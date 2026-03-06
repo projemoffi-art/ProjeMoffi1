@@ -1,666 +1,576 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { PerspectiveCamera, OrbitControls, Stars, Torus, Cylinder } from '@react-three/drei';
+import React, { useState, useRef, useEffect, useMemo, Suspense } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Stars, Float } from '@react-three/drei';
 import * as THREE from 'three';
 import { useSwipeable } from 'react-swipeable';
-import { Play, RotateCcw, Home, Trophy, Coins, Footprints, AlertTriangle, CheckCircle2, Trees, Building2, Stethoscope, Eye } from 'lucide-react';
+import { Trophy, Coins, AlertTriangle, Zap, ShieldCheck, Star, Snail } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RascalCharacter, AnimState } from './RascalCharacter';
-import { LevelGenerator, LevelObject, ObstacleType, ItemType } from './LevelGenerator';
-import { RoadSegment, BarrierLow, BarrierHigh, Bush, TrafficCone, TreeSimple } from './WorldAssets';
+import { MoffiCharacter, CharacterState } from './MoffiCharacter';
+import { LevelGenerator, LevelObject } from './LevelGenerator';
+import {
+    RoadSegment, BarrierLow, BarrierHigh, Bush, TrafficCone,
+    PowerUpOrb, POWERUP_COLORS, TreeSimple
+} from './WorldAssets';
 
-// --- CONFIG ---
+// =====================================================
+// CONFIG
+// =====================================================
 const LANE_WIDTH = 2.5;
 const SPEED_INITIAL = 12;
-const SPEED_MAX = 45;
-const SPEED_INCREMENT = 0.8;
-const JUMP_DURATION = 0.7;
-const SLIDE_DURATION = 0.9;
+const SPEED_MAX = 52;
+const JUMP_VELOCITY = 16;
+const SLOW_MOTION_FACTOR = 0.38;
+const SLIDE_DURATION = 750;
+const COLLISION_W = 0.85;        // Normal hit box width
+const COLLISION_GRACE_W = 0.62; // Forgiveness box (last-second-save feel)
+const GRACE_WINDOW_MS = 150;    // 150ms grace before real collision
 
-// --- ASSETS & THEMES ---
-const COLORS = {
-    furBase: '#ffffff',
-    furSpot: '#855E42',
-    bandana: '#3b82f6',
-    nose: '#1e293b',
-    tongue: '#f43f5e',
-    ground: '#e2e8f0',
-    obstacle: '#ef4444',
-    coin: '#f59e0b',
-    magnet: '#db2777',
-    rocket: '#ef4444',
-    snail: '#10b981',
+// =====================================================
+// TYPES
+// =====================================================
+type GamePhase = 'menu' | 'playing' | 'gameover';
+
+type PowerUpState = {
+    type: 'MAGNET' | 'SHIELD' | 'MULTIPLIER' | 'ROCKET' | 'SNAIL' | null;
+    expiresAt: number;
 };
 
-const THEMES = {
-    park: { name: 'Park', sky: '#bfdbfe', ground: '#86efac', obstacle: '#b91c1c', fog: '#bfdbfe' },
-    city: { name: 'Şehir', sky: '#1e293b', ground: '#334155', obstacle: '#f59e0b', fog: '#1e293b' },
-    vet: { name: 'Klinik', sky: '#f0f9ff', ground: '#fff', obstacle: '#dc2626', fog: '#f0f9ff' },
-};
-
-// --- TYPES ---
-type GameState = 'menu' | 'playing' | 'gameover';
-type Lane = -1 | 0 | 1;
-type Emotion = 'idle' | 'happy' | 'scared' | 'run' | 'cool' | 'hit' | 'wink' | 'proud';
-type PowerUpType = 'magnet' | 'rocket' | 'snail';
-type ThemeType = 'park' | 'city' | 'vet';
-
-// --- UTILS ---
-class CameraShakeManager {
-    intensity = 0;
-    decay = 5;
-    trigger(amount: number) { this.intensity = amount; }
-    update(dt: number) {
-        this.intensity = THREE.MathUtils.lerp(this.intensity, 0, this.decay * dt);
-        return this.intensity;
-    }
-}
-const cameraShaker = new CameraShakeManager();
-
-// --- MISSIONS ---
-interface Mission {
+type DailyMission = {
     id: string;
     desc: string;
+    type: 'coin' | 'slide' | 'powerup' | 'distance';
     target: number;
-    current: number;
-    completed: boolean;
-    type: 'coin' | 'jump' | 'score';
-}
+    progress: number;
+    done: boolean;
+};
 
-const generateMissions = (): Mission[] => [
-    { id: 'm1', desc: '15 Altın Topla', target: 15, current: 0, completed: false, type: 'coin' },
-    { id: 'm2', desc: '5 Kez Zıpla', target: 5, current: 0, completed: false, type: 'jump' }
+const DAILY_MISSIONS: DailyMission[] = [
+    { id: 'm1', desc: '500 Coin Topla', type: 'coin', target: 500, progress: 0, done: false },
+    { id: 'm2', desc: '3 Kere Kay', type: 'slide', target: 3, progress: 0, done: false },
+    { id: 'm3', desc: '2 PowerUp Kullan', type: 'powerup', target: 2, progress: 0, done: false },
 ];
 
-// --- RASCAL RIG (PHASE 4: ANIMATION & REACTIONS) ---
-// --- RASCAL RIG REMOVED (Moved to RascalCharacter.tsx) ---
-
-// 2. RUNNER PLAYER (Physics Container - with Reaction Triggers)
-function RunnerPlayer({
-    gameState,
-    setGameState,
-    activePowerUp,
-    onScoreUpdate,
-    onSpeedUpdate,
+// =====================================================
+// MAIN COMPONENT
+// =====================================================
+export default function MoffiRunGame({
+    onClose,
+    onGameEnd
 }: {
-    gameState: GameState;
-    setGameState: (s: GameState) => void;
-    activePowerUp: PowerUpType | null;
-    onCollect: () => void;
-    onScoreUpdate: (dist: number) => void;
-    onSpeedUpdate: (spd: number) => void;
+    onClose: () => void;
+    onGameEnd?: (result: { score: number; coins: number; missionsCompleted: number }) => void;
 }) {
-    const playerRef = useRef<THREE.Group>(null);
-    const [lane, setLane] = useState<Lane>(0);
-    const [isJumping, setIsJumping] = useState(false);
-    const [isSliding, setIsSliding] = useState(false);
-    const [emotion, setEmotion] = useState<Emotion>('idle');
-    const emotionTimer = useRef<NodeJS.Timeout | null>(null);
+    const [phase, setPhase] = useState<GamePhase>('menu');
+    const [score, setScore] = useState(0);
+    const [coins, setCoins] = useState(0);
+    const [powerUp, setPowerUp] = useState<PowerUpState>({ type: null, expiresAt: 0 });
+    const [missions, setMissions] = useState<DailyMission[]>(DAILY_MISSIONS);
+    const [isClient, setIsClient] = useState(false);
+    const scoreRef = useRef(0);
+    const coinsRef = useRef(0);
 
-    // Physics
-    const targetX = useRef(0);
-    const velocityY = useRef(0);
-    const positionY = useRef(0.0);
-    const runDistance = useRef(0);
-    const speed = useRef(SPEED_INITIAL);
-
-    // REACTIVE EMOTION SYSTEM
-    const triggerEmotion = (newEmotion: Emotion, duration = 1200) => {
-        // Priority check: 'Hit' overrides everything. 'Happy' overrides 'Run'.
-        if (emotion === 'hit') return;
-
-        setEmotion(newEmotion);
-        if (emotionTimer.current) clearTimeout(emotionTimer.current);
-
-        if (newEmotion !== 'run' && newEmotion !== 'idle' && newEmotion !== 'cool') {
-            emotionTimer.current = setTimeout(() => {
-                setEmotion(gameState === 'playing' ? (activePowerUp ? 'cool' : 'run') : 'idle');
-            }, duration);
-        }
-    };
-
-    useEffect(() => {
-        (window as any).triggerHappy = () => triggerEmotion('happy', 800);
-        (window as any).triggerScared = () => triggerEmotion('scared', 1000);
-        (window as any).currentLane = lane; // Expose for Gaze
-    }, [gameState, activePowerUp, lane]);
-
-    useEffect(() => {
-        if (gameState === 'playing') triggerEmotion(activePowerUp ? 'cool' : 'run');
-        else triggerEmotion('idle');
-
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (gameState !== 'playing') return;
-            switch (e.key) {
-                case 'ArrowLeft': case 'a': setLane(l => Math.max(l - 1, -1) as Lane); break;
-                case 'ArrowRight': case 'd': setLane(l => Math.min(l + 1, 1) as Lane); break;
-                case 'ArrowUp': case 'w': if (!isJumping && !isSliding) jump(); break;
-                case 'ArrowDown': case 's': if (!isSliding && !isJumping) slide(); break;
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [gameState, isJumping, isSliding, activePowerUp]);
-
-    useEffect(() => {
-        (window as any).startRun = () => {
-            setGameState('playing');
-            speed.current = SPEED_INITIAL;
-            runDistance.current = 0;
-            triggerEmotion('run');
-        };
-        (window as any).moveLeft = () => setLane(l => Math.max(l - 1, -1) as Lane);
-        (window as any).moveRight = () => setLane(l => Math.min(l + 1, 1) as Lane);
-        (window as any).jump = () => { if (!isJumping && !isSliding) jump(); };
-        (window as any).slide = () => { if (!isSliding && !isJumping) slide(); };
-    }, [gameState, isJumping, isSliding]);
-
-    const jump = () => {
-        setIsJumping(true);
-        velocityY.current = 13;
-        (window as any).triggerJumpMission?.();
-        setTimeout(() => setIsJumping(false), JUMP_DURATION * 1000);
-    };
-
-    const slide = () => {
-        setIsSliding(true);
-        setTimeout(() => setIsSliding(false), SLIDE_DURATION * 1000);
-    };
-
-    useFrame((state, delta) => {
-        if (gameState !== 'playing' || !playerRef.current) return;
-
-        let actualSpeed = speed.current;
-        if (activePowerUp === 'rocket') actualSpeed = SPEED_MAX * 1.5;
-        if (activePowerUp === 'snail') actualSpeed = speed.current * 0.6;
-        if (speed.current < SPEED_MAX) speed.current += SPEED_INCREMENT * delta;
-        onSpeedUpdate(actualSpeed);
-
-        runDistance.current += actualSpeed * delta;
-        playerRef.current.position.z = -runDistance.current;
-        onScoreUpdate(Math.floor(runDistance.current));
-
-        targetX.current = lane * LANE_WIDTH;
-        if (activePowerUp === 'rocket') {
-            playerRef.current.position.y = 4;
-            playerRef.current.position.x = 0;
-        } else {
-            playerRef.current.position.x = THREE.MathUtils.lerp(playerRef.current.position.x, targetX.current, 12 * delta);
-
-            if (isJumping) {
-                positionY.current += velocityY.current * delta;
-                velocityY.current -= 40 * delta;
-                if (positionY.current < 0) positionY.current = 0;
-            } else {
-                positionY.current = THREE.MathUtils.lerp(positionY.current, 0, 20 * delta);
-            }
-            playerRef.current.position.y = positionY.current;
-        }
-
-        const shake = cameraShaker.update(delta);
-        const desiredCamZ = playerRef.current.position.z + 8 + (actualSpeed * 0.1);
-        const desiredCamY = activePowerUp === 'rocket' ? 8 : 5 + (actualSpeed * 0.05);
-        state.camera.position.z = THREE.MathUtils.lerp(state.camera.position.z, desiredCamZ, 0.1);
-        state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, desiredCamY, 0.05) + (Math.random() - 0.5) * shake;
-        state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, playerRef.current.position.x * 0.3, 0.1) + (Math.random() - 0.5) * shake;
-        state.camera.lookAt(playerRef.current.position.x * 0.1, activePowerUp === 'rocket' ? 3 : 1, playerRef.current.position.z - 5);
-
-        (window as any).playerPosition = playerRef.current.position;
-        (window as any).isSliding = isSliding;
+    // Single source of truth — directly accessible inside useFrame
+    const gs = useRef({
+        started: false,
+        distance: 0,
+        speed: SPEED_INITIAL,
+        lane: 0 as -1 | 0 | 1,
+        isJumping: false,
+        isSliding: false,
+        y: 0,
+        vy: 0,
+        slideEndTime: 0,
+        shieldActive: false,
+        magnetActive: false,
+        multiplier: 1,
+        slowActive: false,
+        missionsProgress: { coin: 0, slide: 0, powerup: 0, distance: 0 },
     });
 
-    const getAnimState = (): AnimState => {
-        if (gameState !== 'playing') return 'IDLE';
-        if (isJumping) return 'JUMP';
-        if (isSliding) return 'SLIDE';
-        return 'RUN';
+    useEffect(() => { setIsClient(true); }, []);
+
+    // ---- KEYBOARD CONTROLS ----
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (!gs.current.started) return;
+            const d = gs.current;
+            if (e.key === 'ArrowLeft' || e.key === 'a') d.lane = Math.max(-1, d.lane - 1) as any;
+            if (e.key === 'ArrowRight' || e.key === 'd') d.lane = Math.min(1, d.lane + 1) as any;
+            if ((e.key === 'ArrowUp' || e.key === 'w') && !d.isJumping && !d.isSliding) {
+                d.isJumping = true; d.vy = JUMP_VELOCITY;
+            }
+            if ((e.key === 'ArrowDown' || e.key === 's') && !d.isSliding && !d.isJumping) {
+                d.isSliding = true;
+                d.missionsProgress.slide++;
+                setTimeout(() => { d.isSliding = false; }, SLIDE_DURATION);
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, []);
+
+    // ---- SWIPE CONTROLS ----
+    const swipeHandlers = useSwipeable({
+        onSwipedLeft: () => { if (!gs.current.started) return; gs.current.lane = Math.max(-1, gs.current.lane - 1) as any; },
+        onSwipedRight: () => { if (!gs.current.started) return; gs.current.lane = Math.min(1, gs.current.lane + 1) as any; },
+        onSwipedUp: () => {
+            const d = gs.current;
+            if (!d.started || d.isJumping || d.isSliding) return;
+            d.isJumping = true; d.vy = JUMP_VELOCITY;
+        },
+        onSwipedDown: () => {
+            const d = gs.current;
+            if (!d.started || d.isSliding || d.isJumping) return;
+            d.isSliding = true;
+            d.missionsProgress.slide++;
+            setTimeout(() => { d.isSliding = false; }, SLIDE_DURATION);
+        },
+        trackMouse: true,
+        preventScrollOnSwipe: true,
+    });
+
+    const triggerStart = (e: React.PointerEvent) => {
+        e.preventDefault();
+        gs.current = {
+            started: true,
+            distance: 0,
+            speed: SPEED_INITIAL,
+            lane: 0,
+            isJumping: false,
+            isSliding: false,
+            y: 0,
+            vy: 0,
+            slideEndTime: 0,
+            shieldActive: false,
+            magnetActive: false,
+            multiplier: 1,
+            slowActive: false,
+            missionsProgress: { coin: 0, slide: 0, powerup: 0, distance: 0 },
+        };
+        scoreRef.current = 0;
+        coinsRef.current = 0;
+        setScore(0);
+        setCoins(0);
+        setPowerUp({ type: null, expiresAt: 0 });
+        setMissions(DAILY_MISSIONS.map(m => ({ ...m, progress: 0, done: false })));
+        setPhase('playing');
     };
 
+    const handleCrash = () => {
+        const completedCount = missions.filter(m => m.done).length;
+        onGameEnd?.({ score: scoreRef.current, coins: coinsRef.current, missionsCompleted: completedCount });
+        setPhase('gameover');
+        gs.current.started = false;
+    };
+
+    const handleCoin = () => {
+        coinsRef.current += 1;
+        setCoins(c => c + 1);
+        gs.current.missionsProgress.coin++;
+        setMissions(prev => prev.map(m =>
+            m.type === 'coin' ? { ...m, progress: gs.current.missionsProgress.coin, done: gs.current.missionsProgress.coin >= m.target } : m
+        ));
+    };
+
+    const handlePowerUp = (type: 'MAGNET' | 'SHIELD' | 'MULTIPLIER' | 'ROCKET' | 'SNAIL') => {
+        const durations: Record<string, number> = { MAGNET: 8000, SHIELD: 5000, MULTIPLIER: 10000, ROCKET: 6000, SNAIL: 5000 };
+        const expiresAt = Date.now() + durations[type];
+        setPowerUp({ type, expiresAt });
+        gs.current.missionsProgress.powerup++;
+
+        if (type === 'MAGNET') { gs.current.magnetActive = true; setTimeout(() => { gs.current.magnetActive = false; }, durations[type]); }
+        if (type === 'SHIELD') { gs.current.shieldActive = true; } // cleared on first hit
+        if (type === 'MULTIPLIER') { gs.current.multiplier = 2; setTimeout(() => { gs.current.multiplier = 1; }, durations[type]); }
+        if (type === 'SNAIL') { gs.current.slowActive = true; setTimeout(() => { gs.current.slowActive = false; }, durations[type]); }
+        if (type === 'ROCKET') {
+            gs.current.speed = Math.min(gs.current.speed * 1.5, SPEED_MAX);
+            setTimeout(() => { /* speed normalizes naturally */ }, durations[type]);
+        }
+
+        setMissions(prev => prev.map(m =>
+            m.type === 'powerup' ? { ...m, progress: gs.current.missionsProgress.powerup, done: gs.current.missionsProgress.powerup >= m.target } : m
+        ));
+    };
+
+    const handleScore = (s: number) => {
+        scoreRef.current = s;
+        setScore(s);
+    };
+
+    if (!isClient) return <div className="fixed inset-0 bg-[#0a1a0a]" />;
+
     return (
-        <group ref={playerRef}>
-            <RascalCharacter
-                state={getAnimState()}
-                laneOffset={lane}
-                speed={speed.current}
-                grounded={!isJumping}
-                emotion={emotion}
-            />
-            {activePowerUp === 'magnet' && (
-                <mesh position={[0, 1.2, 0]}>
-                    <torusGeometry args={[0.3, 0.05, 8, 16, Math.PI]} />
-                    <meshStandardMaterial color={COLORS.magnet} />
-                </mesh>
-            )}
-        </group>
+        <div className="fixed inset-0 bg-[#0a1a0a] z-[100] touch-none select-none" {...swipeHandlers}>
+            {/* 3D CANVAS */}
+            <Canvas
+                shadows
+                dpr={[1, 2]}
+                camera={{ fov: 60, position: [0, 5, 10], near: 0.1, far: 500 }}
+            >
+                <color attach="background" args={['#12231a']} />
+                <ambientLight intensity={1.0} />
+                <directionalLight position={[5, 15, 8]} intensity={1.8} castShadow shadow-mapSize={[1024, 1024]} />
+                <pointLight position={[-5, 8, 5]} intensity={1.2} color="#88ffaa" />
+                <fog attach="fog" args={['#12231a', 22, 100]} />
+                <Stars radius={150} count={2500} factor={3} />
+
+                <GameScene
+                    gs={gs}
+                    phase={phase}
+                    onCrash={handleCrash}
+                    onCoin={handleCoin}
+                    onPowerUp={handlePowerUp}
+                    onScore={handleScore}
+                />
+            </Canvas>
+
+            {/* HUD */}
+            <AnimatePresence>
+                {phase === 'playing' && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute top-0 left-0 right-0 p-5 flex justify-between items-start pointer-events-none z-[150]"
+                    >
+                        {/* Left: Score + Coins */}
+                        <div className="flex flex-col gap-2">
+                            <div className="bg-black/60 backdrop-blur px-5 py-2.5 rounded-2xl border border-white/10 flex items-center gap-3">
+                                <Trophy className="text-amber-400 w-5 h-5" />
+                                <span className="text-2xl font-black text-white tabular-nums">{score}m</span>
+                            </div>
+                            <div className="bg-black/60 backdrop-blur px-5 py-2.5 rounded-2xl border border-white/10 flex items-center gap-3">
+                                <Coins className="text-yellow-400 w-5 h-5" />
+                                <span className="text-2xl font-black text-white tabular-nums">{coins}</span>
+                                {gs.current.multiplier > 1 && (
+                                    <span className="text-xs font-black text-amber-400 bg-amber-400/20 px-2 py-0.5 rounded-full">×{gs.current.multiplier}</span>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Right: Active Power-Up */}
+                        {powerUp.type && (
+                            <div className="bg-black/60 backdrop-blur px-5 py-3 rounded-2xl border border-white/20 flex items-center gap-2">
+                                {powerUp.type === 'MAGNET' && <span className="text-2xl">🧲</span>}
+                                {powerUp.type === 'SHIELD' && <ShieldCheck className="text-blue-400 w-7 h-7" />}
+                                {powerUp.type === 'MULTIPLIER' && <Star className="text-amber-400 w-7 h-7" />}
+                                {powerUp.type === 'ROCKET' && <Zap className="text-red-400 w-7 h-7" />}
+                                {powerUp.type === 'SNAIL' && <Snail className="text-green-400 w-7 h-7" />}
+                                <div className="text-xs font-bold text-white/60 uppercase">
+                                    {Math.max(0, Math.ceil((powerUp.expiresAt - Date.now()) / 1000))}s
+                                </div>
+                            </div>
+                        )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* MENU */}
+            <AnimatePresence>
+                {phase === 'menu' && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 backdrop-blur-lg z-[200]"
+                    >
+                        <motion.div
+                            initial={{ y: -30, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: 0.2, type: 'spring' }}
+                            className="text-center mb-12"
+                        >
+                            <h1 className="text-7xl font-black text-white italic tracking-tighter leading-none drop-shadow-2xl">
+                                MOFFI<br />
+                                <span className="text-orange-400">RUN</span>
+                            </h1>
+                        </motion.div>
+
+                        {/* Daily Missions Preview */}
+                        <div className="bg-white/5 border border-white/10 rounded-3xl p-5 mb-8 w-72">
+                            <p className="text-white/40 text-xs font-black uppercase tracking-widest mb-3">Günlük Görevler</p>
+                            {DAILY_MISSIONS.map(m => (
+                                <div key={m.id} className="flex justify-between items-center py-1.5">
+                                    <span className="text-white/70 text-sm">{m.desc}</span>
+                                    <span className="text-white/30 text-xs font-bold">0/{m.target}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        <motion.button
+                            whileTap={{ scale: 0.93 }}
+                            onPointerDown={triggerStart}
+                            className="w-56 py-6 bg-orange-500 text-white text-3xl font-black rounded-[2rem] shadow-[0_12px_0_rgb(194,65,12)] active:translate-y-2 active:shadow-none transition-all cursor-pointer select-none"
+                        >
+                            OYNA
+                        </motion.button>
+
+                        <button onPointerDown={onClose} className="mt-6 text-white/30 text-xs font-bold hover:text-white/60 transition-colors">
+                            KAPAT
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* GAME OVER */}
+            <AnimatePresence>
+                {phase === 'gameover' && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ type: 'spring' }}
+                        className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 backdrop-blur-3xl z-[210] p-8"
+                    >
+                        <AlertTriangle className="w-16 h-16 text-orange-500 mb-4" />
+                        <h2 className="text-6xl font-black text-white italic mb-10">EYVAH!</h2>
+
+                        <div className="flex gap-12 mb-10">
+                            <div className="text-center">
+                                <p className="text-white/30 text-xs font-black uppercase tracking-widest mb-1">Mesafe</p>
+                                <p className="text-5xl font-black text-white">{score}m</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-white/30 text-xs font-black uppercase tracking-widest mb-1">Altın</p>
+                                <p className="text-5xl font-black text-yellow-400">{coins}</p>
+                            </div>
+                        </div>
+
+                        {/* Mission Results */}
+                        <div className="w-full max-w-xs mb-8">
+                            {missions.map(m => (
+                                <div key={m.id} className={`flex justify-between items-center py-2 border-b border-white/5 ${m.done ? 'text-green-400' : 'text-white/40'}`}>
+                                    <span className="text-sm font-bold">{m.done ? '✅' : '⬜️'} {m.desc}</span>
+                                    <span className="text-xs">{Math.min(m.progress, m.target)}/{m.target}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            onPointerDown={triggerStart}
+                            className="w-full max-w-sm py-6 bg-orange-500 text-white font-black text-2xl rounded-[2rem] mb-4 shadow-[0_10px_0_rgb(194,65,12)] active:translate-y-2 active:shadow-none"
+                        >
+                            TEKRAR DENE
+                        </motion.button>
+                        <button onPointerDown={onClose} className="text-white/30 text-xs font-bold uppercase tracking-widest hover:text-white/60">
+                            Ana Menü
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
     );
 }
 
-// 3. TRACK (UPDATED: Chunk System)
-const levelGen = new LevelGenerator(-20); // Static instance
-
-function TrackManager({ onCrash, onCollect, onPowerUp, theme }: any) {
-    const themeConfig = THEMES[theme as ThemeType] || THEMES.park;
+// =====================================================
+// GAME SCENE (Three.js Canvas Inner)
+// =====================================================
+function GameScene({ gs, phase, onCrash, onCoin, onPowerUp, onScore }: any) {
+    const { camera } = useThree();
+    const playerRef = useRef<THREE.Group>(null!);
     const [chunks, setChunks] = useState<LevelObject[]>([]);
-    const [scenery, setScenery] = useState<any[]>([]); // Side trees
-    const lastGenZ = useRef(-20);
-    const playerZRef = useRef(0);
+    const levelGen = useMemo(() => new LevelGenerator(-20), []);
+    const nextChunkAt = useRef(-20);
+    const graceTimers = useRef<Map<string, number>>(new Map());
+    const startTime = useRef<number>(0);
 
-    // Initial Gen
+    // Init world
     useEffect(() => {
         levelGen.reset(-20);
-        let initialObjects: LevelObject[] = [];
-        for (let i = 0; i < 5; i++) { // Pre-gen 5 chunks
-            const chunk = levelGen.generateNextChunk();
-            initialObjects = [...initialObjects, ...chunk.objects];
+        let items: LevelObject[] = [];
+        for (let i = 0; i < 20; i++) {
+            const c = levelGen.generateNextChunk();
+            items = [...items, ...c.objects];
         }
-        setChunks(initialObjects);
+        setChunks(items);
+        nextChunkAt.current = -20 - 20 * 30;
+    }, []);
 
-        // Gen Scenery
-        const trees = [];
-        for (let z = -10; z > -200; z -= 15) {
-            trees.push({ id: `tl_${z}`, x: -8 - Math.random() * 5, z, type: 'TREE' });
-            trees.push({ id: `tr_${z}`, x: 8 + Math.random() * 5, z, type: 'TREE' });
+    // Static side trees
+    const trees = useMemo(() => (
+        new Array(80).fill(0).map((_, i) => (
+            <TreeSimple key={i} position={[(i % 2 === 0 ? 1 : -1) * (11 + (i % 5) * 1.5), 0, -i * 14]} />
+        ))
+    ), []);
+
+    useFrame((_, delta) => {
+        if (!playerRef.current) return;
+
+        // --- MENU: camera orbits Moffi ---
+        if (!gs.current.started) {
+            playerRef.current.position.set(0, 0, 0);
+            camera.position.set(0, 4, 8);
+            camera.lookAt(0, 1.2, 0);
+            return;
         }
-        setScenery(trees);
 
-    }, [theme]);
+        const d = gs.current;
+        const now = Date.now();
 
-    // Infinite Gen Loop
-    useFrame(() => {
-        const playerPos = (window as any).playerPosition;
-        if (!playerPos) return;
-        playerZRef.current = playerPos.z;
+        // Mark start time
+        if (startTime.current === 0) startTime.current = now;
+        const elapsed = (now - startTime.current) / 1000;
 
-        // Cleanup behind & Generate ahead
-        if (playerPos.z < lastGenZ.current + 100) {
-            // Simple Endless Logic for Demo
-            // Check if last object is close
-            const lastObj = chunks[chunks.length - 1];
-            if (!lastObj || lastObj.z > playerPos.z - 150) { // Need more
-                const chunk = levelGen.generateNextChunk();
-                setChunks(prev => {
-                    const keep = prev.filter(o => o.z < playerPos.z + 20); // Remove passed
-                    return [...keep, ...chunk.objects];
-                });
-            }
+        // --- SPEED CURVE (GDD spec: non-linear) ---
+        const slow = d.slowActive ? SLOW_MOTION_FACTOR : 1;
+        const targetSpeed = SPEED_INITIAL + Math.pow(elapsed, 1.3) * 0.35;
+        d.speed = Math.min(SPEED_MAX * slow, Math.max(d.speed, targetSpeed));
+        levelGen.currentSpeed = d.speed;
+
+        const effectiveDelta = delta * slow;
+        d.distance += d.speed * effectiveDelta;
+        onScore(Math.floor(d.distance));
+
+        // --- JUMP PHYSICS ---
+        if (d.isJumping) {
+            d.y += d.vy * effectiveDelta;
+            d.vy -= 38 * effectiveDelta;
+            if (d.y <= 0) { d.y = 0; d.isJumping = false; d.vy = 0; }
         }
-    });
 
-    // Broadcast Nearest (Adapted for new structure)
-    useFrame(() => {
-        const playerPos = (window as any).playerPosition;
-        if (!playerPos) return;
-        let minDist = 999;
-        chunks.forEach((obj) => {
-            // Only checking obstacles for scare reaction
-            if (obj.type.includes('BARRIER') || obj.type.includes('CONE')) {
-                if (obj.z < playerPos.z + 5 && obj.z > playerPos.z - 10) {
-                    const dist = Math.sqrt(Math.pow(obj.z - playerPos.z, 2) + Math.pow(((obj.x || 0) * LANE_WIDTH) - playerPos.x, 2));
-                    if (dist < minDist) minDist = dist;
+        // --- PLAYER POSITION ---
+        playerRef.current.position.z = -d.distance;
+        playerRef.current.position.x = THREE.MathUtils.lerp(
+            playerRef.current.position.x,
+            d.lane * LANE_WIDTH,
+            18 * effectiveDelta
+        );
+        playerRef.current.position.y = d.y;
+
+        // --- CAMERA FOLLOW ---
+        const speedFOVBoost = d.speed * 0.025;
+        camera.position.z = playerRef.current.position.z + 9;
+        camera.position.y = THREE.MathUtils.lerp(camera.position.y, 4.5 + speedFOVBoost, 0.1);
+        camera.position.x = THREE.MathUtils.lerp(camera.position.x, playerRef.current.position.x * 0.35, 0.12);
+        camera.lookAt(playerRef.current.position.x * 0.12, 1.3, playerRef.current.position.z - 6);
+
+        // --- MAGNET: attract coins ---
+        if (d.magnetActive) {
+            chunks.forEach((obj: any) => {
+                if (obj.type === 'COIN' && !obj.collected) {
+                    const dz2 = Math.abs(playerRef.current.position.z - obj.z);
+                    if (dz2 < 12) { obj.collected = true; onCoin(); }
                 }
+            });
+        }
+
+        // --- CHUNK STREAM ---
+        if (playerRef.current.position.z < nextChunkAt.current + 200) {
+            const c = levelGen.generateNextChunk();
+            setChunks(prev => [...prev.filter(o => o.z < playerRef.current.position.z + 60), ...c.objects]);
+            nextChunkAt.current -= c.length;
+        }
+
+        // --- COLLISION (with grace window) ---
+        chunks.forEach((obj: any) => {
+            if (obj.collected) return;
+            const dz = Math.abs(playerRef.current.position.z - obj.z);
+            if (dz > 2.0) return;
+
+            const dx = Math.abs(playerRef.current.position.x - (obj.x * LANE_WIDTH));
+            const pType: string = obj.type;
+
+            // POWERUP COLLECTION
+            if (['MAGNET', 'SHIELD', 'MULTIPLIER', 'ROCKET', 'SNAIL'].includes(pType)) {
+                if (dx < 1.2) {
+                    obj.collected = true;
+                    onPowerUp(pType as any);
+                }
+                return;
+            }
+
+            // COIN COLLECTION
+            if (pType === 'COIN') {
+                if (dx < 0.9) { obj.collected = true; onCoin(); }
+                return;
+            }
+
+            // OBSTACLE COLLISION — with grace window
+            const gKey = obj.uniqueId;
+            let effectiveW = COLLISION_W;
+            if (!graceTimers.current.has(gKey)) {
+                graceTimers.current.set(gKey, now);
+                effectiveW = COLLISION_GRACE_W; // First frame of contact = forgiveness
+            } else {
+                const firstContact = graceTimers.current.get(gKey)!;
+                effectiveW = (now - firstContact) < GRACE_WINDOW_MS ? COLLISION_GRACE_W : COLLISION_W;
+            }
+
+            if (dx < effectiveW) {
+                // Jump clears BARRIER_LOW
+                if (pType === 'BARRIER_LOW' && d.y > 1.2) return;
+                // Slide clears BARRIER_HIGH
+                if (pType === 'BARRIER_HIGH' && d.isSliding) return;
+
+                // SHIELD absorbs one hit
+                if (d.shieldActive) {
+                    d.shieldActive = false;
+                    obj.collected = true; // neutralize obstacle
+                    return;
+                }
+
+                onCrash();
             }
         });
-        (window as any).nearestObstacleDist = minDist;
     });
+
+    const laneDelta = (gs.current.lane * LANE_WIDTH) - (playerRef.current?.position.x ?? 0);
+    const playerState: CharacterState = gs.current.isJumping ? 'JUMP'
+        : gs.current.isSliding ? 'SLIDE'
+            : !gs.current.started ? 'IDLE'
+                : laneDelta > 0.3 ? 'SIDESTEP_RIGHT'
+                    : laneDelta < -0.3 ? 'SIDESTEP_LEFT'
+                        : 'RUN';
 
     return (
         <group>
-            {/* INFINITE ROAD MESH (Static for now, implies straight road) */}
-            <RoadSegment length={500} zPos={-250} />
+            {/* World */}
+            <RoadSegment length={4000} zPos={-2000} />
+            {trees}
 
-            {/* SCENERY */}
-            {scenery.map(s => <TreeSimple key={s.id} position={[s.x, 0, s.z]} />)}
-
-            {/* DYNAMIC OBJECTS */}
-            {chunks.map((obj) => (
-                <GameEntity
-                    key={obj.uniqueId}
-                    data={obj}
-                    onCrash={onCrash}
-                    onCollect={onCollect}
-                    onPowerUp={onPowerUp}
-                />
-            ))}
-        </group>
-    );
-}
-
-// Unified Entity Component
-function GameEntity({ data, onCrash, onCollect, onPowerUp }: any) {
-    const [crashed, setCrashed] = useState(false);
-    const [collected, setCollected] = useState(false);
-
-    // Collision Logic (Shared)
-    useFrame((state, delta) => {
-        if (crashed || collected) return;
-        const playerPos = (window as any).playerPosition;
-        if (!playerPos) return;
-
-        // Optimization: Dist check
-        if (playerPos.z < data.z - 2 || playerPos.z > data.z + 2) return;
-
-        const dz = Math.abs(playerPos.z - data.z);
-        const dx = Math.abs(playerPos.x - ((data.x || 0) * LANE_WIDTH));
-
-        // HITBOXES
-        let hitDist = 0.8;
-        if (data.type === 'COIN') hitDist = 1.0;
-
-        if (dz < 1.0 && dx < hitDist) {
-            // Check Height for Barriers
-            const isSlide = (window as any).isSliding;
-            const isJump = (window as any).playerPosition.y > 1.2;
-
-            if (data.type === 'COIN') {
-                setCollected(true); (window as any).triggerHappy?.(); onCollect();
-            } else if (data.type === 'BARRIER_LOW') {
-                if (!isJump && !(window as any).isInvincible) { setCrashed(true); onCrash(); }
-            } else if (data.type === 'BARRIER_HIGH') {
-                if (!isSlide && !(window as any).isInvincible) { setCrashed(true); onCrash(); }
-            } else if (['BUSH', 'TRAFFIC_CONE'].includes(data.type)) {
-                if (!(window as any).isInvincible) { setCrashed(true); onCrash(); }
-            } else if (['MAGNET', 'ROCKET', 'SNAIL'].includes(data.type)) {
-                setCollected(true); onPowerUp(data.type);
-            }
-        }
-    });
-
-    if (collected || (crashed && (window as any).isInvincible)) return null;
-
-    const pos: [number, number, number] = [(data.x || 0) * LANE_WIDTH, data.y || 0, data.z];
-
-    // RENDER MAPPING
-    if (data.type === 'COIN') {
-        return (
-            <group position={pos}>
-                <mesh rotation={[Math.PI / 2, 0, 0]}>
-                    <cylinderGeometry args={[0.4, 0.4, 0.1, 16]} />
-                    <meshStandardMaterial color={COLORS.coin} emissive="#f59e0b" emissiveIntensity={0.5} />
-                </mesh>
+            {/* Player — real Mixamo skeletal character */}
+            <group ref={playerRef}>
+                <React.Suspense fallback={null}>
+                    <MoffiCharacter
+                        state={playerState}
+                        laneTargetX={gs.current.lane * LANE_WIDTH}
+                        speed={gs.current.speed}
+                    />
+                </React.Suspense>
             </group>
-        );
-    }
-    if (data.type === 'BARRIER_LOW') return <BarrierLow position={pos} />;
-    if (data.type === 'BARRIER_HIGH') return <BarrierHigh position={pos} />;
-    if (data.type === 'BUSH') return <Bush position={pos} />;
-    if (data.type === 'TRAFFIC_CONE') return <TrafficCone position={pos} />;
-    // Powerups
-    if (['MAGNET', 'ROCKET', 'SNAIL'].includes(data.type)) {
-        const color = data.type === 'MAGNET' ? COLORS.magnet : data.type === 'ROCKET' ? COLORS.rocket : COLORS.snail;
-        return (
-            <group position={pos}>
-                <mesh castShadow>
-                    <boxGeometry args={[0.8, 0.8, 0.8]} />
-                    <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.8} />
-                </mesh>
-            </group>
-        );
-    }
 
-    return null;
-}
+            {/* World Objects */}
+            {chunks.map((obj: any) => {
+                if (obj.collected) return null;
+                const pos: [number, number, number] = [obj.x * LANE_WIDTH, obj.y || 0, obj.z];
+                const pType: string = obj.type;
 
-// 3. SPEED LINES (Same)
-function SpeedLines({ speed }: { speed: number }) {
-    const groupRef = useRef<THREE.Group>(null);
-    const lines = useMemo(() => new Array(30).fill(0).map(() => ({ x: (Math.random() - 0.5) * 20, y: Math.random() * 8, z: Math.random() * 30, len: Math.random() * 10 })), []);
+                if (pType === 'COIN') return (
+                    <Float key={obj.uniqueId} speed={5} rotationIntensity={0.5}>
+                        <mesh position={pos} rotation={[Math.PI / 2, 0, 0]} castShadow>
+                            <cylinderGeometry args={[0.38, 0.38, 0.1, 16]} />
+                            <meshStandardMaterial color="#fcd34d" emissive="#f59e0b" emissiveIntensity={0.7} metalness={0.8} roughness={0.2} />
+                        </mesh>
+                    </Float>
+                );
 
-    useFrame((state, delta) => {
-        if (!groupRef.current) return;
-        const playerPos = (window as any).playerPosition;
-        if (playerPos) groupRef.current.position.z = playerPos.z;
-        groupRef.current.children.forEach((child: any) => {
-            child.position.z += speed * delta * 2;
-            if (child.position.z > 10) {
-                child.position.z = -30 - Math.random() * 20; child.position.x = (Math.random() - 0.5) * 20;
-            }
-        });
-    });
-    const opacity = Math.max(0, (speed - 15) / 25);
-    if (opacity < 0.05) return null;
-    return (
-        <group ref={groupRef}>
-            {lines.map((l, i) => (
-                <mesh key={i} position={[l.x, l.y, -l.z]} rotation={[Math.PI / 2, 0, 0]}>
-                    <cylinderGeometry args={[0.02, 0.02, l.len, 8]} />
-                    <meshBasicMaterial color="white" transparent opacity={opacity * 0.5} />
-                </mesh>
-            ))}
+                if (pType === 'BARRIER_LOW') return <BarrierLow key={obj.uniqueId} position={pos} />;
+                if (pType === 'BARRIER_HIGH') return <BarrierHigh key={obj.uniqueId} position={pos} />;
+                if (pType === 'BUSH') return <Bush key={obj.uniqueId} position={pos} />;
+                if (pType === 'TRAFFIC_CONE') return <TrafficCone key={obj.uniqueId} position={pos} />;
+
+                // Power-ups
+                const pColors = POWERUP_COLORS[pType];
+                if (pColors) return (
+                    <Float key={obj.uniqueId} speed={3} floatIntensity={0.8}>
+                        <PowerUpOrb position={pos} color={pColors.color} emissive={pColors.emissive} />
+                    </Float>
+                );
+
+                return null;
+            })}
         </group>
-    );
-}
-
-// MAIN COMPONENT
-export default function MoffiRunGame({ onClose, onGameEnd }: { onClose: () => void, onGameEnd: (result: any) => void }) {
-    const [gameState, setGameState] = useState<GameState>('menu');
-    const [score, setScore] = useState(0);
-    const [coins, setCoins] = useState(0);
-    const [currentSpeed, setCurrentSpeed] = useState(SPEED_INITIAL);
-
-    // STATES
-    const [missions, setMissions] = useState<Mission[]>(generateMissions());
-    const [activePowerUp, setActivePowerUp] = useState<PowerUpType | null>(null);
-    const [powerUpTime, setPowerUpTime] = useState(0);
-    const [activeTheme, setActiveTheme] = useState<ThemeType>('park');
-
-    const handlePowerUp = (type: PowerUpType) => {
-        setActivePowerUp(type);
-        setPowerUpTime(100);
-        if (type === 'magnet') (window as any).hasMagnet = true;
-        if (type === 'rocket') (window as any).isInvincible = true;
-        if (type === 'rocket') cameraShaker.trigger(0.5);
-
-        let t = 100;
-        const interval = setInterval(() => {
-            t -= 2;
-            setPowerUpTime(t);
-            if (t <= 0) {
-                clearInterval(interval);
-                setActivePowerUp(null);
-                (window as any).hasMagnet = false;
-                (window as any).isInvincible = false;
-            }
-        }, 100);
-    };
-
-    const handleCollectCoin = () => {
-        setCoins(c => c + 1);
-        updateMissions('coin');
-    };
-
-    const updateMissions = (type: 'coin' | 'jump' | 'score') => {
-        setMissions(prev => prev.map(m => {
-            if (m.type === type && !m.completed) {
-                const newVal = m.current + 1;
-                return { ...m, current: Math.min(newVal, m.target), completed: newVal >= m.target };
-            }
-            return m;
-        }));
-    };
-
-    useEffect(() => {
-        (window as any).triggerJumpMission = () => updateMissions('jump');
-    }, [missions]);
-
-    const handlers = useSwipeable({
-        onSwipedLeft: () => (window as any).moveLeft?.(),
-        onSwipedRight: () => (window as any).moveRight?.(),
-        onSwipedUp: () => (window as any).jump?.(),
-        onSwipedDown: () => (window as any).slide?.(),
-        trackMouse: true
-    });
-
-    const handleGameOver = () => {
-        cameraShaker.trigger(1.0);
-        setGameState('gameover');
-        setActivePowerUp(null);
-
-        if (onGameEnd) {
-            onGameEnd({
-                score,
-                coins,
-                missionsCompleted: missions.filter(m => m.completed).length,
-                theme: activeTheme
-            });
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 bg-slate-900 z-[100]" {...handlers}>
-            <Canvas shadows dpr={[1, 1.5]}>
-                <PerspectiveCamera makeDefault position={[0, 6, 8]} fov={55} />
-                <ambientLight intensity={0.7} />
-                <directionalLight position={[10, 20, -5]} intensity={1.2} castShadow />
-
-                {gameState === 'playing' ? (
-                    <>
-                        <RunnerPlayer
-                            gameState={gameState}
-                            setGameState={setGameState}
-                            activePowerUp={activePowerUp}
-                            onCollect={handleCollectCoin}
-                            onScoreUpdate={setScore}
-                            onSpeedUpdate={setCurrentSpeed}
-                        />
-                        <TrackManager
-                            onCrash={handleGameOver}
-                            onCollect={handleCollectCoin}
-                            onPowerUp={handlePowerUp}
-                            theme={activeTheme}
-                        />
-                        <SpeedLines speed={currentSpeed} />
-                        <fog attach="fog" args={[THEMES[activeTheme].fog, 10, 80]} />
-                        <Stars radius={100} count={5000} fade speed={currentSpeed / 5} />
-                    </>
-                ) : (
-                    <OrbitControls autoRotate enableZoom={false} maxPolarAngle={Math.PI / 2} />
-                )}
-
-                {gameState === 'menu' && (
-                    <group>
-                        <RascalCharacter
-                            state="IDLE"
-                            speed={0}
-                            emotion="happy"
-                            laneOffset={0}
-                            grounded={true}
-                        />
-                        <gridHelper args={[20, 20]} />
-                        <Stars />
-                    </group>
-                )}
-            </Canvas>
-
-            {/* UI - MENU */}
-            {gameState === 'menu' && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
-                    <Footprints className="w-24 h-24 text-yellow-400 mb-4 animate-bounce" />
-                    <h1 className="text-6xl font-black text-white italic tracking-tighter mb-2 transform -skew-x-12">MOFFI RASCAL</h1>
-                    <p className="text-xl text-white/80 mb-8 font-bold">FAZ 4: ANIMASYON & REAKSİYON</p>
-
-                    {/* THEME SELECTOR */}
-                    <div className="flex gap-4 mb-8">
-                        {Object.entries(THEMES).map(([key, t]) => (
-                            <button
-                                key={key}
-                                onClick={() => setActiveTheme(key as ThemeType)}
-                                className={`px-4 py-2 rounded-xl flex flex-col items-center gap-1 border-2 transition-all ${activeTheme === key ? 'bg-white text-black border-yellow-400 scale-110' : 'bg-black/40 text-gray-400 border-white/10'}`}
-                            >
-                                {key === 'park' ? <Trees className="w-5 h-5" /> : key === 'city' ? <Building2 className="w-5 h-5" /> : <Stethoscope className="w-5 h-5" />}
-                                <span className="text-xs font-bold uppercase">{t.name}</span>
-                            </button>
-                        ))}
-                    </div>
-
-                    <button onClick={() => { setMissions(generateMissions()); setGameState('playing'); }} className="px-12 py-5 bg-yellow-400 hover:bg-yellow-300 text-black text-2xl font-black rounded-2xl shadow-xl hover:scale-105 transition-all flex items-center gap-3">
-                        <Play className="fill-current w-8 h-8" /> KOŞ!
-                    </button>
-                    <button onClick={onClose} className="mt-6 text-white/50 font-bold hover:text-white">Çıkış</button>
-                </div>
-            )}
-
-            {/* UI - HUD */}
-            {gameState === 'playing' && (
-                <div className="absolute top-0 left-0 w-full p-6 flex flex-col justify-between h-full pointer-events-none pb-20">
-                    {/* TOP BAR */}
-                    <div className="flex justify-between items-start">
-                        <div className="flex flex-col gap-3">
-                            <div className="bg-black/40 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/10 flex items-center gap-3">
-                                <Coins className="text-yellow-400 fill-current w-8 h-8 drop-shadow-lg" />
-                                <span className="text-3xl font-black text-white tracking-widest">{coins}</span>
-                            </div>
-                            <div className="bg-black/40 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/10 flex items-center gap-3">
-                                <Trophy className="text-blue-400 w-6 h-6" />
-                                <span className="text-2xl font-bold text-white tracking-wide">{score}m</span>
-                            </div>
-                        </div>
-
-                        {/* MISSIONS CARD */}
-                        <div className="bg-black/40 backdrop-blur-md p-4 rounded-2xl border border-white/10 w-48">
-                            <h4 className="text-[10px] font-black text-white/50 uppercase mb-2">Görevler</h4>
-                            <div className="space-y-2">
-                                {missions.map(m => (
-                                    <div key={m.id} className="text-white">
-                                        <div className="flex justify-between text-xs font-bold mb-1">
-                                            <span className={m.completed ? "text-green-400 line-through opacity-50" : "text-white"}>{m.desc}</span>
-                                            {m.completed && <CheckCircle2 className="w-3 h-3 text-green-400" />}
-                                        </div>
-                                        <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-                                            <div className="h-full bg-yellow-400 transition-all duration-300" style={{ width: `${(m.current / m.target) * 100}%` }} />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* POWERUP INDICATOR (CENTER) */}
-                    <AnimatePresence>
-                        {activePowerUp && (
-                            <motion.div
-                                initial={{ scale: 0, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                exit={{ scale: 0, opacity: 0 }}
-                                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center"
-                            >
-                                <div className="text-6xl animate-bounce drop-shadow-2xl">
-                                    {activePowerUp === 'magnet' ? '🧲' : activePowerUp === 'rocket' ? '🚀' : '🐌'}
-                                </div>
-                                <div className="text-white font-black text-2xl uppercase tracking-widest drop-shadow-md">
-                                    {activePowerUp === 'magnet' ? 'MAGNET!' : activePowerUp === 'rocket' ? 'BOOST!' : 'SNAIL!'}
-                                </div>
-                                <div className="w-32 h-2 bg-black/50 rounded-full mt-2 overflow-hidden border border-white/20">
-                                    <motion.div className="h-full bg-white" style={{ width: `${powerUpTime}%` }} />
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-
-                    {/* REACTION ICON (Left Side) */}
-                    {/* Visual feedback near the character could go here too */}
-                </div>
-            )}
-
-            {/* UI - GAMEOVER */}
-            {gameState === 'gameover' && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-900/90 backdrop-blur-md z-50">
-                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="bg-white p-6 rounded-full mb-6 relative">
-                        <AlertTriangle className="w-16 h-16 text-red-600" />
-                    </motion.div>
-                    <h2 className="text-5xl font-black text-white mb-2">ÇARPTIN!</h2>
-
-                    <div className="flex gap-4">
-                        <button onClick={() => { setGameState('playing'); setScore(0); setCoins(0); setMissions(generateMissions()); }} className="px-8 py-4 bg-white text-red-900 font-black text-xl rounded-xl shadow-lg hover:bg-gray-100 flex items-center gap-2">
-                            <RotateCcw className="w-6 h-6" /> TEKRAR
-                        </button>
-                        <button onClick={onClose} className="px-8 py-4 bg-black/40 text-white font-bold text-xl rounded-xl hover:bg-black/60 flex items-center gap-2">
-                            <Home className="w-6 h-6" /> MENÜ
-                        </button>
-                    </div>
-                </div>
-            )}
-        </div>
     );
 }

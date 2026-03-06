@@ -1,24 +1,32 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { ProductMockService, Product } from "@/services/mock/ProductMockService";
 import { InteractiveDesignCanvas } from "@/components/studio/InteractiveDesignCanvas";
+import { Preview3D } from "@/components/studio/Preview3D";
+import { ExportModal } from "@/components/studio/ExportModal";
 import { Loader2 } from "lucide-react";
+import { AnimatePresence } from "framer-motion";
 
 function StudioDesignContent() {
     const searchParams = useSearchParams();
     const productId = searchParams.get('productId');
     const colorId = searchParams.get('colorId');
-    const sizeId = searchParams.get('sizeId');
 
     const [product, setProduct] = useState<Product | null>(null);
     const [loading, setLoading] = useState(true);
 
+    // 3D Preview & Export state
+    const [show3D, setShow3D] = useState(false);
+    const [showExport, setShowExport] = useState(false);
+    const [designState, setDesignState] = useState<any>(null);
+    const canvasContainerRef = useRef<HTMLDivElement>(null);
+
     useEffect(() => {
         const loadProduct = async () => {
             setLoading(true);
-            const idToLoad = productId || 'tshirt-classic'; // Fallback to default
+            const idToLoad = productId || 'tshirt-classic';
             const p = await ProductMockService.getProductById(idToLoad);
             setProduct(p);
             setLoading(false);
@@ -32,18 +40,37 @@ function StudioDesignContent() {
 
     if (!product) return <div>Product Not Found</div>;
 
-    // Determine the correct image based on color selection
-    // Fallback to front image if no specific color override (mock logic)
-    // In a real app, we would map colorId to a specific image variant
     const productImage = product.images.front;
-    const selectedColor = product.colors.find(c => c.id === colorId)?.hex;
 
     return (
-        <div className="h-screen w-full bg-[#09090b] overflow-hidden">
+        <div ref={canvasContainerRef} className="h-screen w-full bg-[#09090b] overflow-hidden">
             <InteractiveDesignCanvas
                 productImage={productImage}
                 productName={product.name}
-                onSave={(state) => console.log("Saving design...", state)}
+                onSave={(state) => {
+                    setDesignState(state);
+                    setShowExport(true);
+                }}
+            />
+
+            {/* 3D Preview */}
+            <AnimatePresence>
+                {show3D && (
+                    <Preview3D
+                        productType={product.id?.includes('mug') ? 'mug' : product.id?.includes('tote') ? 'tote' : 'tshirt'}
+                        productImage={productImage}
+                        layers={designState?.layers || []}
+                        onClose={() => setShow3D(false)}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* Export Modal */}
+            <ExportModal
+                isOpen={showExport}
+                onClose={() => setShowExport(false)}
+                canvasRef={canvasContainerRef}
+                designData={designState || { layers: [], product: null }}
             />
         </div>
     );

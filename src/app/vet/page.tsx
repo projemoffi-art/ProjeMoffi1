@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { BottomNav } from "@/components/home/BottomNav";
 import { VaccineModal } from "@/components/vet/VaccineModal";
 import { MoffiAssistant } from "@/components/ai/MoffiAssistant";
 import { DentalCareModal } from "@/components/vet/DentalCareModal";
@@ -45,9 +44,30 @@ export default function VetPage() {
     const [selectedClinic, setSelectedClinic] = useState<VetClinic | null>(null);
 
     // APPOINTMENT FORM STATE
-    const [selectedDate, setSelectedDate] = useState<string>("Bugün");
+    const [selectedDate, setSelectedDate] = useState<string>("");
     const [selectedTime, setSelectedTime] = useState<string | null>(null);
-    const timeSlots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30'];
+    const allTimeSlots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30'];
+
+    // Generate real dates (today + next 4 days)
+    const dateOptions = Array.from({ length: 5 }, (_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() + i);
+        const dayNames = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+        const monthNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+        return {
+            key: d.toISOString().split('T')[0], // YYYY-MM-DD
+            label: i === 0 ? 'Bugün' : i === 1 ? 'Yarın' : `${d.getDate()} ${monthNames[d.getMonth()]}`,
+            dayName: dayNames[d.getDay()],
+        };
+    });
+
+    // Filter past time slots if today is selected
+    const timeSlots = allTimeSlots.filter(time => {
+        if (!selectedDate || selectedDate !== dateOptions[0]?.key) return true;
+        const now = new Date();
+        const [h, m] = time.split(':').map(Number);
+        return h > now.getHours() || (h === now.getHours() && m > now.getMinutes());
+    });
 
 
     const handleServiceClick = (action: string) => {
@@ -62,7 +82,7 @@ export default function VetPage() {
     const openAppointment = (clinic: VetClinic) => {
         setSelectedClinic(clinic);
         setActiveModal('appointment');
-        setSelectedDate("Bugün");
+        setSelectedDate(dateOptions[0]?.key || '');
         setSelectedTime(null);
     };
 
@@ -78,12 +98,6 @@ export default function VetPage() {
 
     return (
         <div className="min-h-screen bg-[#F8F9FC] dark:bg-black pb-32 font-sans relative">
-
-
-
-
-
-
 
             {/* HEADER */}
             <header className="sticky top-0 z-40 bg-white/90 dark:bg-[#1A1A1A]/90 backdrop-blur-xl border-b border-gray-100 dark:border-white/5 pb-4 transition-all">
@@ -226,7 +240,6 @@ export default function VetPage() {
                     </div>
                 </section>
             </main>
-            <BottomNav />
             <MoffiAssistant />
 
             {/* --- MODALS --- */}
@@ -253,15 +266,15 @@ export default function VetPage() {
                             <div className="mb-6">
                                 <label className="text-xs font-bold text-gray-500 uppercase mb-2 block tracking-wider">Tarih Seç</label>
                                 <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                                    {['Bugün', 'Yarın', '14 Ara', '15 Ara', '16 Ara'].map((day, i) => (
+                                    {dateOptions.map((day) => (
                                         <button
-                                            key={day}
-                                            onClick={() => setSelectedDate(day)}
-                                            className={cn("px-4 py-3 rounded-xl min-w-[80px] text-center border transition-all relative overflow-hidden", selectedDate === day ? "bg-[#5B4D9D] text-white border-[#5B4D9D] shadow-lg shadow-purple-500/30" : "border-gray-200 dark:border-white/10 text-gray-500 hover:bg-gray-50")}
+                                            key={day.key}
+                                            onClick={() => { setSelectedDate(day.key); setSelectedTime(null); }}
+                                            className={cn("px-4 py-3 rounded-xl min-w-[80px] text-center border transition-all relative overflow-hidden", selectedDate === day.key ? "bg-[#5B4D9D] text-white border-[#5B4D9D] shadow-lg shadow-purple-500/30" : "border-gray-200 dark:border-white/10 text-gray-500 hover:bg-gray-50")}
                                         >
-                                            <div className="text-xs font-medium opacity-80">{i === 0 ? 'Pzt' : i === 1 ? 'Sal' : i === 2 ? 'Çar' : 'Per'}</div>
-                                            <div className="text-sm font-bold">{day}</div>
-                                            {selectedDate === day && <motion.div layoutId="activeDate" className="absolute inset-0 bg-white/10" />}
+                                            <div className="text-xs font-medium opacity-80">{day.dayName}</div>
+                                            <div className="text-sm font-bold">{day.label}</div>
+                                            {selectedDate === day.key && <motion.div layoutId="activeDate" className="absolute inset-0 bg-white/10" />}
                                         </button>
                                     ))}
                                 </div>

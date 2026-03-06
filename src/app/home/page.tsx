@@ -4,7 +4,7 @@ import React from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import {
-    Sparkles, ChevronRight, Menu, PawPrint, Gamepad2, Activity, Share2, Layers, Palette
+    Sparkles, ChevronRight, Menu, PawPrint, Gamepad2, Activity, Share2, Layers, Palette, ShoppingBag
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -48,7 +48,7 @@ const StudioHero = () => {
             <motion.div
                 style={{ opacity }}
                 className="relative z-10 w-full max-w-sm aspect-[4/5] bg-white/10 dark:bg-black/20 backdrop-blur-2xl rounded-[3rem] border border-white/40 shadow-2xl flex flex-col items-center justify-between p-6 group cursor-pointer hover:scale-[1.02] transition-transform duration-500"
-                onClick={() => router.push('/studio-sandbox-3')}
+                onClick={() => router.push('/studio')}
             >
                 {/* Floating Elements inside Glass - Fixed with Palette Icon */}
                 <div className="absolute top-10 right-[-20px] w-16 h-16 bg-white/30 backdrop-blur-md rounded-2xl shadow-lg animate-bounce duration-[3000ms] flex items-center justify-center">
@@ -111,8 +111,8 @@ const PriorityGrid = () => {
                 </div>
             </motion.div>
 
-            {/* ROW 2: GAME & VET (Compact Split) - SCANDINAVIAN / ARCTIC SERIES */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* ROW 2: GAME, VET & PETSHOP (Compact Split) */}
+            <div className="grid grid-cols-3 gap-3">
                 {/* Game - Arctic White/Ice - WIRED TO /game */}
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
@@ -123,14 +123,10 @@ const PriorityGrid = () => {
                     onClick={() => router.push('/game')}
                     className="h-28 relative bg-[#F8FAFC] rounded-[1.8rem] p-4 flex flex-col justify-between overflow-hidden cursor-pointer group shadow-lg shadow-slate-200/50 border border-white/60"
                 >
-                    {/* Arctic Gradient */}
                     <div className="absolute inset-0 bg-gradient-to-br from-[#F0F9FF] to-[#E0F2FE] opacity-100" />
-
-                    {/* Frozen Sheen/Ice Effect */}
                     <div className="absolute -right-6 -top-6 w-32 h-32 rounded-full bg-white/40 blur-2xl" />
                     <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent opacity-50 mix-blend-overlay" />
 
-                    {/* Content */}
                     <div className="relative z-10 flex justify-between items-start">
                         <Gamepad2 className="w-5 h-5 text-slate-600 drop-shadow-sm" />
                     </div>
@@ -141,7 +137,7 @@ const PriorityGrid = () => {
                     </div>
                 </motion.div>
 
-                {/* Vet - Arctic White/Ice (Identical Style) - WIRED TO /vet */}
+                {/* Vet - Arctic White/Ice - WIRED TO /vet */}
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     whileInView={{ opacity: 1, scale: 1 }}
@@ -151,10 +147,7 @@ const PriorityGrid = () => {
                     onClick={() => router.push('/vet')}
                     className="h-28 relative bg-[#F8FAFC] rounded-[1.8rem] p-4 flex flex-col justify-between overflow-hidden cursor-pointer group shadow-lg shadow-slate-200/50 border border-white/60"
                 >
-                    {/* Arctic Gradient */}
                     <div className="absolute inset-0 bg-gradient-to-br from-[#F0F9FF] to-[#E0F2FE] opacity-100" />
-
-                    {/* Frozen Sheen/Ice Effect */}
                     <div className="absolute -right-8 -bottom-8 w-32 h-32 rounded-full bg-white/40 blur-2xl pointer-events-none" />
                     <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent opacity-50 mix-blend-overlay" />
 
@@ -169,43 +162,38 @@ const PriorityGrid = () => {
                         <p className="text-[10px] text-slate-500 font-medium tracking-wide mt-1">Uzmanlara ulaş.</p>
                     </div>
                 </motion.div>
+
+                {/* PetShop - Arctic White/Ice - WIRED TO /petshop */}
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.3 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.96 }}
+                    onClick={() => router.push('/petshop')}
+                    className="h-28 relative bg-[#F8FAFC] rounded-[1.8rem] p-4 flex flex-col justify-between overflow-hidden cursor-pointer group shadow-lg shadow-slate-200/50 border border-white/60"
+                >
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#FFF7ED] to-[#FFEDD5] opacity-100" />
+                    <div className="absolute -left-6 -top-6 w-32 h-32 rounded-full bg-orange-200/30 blur-2xl" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent opacity-50 mix-blend-overlay" />
+
+                    <div className="relative z-10 flex justify-between items-start">
+                        <div className="p-1.5 bg-white/40 backdrop-blur-md rounded-lg text-orange-600 shadow-sm border border-white/20">
+                            <ShoppingBag className="w-4 h-4 text-orange-700" strokeWidth={2.5} />
+                        </div>
+                    </div>
+
+                    <div className="relative z-10">
+                        <h3 className="text-lg font-bold text-slate-800 mb-0 leading-none">PetShop</h3>
+                        <p className="text-[10px] text-slate-500 font-medium tracking-wide mt-1">Alışveriş yap.</p>
+                    </div>
+                </motion.div>
             </div>
         </section>
     );
 };
 
-// 4. BOTTOM NAV (Glass & Social Icon Fixed)
-const GlassNav = () => {
-    const router = useRouter();
 
-    return (
-        <div className="fixed bottom-8 left-6 right-6 h-20 bg-black/80 dark:bg-white/10 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl border border-white/10 flex items-center justify-between px-8 z-50">
-            {/* Social Icon (Fixed Place) */}
-            <button className="flex flex-col items-center gap-1 text-white/50 hover:text-white transition-colors">
-                <Share2 className="w-6 h-6" />
-            </button>
-
-            {/* Center: Quick Action (Floating Sparkle) - Wired to /community */}
-            <div className="absolute left-1/2 -translate-x-1/2 -top-6">
-                <button
-                    onClick={() => router.push('/community')}
-                    className="w-16 h-16 bg-[#121212] text-white rounded-full flex items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.3)] hover:scale-110 active:scale-95 transition-all border border-white/10 relative overflow-hidden group"
-                >
-                    {/* Shine Effect */}
-                    <div className="absolute inset-0 bg-gradient-to-tr from-white/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-                    {/* Icon */}
-                    <Sparkles className="w-7 h-7 text-white/90" strokeWidth={1.5} />
-                </button>
-            </div>
-
-            {/* Profile / Menu */}
-            <button className="flex flex-col items-center gap-1 text-white/50 hover:text-white transition-colors">
-                <Layers className="w-6 h-6" />
-            </button>
-        </div>
-    );
-};
 
 export default function StudioFirstPage() {
     return (
@@ -213,7 +201,6 @@ export default function StudioFirstPage() {
             <StateBar />
             <StudioHero />
             <PriorityGrid />
-            <GlassNav />
         </main>
     );
 }

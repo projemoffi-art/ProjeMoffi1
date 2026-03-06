@@ -119,3 +119,98 @@ export interface UserVaccineRecord {
     status: 'completed' | 'pending' | 'overdue' | 'snoozed';
     vetName?: string;
 }
+
+// --- PETSHOP ---
+export type ShopCategory = 'food' | 'snack' | 'toy' | 'care' | 'accessory';
+
+export interface ShopProduct {
+    id: string;
+    name: string;
+    brand: string;
+    price: number;
+    oldPrice?: number;
+    rating: number;
+    reviews: number;
+    image: string;
+    category: ShopCategory;
+    tag?: string;
+    inStock: boolean;
+    stockCount?: number;
+    description?: string;
+}
+
+export interface ShopCartItem {
+    productId: string;
+    quantity: number;
+    addedAt: string; // ISO timestamp
+}
+
+export type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';
+
+export interface ShopOrder {
+    id: string;
+    userId: string;
+    items: Array<{ product: ShopProduct; quantity: number }>;
+    totalPrice: number;
+    discountCode?: string;
+    discountAmount?: number;
+    shippingAddress: string;
+    status: OrderStatus;
+    createdAt: string;
+    updatedAt: string;
+    trackingNumber?: string;
+}
+
+// --- WALK ---
+export interface WalkCheckpoint {
+    lat: number;
+    lng: number;
+    timestamp: string;
+}
+
+export interface WalkSession {
+    id: string;
+    userId: string;
+    petId: string;
+    startTime: string;
+    endTime?: string;
+    distanceKm: number;
+    durationMinutes: number;
+    route: WalkCheckpoint[];
+    caloriesBurned?: number;
+    weather?: WeatherState;
+    mood?: 'happy' | 'tired' | 'excited' | 'calm';
+    notes?: string;
+}
+
+export interface WalkStats {
+    totalWalks: number;
+    totalDistanceKm: number;
+    totalDurationMinutes: number;
+    averageDistanceKm: number;
+    longestWalkKm: number;
+    currentStreak: number; // consecutive days
+    bestStreak: number;
+}
+
+// --- GAME ---
+export interface GameScore {
+    id: string;
+    userId: string;
+    petId: string;
+    score: number;
+    coins: number;
+    distance: number;
+    missionsCompleted: number;
+    playedAt: string;
+    duration: number; // seconds
+}
+
+export interface LeaderboardEntry {
+    rank: number;
+    userId: string;
+    username: string;
+    avatar: string;
+    highScore: number;
+    totalCoins: number;
+}

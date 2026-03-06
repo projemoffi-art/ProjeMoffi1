@@ -8,6 +8,9 @@ import { PetProvider } from "@/context/PetContext";
 
 import { FloatingControls } from "@/components/common/FloatingControls";
 import { GlobalAIWidget } from "@/components/ai/GlobalAIWidget";
+import { BottomNav } from "@/components/home/BottomNav";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ClientAuthWrapper } from "@/components/auth/ClientAuthWrapper";
 
 const poppins = Poppins({
   weight: ['400', '600', '700', '900'],
@@ -39,9 +42,16 @@ export default function RootLayout({
           <SocialProvider>
             <AuthProvider>
               <ShopProvider>
-                {children}
-                <FloatingControls />
-                <GlobalAIWidget />
+                <ClientAuthWrapper>
+                  <div className="pb-24">
+                    <ErrorBoundary>
+                      {children}
+                    </ErrorBoundary>
+                  </div>
+                  <BottomNav />
+                  <FloatingControls />
+                  <GlobalAIWidget />
+                </ClientAuthWrapper>
               </ShopProvider>
             </AuthProvider>
           </SocialProvider>

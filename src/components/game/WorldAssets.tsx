@@ -1,151 +1,198 @@
 import React from 'react';
-import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 
-// --- COLORS ---
-const C_ASPHALT = '#334155';
-const C_STRIPE = '#ffffff';
-const C_SIDEWALK = '#94a3b8';
-const C_GRASS = '#4ade80';
-const C_BARRIER_RED = '#ef4444';
-const C_BARRIER_WHITE = '#f8fafc';
-const C_WOOD = '#78350f';
-const C_LEAF = '#15803d';
+// --- COLORS (No external deps) ---
+const C_DIRT = '#8B4513';
+const C_PATH = '#A0522D';
+const C_GRASS = '#228B22';
+const C_GLIGHT = '#32CD32';
+const C_WOOD = '#5D4037';
+const C_LEAF = '#1B5E20';
+const C_MUSH = '#E53935';
 
-// --- PRIMITIVES ---
-
+// =====================================================
+// ROAD SEGMENT
+// =====================================================
 export function RoadSegment({ length = 100, zPos = 0 }: { length: number, zPos: number }) {
-    // Tiling texture logic could go here
     return (
         <group position={[0, 0, zPos]}>
-            {/* Main Road - 3 Lanes = 7.5 wide approx */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-                <planeGeometry args={[10, length]} />
-                <meshStandardMaterial color={C_ASPHALT} roughness={0.9} />
+                <planeGeometry args={[8, length]} />
+                <meshStandardMaterial color={C_PATH} roughness={1} />
             </mesh>
-
-            {/* Lane Markers */}
-            {[-2.5, 2.5].map((x, i) => (
-                <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[x / 2, 0.01, 0]}>
-                    <planeGeometry args={[0.2, length]} />
-                    <meshStandardMaterial color={C_ASPHALT} />
-                    {/* In real shader we'd do dashed lines. Simple solid line implies lane division */}
+            {[-4, 4].map((x, i) => (
+                <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.01, 0]}>
+                    <planeGeometry args={[1, length]} />
+                    <meshStandardMaterial color={C_DIRT} />
                 </mesh>
             ))}
-
-            {/* Center Dashed Line (Simulated by multiple small meshes or texture. For performance, Texture is best. For this demo, we skip or do 1 solid line) */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[1.25, 0.02, 0]}>
-                <planeGeometry args={[0.1, length]} />
-                <meshStandardMaterial color={C_STRIPE} opacity={0.5} transparent />
-            </mesh>
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-1.25, 0.02, 0]}>
-                <planeGeometry args={[0.1, length]} />
-                <meshStandardMaterial color={C_STRIPE} opacity={0.5} transparent />
-            </mesh>
-
-            {/* CURBS & SIDEWALK */}
-            <mesh position={[-6, 0.1, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-                <planeGeometry args={[4, length]} />
-                <meshStandardMaterial color={C_SIDEWALK} />
-            </mesh>
-            <mesh position={[6, 0.1, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-                <planeGeometry args={[4, length]} />
-                <meshStandardMaterial color={C_SIDEWALK} />
-            </mesh>
-
-            {/* GRASS EXTENT */}
-            <mesh position={[-15, -0.1, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-                <planeGeometry args={[14, length]} />
-                <meshStandardMaterial color={C_GRASS} />
-            </mesh>
-            <mesh position={[15, -0.1, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-                <planeGeometry args={[14, length]} />
-                <meshStandardMaterial color={C_GRASS} />
-            </mesh>
+            {/* Lane guides */}
+            {[-1.25, 1.25].map((x, i) => (
+                <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.02, 0]}>
+                    <planeGeometry args={[0.06, length]} />
+                    <meshStandardMaterial color={C_GLIGHT} opacity={0.25} transparent />
+                </mesh>
+            ))}
+            {/* Side grass */}
+            {[-14, 14].map((x, i) => (
+                <mesh key={i} position={[x, -0.05, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+                    <planeGeometry args={[20, length]} />
+                    <meshStandardMaterial color={C_GRASS} />
+                </mesh>
+            ))}
         </group>
     );
 }
 
+// =====================================================
+// OBSTACLES
+// =====================================================
+
+/** LOG — Jump Over (BARRIER_LOW) */
 export function BarrierLow({ position }: { position: [number, number, number] }) {
     return (
         <group position={position}>
-            {/* Legs */}
-            <mesh position={[-1, 0.4, 0]} castShadow><boxGeometry args={[0.2, 0.8, 0.2]} /><meshStandardMaterial color="gray" /></mesh>
-            <mesh position={[1, 0.4, 0]} castShadow><boxGeometry args={[0.2, 0.8, 0.2]} /><meshStandardMaterial color="gray" /></mesh>
-            {/* Bar */}
-            <mesh position={[0, 0.7, 0]} castShadow>
-                <boxGeometry args={[2.2, 0.3, 0.1]} />
-                <meshStandardMaterial color={C_BARRIER_RED} />
+            <mesh rotation={[0, 0, Math.PI / 2]} castShadow position={[0, 0.4, 0]}>
+                <cylinderGeometry args={[0.38, 0.38, 2.6, 8]} />
+                <meshStandardMaterial color={C_WOOD} roughness={0.9} />
             </mesh>
-            <mesh position={[0.5, 0.7, 0.01]}><boxGeometry args={[0.3, 0.3, 0.1]} /><meshStandardMaterial color={C_BARRIER_WHITE} /></mesh>
-            <mesh position={[-0.5, 0.7, 0.01]}><boxGeometry args={[0.3, 0.3, 0.1]} /><meshStandardMaterial color={C_BARRIER_WHITE} /></mesh>
+            {/* Moss patch */}
+            <mesh position={[0.4, 0.75, 0.05]} scale={[0.6, 0.12, 0.5]}>
+                <sphereGeometry args={[0.5]} />
+                <meshStandardMaterial color={C_GLIGHT} />
+            </mesh>
         </group>
     );
 }
 
+/** HANGING BRANCH — Slide Under (BARRIER_HIGH) */
 export function BarrierHigh({ position }: { position: [number, number, number] }) {
     return (
         <group position={position}>
-            {/* Solid Billboard Block - Must slide under? No, high barrier usually means Jump or Dodge, 
-                Wait, user said HighBarricade = Slideable. Usually requires 'Arch' shape. 
-                Let's make it a 'Road Work Sign' on legs with gap below. */}
-            <mesh position={[-0.8, 1.5, 0]} castShadow><cylinderGeometry args={[0.05, 0.05, 3]} /><meshStandardMaterial color="gray" /></mesh>
-            <mesh position={[0.8, 1.5, 0]} castShadow><cylinderGeometry args={[0.05, 0.05, 3]} /><meshStandardMaterial color="gray" /></mesh>
-
-            {/* The Sign Box */}
-            <mesh position={[0, 2, 0]} castShadow>
-                <boxGeometry args={[2, 1.5, 0.2]} />
-                <meshStandardMaterial color="#fcd34d" /> {/* Yellow Warning */}
+            <mesh position={[-1.6, 1.5, 0]} castShadow>
+                <boxGeometry args={[0.3, 3, 0.3]} />
+                <meshStandardMaterial color={C_WOOD} />
             </mesh>
-            <mesh position={[0, 2, 0.11]} rotation={[0, 0, Math.PI / 4]}>
-                <boxGeometry args={[1, 1, 0.01]} />
-                <meshBasicMaterial color="black" />
+            <mesh position={[0, 2.0, 0]} castShadow>
+                <boxGeometry args={[3.6, 0.35, 0.7]} />
+                <meshStandardMaterial color={C_WOOD} />
             </mesh>
-            {/* Clearance Check: Board starts at Y=1.25 (2 - 0.75). Player slide height is ~0.5. It works. */}
+            {[-1, 0, 1].map((x, i) => (
+                <mesh key={i} position={[x, 1.65, 0.15]} castShadow>
+                    <dodecahedronGeometry args={[0.38]} />
+                    <meshStandardMaterial color={C_LEAF} />
+                </mesh>
+            ))}
         </group>
     );
 }
 
+/** MUSHROOM — Dodge (BUSH) */
 export function Bush({ position }: { position: [number, number, number] }) {
     return (
         <group position={position}>
-            <mesh position={[0, 0.5, 0]} castShadow>
-                <dodecahedronGeometry args={[0.6]} />
-                <meshStandardMaterial color={C_LEAF} />
+            <mesh position={[0, 0.4, 0]} castShadow>
+                <cylinderGeometry args={[0.28, 0.38, 0.8, 8]} />
+                <meshStandardMaterial color="#F5F5DC" />
             </mesh>
-            <mesh position={[0.4, 0.3, 0.3]} castShadow>
-                <dodecahedronGeometry args={[0.4]} />
-                <meshStandardMaterial color={C_LEAF} />
+            <mesh position={[0, 0.85, 0]} castShadow>
+                <sphereGeometry args={[0.82, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+                <meshStandardMaterial color={C_MUSH} />
             </mesh>
-            <mesh position={[-0.3, 0.4, -0.2]} castShadow>
-                <dodecahedronGeometry args={[0.5]} />
-                <meshStandardMaterial color={C_LEAF} />
-            </mesh>
+            {[0.35, -0.35].flatMap((x) => [0.35, -0.35].map((z, j) => (
+                <mesh key={`${x}-${j}`} position={[x, 1.25, z]} rotation={[Math.PI / 2, 0, 0]}>
+                    <circleGeometry args={[0.13]} />
+                    <meshBasicMaterial color="white" />
+                </mesh>
+            )))}
         </group>
     );
 }
 
+/** TREE STUMP — Dodge (TRAFFIC_CONE) */
 export function TrafficCone({ position }: { position: [number, number, number] }) {
     return (
         <group position={position}>
-            <mesh position={[0, 0.3, 0]} castShadow>
-                <cylinderGeometry args={[0.02, 0.2, 0.6, 16]} />
-                <meshStandardMaterial color="#f97316" />
+            <mesh position={[0, 0.45, 0]} castShadow>
+                <cylinderGeometry args={[0.58, 0.7, 0.9, 8]} />
+                <meshStandardMaterial color={C_WOOD} roughness={0.9} />
             </mesh>
-            <mesh position={[0, 0.05, 0]}>
-                <boxGeometry args={[0.4, 0.1, 0.4]} />
-                <meshStandardMaterial color="#f97316" />
+            <mesh position={[0, 0.92, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <circleGeometry args={[0.52]} />
+                <meshStandardMaterial color="#D2B48C" />
             </mesh>
         </group>
     );
 }
 
-// Side Scenery
-export function TreeSimple({ position }: { position: [number, number, number] }) {
+/** DOUBLE LANE BLOCK — 2 lane blocker (DOUBLE_LANE) — only center escape */
+export function DoubleLaneBarrier({ position }: { position: [number, number, number] }) {
     return (
-        <group position={position} scale={1.5 + Math.random()}>
-            <mesh position={[0, 1, 0]} castShadow><cylinderGeometry args={[0.2, 0.3, 2, 6]} /><meshStandardMaterial color={C_WOOD} /></mesh>
-            <mesh position={[0, 2.5, 0]} castShadow><dodecahedronGeometry args={[1.2]} /><meshStandardMaterial color={C_LEAF} /></mesh>
+        <group position={position}>
+            {/* Left obstacle */}
+            <group position={[-2.5, 0, 0]}>
+                <mesh position={[0, 0.6, 0]} castShadow>
+                    <boxGeometry args={[1.2, 1.2, 0.6]} />
+                    <meshStandardMaterial color="#4a7c59" />
+                </mesh>
+            </group>
+            {/* Right obstacle */}
+            <group position={[2.5, 0, 0]}>
+                <mesh position={[0, 0.6, 0]} castShadow>
+                    <boxGeometry args={[1.2, 1.2, 0.6]} />
+                    <meshStandardMaterial color="#4a7c59" />
+                </mesh>
+            </group>
+        </group>
+    );
+}
+
+// =====================================================
+// POWER-UP VISUALS
+// =====================================================
+
+export function PowerUpOrb({ position, color, emissive }: { position: [number, number, number], color: string, emissive: string }) {
+    return (
+        <group position={position}>
+            <mesh castShadow>
+                <octahedronGeometry args={[0.55]} />
+                <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={1.2} />
+            </mesh>
+            {/* Inner glow core */}
+            <mesh>
+                <sphereGeometry args={[0.3, 12, 12]} />
+                <meshBasicMaterial color={emissive} transparent opacity={0.4} />
+            </mesh>
+        </group>
+    );
+}
+
+export const POWERUP_COLORS: Record<string, { color: string; emissive: string }> = {
+    MAGNET: { color: '#db2777', emissive: '#db2777' },
+    ROCKET: { color: '#ef4444', emissive: '#ef4444' },
+    SNAIL: { color: '#10b981', emissive: '#10b981' },
+    SHIELD: { color: '#60a5fa', emissive: '#3b82f6' },
+    MULTIPLIER: { color: '#f59e0b', emissive: '#d97706' },
+};
+
+// =====================================================
+// SCENERY
+// =====================================================
+
+export function TreeSimple({ position }: { position: [number, number, number] }) {
+    const scale = 1.4 + Math.random() * 1.8;
+    return (
+        <group position={position} scale={scale}>
+            <mesh position={[0, 1, 0]} castShadow>
+                <cylinderGeometry args={[0.2, 0.32, 2, 6]} />
+                <meshStandardMaterial color={C_WOOD} />
+            </mesh>
+            {[1.8, 3.0, 4.0].map((y, i) => (
+                <mesh key={i} position={[0, y, 0]} castShadow>
+                    <coneGeometry args={[1.4 - i * 0.3, 1.6, 7]} />
+                    <meshStandardMaterial color={C_LEAF} roughness={0.8} />
+                </mesh>
+            ))}
         </group>
     );
 }

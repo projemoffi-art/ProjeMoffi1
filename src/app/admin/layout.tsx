@@ -4,17 +4,19 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { LayoutDashboard, Megaphone, Map, BarChart3, Store, Settings, LogOut, Shield, Menu, X, ChevronRight, ChevronLeft } from "lucide-react";
+import { LayoutDashboard, Megaphone, Map, BarChart3, Store, Settings, LogOut, Shield, Menu, X, ChevronRight, ChevronLeft, Building2, Wallet, AlertTriangle, Sliders } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 const MENU_ITEMS = [
     { title: "Genel Bakış", icon: LayoutDashboard, path: "/admin" },
+    { title: "İşletme Yönetimi", icon: Building2, path: "/admin/businesses" },
+    { title: "Platform Finans", icon: Wallet, path: "/admin/platform-finance" },
+    { title: "Moderasyon", icon: AlertTriangle, path: "/admin/moderation" },
     { title: "Kampanyalar", icon: Megaphone, path: "/admin/campaigns" },
     { title: "Walk Quest", icon: Map, path: "/admin/quests" },
     { title: "Analizler", icon: BarChart3, path: "/admin/analytics" },
-    { title: "Mağaza Profili", icon: Store, path: "/admin/profile" },
-    { title: "Ayarlar", icon: Settings, path: "/admin/settings" },
+    { title: "Platform Ayarları", icon: Sliders, path: "/admin/platform-settings" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -54,13 +56,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             )}>
                 {/* Logo Area */}
                 <div className={cn("flex items-center gap-3 p-6", collapsed && "lg:justify-center lg:p-4")}>
-                    <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-200 flex-shrink-0">
-                        M
+                    <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-red-200 flex-shrink-0">
+                        ⚡
                     </div>
                     {(!collapsed || (typeof window !== 'undefined' && window.innerWidth < 1024)) && (
                         <div className={cn("flex flex-col", collapsed && "lg:hidden")}>
-                            <span className="font-bold text-gray-900 text-lg leading-none">MoffiBusiness</span>
-                            <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mt-1">Partner Panel</span>
+                            <span className="font-bold text-gray-900 text-lg leading-none">MoffiAdmin</span>
+                            <span className="text-[10px] font-bold text-red-500 uppercase tracking-wider mt-1">Super Admin</span>
                         </div>
                     )}
                 </div>
@@ -138,7 +140,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         <button onClick={() => setSidebarOpen(true)}>
                             <Menu className="w-6 h-6 text-gray-600" />
                         </button>
-                        <span className="font-bold text-gray-900">MoffiBusiness</span>
+                        <span className="font-bold text-gray-900">MoffiAdmin</span>
                     </div>
                 </header>
 

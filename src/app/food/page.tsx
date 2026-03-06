@@ -6,7 +6,6 @@ import {
     ChevronLeft, Settings, Plus, Utensils,
     Flame, Droplets, ScanBarcode, Share2, Award, Zap, ArrowRight
 } from "lucide-react";
-import { BottomNav } from "@/components/home/BottomNav";
 import { NutritionRing } from "@/components/food/NutritionRing";
 import { WaterTracker } from "@/components/food/WaterTracker";
 import { MealLoggerModal } from "@/components/food/MealLoggerModal";
@@ -35,7 +34,9 @@ export default function FoodPage() {
     const [smartMeals, setSmartMeals] = useState<SmartMealProps[]>([
         {
             id: 'm1', type: 'Sabah', status: 'done',
-            suggestion: { foodName: "ProPlan Somon", amount: 150, calories: 540 }
+            suggestion: { foodName: "ProPlan Somon", amount: 150, calories: 540 },
+            onComplete: () => { },
+            onSkip: () => { }
         },
         {
             id: 'm2', type: 'Akşam', status: 'pending',
@@ -44,7 +45,9 @@ export default function FoodPage() {
                 amount: isHighActivity ? 180 : 150,
                 calories: isHighActivity ? 650 : 540,
                 reason: isHighActivity ? "Bugün çok koştu, ekstra protein! ⚡" : undefined
-            }
+            },
+            onComplete: () => { },
+            onSkip: () => { }
         },
         {
             id: 'm3', type: 'Ödül', status: 'pending',
@@ -53,7 +56,9 @@ export default function FoodPage() {
                 amount: 1,
                 calories: 80,
                 reason: "Diş sağlığı için önerilen"
-            }
+            },
+            onComplete: () => { },
+            onSkip: () => { }
         }
     ]);
 
@@ -210,8 +215,6 @@ export default function FoodPage() {
                     <WaterTracker />
                 </section>
             </main>
-
-            <BottomNav />
 
             <MealLoggerModal
                 isOpen={isMealModalOpen}

@@ -11,7 +11,6 @@ import {
     Users, Activity, Plus, Footprints, Utensils
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BottomNav } from "@/components/home/BottomNav";
 import { useSocial } from "@/context/SocialContext";
 import { useAuth } from "@/context/AuthContext";
 import EditProfileModal from "@/components/profile/EditProfileModal";
@@ -431,8 +430,6 @@ export default function ProfilePage() {
 
                 </AnimatePresence>
             </main>
-
-            <BottomNav active="profile" />
 
             {/* EDIT PROFILE MODAL */}
             <EditProfileModal

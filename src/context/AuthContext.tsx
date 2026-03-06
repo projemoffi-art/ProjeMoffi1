@@ -1,8 +1,10 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 
-export type UserRole = 'user' | 'admin';
+export type UserRole = 'user' | 'business' | 'admin';
+export type BusinessType = 'petshop' | 'vet' | 'grooming' | 'trainer' | 'shelter';
 
 export interface User {
     id: string;
@@ -10,13 +12,19 @@ export interface User {
     email: string;
     role: UserRole;
     avatar?: string;
+    cover_photo?: string;
     bio?: string;
     joinedAt: string;
     stats: {
         posts: number;
         followers: number;
         following: number;
-    }
+    };
+    // Business fields
+    businessType?: BusinessType;
+    businessId?: string;
+    businessName?: string;
+    businessApproved?: boolean;
 }
 
 interface AuthContextType {
@@ -29,6 +37,17 @@ interface AuthContextType {
     updateProfile: (data: Partial<User>) => void;
     getAllUsers: () => User[];
     deleteUser: (id: string) => void;
+    registerBusiness: (data: {
+        email: string;
+        password: string;
+        businessName: string;
+        businessType: BusinessType;
+        ownerName: string;
+        phone: string;
+        address: string;
+        taxId: string;
+        iban: string;
+    }) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,232 +56,164 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Initial load from storage & Admin Seeding
+    // Map Supabase User to our Custom App User
+    const mapSupabaseUser = (sbUser: any): User => {
+        return {
+            id: sbUser.id,
+            username: sbUser.user_metadata?.username || sbUser.email?.split('@')[0] || "User",
+            email: sbUser.email || "",
+            role: (sbUser.user_metadata?.role as UserRole) || 'user',
+            avatar: sbUser.user_metadata?.avatar_url || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=100", // Default Mochi avatar
+            bio: sbUser.user_metadata?.bio || "Yeni Moffi Üyesi ✨",
+            joinedAt: sbUser.created_at || new Date().toISOString(),
+            stats: { posts: 0, followers: 0, following: 0 } // Default stats
+        };
+    };
+
     useEffect(() => {
-        const adminEmail = 'moffidestek@gmail.com';
-        const adminPass = 'admin';
-
-        // 1. Get current data
-        let usersStore = JSON.parse(localStorage.getItem('moffipet_users') || '[]');
-
-        // 2. Check if admin exists
-        const adminIndex = usersStore.findIndex((u: any) => u.email.toLowerCase() === adminEmail);
-
-        if (adminIndex >= 0) {
-            // User exists - FORCE UPDATE ROLE to admin if not already
-            if (usersStore[adminIndex].role !== 'admin' || usersStore[adminIndex].password !== adminPass) {
-                console.log("Admin account found but needed updates. Fixing...");
-                usersStore[adminIndex].role = 'admin';
-                usersStore[adminIndex].password = adminPass; // Ensure password is correct
-                localStorage.setItem('moffipet_users', JSON.stringify(usersStore));
+        // Initial Fetch
+        const fetchSession = async () => {
+            const { data: { session }, error } = await supabase.auth.getSession();
+            if (error) {
+                console.error("Auth Fetch Error:", error.message);
+            }
+            if (session?.user) {
+                setUser(mapSupabaseUser(session.user));
             } else {
-                console.log("Admin account verified.");
+                setUser(null);
             }
-        } else {
-            // User does not exist - SEED IT
-            console.warn("Admin account missing! Seeding now...");
-            const adminUser = {
-                id: 'admin_master_v2',
-                username: 'Moffi Destek',
-                email: adminEmail,
-                password: adminPass,
-                role: 'admin',
-                avatar: undefined,
-                bio: "Official Support & Admin",
-                joinedAt: new Date().toISOString(),
-                stats: { posts: 999, followers: 999999, following: 0 }
-            };
-            usersStore = [...usersStore, adminUser];
-            localStorage.setItem('moffipet_users', JSON.stringify(usersStore));
-            console.log("Admin account seeded successfully.");
-        }
+            setIsLoading(false);
+        };
 
-        // 3. Load Session & FIX STALE DATA
-        const storedUserStr = localStorage.getItem('moffipet_current_user');
-        if (storedUserStr) {
-            try {
-                let sessionUser = JSON.parse(storedUserStr);
+        fetchSession();
 
-                // CRITICAL FIX: If this is the admin email, FORCE the role in the session too
-                if (sessionUser.email.toLowerCase() === adminEmail && sessionUser.role !== 'admin') {
-                    console.log("Fixing stale admin session role...");
-                    sessionUser.role = 'admin';
-                    localStorage.setItem('moffipet_current_user', JSON.stringify(sessionUser));
+        // Listen for Auth Changes (Login, Logout)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+            async (_event, session) => {
+                if (session?.user) {
+                    setUser(mapSupabaseUser(session.user));
+                } else {
+                    setUser(null);
                 }
-
-                setUser(sessionUser);
-            } catch (e) {
-                console.error("Failed to parse user session", e);
+                setIsLoading(false);
             }
-        }
-        setIsLoading(false);
+        );
+
+        return () => subscription.unsubscribe();
     }, []);
 
     const login = async (email: string, password: string) => {
-        await new Promise(resolve => setTimeout(resolve, 800));
-
-        // --- GOD MODE FIX: FORCE ADMIN LOGIN ---
-        // This bypasses any corrupted localStorage state.
-        if (email.toLowerCase() === 'moffidestek@gmail.com' && password === 'admin') {
-            console.log("God Mode: Forcefully logging in Admin.");
-
-            // 1. Create the perfect admin object
-            const adminUserStore = {
-                id: 'admin_master_v2',
-                username: 'Moffi Destek',
-                email: 'moffidestek@gmail.com',
-                password: 'admin',
-                role: 'admin',
-                avatar: undefined,
-                bio: "Official Support & Admin",
-                joinedAt: new Date().toISOString(),
-                stats: { posts: 999, followers: 999999, following: 0 }
+        // --- LOCAL DEV RATE LIMIT BYPASS ---
+        if (email.endsWith('.test')) {
+            const mockUser: User = {
+                id: 'mock_test_user',
+                email: email,
+                username: email.split('@')[0],
+                role: 'user',
+                joinedAt: '2024 (Beta)',
+                stats: { posts: 0, followers: 0, following: 0 }
             };
-
-            // 2. Ensure it exists in storage (Heal the storage if needed)
-            const usersStore = JSON.parse(localStorage.getItem('moffipet_users') || '[]');
-            const existingIndex = usersStore.findIndex((u: any) => u.email.toLowerCase() === email.toLowerCase());
-
-            if (existingIndex >= 0) {
-                usersStore[existingIndex] = adminUserStore; // Overwrite with correct data
-            } else {
-                usersStore.push(adminUserStore);
-            }
-            localStorage.setItem('moffipet_users', JSON.stringify(usersStore));
-
-            // 3. Create Session
-            const sessionUser: User = {
-                id: adminUserStore.id,
-                username: adminUserStore.username,
-                email: adminUserStore.email,
-                role: 'admin', // Explicitly typed as Admin
-                avatar: adminUserStore.avatar,
-                bio: adminUserStore.bio,
-                joinedAt: adminUserStore.joinedAt,
-                stats: adminUserStore.stats
-            };
-
-            setUser(sessionUser);
-            localStorage.setItem('moffipet_current_user', JSON.stringify(sessionUser));
-            return { success: true };
-        }
-        // ----------------------------------------
-
-        const usersStore = JSON.parse(localStorage.getItem('moffipet_users') || '[]');
-        // Case-insensitive email check
-        let foundUser = usersStore.find((u: any) => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
-
-        if (foundUser) {
-            const role: UserRole = (email.toLowerCase() === 'moffidestek@gmail.com') ? 'admin' : (foundUser.role || 'user');
-
-            const sessionUser: User = {
-                id: foundUser.id,
-                username: foundUser.username,
-                email: foundUser.email,
-                role: role,
-                avatar: foundUser.avatar,
-                bio: foundUser.bio,
-                joinedAt: foundUser.joinedAt,
-                stats: foundUser.stats
-            };
-
-            setUser(sessionUser);
-            localStorage.setItem('moffipet_current_user', JSON.stringify(sessionUser));
+            setUser(mockUser);
             return { success: true };
         }
 
-        return { success: false, error: "E-posta veya şifre hatalı." };
+        const { error } = await supabase.auth.signInWithPassword({
+            email,
+            password
+        });
+        if (error) {
+            return { success: false, error: "E-posta veya şifre hatalı." };
+        }
+        return { success: true };
     };
 
     const signup = async (name: string, email: string, password: string) => {
-        await new Promise(resolve => setTimeout(resolve, 800));
-
-        const usersStore = JSON.parse(localStorage.getItem('moffipet_users') || '[]');
-
-        if (usersStore.some((u: any) => u.email.toLowerCase() === email.toLowerCase())) {
-            return { success: false, error: "Bu e-posta adresi zaten kayıtlı. Giriş yapmayı dene." };
+        // --- LOCAL DEV RATE LIMIT BYPASS ---
+        // If the user uses a '.test' email (e.g. hello@moffi.test), we mock a successful sign up
+        // to prevent getting stuck on 'Rate Limit Exceeded' locks during UI testing!
+        if (email.endsWith('.test')) {
+            const mockUser: User = {
+                id: 'mock_' + Date.now().toString(),
+                email: email,
+                username: name,
+                role: 'user',
+                joinedAt: '2024 (Beta)',
+                stats: { posts: 0, followers: 0, following: 0 }
+            };
+            setUser(mockUser);
+            return { success: true };
         }
 
-        const newUser = {
-            id: Math.random().toString(36).substr(2, 9),
-            username: name,
+        const { data, error } = await supabase.auth.signUp({
             email,
             password,
-            role: (email.toLowerCase() === 'moffidestek@gmail.com') ? 'admin' : 'user',
-            avatar: undefined,
-            bio: "Merhaba! Ben MoffiPet dünyasına yeni katıldım.",
-            joinedAt: new Date().toISOString(),
-            stats: { posts: 0, followers: 0, following: 0 }
-        };
-
-        const updatedUsers = [...usersStore, newUser];
-        localStorage.setItem('moffipet_users', JSON.stringify(updatedUsers));
-
-        const sessionUser: User = {
-            id: newUser.id,
-            username: newUser.username,
-            email: newUser.email,
-            role: newUser.role as UserRole,
-            avatar: newUser.avatar,
-            bio: newUser.bio,
-            joinedAt: newUser.joinedAt,
-            stats: newUser.stats
-        };
-
-        setUser(sessionUser);
-        localStorage.setItem('moffipet_current_user', JSON.stringify(sessionUser));
-
+            options: {
+                data: {
+                    username: name,
+                    role: 'user'
+                }
+            }
+        });
+        if (error) {
+            // Translate common Supabase Auth errors for better UX
+            if (error.message.includes('rate_limit') || error.message.includes('rate limit')) {
+                return { success: false, error: "Çok fazla deneme yaptınız. Güvenlik gereği lütfen bir süre bekleyip tekrar deneyin veya farklı bir e-posta adresi kullanın." };
+            }
+            if (error.message.includes('already registered')) {
+                return { success: false, error: "Bu e-posta adresi zaten kayıtlı. Lütfen giriş yapmayı deneyin." };
+            }
+            return { success: false, error: error.message };
+        }
         return { success: true };
     };
 
     const forgotPassword = async (email: string) => {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const usersStore = JSON.parse(localStorage.getItem('moffipet_users') || '[]');
-
-        const exists = usersStore.some((u: any) => u.email.toLowerCase() === email.toLowerCase());
-
-        if (exists) {
-            // In a real app, send API request here.
-            // For demo, we just simulate success.
-            console.log(`[Email Service] Password reset code sent to ${email}: 123456`);
-            return { success: true, message: "Doğrulama kodu gönderildi." };
-        } else {
-            // Security best practice: Don't reveal if user exists, but for UX in this specific demo we might want to guide them.
-            // Sticking to generic message or guiding based on user preference.
-            return { success: false, error: "Bu e-posta ile kayıtlı kullanıcı bulunamadı." };
+        const { error } = await supabase.auth.resetPasswordForEmail(email);
+        if (error) {
+            return { success: false, error: error.message };
         }
+        return { success: true, message: "Şifre sıfırlama e-postası gönderildi." };
     };
 
-    const logout = () => {
-        setUser(null);
-        localStorage.removeItem('moffipet_current_user');
+    const logout = async () => {
+        await supabase.auth.signOut();
     };
 
-    const updateProfile = (data: Partial<User>) => {
+    const updateProfile = async (data: Partial<User>) => {
         if (!user) return;
+
+        // Optimistic UI update
         const updatedUser = { ...user, ...data };
         setUser(updatedUser);
-        localStorage.setItem('moffipet_current_user', JSON.stringify(updatedUser));
 
-        // Also update in main db
-        const usersStore = JSON.parse(localStorage.getItem('moffipet_users') || '[]');
-        const updatedStore = usersStore.map((u: any) => u.id === user.id ? { ...u, ...data } : u);
-        localStorage.setItem('moffipet_users', JSON.stringify(updatedStore));
+        // Map subset of data back to Supabase user_metadata
+        await supabase.auth.updateUser({
+            data: {
+                username: updatedUser.username,
+                bio: updatedUser.bio,
+                avatar_url: updatedUser.avatar
+            }
+        });
     };
 
+    // --- MOCKS FOR LEGACY DASHBOARDS (So they don't crash) ---
     const getAllUsers = (): User[] => {
-        if (typeof window === 'undefined') return [];
-        return JSON.parse(localStorage.getItem('moffipet_users') || '[]');
+        return [];
     };
 
     const deleteUser = (id: string) => {
-        const usersStore = JSON.parse(localStorage.getItem('moffipet_users') || '[]');
-        const updatedStore = usersStore.filter((u: any) => u.id !== id);
-        localStorage.setItem('moffipet_users', JSON.stringify(updatedStore));
+        console.warn("Delete User not implemented in Supabase Context yet.");
+    };
+
+    const registerBusiness = async (data: any) => {
+        return { success: false, error: "Business registration requires Supabase DB schema." };
     };
 
     return (
-        <AuthContext.Provider value={{ user, isLoading, login, signup, logout, updateProfile, getAllUsers, forgotPassword, deleteUser }}>
+        <AuthContext.Provider value={{
+            user, isLoading, login, signup, logout,
+            updateProfile, getAllUsers, forgotPassword, deleteUser, registerBusiness
+        }}>
             {children}
         </AuthContext.Provider>
     );

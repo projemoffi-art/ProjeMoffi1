@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -13,7 +12,6 @@ import MoffiJumpGame from "@/components/game/MoffiJumpGame";
 import PetMemoryGame from "@/components/game/PetMemoryGame";
 import VetEscapeGame from "@/components/game/VetEscapeGame";
 import MoffiRunGame from "@/components/game/MoffiRunGame";
-import { BottomNav } from "@/components/home/BottomNav";
 
 // --- TYPES ---
 interface PetStats {
@@ -355,8 +353,6 @@ export default function GamePage() {
                     )}
                 </AnimatePresence>
             </div>
-
-            <BottomNav active="game" />
         </div>
     );
 }

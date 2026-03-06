@@ -10,8 +10,17 @@ interface BottomNavProps {
     className?: string;
 }
 
+// Routes where BottomNav should be hidden
+const HIDDEN_ROUTES = ['/studio', '/walk', '/login', '/signup', '/register', '/business-register'];
+
 export function BottomNav({ active, className }: BottomNavProps) {
     const pathname = usePathname();
+
+    // Hide nav on specific pages
+    if (pathname && HIDDEN_ROUTES.some(route => pathname.startsWith(route))) {
+        return null;
+    }
+
     // Fallback active detection if prop is not passed
     const currentActive = active || (pathname?.includes('/home') ? 'home' :
         pathname?.includes('/shop') ? 'explore' :
