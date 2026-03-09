@@ -21,7 +21,7 @@ export default function Home() {
 
     if (user) {
       // Already logged in → go to home
-      router.replace('/home');
+      router.replace('/community');
     } else {
       // Not logged in → check if onboarding was seen before
       const onboardingSeen = localStorage.getItem('moffipet_onboarding_seen');
@@ -44,7 +44,7 @@ export default function Home() {
   };
 
   const handleLoginComplete = () => {
-    router.replace('/home');
+    router.replace('/community');
   };
 
   const handleSignupComplete = () => {
@@ -52,7 +52,7 @@ export default function Home() {
   };
 
   const handleSetupComplete = () => {
-    router.replace('/home');
+    router.replace('/community');
   };
 
   // Show nothing while checking session

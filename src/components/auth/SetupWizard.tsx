@@ -1,17 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { Camera, ChevronRight, User, Dog, Cat, Bird, Heart } from "lucide-react";
+import { Camera, ChevronRight, User, Dog, Cat, Bird, Heart, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useSocial } from "@/context/SocialContext";
+import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/lib/supabase";
 
 interface SetupProps {
     onComplete: () => void;
 }
 
 export function SetupWizard({ onComplete }: SetupProps) {
-    const { updateUserInfo } = useSocial();
+    const { user, updateProfile } = useAuth();
     const [step, setStep] = useState<1 | 2>(1);
+    const [isUploading, setIsUploading] = useState(false);
+
+    // Avatar State
+    const [avatarFile, setAvatarFile] = useState<File | null>(null);
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
     // Step 1: Profile
     const [name, setName] = useState("");
@@ -21,16 +27,44 @@ export function SetupWizard({ onComplete }: SetupProps) {
     const [petName, setPetName] = useState("");
     const [petType, setPetType] = useState<'dog' | 'cat' | 'bird' | 'other'>('dog');
 
-    const handleNext = () => {
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setAvatarFile(file);
+            setAvatarPreview(URL.createObjectURL(file));
+        }
+    };
+
+    const handleNext = async () => {
         if (step === 1 && name && username) {
             setStep(2);
         } else if (step === 2 && petName) {
-            // Update Context with real user data
-            updateUserInfo({
-                name: petName + " The " + (petType === 'dog' ? 'Dog' : petType), // Creative naming hack
+            setIsUploading(true);
+            let finalAvatarUrl = null;
+
+            // Buluta Fotoğraf Yükleme (Supabase Storage)
+            if (avatarFile && user?.id) {
+                const fileExt = avatarFile.name.split('.').pop();
+                const fileName = `${user.id}/profile_${Date.now()}.${fileExt}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('avatars')
+                    .upload(fileName, avatarFile, { upsert: true });
+
+                if (!uploadError) {
+                    const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
+                    finalAvatarUrl = data.publicUrl;
+                }
+            }
+
+            // Update Context with real user data and new avatar
+            await updateProfile({
                 username: username,
-                bio: `Merhaba! Ben ${name}'in dostuyum.`, // Default bio
+                bio: `Merhaba! Ben ${name}. İlk dostum ${petName} (${petType}).`,
+                ...(finalAvatarUrl && { avatar: finalAvatarUrl })
             });
+
+            setIsUploading(false);
             onComplete();
         }
     };
@@ -50,12 +84,24 @@ export function SetupWizard({ onComplete }: SetupProps) {
                         <p className="text-gray-500 mb-8">Moffi topluluğunda seni nasıl tanıyalım?</p>
 
                         <div className="flex justify-center mb-8">
-                            <div className="w-28 h-28 bg-gray-100 rounded-full flex items-center justify-center relative border-4 border-white shadow-lg">
-                                <User className="w-10 h-10 text-gray-400" />
-                                <button className="absolute bottom-0 right-0 p-2 bg-moffi-purple-dark text-white rounded-full border-2 border-white shadow-sm">
+                            <label
+                                htmlFor="profile-upload"
+                                className="w-28 h-28 bg-gray-100 rounded-full flex items-center justify-center relative border-4 border-white shadow-lg cursor-pointer overflow-hidden group block"
+                            >
+                                {avatarPreview ? (
+                                    <img src={avatarPreview} alt="Profile" className="w-full h-full object-cover" />
+                                ) : (
+                                    <User className="w-10 h-10 text-gray-400 group-hover:scale-110 transition-transform" />
+                                )}
+                                <div className="absolute inset-0 bg-black/20 hidden group-hover:flex items-center justify-center transition-all">
+                                    <Camera className="w-8 h-8 text-white opacity-80" />
+                                </div>
+                                <input type="file" id="profile-upload" className="hidden" accept="image/*" onChange={handleFileChange} />
+
+                                <button type="button" className="absolute bottom-0 right-0 p-2 bg-moffi-purple-dark text-white rounded-full border-2 border-white shadow-sm z-10 pointer-events-none">
                                     <Camera className="w-4 h-4" />
                                 </button>
-                            </div>
+                            </label>
                         </div>
 
                         <div className="space-y-4">
@@ -157,11 +203,20 @@ export function SetupWizard({ onComplete }: SetupProps) {
             <div className="p-6 pb-8 bg-white border-t border-gray-50">
                 <button
                     onClick={handleNext}
-                    disabled={(step === 1 && !username) || (step === 2 && !petName)}
+                    disabled={(step === 1 && !username) || (step === 2 && !petName) || isUploading}
                     className="w-full py-4 bg-moffi-purple-dark text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-xl shadow-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
-                    {step === 1 ? "Devam Et" : "Moffi'ye Katıl!"}
-                    <ChevronRight className="w-5 h-5" />
+                    {isUploading ? (
+                        <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            <span>Moffi'ye Bağlanıyor...</span>
+                        </>
+                    ) : (
+                        <>
+                            {step === 1 ? "Devam Et" : "Moffi'ye Katıl!"}
+                            <ChevronRight className="w-5 h-5" />
+                        </>
+                    )}
                 </button>
             </div>
         </div>

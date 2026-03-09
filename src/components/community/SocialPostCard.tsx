@@ -17,13 +17,12 @@ interface PostProps {
         likes: number;
         comments: number;
     };
-};
-isSponsored ?: boolean;
-context ?: {
-    type: 'memory';
-    date: string;
-    mood: string;
-};
+    isSponsored?: boolean;
+    context?: {
+        type: 'memory';
+        date: string;
+        mood: string;
+    };
 }
 
 export function SocialPostCard({ user, content, isSponsored, context }: PostProps) {

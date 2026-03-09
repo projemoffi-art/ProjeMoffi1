@@ -4,7 +4,7 @@ import React from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import {
-    Sparkles, ChevronRight, Menu, PawPrint, Gamepad2, Activity, Share2, Layers, Palette, ShoppingBag
+    Sparkles, ChevronRight, Menu, PawPrint, Gamepad2, Activity, Share2, Layers, Palette, ShoppingBag, Hexagon, Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -66,14 +66,33 @@ const StudioHero = () => {
                     </h1>
                 </div>
 
-                <div className="w-full">
-                    <p className="text-white/90 text-sm font-medium mb-6 leading-relaxed">
-                        Sıradan olma. Mochi için benzersiz bir tarz yarat.
+                <div className="w-full space-y-3">
+                    <p className="text-white/90 text-sm font-medium mb-3 leading-relaxed">
+                        Sıradan olma. Moffi Studio ile kendi tarzını yarat.
                     </p>
-                    <button className="w-full h-14 bg-white text-black rounded-full font-bold text-lg hover:scale-105 active:scale-95 transition-all shadow-xl flex items-center justify-center gap-2">
+                    <button
+                        onClick={(e) => { e.stopPropagation(); router.push('/studio'); }}
+                        className="w-full h-14 bg-white text-black rounded-full font-bold text-lg hover:scale-105 active:scale-95 transition-all shadow-xl flex items-center justify-center gap-2"
+                    >
                         <Sparkles className="w-5 h-5" />
                         Tasarla
                     </button>
+                    <div className="grid grid-cols-1 gap-2">
+                        <button
+                            onClick={(e) => { e.stopPropagation(); router.push('/studio-sandbox-3'); }}
+                            className="w-full h-11 bg-white/10 backdrop-blur-md text-white/90 border border-white/20 rounded-full font-bold text-sm hover:bg-white/20 transition-all flex items-center justify-center gap-2 shadow-lg"
+                        >
+                            <Palette className="w-4 h-4 text-purple-400" />
+                            Stüdyo Demo
+                        </button>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); router.push('/community'); }}
+                            className="w-full h-11 bg-black/60 backdrop-blur-md text-white border border-white/10 rounded-full font-bold text-sm hover:bg-black/80 transition-all flex items-center justify-center gap-2 shadow-lg mt-1"
+                        >
+                            <Users className="w-4 h-4 text-cyan-400" />
+                            Yeni Topluluk Demo
+                        </button>
+                    </div>
                 </div>
             </motion.div>
         </section>
@@ -104,7 +123,7 @@ const PriorityGrid = () => {
                 </div>
                 <div className="flex-1 pr-6">
                     <h3 className="text-2xl font-black tracking-tight text-gray-800 dark:text-white mb-0">Yürüyüş</h3>
-                    <p className="text-xs text-gray-400 font-light tracking-wide">Mochi hazır.</p>
+                    <p className="text-xs text-gray-400 font-light tracking-wide">Dostun için her şey hazır.</p>
                 </div>
                 <div className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center">
                     <ChevronRight className="w-4 h-4 opacity-30" />

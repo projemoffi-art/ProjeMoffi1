@@ -28,8 +28,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     useEffect(() => {
         if (!isLoading) {
-            // Allow admin OR moffidestek email
-            const isAdmin = user?.role === 'admin' || user?.email === 'moffidestek@gmail.com';
+            // Allow admin OR known admin emails
+            const ADMIN_EMAILS = ['moffidestek@gmail.com', 'projemoffi@gmail.com']; // Buraya kendi e-postanı ekle
+            const isAdmin = user?.role === 'admin' || ADMIN_EMAILS.includes(user?.email || '');
             if (!user || !isAdmin) {
                 router.push('/');
             }
@@ -37,7 +38,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }, [user, isLoading, router]);
 
     if (isLoading) return <div className="h-screen w-full flex items-center justify-center bg-gray-50">Yükleniyor...</div>;
-    const isAdmin = user?.role === 'admin' || user?.email === 'moffidestek@gmail.com';
+    const ADMIN_EMAILS = ['moffidestek@gmail.com', 'projemoffi@gmail.com'];
+    const isAdmin = user?.role === 'admin' || ADMIN_EMAILS.includes(user?.email || '');
     if (!isAdmin) return null;
 
     return (

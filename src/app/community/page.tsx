@@ -76,7 +76,6 @@ export default function MoffiSocialMasterpiece() {
     const [userPets, setUserPets] = useState<any[]>([]);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isPublishing, setIsPublishing] = useState(false);
-    const [activeTab, setActiveTab] = useState('feed'); // feed, map, profile
     const [isSearchOpen, setIsSearchOpen] = useState(false);
 
     useEffect(() => {
@@ -237,7 +236,19 @@ export default function MoffiSocialMasterpiece() {
     const [adoptionPetType, setAdoptionPetType] = useState("cat");
     const [isSubmittingAdoption, setIsSubmittingAdoption] = useState(false);
 
-    // ADOPTION MESSAGING STATES (Dedicated)
+
+    const [activeTab, setActiveTab] = useState('adoption'); // profiles, lost, ads, adoption
+    const [isInboxOpen, setIsInboxOpen] = useState(false);
+    const [inboxTab, setInboxTab] = useState<'chats' | 'sos'>('chats');
+
+    // ADOPTION APPLICATION STATES
+    const [isApplicationFormOpen, setIsApplicationFormOpen] = useState(false);
+    const [appExperience, setAppExperience] = useState('0-2 Yıl');
+    const [appHomeType, setAppHomeType] = useState('Apartman');
+    const [appNote, setAppNote] = useState('');
+    const [isSubmittingApp, setIsSubmittingApp] = useState(false);
+
+    // ADOPTION CHAT STATES
     const [isAdoptionChatOpen, setIsAdoptionChatOpen] = useState(false);
     const [adoptionChatPet, setAdoptionChatPet] = useState<any | null>(null);
     const [adoptionMessages, setAdoptionMessages] = useState<any[]>([]);
@@ -255,9 +266,7 @@ export default function MoffiSocialMasterpiece() {
     const [anonError, setAnonError] = useState<string | null>(null);
     const [isSubmittingAnon, setIsSubmittingAnon] = useState(false);
 
-    // INBOX STATES
-    const [isInboxOpen, setIsInboxOpen] = useState(false);
-    const [inboxTab, setInboxTab] = useState<'chats' | 'sos'>('chats');
+    // INBOX DATA STATES
     const [inboxMessages, setInboxMessages] = useState<any[]>([]);
     const [sosAlerts, setSosAlerts] = useState<any[]>([]);
     const [unreadInboxCount, setUnreadInboxCount] = useState(0);
@@ -269,6 +278,7 @@ export default function MoffiSocialMasterpiece() {
     const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
     const [activeMessageMenuId, setActiveMessageMenuId] = useState<string | null>(null);
     const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
+
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -759,6 +769,32 @@ export default function MoffiSocialMasterpiece() {
             { id: 'sys-1', text: `Merhaba! ${pet.name} için sahiplenme süreci başlatıldı. 👋`, sender: 'system', time: 'Şimdi' },
             { id: 'sys-2', text: 'Moffi Güvenli Mesajlaşma üzerinden ilan sahibiyle iletişime geçiyorsunuz. Lütfen kişisel bilgilerinizi paylaşırken dikkatli olun.', sender: 'system', time: 'Şimdi' }
         ]);
+    };
+
+    const submitAdoptionApplication = async () => {
+        if (!user || !selectedAdoptionPet) return;
+        setIsSubmittingApp(true);
+        try {
+            const { error } = await supabase.from('adoption_applications').insert([{
+                ad_id: selectedAdoptionPet.id,
+                applicant_id: user.id,
+                applicant_notes: appNote,
+                experience_level: appExperience,
+                home_conditions: appHomeType,
+                status: 'pending'
+            }]);
+
+            if (error) throw error;
+
+            showToast("Başvuru İletildi! ❤️", "İlan sahibi başvurunuzu inceledikten sonra size dönecek.", "success");
+            setIsApplicationFormOpen(false);
+            setAppNote("");
+            setSelectedAdoptionPet(null); // Close the detail view too
+        } catch (err: any) {
+            showToast("Hata", err.message, "error");
+        } finally {
+            setIsSubmittingApp(false);
+        }
     };
 
     const handleSendAdoptionMsg = () => {
@@ -3489,12 +3525,20 @@ export default function MoffiSocialMasterpiece() {
 
                             {/* Apple iOS Style Floating Action Bar */}
                             <div className="w-full p-6 pt-2 pb-10 bg-gradient-to-t from-[#0A0A0E] via-[#0A0A0E] to-transparent relative z-20">
-                                <button
-                                    onClick={() => handleStartAdoptionChat(selectedAdoptionPet)}
-                                    className="w-full py-4 rounded-full bg-white text-black font-black text-[15px] shadow-[0_10px_30px_rgba(255,255,255,0.15)] active:scale-95 transition-transform flex items-center justify-center gap-2"
-                                >
-                                    <MessageCircle className="w-5 h-5" /> İlan Sahibiyle Mesajlaş
-                                </button>
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => handleStartAdoptionChat(selectedAdoptionPet)}
+                                        className="flex-1 py-4 rounded-full bg-white/10 border border-white/10 text-white font-bold text-[15px] active:scale-95 transition-transform flex items-center justify-center gap-2"
+                                    >
+                                        <MessageCircle className="w-5 h-5" /> Mesaj
+                                    </button>
+                                    <button
+                                        onClick={() => setIsApplicationFormOpen(true)}
+                                        className="flex-[2] py-4 rounded-full bg-cyan-500 text-black font-black text-[15px] shadow-[0_10px_30px_rgba(34,211,238,0.3)] active:scale-95 transition-transform flex items-center justify-center gap-2"
+                                    >
+                                        <HeartHandshake className="w-5 h-5" /> Sahiplenme Başvurusu
+                                    </button>
+                                </div>
                                 <button
                                     onClick={() => {
                                         setReportingAdId(selectedAdoptionPet?.id || null);
@@ -3511,9 +3555,10 @@ export default function MoffiSocialMasterpiece() {
                 )}
             </AnimatePresence>
 
+
             {/* REPORT ADOPTION AD MODAL (Apple Action Sheet) */}
             <AnimatePresence>
-                {isReportAdModalOpen && (
+                {isReportAdModalOpen && selectedAdoptionPet && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -3545,31 +3590,24 @@ export default function MoffiSocialMasterpiece() {
 
                             <div className="space-y-2 mb-6">
                                 {[
-                                    { value: 'fee_request', label: '💸 Ücret / Para Talep Ediyor', desc: 'Sahiplendirme karşılığında ödeme istiyor' },
-                                    { value: 'animal_sale', label: '🏷️ Hayvan Satışı Yapıyor', desc: 'Bu bir satılık ilan, ücretsiz değil' },
-                                    { value: 'fake_ad', label: '❌ Sahte veya Yanıltıcı İlan', desc: 'Fotoğraf veya bilgiler gerçek değil' },
-                                    { value: 'inappropriate', label: '⚠️ Uygunsuz İçerik', desc: 'Hayvan refahına aykırı içerik' },
-                                    { value: 'other', label: '🔍 Diğer Sebep', desc: 'Yukarıdaki kategorilere girmiyor' },
+                                    { value: 'fee', label: '💸 Ücret Talep Ediyor', desc: 'Sahiplendirme için para isteniyor' },
+                                    { value: 'sale', label: '🏷️ Hayvan Satışı', desc: 'Ticari amaçlı satış ilanı' },
+                                    { value: 'fake', label: '❌ Sahte İlan', desc: 'Görsel veya bilgiler gerçek değil' },
+                                    { value: 'inappropriate', label: '⚠️ Uygunsuz İçerik', desc: 'Kötü muamele veya şiddet' },
+                                    { value: 'other', label: '🔍 Diğer', desc: 'Diğer güvenlik sorunları' }
                                 ].map((opt) => (
                                     <button
                                         key={opt.value}
                                         onClick={() => setReportReason(opt.value)}
                                         className={cn(
                                             "w-full flex items-start gap-3 p-4 rounded-2xl border transition-all text-left",
-                                            reportReason === opt.value
-                                                ? "bg-red-500/15 border-red-500/40 shadow-[0_0_15px_rgba(239,68,68,0.1)]"
-                                                : "bg-white/5 border-white/5 hover:bg-white/10"
+                                            reportReason === opt.value ? "bg-red-500/10 border-red-500/30" : "bg-white/5 border-white/5"
                                         )}
                                     >
                                         <div className="flex-1">
                                             <p className="text-white font-bold text-sm">{opt.label}</p>
                                             <p className="text-gray-500 text-xs mt-0.5">{opt.desc}</p>
                                         </div>
-                                        {reportReason === opt.value && (
-                                            <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center shrink-0 mt-0.5">
-                                                <Check className="w-3 h-3 text-white" />
-                                            </div>
-                                        )}
                                     </button>
                                 ))}
                             </div>
@@ -3583,6 +3621,110 @@ export default function MoffiSocialMasterpiece() {
                                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                 ) : (
                                     <><ShieldAlert className="w-5 h-5" /> Bildirimi Gönder</>
+                                )}
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ADOPTION APPLICATION FORM MODAL (Apple Style) */}
+            <AnimatePresence>
+                {isApplicationFormOpen && selectedAdoptionPet && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[400] flex flex-col justify-end"
+                    >
+                        <motion.div
+                            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                            onClick={() => setIsApplicationFormOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 28, stiffness: 250 }}
+                            className="relative bg-[#0A0A0E] rounded-t-[3rem] p-6 pb-12 border-t border-white/10 z-10 flex flex-col max-h-[90vh]"
+                        >
+                            <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-6" />
+
+                            <div className="flex items-center gap-4 mb-8">
+                                <div className="w-16 h-16 rounded-[1.5rem] overflow-hidden border border-white/10">
+                                    <img src={selectedAdoptionPet.img} className="w-full h-full object-cover" />
+                                </div>
+                                <div>
+                                    <h3 className="text-white font-black text-xl">{selectedAdoptionPet.name} İçin Başvuru</h3>
+                                    <p className="text-cyan-400 text-xs font-bold uppercase tracking-widest mt-1">Son Adım: Yuva Olma Formu</p>
+                                </div>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto no-scrollbar space-y-6">
+                                <div>
+                                    <label className="text-gray-500 text-[11px] font-black uppercase tracking-widest ml-1 mb-2 block">Evcil Hayvan Tecrübeniz</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {['0-2 Yıl', '3-5 Yıl', '5+ Yıl'].map(lvl => (
+                                            <button
+                                                key={lvl}
+                                                onClick={() => setAppExperience(lvl)}
+                                                className={cn(
+                                                    "py-3 rounded-2xl text-[13px] font-bold border transition-all",
+                                                    appExperience === lvl ? "bg-cyan-500/20 border-cyan-400 text-cyan-400" : "bg-white/5 border-white/5 text-gray-400"
+                                                )}
+                                            >
+                                                {lvl}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-gray-500 text-[11px] font-black uppercase tracking-widest ml-1 mb-2 block">Yaşam Alanınız</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {['Apartman', 'Müstakil', 'Bahçeli'].map(type => (
+                                            <button
+                                                key={type}
+                                                onClick={() => setAppHomeType(type)}
+                                                className={cn(
+                                                    "py-3 rounded-2xl text-[13px] font-bold border transition-all",
+                                                    appHomeType === type ? "bg-cyan-500/20 border-cyan-400 text-cyan-400" : "bg-white/5 border-white/5 text-gray-400"
+                                                )}
+                                            >
+                                                {type}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-gray-500 text-[11px] font-black uppercase tracking-widest ml-1 mb-2 block">Kendinizden Bahsedin</label>
+                                    <textarea
+                                        rows={4}
+                                        placeholder="Neden onu sahiplenmek istiyorsunuz? Ona nasıl bir hayat sunacaksınız?"
+                                        value={appNote}
+                                        onChange={(e) => setAppNote(e.target.value)}
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white text-[15px] focus:outline-none focus:border-cyan-400 transition-colors resize-none placeholder:text-gray-600"
+                                    />
+                                </div>
+
+                                <div className="bg-cyan-500/5 border border-cyan-500/10 rounded-3xl p-4 flex items-start gap-3">
+                                    <ShieldAlert className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
+                                    <p className="text-[11px] text-gray-400 leading-relaxed">
+                                        Moffi, sahiplendirme sürecinde aracıdır. Başvurunuz ilan sahibine iletilir. Kişisel güvenliğiniz için buluşmaları halka açık yerlerde gerçekleştirmenizi öneririz.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={submitAdoptionApplication}
+                                disabled={!appNote.trim() || isSubmittingApp}
+                                className="w-full mt-8 py-4 rounded-full bg-cyan-500 text-black font-black text-[16px] shadow-[0_15px_40px_rgba(34,211,238,0.2)] active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-40"
+                            >
+                                {isSubmittingApp ? (
+                                    <div className="w-6 h-6 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                                ) : (
+                                    <><CheckCheck className="w-5 h-5" /> Başvuruyu Tamamla</>
                                 )}
                             </button>
                         </motion.div>
@@ -3645,13 +3787,6 @@ export default function MoffiSocialMasterpiece() {
                                     )}
                                 </motion.div>
                             ))}
-                            {isSendingAdoptionMsg && (
-                                <div className="flex gap-1.5 p-2 bg-white/5 rounded-full w-12 justify-center">
-                                    <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                                    <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                                    <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" />
-                                </div>
-                            )}
                         </div>
 
                         {/* Input Area */}
@@ -3679,211 +3814,217 @@ export default function MoffiSocialMasterpiece() {
 
             {/* INSTAGRAM STYLE STORY VIEWER */}
             <AnimatePresence>
-                {viewerStoryGroupIndex !== null && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        transition={{ duration: 0.2 }}
-                        className="fixed inset-0 z-[200] bg-black flex flex-col justify-center items-center"
-                    >
-                        {/* Progress Bars Placeholder */}
-                        <div className="absolute top-4 left-4 right-4 z-10 flex gap-1 h-0.5">
-                            {storyGroups[viewerStoryGroupIndex].stories.map((_, idx) => (
-                                <div key={idx} className="flex-1 bg-white/20 overflow-hidden rounded-full relative">
-                                    <div
-                                        className={cn(
-                                            "absolute top-0 left-0 bottom-0 bg-white",
-                                            idx === viewerStoryIndex && "shadow-[0_0_10px_white]"
-                                        )}
-                                        style={{
-                                            width: idx < viewerStoryIndex ? '100%' : idx === viewerStoryIndex ? `${storyProgress}%` : '0%',
-                                            transition: idx === viewerStoryIndex && storyProgress === 100 ? 'width 5000ms linear' : 'none'
-                                        }}
-                                    />
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Top Header */}
-                        <div className="absolute top-8 left-4 right-4 z-10 flex justify-between items-center text-white drop-shadow-md">
-                            <div className="flex items-center gap-3">
-                                <img src={(storyGroups[viewerStoryGroupIndex].user_id === user?.id ? (user?.avatar || storyGroups[viewerStoryGroupIndex].author_avatar) : storyGroups[viewerStoryGroupIndex].author_avatar) || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200"} className="w-8 h-8 rounded-full border border-white/40 object-cover" />
-                                <span className="font-bold text-sm tracking-wide">{storyGroups[viewerStoryGroupIndex].author_name}</span>
-                                <span className="text-white/60 text-xs mt-0.5">· {formatTimeAgo(storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].created_at)}</span>
-                            </div>
-                            <button onClick={closeStoryViewer} className="w-8 h-8 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center border border-white/20 active:scale-90 transition-transform"><X className="w-5 h-5" /></button>
-                        </div>
-
-                        {/* Media Display */}
-                        <div className="relative w-full h-full md:max-w-md md:aspect-[9/16] md:h-auto md:max-h-[90vh] md:rounded-3xl overflow-hidden bg-[#1c1c1e] md:border md:border-white/10 shadow-2xl">
-                            <img
-                                key={storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].id}
-                                src={storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].media_url}
-                                className="w-full h-full object-cover animate-in fade-in zoom-in-95 duration-300"
-                            />
-
-                            {/* Gradients */}
-                            <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
-                            <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
-
-                            {/* Tap Zones */}
-                            <div className="absolute inset-y-0 left-0 w-1/3 z-20 cursor-pointer" onClick={prevStory} />
-                            <div className="absolute inset-y-0 right-0 w-2/3 z-20 cursor-pointer" onClick={nextStory} />
-
-                            {/* Bottom Actions 📸 */}
-                            <div className="absolute inset-x-0 bottom-0 p-4 z-30 flex items-center gap-3">
-                                {storyGroups[viewerStoryGroupIndex].user_id === user?.id ? (
-                                    <div className="flex items-center justify-between w-full text-white">
-                                        <button className="flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); alert("Hikayeyi Görenler: Luna, Felix, Buster ve 12 diğer kişi."); }}>
-                                            <div className="flex -space-x-2">
-                                                <img src="https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=100" className="w-6 h-6 rounded-full border border-black z-20 object-cover" />
-                                                <img src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=100" className="w-6 h-6 rounded-full border border-black z-10 object-cover" />
-                                                <div className="w-6 h-6 rounded-full border border-black bg-white/20 backdrop-blur-md flex items-center justify-center text-[8px] font-bold z-0">+12</div>
-                                            </div>
-                                            <span className="text-[11px] font-medium opacity-90">Etkinlikler</span>
-                                        </button>
-                                        <div className="flex gap-4">
-                                            <button className="flex flex-col items-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); alert("Öne Çıkarılıyor..."); }}>
-                                                <Heart className="w-6 h-6" />
-                                                <span className="text-[10px]">Öne Çıkar</span>
-                                            </button>
-                                            <button className="flex flex-col items-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); alert("Tıklanabilir Seçenekler: Kopyala, Arşivle, Sil"); }}>
-                                                <MoreHorizontal className="w-6 h-6" />
-                                                <span className="text-[10px]">Daha Fazla</span>
-                                            </button>
-                                        </div>
+                {
+                    viewerStoryGroupIndex !== null && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            transition={{ duration: 0.2 }}
+                            className="fixed inset-0 z-[200] bg-black flex flex-col justify-center items-center"
+                        >
+                            {/* Progress Bars Placeholder */}
+                            <div className="absolute top-4 left-4 right-4 z-10 flex gap-1 h-0.5">
+                                {storyGroups[viewerStoryGroupIndex].stories.map((_, idx) => (
+                                    <div key={idx} className="flex-1 bg-white/20 overflow-hidden rounded-full relative">
+                                        <div
+                                            className={cn(
+                                                "absolute top-0 left-0 bottom-0 bg-white",
+                                                idx === viewerStoryIndex && "shadow-[0_0_10px_white]"
+                                            )}
+                                            style={{
+                                                width: idx < viewerStoryIndex ? '100%' : idx === viewerStoryIndex ? `${storyProgress}%` : '0%',
+                                                transition: idx === viewerStoryIndex && storyProgress === 100 ? 'width 5000ms linear' : 'none'
+                                            }}
+                                        />
                                     </div>
-                                ) : (
-                                    <>
-                                        {/* Reply Box */}
-                                        <div className="flex-1 bg-black/20 backdrop-blur-xl border border-white/20 rounded-full flex items-center px-4 h-12 pointer-events-auto">
-                                            <input
-                                                type="text"
-                                                placeholder={`Mesaj Gönder...`}
-                                                className="bg-transparent text-white w-full text-sm outline-none placeholder:text-white/70"
-                                                onClick={(e) => e.stopPropagation()}
-                                            />
-                                        </div>
-                                        <button className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform pointer-events-auto" onClick={(e) => { e.stopPropagation(); alert("Hikaye beğenildi!"); }}>
-                                            <Heart className="w-7 h-7 hover:fill-red-500 hover:text-red-500 transition-colors" />
-                                        </button>
-                                        <button className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform pointer-events-auto" onClick={(e) => { e.stopPropagation(); alert("Paylaşım menüsü açılıyor..."); }}>
-                                            <Send className="w-6 h-6 -ml-1" />
-                                        </button>
-                                    </>
-                                )}
+                                ))}
                             </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+
+                            {/* Top Header */}
+                            <div className="absolute top-8 left-4 right-4 z-10 flex justify-between items-center text-white drop-shadow-md">
+                                <div className="flex items-center gap-3">
+                                    <img src={(storyGroups[viewerStoryGroupIndex].user_id === user?.id ? (user?.avatar || storyGroups[viewerStoryGroupIndex].author_avatar) : storyGroups[viewerStoryGroupIndex].author_avatar) || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200"} className="w-8 h-8 rounded-full border border-white/40 object-cover" />
+                                    <span className="font-bold text-sm tracking-wide">{storyGroups[viewerStoryGroupIndex].author_name}</span>
+                                    <span className="text-white/60 text-xs mt-0.5">· {formatTimeAgo(storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].created_at)}</span>
+                                </div>
+                                <button onClick={closeStoryViewer} className="w-8 h-8 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center border border-white/20 active:scale-90 transition-transform"><X className="w-5 h-5" /></button>
+                            </div>
+
+                            {/* Media Display */}
+                            <div className="relative w-full h-full md:max-w-md md:aspect-[9/16] md:h-auto md:max-h-[90vh] md:rounded-3xl overflow-hidden bg-[#1c1c1e] md:border md:border-white/10 shadow-2xl">
+                                <img
+                                    key={storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].id}
+                                    src={storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].media_url}
+                                    className="w-full h-full object-cover animate-in fade-in zoom-in-95 duration-300"
+                                />
+
+                                {/* Gradients */}
+                                <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
+                                <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+
+                                {/* Tap Zones */}
+                                <div className="absolute inset-y-0 left-0 w-1/3 z-20 cursor-pointer" onClick={prevStory} />
+                                <div className="absolute inset-y-0 right-0 w-2/3 z-20 cursor-pointer" onClick={nextStory} />
+
+                                {/* Bottom Actions 📸 */}
+                                <div className="absolute inset-x-0 bottom-0 p-4 z-30 flex items-center gap-3">
+                                    {storyGroups[viewerStoryGroupIndex].user_id === user?.id ? (
+                                        <div className="flex items-center justify-between w-full text-white">
+                                            <button className="flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); alert("Hikayeyi Görenler: Luna, Felix, Buster ve 12 diğer kişi."); }}>
+                                                <div className="flex -space-x-2">
+                                                    <img src="https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=100" className="w-6 h-6 rounded-full border border-black z-20 object-cover" />
+                                                    <img src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=100" className="w-6 h-6 rounded-full border border-black z-10 object-cover" />
+                                                    <div className="w-6 h-6 rounded-full border border-black bg-white/20 backdrop-blur-md flex items-center justify-center text-[8px] font-bold z-0">+12</div>
+                                                </div>
+                                                <span className="text-[11px] font-medium opacity-90">Etkinlikler</span>
+                                            </button>
+                                            <div className="flex gap-4">
+                                                <button className="flex flex-col items-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); alert("Öne Çıkarılıyor..."); }}>
+                                                    <Heart className="w-6 h-6" />
+                                                    <span className="text-[10px]">Öne Çıkar</span>
+                                                </button>
+                                                <button className="flex flex-col items-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); alert("Tıklanabilir Seçenekler: Kopyala, Arşivle, Sil"); }}>
+                                                    <MoreHorizontal className="w-6 h-6" />
+                                                    <span className="text-[10px]">Daha Fazla</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            {/* Reply Box */}
+                                            <div className="flex-1 bg-black/20 backdrop-blur-xl border border-white/20 rounded-full flex items-center px-4 h-12 pointer-events-auto">
+                                                <input
+                                                    type="text"
+                                                    placeholder={`Mesaj Gönder...`}
+                                                    className="bg-transparent text-white w-full text-sm outline-none placeholder:text-white/70"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                />
+                                            </div>
+                                            <button className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform pointer-events-auto" onClick={(e) => { e.stopPropagation(); alert("Hikaye beğenildi!"); }}>
+                                                <Heart className="w-7 h-7 hover:fill-red-500 hover:text-red-500 transition-colors" />
+                                            </button>
+                                            <button className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform pointer-events-auto" onClick={(e) => { e.stopPropagation(); alert("Paylaşım menüsü açılıyor..."); }}>
+                                                <Send className="w-6 h-6 -ml-1" />
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </motion.div>
+                    )
+                }
+            </AnimatePresence >
 
             {/* QR CODE GENERATOR MODAL (PET-ID) */}
             <AnimatePresence>
-                {qrModalPet && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-md flex items-center justify-center p-6"
-                        onClick={() => setQrModalPet(null)}
-                    >
+                {
+                    qrModalPet && (
                         <motion.div
-                            initial={{ scale: 0.9, y: 20 }}
-                            animate={{ scale: 1, y: 0 }}
-                            exit={{ scale: 0.9, y: 20 }}
-                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                            className="bg-[#1C1C1E] border border-white/10 p-6 rounded-[2.5rem] w-full max-w-sm flex flex-col items-center shadow-2xl relative overflow-hidden"
-                            onClick={(e) => e.stopPropagation()}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-md flex items-center justify-center p-6"
+                            onClick={() => setQrModalPet(null)}
                         >
-                            <img src={qrModalPet.avatar} className="absolute inset-0 w-full h-full object-cover opacity-10 blur-xl pointer-events-none" />
+                            <motion.div
+                                initial={{ scale: 0.9, y: 20 }}
+                                animate={{ scale: 1, y: 0 }}
+                                exit={{ scale: 0.9, y: 20 }}
+                                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                                className="bg-[#1C1C1E] border border-white/10 p-6 rounded-[2.5rem] w-full max-w-sm flex flex-col items-center shadow-2xl relative overflow-hidden"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <img src={qrModalPet.avatar} className="absolute inset-0 w-full h-full object-cover opacity-10 blur-xl pointer-events-none" />
 
-                            <div className="relative z-10 w-full flex flex-col items-center text-center">
-                                <div className="w-16 h-16 rounded-full border-2 border-cyan-400 p-0.5 mb-4 shadow-lg shrink-0">
-                                    <img src={qrModalPet.avatar} className="w-full h-full rounded-full object-cover" />
+                                <div className="relative z-10 w-full flex flex-col items-center text-center">
+                                    <div className="w-16 h-16 rounded-full border-2 border-cyan-400 p-0.5 mb-4 shadow-lg shrink-0">
+                                        <img src={qrModalPet.avatar} className="w-full h-full rounded-full object-cover" />
+                                    </div>
+                                    <h3 className="text-2xl font-black text-white mb-1">{qrModalPet.name} - Akıllı Kimlik</h3>
+                                    <p className="text-sm text-gray-400 font-medium mb-6">Bu QR Kodu Moffi Künyesine yazdırın veya tasmaya yapıştırın. (Test için kamera ile okutabilir veya Linke Tıklayabilirsiniz!)</p>
+
+                                    {/* THE QR CODE SURROUNDED BY NEON BORDER */}
+                                    <div className="bg-white p-4 rounded-3xl shadow-[0_0_30px_rgba(34,211,238,0.4)] border-4 border-cyan-400/50 mb-6 active:scale-95 transition-transform cursor-pointer" onClick={() => window.open(`${window.location.origin}/id/${qrModalPet.id}`, '_blank')}>
+                                        <QRCodeSVG
+                                            value={`${window.location.origin}/id/${qrModalPet.id}`}
+                                            size={180}
+                                            bgColor="#FFFFFF"
+                                            fgColor="#000000"
+                                            level="H"
+                                        />
+                                    </div>
+
+                                    <div className="flex gap-2 w-full">
+                                        <button className="flex-1 bg-white text-black font-bold py-3 rounded-2xl flex items-center justify-center gap-2" onClick={() => alert("QR Yüksek Kalitede (PDF) İndirildi!")}>
+                                            İndir & Yazdır
+                                        </button>
+                                        <button className="flex-1 bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 font-bold py-3 rounded-2xl flex items-center justify-center gap-2" onClick={() => window.open(`${window.location.origin}/id/${qrModalPet.id}`, '_blank')}>
+                                            Test Et (Aç)
+                                        </button>
+                                    </div>
                                 </div>
-                                <h3 className="text-2xl font-black text-white mb-1">{qrModalPet.name} - Akıllı Kimlik</h3>
-                                <p className="text-sm text-gray-400 font-medium mb-6">Bu QR Kodu Moffi Künyesine yazdırın veya tasmaya yapıştırın. (Test için kamera ile okutabilir veya Linke Tıklayabilirsiniz!)</p>
 
-                                {/* THE QR CODE SURROUNDED BY NEON BORDER */}
-                                <div className="bg-white p-4 rounded-3xl shadow-[0_0_30px_rgba(34,211,238,0.4)] border-4 border-cyan-400/50 mb-6 active:scale-95 transition-transform cursor-pointer" onClick={() => window.open(`${window.location.origin}/id/${qrModalPet.id}`, '_blank')}>
-                                    <QRCodeSVG
-                                        value={`${window.location.origin}/id/${qrModalPet.id}`}
-                                        size={180}
-                                        bgColor="#FFFFFF"
-                                        fgColor="#000000"
-                                        level="H"
-                                    />
-                                </div>
-
-                                <div className="flex gap-2 w-full">
-                                    <button className="flex-1 bg-white text-black font-bold py-3 rounded-2xl flex items-center justify-center gap-2" onClick={() => alert("QR Yüksek Kalitede (PDF) İndirildi!")}>
-                                        İndir & Yazdır
-                                    </button>
-                                    <button className="flex-1 bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 font-bold py-3 rounded-2xl flex items-center justify-center gap-2" onClick={() => window.open(`${window.location.origin}/id/${qrModalPet.id}`, '_blank')}>
-                                        Test Et (Aç)
-                                    </button>
-                                </div>
-                            </div>
-
-                            <button onClick={() => setQrModalPet(null)} className="absolute top-4 right-4 w-8 h-8 bg-white/10 rounded-full flex items-center justify-center text-white z-20">
-                                <X className="w-4 h-4" />
-                            </button>
+                                <button onClick={() => setQrModalPet(null)} className="absolute top-4 right-4 w-8 h-8 bg-white/10 rounded-full flex items-center justify-center text-white z-20">
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </motion.div>
                         </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                    )
+                }
+            </AnimatePresence >
 
             {/* MOFFI HUB OVERLAY MENU (Apple Style Action Menu) */}
             <AnimatePresence>
-                {isHubOpen && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[140] bg-[#0A0A0E]/60 backdrop-blur-md flex items-end justify-center px-4 pb-28"
-                        onClick={() => setIsHubOpen(false)}
-                    >
+                {
+                    isHubOpen && (
                         <motion.div
-                            initial={{ scale: 0.9, y: 100, opacity: 0 }}
-                            animate={{ scale: 1, y: 0, opacity: 1 }}
-                            exit={{ scale: 0.9, y: 100, opacity: 0 }}
-                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                            className="w-full max-w-sm bg-[#1C1C1E]/90 border border-white/10 rounded-[3rem] p-6 shadow-[0_30px_60px_rgba(0,0,0,0.8)]"
-                            onClick={(e) => e.stopPropagation()}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[140] bg-[#0A0A0E]/60 backdrop-blur-md flex items-end justify-center px-4 pb-28"
+                            onClick={() => setIsHubOpen(false)}
                         >
-                            <div className="grid grid-cols-3 gap-y-8 gap-x-4">
-                                {[
-                                    { icon: Globe, label: 'Moffi.net', color: 'text-cyan-400', bg: 'bg-cyan-500/10', onClick: () => window.open('https://moffi.net', '_blank') },
-                                    { icon: PawPrint, label: 'Yürüyüş', color: 'text-green-400', bg: 'bg-green-500/10', href: '/walk' },
-                                    { icon: Stethoscope, label: 'Veteriner', color: 'text-blue-400', bg: 'bg-blue-500/10', href: '/vet' },
-                                    { icon: ShoppingBag, label: 'Market', color: 'text-orange-400', bg: 'bg-orange-500/10', href: '/petshop' },
-                                    { icon: Palette, label: 'Stüdyo', color: 'text-purple-400', bg: 'bg-purple-500/10', href: '/studio' },
-                                    { icon: Gamepad2, label: 'Oyun', color: 'text-pink-400', bg: 'bg-pink-500/10', href: '/game' },
-                                ].map((tool, idx) => (
-                                    <button
-                                        key={idx}
-                                        onClick={tool.onClick || (() => router.push(tool.href!))}
-                                        className="flex flex-col items-center gap-2 group active:scale-90 transition-transform"
-                                    >
-                                        <div className={cn("w-16 h-16 rounded-3xl flex items-center justify-center transition-all shadow-lg", tool.bg, "group-hover:scale-105 border border-white/5")}>
-                                            <tool.icon className={cn("w-7 h-7", tool.color)} />
-                                        </div>
-                                        <span className="text-[11px] font-bold text-gray-300 group-hover:text-white transition-colors">{tool.label}</span>
-                                    </button>
-                                ))}
-                            </div>
-                            <button onClick={() => setIsHubOpen(false)} className="w-full mt-8 py-4 bg-white/5 rounded-2xl text-gray-400 text-sm font-bold hover:bg-white/10 transition-colors">
-                                Kapat
-                            </button>
+                            <motion.div
+                                initial={{ scale: 0.9, y: 100, opacity: 0 }}
+                                animate={{ scale: 1, y: 0, opacity: 1 }}
+                                exit={{ scale: 0.9, y: 100, opacity: 0 }}
+                                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                                className="w-full max-w-sm bg-[#1C1C1E]/90 border border-white/10 rounded-[3rem] p-6 shadow-[0_30px_60px_rgba(0,0,0,0.8)]"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className="grid grid-cols-3 gap-y-8 gap-x-4">
+                                    {[
+                                        { icon: Globe, label: 'Moffi.net', color: 'text-cyan-400', bg: 'bg-cyan-500/10', onClick: () => window.open('https://moffi.net', '_blank') },
+                                        { icon: PawPrint, label: 'Yürüyüş', color: 'text-green-400', bg: 'bg-green-500/10', href: '/walk' },
+                                        { icon: Stethoscope, label: 'Veteriner', color: 'text-blue-400', bg: 'bg-blue-500/10', href: '/vet' },
+                                        { icon: ShoppingBag, label: 'Market', color: 'text-orange-400', bg: 'bg-orange-500/10', href: '/petshop' },
+                                        { icon: Palette, label: 'Stüdyo', color: 'text-purple-400', bg: 'bg-purple-500/10', href: '/studio' },
+                                        { icon: Gamepad2, label: 'Oyun', color: 'text-pink-400', bg: 'bg-pink-500/10', href: '/game' },
+                                    ].map((tool, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={tool.onClick || (() => router.push(tool.href!))}
+                                            className="flex flex-col items-center gap-2 group active:scale-90 transition-transform"
+                                        >
+                                            <div className={cn("w-16 h-16 rounded-3xl flex items-center justify-center transition-all shadow-lg", tool.bg, "group-hover:scale-105 border border-white/5")}>
+                                                <tool.icon className={cn("w-7 h-7", tool.color)} />
+                                            </div>
+                                            <span className="text-[11px] font-bold text-gray-300 group-hover:text-white transition-colors">{tool.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                                <button onClick={() => setIsHubOpen(false)} className="w-full mt-8 py-4 bg-white/5 rounded-2xl text-gray-400 text-sm font-bold hover:bg-white/10 transition-colors">
+                                    Kapat
+                                </button>
+                            </motion.div>
                         </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                    )
+                }
+            </AnimatePresence >
 
             {/* GLOBAL BOTTOM TAB BAR - Simplified Apple iOS Style */}
-            <nav className="fixed bottom-0 left-0 right-0 z-[150] safe-area-bottom">
+            < nav className="fixed bottom-0 left-0 right-0 z-[150] safe-area-bottom" >
                 <div className="bg-[#0A0A0E]/80 backdrop-blur-2xl border-t border-white/5 px-6 pb-6 pt-3">
                     <div className="flex items-center justify-between max-w-sm mx-auto">
                         <button
@@ -3914,8 +4055,8 @@ export default function MoffiSocialMasterpiece() {
                         </button>
                     </div>
                 </div>
-            </nav>
-        </div>
+            </nav >
+        </div >
     );
 }
 

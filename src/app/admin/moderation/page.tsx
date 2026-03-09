@@ -1,201 +1,440 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { MOCK_REPORTS } from "@/data/mockBusinessRegistry";
-import { ModerationReport, ReportType, ReportStatus } from "@/types/business";
-import { cn } from "@/lib/utils";
-import {
-    AlertTriangle, Search, CheckCircle, XCircle, Clock, Eye,
-    Shield, Package, MessageSquare, Building2, Star,
-    X, Loader2, ChevronRight
-} from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+    ShieldCheck, ShieldAlert, ShieldX, Clock, Eye, Trash2, CheckCircle,
+    XCircle, RotateCcw, AlertTriangle, TrendingUp, MessageSquare, Flag,
+    ChevronDown, RefreshCw, User, Calendar, Search, Filter
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
-const TYPE_CONFIG: Record<ReportType, { label: string; icon: typeof Package; color: string }> = {
-    product: { label: 'Ürün', icon: Package, color: 'bg-blue-50 text-blue-600' },
-    review: { label: 'Yorum', icon: MessageSquare, color: 'bg-amber-50 text-amber-600' },
-    social_post: { label: 'Sosyal Gönderi', icon: Star, color: 'bg-pink-50 text-pink-600' },
-    business: { label: 'İşletme', icon: Building2, color: 'bg-red-50 text-red-600' },
+type AdStatus = "pending" | "active" | "removed" | "all";
+
+const STAT_COLORS = {
+    pending: "bg-amber-50 border-amber-200 text-amber-700",
+    active: "bg-green-50 border-green-200 text-green-700",
+    removed: "bg-red-50 border-red-200 text-red-700",
+    reports: "bg-purple-50 border-purple-200 text-purple-700",
 };
 
-const STATUS_CONFIG: Record<ReportStatus, { label: string; color: string; bg: string }> = {
-    pending: { label: 'Bekliyor', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' },
-    resolved: { label: 'Çözüldü', color: 'text-green-700', bg: 'bg-green-50 border-green-200' },
-    dismissed: { label: 'Reddedildi', color: 'text-gray-500', bg: 'bg-gray-50 border-gray-200' },
+const STATUS_BADGE: Record<string, { label: string; className: string; icon: any }> = {
+    active: { label: "Yayında", className: "bg-green-100 text-green-700 border border-green-200", icon: ShieldCheck },
+    pending: { label: "Bekliyor", className: "bg-amber-100 text-amber-700 border border-amber-200", icon: Clock },
+    removed: { label: "Kaldırıldı", className: "bg-red-100 text-red-700 border border-red-200", icon: ShieldX },
 };
 
-export default function AdminModerationPage() {
-    const [statusFilter, setStatusFilter] = useState<ReportStatus | 'all'>('all');
-    const [detailReport, setDetailReport] = useState<ModerationReport | null>(null);
+const VIOLATION_LABELS: Record<string, string> = {
+    fee_request: "💸 Ücret Talebi",
+    animal_sale: "🏷️ Hayvan Satışı",
+    fake_ad: "❌ Sahte İlan",
+    inappropriate: "⚠️ Uygunsuz İçerik",
+    kvkk_phone: "📞 KVKK - Telefon",
+    iban: "🏦 IBAN / Ödeme",
+    kvkk_email: "📧 KVKK - E-posta",
+    kvkk_tckn: "🪪 KVKK - TC Kimlik",
+    external_link: "🔗 Dış Link",
+    other: "🔍 Diğer",
+};
 
-    const filtered = useMemo(() => {
-        let result = [...MOCK_REPORTS];
-        if (statusFilter !== 'all') result = result.filter(r => r.status === statusFilter);
-        return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    }, [statusFilter]);
+export default function ModerationPage() {
+    const [ads, setAds] = useState<any[]>([]);
+    const [reports, setReports] = useState<any[]>([]);
+    const [stats, setStats] = useState({ pending: 0, active: 0, removed: 0, reports: 0 });
+    const [filter, setFilter] = useState<AdStatus>("all");
+    const [searchQuery, setSearchQuery] = useState("");
+    const [isLoading, setIsLoading] = useState(true);
+    const [selectedAd, setSelectedAd] = useState<any | null>(null);
+    const [actionLoading, setActionLoading] = useState<string | null>(null);
+    const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
-    const counts = {
-        all: MOCK_REPORTS.length,
-        pending: MOCK_REPORTS.filter(r => r.status === 'pending').length,
-        resolved: MOCK_REPORTS.filter(r => r.status === 'resolved').length,
-        dismissed: MOCK_REPORTS.filter(r => r.status === 'dismissed').length,
+    const showToast = (msg: string, type: "success" | "error" = "success") => {
+        setToast({ msg, type });
+        setTimeout(() => setToast(null), 3500);
     };
 
+    const fetchData = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            // İlanlar
+            const { data: adsData } = await supabase
+                .from("adoption_ads")
+                .select("*")
+                .order("created_at", { ascending: false });
+
+            // İhbarlar
+            const { data: reportsData } = await supabase
+                .from("adoption_reports")
+                .select("*, adoption_ads(name, breed, image_url)")
+                .order("created_at", { ascending: false })
+                .limit(50);
+
+            setAds(adsData || []);
+            setReports(reportsData || []);
+            setStats({
+                pending: (adsData || []).filter(a => a.status === "pending").length,
+                active: (adsData || []).filter(a => a.status === "active").length,
+                removed: (adsData || []).filter(a => a.status === "removed").length,
+                reports: (reportsData || []).filter(r => r.status === "pending").length,
+            });
+        } catch (err) {
+            console.error("Veri yüklenemedi:", err);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => { fetchData(); }, [fetchData]);
+
+    const handleAction = async (adId: string, newStatus: "active" | "removed") => {
+        setActionLoading(adId + newStatus);
+        try {
+            const { error } = await supabase
+                .from("adoption_ads")
+                .update({ status: newStatus, moderated_at: new Date().toISOString() })
+                .eq("id", adId);
+            if (error) throw error;
+            showToast(newStatus === "active" ? "✅ İlan onaylandı!" : "🗑️ İlan kaldırıldı.", "success");
+            setSelectedAd(null);
+            fetchData();
+        } catch (err: any) {
+            showToast("Hata: " + err.message, "error");
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const handleReportAction = async (reportId: string, action: "reviewed" | "dismissed") => {
+        await supabase.from("adoption_reports").update({ status: action }).eq("id", reportId);
+        showToast(action === "reviewed" ? "İhbar işleme alındı." : "İhbar reddedildi.");
+        fetchData();
+    };
+
+    const filteredAds = ads.filter(ad => {
+        const matchFilter = filter === "all" || ad.status === filter;
+        const matchSearch = !searchQuery ||
+            ad.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            ad.breed?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            ad.author_name?.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchFilter && matchSearch;
+    });
+
     return (
-        <div>
-            <div className="mb-8">
-                <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">Moderasyon</h1>
-                <p className="text-sm text-gray-500 mt-1">Şikayetleri ve bildirimleri yönetin</p>
+        <div className="space-y-8">
+            {/* HEADER */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-black text-gray-900">İçerik Moderasyonu</h1>
+                    <p className="text-sm text-gray-500 mt-1">Sahiplendirme ilanları ve kullanıcı ihbarlarını yönet</p>
+                </div>
+                <button
+                    onClick={fetchData}
+                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition shadow-sm"
+                >
+                    <RefreshCw className="w-4 h-4" /> Yenile
+                </button>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <StatBox label="Toplam" value={counts.all} icon={Shield} color="indigo" />
-                <StatBox label="Bekleyen" value={counts.pending} icon={Clock} color="amber" />
-                <StatBox label="Çözülen" value={counts.resolved} icon={CheckCircle} color="green" />
-                <StatBox label="Reddedilen" value={counts.dismissed} icon={XCircle} color="gray" />
-            </div>
-
-            {/* Filter Tabs */}
-            <div className="flex gap-2 mb-6">
-                {(['all', 'pending', 'resolved', 'dismissed'] as const).map(s => (
-                    <button key={s} onClick={() => setStatusFilter(s)} className={cn(
-                        "px-4 py-2 rounded-xl text-xs font-bold border transition",
-                        statusFilter === s ? "bg-indigo-50 border-indigo-200 text-indigo-700" : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"
-                    )}>
-                        {s === 'all' ? 'Tümü' : STATUS_CONFIG[s].label}
-                        <span className="ml-1 text-[10px] bg-gray-100 px-1.5 py-0.5 rounded">{counts[s]}</span>
-                    </button>
+            {/* STATS */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                    { key: "pending", label: "Bekleyen", icon: Clock, value: stats.pending, color: STAT_COLORS.pending },
+                    { key: "active", label: "Yayında", icon: ShieldCheck, value: stats.active, color: STAT_COLORS.active },
+                    { key: "removed", label: "Kaldırılan", icon: ShieldX, value: stats.removed, color: STAT_COLORS.removed },
+                    { key: "reports", label: "Açık İhbar", icon: Flag, value: stats.reports, color: STAT_COLORS.reports },
+                ].map(stat => (
+                    <div key={stat.key} className={cn("p-5 rounded-2xl border flex items-center gap-4", stat.color)}>
+                        <div className="p-2 bg-white/60 rounded-xl">
+                            <stat.icon className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <div className="text-3xl font-black leading-none">{stat.value}</div>
+                            <div className="text-xs font-semibold mt-1 opacity-70">{stat.label}</div>
+                        </div>
+                    </div>
                 ))}
             </div>
 
-            {/* Reports */}
-            {filtered.length === 0 ? (
-                <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center">
-                    <Shield className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                    <h3 className="font-bold text-gray-700">Bildirim bulunamadı</h3>
+            {/* TABS */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="flex border-b border-gray-100">
+                    {[
+                        { id: "ads", label: "İlanlar", icon: ShieldAlert },
+                        { id: "reports", label: "İhbarlar", icon: Flag },
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => { }}
+                            className="flex-1 flex items-center justify-center gap-2 py-4 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600"
+                        >
+                            <tab.icon className="w-4 h-4" /> {tab.label}
+                        </button>
+                    ))}
                 </div>
-            ) : (
-                <div className="space-y-3">
-                    {filtered.map(report => {
-                        const typeConf = TYPE_CONFIG[report.type];
-                        const statusConf = STATUS_CONFIG[report.status];
-                        const TypeIcon = typeConf.icon;
-                        return (
-                            <div key={report.id} onClick={() => setDetailReport(report)} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-lg transition-all cursor-pointer group">
-                                <div className="flex items-center gap-4">
-                                    <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0", typeConf.color)}>
-                                        <TypeIcon className="w-5 h-5" />
+
+                {/* SEARCH + FILTER */}
+                <div className="flex items-center gap-3 p-4 border-b border-gray-50 bg-gray-50/50">
+                    <div className="flex-1 relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="İlan adı, ırk veya kullanıcı ara..."
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-xl outline-none focus:border-indigo-400 bg-white"
+                        />
+                    </div>
+                    <div className="flex gap-2">
+                        {(["all", "pending", "active", "removed"] as AdStatus[]).map(f => (
+                            <button
+                                key={f}
+                                onClick={() => setFilter(f)}
+                                className={cn(
+                                    "px-3 py-1.5 rounded-lg text-xs font-bold transition",
+                                    filter === f
+                                        ? "bg-indigo-600 text-white shadow"
+                                        : "bg-white text-gray-500 border border-gray-200 hover:border-indigo-300"
+                                )}
+                            >
+                                {f === "all" ? "Tümü" : f === "pending" ? "Bekleyen" : f === "active" ? "Yayında" : "Kaldırılan"}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* ADS LIST */}
+                <div className="divide-y divide-gray-50">
+                    {isLoading ? (
+                        <div className="p-12 text-center text-gray-400 text-sm">Yükleniyor...</div>
+                    ) : filteredAds.length === 0 ? (
+                        <div className="p-12 text-center">
+                            <ShieldCheck className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+                            <p className="text-gray-400 font-semibold">Bu kategoride ilan yok</p>
+                        </div>
+                    ) : (
+                        filteredAds.map(ad => {
+                            const badge = STATUS_BADGE[ad.status] || STATUS_BADGE.pending;
+                            const BadgeIcon = badge.icon;
+                            const adReports = reports.filter(r => r.ad_id === ad.id);
+                            return (
+                                <div
+                                    key={ad.id}
+                                    className="flex items-center gap-4 p-4 hover:bg-gray-50/80 transition cursor-pointer group"
+                                    onClick={() => setSelectedAd(ad)}
+                                >
+                                    {/* Thumbnail */}
+                                    <div className="w-14 h-14 rounded-xl overflow-hidden bg-gray-100 shrink-0 border border-gray-100">
+                                        {ad.image_url ? (
+                                            <img src={ad.image_url} className="w-full h-full object-cover" alt={ad.name} />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-2xl">🐾</div>
+                                        )}
+                                    </div>
+
+                                    {/* Info */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-bold text-gray-900 text-sm">{ad.name}</span>
+                                            <span className="text-gray-400 text-xs">• {ad.breed}</span>
+                                            {adReports.length > 0 && (
+                                                <span className="bg-red-100 text-red-600 text-[10px] font-black px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                                                    <Flag className="w-2.5 h-2.5" /> {adReports.length}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                                            <User className="w-3 h-3" /> {ad.author_name || "Bilinmiyor"}
+                                            <span className="mx-1">·</span>
+                                            <Calendar className="w-3 h-3" /> {new Date(ad.created_at).toLocaleDateString("tr-TR")}
+                                        </div>
+                                        {ad.moderation_result && (
+                                            <p className="text-[11px] mt-1 text-gray-400 truncate max-w-sm">
+                                                🤖 {ad.moderation_result}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Status + Actions */}
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <span className={cn("flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-full", badge.className)}>
+                                            <BadgeIcon className="w-3 h-3" /> {badge.label}
+                                        </span>
+                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                                            {ad.status !== "active" && (
+                                                <button
+                                                    onClick={e => { e.stopPropagation(); handleAction(ad.id, "active"); }}
+                                                    disabled={actionLoading === ad.id + "active"}
+                                                    className="w-8 h-8 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg flex items-center justify-center transition"
+                                                    title="Onayla"
+                                                >
+                                                    <CheckCircle className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                            {ad.status !== "removed" && (
+                                                <button
+                                                    onClick={e => { e.stopPropagation(); handleAction(ad.id, "removed"); }}
+                                                    disabled={actionLoading === ad.id + "removed"}
+                                                    className="w-8 h-8 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg flex items-center justify-center transition"
+                                                    title="Kaldır"
+                                                >
+                                                    <XCircle className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
+
+                {/* PENDING REPORTS SECTION */}
+                {reports.filter(r => r.status === "pending").length > 0 && (
+                    <div className="border-t-4 border-dashed border-red-100">
+                        <div className="px-5 py-3 bg-red-50 flex items-center gap-2">
+                            <Flag className="w-4 h-4 text-red-500" />
+                            <span className="text-sm font-black text-red-600 uppercase tracking-wide">Açık İhbarlar</span>
+                            <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+                                {reports.filter(r => r.status === "pending").length}
+                            </span>
+                        </div>
+                        <div className="divide-y divide-gray-50">
+                            {reports.filter(r => r.status === "pending").map(report => (
+                                <div key={report.id} className="flex items-center gap-4 p-4 hover:bg-red-50/30 transition">
+                                    <div className="w-10 h-10 rounded-xl overflow-hidden bg-gray-100 shrink-0">
+                                        {report.adoption_ads?.image_url ? (
+                                            <img src={report.adoption_ads.image_url} className="w-full h-full object-cover" alt="" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-lg">🐾</div>
+                                        )}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <h3 className="font-bold text-gray-900 text-sm truncate">{report.targetTitle}</h3>
-                                            <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full border", statusConf.bg, statusConf.color)}>{statusConf.label}</span>
-                                        </div>
-                                        <div className="text-xs text-gray-500 truncate">
-                                            <span className="font-medium">{typeConf.label}</span> · {report.reason} · Bildiren: {report.reportedBy}
-                                        </div>
+                                        <p className="font-bold text-sm text-gray-800">
+                                            {report.adoption_ads?.name || "Silinmiş İlan"} — {VIOLATION_LABELS[report.reason] || report.reason}
+                                        </p>
+                                        <p className="text-[11px] text-gray-400 mt-0.5">
+                                            {new Date(report.created_at).toLocaleString("tr-TR")}
+                                        </p>
                                     </div>
-                                    <div className="text-right flex-shrink-0 hidden sm:block">
-                                        <div className="text-[10px] text-gray-400">{new Date(report.createdAt).toLocaleDateString('tr-TR')}</div>
+                                    <div className="flex gap-2 shrink-0">
+                                        <button
+                                            onClick={() => handleReportAction(report.id, "reviewed")}
+                                            className="px-3 py-1.5 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition flex items-center gap-1"
+                                        >
+                                            <XCircle className="w-3 h-3" /> İşleme Al
+                                        </button>
+                                        <button
+                                            onClick={() => handleReportAction(report.id, "dismissed")}
+                                            className="px-3 py-1.5 bg-gray-100 text-gray-600 text-xs font-bold rounded-lg hover:bg-gray-200 transition"
+                                        >
+                                            Reddet
+                                        </button>
                                     </div>
-                                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-indigo-500 transition" />
                                 </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
-
-            {/* Detail Modal */}
-            <AnimatePresence>
-                {detailReport && <ReportDetailModal report={detailReport} onClose={() => setDetailReport(null)} />}
-            </AnimatePresence>
-        </div>
-    );
-}
-
-function StatBox({ label, value, icon: Icon, color }: { label: string; value: number; icon: typeof Shield; color: string }) {
-    const colors: Record<string, string> = { indigo: 'bg-indigo-50 text-indigo-600', amber: 'bg-amber-50 text-amber-600', green: 'bg-green-50 text-green-600', gray: 'bg-gray-100 text-gray-500' };
-    return (
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
-            <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center mb-3", colors[color])}><Icon className="w-4 h-4" /></div>
-            <div className="text-2xl font-black text-gray-900">{value}</div>
-            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-1">{label}</div>
-        </div>
-    );
-}
-
-function ReportDetailModal({ report, onClose }: { report: ModerationReport; onClose: () => void }) {
-    const [action, setAction] = useState<null | 'resolving' | 'dismissing'>(null);
-    const [done, setDone] = useState<null | 'resolved' | 'dismissed'>(null);
-    const [resolution, setResolution] = useState('');
-    const typeConf = TYPE_CONFIG[report.type];
-    const statusConf = STATUS_CONFIG[report.status];
-
-    const handleAction = (type: 'resolve' | 'dismiss') => {
-        setAction(type === 'resolve' ? 'resolving' : 'dismissing');
-        setTimeout(() => { setAction(null); setDone(type === 'resolve' ? 'resolved' : 'dismissed'); setTimeout(onClose, 1200); }, 1200);
-    };
-
-    return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
-            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-                {done ? (
-                    <div className="p-12 text-center">
-                        <div className={cn("w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4", done === 'resolved' ? "bg-green-100" : "bg-gray-100")}>
-                            {done === 'resolved' ? <CheckCircle className="w-8 h-8 text-green-600" /> : <XCircle className="w-8 h-8 text-gray-500" />}
+                            ))}
                         </div>
-                        <h3 className="text-lg font-black text-gray-900">{done === 'resolved' ? 'Bildirim Çözüldü' : 'Bildirim Reddedildi'}</h3>
                     </div>
-                ) : (
-                    <>
-                        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", typeConf.color)}><typeConf.icon className="w-5 h-5" /></div>
-                                <div>
-                                    <h2 className="font-black text-gray-900">{report.targetTitle}</h2>
-                                    <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full border", statusConf.bg, statusConf.color)}>{statusConf.label}</span>
-                                </div>
-                            </div>
-                            <button onClick={onClose} className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><X className="w-4 h-4" /></button>
-                        </div>
-                        <div className="p-6 space-y-3">
-                            <Row label="Tür" value={typeConf.label} />
-                            <Row label="Sebep" value={report.reason} />
-                            <Row label="Bildiren" value={report.reportedBy} />
-                            <Row label="Tarih" value={new Date(report.createdAt).toLocaleString('tr-TR')} />
-                            {report.resolution && <Row label="Çözüm" value={report.resolution} />}
+                )}
+            </div>
 
-                            {report.status === 'pending' && (
-                                <div className="pt-3 border-t border-gray-100">
-                                    <label className="text-xs font-bold text-gray-500 mb-1.5 block">Çözüm Notu</label>
-                                    <textarea value={resolution} onChange={e => setResolution(e.target.value)} rows={2} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-200" placeholder="İçerik kaldırıldı, kullanıcı uyarıldı..." />
+            {/* AD DETAIL MODAL */}
+            <AnimatePresence>
+                {selectedAd && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                        onClick={() => setSelectedAd(null)}
+                    >
+                        <motion.div
+                            initial={{ y: 40, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: 40, opacity: 0 }}
+                            onClick={e => e.stopPropagation()}
+                            className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
+                        >
+                            {selectedAd.image_url && (
+                                <div className="w-full h-52 bg-gray-100 relative">
+                                    <img src={selectedAd.image_url} className="w-full h-full object-cover" alt="" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                                    <div className="absolute bottom-4 left-4">
+                                        <span className={cn(
+                                            "text-xs font-black px-3 py-1 rounded-full",
+                                            STATUS_BADGE[selectedAd.status]?.className
+                                        )}>
+                                            {STATUS_BADGE[selectedAd.status]?.label}
+                                        </span>
+                                    </div>
                                 </div>
                             )}
-                        </div>
-                        {report.status === 'pending' && (
-                            <div className="p-6 border-t border-gray-100 flex gap-3">
-                                <button onClick={() => handleAction('dismiss')} disabled={!!action} className="flex-1 px-5 py-3 rounded-xl border border-gray-200 text-gray-600 font-bold text-sm hover:bg-gray-50 transition flex items-center justify-center gap-2 disabled:opacity-50">
-                                    {action === 'dismissing' ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />} Reddet
-                                </button>
-                                <button onClick={() => handleAction('resolve')} disabled={!!action} className="flex-1 px-5 py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold text-sm shadow-lg shadow-green-200 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
-                                    {action === 'resolving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />} Çöz
-                                </button>
-                            </div>
-                        )}
-                    </>
-                )}
-            </motion.div>
-        </motion.div>
-    );
-}
+                            <div className="p-6">
+                                <h2 className="text-2xl font-black text-gray-900">{selectedAd.name}</h2>
+                                <p className="text-indigo-600 font-semibold text-sm mt-1">{selectedAd.breed} • {selectedAd.age}</p>
 
-function Row({ label, value }: { label: string; value: string }) {
-    return (
-        <div className="flex justify-between items-start py-1.5 border-b border-gray-50 last:border-0">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</span>
-            <span className="text-sm font-medium text-gray-900 text-right max-w-[65%]">{value}</span>
+                                <div className="mt-4 space-y-2">
+                                    <div className="bg-gray-50 rounded-2xl p-4">
+                                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Açıklama</p>
+                                        <p className="text-sm text-gray-700 leading-relaxed">{selectedAd.description || "Açıklama yok."}</p>
+                                    </div>
+                                    {selectedAd.moderation_result && (
+                                        <div className={cn(
+                                            "rounded-2xl p-4",
+                                            selectedAd.moderation_passed === false ? "bg-red-50" : "bg-green-50"
+                                        )}>
+                                            <p className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: selectedAd.moderation_passed === false ? '#dc2626' : '#16a34a' }}>
+                                                🤖 Moffi AI Kararı
+                                            </p>
+                                            <p className="text-sm font-medium" style={{ color: selectedAd.moderation_passed === false ? '#991b1b' : '#166534' }}>
+                                                {selectedAd.moderation_result}
+                                            </p>
+                                        </div>
+                                    )}
+                                    <div className="text-xs text-gray-400 flex items-center gap-2 pt-1">
+                                        <User className="w-3 h-3" /> {selectedAd.author_name} ·
+                                        <Calendar className="w-3 h-3" /> {new Date(selectedAd.created_at).toLocaleString("tr-TR")}
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3 mt-6">
+                                    <button
+                                        onClick={() => handleAction(selectedAd.id, "active")}
+                                        disabled={selectedAd.status === "active" || !!actionLoading}
+                                        className="flex-1 bg-green-600 text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-green-700 transition disabled:opacity-40"
+                                    >
+                                        <CheckCircle className="w-5 h-5" /> Onayla
+                                    </button>
+                                    <button
+                                        onClick={() => handleAction(selectedAd.id, "removed")}
+                                        disabled={selectedAd.status === "removed" || !!actionLoading}
+                                        className="flex-1 bg-red-600 text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-red-700 transition disabled:opacity-40"
+                                    >
+                                        <XCircle className="w-5 h-5" /> Kaldır
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* TOAST */}
+            <AnimatePresence>
+                {toast && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20 }}
+                        className={cn(
+                            "fixed bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-2xl font-bold text-sm shadow-xl z-[100] text-white",
+                            toast.type === "success" ? "bg-green-600" : "bg-red-600"
+                        )}
+                    >
+                        {toast.msg}
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

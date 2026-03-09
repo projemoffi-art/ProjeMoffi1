@@ -6,11 +6,9 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ShopProvider } from "@/context/ShopContext";
 import { PetProvider } from "@/context/PetContext";
 
-import { FloatingControls } from "@/components/common/FloatingControls";
-import { GlobalAIWidget } from "@/components/ai/GlobalAIWidget";
-import { BottomNav } from "@/components/home/BottomNav";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ClientAuthWrapper } from "@/components/auth/ClientAuthWrapper";
+import { DynamicNavigation } from "@/components/common/DynamicNavigation";
 
 const poppins = Poppins({
   weight: ['400', '600', '700', '900'],
@@ -24,8 +22,21 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "MoffiPet",
-  description: "Super App for Pets",
+  title: "Moffi Pro",
+  description: "Advanced Customization Engine",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Moffi Pro",
+  },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    viewportFit: "cover",
+    userScalable: false,
+  },
 };
 
 export default function RootLayout({
@@ -43,14 +54,13 @@ export default function RootLayout({
             <AuthProvider>
               <ShopProvider>
                 <ClientAuthWrapper>
-                  <div className="pb-24">
+                  <div className="min-h-screen relative overflow-hidden">
                     <ErrorBoundary>
                       {children}
                     </ErrorBoundary>
                   </div>
-                  <BottomNav />
-                  <FloatingControls />
-                  <GlobalAIWidget />
+
+                  <DynamicNavigation />
                 </ClientAuthWrapper>
               </ShopProvider>
             </AuthProvider>
