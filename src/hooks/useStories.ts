@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/context/AuthContext';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
 export interface Story {
     id: string;
