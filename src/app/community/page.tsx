@@ -10,12 +10,12 @@ import {
     LogOut, ChevronRight, ChevronLeft, User, Bell, Lock, HelpCircle, Check, HeartHandshake, CheckCheck, ShieldAlert,
     AlertTriangle, PhoneCall, BadgeCheck, Radar, Palette, ShoppingBag, Gamepad2, Stethoscope, Globe
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '../../lib/utils';
 import { useRouter } from 'next/navigation';
-import AuthModal from '@/components/auth/AuthModal';
-import { useAuth } from '@/context/AuthContext';
-import { useStories } from '@/hooks/useStories';
-import { supabase } from '@/lib/supabase';
+import AuthModal from '../../components/auth/AuthModal';
+import { useAuth } from '../../context/AuthContext';
+import { useStories } from '../../hooks/useStories';
+import { supabase } from '../../lib/supabase';
 import { QRCodeSVG } from 'qrcode.react';
 
 // -- MOCK DATA --
