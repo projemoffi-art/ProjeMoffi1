@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Heart, Zap, Utensils, Moon, Gamepad2, Trophy, Sparkles, Coins, Plus,
-    Flame, Timer, Brain, Award, ChevronRight, Lock, Star
+    Flame, Timer, Brain, Award, ChevronRight, Lock, Star,
+    ChevronLeft
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import FoodCatchGame from "@/components/game/FoodCatchGame";
@@ -32,6 +34,7 @@ interface GameState {
 const DAILY_POINT_CAP = 100;
 
 export default function GamePage() {
+    const router = useRouter();
     // PET STATE
     const [stats, setStats] = useState<PetStats>({
         hunger: 80, happiness: 90, energy: 100, xp: 1250, level: 5
@@ -193,6 +196,20 @@ export default function GamePage() {
 
     return (
         <div className="min-h-screen bg-[#F8F9FC] dark:bg-black font-sans pb-32">
+
+            {/* BACK BUTTON */}
+            <button 
+                onClick={() => {
+                    if (window.history.length > 2) {
+                        router.back();
+                    } else {
+                        router.push('/community');
+                    }
+                }} 
+                className="fixed top-6 left-6 z-[60] w-12 h-12 bg-white/20 dark:bg-black/40 backdrop-blur-xl border border-gray-200 dark:border-white/10 rounded-2xl flex items-center justify-center hover:bg-white/10 hover:scale-105 active:scale-95 transition-all shadow-xl"
+            >
+                <ChevronLeft className="w-6 h-6 text-gray-800 dark:text-white" />
+            </button>
 
             {/* GAME MODALS */}
             <AnimatePresence>

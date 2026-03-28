@@ -130,12 +130,14 @@ export function ConfiguratorPanel({
                     )}
                 </div>
 
-                <button
+                <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={onStartDesigning}
-                    className="w-full h-14 bg-white text-black rounded-2xl font-bold text-lg hover:bg-neutral-100 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+                    className="w-full h-14 bg-white text-black rounded-2xl font-bold text-lg hover:bg-neutral-100 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] flex items-center justify-center gap-2"
                 >
                     Tasarlamaya Başla
-                </button>
+                </motion.button>
                 <p className="text-center text-[10px] text-neutral-600 mt-3">
                     Teslimat süresi: 3-5 İş Günü • Ücretsiz İade
                 </p>

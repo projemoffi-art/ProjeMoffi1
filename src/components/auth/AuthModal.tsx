@@ -60,7 +60,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+                <div className="fixed inset-0 z-[1000] flex items-center justify-center px-4">
                     {/* Dark Glass Backdrop */}
                     <motion.div
                         initial={{ opacity: 0 }}

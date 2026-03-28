@@ -18,20 +18,20 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 }
 
 export function useVet() {
-    const [clinics, setClinics] = useState<VetClinic[]>([]);
+    const [featuredClinics, setFeaturedClinics] = useState<VetClinic[]>([]);
+    const [allClinics, setAllClinics] = useState<VetClinic[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
 
-    // Initial Fetch
     useEffect(() => {
-        fetchClinics();
+        init();
     }, []);
 
-    const fetchClinics = async () => {
+    const init = async () => {
         setIsLoading(true);
         try {
-            // Get Location
-            let lat = 40.9850; // Default: Istanbul/Moda
+            // 1. Get Location
+            let lat = 40.9850;
             let lng = 29.0300;
 
             if ("geolocation" in navigator) {
@@ -43,24 +43,27 @@ export function useVet() {
                     lng = position.coords.longitude;
                     setUserLocation([lat, lng]);
                 } catch (e) {
-                    console.warn("Location access denied, using default.");
+                    console.warn("Location access denied");
                 }
             }
 
-            // Fetch Data
-            const rawClinics = await vetService.getNearbyClinics(lat, lng);
+            // 2. Parallel Fetch
+            const [rawFeatured, rawAll] = await Promise.all([
+                vetService.getFeaturedClinics(),
+                vetService.getAllClinics()
+            ]);
 
-            // Enrich with Distance UI Logic (Client-side)
-            const enriched = rawClinics.map(c => {
+            const enrich = (list: VetClinic[]) => list.map(c => {
                 const distVal = calculateDistance(lat, lng, c.location.lat, c.location.lng);
                 return {
                     ...c,
                     distance: distVal.toFixed(1) + " km",
-                    _distVal: distVal // internal sort key
+                    _distVal: distVal
                 };
             }).sort((a, b) => a._distVal - b._distVal);
 
-            setClinics(enriched);
+            setFeaturedClinics(enrich(rawFeatured));
+            setAllClinics(enrich(rawAll));
 
         } catch (err) {
             console.error(err);
@@ -90,10 +93,11 @@ export function useVet() {
     };
 
     return {
-        clinics,
+        featuredClinics,
+        allClinics,
         userLocation,
         isLoading,
         bookAppointment,
-        refresh: fetchClinics
+        refresh: init
     };
 }

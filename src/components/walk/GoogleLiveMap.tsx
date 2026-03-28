@@ -140,18 +140,37 @@ export default function GoogleLiveMap({
     const userLocation = useMemo(() => ({ lat: userPos[0], lng: userPos[1] }), [userPos]);
     const [routeDest, setRouteDest] = useState<{ lat: number, lng: number } | null>(null);
 
-    // If no key, we show a clean error state instead of breaking
+    // If no key, we show a clean preview state instead of breaking
     if (!API_KEY) {
         return (
-            <div className="w-full h-full bg-[#1A1A1A] flex flex-col items-center justify-center text-center p-6 space-y-4">
-                <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center">
-                    <AlertCircle className="w-8 h-8 text-red-500" />
-                </div>
-                <div>
-                    <h3 className="text-white font-bold text-lg">Google Maps API Anahtarı Eksik</h3>
-                    <p className="text-gray-400 text-sm mt-1 max-w-xs mx-auto">
-                        Moffi Walk Pro özellikleri için lütfen <code>NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code> değerini tanımlayın.
-                    </p>
+            <div className="w-full h-full bg-[#0A0A0E] relative overflow-hidden flex flex-col items-center justify-center text-center p-8">
+                {/* Stylized Map Background (Grid) */}
+                <div className="absolute inset-0 opacity-20" style={{ 
+                    backgroundImage: `radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 0)`,
+                    backgroundSize: '32px 32px' 
+                }} />
+                
+                {/* Decorative Circles */}
+                <div className="absolute -top-20 -left-20 w-64 h-64 bg-indigo-500/10 blur-[100px] rounded-full" />
+                <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-purple-500/10 blur-[100px] rounded-full" />
+
+                <div className="relative z-10 space-y-6">
+                    <div className="w-20 h-20 bg-white/5 backdrop-blur-xl rounded-[2rem] border border-white/10 flex items-center justify-center mx-auto shadow-2xl relative overflow-hidden">
+                        {isTracking && (
+                            <div className="absolute inset-0 bg-indigo-500/20 animate-pulse" />
+                        )}
+                        <Navigation className={cn("w-10 h-10 text-white/40", isTracking ? "animate-bounce" : "animate-pulse")} />
+                    </div>
+                    <div>
+                        <h3 className="text-white font-black text-xl tracking-tight uppercase italic">
+                            {isTracking ? "Takip Radarı Aktif" : "Harita Önizleme"}
+                        </h3>
+                        <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em] mt-2 max-w-[240px] mx-auto leading-relaxed">
+                            {isTracking 
+                                ? "Canlı konum verileri için harita yapılandırması bekleniyor. Takip devam ediyor..." 
+                                : "Canlı takip özellikleri için Google Maps API yapılandırması gereklidir."}
+                        </p>
+                    </div>
                 </div>
             </div>
         );

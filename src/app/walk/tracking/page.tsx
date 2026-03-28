@@ -7,11 +7,14 @@ import {
     Pause, Play, StopCircle, Camera, Music,
     Zap, Timer, Flame, CheckCircle2, ChevronLeft, X,
     SkipForward, SkipBack, Share2, Search, Mic, Home, LayoutGrid,
-    AlertTriangle, Droplets, Bone, Plus,
+    AlertTriangle, Droplets, Bone, Plus, Heart, Activity,
     Skull, AlertOctagon, Footprints, MessageSquarePlus,
     Car, Syringe
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
+import { Bluetooth, BluetoothConnected, BluetoothSearching, Smartphone } from "lucide-react";
+import { parseHeartRate, HR_SERVICE_UUID, HR_CHARACTERISTIC_UUID } from "@/lib/bluetoothManager";
 import { PLACES, Place } from "@/data/mockPlaces";
 
 // Helper for dist
@@ -42,6 +45,10 @@ function TrackingContent() {
     const [visitedPlaceIds, setVisitedPlaceIds] = useState<string[]>([]);
     const [reward, setReward] = useState<Place | null>(null);
 
+    // Simulated Stats
+    const [pulse, setPulse] = useState(72);
+    const [speed, setSpeed] = useState(0);
+
     // Marks State (Lifted Up)
     const [marks, setMarks] = useState(MOCK_MARKS);
 
@@ -52,6 +59,12 @@ function TrackingContent() {
     const [musicQuery, setMusicQuery] = useState("");
     const [currentEmbedUrl, setCurrentEmbedUrl] = useState<string | null>(null);
     const [toastMessage, setToastMessage] = useState<string | null>(null);
+    const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+
+    // Bluetooth States
+    const [isBleSupported, setIsBleSupported] = useState(true);
+    const [bleDevice, setBleDevice] = useState<BluetoothDevice | null>(null);
+    const [bleConnectionStatus, setBleConnectionStatus] = useState<'idle' | 'connecting' | 'connected' | 'error'>('idle');
 
     // CAMERA
     const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
@@ -102,11 +115,27 @@ function TrackingContent() {
         if (!isPaused) {
             interval = setInterval(() => {
                 setDuration(prev => prev + 1);
-                setCalories(prev => prev + 0.05); // Fake calorie burn
+                
+                // --- Smart Pulse (Reacts to Speed) ---
+                // Skip simulation if real BLE sensor is connected
+                if (bleConnectionStatus !== 'connected') {
+                    setPulse(prev => {
+                        const targetHR = 85 + (speed * 12); 
+                        const fluctuation = (Math.random() * 4) - 2;
+                        return Math.min(170, Math.max(70, prev + (targetHR - prev) * 0.1 + fluctuation));
+                    });
+                }
+
+                // --- MET Calories (Weight * MET * Time) ---
+                // Simulating a 15kg dog. MET for walking is approx 3.0.
+                // Formula: 15kg * 3.0 MET * (1/3600 hrs) = calories per second
+                const met = speed > 6 ? 6.0 : speed > 3 ? 3.5 : 2.0;
+                const calPerSec = (15 * met) / 3600;
+                setCalories(prev => prev + calPerSec);
             }, 1000);
         }
         return () => clearInterval(interval);
-    }, [isPaused]);
+    }, [isPaused, speed]); // Pulse/Calories now depend on speed intensity
 
     // GPS TRACKING
     useEffect(() => {
@@ -114,16 +143,31 @@ function TrackingContent() {
 
         watchIdRef.current = navigator.geolocation.watchPosition(
             (pos) => {
-                const { latitude, longitude } = pos.coords;
+                const { latitude, longitude, speed: gpsSpeed } = pos.coords;
                 const newPos: [number, number] = [latitude, longitude];
                 setUserPos(newPos);
-
+                
                 if (!isPaused) {
+                    // --- REAL SPEED INTEGRATION ---
+                    if (gpsSpeed !== null) {
+                        // m/s to km/h conversion
+                        setSpeed(Number((gpsSpeed * 3.6).toFixed(1)));
+                    }
+
                     setPath(prev => {
                         const newPath = [...prev, newPos];
                         if (prev.length > 0) {
                             const lastPos = prev[prev.length - 1];
-                            setDistance(curr => curr + getDistKm(lastPos[0], lastPos[1], latitude, longitude));
+                            const distDelta = getDistKm(lastPos[0], lastPos[1], latitude, longitude);
+                            
+                            // Manual Speed Fallback (if native API fails)
+                            if (gpsSpeed === null) {
+                                // Assuming 1 update per 2 seconds approx (very rough fallback)
+                                const fallBackSpeed = (distDelta * 3600) / 2;
+                                setSpeed(Number(Math.min(15, fallBackSpeed).toFixed(1)));
+                            }
+                            
+                            setDistance(curr => curr + distDelta);
                         }
                         return newPath;
                     });
@@ -137,7 +181,7 @@ function TrackingContent() {
                 }
             },
             (err) => console.error(err),
-            { enableHighAccuracy: true, distanceFilter: 5 }
+            { enableHighAccuracy: true }
         );
 
         return () => {
@@ -186,8 +230,44 @@ function TrackingContent() {
         return `${m}:${s}`;
     };
 
-    const handleFinish = () => {
-        router.push('/walk');
+    // BLE Connection
+    const connectHR = async () => {
+        if (!navigator.bluetooth) {
+            setToastMessage("Tarayıcı Bluetooth desteklemiyor.");
+            return;
+        }
+
+        try {
+            setBleConnectionStatus('connecting');
+            const device = await navigator.bluetooth.requestDevice({
+                filters: [{ services: [HR_SERVICE_UUID] }]
+            });
+
+            setBleDevice(device);
+            const server = await device.gatt?.connect();
+            const service = await server?.getPrimaryService(HR_SERVICE_UUID);
+            const characteristic = await service?.getCharacteristic(HR_CHARACTERISTIC_UUID);
+
+            await characteristic?.startNotifications();
+            characteristic?.addEventListener('characteristicvaluechanged', (event: any) => {
+                const value = event.target.value;
+                const bpm = parseHeartRate(value);
+                setPulse(bpm);
+            });
+
+            device.addEventListener('gattserverdisconnected', () => {
+                setBleConnectionStatus('idle');
+                setBleDevice(null);
+                setToastMessage("Cihaz bağlantısı kesildi.");
+            });
+
+            setBleConnectionStatus('connected');
+            setToastMessage("Nabız Bandı Bağlandı! ❤️");
+        } catch (error) {
+            console.error(error);
+            setBleConnectionStatus('error');
+            setToastMessage("Bağlantı kurulamadı.");
+        }
     };
 
     return (
@@ -201,19 +281,70 @@ function TrackingContent() {
                 <ChevronLeft className="w-6 h-6" />
             </button>
 
-            {/* TOP STATS */}
-            <div className="absolute top-0 left-0 right-0 z-[50] p-6 bg-gradient-to-b from-black/80 to-transparent pt-16 pointer-events-none">
-                <div className="flex justify-between items-end text-white">
-                    <div>
-                        <div className="text-xs font-bold opacity-60 uppercase mb-1">Süre</div>
-                        <div className="text-5xl font-black tracking-tighter tabular-nums leading-none">
-                            {formatTime(duration)}
+            {/* TOP STATS (Premium Glass Overlay) */}
+            <div className="absolute top-0 left-0 right-0 z-[50] p-6 pt-16 bg-gradient-to-b from-black/90 via-black/40 to-transparent pointer-events-none">
+                <div className="flex justify-between items-start text-white pointer-events-auto">
+                    {/* Time & Pulse Section */}
+                    <div className="flex flex-col gap-1">
+                        <div className="flex items-start gap-4">
+                            {/* Duration Clock with fixed width */}
+                            <div className="text-5xl font-black tracking-tighter tabular-nums leading-none min-w-[145px]">
+                                {formatTime(duration)}
+                            </div>
+                            
+                            {/* Status & Biometrics - Non-shifting anchor */}
+                            <div className="flex flex-col gap-1.5 pt-1">
+                                <span className={cn(
+                                    "px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-1 border transition-colors w-fit",
+                                    isPaused ? "bg-gray-500/20 border-gray-500/30 text-gray-400" : "bg-red-500/10 border-red-500/20 text-red-500"
+                                )}>
+                                    <Heart className={cn("w-3 h-3 fill-current", !isPaused && "animate-pulse")} /> 
+                                    {isPaused ? "PAUSE" : "CANLI"}
+                                </span>
+                                <div className="flex items-center gap-1.5 text-sm font-black tabular-nums tracking-tight text-white/90">
+                                    <div className="flex items-center justify-center w-5 h-5 bg-red-500/20 rounded-full">
+                                        <Activity className="w-3 h-3 text-red-500" />
+                                    </div>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className={cn("text-lg", bleConnectionStatus === 'connected' && "text-green-400")}>
+                                            {Math.floor(pulse)}
+                                        </span>
+                                        <span className="opacity-40 text-[9px] uppercase">BPM</span>
+                                    </div>
+
+                                    {/* BLE Connect Button */}
+                                    <button
+                                        onClick={connectHR}
+                                        className={cn(
+                                            "ml-1 w-6 h-6 rounded-full flex items-center justify-center transition-all active:scale-90 border",
+                                            bleConnectionStatus === 'connected' 
+                                                ? "bg-green-500/20 border-green-500/40 text-green-400" 
+                                                : bleConnectionStatus === 'connecting'
+                                                    ? "bg-blue-500/20 border-blue-500/40 text-blue-400 animate-pulse"
+                                                    : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10"
+                                        )}
+                                        title="Nabız Sensörü Bağla"
+                                    >
+                                        {bleConnectionStatus === 'connected' ? <BluetoothConnected className="w-3 h-3" /> : <Bluetooth className="w-3 h-3" />}
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div className="text-right">
-                        <div className="text-3xl font-bold tabular-nums">{distance.toFixed(2)} <span className="text-sm font-normal opacity-60">km</span></div>
-                        <div className="text-sm font-bold text-orange-400 flex items-center justify-end gap-1">
-                            <Flame className="w-3 h-3 fill-current" /> {Math.floor(calories)} kcal
+
+                    {/* Distance & Speed Section */}
+                    <div className="text-right flex flex-col gap-1 items-end">
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-4xl font-black tabular-nums tracking-tighter">{distance.toFixed(2)}</span>
+                            <span className="text-xs font-black opacity-40 uppercase tracking-widest">km</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-1 text-xs font-black tabular-nums text-white/60">
+                                <Zap className="w-3 h-3 text-yellow-400 fill-yellow-400" /> {speed.toFixed(1)} <span className="text-[9px] opacity-40 uppercase">km/h</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-xs font-black tabular-nums text-orange-400">
+                                <Flame className="w-3 h-3 fill-orange-400" /> {Math.floor(calories)} <span className="text-[9px] opacity-40 uppercase">kcal</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -232,29 +363,143 @@ function TrackingContent() {
                 />
             </div>
 
-            {/* --- LEFT SIDEBAR (Glassmorphic) --- */}
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 z-[55] pl-4 pointer-events-auto flex items-center">
+            {/* --- LEFT SIDEBAR (Sihirli Sidebar - Vertical Drawer) --- */}
+            <div className="absolute left-6 bottom-32 z-[55] flex flex-col items-center gap-4">
+                
+                {/* Expandable Icons (Upwards) */}
+                <AnimatePresence>
+                    {isActionMenuOpen && (
+                        <motion.div
+                            initial="closed"
+                            animate="open"
+                            exit="closed"
+                            variants={{
+                                open: { opacity: 1, y: 0, transition: { staggerChildren: 0.05, delayChildren: 0.1 } },
+                                closed: { opacity: 0, y: 20, transition: { staggerChildren: 0.05, staggerDirection: -1 } }
+                            }}
+                            className="flex flex-col gap-4 mb-2"
+                        >
+                            {/* Quick Water (💧) */}
+                            <motion.button
+                                variants={{ open: { opacity: 1, scale: 1 }, closed: { opacity: 0, scale: 0.8 } }}
+                                onClick={() => { handleAction('water', 'Su Molası Kaydedildi! 💧'); setIsActionMenuOpen(false); }}
+                                className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-500/30 backdrop-blur-xl flex items-center justify-center text-blue-400 hover:bg-blue-500/40 transition-all shadow-xl active:scale-90"
+                            >
+                                <Droplets className="w-6 h-6 fill-current" />
+                            </motion.button>
 
-                {/* Main Action Column */}
-                <div className="flex flex-col gap-5 bg-black/20 backdrop-blur-xl p-2 rounded-2xl border border-white/5 shadow-2xl">
+                            {/* Quick Pee (✨) */}
+                            <motion.button
+                                variants={{ open: { opacity: 1, scale: 1 }, closed: { opacity: 0, scale: 0.8 } }}
+                                onClick={() => { handleAction('pee', 'Çiş İşaretlendi! ✨'); setIsActionMenuOpen(false); }}
+                                className="w-12 h-12 rounded-2xl bg-yellow-500/20 border border-yellow-500/30 backdrop-blur-xl flex items-center justify-center text-yellow-400 hover:bg-yellow-500/40 transition-all shadow-xl active:scale-90"
+                            >
+                                <Zap className="w-6 h-6 fill-current" />
+                            </motion.button>
 
-                    {/* Quick Water */}
-                    <button
-                        onClick={() => handleAction('water', 'Su Molası Kaydedildi! 💧')}
-                        className="w-9 h-9 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center text-blue-400 hover:bg-white/20 transition-all shadow-lg active:scale-95"
-                    >
-                        <Droplets className="w-5 h-5" />
-                    </button>
+                            {/* Quick Poop (💩) */}
+                            <motion.button
+                                variants={{ open: { opacity: 1, scale: 1 }, closed: { opacity: 0, scale: 0.8 } }}
+                                onClick={() => { handleAction('poop', 'Tuvalet Kaydedildi! 💩'); setIsActionMenuOpen(false); }}
+                                className="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-xl flex items-center justify-center text-white hover:bg-white/20 transition-all shadow-xl active:scale-90"
+                            >
+                                <span className="text-xl leading-none">💩</span>
+                            </motion.button>
 
-                    {/* Quick Poop */}
-                    <button
-                        onClick={() => handleAction('poop', 'Tuvalet Kaydedildi! 💩')}
-                        className="w-9 h-9 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-all shadow-lg active:scale-95"
-                    >
-                        <span className="text-sm leading-none">💩</span>
-                    </button>
-                </div>
+                            {/* Quick Treat (🦴) */}
+                            <motion.button
+                                variants={{ open: { opacity: 1, scale: 1 }, closed: { opacity: 0, scale: 0.8 } }}
+                                onClick={() => { handleAction('treat', 'Ödül Verildi! 🦴'); setIsActionMenuOpen(false); }}
+                                className="w-12 h-12 rounded-2xl bg-green-500/20 border border-green-500/30 backdrop-blur-xl flex items-center justify-center text-green-400 hover:bg-green-500/40 transition-all shadow-xl active:scale-90"
+                            >
+                                <Bone className="w-6 h-6 fill-current" />
+                            </motion.button>
 
+                            {/* Danger Reporting (⚠️) */}
+                            <motion.div
+                                variants={{ open: { opacity: 1, scale: 1 }, closed: { opacity: 0, scale: 0.8 } }}
+                                className="relative"
+                            >
+                                <button
+                                    onClick={() => setActiveSidebar(activeSidebar === 'danger' ? null : 'danger')}
+                                    className={cn(
+                                        "w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-xl active:scale-90 border backdrop-blur-xl",
+                                        activeSidebar === 'danger' 
+                                            ? "bg-red-500 text-white border-red-400" 
+                                            : "bg-red-500/20 border-red-500/30 text-red-500 hover:bg-red-500/40"
+                                    )}
+                                >
+                                    <AlertTriangle className="w-6 h-6 fill-current" />
+                                </button>
+
+                                {/* Danger Sub-menu (Side Reveal) */}
+                                <AnimatePresence>
+                                    {activeSidebar === 'danger' && (
+                                        <motion.div
+                                            initial={{ opacity: 0, x: -20, scale: 0.8 }}
+                                            animate={{ opacity: 1, x: 0, scale: 1 }}
+                                            exit={{ opacity: 0, x: -20, scale: 0.8 }}
+                                            className="absolute left-full ml-4 bottom-0 bg-black/60 backdrop-blur-2xl p-2 rounded-2xl border border-white/10 flex gap-2 shadow-2xl"
+                                        >
+                                            {DANGER_TYPES.map(type => (
+                                                <button
+                                                    key={type.id}
+                                                    onClick={() => { handleAction(type.id, `${type.label} Bildirildi! ⚠️`); setIsActionMenuOpen(false); }}
+                                                    className={cn(
+                                                        "w-11 h-11 rounded-xl flex items-center justify-center border transition-all active:scale-90",
+                                                        type.color
+                                                    )}
+                                                >
+                                                    <type.icon className="w-6 h-6" />
+                                                </button>
+                                            ))}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Main Toggle Button (Magic +) */}
+                <motion.button
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => { setIsActionMenuOpen(!isActionMenuOpen); setActiveSidebar(null); }}
+                    className={cn(
+                        "w-16 h-16 rounded-[2rem] flex items-center justify-center transition-all shadow-2xl border relative overflow-hidden group",
+                        isActionMenuOpen 
+                            ? "bg-white text-black border-white/20" 
+                            : "bg-black/40 text-white border-white/10 backdrop-blur-xl"
+                    )}
+                >
+                    <AnimatePresence mode="wait">
+                        {isActionMenuOpen ? (
+                            <motion.div
+                                key="close-icon"
+                                initial={{ rotate: -90, opacity: 0 }}
+                                animate={{ rotate: 0, opacity: 1 }}
+                                exit={{ rotate: 90, opacity: 0 }}
+                            >
+                                <X className="w-8 h-8" />
+                            </motion.div>
+                        ) : (
+                            <motion.div
+                                key="open-icon"
+                                initial={{ rotate: 90, opacity: 0 }}
+                                animate={{ rotate: 0, opacity: 1 }}
+                                exit={{ rotate: -90, opacity: 0 }}
+                                className="flex items-center justify-center"
+                            >
+                                <Plus className="w-8 h-8" />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                    
+                    {/* Subtle pulse for closed state */}
+                    {!isActionMenuOpen && (
+                        <div className="absolute inset-0 bg-white/5 animate-pulse group-hover:bg-white/10 transition-colors" />
+                    )}
+                </motion.button>
             </div>
 
             {/* TOAST NOTIFICATION */}

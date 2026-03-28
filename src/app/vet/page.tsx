@@ -1,67 +1,56 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
     Search, MapPin, Phone, Star, Calendar,
-    Stethoscope, Clock, ShieldAlert, ChevronRight,
-    MessageCircle, HeartPulse, Syringe, Pill,
+    ShieldAlert, ChevronRight, Syringe, Pill,
     Navigation, Coins, CheckCircle2, ChevronLeft,
-    AlertTriangle, X, Info, LocateFixed, Filter
+    X, Filter, ShieldCheck
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { VaccineModal } from "@/components/vet/VaccineModal";
-import { MoffiAssistant } from "@/components/ai/MoffiAssistant";
 import { DentalCareModal } from "@/components/vet/DentalCareModal";
 import { PharmacyModal } from "@/components/vet/PharmacyModal";
+import { ClinicListModal } from "@/components/vet/ClinicListModal";
 import { PetSwitcher } from "@/components/common/PetSwitcher";
-
-// Dynamic imports to prevent SSR issues
-const LiveMap = dynamic(() => import('@/components/walk/LiveMap'), { ssr: false, loading: () => <div className="h-48 bg-gray-200 animate-pulse rounded-3xl mb-4" /> });
-
-// --- TYPES ---
 import { useVet } from "@/hooks/useVet";
 import { VetClinic } from "@/types/domain";
 
-const SERVICES = [
-    { id: 'exam', label: 'Randevu Al', icon: Calendar, color: 'bg-blue-500', action: 'appointment' },
-    { id: 'vaccine', label: 'Aşı Takvimi', icon: Syringe, color: 'bg-green-500', action: 'vaccine' },
-    { id: 'dental', label: 'Diş Bakımı', icon: HeartPulse, color: 'bg-pink-500', action: 'dental' },
-    { id: 'pharma', label: 'Nöbetçi Eczane', icon: Pill, color: 'bg-purple-500', action: 'pharma' },
-];
+// Dynamic imports to prevent SSR issues
+const LiveMap = dynamic(() => import('@/components/walk/LiveMap'), { ssr: false, loading: () => <div className="h-48 bg-[var(--card-bg)] animate-pulse rounded-3xl mb-4" /> });
 
 export default function VetPage() {
     const router = useRouter();
-
-    // CUSTOM HOOK -> BRIDGE TO SERVICE
-    const { clinics, userLocation, isLoading, bookAppointment } = useVet();
+    const { featuredClinics, allClinics, userLocation, isLoading, bookAppointment } = useVet();
 
     // UI STATES
     const [searchQuery, setSearchQuery] = useState("");
-    const [activeModal, setActiveModal] = useState<'appointment' | 'vaccine' | 'dental' | 'pharma' | 'sos' | 'success' | null>(null);
+    const [activeModal, setActiveModal] = useState<'appointment' | 'vaccine' | 'dental' | 'pharma' | 'sos' | 'success' | 'rating' | 'clinicList' | null>(null);
     const [selectedClinic, setSelectedClinic] = useState<VetClinic | null>(null);
+    const [successMessage, setSuccessMessage] = useState("Randevu Oluşturuldu ✨");
+    const [userRating, setUserRating] = useState(0);
+    const [userComment, setUserComment] = useState("");
 
     // APPOINTMENT FORM STATE
     const [selectedDate, setSelectedDate] = useState<string>("");
     const [selectedTime, setSelectedTime] = useState<string | null>(null);
     const allTimeSlots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30'];
 
-    // Generate real dates (today + next 4 days)
     const dateOptions = Array.from({ length: 5 }, (_, i) => {
         const d = new Date();
         d.setDate(d.getDate() + i);
         const dayNames = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
         const monthNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
         return {
-            key: d.toISOString().split('T')[0], // YYYY-MM-DD
+            key: d.toISOString().split('T')[0],
             label: i === 0 ? 'Bugün' : i === 1 ? 'Yarın' : `${d.getDate()} ${monthNames[d.getMonth()]}`,
             dayName: dayNames[d.getDay()],
         };
     });
 
-    // Filter past time slots if today is selected
     const timeSlots = allTimeSlots.filter(time => {
         if (!selectedDate || selectedDate !== dateOptions[0]?.key) return true;
         const now = new Date();
@@ -69,13 +58,12 @@ export default function VetPage() {
         return h > now.getHours() || (h === now.getHours() && m > now.getMinutes());
     });
 
-
     const handleServiceClick = (action: string) => {
         if (action === 'vaccine') setActiveModal('vaccine');
         else if (action === 'dental') setActiveModal('dental');
         else if (action === 'pharma') setActiveModal('pharma');
         else if (action === 'appointment') {
-            document.getElementById('clinics-list')?.scrollIntoView({ behavior: 'smooth' });
+            setActiveModal('clinicList');
         }
     };
 
@@ -88,45 +76,60 @@ export default function VetPage() {
 
     const confirmAppointment = async () => {
         if (!selectedClinic || !selectedTime) return;
-
-        // Use Hook to Book via Service
         await bookAppointment(selectedClinic, selectedDate, selectedTime, 'general');
-
+        setSuccessMessage("Randevu Oluşturuldu ✨");
         setActiveModal('success');
         setTimeout(() => setActiveModal(null), 3000);
     };
 
     return (
-        <div className="min-h-screen bg-[#F8F9FC] dark:bg-black pb-32 font-sans relative">
+        <div className="min-h-screen bg-[var(--background)] pb-32 font-sans relative text-[var(--foreground)] selection:bg-[#5B4D9D]/30">
+            {/* AMBIENT BACKGROUND GLOWS */}
+            <div className="fixed inset-0 pointer-events-none overflow-hidden">
+                <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-[#5B4D9D]/10 blur-[120px] rounded-full animate-pulse" />
+                <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/5 blur-[100px] rounded-full" />
+            </div>
 
             {/* HEADER */}
-            <header className="sticky top-0 z-40 bg-white/90 dark:bg-[#1A1A1A]/90 backdrop-blur-xl border-b border-gray-100 dark:border-white/5 pb-4 transition-all">
-                <div className="px-6 pt-6 pb-2 flex flex-col gap-4">
+            <header className="sticky top-0 z-50 bg-[var(--background)]/60 backdrop-blur-3xl border-b border-[var(--card-border)] pb-4 transition-all">
+                <div className="px-6 pt-8 pb-2 flex flex-col gap-6">
                     <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                            <button onClick={() => router.push('/home')} className="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center hover:bg-gray-200 transition-colors"><ChevronLeft className="w-6 h-6" /></button>
-                            <div className="flex flex-col">
-                                <h1 className="text-2xl font-black text-gray-900 dark:text-white leading-none mb-1">
+                        <div className="flex items-center gap-4">
+                            <button 
+                                onClick={() => {
+                                    if (window.history.length > 2) {
+                                        router.back();
+                                    } else {
+                                        router.push('/community');
+                                    }
+                                }} 
+                                className="w-11 h-11 rounded-2xl bg-[var(--card-bg)] border border-white/10 flex items-center justify-center hover:bg-white/10 hover:scale-105 active:scale-95 transition-all"
+                            >
+                                <ChevronLeft className="w-6 h-6 text-[var(--foreground)]/80" />
+                            </button>
+                            <div>
+                                <h1 className="text-3xl font-black text-[var(--foreground)] tracking-tighter leading-none mb-1.5">
                                     Veteriner
                                 </h1>
-                                <div className="scale-90 origin-left -ml-1">
+                                <div className="scale-95 origin-left opacity-90">
                                     <PetSwitcher />
                                 </div>
                             </div>
                         </div>
-                        <div className="bg-yellow-400/10 border border-yellow-400/20 px-3 py-1.5 rounded-full flex items-center gap-2">
+                        <div className="bg-[var(--card-bg)] border border-white/10 px-4 py-2 rounded-2xl flex items-center gap-2 backdrop-blur-md">
                             <Coins className="w-4 h-4 text-yellow-500 fill-current" />
-                            <span className="text-sm font-bold text-yellow-700 dark:text-yellow-400">2,450</span>
+                            <span className="text-sm font-black text-[var(--foreground)]/90">2,450</span>
                         </div>
                     </div>
 
-                    {/* SEARCH */}
+                    {/* MINIMALIST SEARCH */}
                     <div className="relative group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-[#5B4D9D] transition-colors" />
+                        <div className="absolute inset-0 bg-[#5B4D9D]/10 rounded-2xl blur-md opacity-0 group-focus-within:opacity-100 transition-opacity" />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--foreground)]/30 group-focus-within:text-[#5B4D9D] transition-colors" />
                         <input
                             type="text"
                             placeholder="Klinik, veteriner veya uzmanlık ara..."
-                            className="w-full h-12 pl-12 pr-4 bg-gray-100 dark:bg-white/5 rounded-2xl border-none outline-none font-bold text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-[#5B4D9D]/50 transition-all shadow-sm"
+                            className="w-full h-14 pl-12 pr-4 bg-[var(--card-bg)] rounded-2xl border border-white/10 outline-none font-bold text-sm text-[var(--foreground)] placeholder:text-[var(--foreground)]/20 focus:border-[#5B4D9D]/50 focus:bg-white/[0.08] transition-all relative z-10 text-center"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -134,103 +137,171 @@ export default function VetPage() {
                 </div>
             </header>
 
-            <main className="px-6 py-6 space-y-8">
+            <main className="px-6 py-8 space-y-10 relative z-10">
 
-                {/* QUICK SERVICES */}
-                <section className="grid grid-cols-4 gap-3">
-                    {SERVICES.map((service) => (
-                        <button
-                            key={service.id}
-                            onClick={() => handleServiceClick(service.action)}
-                            className="flex flex-col items-center gap-2 group"
-                        >
-                            <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg transition-transform group-hover:scale-105 active:scale-95", service.color)}>
-                                <service.icon className="w-6 h-6" />
-                            </div>
-                            <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300 text-center leading-tight">{service.label}</span>
-                        </button>
-                    ))}
+                {/* BENTO QUICK SERVICES - Glassmorphism 2.0 */}
+                <section className="grid grid-cols-6 grid-rows-2 gap-4 h-[260px]">
+                    {/* LARGE: Randevu Al */}
+                    <motion.button
+                        whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleServiceClick('appointment')}
+                        className="col-span-4 row-span-2 bg-[#1C1C1E] border border-white/10 rounded-[2.8rem] p-7 text-left flex flex-col justify-between relative overflow-hidden group shadow-2xl"
+                    >
+                        {/* Mesh Glow Background */}
+                        <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-[#5B4D9D]/20 blur-[80px] rounded-full group-hover:bg-[#5B4D9D]/30 transition-colors duration-500" />
+                        <div className="absolute bottom-[-10%] left-[-10%] w-32 h-32 bg-blue-500/10 blur-[60px] rounded-full" />
+                        
+                        <div className="w-16 h-16 rounded-[1.8rem] bg-white/5 backdrop-blur-2xl flex items-center justify-center border border-white/10 shadow-xl relative z-10">
+                            <Calendar className="w-8 h-8 text-white" />
+                        </div>
+                        
+                        <div className="relative z-10">
+                            <p className="text-[#5B4D9D] text-[10px] font-black uppercase tracking-[0.3em] mb-1">Moffi Health</p>
+                            <h3 className="text-3xl font-black text-white tracking-tighter leading-none italic uppercase">Randevu Al</h3>
+                            <p className="text-white/40 text-[11px] font-bold mt-2 uppercase tracking-widest max-w-[140px]">En Yakın Kliniklere Hızlı Erişim</p>
+                        </div>
+                        
+                        <div className="absolute top-8 right-8 w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10 group-hover:translate-x-1 transition-all">
+                            <ChevronRight className="w-6 h-6 text-white/40 group-hover:text-white" />
+                        </div>
+                    </motion.button>
+
+                    {/* MEDIUM: Aşılar */}
+                    <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleServiceClick('vaccine')}
+                        className="col-span-2 row-span-1 bg-emerald-500/5 border border-emerald-500/20 rounded-[2.2rem] p-5 flex flex-col items-start justify-between group hover:bg-emerald-500/10 transition-all shadow-lg"
+                    >
+                        <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/20 group-hover:scale-110 transition-transform">
+                            <Syringe className="w-5 h-5 text-emerald-400" />
+                        </div>
+                        <div>
+                            <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest block mb-1">Takvim</span>
+                            <span className="text-lg font-black text-white tracking-tighter uppercase italic leading-none">Aşılar</span>
+                        </div>
+                    </motion.button>
+
+                    {/* MEDIUM: Eczane */}
+                    <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleServiceClick('pharma')}
+                        className="col-span-2 row-span-1 bg-purple-500/5 border border-purple-500/20 rounded-[2.2rem] p-5 flex flex-col items-start justify-between group hover:bg-purple-500/10 transition-all shadow-lg"
+                    >
+                        <div className="w-10 h-10 rounded-2xl bg-purple-500/20 flex items-center justify-center border border-purple-500/20 group-hover:scale-110 transition-transform">
+                            <Pill className="w-5 h-5 text-purple-400" />
+                        </div>
+                        <div>
+                            <span className="text-[10px] font-black text-purple-400 uppercase tracking-widest block mb-1">Nöbetçi</span>
+                            <span className="text-lg font-black text-white tracking-tighter uppercase italic leading-none">Eczane</span>
+                        </div>
+                    </motion.button>
                 </section>
 
-                {/* INTERACTIVE MAP PREVIEW */}
-                <section className="relative w-full h-48 rounded-[2rem] overflow-hidden border border-gray-200 dark:border-white/10 shadow-lg">
+                {/* MAP PREVIEW - SLEEK CRYSTAL VERSION */}
+                <section className="relative w-full h-56 rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl">
                     {userLocation ? (
                         <LiveMap
                             userPos={userLocation}
-                            visitedPlaceIds={clinics.map(c => c.id)}
+                            visitedPlaceIds={allClinics.map(c => c.id)}
                             path={[]}
                             isTracking={false}
                         />
                     ) : (
-                        <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400 text-xs">Harita yükleniyor...</div>
+                        <div className="w-full h-full bg-[var(--card-bg)] flex items-center justify-center text-[var(--foreground)]/20 text-xs font-bold">Harita Hazırlanıyor...</div>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
-                    <div className="absolute bottom-4 left-4 text-white">
-                        <div className="font-bold text-sm flex items-center gap-2"><MapPin className="w-4 h-4 text-orange-400" /> {clinics.length} Klinik Bulundu</div>
-                        <div className="text-[10px] opacity-80">Haritada incele</div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-[var(--background)] via-[var(--background)]/20 to-transparent pointer-events-none" />
+                    <div className="absolute bottom-6 left-6 flex items-end justify-between right-6 pointer-events-none">
+                        <div>
+                            <div className="font-black text-lg text-[var(--foreground)] flex items-center gap-2"><MapPin className="w-5 h-5 text-orange-500" /> {allClinics.length} Klinik</div>
+                            <div className="text-[10px] text-[var(--foreground)]/50 font-bold uppercase tracking-widest">Çevrendeki Aktif Noktalar</div>
+                        </div>
+                        <button className="bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2 rounded-full text-[10px] font-black text-[var(--foreground)] pointer-events-auto hover:bg-white/20 transition-all">
+                            GENİŞLET
+                        </button>
                     </div>
                 </section>
 
-                {/* CLINICS LIST (REAL SORTING) */}
+                {/* CLINICS LIST - PREMIUM APPLE MAPS CARDS */}
                 <section id="clinics-list">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-black text-gray-900 dark:text-white">Yakındaki Klinikler</h2>
-                        <button className="text-xs font-bold text-[#5B4D9D] flex items-center gap-1"><Filter className="w-3 h-3" /> Filtrele</button>
+                    <div className="flex items-center justify-between mb-8 px-1">
+                        <div>
+                            <h2 className="text-3xl font-black text-white tracking-tighter italic uppercase leading-none">Öne Çıkanlar</h2>
+                            <p className="text-[10px] text-white/30 font-black uppercase tracking-[0.3em] mt-2">Popüler Noktalar</p>
+                        </div>
+                        <button className="bg-white/5 border border-white/10 px-4 py-2 rounded-2xl text-[10px] font-black text-white/40 flex items-center gap-2 hover:bg-white/10 hover:text-white transition-all">
+                            <Filter className="w-3.5 h-3.5" /> FİLTRELE
+                        </button>
                     </div>
 
-                    <div className="space-y-4">
-                        {clinics.map((clinic) => (
+                    <div className="space-y-8">
+                        {featuredClinics.map((clinic, index) => (
                             <motion.div
-                                initial={{ opacity: 0, y: 20 }}
+                                initial={{ opacity: 0, y: 40 }}
                                 whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true }}
-                                key={clinic.id}
+                                viewport={{ once: true, margin: "-50px" }}
+                                transition={{ type: "spring", stiffness: 80, damping: 12, delay: index * 0.05 }}
+                                key={clinic.id || `clinic-${index}`}
                                 className={cn(
-                                    "bg-white dark:bg-[#1A1A1A] rounded-[2rem] p-4 shadow-sm border transition-all active:scale-[0.98]",
-                                    clinic.isPremium ? "border-yellow-400/50 shadow-yellow-500/10 ring-1 ring-yellow-400/20" : "border-gray-100 dark:border-white/5"
+                                    "bg-[#1C1C1E] rounded-[3rem] p-6 border transition-all active:scale-[0.98] group relative overflow-hidden",
+                                    clinic.isPremium ? "border-yellow-500/30 shadow-[0_30px_60px_rgba(234,179,8,0.1)]" : "border-white/5 shadow-2xl"
                                 )}
                             >
-                                <div className="flex gap-4">
-                                    <div className="w-24 h-24 rounded-2xl bg-gray-200 overflow-hidden relative shrink-0">
-                                        <img src={clinic.imageUrl} className="w-full h-full object-cover" />
-                                        {clinic.isPremium && (
-                                            <div className="absolute top-0 left-0 bg-yellow-400 text-black text-[9px] font-black px-2 py-1 rounded-br-lg z-10">
-                                                ÖNERİLEN
+                                {/* Subtle Background Shimmer */}
+                                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+
+                                <div className="flex flex-col gap-6 relative z-10">
+                                    {/* Card Header: Main Image & floating data */}
+                                    <div className="relative h-56 rounded-[2rem] overflow-hidden border border-white/10">
+                                        <img src={clinic.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                                        
+                                        {/* Floating Badges */}
+                                        <div className="absolute top-4 left-4 flex gap-2">
+                                            {clinic.isPremium && (
+                                                <div className="bg-gradient-to-br from-yellow-400 to-orange-500 text-black text-[10px] font-black px-4 py-1.5 rounded-full shadow-2xl flex items-center gap-1.5">
+                                                    <ShieldCheck className="w-3.5 h-3.5" /> MOFFI VERIFIED
+                                                </div>
+                                            )}
+                                            <div className="bg-black/40 backdrop-blur-md text-white text-[10px] font-black px-4 py-1.5 rounded-full border border-white/20 whitespace-nowrap">
+                                                {clinic.distance}
                                             </div>
-                                        )}
-                                        <div className="absolute bottom-0 right-0 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-tl-lg backdrop-blur-sm">
-                                            {clinic.distance}
                                         </div>
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <h3 className="font-bold text-gray-900 dark:text-white leading-tight mb-1">{clinic.name}</h3>
-                                                <div className="flex items-center gap-1 text-xs text-gray-500 mb-2">
-                                                    <MapPin className="w-3 h-3 text-gray-400" /> {clinic.distance} uzakta
+
+                                        <div className="absolute bottom-4 left-6 right-6 flex items-end justify-between">
+                                            <div className="flex-1">
+                                                <h3 className="font-black text-white text-2xl tracking-tighter uppercase italic leading-none">{clinic.name}</h3>
+                                                <p className="text-white/60 text-[10px] font-black uppercase tracking-[0.2em] mt-1 flex items-center gap-1.5">
+                                                    <MapPin className="w-3 h-3 text-orange-500" /> {clinic.address || "İstanbul, Kadıköy"}
+                                                </p>
+                                            </div>
+                                            <div className="flex flex-col items-end gap-1 translate-y-2">
+                                                <div className="bg-white p-3 rounded-2xl shadow-2xl text-black flex flex-col items-center min-w-[50px]">
+                                                    <Star className="w-4 h-4 text-yellow-500 fill-current mb-0.5" />
+                                                    <span className="text-xs font-black">{clinic.rating}</span>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-1 bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 rounded-md">
-                                                <Star className="w-3 h-3 text-orange-400 fill-current" />
-                                                <span className="text-xs font-bold text-gray-900 dark:text-white">{clinic.rating}</span>
-                                            </div>
                                         </div>
+                                    </div>
 
-                                        <div className="flex flex-wrap gap-1 mb-3">
-                                            {clinic.features.map((f: string) => (
-                                                <span key={f} className="text-[9px] bg-gray-50 dark:bg-white/5 text-gray-500 px-2 py-0.5 rounded-full border border-gray-100 dark:border-white/5">{f}</span>
+                                    {/* Card Footer: Features & Actions */}
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex gap-2">
+                                            {clinic.features.slice(0, 3).map((f: string) => (
+                                                <span key={f} className="text-[9px] font-black bg-white/5 text-white/40 px-3 py-1.5 rounded-lg border border-white/5 uppercase tracking-tighter">{f}</span>
                                             ))}
                                         </div>
-
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-3">
+                                            <button className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 text-emerald-400 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all shadow-xl active:scale-90">
+                                                <Phone className="w-5 h-5 fill-current" />
+                                            </button>
                                             <button
                                                 onClick={() => openAppointment(clinic)}
-                                                className="flex-1 bg-[#5B4D9D] hover:bg-[#4a3e80] text-white text-xs font-bold py-2.5 rounded-xl transition-colors shadow-lg shadow-purple-500/20"
+                                                className="bg-white text-black h-12 px-8 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-white/90 transition-all shadow-2xl active:scale-95 whitespace-nowrap"
                                             >
                                                 Randevu Al
-                                            </button>
-                                            <button className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/20 text-green-600 flex items-center justify-center hover:scale-105 transition-transform">
-                                                <Phone className="w-4 h-4" />
                                             </button>
                                         </div>
                                     </div>
@@ -240,55 +311,77 @@ export default function VetPage() {
                     </div>
                 </section>
             </main>
-            <MoffiAssistant />
+            
+            {/* AMBIENT BOTTOM GRADIENT */}
+            <div className="fixed bottom-0 inset-x-0 h-32 bg-gradient-to-t from-[var(--background)] to-transparent pointer-events-none z-20" />
 
             {/* --- MODALS --- */}
             <AnimatePresence>
-
-                {/* 1. APPOINTMENT MODAL (FULL FUNCTIONAL) */}
+                {/* 1. APPOINTMENT MODAL - Apple Modern Refinement */}
                 {activeModal === 'appointment' && selectedClinic && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm">
-                        <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="w-full max-w-md bg-white dark:bg-[#121212] rounded-t-[2rem] sm:rounded-[2rem] p-6 shadow-2xl overflow-hidden h-[85vh] flex flex-col">
-                            <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-xl font-black text-gray-900 dark:text-white">Randevu Oluştur</h2>
-                                <button onClick={() => setActiveModal(null)} className="w-8 h-8 bg-gray-100 dark:bg-white/10 rounded-full flex items-center justify-center"><X className="w-4 h-4" /></button>
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-black/80 flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-xl">
+                        <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="w-full max-w-md bg-[#1C1C1E] rounded-t-[3rem] sm:rounded-[3.5rem] p-7 shadow-[0_50px_100px_rgba(0,0,0,0.5)] overflow-hidden h-[85vh] flex flex-col border border-white/10 text-white relative">
+                            {/* iOS Style Grab Handle */}
+                            <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/10 rounded-full sm:hidden" />
+                            
+                            <div className="flex justify-between items-center mb-8 mt-2 sm:mt-0">
+                                <h2 className="text-2xl font-black tracking-tighter uppercase italic leading-none">Randevu Oluştur</h2>
+                                <button onClick={() => setActiveModal(null)} className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center border border-white/10 hover:bg-white/10 transition-all"><X className="w-5 h-5" /></button>
                             </div>
 
-                            <div className="flex items-center gap-3 mb-6 p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5">
-                                <img src={selectedClinic.imageUrl} className="w-14 h-14 rounded-xl object-cover" />
-                                <div>
-                                    <div className="font-bold text-gray-900 dark:text-white">{selectedClinic.name}</div>
-                                    <div className="text-xs text-gray-500 flex items-center gap-1"><MapPin className="w-3 h-3" /> {selectedClinic.distance}</div>
+                            <div className="flex items-center gap-5 mb-8 p-5 bg-white/5 rounded-[2.2rem] border border-white/10 relative overflow-hidden group">
+                                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+                                <img src={selectedClinic.imageUrl} className="w-20 h-20 rounded-2xl object-cover shrink-0 border border-white/10" />
+                                <div className="relative z-10 flex-1">
+                                    <div className="font-black text-xl tracking-tight leading-snug mb-1">{selectedClinic.name}</div>
+                                    <div className="text-[10px] text-white/40 font-black uppercase tracking-widest flex items-center gap-1.5">
+                                        <MapPin className="w-3.5 h-3.5 text-orange-500" /> {selectedClinic.distance}
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* DATE SELECTOR */}
-                            <div className="mb-6">
-                                <label className="text-xs font-bold text-gray-500 uppercase mb-2 block tracking-wider">Tarih Seç</label>
-                                <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                            {/* DATE SELECTOR - iOS Style */}
+                            <div className="mb-8">
+                                <div className="flex items-center justify-between mb-4 px-1">
+                                    <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Randevu Günü</label>
+                                    <span className="text-[10px] font-black text-[#5B4D9D] uppercase tracking-widest">En Erken Bugüne</span>
+                                </div>
+                                <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar -mx-1 px-1">
                                     {dateOptions.map((day) => (
                                         <button
                                             key={day.key}
                                             onClick={() => { setSelectedDate(day.key); setSelectedTime(null); }}
-                                            className={cn("px-4 py-3 rounded-xl min-w-[80px] text-center border transition-all relative overflow-hidden", selectedDate === day.key ? "bg-[#5B4D9D] text-white border-[#5B4D9D] shadow-lg shadow-purple-500/30" : "border-gray-200 dark:border-white/10 text-gray-500 hover:bg-gray-50")}
+                                            className={cn(
+                                                "px-6 py-5 rounded-[2rem] min-w-[100px] text-center border transition-all relative overflow-hidden flex flex-col items-center group",
+                                                selectedDate === day.key 
+                                                    ? "bg-white text-black border-white shadow-2xl shadow-white/10" 
+                                                    : "border-white/5 bg-white/5 text-white/30 hover:bg-white/10 hover:border-white/20"
+                                            )}
                                         >
-                                            <div className="text-xs font-medium opacity-80">{day.dayName}</div>
-                                            <div className="text-sm font-bold">{day.label}</div>
-                                            {selectedDate === day.key && <motion.div layoutId="activeDate" className="absolute inset-0 bg-white/10" />}
+                                            <div className="text-[9px] font-black uppercase tracking-widest mb-1 opacity-60">{day.dayName}</div>
+                                            <div className="text-sm font-black tracking-tight">{day.label}</div>
+                                            {selectedDate === day.key && (
+                                                <motion.div layoutId="day-dot" className="absolute bottom-2 w-1 h-1 bg-black rounded-full" />
+                                            )}
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
                             {/* TIME SELECTOR */}
-                            <div className="mb-6 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                                <label className="text-xs font-bold text-gray-500 uppercase mb-2 block tracking-wider">Saat Seç</label>
+                            <div className="mb-8 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                                <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-4 block px-1">Randevu Saati</label>
                                 <div className="grid grid-cols-4 gap-3">
                                     {timeSlots.map(time => (
                                         <button
                                             key={time}
                                             onClick={() => setSelectedTime(time)}
-                                            className={cn("py-2.5 rounded-xl text-sm font-bold border transition-all", selectedTime === time ? "bg-[#5B4D9D] text-white border-[#5B4D9D] shadow-md" : "border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5")}
+                                            className={cn(
+                                                "py-4 rounded-2xl text-[13px] font-black border transition-all",
+                                                selectedTime === time 
+                                                    ? "bg-[#5B4D9D] text-white border-[#5B4D9D] shadow-[0_10px_30px_rgba(91,77,157,0.4)]" 
+                                                    : "border-white/5 bg-white/5 text-white/40 hover:bg-white/10 hover:border-white/10"
+                                            )}
                                         >
                                             {time}
                                         </button>
@@ -296,78 +389,144 @@ export default function VetPage() {
                                 </div>
                             </div>
 
-                            <div className="mt-auto border-t border-gray-100 dark:border-white/10 pt-4">
-                                <div className="flex justify-between items-center mb-4 text-sm">
-                                    <span className="text-gray-500">Muayene Ücreti</span>
-                                    <span className="font-black text-gray-900 dark:text-white">650.00 ₺</span>
+                            <div className="mt-auto pt-6 border-t border-white/5">
+                                <div className="flex justify-between items-center mb-6 px-2">
+                                    <div>
+                                        <span className="text-white/40 font-black text-[10px] uppercase tracking-widest block mb-1">Hizmet Bedeli</span>
+                                        <span className="font-black text-2xl text-white tracking-tighter italic uppercase leading-none">650.00 ₺</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="bg-emerald-500/10 text-emerald-400 text-[9px] font-black px-3 py-1.5 rounded-full border border-emerald-500/20">MOFFI ÜYELİĞİ AKTİF</span>
+                                    </div>
                                 </div>
                                 <button
                                     onClick={confirmAppointment}
                                     disabled={!selectedTime}
-                                    className="w-full bg-[#5B4D9D] text-white py-4 rounded-xl font-black text-lg shadow-xl shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#4a3e80] transition-colors flex items-center justify-center gap-2"
+                                    className="w-full bg-white text-black py-5 rounded-[2rem] font-black text-sm uppercase tracking-[0.2em] shadow-[0_30px_60px_rgba(255,255,255,0.1)] disabled:opacity-20 transition-all flex items-center justify-center gap-3 active:scale-95 group"
                                 >
-                                    {selectedTime ? `Randevuyu Onayla (${selectedTime})` : 'Saat Seçiniz'} <ChevronRight className="w-5 h-5" />
+                                    {selectedTime ? `ONAYLA VE OLUŞTUR` : 'SAAT SEÇİNİZ'} 
+                                    <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                                 </button>
                             </div>
                         </motion.div>
                     </motion.div>
                 )}
 
-                {/* 2. SOS MODAL */}
+                {/* 2. SOS MODAL - Critical Apple Alert */}
                 {activeModal === 'sos' && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-red-600/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center text-white">
-                        <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} className="bg-white text-red-600 p-8 rounded-full mb-8 shadow-2xl animate-pulse ring-8 ring-red-400/30">
-                            <ShieldAlert className="w-20 h-20 fill-current" />
-                        </motion.div>
-                        <h2 className="text-4xl font-black mb-4 tracking-tight">ACİL DURUM!</h2>
-                        <div className="bg-black/20 p-4 rounded-2xl mb-8 border border-white/10 max-w-sm">
-                            <div className="text-sm opacity-80 mb-1">En Yakın Açık Klinik:</div>
-                            <div className="font-bold text-xl">Acil Vet 24/7</div>
-                            <div className="text-sm font-mono mt-1 flex items-center justify-center gap-2"><Navigation className="w-4 h-4" /> 2.5 km (5 dk)</div>
-                        </div>
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-[#FF3B30] flex flex-col items-center justify-center p-8 text-center text-white relative overflow-hidden">
+                        {/* Background Pulsing Radiance */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                        <motion.div 
+                            animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
+                            transition={{ repeat: Infinity, duration: 3 }}
+                            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] bg-white/20 blur-[120px] rounded-full" 
+                        />
 
-                        <div className="flex flex-col gap-4 w-full max-w-xs">
-                            <button className="bg-white text-red-600 py-4 rounded-2xl font-black text-xl flex items-center justify-center gap-3 shadow-xl hover:scale-105 transition-transform">
-                                <Phone className="w-6 h-6 fill-current" /> HEMAN ARA
-                            </button>
-                            <button className="bg-red-800 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 border border-red-400/30 hover:bg-red-700">
-                                <Navigation className="w-5 h-5" /> Yol Tarifi Al
-                            </button>
-                            <button onClick={() => setActiveModal(null)} className="mt-4 text-sm font-bold opacity-60 hover:opacity-100">
-                                İptal Et
-                            </button>
+                        <motion.div 
+                            initial={{ scale: 0.5, opacity: 0 }} 
+                            animate={{ scale: 1, opacity: 1 }} 
+                            className="bg-white text-[#FF3B30] p-12 rounded-[3.5rem] mb-10 shadow-[0_50px_100px_rgba(0,0,0,0.3)] relative z-10"
+                        >
+                            <ShieldAlert className="w-24 h-24 fill-current animate-pulse" />
+                        </motion.div>
+
+                        <div className="relative z-10">
+                            <h2 className="text-6xl font-black mb-6 tracking-tighter uppercase italic leading-none">ACİL DURUM</h2>
+                            <div className="bg-black/20 backdrop-blur-3xl p-8 rounded-[3rem] mb-12 border border-white/20 max-w-sm mx-auto shadow-2xl">
+                                <div className="text-[10px] font-black opacity-60 mb-2 uppercase tracking-[0.3em]">En Yakın 7/24 Klinik:</div>
+                                <div className="font-black text-3xl tracking-tighter italic uppercase">Acil Vet 24/7</div>
+                                <div className="text-sm font-black mt-3 flex items-center justify-center gap-2 text-white/80">
+                                    <MapPin className="w-5 h-5 text-white" /> 2.5 KM (5 DK)
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col gap-5 w-80 mx-auto">
+                                <button className="bg-white text-[#FF3B30] py-6 rounded-[2.5rem] font-black text-xl flex items-center justify-center gap-4 shadow-2xl active:scale-95 transition-all uppercase tracking-widest">
+                                    <Phone className="w-8 h-8 fill-current" /> ŞİMDİ ARA
+                                </button>
+                                <button className="bg-black/40 text-white py-6 rounded-[2.5rem] font-black flex items-center justify-center gap-3 border border-white/10 backdrop-blur-md hover:bg-black/60 transition-all uppercase text-sm tracking-widest">
+                                    <Navigation className="w-6 h-6" /> YOL TARİFİ
+                                </button>
+                                <button onClick={() => setActiveModal(null)} className="mt-10 text-[10px] font-black opacity-40 uppercase tracking-[0.4em] hover:opacity-100 transition-opacity">
+                                    İPTAL ET VE DÖN
+                                </button>
+                            </div>
                         </div>
                     </motion.div>
                 )}
+                {/* 3. RATING MODAL - Premium Crystal Design */}
+                {activeModal === 'rating' && selectedClinic && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[150] bg-black/90 backdrop-blur-2xl flex items-center justify-center p-6">
+                        <motion.div initial={{ scale: 0.9, y: 30 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 30 }} className="w-full max-w-sm bg-[#1C1C1E] rounded-[3.5rem] p-9 border border-white/10 shadow-[0_50px_100px_rgba(0,0,0,0.6)] relative overflow-hidden">
+                            <div className="absolute top-[-20%] left-[-10%] w-64 h-64 bg-yellow-500/5 blur-[80px] rounded-full" />
+                            
+                            <button onClick={() => setActiveModal(null)} className="absolute top-8 right-8 w-11 h-11 bg-white/5 rounded-full flex items-center justify-center border border-white/10 hover:bg-white/10 transition-all text-white/40 hover:text-white z-20"><X className="w-5 h-5" /></button>
+                            
+                            <div className="flex flex-col items-center text-center relative z-10">
+                                <div className="w-24 h-24 rounded-[2.5rem] bg-white/5 overflow-hidden mb-6 border border-white/10 shadow-2xl group">
+                                    <img src={selectedClinic.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                </div>
+                                <h3 className="text-2xl font-black text-white tracking-tighter uppercase italic leading-none mb-2">{selectedClinic.name}</h3>
+                                <p className="text-white/30 text-[10px] font-black uppercase tracking-[0.3em] mb-10">DENEYİMİNİZİ PUANLAYIN</p>
 
-                {/* 3. VACCINE MODAL (NEW COMPONENT) */}
-                <VaccineModal
-                    isOpen={activeModal === 'vaccine'}
-                    onClose={() => setActiveModal(null)}
-                />
+                                {/* STARS - iOS Interaction Style */}
+                                <div className="flex gap-3 mb-10">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                        <motion.button 
+                                            key={star} 
+                                            whileHover={{ scale: 1.2 }}
+                                            whileTap={{ scale: 0.8 }}
+                                            onClick={() => setUserRating(star)}
+                                            className="transition-all"
+                                        >
+                                            <Star className={cn("w-10 h-10 transition-all duration-300", userRating >= star ? "text-yellow-500 fill-current filter drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" : "text-white/5")} />
+                                        </motion.button>
+                                    ))}
+                                </div>
 
-                {/* 4. DENTAL CARE MODAL */}
-                <DentalCareModal
-                    isOpen={activeModal === 'dental'}
-                    onClose={() => setActiveModal(null)}
-                />
+                                <textarea
+                                    placeholder="Geri bildiriminizi buraya bırakın..."
+                                    value={userComment}
+                                    onChange={(e) => setUserComment(e.target.value)}
+                                    className="w-full bg-white/5 border border-white/10 rounded-[2rem] p-5 text-sm font-bold text-white placeholder:text-white/10 outline-none focus:border-yellow-500/50 transition-all resize-none h-32 mb-8 focus:bg-white/10 shadow-inner"
+                                />
 
-                {/* 5. PHARMACY MODAL */}
-                <PharmacyModal
-                    isOpen={activeModal === 'pharma'}
-                    onClose={() => setActiveModal(null)}
-                />
-
-                {/* 4. SUCCESS TOAST */}
-                <AnimatePresence>
-                    {activeModal === 'success' && (
-                        <motion.div initial={{ y: -100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -100, opacity: 0 }} className="fixed top-10 inset-x-0 flex justify-center z-[70] pointer-events-none">
-                            <div className="bg-green-500 text-white px-6 py-3 rounded-full shadow-2xl font-bold flex items-center gap-2">
-                                <CheckCircle2 className="w-6 h-6" /> Randevu Başarıyla Oluşturuldu!
+                                <div className="w-full flex flex-col gap-4">
+                                    <button
+                                        onClick={() => { setSuccessMessage("Değerlendirmen için teşekkürler! ✨"); setActiveModal('success'); setTimeout(() => setActiveModal(null), 2000); }}
+                                        disabled={userRating === 0}
+                                        className="w-full bg-white text-black py-5 rounded-[2rem] font-black text-sm uppercase tracking-[0.2em] shadow-[0_20px_40px_rgba(255,255,255,0.1)] disabled:opacity-10 transition-all active:scale-95"
+                                    >
+                                        GÖNDER VE KAPAT
+                                    </button>
+                                    <button onClick={() => setActiveModal(null)} className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] hover:text-white/40 transition-colors">ŞİMDİ DEĞİL</button>
+                                </div>
                             </div>
                         </motion.div>
-                    )}
-                </AnimatePresence>
+                    </motion.div>
+                )}
+
+                {/* MODALS COMPONENTS */}
+                <VaccineModal isOpen={activeModal === 'vaccine'} onClose={() => setActiveModal(null)} />
+                <DentalCareModal isOpen={activeModal === 'dental'} onClose={() => setActiveModal(null)} />
+                <PharmacyModal isOpen={activeModal === 'pharma'} onClose={() => setActiveModal(null)} />
+                <ClinicListModal 
+                    isOpen={activeModal === 'clinicList'} 
+                    onClose={() => setActiveModal(null)}
+                    clinics={allClinics}
+                    onSelectClinic={(clinic) => openAppointment(clinic)}
+                    isLoading={isLoading}
+                />
+
+                {/* SUCCESS TOAST */}
+                {activeModal === 'success' && (
+                    <motion.div initial={{ y: -100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -100, opacity: 0 }} className="fixed top-12 inset-x-0 flex justify-center z-[300] pointer-events-none">
+                        <div className="bg-white text-black px-8 py-4 rounded-full shadow-2xl font-black flex items-center gap-3 border border-white/20">
+                            <CheckCircle2 className="w-6 h-6 text-green-500" /> {successMessage}
+                        </div>
+                    </motion.div>
+                )}
             </AnimatePresence>
         </div>
     );

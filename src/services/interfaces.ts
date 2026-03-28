@@ -1,6 +1,6 @@
 import {
     FamilyMember, FamilyLog, DailyMemory, DayContext, MemoryMoment,
-    VetClinic, VetAppointment,
+    VetClinic, VetAppointment, VaccineRuleset, UserVaccineRecord,
     ShopProduct, ShopCategory, ShopOrder, ShopCartItem,
     WalkSession, WalkStats,
     GameScore, LeaderboardEntry
@@ -37,10 +37,18 @@ export interface IMemoryService {
 // ==========================================
 export interface IVetService {
     getNearbyClinics(lat: number, lng: number, radiusKm?: number): Promise<VetClinic[]>;
+    getFeaturedClinics(): Promise<VetClinic[]>;
+    getAllClinics(): Promise<VetClinic[]>;
     getClinicDetails(id: string): Promise<VetClinic | null>;
     createAppointment(appointment: Omit<VetAppointment, 'id' | 'status'>): Promise<VetAppointment>;
     getAppointments(userId: string): Promise<VetAppointment[]>;
     cancelAppointment(id: string): Promise<void>;
+}
+
+export interface IVaccineService {
+    getRuleset(countryCode: string): Promise<VaccineRuleset>;
+    getUserSchedule(petId: string, countryCode: string): Promise<UserVaccineRecord[]>;
+    markAsDone(recordId: string, date: string, vetName: string): Promise<void>;
 }
 
 // ==========================================

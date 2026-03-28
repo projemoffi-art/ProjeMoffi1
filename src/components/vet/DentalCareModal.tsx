@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import {
     X, HeartPulse, CheckCircle2, AlertTriangle,
     Smile, Play, Pause, RotateCcw, ChevronRight,
-    Search, Award, Sparkles, BookOpen
+    Search, Award, Sparkles, BookOpen, Shield
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -14,7 +14,6 @@ interface DentalCareModalProps {
     onClose: () => void;
 }
 
-// --- INTELLIGENT CHECKUP QUESTIONS ---
 const QUESTIONS = [
     {
         id: 1,
@@ -47,14 +46,10 @@ const QUESTIONS = [
 
 export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
     const [activeTab, setActiveTab] = useState<'checkup' | 'timer' | 'guide'>('checkup');
-
-    // CHECKUP STATE
     const [currentStep, setCurrentStep] = useState(0);
     const [totalScore, setTotalScore] = useState(0);
     const [showResult, setShowResult] = useState(false);
-
-    // TIMER STATE
-    const [timeLeft, setTimeLeft] = useState(120); // 2 minutes
+    const [timeLeft, setTimeLeft] = useState(120);
     const [isTimerRunning, setIsTimerRunning] = useState(false);
 
     useEffect(() => {
@@ -83,9 +78,9 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
     };
 
     const getResultFeedback = () => {
-        if (totalScore === 0) return { title: "Mükemmel Gülüş! 🦷✨", desc: "Mochi'nin diş sağlığı harika görünüyor. Rutin bakıma devam!", color: "text-green-500", bg: "bg-green-50", border: "border-green-200" };
-        if (totalScore <= 3) return { title: "Dikkatli Olalım 🤔", desc: "Ufak belirtiler var. Fırçalama sıklığını artırmalı ve takip etmelisin.", color: "text-yellow-500", bg: "bg-yellow-50", border: "border-yellow-200" };
-        return { title: "Veteriner Kontrolü Şart 🚨", desc: "Diş taşı veya diş eti hastalığı riski yüksek. Lütfen randevu al.", color: "text-red-500", bg: "bg-red-50", border: "border-red-200" };
+        if (totalScore === 0) return { title: "Mükemmel Gülüş! 🦷✨", desc: "Mochi'nin diş sağlığı harika görünüyor. Rutin bakıma devam!", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" };
+        if (totalScore <= 3) return { title: "Dikkatli Olalım 🤔", desc: "Ufak belirtiler var. Fırçalama sıklığını artırmalı ve takip etmelisin.", color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" };
+        return { title: "Veteriner Kontrolü Şart 🚨", desc: "Diş taşı veya diş eti hastalığı riski yüksek. Lütfen randevu al.", color: "text-[#FF3B30]", bg: "bg-[#FF3B30]/10", border: "border-red-500/20" };
     };
 
     const formatTime = (seconds: number) => {
@@ -101,94 +96,121 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-[#C4F5E6]/90 dark:bg-[#064e3b]/90 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4"
+            className="fixed inset-0 z-[150] bg-black/90 backdrop-blur-2xl flex items-end sm:items-center justify-center p-0 sm:p-4"
         >
             <motion.div
                 initial={{ y: "100%" }}
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}
-                className="w-full max-w-lg bg-white dark:bg-[#121212] rounded-t-[2.5rem] sm:rounded-[2.5rem] h-[85vh] flex flex-col overflow-hidden shadow-2xl ring-4 ring-emerald-100 dark:ring-emerald-900/20"
+                className="w-full max-w-lg bg-[#111111] rounded-t-[3.5rem] sm:rounded-[4rem] h-[90vh] flex flex-col overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.8)] border border-white/10 relative"
             >
+                {/* iOS Style Grab Handle */}
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/10 rounded-full sm:hidden z-50" />
+
                 {/* HEADER */}
-                <div className="p-6 pb-4 bg-emerald-500 text-white relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-8 opacity-10">
-                        <Smile className="w-48 h-48" />
-                    </div>
-                    <div className="flex justify-between items-center relative z-10">
-                        <div>
-                            <h2 className="text-2xl font-black">Dental Care</h2>
-                            <p className="text-emerald-100 font-bold text-xs opacity-90">Sağlıklı Dişler, Mutlu Patiler</p>
+                <div className="p-8 pb-4 bg-[#111111]/80 backdrop-blur-3xl z-30 sticky top-0 border-b border-white/5">
+                    <div className="flex justify-between items-center mb-8 mt-2 sm:mt-0">
+                        <div className="flex items-center gap-4">
+                            <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shadow-2xl">
+                                <Smile className="w-8 h-8" />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-black text-white tracking-tighter uppercase italic leading-none">Ağız Sağlığı</h2>
+                                <p className="text-[10px] text-white/30 font-black uppercase tracking-[0.3em] mt-2">DENTAL CARE 2.0</p>
+                            </div>
                         </div>
-                        <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"><X className="w-5 h-5" /></button>
+                        <button onClick={onClose} className="w-11 h-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all">
+                            <X className="w-5 h-5" />
+                        </button>
                     </div>
 
-                    {/* NAVIGATION PILLS */}
-                    <div className="flex bg-emerald-600/30 p-1 rounded-xl mt-6 relative z-10 backdrop-blur-sm">
-                        <button onClick={() => setActiveTab('checkup')} className={cn("flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1", activeTab === 'checkup' ? "bg-white text-emerald-600 shadow-sm" : "text-emerald-50 hover:bg-white/10")}>
-                            <Search className="w-3 h-3" /> Kontrol
+                    {/* TABS - Apple Glass style */}
+                    <div className="flex bg-white/5 border border-white/10 p-1.5 rounded-[1.8rem]">
+                        <button
+                            onClick={() => setActiveTab('checkup')}
+                            className={cn(
+                                "flex-1 py-3.5 rounded-[1.4rem] text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+                                activeTab === 'checkup' ? "bg-white text-black shadow-2xl" : "text-white/30 hover:text-white/60"
+                            )}
+                        >
+                            <Search className="w-3.5 h-3.5" /> KONTROL
                         </button>
-                        <button onClick={() => setActiveTab('timer')} className={cn("flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1", activeTab === 'timer' ? "bg-white text-emerald-600 shadow-sm" : "text-emerald-50 hover:bg-white/10")}>
-                            <HeartPulse className="w-3 h-3" /> Fırçala
+                        <button
+                            onClick={() => setActiveTab('timer')}
+                            className={cn(
+                                "flex-1 py-3.5 rounded-[1.4rem] text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+                                activeTab === 'timer' ? "bg-emerald-500 text-white shadow-2xl" : "text-white/30 hover:text-white/60"
+                            )}
+                        >
+                            <HeartPulse className="w-3.5 h-3.5" /> FIRÇALA
                         </button>
-                        <button onClick={() => setActiveTab('guide')} className={cn("flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1", activeTab === 'guide' ? "bg-white text-emerald-600 shadow-sm" : "text-emerald-50 hover:bg-white/10")}>
-                            <BookOpen className="w-3 h-3" /> Rehber
+                        <button
+                            onClick={() => setActiveTab('guide')}
+                            className={cn(
+                                "flex-1 py-3.5 rounded-[1.4rem] text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+                                activeTab === 'guide' ? "bg-blue-500 text-white shadow-2xl" : "text-white/30 hover:text-white/60"
+                            )}
+                        >
+                            <BookOpen className="w-3.5 h-3.5" /> REHBER
                         </button>
                     </div>
                 </div>
 
                 {/* CONTENT AREA */}
-                <div className="flex-1 overflow-y-auto p-6 bg-[#F0FDF9] dark:bg-[#022c22]">
+                <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-black/20">
 
                     {/* 1. SMART CHECKUP */}
                     {activeTab === 'checkup' && (
                         <div className="h-full flex flex-col">
                             {!showResult ? (
-                                <motion.div
-                                    key={currentStep}
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: -20 }}
-                                    className="flex-1 flex flex-col justify-center"
-                                >
-                                    <div className="text-center mb-8">
-                                        <div className="inline-block bg-emerald-100 text-emerald-600 px-3 py-1 rounded-full text-xs font-black mb-4">
-                                            SORU {currentStep + 1} / {QUESTIONS.length}
+                                <AnimatePresence mode="wait">
+                                    <motion.div
+                                        key={currentStep}
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -20 }}
+                                        className="flex-1 flex flex-col justify-center py-6"
+                                    >
+                                        <div className="text-center mb-10">
+                                            <div className="inline-block bg-white/5 text-white/40 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.3em] mb-6 border border-white/5">
+                                                SORU {currentStep + 1} / {QUESTIONS.length}
+                                            </div>
+                                            <h3 className="text-3xl font-black text-white leading-tight tracking-tighter uppercase italic">
+                                                {QUESTIONS[currentStep].question}
+                                            </h3>
                                         </div>
-                                        <h3 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">
-                                            {QUESTIONS[currentStep].question}
-                                        </h3>
-                                    </div>
 
-                                    <div className="space-y-3">
-                                        {QUESTIONS[currentStep].options.map((opt, idx) => (
-                                            <button
-                                                key={idx}
-                                                onClick={() => handleAnswer(opt.score)}
-                                                className="w-full bg-white dark:bg-white/5 p-4 rounded-2xl border-2 border-transparent hover:border-emerald-400 group transition-all shadow-sm flex items-center gap-4 text-left"
-                                            >
-                                                <span className="text-3xl group-hover:scale-125 transition-transform">{opt.icon}</span>
-                                                <span className="font-bold text-gray-700 dark:text-gray-200">{opt.label}</span>
-                                                <ChevronRight className="ml-auto w-5 h-5 text-gray-300 group-hover:text-emerald-500" />
-                                            </button>
-                                        ))}
-                                    </div>
-                                </motion.div>
+                                        <div className="space-y-4">
+                                            {QUESTIONS[currentStep].options.map((opt, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => handleAnswer(opt.score)}
+                                                    className="w-full bg-[#1C1C1E] p-6 rounded-[2.5rem] border border-white/5 hover:border-emerald-500/30 group transition-all shadow-xl flex items-center gap-5 text-left active:scale-[0.98]"
+                                                >
+                                                    <span className="text-4xl group-hover:scale-125 transition-transform">{opt.icon}</span>
+                                                    <span className="font-black text-white/70 uppercase tracking-tight text-lg">{opt.label}</span>
+                                                    <ChevronRight className="ml-auto w-6 h-6 text-white/10 group-hover:text-emerald-500 transition-colors" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </motion.div>
+                                </AnimatePresence>
                             ) : (
                                 <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center pt-8">
-                                    <div className={cn("w-24 h-24 mx-auto rounded-full flex items-center justify-center mb-6 animate-bounce", getResultFeedback().bg)}>
+                                    <div className={cn("w-28 h-28 mx-auto rounded-[2.5rem] flex items-center justify-center mb-8 shadow-2xl", getResultFeedback().bg)}>
                                         {totalScore === 0 ? <Sparkles className={cn("w-12 h-12", getResultFeedback().color)} /> : <AlertTriangle className={cn("w-12 h-12", getResultFeedback().color)} />}
                                     </div>
-                                    <h3 className="text-3xl font-black text-gray-900 dark:text-white mb-2">{getResultFeedback().title}</h3>
-                                    <p className="text-gray-600 dark:text-gray-300 mb-8 max-w-[80%] mx-auto">{getResultFeedback().desc}</p>
+                                    <h3 className="text-3xl font-black text-white mb-3 tracking-tighter uppercase italic">{getResultFeedback().title}</h3>
+                                    <p className="text-white/40 font-bold mb-10 max-w-[90%] mx-auto leading-relaxed uppercase tracking-tight text-sm">{getResultFeedback().desc}</p>
 
-                                    <div className="flex flex-col gap-3">
+                                    <div className="flex flex-col gap-4">
                                         {totalScore > 3 && (
-                                            <button className="w-full py-4 rounded-xl bg-red-500 text-white font-bold shadow-lg shadow-red-500/30 hover:bg-red-600 transition-colors">
-                                                Veteriner Randevusu Al
+                                            <button className="w-full h-16 rounded-[2rem] bg-[#FF3B30] text-white font-black uppercase tracking-[0.2em] shadow-2xl shadow-red-500/20 hover:bg-red-600 active:scale-95 transition-all text-xs">
+                                                VETERİNER RANDEVUSU AL
                                             </button>
                                         )}
-                                        <button onClick={resetCheckup} className="w-full py-4 rounded-xl bg-white dark:bg-white/5 border border-gray-200 text-gray-500 font-bold hover:bg-gray-50">
-                                            Tekrar Kontrol Et
+                                        <button onClick={resetCheckup} className="w-full h-16 rounded-[2rem] bg-white text-black font-black uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all text-xs">
+                                            TEKRAR KONTROL ET
                                         </button>
                                     </div>
                                 </motion.div>
@@ -198,82 +220,91 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
 
                     {/* 2. BRUSH TIMER */}
                     {activeTab === 'timer' && (
-                        <div className="flex flex-col items-center justify-center h-full text-center">
-                            <div className="relative mb-8">
-                                {/* Progress Ring */}
-                                <svg className="w-64 h-64 transform -rotate-90">
-                                    <circle cx="128" cy="128" r="120" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-emerald-100 dark:text-emerald-900/20" />
+                        <div className="flex flex-col items-center justify-center min-h-[50vh] pt-12 text-center">
+                            <div className="relative mb-12">
+                                {/* Progress Ring with subtle glow */}
+                                <svg className="w-72 h-72 transform -rotate-90 filter drop-shadow-[0_0_20px_rgba(16,185,129,0.1)]">
+                                    <circle cx="144" cy="144" r="130" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-white/5" />
                                     <circle
-                                        cx="128" cy="128" r="120"
-                                        stroke="currentColor" strokeWidth="8" fill="transparent"
-                                        strokeDasharray={2 * Math.PI * 120}
-                                        strokeDashoffset={2 * Math.PI * 120 * (1 - timeLeft / 120)}
+                                        cx="144" cy="144" r="130"
+                                        stroke="currentColor" strokeWidth="10" fill="transparent"
+                                        strokeDasharray={2 * Math.PI * 130}
+                                        strokeDashoffset={2 * Math.PI * 130 * (1 - timeLeft / 120)}
                                         className="text-emerald-500 transition-all duration-1000 ease-linear"
                                         strokeLinecap="round"
                                     />
                                 </svg>
                                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                    <div className="text-6xl font-black text-gray-900 dark:text-white font-mono tracking-tighter">
+                                    <div className="text-7xl font-black text-white tracking-tighter italic leading-none">
                                         {formatTime(timeLeft)}
                                     </div>
-                                    <div className="text-emerald-500 font-bold text-sm mt-2 animate-pulse">
-                                        {isTimerRunning ? "Fırçalamaya Devam! 🦷" : "Süre Doldu!"}
+                                    <div className="text-emerald-500 font-black text-[10px] uppercase tracking-[0.4em] mt-4 animate-pulse">
+                                        {isTimerRunning ? "FIRÇALAMAYA DEVAM! 🦷" : "SÜRE DOLDU!"}
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-6">
                                 <button
                                     onClick={() => setIsTimerRunning(!isTimerRunning)}
                                     className={cn(
-                                        "w-20 h-20 rounded-full flex items-center justify-center shadow-xl transition-all hover:scale-105 active:scale-95",
-                                        isTimerRunning ? "bg-amber-400 text-white" : "bg-emerald-500 text-white"
+                                        "w-24 h-24 rounded-full flex items-center justify-center shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-all hover:scale-105 active:scale-90 border-4 border-white/5",
+                                        isTimerRunning ? "bg-[#FF9500] text-white" : "bg-emerald-500 text-white"
                                     )}
                                 >
-                                    {isTimerRunning ? <Pause className="w-8 h-8 fill-current" /> : <Play className="w-8 h-8 fill-current ml-1" />}
+                                    {isTimerRunning ? <Pause className="w-10 h-10 fill-current" /> : <Play className="w-10 h-10 fill-current ml-1" />}
                                 </button>
                                 <button
                                     onClick={() => { setIsTimerRunning(false); setTimeLeft(120); }}
-                                    className="w-14 h-14 rounded-full bg-gray-200 dark:bg-white/10 text-gray-500 flex items-center justify-center hover:bg-gray-300 transition-colors"
+                                    className="w-16 h-16 rounded-full bg-white/5 text-white/30 flex items-center justify-center hover:bg-white/10 hover:text-white transition-all active:scale-90 border border-white/10"
                                 >
-                                    <RotateCcw className="w-6 h-6" />
+                                    <RotateCcw className="w-7 h-7" />
                                 </button>
                             </div>
 
-                            <p className="mt-8 text-xs text-gray-400 font-medium">Hergün 2 dakika fırçalamak plak oluşumunu %80 azaltır.</p>
+                            <p className="mt-12 text-[10px] text-white/20 font-black uppercase tracking-[0.2em] max-w-[80%] leading-relaxed">
+                                GÜNLÜK 2 DAKİKA FIRÇALAMA PLAK OLUŞUMUNU <span className="text-emerald-500/50">%80</span> AZALTIR.
+                            </p>
                         </div>
                     )}
 
                     {/* 3. GUIDE */}
                     {activeTab === 'guide' && (
-                        <div className="space-y-4">
-                            <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-emerald-100 dark:border-emerald-900/20 shadow-sm relative overflow-hidden">
-                                <div className="absolute -right-4 -top-4 w-24 h-24 bg-emerald-100 rounded-full opacity-50" />
-                                <h3 className="font-bold text-lg mb-2 z-10 relative">Fırçalama Tekniği 101</h3>
-                                <ol className="space-y-3 text-sm text-gray-600 dark:text-gray-300 relative z-10">
-                                    <li className="flex gap-3"><span className="bg-emerald-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0">1</span> Dudakları nazikçe yukarı kaldırın.</li>
-                                    <li className="flex gap-3"><span className="bg-emerald-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0">2</span> Fırçayı 45 derece açıyla tutun.</li>
-                                    <li className="flex gap-3"><span className="bg-emerald-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0">3</span> Dairesel hareketlerle dış yüzeyleri fırçalayın.</li>
-                                </ol>
-                            </div>
-
-                            <div className="bg-amber-50 dark:bg-amber-900/10 p-4 rounded-2xl border border-amber-100 dark:border-amber-900/20 flex gap-4 items-center">
-                                <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 shrink-0">
-                                    <AlertTriangle className="w-6 h-6" />
-                                </div>
-                                <div className="text-sm">
-                                    <span className="font-bold text-amber-800 dark:text-amber-400 block mb-1">ASLA İnsan Macunu Kullanma!</span>
-                                    <span className="text-amber-700/70 dark:text-amber-300/70 text-xs">Florür köpekler için zehirlidir. Sadece evcil hayvan macunu kullan.</span>
+                        <div className="space-y-6">
+                            <div className="bg-[#1C1C1E] p-8 rounded-[3rem] border border-white/5 shadow-2xl relative overflow-hidden group">
+                                <div className="absolute -right-10 -top-10 w-40 h-40 bg-emerald-500/5 rounded-full blur-3xl group-hover:bg-emerald-500/10 transition-colors" />
+                                <h3 className="text-lg font-black text-white italic tracking-tight uppercase mb-6 z-10 relative">Fırçalama Tekniği 101</h3>
+                                <div className="space-y-5 relative z-10">
+                                    {[
+                                        "Dudakları nazikçe yukarı kaldırın.",
+                                        "Fırçayı 45 derece açıyla tutun.",
+                                        "Dairesel hareketlerle yüzeyleri fırçalayın."
+                                    ].map((step, i) => (
+                                        <div key={i} className="flex gap-4 items-start">
+                                            <span className="bg-emerald-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 shadow-lg shadow-emerald-500/20">{i + 1}</span>
+                                            <p className="text-sm font-bold text-white/60 uppercase tracking-tight">{step}</p>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
 
-                            <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-2xl border border-blue-100 dark:border-blue-900/20 flex gap-4 items-center">
-                                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 shrink-0">
-                                    <Award className="w-6 h-6" />
+                            <div className="bg-[#FF3B30]/5 border border-red-500/10 p-6 rounded-[2.5rem] flex gap-5 items-center">
+                                <div className="w-14 h-14 bg-red-500/10 rounded-2xl flex items-center justify-center text-[#FF3B30] shrink-0 border border-red-500/10">
+                                    <AlertTriangle className="w-7 h-7" />
                                 </div>
-                                <div className="text-sm">
-                                    <span className="font-bold text-blue-800 dark:text-blue-400 block mb-1">Moffi Öneriyor</span>
-                                    <span className="text-blue-700/70 dark:text-blue-300/70 text-xs">Enzimli diş macunları temizliği kolaylaştırır.</span>
+                                <div className="flex-1">
+                                    <span className="font-black text-[#FF3B30] text-[10px] uppercase tracking-widest block mb-1 italic">ASLA İNSAN MACUNU KULLANMA!</span>
+                                    <p className="text-white/40 text-[10px] font-bold uppercase tracking-tight leading-relaxed">Florür köpekler için zehirlidir. Sadece evcil hayvan macunu kullan.</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-blue-500/5 border border-blue-500/10 p-6 rounded-[2.5rem] flex gap-5 items-center">
+                                <div className="w-14 h-14 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-400 shrink-0 border border-blue-500/10">
+                                    <Shield className="w-7 h-7" />
+                                </div>
+                                <div className="flex-1">
+                                    <span className="font-black text-blue-400 text-[10px] uppercase tracking-widest block mb-1 italic">MOFFİ ÖNERİYOR</span>
+                                    <p className="text-white/40 text-[10px] font-bold uppercase tracking-tight leading-relaxed">Enzimli diş macunları mekanik fırçalama olmadan da temizlik sağlar.</p>
                                 </div>
                             </div>
                         </div>

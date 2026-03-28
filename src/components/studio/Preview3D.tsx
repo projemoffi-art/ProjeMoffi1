@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { RotateCw, Move, ZoomIn, ZoomOut, Box, Maximize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -10,9 +10,10 @@ interface Preview3DProps {
     productImage: string;
     layers: any[];
     onClose: () => void;
+    isEmbedded?: boolean;
 }
 
-export function Preview3D({ productType, productImage, layers, onClose }: Preview3DProps) {
+export function Preview3D({ productType, productImage, layers, onClose, isEmbedded }: Preview3DProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [rotation, setRotation] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
@@ -72,13 +73,16 @@ export function Preview3D({ productType, productImage, layers, onClose }: Previe
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex items-center justify-center"
+            className={cn(
+                "z-[100] flex flex-col items-center justify-center transition-all",
+                isEmbedded ? "w-full h-full bg-transparent" : "fixed inset-0 bg-black/90 backdrop-blur-xl"
+            )}
             onMouseMove={handleMouseMove}
             onMouseUp={() => setIsDragging(false)}
             onMouseLeave={() => setIsDragging(false)}
         >
             {/* Controls */}
-            <div className="absolute top-6 right-6 flex gap-2">
+            <div className={cn("absolute flex gap-2 z-50", isEmbedded ? "top-4 right-4" : "top-6 right-6")}>
                 <button onClick={() => setAutoRotate(!autoRotate)}
                     className={cn("px-4 py-2 rounded-full text-sm font-bold transition",
                         autoRotate ? "bg-purple-600 text-white" : "bg-white/10 text-white hover:bg-white/20"
@@ -122,24 +126,36 @@ export function Preview3D({ productType, productImage, layers, onClose }: Previe
                         <img src={productImage} className="w-full h-full object-cover" style={{ opacity: 0.9 }} />
                         {/* Design overlay */}
                         <div className="absolute inset-0">
-                            {layers.filter(l => l.visible).map(layer => (
-                                <div key={layer.id} className="absolute" style={{
-                                    left: `${layer.x}%`, top: `${layer.y}%`,
-                                    transform: `translate(-50%, -50%) rotate(${layer.rotation}deg) scale(${layer.scale})`,
-                                }}>
-                                    {layer.type === 'text' ? (
-                                        <p style={{
-                                            fontFamily: layer.font, color: layer.color,
-                                            fontSize: `${layer.fontSize || 36}px`,
-                                            opacity: layer.opacity / 100,
-                                            fontWeight: layer.bold ? 'bold' : 'normal',
-                                            fontStyle: layer.italic ? 'italic' : 'normal',
-                                        }} className="whitespace-nowrap">{layer.content}</p>
-                                    ) : (
-                                        <img src={layer.src} className="w-24 h-24 object-contain" style={{ opacity: layer.opacity / 100 }} />
-                                    )}
-                                </div>
-                            ))}
+                            <AnimatePresence>
+                                {layers.filter(l => l.visible).map(layer => (
+                                    <motion.div 
+                                        key={layer.id} 
+                                        layout
+                                        initial={false}
+                                        animate={{
+                                            left: `${layer.x}%`, 
+                                            top: `${layer.y}%`,
+                                            rotate: layer.rotation,
+                                            scale: layer.scale,
+                                            opacity: layer.opacity / 100
+                                        }}
+                                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                        className="absolute" 
+                                        style={{ transform: 'translate(-50%, -50%)' }}
+                                    >
+                                        {layer.type === 'text' ? (
+                                            <p style={{
+                                                fontFamily: layer.font, color: layer.color,
+                                                fontSize: `${layer.fontSize || 36}px`,
+                                                fontWeight: layer.bold ? 'bold' : 'normal',
+                                                fontStyle: layer.italic ? 'italic' : 'normal',
+                                            }} className="whitespace-nowrap">{layer.content}</p>
+                                        ) : (
+                                            <img src={layer.src} className="w-24 h-24 object-contain" />
+                                        )}
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
                         </div>
                         {/* Fabric texture overlay */}
                         <div className="absolute inset-0 pointer-events-none"

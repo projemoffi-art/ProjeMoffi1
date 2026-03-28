@@ -30,8 +30,8 @@ export function useVaccineSchedule(petId: string = 'pet-1', countryCode: string 
             setRuleset(rules);
 
             // Merge Logic: Connect Record to Definition
-            const richData: RichVaccineRecord[] = records.map(rec => {
-                const def = rules.definitions.find(d => d.id === rec.vaccineId);
+            const richData: RichVaccineRecord[] = records.map((rec: UserVaccineRecord) => {
+                const def = rules.definitions.find((d: VaccineDefinition) => d.id === rec.vaccineId);
                 if (!def) throw new Error(`Definition not found for ${rec.vaccineId}`);
                 return { ...rec, definition: def };
             });

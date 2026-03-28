@@ -6,7 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     Shirt, Coffee, Dog, ShoppingBag,
     ChevronRight, ArrowRight, Store,
-    Star, Sparkles, Search, SlidersHorizontal, Loader2
+    Star, Sparkles, Search, SlidersHorizontal, Loader2,
+    ChevronLeft
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProductMockService, Product } from "@/services/mock/ProductMockService";
@@ -58,6 +59,20 @@ export default function StudioHubPage() {
             {/* BACKGROUND ACCENTS */}
             <div className="fixed top-0 left-0 w-full h-[500px] bg-gradient-to-b from-purple-900/10 to-transparent pointer-events-none" />
             <div className="fixed -top-40 -right-40 w-[600px] h-[600px] bg-indigo-600/10 blur-[150px] rounded-full pointer-events-none" />
+
+            {/* BACK BUTTON */}
+            <button 
+                onClick={() => {
+                    if (window.history.length > 2) {
+                        router.back();
+                    } else {
+                        router.push('/community');
+                    }
+                }} 
+                className="fixed top-6 left-6 z-[60] w-12 h-12 bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center justify-center hover:bg-white/10 hover:scale-105 active:scale-95 transition-all shadow-2xl"
+            >
+                <ChevronLeft className="w-6 h-6 text-white" />
+            </button>
 
             {/* --- HEADER SECTION --- */}
             <div className="relative pt-24 pb-12 px-6 md:px-20 max-w-7xl mx-auto">

@@ -93,44 +93,48 @@ export default function ProductConfigPage({ params }: { params: { id: string } }
             <div className="flex-1 flex flex-col md:flex-row overflow-hidden h-[calc(100vh-64px)]">
 
                 {/* LEFT: Product Preview Gallery */}
-                <div className="w-full md:w-2/3 bg-[#0c0c0e] relative flex items-center justify-center p-8 md:p-12 overflow-hidden">
+                <div className="w-full md:w-2/3 bg-[#0c0c0e] relative flex items-center justify-center p-8 md:p-12 overflow-hidden glossy-mesh">
                     {/* Background Ambience */}
                     <div
-                        className="absolute inset-0 opacity-20 blur-3xl transition-colors duration-700"
-                        style={{ background: `radial-gradient(circle at center, ${selectedColor.hex}40, transparent 70%)` }}
+                        className="absolute inset-0 opacity-40 blur-[120px] transition-colors duration-1000"
+                        style={{ background: `radial-gradient(circle at center, ${selectedColor.hex}60, transparent 70%)` }}
                     />
 
                     {/* Image Carousel */}
-                    <div className="relative w-full max-w-[600px] aspect-square z-10">
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="relative w-full max-w-[600px] aspect-square z-10"
+                    >
                         <AnimatePresence mode="wait">
                             <motion.img
-                                key={currentImageIndex + selectedColor.id} // Change key on color change to trigger animation
+                                key={currentImageIndex + selectedColor.id} 
                                 src={images[currentImageIndex]}
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 1.05 }}
-                                transition={{ duration: 0.4 }}
-                                className="w-full h-full object-contain drop-shadow-2xl"
+                                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 1.1, y: -20 }}
+                                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                                className="w-full h-full object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
                                 alt={product.name}
                             />
                         </AnimatePresence>
 
                         {/* Carousel Controls */}
                         {images.length > 1 && (
-                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-3 p-2 bg-black/20 backdrop-blur-md rounded-full border border-white/10">
                                 {images.map((_, idx) => (
                                     <button
                                         key={idx}
                                         onClick={() => setCurrentImageIndex(idx)}
                                         className={cn(
                                             "w-2 h-2 rounded-full transition-all",
-                                            currentImageIndex === idx ? "bg-white w-6" : "bg-white/30 hover:bg-white/50"
+                                            currentImageIndex === idx ? "bg-white w-8" : "bg-white/20 hover:bg-white/40"
                                         )}
                                     />
                                 ))}
                             </div>
                         )}
-                    </div>
+                    </motion.div>
 
                     {/* Quality Badge Floating */}
                     {product.brand.isMoffi && (

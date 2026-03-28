@@ -52,6 +52,7 @@ export interface DailyMemory {
 
     moments: MemoryMoment[]; // Array of slides
     mood: 'happy' | 'tired' | 'excited' | 'cozy';
+    title: string;
 }
 
 export interface DayContext {
@@ -67,7 +68,8 @@ export interface DayContext {
 export interface VetClinic {
     id: string;
     name: string;
-    location: { lat: number; lng: number; address?: string };
+    location: { lat: number; lng: number };
+    address: string;
     rating: number;
     reviewCount: number;
     isPremium: boolean;

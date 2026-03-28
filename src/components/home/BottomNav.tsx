@@ -1,12 +1,12 @@
 "use client";
 
-import { Home, ShoppingBag, User, Gamepad2, Compass, Hexagon, Utensils } from "lucide-react";
+import { ShoppingBag, User, Gamepad2, Compass, Hexagon, Utensils } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 
 interface BottomNavProps {
-    active?: 'home' | 'explore' | 'community' | 'game' | 'food' | 'profile';
+    active?: 'explore' | 'community' | 'food' | 'profile';
     className?: string;
 }
 
@@ -22,14 +22,13 @@ export function BottomNav({ active, className }: BottomNavProps) {
     }
 
     // Fallback active detection if prop is not passed
-    const currentActive = active || (pathname?.includes('/home') ? 'home' :
+    const currentActive = active || (
         pathname?.includes('/shop') ? 'explore' :
             pathname?.includes('/community') ? 'community' :
                 pathname?.includes('/food') ? 'food' :
-                    pathname?.includes('/profile') ? 'profile' : 'home');
+                    pathname?.includes('/profile') ? 'profile' : 'community');
 
     const navItems = [
-        { id: 'home', icon: Home, label: 'Ev', path: '/home' },
         { id: 'explore', icon: Compass, label: 'Keşfet', path: '/shop' },
         { id: 'community', icon: Hexagon, label: 'Topluluk', path: '/community', isCenter: true },
         { id: 'food', icon: Utensils, label: 'Beslenme', path: '/food' },

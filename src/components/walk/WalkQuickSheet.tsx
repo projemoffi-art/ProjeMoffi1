@@ -1,0 +1,175 @@
+"use client";
+
+import React, { useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+    X, MapPin, Trophy, Flame, Timer, 
+    Footprints, Play, ArrowRight, Star,
+    Navigation, Activity, ChevronRight,
+    Cookie
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useWalk } from "@/hooks/useWalk";
+import { useRouter } from "next/navigation";
+
+interface WalkQuickSheetProps {
+    isOpen: boolean;
+    onClose: () => void;
+    petId?: string;
+}
+
+export function WalkQuickSheet({ isOpen, onClose, petId = "pet-1" }: WalkQuickSheetProps) {
+    const router = useRouter();
+    const { stats, history, isLoading } = useWalk();
+
+    // Calculate today's stats from history
+    const todayStats = useMemo(() => {
+        const today = new Date().toISOString().split('T')[0];
+        const todayWalks = history.filter(w => w.startTime.startsWith(today));
+        
+        return {
+            km: Math.round(todayWalks.reduce((sum, w) => sum + w.distanceKm, 0) * 10) / 10,
+            minutes: todayWalks.reduce((sum, w) => sum + w.durationMinutes, 0),
+            kcal: todayWalks.reduce((sum, w) => sum + (w.caloriesBurned || 0), 0)
+        };
+    }, [history]);
+
+    return (
+        <AnimatePresence>
+            {isOpen && (
+                <>
+                    {/* Backdrop */}
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={onClose}
+                        className="fixed inset-0 z-[3000] bg-black/60 backdrop-blur-sm"
+                    />
+
+                    {/* Sheet */}
+                    <motion.div
+                        initial={{ y: "100%" }}
+                        animate={{ y: 0 }}
+                        exit={{ y: "100%" }}
+                        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                        className="fixed bottom-0 inset-x-0 z-[3001] bg-[#121212] rounded-t-[3rem] border-t border-white/10 shadow-[0_-20px_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col max-h-[90vh]"
+                    >
+                        {/* iOS Style Grab Handle */}
+                        <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/10 rounded-full" />
+
+                        <div className="px-8 pt-10 pb-6 flex items-center justify-between">
+                            <div>
+                                <h3 className="text-2xl font-black text-white tracking-tighter uppercase italic leading-none">Moffi Yürüyüş</h3>
+                                <p className="text-[10px] text-orange-500 font-black uppercase tracking-[0.3em] mt-2">Günlük İstatistikler</p>
+                            </div>
+                            <button 
+                                onClick={onClose}
+                                className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center border border-white/10 hover:bg-white/10 transition-all"
+                            >
+                                <X className="w-5 h-5 text-white/50" />
+                            </button>
+                        </div>
+
+                        <div className="px-8 pb-12 space-y-8 overflow-y-auto no-scrollbar">
+                            
+                            {/* 1. BENTO STATS BAR */}
+                            <div className="grid grid-cols-3 gap-3">
+                                <div className="bg-white/5 border border-white/5 rounded-[1.8rem] p-4 flex flex-col items-center justify-center gap-1 group hover:border-orange-500/30 transition-all">
+                                    <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-500 mb-1 group-hover:scale-110 transition-transform">
+                                        <Flame className="w-4 h-4" />
+                                    </div>
+                                    <span className="text-xl font-black text-white">{todayStats.kcal || "240"}</span>
+                                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Kcal</span>
+                                </div>
+                                <div className="bg-white/5 border border-white/5 rounded-[1.8rem] p-4 flex flex-col items-center justify-center gap-1 group hover:border-blue-500/30 transition-all">
+                                    <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500 mb-1 group-hover:scale-110 transition-transform">
+                                        <Footprints className="w-4 h-4" />
+                                    </div>
+                                    <span className="text-xl font-black text-white">{todayStats.km || "3.2"}</span>
+                                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Km</span>
+                                </div>
+                                <div className="bg-white/5 border border-white/5 rounded-[1.8rem] p-4 flex flex-col items-center justify-center gap-1 group hover:border-purple-500/30 transition-all">
+                                    <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-500 mb-1 group-hover:scale-110 transition-transform">
+                                        <Timer className="w-4 h-4" />
+                                    </div>
+                                    <span className="text-xl font-black text-white">{todayStats.minutes || "45"}</span>
+                                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Dk</span>
+                                </div>
+                            </div>
+
+                            {/* 2. LEADERBOARD CARD */}
+                            <section>
+                                <div className="flex items-center justify-between mb-4 px-1">
+                                    <h4 className="text-[10px] font-black text-white/20 uppercase tracking-widest flex items-center gap-2">
+                                        <Trophy className="w-3 h-3 text-yellow-500" /> Global Arena
+                                    </h4>
+                                    <span className="text-[9px] font-black text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded-full uppercase tracking-widest">Silver II</span>
+                                </div>
+
+                                <div className="bg-gradient-to-br from-[#240b36] to-[#c31432]/20 border border-white/10 rounded-[2.2rem] p-5 relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-3xl -mr-10 -mt-10" />
+                                    
+                                    <div className="flex items-center justify-between relative z-10">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-14 h-14 bg-white/10 backdrop-blur rounded-2xl flex items-center justify-center border border-white/20">
+                                                <Trophy className="w-8 h-8 text-yellow-400 fill-current" />
+                                            </div>
+                                            <div>
+                                                <h5 className="font-black text-white text-lg leading-tight uppercase italic">Sıralaman</h5>
+                                                <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest font-mono">#6 Global Resident</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-2xl font-black text-white tracking-tighter">2,450</div>
+                                            <div className="text-[9px] font-black text-yellow-500 uppercase tracking-widest">Puan</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            {/* 3. LIVE RADAR / FRIENDS NEARBY */}
+                            <div className="bg-indigo-500/5 border border-indigo-500/10 rounded-[2rem] p-5 flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="relative">
+                                        <div className="w-12 h-12 bg-indigo-500/20 rounded-full flex items-center justify-center">
+                                            <Activity className="w-6 h-6 text-indigo-400" />
+                                        </div>
+                                        <div className="absolute inset-0 bg-indigo-500/30 rounded-full animate-ping" />
+                                    </div>
+                                    <div>
+                                        <h6 className="text-white font-black text-sm uppercase tracking-tight italic">Çevrede Hareketlilik</h6>
+                                        <p className="text-indigo-400/80 text-[10px] font-black uppercase tracking-widest mt-0.5">12 Moffi Arkadaşı Aktif</p>
+                                    </div>
+                                </div>
+                                <div className="bg-indigo-500/20 text-indigo-300 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
+                                    <MapPin className="w-3 h-3" /> Radar
+                                </div>
+                            </div>
+
+                            {/* 4. ACTIONS */}
+                            <div className="space-y-4">
+                                <button
+                                    onClick={() => { router.push('/walk/tracking'); onClose(); }}
+                                    className="w-full h-16 bg-white text-black rounded-[1.8rem] flex items-center justify-center gap-3 active:scale-95 transition-all group overflow-hidden relative"
+                                >
+                                    <div className="absolute inset-0 bg-gradient-to-r from-orange-500/0 via-orange-500/10 to-orange-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                                    <Play className="w-6 h-6 fill-current" />
+                                    <span className="text-sm font-black uppercase tracking-[0.2em]">Yürüyüşü Başlat</span>
+                                </button>
+
+                                <button
+                                    onClick={() => { router.push('/walk'); onClose(); }}
+                                    className="w-full bg-white/5 border border-white/10 py-5 rounded-[2rem] flex items-center justify-center gap-3 group hover:bg-white hover:text-black transition-all"
+                                >
+                                    <span className="text-[11px] font-black uppercase tracking-[0.3em]">Tüm Detayları Gör</span>
+                                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+                </>
+            )}
+        </AnimatePresence>
+    );
+}

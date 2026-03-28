@@ -31,6 +31,10 @@ export const DalleService = {
                 style: "vivid" // or 'natural'
             });
 
+            if (!response.data || response.data.length === 0) {
+                return null;
+            }
+
             return response.data[0].url || null;
         } catch (error) {
             console.error("DALL-E Generation Failed:", error);

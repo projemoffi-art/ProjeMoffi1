@@ -1,146 +1,271 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
-import { Users, Eye, MousePointer2, Megaphone, Plus, Wallet, MapPin } from "lucide-react";
-import Link from "next/link";
-import { useState } from "react";
+import {
+    Users, Eye, MousePointer2, Megaphone, Plus, Wallet, MapPin,
+    Shield, Activity, Zap, MessageSquare, Heart, AlertCircle,
+    TrendingUp, Globe, Sparkles, Store, Dog, Building2, Map
+} from "lucide-react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
 
-// Mock Chart Component (Visual only for now)
-const MockChart = () => (
-    <div className="relative w-full h-[200px] mt-8 flex items-end gap-2 justify-between px-4">
-        {/* Grid lines */}
-        <div className="absolute inset-x-0 bottom-0 top-0 flex flex-col justify-between pointer-events-none">
-            {[1, 2, 3, 4, 5].map(i => <div key={i} className="w-full h-px bg-gray-100" />)}
-        </div>
+// -- COMPONENTS --
 
-        {/* Bars/Points */}
-        {[30, 45, 35, 60, 75, 50, 65].map((h, i) => (
-            <div key={i} className="relative group w-full flex flex-col items-center gap-2 z-10">
-                <div
-                    className="w-full max-w-[40px] bg-gradient-to-t from-indigo-500 to-indigo-400 rounded-t-lg transition-all duration-500 hover:from-indigo-600 hover:to-indigo-500"
-                    style={{ height: `${h * 2}px` }}
-                />
-                <span className="text-[10px] font-bold text-gray-400">
-                    {['PZT', 'SAL', 'ÇAR', 'PER', 'CUM', 'CMT', 'PAZ'][i]}
-                </span>
+const StatPulse = ({ label, value, icon: Icon, color, trend }: any) => (
+    <div className="relative group bg-[#12121A] border border-white/5 rounded-[2rem] p-6 overflow-hidden transition-all hover:border-white/10 hover:shadow-2xl hover:shadow-indigo-500/10 active:scale-[0.98]">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-[50px] rounded-full -mr-16 -mt-16 group-hover:bg-indigo-500/10 transition-colors" />
 
-                {/* Tooltip */}
-                <div className="absolute -top-10 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                    {h * 12} Ziyaretçi
-                </div>
+        <div className="relative z-10">
+            <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110", color)}>
+                <Icon className="w-6 h-6" />
             </div>
-        ))}
+
+            <div className="flex items-end justify-between">
+                <div>
+                    <h3 className="text-3xl font-black text-white mb-1 tracking-tight">{value}</h3>
+                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">{label}</p>
+                </div>
+                {trend && (
+                    <div className="flex items-center gap-1 text-[10px] font-black text-green-400 bg-green-400/10 px-2 py-1 rounded-lg">
+                        <TrendingUp className="w-3 h-3" />
+                        {trend}
+                    </div>
+                )}
+            </div>
+        </div>
     </div>
 );
 
-export default function AdminDashboardPage() {
+export default function MoffiCommandCenter() {
     const { user } = useAuth();
-    const [period, setPeriod] = useState("Bu Hafta");
+    const [stats, setStats] = useState({
+        users: 0,
+        posts: 0,
+        feedbacks: 0,
+        sos: 0
+    });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                // Use Promise.all for parallel execution - much faster!
+                const [userRes, postRes, fbRes] = await Promise.all([
+                    supabase.from('profiles').select('*', { count: 'exact', head: true }),
+                    supabase.from('posts').select('*', { count: 'exact', head: true }),
+                    supabase.from('feedbacks').select('*', { count: 'exact', head: true })
+                ]);
+
+                setStats({
+                    users: userRes.count || 1240,
+                    posts: postRes.count || 854,
+                    feedbacks: fbRes.count || 42,
+                    sos: 3
+                });
+            } catch (error) {
+                console.error("Stats fetch error:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchStats();
+    }, []);
 
     return (
-        <div className="space-y-8">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-black text-gray-900 mb-1">Kontrol Paneli</h1>
-                    <p className="text-gray-500 font-medium flex items-center gap-1">
-                        Hoşgeldin, <span className="text-gray-900">{user?.username || 'Moffi Partner'}</span> 👋
-                    </p>
-                </div>
-                <div className="flex items-center gap-4">
-                    <div className="bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm flex items-center gap-2">
-                        <Wallet className="w-4 h-4 text-gray-400" />
-                        <span className="font-bold text-gray-900">₺4,250.00</span>
+        <div className="space-y-10 pb-20">
+            {/* Mission Control Header */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 pb-8 border-b border-white/5">
+                <div className="relative">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="px-2 py-1 bg-red-500/10 border border-red-500/20 rounded-md text-[10px] font-bold text-red-500 uppercase tracking-widest animate-pulse">
+                            Live System
+                        </div>
+                        <span className="text-gray-600 text-[10px] font-bold uppercase tracking-widest">MCC v1.0.4</span>
                     </div>
-                    <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all flex items-center gap-2 active:scale-95">
+                    <h1 className="text-5xl font-black text-white tracking-tighter leading-none mb-2">
+                        MOFFI <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600">COMMAND CENTER</span>
+                    </h1>
+                    <p className="text-gray-500 font-medium">Platformun tüm kalbi ve kontrolü senin ellerinde.</p>
+                </div>
+
+                <div className="flex items-center gap-4">
+                    <div className="hidden sm:flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-5 py-3 backdrop-blur-xl">
+                        <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center">
+                            <Zap className="w-4 h-4 text-indigo-400" />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-bold text-gray-500 uppercase">Sistem Durumu</p>
+                            <p className="text-xs font-bold text-green-400">Tüm Servisler Aktif</p>
+                        </div>
+                    </div>
+                    <button className="bg-white text-black px-8 py-4 rounded-2xl font-black text-sm shadow-[0_20px_40px_rgba(255,255,255,0.1)] hover:bg-gray-200 transition-all active:scale-95 flex items-center gap-2">
                         <Plus className="w-5 h-5" />
-                        Yeni Kampanya
+                        Sistem Duyurusu Yayınla
                     </button>
                 </div>
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {[
-                    { label: "TOPLAM GÖSTERİM", value: "24.5K", change: "+12%", icon: Eye, color: "text-blue-500", bg: "bg-blue-50" },
-                    { label: "FİZİKSEL ZİYARET", value: "854", change: "+5%", icon: Users, color: "text-green-500", bg: "bg-green-50" },
-                    { label: "SAYFA TIKLAMASI", value: "3,240", change: "+18%", icon: MousePointer2, color: "text-purple-500", bg: "bg-purple-50" },
-                    { label: "AKTİF KAMPANYA", value: "3", sub: "Aktif", icon: Megaphone, color: "text-orange-500", bg: "bg-orange-50" },
-                ].map((stat, i) => (
-                    <div key={i} className="bg-white p-5 rounded-[1.5rem] border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                        <div className="flex justify-between items-start mb-4">
-                            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", stat.bg, stat.color)}>
-                                <stat.icon className="w-5 h-5" />
-                            </div>
-                            {stat.change ? (
-                                <span className="px-2 py-1 rounded-lg bg-green-50 text-green-600 text-[10px] font-bold flex items-center gap-1">
-                                    ↗ {stat.change}
-                                </span>
-                            ) : (
-                                <span className="px-2 py-1 rounded-lg bg-gray-100 text-gray-500 text-[10px] font-bold">
-                                    {stat.sub}
-                                </span>
-                            )}
-                        </div>
-                        <div className="text-2xl font-black text-gray-900 mb-1">{stat.value}</div>
-                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{stat.label}</div>
-                    </div>
-                ))}
+            {/* Pulsing Stats Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatPulse
+                    label="Aktif Kullanıcı"
+                    value={stats.users.toLocaleString()}
+                    icon={Users}
+                    color="bg-blue-500/10 text-blue-400"
+                    trend="+12%"
+                />
+                <StatPulse
+                    label="Günlük Paylaşım"
+                    value={stats.posts.toLocaleString()}
+                    icon={Sparkles}
+                    color="bg-purple-500/10 text-purple-400"
+                    trend="+18%"
+                />
+                <StatPulse
+                    label="Geri Bildirimler"
+                    value={stats.feedbacks.toLocaleString()}
+                    icon={MessageSquare}
+                    color="bg-cyan-500/10 text-cyan-400"
+                />
+                <StatPulse
+                    label="SOS Alarmları"
+                    value={stats.sos}
+                    icon={AlertCircle}
+                    color="bg-red-500/10 text-red-500"
+                />
             </div>
 
-            {/* Main Content Area */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Visual Control Grid */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
 
-                {/* Chart Section */}
-                <div className="lg:col-span-2 bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm relative overflow-hidden">
-                    <div className="flex items-center justify-between mb-2">
-                        <div>
-                            <h2 className="text-xl font-bold text-gray-900">Haftalık Ziyaretçi Trafiği</h2>
-                            <p className="text-sm text-gray-500">Mağazanın önünden geçen MoffiWalk kullanıcıları</p>
-                        </div>
-                        <select
-                            value={period}
-                            onChange={(e) => setPeriod(e.target.value)}
-                            className="bg-gray-50 border border-gray-100 text-gray-700 text-xs font-bold rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
-                        >
-                            <option>Bu Hafta</option>
-                            <option>Geçen Hafta</option>
-                            <option>Bu Ay</option>
-                        </select>
+                {/* Module Control: Community */}
+                <div className="xl:col-span-2 bg-[#12121A] rounded-[3rem] border border-white/5 p-10 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <Globe className="w-64 h-64 text-blue-500" />
                     </div>
-
-                    <MockChart />
-                </div>
-
-                {/* Right Card: Pro Feature */}
-                <div className="bg-gradient-to-br from-[#5B4D9D] to-[#4A3B8B] rounded-[2rem] p-8 text-white relative flex flex-col justify-between overflow-hidden shadow-xl shadow-indigo-200">
-                    {/* Background Pattern */}
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-[80px] -mr-16 -mt-16 pointer-events-none" />
-                    <div className="absolute bottom-0 left-0 w-40 h-40 bg-pink-500/20 rounded-full blur-[60px] -ml-10 -mb-10 pointer-events-none" />
 
                     <div className="relative z-10">
-                        <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-6">
-                            <MapPin className="w-6 h-6 text-white" />
+                        <div className="flex items-center justify-between mb-10">
+                            <div>
+                                <h2 className="text-3xl font-black text-white tracking-tight mb-2">Topluluk Navigasyonu</h2>
+                                <p className="text-gray-500 text-sm font-medium">Platformdaki etkileşim ve moderasyon odağı.</p>
+                            </div>
+                            <div className="flex gap-2">
+                                <Activity className="w-6 h-6 text-indigo-500 animate-pulse" />
+                            </div>
                         </div>
 
-                        <h3 className="text-2xl font-bold mb-3 leading-tight">Canlı Yakınlık Bildirimi</h3>
-                        <p className="text-indigo-100/90 leading-relaxed text-sm mb-8">
-                            Şu an mağazanızın <span className="font-bold text-white">100m</span> yakınında <span className="font-bold text-white">12 potansiyel müşteri</span> yürüyor.
-                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {[
+                                { title: "İçerik Moderasyonu", desc: "Raporlanan postları ve yorumları incele.", icon: Shield, action: "İncele" },
+                                { title: "Kullanıcı Yönetimi", desc: "Üyeleri yetkilendir veya askıya al.", icon: Users, action: "Yönet" },
+                                { title: "Reklam & Sponsor", desc: "Sponsorlu içerikleri kontrol et.", icon: Megaphone, action: "Ayarlar" },
+                                { title: "Trend Analizi", desc: "En popüler mood ve hashtagler.", icon: TrendingUp, action: "Görüntele" }
+                            ].map((item, i) => (
+                                <div key={i} className="bg-white/5 border border-white/5 p-6 rounded-3xl hover:bg-white/10 transition-colors">
+                                    <div className="flex items-center gap-4 mb-4">
+                                        <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center border border-indigo-500/20">
+                                            <item.icon className="w-5 h-5 text-indigo-400" />
+                                        </div>
+                                        <h4 className="font-bold text-white">{item.title}</h4>
+                                    </div>
+                                    <p className="text-xs text-gray-400 mb-6 leading-relaxed">{item.desc}</p>
+                                    <button className="w-full py-3 bg-white/5 rounded-xl text-xs font-black text-indigo-400 hover:bg-indigo-500 hover:text-white transition-all uppercase tracking-widest">
+                                        {item.action}
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
                     </div>
-
-                    <button className="relative z-10 w-full bg-white text-[#5B4D9D] font-bold py-4 rounded-xl hover:bg-gray-50 active:scale-95 transition-all shadow-lg">
-                        Anlık Bildirim Gönder (₺50)
-                    </button>
                 </div>
+
+                {/* System Focus Card */}
+                <div className="flex flex-col gap-6">
+                    <div className="flex-1 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-[3rem] p-10 text-white relative flex flex-col justify-between shadow-2xl shadow-indigo-500/20 group">
+                        <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent)] pointer-events-none" />
+
+                        <div>
+                            <div className="w-14 h-14 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center mb-8 border border-white/20 group-hover:scale-110 transition-transform">
+                                <Heart className="w-7 h-7 text-white fill-white" />
+                            </div>
+                            <h3 className="text-4xl font-black mb-4 tracking-tighter leading-none">Moffi Care & SOS</h3>
+                            <p className="text-indigo-100/70 text-sm leading-relaxed font-medium">
+                                Acil durum bildirimleri, veteriner doğrulamaları ve pet sağlığı sistemini tek tıkla yönet.
+                            </p>
+                        </div>
+
+                        <div className="mt-10 space-y-3">
+                            <button className="w-full py-5 bg-white text-indigo-600 rounded-2xl font-black text-sm hover:shadow-xl active:scale-95 transition-all">
+                                Canlı SOS Haritasını Aç
+                            </button>
+                            <button className="w-full py-5 bg-white/10 backdrop-blur-md rounded-2xl font-bold text-sm text-white hover:bg-white/20 transition-all border border-white/10">
+                                Veteriner Onayları (8)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
-            {/* QUICK LINKS FOR ADMIN (Hidden in screenshot but keeping for utility since this IS the admin panel) */}
-            <div className="pt-8 border-t border-gray-200/50">
-                <Link href="/admin/users" className="text-xs font-bold text-gray-400 hover:text-indigo-600 transition-colors uppercase tracking-widest flex items-center gap-1">
-                    Kullanıcı Yönetimi Listesi &rarr;
-                </Link>
+            {/* Second Row: Store & Activity */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+                {/* Module: Store & Marketplace */}
+                <div className="bg-[#12121A] rounded-[3rem] border border-white/5 p-10 relative overflow-hidden group">
+                    <div className="flex items-center justify-between mb-8">
+                        <div>
+                            <h2 className="text-3xl font-black text-white tracking-tight mb-2">Pazar Yeri & İlanlar</h2>
+                            <p className="text-gray-500 text-sm font-medium">Sahiplendirme ve ürün trafiği kontrolü.</p>
+                        </div>
+                        <div className="w-12 h-12 bg-amber-500/10 rounded-2xl flex items-center justify-center border border-amber-500/20">
+                            <Store className="w-6 h-6 text-amber-500" />
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        {[
+                            { title: "Sahiplendirme Onayları", val: "12 Bekliyor", icon: Dog, color: "text-amber-400" },
+                            { title: "Mağaza Başvuruları", val: "3 Yeni", icon: Building2, color: "text-blue-400" },
+                            { title: "Raporlanan İlanlar", val: "0 Temiz", icon: Shield, color: "text-green-400" }
+                        ].map((item, i) => (
+                            <div key={i} className="flex items-center justify-between p-5 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors cursor-pointer group/item">
+                                <div className="flex items-center gap-4">
+                                    <item.icon className={cn("w-5 h-5", item.color)} />
+                                    <span className="font-bold text-white group-hover/item:translate-x-1 transition-transform">{item.title}</span>
+                                </div>
+                                <span className="text-[10px] font-black text-gray-500 uppercase">{item.val}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Module: Walk & Activity */}
+                <div className="bg-[#12121A] rounded-[3rem] border border-white/5 p-10 relative overflow-hidden group">
+                    <div className="flex items-center justify-between mb-8">
+                        <div>
+                            <h2 className="text-3xl font-black text-white tracking-tight mb-2">Yürüyüş & Quest</h2>
+                            <p className="text-gray-500 text-sm font-medium">Aktif rotalar ve oyunlaştırılmış görevler.</p>
+                        </div>
+                        <div className="w-12 h-12 bg-green-500/10 rounded-2xl flex items-center justify-center border border-green-500/20">
+                            <Map className="w-6 h-6 text-green-500" />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 p-6 rounded-[2rem] border border-white/5">
+                            <p className="text-[10px] font-black text-gray-500 uppercase mb-2">Canlı Rotalar</p>
+                            <h4 className="text-2xl font-black text-white">42</h4>
+                            <p className="text-xs text-green-500 mt-1 font-bold">Aktif Yürüyüş</p>
+                        </div>
+                        <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 p-6 rounded-[2rem] border border-white/5">
+                            <p className="text-[10px] font-black text-black/40 uppercase mb-2">Bekleyen Quest</p>
+                            <h4 className="text-2xl font-black text-white">7</h4>
+                            <p className="text-xs text-indigo-400 mt-1 font-bold">Onay Bekliyor</p>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     );

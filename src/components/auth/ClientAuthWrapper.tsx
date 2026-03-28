@@ -41,7 +41,7 @@ export function ClientAuthWrapper({ children }: Props) {
         // Business routes → need business role + approval
         if (isBusinessRoute) {
             if (user.role !== 'business' && user.role !== 'admin') {
-                router.replace("/home");
+                router.replace("/community");
                 return;
             }
             // Business user but not approved → show pending page (handled within business layout)
@@ -50,7 +50,7 @@ export function ClientAuthWrapper({ children }: Props) {
         // Admin routes → need admin role
         if (isAdminRoute) {
             if (user.role !== 'admin') {
-                router.replace("/home");
+                router.replace("/community");
                 return;
             }
         }

@@ -5,6 +5,7 @@ import { SocialProvider } from "@/context/SocialContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { ShopProvider } from "@/context/ShopContext";
 import { PetProvider } from "@/context/PetContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ClientAuthWrapper } from "@/components/auth/ClientAuthWrapper";
@@ -21,6 +22,14 @@ const inter = Inter({
   variable: '--font-inter',
 });
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+  userScalable: false,
+};
+
 export const metadata: Metadata = {
   title: "Moffi Pro",
   description: "Advanced Customization Engine",
@@ -29,13 +38,6 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "Moffi Pro",
-  },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    viewportFit: "cover",
-    userScalable: false,
   },
 };
 
@@ -49,23 +51,25 @@ export default function RootLayout({
       <body
         className={`${poppins.variable} ${inter.variable} font-sans antialiased`}
       >
-        <PetProvider> {/* Added PetProvider wrapper */}
-          <SocialProvider>
-            <AuthProvider>
-              <ShopProvider>
-                <ClientAuthWrapper>
-                  <div className="min-h-screen relative overflow-hidden">
-                    <ErrorBoundary>
-                      {children}
-                    </ErrorBoundary>
-                  </div>
+        <ThemeProvider>
+          <PetProvider> {/* Added PetProvider wrapper */}
+            <SocialProvider>
+              <AuthProvider>
+                <ShopProvider>
+                  <ClientAuthWrapper>
+                    <div className="min-h-screen relative overflow-hidden">
+                      <ErrorBoundary>
+                        {children}
+                      </ErrorBoundary>
+                    </div>
 
-                  <DynamicNavigation />
-                </ClientAuthWrapper>
-              </ShopProvider>
-            </AuthProvider>
-          </SocialProvider>
-        </PetProvider> {/* Closed PetProvider wrapper */}
+                    <DynamicNavigation />
+                  </ClientAuthWrapper>
+                </ShopProvider>
+              </AuthProvider>
+            </SocialProvider>
+          </PetProvider> {/* Closed PetProvider wrapper */}
+        </ThemeProvider>
       </body>
     </html>
   );

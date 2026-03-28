@@ -125,7 +125,7 @@ export default function FoodPage() {
             {/* HEADER */}
             <header className="sticky top-0 z-40 bg-white/80 dark:bg-black/80 backdrop-blur-xl px-6 pt-6 pb-4 border-b border-gray-100 dark:border-white/5">
                 <div className="flex justify-between items-center mb-4">
-                    <button onClick={() => router.push('/home')} className="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center hover:bg-gray-200"><ChevronLeft className="w-6 h-6" /></button>
+                    <button onClick={() => router.push('/community')} className="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center hover:bg-gray-200"><ChevronLeft className="w-6 h-6" /></button>
                     <div className="text-center">
                         <h1 className="text-xl font-black text-gray-900 dark:text-white">Beslenme Koçu</h1>
                         <p className="text-[10px] font-bold text-green-500 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded-full inline-block">SMART PLAN</p>

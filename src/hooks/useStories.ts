@@ -27,6 +27,20 @@ export function useStories() {
 
     const fetchStories = async () => {
         setIsLoading(true);
+        // SUPABASE_DISABLED: Hız için direkt Mock storyler
+        const mockStories: Story[] = [
+            { id: 's1', user_id: 'u1', author_name: 'Bella', author_avatar: 'https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=100', media_url: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=800', created_at: new Date().toISOString() },
+            { id: 's2', user_id: 'u2', author_name: 'Milo', author_avatar: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=100', media_url: 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?q=80&w=800', created_at: new Date().toISOString() },
+        ];
+
+        const groups: UserStoryGroup[] = [
+            { user_id: 'u1', author_name: 'Bella', author_avatar: 'https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=100', stories: [mockStories[0]], hasUnseen: true },
+            { user_id: 'u2', author_name: 'Milo', author_avatar: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=100', stories: [mockStories[1]], hasUnseen: true }
+        ];
+
+        setStoryGroups(groups);
+        setIsLoading(false);
+        /*
         // Get stories from the last 24 hours
         const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
@@ -72,11 +86,14 @@ export function useStories() {
 
         setStoryGroups(sortedGroups);
         setIsLoading(false);
+        */
     };
 
     useEffect(() => {
         fetchStories();
 
+        // SUPABASE_DISABLED: Realtime disabled for now
+        /*
         // Setup Realtime Subscription to listen for new stories
         const channel = supabase
             .channel('public:stories')
@@ -88,6 +105,7 @@ export function useStories() {
         return () => {
             supabase.removeChannel(channel);
         };
+        */
     }, [user?.id]);
 
     const uploadStory = async (file: File) => {

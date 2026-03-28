@@ -22,8 +22,8 @@ export function WalkMoments() {
                         className={`rounded-[1.5rem] overflow-hidden relative shadow-md group cursor-pointer ${idx === 0 ? 'h-48 col-span-1 row-span-2' : 'h-22'}`}
                     >
                         {/* Image */}
-                        {post.content.type === 'image' || post.content.type === 'video' ? (
-                            <img src={post.content.image || "/api/placeholder/200/200"} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                        {post.image ? (
+                            <img src={post.image || "/api/placeholder/200/200"} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                         ) : (
                             <div className="w-full h-full bg-gray-100 flex items-center justify-center text-2xl">📸</div>
                         )}
@@ -38,19 +38,14 @@ export function WalkMoments() {
                                     {/* User Avatar Placeholder */}
                                     {/* <img src="" /> */}
                                 </div>
-                                <span className="text-[10px] font-bold text-white truncate max-w-[80px]">{post.user.name}</span>
+                                <span className="text-[10px] font-bold text-white truncate max-w-[80px]">{post.userName}</span>
                             </div>
                             {idx === 0 && (
-                                <p className="text-[10px] text-white/80 line-clamp-2 leading-tight">{post.content.caption}</p>
+                                <p className="text-[10px] text-white/80 line-clamp-2 leading-tight">{post.desc}</p>
                             )}
                         </div>
 
-                        {/* Type Indicator */}
-                        {post.content.type === 'video' && (
-                            <div className="absolute top-2 right-2 bg-white/20 backdrop-blur rounded-full p-1">
-                                <Play className="w-2 h-2 text-white fill-current" />
-                            </div>
-                        )}
+                        {/* Type Indicator Placeholder */}
                     </div>
                 ))}
             </div>

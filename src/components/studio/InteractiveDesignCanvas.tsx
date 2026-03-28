@@ -23,6 +23,8 @@ import { STICKERS, STICKER_CATEGORIES, FONTS, COLORS, GRADIENTS } from "@/consta
 interface DesignOneProps {
     productImage: string;
     productName?: string;
+    initialLayers?: DesignLayer[];
+    onLayersChange?: (layers: DesignLayer[]) => void;
     onSave: (state: any) => void;
 }
 
@@ -53,14 +55,14 @@ const PRODUCTS = [
     { id: 'tote', name: 'Çanta', src: 'https://images.unsplash.com/photo-1597484662317-c9253d3d0984?q=80&w=1974&auto=format&fit=crop' },
 ];
 
-export function InteractiveDesignCanvas({ productImage, productName, onSave }: DesignOneProps) {
+export function InteractiveDesignCanvas({ productImage, productName, initialLayers, onLayersChange, onSave }: DesignOneProps) {
     const router = useRouter();
     const canvasRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [mounted, setMounted] = useState(false);
 
     // Core State
-    const [layers, setLayers] = useState<DesignLayer[]>([]);
+    const [layers, setLayers] = useState<DesignLayer[]>(initialLayers || []);
     const [activeLayerId, setActiveLayerId] = useState<number | null>(null);
     const [draggingId, setDraggingId] = useState<number | null>(null);
 
@@ -107,7 +109,8 @@ export function InteractiveDesignCanvas({ productImage, productName, onSave }: D
             return sliced;
         });
         setHistoryIndex(prev => prev + 1);
-    }, [historyIndex]);
+        if (onLayersChange) onLayersChange(newLayers);
+    }, [historyIndex, onLayersChange]);
 
     const undo = () => { if (historyIndex > 0) { setHistoryIndex(p => p - 1); setLayers(history[historyIndex - 1]); } };
     const redo = () => { if (historyIndex < history.length - 1) { setHistoryIndex(p => p + 1); setLayers(history[historyIndex + 1]); } };
@@ -123,7 +126,11 @@ export function InteractiveDesignCanvas({ productImage, productName, onSave }: D
 
     const updateActiveLayer = (key: string, value: any) => {
         if (!activeLayerId) return;
-        setLayers(prev => prev.map(l => l.id === activeLayerId ? { ...l, [key]: value } : l));
+        setLayers(prev => {
+            const next = prev.map(l => l.id === activeLayerId ? { ...l, [key]: value } : l);
+            if (onLayersChange) onLayersChange(next);
+            return next;
+        });
     };
 
     const deleteActiveLayer = () => {
@@ -253,19 +260,25 @@ export function InteractiveDesignCanvas({ productImage, productName, onSave }: D
             let y = ((e.clientY - rect.top) / rect.height) * 100;
             const snapped = checkSnap(x, y);
             x = snapped.x; y = snapped.y;
-            setLayers(prev => prev.map(l => l.id === draggingId ? { ...l, x, y } : l));
+            const nextLayers = layers.map(l => l.id === draggingId ? { ...l, x, y } : l);
+            setLayers(nextLayers);
+            if (onLayersChange) onLayersChange(nextLayers);
         } else if (transformMode === 'rotate' && initialTransform) {
             const cx = rect.left + (layer.x / 100) * rect.width;
             const cy = rect.top + (layer.y / 100) * rect.height;
             const angle = Math.atan2(e.clientY - cy, e.clientX - cx);
             const delta = angle - initialTransform.angle;
-            setLayers(prev => prev.map(l => l.id === draggingId ? { ...l, rotation: initialTransform.rotation + (delta * (180 / Math.PI)) } : l));
+            const nextLayers = layers.map(l => l.id === draggingId ? { ...l, rotation: initialTransform.rotation + (delta * (180 / Math.PI)) } : l);
+            setLayers(nextLayers);
+            if (onLayersChange) onLayersChange(nextLayers);
         } else if (transformMode === 'scale' && initialTransform) {
             const cx = rect.left + (layer.x / 100) * rect.width;
             const cy = rect.top + (layer.y / 100) * rect.height;
             const dist = Math.hypot(e.clientX - cx, e.clientY - cy);
             const scale = Math.max(0.2, initialTransform.scale * (dist / initialTransform.dist));
-            setLayers(prev => prev.map(l => l.id === draggingId ? { ...l, scale } : l));
+            const nextLayers = layers.map(l => l.id === draggingId ? { ...l, scale } : l);
+            setLayers(nextLayers);
+            if (onLayersChange) onLayersChange(nextLayers);
         }
     };
 

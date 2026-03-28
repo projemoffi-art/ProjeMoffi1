@@ -5,7 +5,7 @@ import { BottomNav } from "@/components/home/BottomNav";
 import { FloatingControls } from "@/components/common/FloatingControls";
 import { GlobalAIWidget } from "@/components/ai/GlobalAIWidget";
 
-const HIDDEN_ROUTES = ['/studio', '/lab', '/production-studio', '/walk', '/community'];
+const HIDDEN_ROUTES = ['/studio', '/lab', '/production-studio'];
 
 export function DynamicNavigation() {
     const pathname = usePathname();
@@ -15,7 +15,7 @@ export function DynamicNavigation() {
 
     if (shouldHide) return null;
 
-    const isHomePage = pathname === '/' || pathname === '/home';
+    const isHomePage = pathname === '/';
 
     return (
         <>

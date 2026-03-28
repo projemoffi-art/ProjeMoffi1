@@ -7,8 +7,17 @@ export interface Comment {
     id: string;
     userId: string;
     userName: string;
+    userImg: string;
     text: string;
     timestamp: number;
+    likes: number;
+    isLiked: boolean;
+    replies: Comment[];
+    media?: {
+        type: 'image' | 'gif';
+        url: string;
+    };
+    isReplyTo?: string; // userName of the person being replied to
 }
 
 export interface Post {
@@ -43,6 +52,11 @@ interface SocialContextType {
     toggleLike: (postId: string) => void;
     addComment: (postId: string, text: string) => void;
     addStory: (image: string) => void;
+    toggleCommentLike: (postId: string, commentId: string) => void;
+    addCommentReply: (postId: string, parentCommentId: string, text: string) => void;
+    deleteComment: (postId: string, commentId: string) => void;
+    editComment: (postId: string, commentId: string, newText: string) => void;
+    reportComment: (postId: string, commentId: string) => void;
 }
 
 const SocialContext = createContext<SocialContextType | undefined>(undefined);
@@ -162,8 +176,121 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
         setStories(prev => [newStory, ...prev]);
     };
 
+    const toggleCommentLike = (postId: string, commentId: string) => {
+        setPosts(prev => prev.map(post => {
+            if (post.id !== postId) return post;
+            
+            const updateCommentLikes = (comments: Comment[]): Comment[] => {
+                return comments.map(c => {
+                    if (c.id === commentId) {
+                        return {
+                            ...c,
+                            isLiked: !c.isLiked,
+                            likes: c.isLiked ? c.likes - 1 : c.likes + 1
+                        };
+                    }
+                    if (c.replies.length > 0) {
+                        return { ...c, replies: updateCommentLikes(c.replies) };
+                    }
+                    return c;
+                });
+            };
+
+            return { ...post, comments: updateCommentLikes(post.comments) };
+        }));
+    };
+
+    const addCommentReply = (postId: string, parentCommentId: string, text: string) => {
+        if (!text.trim()) return;
+        
+        const newReply: Comment = {
+            id: Math.random().toString(36).substr(2, 9),
+            userId: 'current_user', // Mock user
+            userName: 'Sen',
+            userImg: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300',
+            text,
+            timestamp: Date.now(),
+            likes: 0,
+            isLiked: false,
+            replies: []
+        };
+
+        setPosts(prev => prev.map(post => {
+            if (post.id !== postId) return post;
+
+            const updateCommentReplies = (comments: Comment[]): Comment[] => {
+                return comments.map(c => {
+                    if (c.id === parentCommentId) {
+                        return { ...c, replies: [...c.replies, { ...newReply, isReplyTo: c.userName }] };
+                    }
+                    if (c.replies.length > 0) {
+                        return { ...c, replies: updateCommentReplies(c.replies) };
+                    }
+                    return c;
+                });
+            };
+
+            return { ...post, comments: updateCommentReplies(post.comments) };
+        }));
+    };
+
+    const deleteComment = (postId: string, commentId: string) => {
+        setPosts(prev => prev.map(post => {
+            if (post.id !== postId) return post;
+
+            const removeComment = (comments: Comment[]): Comment[] => {
+                return comments
+                    .filter(c => c.id !== commentId)
+                    .map(c => ({
+                        ...c,
+                        replies: removeComment(c.replies)
+                    }));
+            };
+
+            return { ...post, comments: removeComment(post.comments) };
+        }));
+    };
+
+    const editComment = (postId: string, commentId: string, newText: string) => {
+        setPosts(prev => prev.map(post => {
+            if (post.id !== postId) return post;
+
+            const updateText = (comments: Comment[]): Comment[] => {
+                return comments.map(c => {
+                    if (c.id === commentId) {
+                        return { ...c, text: newText };
+                    }
+                    if (c.replies.length > 0) {
+                        return { ...c, replies: updateText(c.replies) };
+                    }
+                    return c;
+                });
+            };
+
+            return { ...post, comments: updateText(post.comments) };
+        }));
+    };
+
+    const reportComment = (postId: string, commentId: string) => {
+        console.log(`[REPORT] Comment ${commentId} in post ${postId} has been reported.`);
+        // In a real app, this would hit a Supabase table like 'reports'
+        alert("Bildiriminiz alındı. İncelemeye alacağız. Teşekkürler!");
+    };
+
     return (
-        <SocialContext.Provider value={{ posts, stories, addPost, toggleLike, addComment, addStory }}>
+        <SocialContext.Provider value={{ 
+            posts, 
+            stories, 
+            addPost, 
+            toggleLike, 
+            addComment, 
+            addStory,
+            toggleCommentLike,
+            addCommentReply,
+            deleteComment,
+            editComment,
+            reportComment
+        }}>
             {children}
         </SocialContext.Provider>
     );

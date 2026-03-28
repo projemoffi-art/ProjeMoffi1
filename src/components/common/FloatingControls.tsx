@@ -10,8 +10,8 @@ export function FloatingControls() {
     const pathname = usePathname();
     const [isDangerOpen, setIsDangerOpen] = useState(false);
 
-    // Show Danger Button ONLY on /walk... pages
-    const showDanger = pathname?.startsWith('/walk');
+    // Show Danger Button ONLY on /walk... pages (Disabled for premium cleanup as per request)
+    const showDanger = false;
 
     // MOCK Danger Logic
     const isVet = pathname?.startsWith('/vet');
@@ -84,10 +84,7 @@ export function FloatingControls() {
     return (
         <div className={`fixed bottom-32 right-6 z-[100] flex flex-col items-center gap-3 transition-all duration-300`}>
 
-            {/* VET PAGE: Only AI */}
-            {isVet && (
-                <MoffiAssistant isEmbedded={true} />
-            )}
+            {/* VET PAGE: Global is enough now */}
 
             {/* WALK/OTHER: Danger (Bottom) only */}
             {!isVet && (

@@ -1,13 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Users, Plus, Clock, Footprints, Utensils,
-    Activity, Heart, Bell
+    Activity, Heart, Bell, X, QrCode, Share2, 
+    ShieldCheck, ChevronRight, MoreHorizontal
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFamily } from "@/hooks/useFamily";
 import { FamilyLog } from "@/types/domain";
+import { QRCodeSVG } from "qrcode.react";
 
 // Helper to map string icon types to components
 const getIcon = (type: FamilyLog['iconType']) => {
@@ -21,15 +24,21 @@ const getIcon = (type: FamilyLog['iconType']) => {
 };
 
 export function FamilyTab() {
-    // Architectural Change: All logic is now in the hook
     const { members, logs, notification, isLoading } = useFamily();
+    const [isInviteSheetOpen, setIsInviteSheetOpen] = useState(false);
 
-    if (isLoading) return <div className="p-10 text-center text-gray-400">Yükleniyor...</div>;
+    if (isLoading) return (
+        <div className="flex flex-col items-center justify-center p-20 gap-4">
+            <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+            <p className="text-sm font-bold text-gray-500 animate-pulse">Aile Verileri Yükleniyor...</p>
+        </div>
+    );
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className="space-y-6 relative"
+            initial={{ opacity: 0, y: 10 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            className="space-y-8 pb-20"
         >
             {/* IN-APP NOTIFICATION TOAST */}
             <AnimatePresence>
@@ -38,95 +47,191 @@ export function FamilyTab() {
                         initial={{ opacity: 0, y: -20, x: "-50%" }}
                         animate={{ opacity: 1, y: 0, x: "-50%" }}
                         exit={{ opacity: 0, y: -20, x: "-50%" }}
-                        className="fixed top-24 left-1/2 transform -translate-x-1/2 z-50 bg-black/80 backdrop-blur-md text-white px-4 py-2 rounded-full shadow-xl flex items-center gap-2 border border-white/10"
+                        className="fixed top-6 left-1/2 transform -translate-x-1/2 z-[100] bg-white/10 backdrop-blur-2xl text-white px-6 py-3 rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.3)] flex items-center gap-3 border border-white/10"
                     >
-                        <Bell className="w-4 h-4 text-yellow-400 fill-current animate-wiggle" />
-                        <span className="text-xs font-bold">{notification}</span>
+                        <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
+                            <Bell className="w-4 h-4 text-white fill-current" />
+                        </div>
+                        <span className="text-sm font-black tracking-tight">{notification}</span>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* MEMBERS GRID */}
-            <div>
-                <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                    <Users className="w-5 h-5 text-[#5B4D9D]" /> Moffi Ailesi
-                </h3>
-                <div className="grid grid-cols-2 gap-3">
-                    {members.map((member) => (
-                        <motion.div
-                            layout
-                            key={member.id}
-                            className="bg-white dark:bg-[#1A1A1A] p-4 rounded-2xl border border-gray-100 dark:border-white/5 relative overflow-hidden group shadow-sm transition-all"
-                        >
-                            <div className="flex items-center gap-3 mb-2">
-                                <div className="relative">
-                                    <img src={member.avatar} className="w-10 h-10 rounded-full object-cover border-2 border-white dark:border-[#1A1A1A] shadow-sm" />
-                                    <div className={cn("absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-[#1A1A1A] transition-colors duration-500",
-                                        member.status === 'online' ? "bg-green-500" : (member.status === 'busy' ? "bg-orange-500 animate-pulse" : "bg-gray-400")
-                                    )} />
-                                </div>
-                                <div>
-                                    <h4 className="font-bold text-sm text-gray-900 dark:text-white leading-tight">{member.name}</h4>
-                                    <span className="text-[10px] text-gray-500 font-medium">{member.role}</span>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                {member.status === 'busy' && <Activity className="w-3 h-3 text-orange-500 animate-pulse" />}
-                                <p className={cn("text-[10px] font-bold py-1 px-2 rounded-lg inline-block transition-colors duration-300",
-                                    member.status === 'busy' ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-500 dark:bg-white/5"
-                                )}>
-                                    {member.statusText}
-                                </p>
-                            </div>
-                        </motion.div>
-                    ))}
-
-                    {/* Invite Card */}
-                    <div className="bg-dashed border-2 border-gray-200 dark:border-white/10 rounded-2xl flex flex-col items-center justify-center p-4 cursor-pointer hover:border-[#5B4D9D] hover:bg-[#5B4D9D]/5 transition-colors gap-2 text-gray-400 hover:text-[#5B4D9D] min-h-[100px]">
-                        <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center">
-                            <Plus className="w-5 h-5" />
-                        </div>
-                        <span className="text-xs font-bold">Üye Davet Et</span>
-                    </div>
+            {/* HEADER SECTION */}
+            <div className="flex items-center justify-between px-2">
+                <div>
+                    <h2 className="text-3xl font-black text-white tracking-tight flex items-center gap-3">
+                        Moffi Ailesi <span className="text-blue-400 text-lg opacity-50">· {members.length}</span>
+                    </h2>
+                    <p className="text-gray-500 text-xs font-bold uppercase tracking-[0.2em] mt-1">Dostumuzun Ortak Bakım Çemberi</p>
                 </div>
+                <button 
+                    onClick={() => setIsInviteSheetOpen(true)}
+                    className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 active:scale-90 transition-transform shadow-lg shadow-blue-500/5"
+                >
+                    <Plus className="w-6 h-6" />
+                </button>
             </div>
 
-            {/* ACTIVITY LOG */}
-            <div className="bg-white dark:bg-[#1A1A1A] rounded-[2rem] p-5 shadow-sm border border-gray-100 dark:border-white/5">
-                <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-blue-500" /> Bugün Neler Oldu?
+            {/* MEMBERS GRID - Apple Bento Style */}
+            <div className="grid grid-cols-2 gap-4">
+                {members.map((member) => (
+                    <motion.div
+                        layout
+                        key={member.id}
+                        whileHover={{ scale: 1.02 }}
+                        className="bg-white/5 backdrop-blur-md p-5 rounded-[2.5rem] border border-white/10 relative overflow-hidden group transition-all"
+                    >
+                        <div className="absolute top-4 right-5">
+                            <div className={cn("w-2 h-2 rounded-full", 
+                                member.status === 'online' ? "bg-green-500" : (member.status === 'busy' ? "bg-orange-500 animate-pulse" : "bg-white/20")
+                            )} />
+                        </div>
+
+                        <div className="flex flex-col items-center text-center">
+                            <div className="relative mb-3">
+                                <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full scale-150 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <img src={member.avatar} className="w-16 h-16 rounded-[1.5rem] object-cover border-4 border-white/5 relative z-10 shadow-2xl" />
+                            </div>
+                            
+                            <h4 className="font-black text-white text-base leading-tight">{member.name}</h4>
+                            <span className="text-[10px] text-blue-400 font-black uppercase tracking-[0.15em] mt-1">{member.role}</span>
+
+                            <div className="mt-4 w-full bg-white/5 rounded-2xl p-2 border border-white/5">
+                                <p className="text-[10px] font-bold text-gray-400 line-clamp-1">{member.statusText}</p>
+                            </div>
+                        </div>
+                    </motion.div>
+                ))}
+
+                {/* Add Member Card */}
+                <button 
+                    onClick={() => setIsInviteSheetOpen(true)}
+                    className="bg-dashed border-2 border-white/10 rounded-[2.5rem] flex flex-col items-center justify-center p-5 group hover:border-blue-500/40 hover:bg-blue-500/5 transition-all gap-2 text-gray-500 hover:text-blue-400 h-full min-h-[160px]"
+                >
+                    <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Plus className="w-6 h-6" />
+                    </div>
+                    <span className="text-xs font-black uppercase tracking-widest">Üye Ekle</span>
+                </button>
+            </div>
+
+            {/* ACTIVITY LOG - Modern Timeline */}
+            <div className="bg-white/5 backdrop-blur-xl rounded-[3rem] p-8 border border-white/10 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-[80px] pointer-events-none" />
+                
+                <h3 className="font-black text-white text-xl mb-8 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-blue-500/20 flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-blue-400" />
+                    </div>
+                    Günlük Aktivite
                 </h3>
+
                 <div className="space-y-0 relative">
-                    {/* Timeline Line */}
-                    <div className="absolute left-[19px] top-4 bottom-4 w-[2px] bg-gray-100 dark:bg-white/5" />
+                    <div className="absolute left-[19px] top-6 bottom-6 w-[2px] bg-white/5" />
 
                     <AnimatePresence initial={false}>
-                        {logs.map((log) => {
+                        {logs.slice(0, 5).map((log) => {
                             const Icon = getIcon(log.iconType);
                             return (
                                 <motion.div
                                     key={log.id}
-                                    initial={{ opacity: 0, x: -20, height: 0 }}
-                                    animate={{ opacity: 1, x: 0, height: 'auto' }}
-                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                                    className="flex gap-4 relative z-10 pb-6 last:pb-0"
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    className="flex gap-6 relative z-10 pb-10 last:pb-2"
                                 >
-                                    <div className={cn("w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border-4 border-white dark:border-[#1A1A1A] shadow-sm z-20 bg-white", log.color)}>
+                                    <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 border border-white/10 shadow-lg z-20 bg-[#0A0A0E] group-hover:scale-110 transition-transform", log.color.replace('bg-', 'bg-opacity-20 bg-'))}>
                                         <Icon className="w-5 h-5" />
                                     </div>
-                                    <div className="pt-1">
-                                        <div className="flex items-baseline gap-2">
-                                            <span className="font-black text-sm text-gray-900 dark:text-white">{log.user}</span>
-                                            <span className="text-xs text-gray-500">{log.time}</span>
+                                    <div className="flex-1 pt-1">
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-black text-[15px] text-white tracking-tight">{log.user}</span>
+                                            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{log.time}</span>
                                         </div>
-                                        <p className="text-xs text-gray-600 dark:text-gray-400 font-medium mt-0.5">{log.action}</p>
+                                        <p className="text-sm text-gray-400 font-medium mt-1 leading-relaxed opacity-80">{log.action}</p>
                                     </div>
+                                    <ChevronRight className="w-4 h-4 text-white/10 mt-2" />
                                 </motion.div>
                             );
                         })}
                     </AnimatePresence>
                 </div>
             </div>
+
+            {/* APPLE STYLE INVITE BOTTOM SHEET */}
+            <AnimatePresence>
+                {isInviteSheetOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[200] flex flex-col justify-end"
+                    >
+                        <motion.div 
+                            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                            onClick={() => setIsInviteSheetOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="relative bg-[#12121A] rounded-t-[3rem] p-8 pb-32 border-t border-white/10 z-10 flex flex-col shadow-[0_-20px_50px_rgba(0,0,0,0.5)]"
+                        >
+                            {/* Grab Handle */}
+                            <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-8 shrink-0" />
+                            
+                            {/* Secondary Close Button (Top Right) */}
+                            <button 
+                                onClick={() => setIsInviteSheetOpen(false)}
+                                className="absolute top-8 right-8 w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-400 active:scale-90 transition-transform z-20"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+
+                            <div className="text-center mb-8">
+                                <div className="w-20 h-20 bg-blue-500/20 rounded-[2rem] flex items-center justify-center mx-auto mb-4">
+                                    <Users className="w-10 h-10 text-blue-500" />
+                                </div>
+                                <h3 className="text-2xl font-black text-white">Aileye Davet Et</h3>
+                                <p className="text-gray-500 text-sm mt-2 font-medium">Birlikte bakmak, sevgi paylaşmaktır.</p>
+                            </div>
+
+                            <div className="bg-white/5 border border-white/5 rounded-[2.5rem] p-8 flex flex-col items-center mb-8">
+                                <div className="bg-white p-4 rounded-3xl shadow-2xl mb-6 relative group cursor-pointer active:scale-95 transition-transform">
+                                    <QRCodeSVG 
+                                        value="moffi://invite/family/123456" 
+                                        size={160}
+                                        bgColor="#FFFFFF"
+                                        fgColor="#000000"
+                                        level="H"
+                                    />
+                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-white/90 transition-opacity rounded-3xl">
+                                        <QrCode className="w-10 h-10 text-black" />
+                                    </div>
+                                </div>
+                                <p className="text-[11px] text-gray-500 font-bold uppercase tracking-[0.2em]">Moffi Kimliği Tara</p>
+                            </div>
+
+                            <div className="space-y-3">
+                                <button className="w-full py-4 rounded-full bg-blue-500 text-white font-black text-sm shadow-[0_10px_30px_rgba(59,130,246,0.3)] flex items-center justify-center gap-3 active:scale-95 transition-transform">
+                                    <Share2 className="w-5 h-5" /> Davet Linki Paylaş
+                                </button>
+                                <button className="w-full py-4 rounded-full bg-white/5 text-gray-400 font-bold text-sm border border-white/5 flex items-center justify-center gap-3 active:scale-95 transition-transform">
+                                    <ShieldCheck className="w-5 h-5" /> Rehberden Bul
+                                </button>
+                            </div>
+
+                            <button 
+                                onClick={() => setIsInviteSheetOpen(false)}
+                                className="w-full mt-6 py-4 text-gray-600 font-black text-xs uppercase tracking-[0.3em] hover:text-white transition-colors"
+                            >
+                                Paneli Kapat
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.div>
     );
 }

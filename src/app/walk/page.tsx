@@ -36,7 +36,16 @@ export default function WalkPage() {
             {/* 1. HEADER & LOCATION */}
             <header className="px-6 py-4 flex justify-between items-center sticky top-0 z-30 bg-[#F8F9FC]/80 dark:bg-[#121212]/80 backdrop-blur-md">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => router.push('/home')} className="w-10 h-10 rounded-full bg-white dark:bg-white/5 flex items-center justify-center shadow-sm active:scale-95 transition-transform border border-gray-100 dark:border-white/10">
+                    <button 
+                        onClick={() => {
+                            if (window.history.length > 2) {
+                                router.back();
+                            } else {
+                                router.push('/community');
+                            }
+                        }} 
+                        className="w-10 h-10 rounded-full bg-white dark:bg-white/5 flex items-center justify-center shadow-sm active:scale-95 transition-transform border border-gray-100 dark:border-white/10"
+                    >
                         <ChevronLeft className="w-5 h-5 text-gray-700 dark:text-white" />
                     </button>
                     <div>
@@ -84,33 +93,33 @@ export default function WalkPage() {
                     </div>
                 </div>
 
-                {/* 3. STATS SUMMARY COMPONENT */}
+                {/* 3. STATS SUMMARY COMPONENT (Premium Bento) */}
                 <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-white dark:bg-[#1A1A1A] p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 flex flex-col items-center justify-center gap-1">
-                        <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center text-orange-500 mb-1">
-                            <Flame className="w-4 h-4" />
+                    <div className="bg-white dark:bg-[#1A1A1A] p-4 rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/5 flex flex-col items-center justify-center gap-1 group truncate">
+                        <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-500/20 flex items-center justify-center text-orange-500 mb-1 group-hover:scale-110 transition-transform">
+                            <Flame className="w-5 h-5" />
                         </div>
-                        <span className="text-lg font-black text-gray-900 dark:text-white">324</span>
-                        <span className="text-[10px] font-bold text-gray-400 uppercase">Kcal</span>
+                        <span className="text-xl font-black text-gray-900 dark:text-white">324</span>
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Kcal</span>
                     </div>
-                    <div className="bg-white dark:bg-[#1A1A1A] p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 flex flex-col items-center justify-center gap-1">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center text-blue-500 mb-1">
-                            <Footprints className="w-4 h-4" />
+                    <div className="bg-white dark:bg-[#1A1A1A] p-4 rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/5 flex flex-col items-center justify-center gap-1 group truncate">
+                        <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center text-blue-500 mb-1 group-hover:scale-110 transition-transform">
+                            <Footprints className="w-5 h-5" />
                         </div>
-                        <span className="text-lg font-black text-gray-900 dark:text-white">4.2</span>
-                        <span className="text-[10px] font-bold text-gray-400 uppercase">Km</span>
+                        <span className="text-xl font-black text-gray-900 dark:text-white">4.2</span>
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Km</span>
                     </div>
-                    <div className="bg-white dark:bg-[#1A1A1A] p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 flex flex-col items-center justify-center gap-1">
-                        <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center text-purple-500 mb-1">
-                            <Timer className="w-4 h-4" />
+                    <div className="bg-white dark:bg-[#1A1A1A] p-4 rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/5 flex flex-col items-center justify-center gap-1 group truncate">
+                        <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-500/20 flex items-center justify-center text-purple-500 mb-1 group-hover:scale-110 transition-transform">
+                            <Timer className="w-5 h-5" />
                         </div>
-                        <span className="text-lg font-black text-gray-900 dark:text-white">45</span>
-                        <span className="text-[10px] font-bold text-gray-400 uppercase">Dk</span>
+                        <span className="text-xl font-black text-gray-900 dark:text-white">45</span>
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Dk</span>
                     </div>
                 </div>
 
                 {/* 4. DISCOVERY MAP (Interactive Preview) */}
-                <div className="relative w-full h-64 rounded-[2.5rem] overflow-hidden shadow-2xl shadow-indigo-200/50 dark:shadow-none border border-white/50 dark:border-white/10 group">
+                <div className="relative w-full h-[320px] rounded-[3rem] overflow-hidden shadow-2xl shadow-indigo-200/50 dark:shadow-none border border-white/50 dark:border-white/10 group">
                     <GoogleLiveMap
                         userPos={userPos}
                         path={[]}
@@ -121,23 +130,26 @@ export default function WalkPage() {
                     />
 
                     {/* Overlay Gradient */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
 
                     {/* Floating Elements on Map */}
-                    <div className="absolute top-4 left-4 right-4 flex justify-between pointer-events-none">
-                        <div className="bg-white/90 dark:bg-black/80 backdrop-blur px-3 py-1.5 rounded-full text-xs font-bold text-gray-800 dark:text-white shadow-lg flex items-center gap-2">
+                    <div className="absolute top-6 left-6 right-6 flex justify-between pointer-events-none">
+                        <div className="bg-white/95 dark:bg-[#0A0A0E]/95 backdrop-blur-xl px-4 py-2 rounded-2xl text-[10px] font-black text-gray-800 dark:text-white shadow-xl flex items-center gap-2 border border-white/10">
                             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> 12 Moffi Arkadaşı Yakınında
                         </div>
                     </div>
 
-                    <div className="absolute bottom-5 left-5 right-5 z-10">
-                        <h2 className="text-white font-bold text-lg mb-0.5">Keşfe Çık</h2>
-                        <p className="text-white/70 text-xs mb-4 max-w-[80%]">Çevredeki parkları, kafeleri ve ödülleri topla.</p>
+                    <div className="absolute bottom-6 left-6 right-6 z-10 flex flex-col gap-4">
+                        <div className="bg-black/20 backdrop-blur-sm p-4 rounded-[2rem] border border-white/10">
+                            <h2 className="text-white font-black text-xl mb-0.5 tracking-tight uppercase italic">Keşfe Çık</h2>
+                            <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest leading-normal">Çevredeki parkları, kafeleri keşfet ve ödülleri topla.</p>
+                        </div>
                         <button
                             onClick={() => router.push('/walk/tracking')}
-                            className="w-full bg-[#5B4D9D] hover:bg-[#4a3e80] text-white py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95"
+                            className="w-full h-16 bg-white text-black rounded-[2rem] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all shadow-2xl active:scale-95 group overflow-hidden"
                         >
-                            <Play className="w-5 h-5 fill-current" /> Yürüyüşü Başlat
+                            <div className="absolute inset-0 bg-gradient-to-r from-orange-500/0 via-orange-500/10 to-orange-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                            <Play className="w-6 h-6 fill-current" /> Yürüyüşü Başlat
                         </button>
                     </div>
                 </div>

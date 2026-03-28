@@ -48,6 +48,8 @@ interface AuthContextType {
         taxId: string;
         iban: string;
     }) => Promise<{ success: boolean; error?: string }>;
+    showAIAssistant: boolean;
+    setShowAIAssistant: (val: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -55,65 +57,133 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [showAIAssistant, setShowAIAssistant] = useState(true);
 
-    // Map Supabase User to our Custom App User
-    const mapSupabaseUser = (sbUser: any): User => {
+    // Load AI preference from localStorage
+    useEffect(() => {
+        const saved = localStorage.getItem('moffi_show_ai');
+        if (saved !== null) {
+            setShowAIAssistant(saved === 'true');
+        }
+    }, []);
+
+    // Save AI preference to localStorage
+    useEffect(() => {
+        localStorage.setItem('moffi_show_ai', showAIAssistant.toString());
+    }, [showAIAssistant]);
+
+    // Map Supabase User & Profile to our Custom App User
+    const mapUserWithProfile = (sbUser: any, profile: any): User => {
         return {
             id: sbUser.id,
-            username: sbUser.user_metadata?.username || sbUser.email?.split('@')[0] || "User",
+            username: profile?.username || sbUser.user_metadata?.username || sbUser.email?.split('@')[0] || "User",
             email: sbUser.email || "",
-            role: (sbUser.user_metadata?.role as UserRole) || 'user',
-            avatar: sbUser.user_metadata?.avatar_url || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=100", // Default Mochi avatar
-            bio: sbUser.user_metadata?.bio || "Yeni Moffi Üyesi ✨",
+            role: (profile?.role as UserRole) || (sbUser.user_metadata?.role as UserRole) || 'user',
+            avatar: profile?.avatar_url || sbUser.user_metadata?.avatar_url || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=100",
+            bio: profile?.bio || sbUser.user_metadata?.bio || "Yeni Moffi Üyesi ✨",
             joinedAt: sbUser.created_at || new Date().toISOString(),
-            stats: { posts: 0, followers: 0, following: 0 } // Default stats
+            stats: {
+                posts: profile?.posts_count || 0,
+                followers: profile?.followers_count || 0,
+                following: profile?.following_count || 0
+            }
         };
     };
 
     useEffect(() => {
-        // Initial Fetch
+        const fetchUserData = async (sbUser: any) => {
+            try {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', sbUser.id)
+                    .single();
+
+                setUser(mapUserWithProfile(sbUser, profile));
+            } catch (error) {
+                console.error("fetchUserData error:", error);
+                // Fallback to basic user data if profile fetch fails
+                setUser(mapUserWithProfile(sbUser, null));
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
         const fetchSession = async () => {
-            const { data: { session }, error } = await supabase.auth.getSession();
-            if (error) {
-                console.error("Auth Fetch Error:", error.message);
-            }
-            if (session?.user) {
-                setUser(mapSupabaseUser(session.user));
-            } else {
-                setUser(null);
-            }
+            console.log("AuthContext: SUPABASE_DISABLED - Dev Mock Session mode active.");
+            // Hızlıca geliştirici hesabını set ediyoruz
+            setUser({
+                id: "dev-mock-id",
+                username: "MoffiGeliştirici",
+                email: "dev@moffi.com",
+                role: 'admin',
+                avatar: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=100",
+                bio: "Supabase limitsiz test hesabı ✨",
+                joinedAt: new Date().toISOString(),
+                stats: { posts: 42, followers: 1500, following: 120 }
+            });
             setIsLoading(false);
+            /*
+            console.log("AuthContext: Fetching session...");
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                console.log("AuthContext: Session found:", !!session);
+                if (session?.user) {
+                    await fetchUserData(session.user);
+                } else {
+                    setUser(null);
+                    setIsLoading(false);
+                }
+            } catch (e) {
+                console.error("AuthContext: Fetch session error:", e);
+                setIsLoading(false);
+            }
+            */
         };
 
         fetchSession();
 
-        // Listen for Auth Changes (Login, Logout)
+        const safetyTimeout = setTimeout(() => {
+            if (isLoading) {
+                console.warn("AuthContext: Loading timed out.");
+                setIsLoading(false);
+            }
+        }, 3000); // Reduced timeout for dev
+
+        // SUPABASE_DISABLED: Auth state change disabled
+        /*
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (_event, session) => {
                 if (session?.user) {
-                    setUser(mapSupabaseUser(session.user));
+                    setIsLoading(true);
+                    await fetchUserData(session.user);
                 } else {
                     setUser(null);
+                    setIsLoading(false);
                 }
-                setIsLoading(false);
             }
         );
+        */
 
-        return () => subscription.unsubscribe();
+        return () => {
+            // subscription.unsubscribe();
+            clearTimeout(safetyTimeout);
+        };
     }, []);
 
     const login = async (email: string, password: string) => {
-        // --- LOCAL DEV RATE LIMIT BYPASS ---
-        if (email.endsWith('.test')) {
-            const mockUser: User = {
-                id: 'mock_test_user',
+        // BYPASS FOR DEV (No Pro Supabase needed)
+        if (email.toLowerCase() === "test@test.com" || email.toLowerCase() === "dev@moffi.com") {
+            setUser({
+                id: "dev-mock-id",
+                username: "MoffiGeliştirici",
                 email: email,
-                username: email.split('@')[0],
-                role: 'user',
-                joinedAt: '2024 (Beta)',
-                stats: { posts: 0, followers: 0, following: 0 }
-            };
-            setUser(mockUser);
+                role: 'admin',
+                avatar: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=100",
+                bio: "Supabase limitsiz test hesabı ✨",
+                joinedAt: new Date().toISOString(),
+                stats: { posts: 42, followers: 1500, following: 120 }
+            });
             return { success: true };
         }
 
@@ -128,19 +198,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const signup = async (name: string, email: string, password: string) => {
-        // --- LOCAL DEV RATE LIMIT BYPASS ---
-        // If the user uses a '.test' email (e.g. hello@moffi.test), we mock a successful sign up
-        // to prevent getting stuck on 'Rate Limit Exceeded' locks during UI testing!
-        if (email.endsWith('.test')) {
-            const mockUser: User = {
-                id: 'mock_' + Date.now().toString(),
-                email: email,
+        // BYPASS FOR DEV
+        if (email.toLowerCase() === "test@test.com" || email.toLowerCase() === "dev@moffi.com") {
+            setUser({
+                id: "dev-mock-id",
                 username: name,
+                email: email,
                 role: 'user',
-                joinedAt: '2024 (Beta)',
+                avatar: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=100",
+                bio: "Yeni Moffi Üyesi ✨",
+                joinedAt: new Date().toISOString(),
                 stats: { posts: 0, followers: 0, following: 0 }
-            };
-            setUser(mockUser);
+            });
             return { success: true };
         }
 
@@ -157,7 +226,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) {
             // Translate common Supabase Auth errors for better UX
             if (error.message.includes('rate_limit') || error.message.includes('rate limit')) {
-                return { success: false, error: "Çok fazla deneme yaptınız. Güvenlik gereği lütfen bir süre bekleyip tekrar deneyin veya farklı bir e-posta adresi kullanın." };
+                return { success: false, error: "Çok fazla deneme yaptınız. Güvenlik gereği lütfen bir süre bekleyip tekrar deneyin." };
             }
             if (error.message.includes('already registered')) {
                 return { success: false, error: "Bu e-posta adresi zaten kayıtlı. Lütfen giriş yapmayı deneyin." };
@@ -176,6 +245,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const logout = async () => {
+        setUser(null);
         await supabase.auth.signOut();
     };
 
@@ -212,7 +282,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return (
         <AuthContext.Provider value={{
             user, isLoading, login, signup, logout,
-            updateProfile, getAllUsers, forgotPassword, deleteUser, registerBusiness
+            updateProfile, getAllUsers, forgotPassword, deleteUser, registerBusiness,
+            showAIAssistant, setShowAIAssistant
         }}>
             {children}
         </AuthContext.Provider>

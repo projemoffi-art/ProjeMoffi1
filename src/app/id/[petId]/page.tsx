@@ -2,43 +2,76 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PhoneCall, MapPin, MessageCircle, Heart, ShieldAlert, BadgeCheck, AlertTriangle, ArrowLeft, Send, PawPrint } from 'lucide-react';
+import { 
+    PhoneCall, MapPin, MessageCircle, Heart, 
+    ShieldAlert, BadgeCheck, AlertTriangle, ArrowLeft, 
+    Send, PawPrint, Loader2, Coins, BellRing
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter, useParams } from 'next/navigation';
+import { getPetStatusById } from '@/services/petIdService';
+import { PetIDState } from '@/types/pet-id';
 
 export default function PetIDPage() {
     const router = useRouter();
     const params = useParams();
     const petId = params?.petId as string || "";
 
-    // TODO: In a real app, fetch pet data based on ID from Supabase here.
-    // For now, we mock the data to show the beautiful architecture.
-    const isLost = petId.includes('lost');
-
-    const MOCK_PET = {
-        name: isLost ? "Luna" : "Milo",
-        type: isLost ? "Köpek" : "Kedi",
-        breed: isLost ? "Golden Retriever" : "British Shorthair",
-        age: isLost ? "2 Yaşında" : "1 Yaşında",
-        avatar: isLost
-            ? "https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=800"
-            : "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=800",
-        bio: isLost
-            ? "Oyun oynamayı çok sever. Yemek görürse dayanamaz. 🎾"
-            : "Öğle uykusuna düşkün. Bazen çok cool ama içten içe sevgi arsızı. 🐈‍⬛",
-        health: isLost ? "Piliç alerjisi var! Acil durumda lütfen piliç bazlı mama VERMEYİN." : "Tüm aşıları tam.",
-        ownerName: "Üveys",
-        status: isLost ? 'lost' : 'safe'
-    };
-
+    const [loading, setLoading] = useState(true);
+    const [petData, setPetData] = useState<PetIDState | null>(null);
     const [showMessageBox, setShowMessageBox] = useState(false);
     const [anonMessage, setAnonMessage] = useState("");
     const [isSending, setIsSending] = useState(false);
+    const [showScanNotification, setShowScanNotification] = useState(false);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            if (!petId) return;
+            setLoading(true);
+            try {
+                const data = await getPetStatusById(petId);
+                setPetData(data);
+                
+                // Simulate "Owner Notified" scan event
+                if (data && data.status === 'lost') {
+                    setTimeout(() => setShowScanNotification(true), 2000);
+                }
+            } catch (error) {
+                console.error("Error fetching pet data:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, [petId]);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4">
+                <Loader2 className="w-10 h-10 text-cyan-500 animate-spin" />
+                <p className="text-white/40 text-xs font-bold uppercase tracking-widest">Moffi Kimlik Bilgileri Alınıyor...</p>
+            </div>
+        );
+    }
+
+    if (!petData) {
+        return (
+            <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-center">
+                <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
+                <h1 className="text-xl font-bold text-white mb-2">Pet ID Bulunamadı</h1>
+                <p className="text-white/50 text-sm mb-6">Girdiğiniz kimlik numarası sistemimizde kayıtlı görünmüyor.</p>
+                <button onClick={() => router.push('/')} className="bg-white/10 text-white px-6 py-3 rounded-2xl font-bold">Anasayfaya Dön</button>
+            </div>
+        );
+    }
+
+    const { pet, status, sosConfig } = petData;
+    const isLost = status === 'lost';
 
     // --- SOS ACTIONS ---
     const handleCallOwner = () => {
-        alert("Sahibine 'Moffi Güvenli Arama' üzerinden bağlanılıyor...");
-        // window.location.href = "tel:+905555555555";
+        if (!sosConfig.allowProxyCalls) return;
+        alert(`Sahibine 'Moffi Güvenli Arama' üzerinden bağlanılıyor...`);
     };
 
     const handleSendLocation = () => {
@@ -50,7 +83,7 @@ export default function PetIDPage() {
     };
 
     const handleSendMessage = () => {
-        if (!anonMessage.trim()) return;
+        if (!anonMessage.trim() || !sosConfig.allowAnonymousMessaging) return;
         setIsSending(true);
         setTimeout(() => {
             setIsSending(false);
@@ -63,9 +96,29 @@ export default function PetIDPage() {
     return (
         <div className="min-h-[100dvh] bg-black text-white selection:bg-cyan-500/30 overflow-hidden relative">
 
+            {/* SCAN NOTIFICATION TOAST (SIMULATION FOR FINDER TO SEE OWNER IS AWARE) */}
+            <AnimatePresence>
+                {showScanNotification && (
+                    <motion.div
+                        initial={{ y: -100, opacity: 0 }}
+                        animate={{ y: 20, opacity: 1 }}
+                        exit={{ y: -100, opacity: 0 }}
+                        className="fixed top-0 inset-x-0 z-[100] flex justify-center px-6 pointer-events-none"
+                    >
+                        <div className="bg-emerald-500 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 backdrop-blur-xl border border-white/20">
+                            <BellRing className="w-5 h-5 animate-ring" />
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-black uppercase tracking-wider leading-none">Moffi Güvenlik</span>
+                                <span className="text-xs font-bold">Sahibine tarama bildirimi iletildi!</span>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* GRADIENT BACKDROP */}
             <div className="absolute inset-x-0 top-0 h-[60dvh] w-full pointer-events-none">
-                <img src={MOCK_PET.avatar} className="w-full h-full object-cover opacity-40 mix-blend-overlay" />
+                <img src={pet.avatarUrl} className="w-full h-full object-cover opacity-40 mix-blend-overlay" />
                 <div className={cn(
                     "absolute inset-0 bg-gradient-to-b from-transparent via-black/80 to-black",
                     isLost ? "from-red-900/40" : "from-cyan-900/40"
@@ -84,7 +137,19 @@ export default function PetIDPage() {
             </header>
 
             {/* MAIN CONTENT PORTRAIT */}
-            <main className="relative z-10 flex flex-col items-center px-6 pt-8 pb-32">
+            <main className="relative z-10 flex flex-col items-center px-6 pt-2 pb-32">
+
+                {/* REWARD BADGE */}
+                {isLost && sosConfig.rewardAmount && (
+                    <motion.div
+                        initial={{ scale: 0, rotate: -10 }}
+                        animate={{ scale: 1, rotate: -5 }}
+                        className="bg-amber-400 text-black px-4 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl mb-4 flex items-center gap-2 z-20"
+                    >
+                        <Coins className="w-3.5 h-3.5" />
+                        Ödüllü Kayıp: {sosConfig.rewardAmount} {sosConfig.rewardCurrency}
+                    </motion.div>
+                )}
 
                 {/* PROFILE PICTURE */}
                 <motion.div
@@ -97,9 +162,8 @@ export default function PetIDPage() {
                         "w-40 h-40 rounded-[2rem] p-1.5 shadow-2xl relative z-10 overflow-hidden",
                         isLost ? "bg-gradient-to-tr from-red-600 to-orange-500" : "bg-gradient-to-tr from-cyan-400 to-blue-600"
                     )}>
-                        <img src={MOCK_PET.avatar} className="w-full h-full rounded-[1.6rem] object-cover" />
+                        <img src={pet.avatarUrl} className="w-full h-full rounded-[1.6rem] object-cover" />
                     </div>
-                    {/* Glow Effect directly behind image */}
                     <div className={cn(
                         "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 rounded-full blur-[40px] -z-10",
                         isLost ? "bg-red-500/50" : "bg-cyan-500/50"
@@ -108,11 +172,11 @@ export default function PetIDPage() {
 
                 {/* NAME AND STATUS */}
                 <div className="text-center mb-8 w-full max-w-sm">
-                    <h1 className="text-4xl font-black mb-2 tracking-tight flex items-center justify-center gap-2">
-                        {MOCK_PET.name}
+                    <h1 className="text-4xl font-black mb-1 tracking-tight flex items-center justify-center gap-2">
+                        {pet.name}
                     </h1>
-                    <p className="text-white/60 text-sm font-medium mb-4 flex items-center justify-center gap-1.5">
-                        {MOCK_PET.breed} • {MOCK_PET.age}
+                    <p className="text-white/60 text-sm font-medium mb-6 flex items-center justify-center gap-1.5 uppercase tracking-widest">
+                        {pet.breed} • {pet.age}
                     </p>
 
                     {/* STATUS BANNER */}
@@ -121,7 +185,7 @@ export default function PetIDPage() {
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ delay: 0.1 }}
                         className={cn(
-                            "w-full rounded-3xl p-5 shadow-xl backdrop-blur-xl border border-white/10 relative overflow-hidden",
+                            "w-full rounded-[2.5rem] p-6 shadow-xl backdrop-blur-xl border border-white/10 relative overflow-hidden",
                             isLost ? "bg-red-500/10" : "bg-white/5"
                         )}
                     >
@@ -134,12 +198,14 @@ export default function PetIDPage() {
                                     </div>
                                     <h2 className="text-xl font-black text-red-400 uppercase tracking-widest">Kayıp Alarmı! 🚨</h2>
                                     <p className="text-sm text-red-100/90 leading-relaxed font-medium">
-                                        Lütfen bana yardım edin, ailemi bulamıyorum. Korkmuş olabilirim, ani hareketler yapmayın.
+                                        {sosConfig.emergencyMessage}
                                     </p>
-                                    <div className="w-full bg-red-950/50 rounded-2xl p-3 border border-red-500/20 mt-2 flex flex-col items-start text-left">
-                                        <span className="text-xs uppercase font-bold text-red-400 mb-1">⚕️ Sağlık Uyarısı</span>
-                                        <p className="text-[13px] text-white/90 leading-snug">{MOCK_PET.health}</p>
-                                    </div>
+                                    {sosConfig.criticalHealthAlert && (
+                                        <div className="w-full bg-red-950/50 rounded-2xl p-3 border border-red-500/10 mt-2 flex flex-col items-start text-left">
+                                            <span className="text-xs uppercase font-bold text-red-400 mb-1">⚕️ Sağlık Uyarısı</span>
+                                            <p className="text-[13px] text-white/90 leading-snug">{sosConfig.criticalHealthAlert}</p>
+                                        </div>
+                                    )}
                                 </div>
                             </>
                         ) : (
@@ -152,7 +218,7 @@ export default function PetIDPage() {
                                     Sahibim yanımda veya evimdeyim. Benimle karşılaştıysan sadece başımı okşa ve iyi olduğumu bil! 🐾
                                 </p>
                                 <div className="w-full h-[1px] bg-white/10 my-2" />
-                                <p className="text-[13px] italic text-white/50">"{MOCK_PET.bio}"</p>
+                                <p className="text-[13px] italic text-white/50">"{pet.bio}"</p>
                             </div>
                         )}
                     </motion.div>
@@ -166,10 +232,12 @@ export default function PetIDPage() {
                         transition={{ delay: 0.2 }}
                         className="w-full max-w-sm flex flex-col gap-3"
                     >
-                        <button onClick={handleCallOwner} className="w-full bg-white text-black hover:bg-gray-100 transition-colors rounded-[20px] p-4 flex items-center justify-center gap-3 font-bold text-[15px] shadow-[0_0_30px_rgba(255,255,255,0.2)] active:scale-95">
-                            <PhoneCall className="w-5 h-5" />
-                            Sahibini Hemen Ara (Gizli Arama)
-                        </button>
+                        {sosConfig.allowProxyCalls && (
+                             <button onClick={handleCallOwner} className="w-full bg-white text-black hover:bg-gray-100 transition-colors rounded-[20px] p-4 flex items-center justify-center gap-3 font-bold text-[15px] shadow-[0_0_30px_rgba(255,255,255,0.2)] active:scale-95">
+                                <PhoneCall className="w-5 h-5 text-emerald-600" />
+                                Sahibini Hemen Ara (Gizli Arama)
+                            </button>
+                        )}
 
                         <div className="flex gap-3 w-full">
                             <button onClick={handleSendLocation} className="flex-1 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 rounded-[20px] p-4 flex flex-col items-center justify-center gap-2 transition-colors active:scale-95">
@@ -177,10 +245,12 @@ export default function PetIDPage() {
                                 <span className="font-semibold text-xs text-center leading-tight">Mevcut Konumumu Gönder</span>
                             </button>
 
-                            <button onClick={() => setShowMessageBox(!showMessageBox)} className="flex-1 bg-white/10 hover:bg-white/15 border border-white/10 text-white rounded-[20px] p-4 flex flex-col items-center justify-center gap-2 transition-colors active:scale-95">
-                                <MessageCircle className="w-6 h-6" />
-                                <span className="font-semibold text-xs text-center leading-tight">Anonim Mesaj Bırak</span>
-                            </button>
+                            {sosConfig.allowAnonymousMessaging && (
+                                <button onClick={() => setShowMessageBox(!showMessageBox)} className="flex-1 bg-white/10 hover:bg-white/15 border border-white/10 text-white rounded-[20px] p-4 flex flex-col items-center justify-center gap-2 transition-colors active:scale-95">
+                                    <MessageCircle className="w-6 h-6" />
+                                    <span className="font-semibold text-xs text-center leading-tight">Anonim Mesaj Bırak</span>
+                                </button>
+                            )}
                         </div>
 
                         {/* ANONYMOUS MESSAGE BOX */}

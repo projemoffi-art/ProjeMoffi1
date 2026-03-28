@@ -40,7 +40,7 @@ export function SocialPostCard({ user, content, isSponsored, context }: PostProp
     };
 
     return (
-        <div className="bg-white mb-6 rounded-[2rem] shadow-sm overflow-hidden relative">
+        <div className="bg-white mb-6 rounded-none relative">
             {/* Header */}
             <div className="flex items-center justify-between p-4">
                 <div className="flex items-center gap-3">

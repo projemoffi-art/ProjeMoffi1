@@ -105,7 +105,16 @@ export default function PetShopPage() {
             {/* HEADER */}
             <div className="sticky top-0 z-50 bg-white/80 dark:bg-black/80 backdrop-blur-2xl border-b border-gray-100 dark:border-white/5">
                 <div className="flex items-center justify-between px-5 pt-4 pb-2">
-                    <button onClick={() => router.push('/home')} className="w-10 h-10 flex items-center justify-center">
+                    <button 
+                        onClick={() => {
+                            if (window.history.length > 2) {
+                                router.back();
+                            } else {
+                                router.push('/community');
+                            }
+                        }} 
+                        className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-white/5 rounded-full transition-colors"
+                    >
                         <ChevronLeft className="w-6 h-6 text-gray-700 dark:text-white" />
                     </button>
 
