@@ -223,7 +223,7 @@ export default function GlobalFeedback() {
                                     </div>
                                 )}
                             </div>
-                        </div>
+                        </motion.div>
                     </div>
                 )}
             </AnimatePresence>
