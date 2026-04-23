@@ -13,14 +13,15 @@ export async function POST(req: Request) {
     try {
         const body = await req.json();
         const { rating, category, comment } = body;
+        const targetEmail = "projemoffi@gmail.com";
 
-        console.log("Feedback Received:", { rating, category, comment });
+        console.log(`[FEEDBACK] New submission for ${targetEmail}:`, { rating, category, comment });
 
         if (!supabaseAdmin) {
-            console.warn("Feedback API: Supabase not configured. Logging to console only.");
+            console.warn(`Feedback API: Supabase not configured. This feedback for ${targetEmail} is logged in Vercel Runtime Logs.`);
             return NextResponse.json({ 
                 success: true, 
-                message: "Feedback received locally (No DB connected)" 
+                message: `Feedback received for ${targetEmail} (No DB connected)` 
             });
         }
 

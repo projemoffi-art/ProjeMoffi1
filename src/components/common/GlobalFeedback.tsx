@@ -58,11 +58,10 @@ export default function GlobalFeedback() {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setIsOpen(true)}
-                className="fixed bottom-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full shadow-2xl hover:bg-white/20 transition-all duration-300 group"
+                className="fixed bottom-28 right-6 z-[90] flex items-center justify-center w-12 h-12 bg-white/10 backdrop-blur-2xl border border-white/20 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] hover:bg-white/20 transition-all duration-500 group"
             >
-                <MessageSquare className="w-5 h-5 text-purple-400 group-hover:rotate-12 transition-transform" />
-                <span className="text-sm font-medium text-white/90">Geri Bildirim</span>
-                <div className="absolute inset-0 bg-purple-500/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                <MessageSquare className="w-5 h-5 text-white/80 group-hover:text-white transition-colors" />
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-purple-500/10 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
             </motion.button>
 
             {/* Feedback Modal */}
