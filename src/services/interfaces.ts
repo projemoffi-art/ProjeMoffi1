@@ -1,5 +1,5 @@
 import {
-    FamilyMember, FamilyLog, DailyMemory, DayContext, MemoryMoment,
+    FamilyMember, FamilyLog,
     VetClinic, VetAppointment, VaccineRuleset, UserVaccineRecord,
     ShopProduct, ShopCategory, ShopOrder, ShopCartItem,
     WalkSession, WalkStats,
@@ -21,16 +21,6 @@ export type FamilyEvent =
     | { type: 'MEMBER_UPDATE', members: FamilyMember[] }
     | { type: 'NEW_LOG', log: FamilyLog }
     | { type: 'NOTIFICATION', message: string };
-
-// ==========================================
-// MEMORY
-// ==========================================
-export interface IMemoryService {
-    getDailyMemory(date: string): Promise<DailyMemory | null>;
-    generateDaySummary(context: DayContext): Promise<{ title: string; moments: MemoryMoment[]; mood: DailyMemory['mood'] }>;
-    saveMemory(memory: DailyMemory): Promise<void>;
-    shareToCommunity(memory: DailyMemory): Promise<void>;
-}
 
 // ==========================================
 // VET

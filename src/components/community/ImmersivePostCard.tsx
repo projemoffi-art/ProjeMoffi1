@@ -6,12 +6,14 @@ import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motio
 import { 
     Heart, MessageCircle, Share2, MoreHorizontal, User, 
     ChevronRight, Info, QrCode, Star, Copy, Bell, 
-    Edit2, Trash2, VolumeX, EyeOff, ShieldAlert, 
+    Edit2, Trash2, VolumeX, Volume2, EyeOff, ShieldAlert, 
     BadgeCheck, Plus, X, Sparkles, Send,
     Download, Instagram, MessageSquare, Zap
 } from 'lucide-react';
 import { useSocial } from '@/context/SocialContext';
 import { cn } from '@/lib/utils';
+import { ShieldCheck, Crown, Footprints, Zap as SOSZap } from 'lucide-react';
+import Image from 'next/image';
 
 interface ImmersivePostCardProps {
     post: any;
@@ -51,6 +53,7 @@ export function ImmersivePostCard({
     const [showComments, setShowComments] = useState(false);
     const [commentInput, setCommentInput] = useState('');
     const [isMoreOpen, setIsMoreOpen] = useState(false);
+    const [isEnhanced, setIsEnhanced] = useState(false);
     const [isAddingToStory, setIsAddingToStory] = useState(false);
     const [replyingTo, setReplyingTo] = useState<any>(null);
     const [showAISuggestions, setShowAISuggestions] = useState(false);
@@ -58,7 +61,21 @@ export function ImmersivePostCard({
     const [selectedMedia, setSelectedMedia] = useState<any>(null);
     const [showGIFPicker, setShowGIFPicker] = useState(false);
     const [editingComment, setEditingComment] = useState<any>(null);
+    const [isMuted, setIsMuted] = useState(true);
     const { stories } = useSocial();
+    const hiddenWords = currentUser?.settings?.content?.hiddenWords || [];
+    const allowComments = currentUser?.settings?.privacy?.allowComments ?? true;
+
+    // Censorship Logic
+    const filterContent = (text: string) => {
+        if (!text || hiddenWords.length === 0) return text;
+        let filtered = text;
+        hiddenWords.forEach((word: string) => {
+            const regex = new RegExp(`\\b${word}\\b`, 'gi');
+            filtered = filtered.replace(regex, '***');
+        });
+        return filtered;
+    };
 
     const MOCK_GIFS = [
         { id: 'g1', url: "https://i.giphy.com/4T7eWG7jRmsTVypLOH.gif" }, // Happy Goldie
@@ -225,14 +242,37 @@ export function ImmersivePostCard({
                     }}
                     className="w-full h-full relative"
                 >
-                    <img 
-                        src={post.media} 
-                        loading={priority ? "eager" : "lazy"}
-                        className="w-full h-full object-cover opacity-90 transition-transform duration-[10s] group-hover:scale-110 pointer-events-none" 
-                    />
+                    {post.media?.match(/\.(mp4|webm|ogg)$/) || post.is_video ? (
+                        <video
+                            src={post.media}
+                            autoPlay={currentUser?.settings?.feed?.autoplay ?? true}
+                            muted={isMuted}
+                            loop
+                            playsInline
+                            className="w-full h-full object-cover opacity-90 transition-transform duration-[10s] group-hover:scale-110"
+                        />
+                    ) : (
+                        <Image 
+                            src={post.media || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} 
+                            fill
+                            priority={priority}
+                            className="object-cover opacity-90 transition-transform duration-[10s] group-hover:scale-110 pointer-events-none" 
+                            alt="Post Media"
+                        />
+                    )}
                     <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90 pointer-events-none" />
                 </motion.div>
             </div>
+
+            {/* VIDEO CONTROLS (Floating Mute Button) */}
+            {(post.media?.match(/\.(mp4|webm|ogg)$/) || post.is_video) && (
+                <button 
+                    onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
+                    className="absolute bottom-32 right-6 w-10 h-10 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white z-30 active:scale-90 transition-all hover:bg-white/10"
+                >
+                    {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                </button>
+            )}
 
             {/* TOP BAR BUILT INTO CARD */}
             <div className="absolute top-5 left-5 right-5 flex justify-between items-start z-20 pointer-events-none">
@@ -263,7 +303,7 @@ export function ImmersivePostCard({
                             animate={{ y: 0 }}
                             exit={{ y: "100%" }}
                             transition={{ type: "spring", damping: 30, stiffness: 350, mass: 0.8 }}
-                            className="absolute bottom-0 left-0 right-0 z-50 bg-[#0a0a0b]/60 backdrop-blur-[50px] border-t border-white/10 rounded-t-[48px] shadow-[0_-20px_80px_rgba(0,0,0,0.8)] flex flex-col pointer-events-auto overflow-hidden max-h-[92%]"
+                            className="absolute bottom-0 left-0 right-0 z-50 bg-background/60 backdrop-blur-[50px] border-t border-card-border rounded-t-[48px] shadow-2xl flex flex-col pointer-events-auto overflow-hidden max-h-[92%]"
                         >
                             <div 
                                 onClick={() => setIsMoreOpen(false)}
@@ -295,7 +335,11 @@ export function ImmersivePostCard({
                                 {/* POST MANAGEMENT SECTION */}
                                 <div className="flex flex-col bg-white/[0.03] rounded-[32px] border border-white/[0.08] divide-y divide-white/[0.05] overflow-hidden">
                                     <button 
-                                        onClick={() => { setIsMoreOpen(false); router.push(post.user_id ? `/profile/${post.user_id}` : '/profile'); }}
+                                        onClick={() => { 
+                                            const targetId = post.user_id || post.userId || post.authorId || post.owner_id || post.user?.id;
+                                            setIsMoreOpen(false); 
+                                            router.push(targetId ? `/profile/${targetId}` : '/profile'); 
+                                        }}
                                         className="w-full px-6 py-5 flex items-center justify-between active:bg-white/[0.07] transition-all group"
                                     >
                                         <div className="flex items-center gap-5">
@@ -425,7 +469,7 @@ export function ImmersivePostCard({
                     <div className="flex flex-col items-center gap-1">
                         <button 
                             onClick={() => {
-                                if (isCommentsDisabled) {
+                                if (isCommentsDisabled || (!allowComments && isOwner)) {
                                     alert('Bu kullanıcı tüm gönderilerini yoruma kapatmıştır.');
                                 } else {
                                     setShowComments(true);
@@ -433,16 +477,16 @@ export function ImmersivePostCard({
                             }} 
                             className={cn(
                                 "w-12 h-12 rounded-full backdrop-blur-md border flex items-center justify-center transition-all shadow-xl",
-                                isCommentsDisabled 
+                                (isCommentsDisabled || (!allowComments && isOwner)) 
                                     ? "bg-white/5 border-white/5 opacity-50 cursor-not-allowed scale-90" 
                                     : "bg-white/10 border-white/20 active:scale-90 hover:bg-white/20"
                             )}
-                            disabled={isCommentsDisabled}
+                            disabled={isCommentsDisabled || (!allowComments && isOwner)}
                         >
-                            <MessageCircle className={cn("w-6 h-6 drop-shadow-md", isCommentsDisabled ? "text-white/20" : "text-white")} />
+                            <MessageCircle className={cn("w-6 h-6 drop-shadow-md", (isCommentsDisabled || (!allowComments && isOwner)) ? "text-white/20" : "text-white")} />
                         </button>
-                        <span className={cn("text-[10px] font-bold drop-shadow-md", isCommentsDisabled ? "text-white/20" : "text-white")}>
-                            {isCommentsDisabled ? '-' : post.comments}
+                        <span className={cn("text-[10px] font-bold drop-shadow-md", (isCommentsDisabled || (!allowComments && isOwner)) ? "text-white/20" : "text-white")}>
+                            {(isCommentsDisabled || (!allowComments && isOwner)) ? '-' : post.comments}
                         </span>
                     </div>
 
@@ -456,28 +500,104 @@ export function ImmersivePostCard({
 
                 <div className="pr-16 w-full flex items-center gap-3">
                     <div 
-                        onClick={() => router.push(post.user_id ? `/profile/${post.user_id}` : '/profile')}
-                        className="w-12 h-12 rounded-full border-2 border-cyan-400 p-0.5 relative pointer-events-auto cursor-pointer active:scale-95 transition-transform"
+                        onClick={() => {
+                            const targetId = post.user_id || post.userId || post.authorId || post.owner_id || post.user?.id;
+                            router.push(targetId ? `/profile/${targetId}` : '/profile');
+                        }}
+                        className="w-12 h-12 rounded-full border-2 border-white/20 p-0.5 relative pointer-events-auto cursor-pointer active:scale-95 transition-transform"
                     >
-                        <img src={isOwner ? (currentUser?.avatar || post.avatar) : post.avatar} className="w-full h-full rounded-full object-cover" />
+                        <Image src={(isOwner ? (currentUser?.avatar || post.avatar) : post.avatar) || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} fill className="rounded-full object-cover" alt="Author" />
                         {!isOwner && (
-                            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-cyan-500 rounded-full flex items-center justify-center border-2 border-black" onClick={(e) => { e.stopPropagation(); alert('Kullanıcıyı takip ettiniz!'); }}>
+                            <motion.div 
+                                className="absolute -bottom-1 -right-1 w-5 h-5 bg-cyan-500 rounded-full flex items-center justify-center border-2 border-black cursor-pointer shadow-lg shadow-cyan-500/40" 
+                                onClick={async (e) => { 
+                                    e.stopPropagation(); 
+                                    try {
+                                        await apiService.followUser(post.user_id || post.userId);
+                                        // Visual feedback: brief scale pop and background pulse
+                                        showToast("Takip Edildi", `${post.author} takip listenize eklendi.`, "success");
+                                    } catch (err) {
+                                        console.error(err);
+                                    }
+                                }}
+                                whileHover={{ scale: 1.2, rotate: 90 }}
+                                whileTap={{ scale: 0.8 }}
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                            >
                                 <Plus className="w-3 h-3 text-white" />
-                            </div>
+                                <motion.div 
+                                    className="absolute inset-0 rounded-full bg-cyan-400"
+                                    initial={{ scale: 1, opacity: 0 }}
+                                    whileTap={{ scale: 3, opacity: 0.5 }}
+                                    transition={{ duration: 0.5 }}
+                                />
+                            </motion.div>
                         )}
                     </div>
-                    <div className="flex flex-col pointer-events-auto cursor-pointer active:opacity-70 transition-opacity" onClick={() => router.push(post.user_id ? `/profile/${post.user_id}` : '/profile')}>
-                        <span className="text-sm font-black text-white drop-shadow-lg leading-tight flex items-center gap-1">
-                            {post.author} <BadgeCheck className="w-3.5 h-3.5 text-cyan-400 fill-cyan-400/20" />
-                        </span>
-                        <span className="text-[11px] text-cyan-300 font-medium drop-shadow-md">
-                            {post.owner}
+                    <div className="flex flex-col pointer-events-auto cursor-pointer active:opacity-70 transition-opacity" onClick={() => {
+                        const targetId = post.user_id || post.userId || post.authorId || post.owner_id || post.user?.id;
+                        router.push(targetId ? `/profile/${targetId}` : '/profile');
+                    }}>
+                        <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-sm font-black text-white drop-shadow-lg leading-tight">
+                                {post.author}
+                            </span>
+                            {/* AURA BADGE IN FEED */}
+                            {post.aura_settings && (
+                                <div 
+                                    className={cn(
+                                        "px-2.5 py-0.5 flex items-center gap-1.5 transition-all duration-500 backdrop-blur-md",
+                                        post.aura_settings.frameStyle === 'glass' && "rounded-full bg-white/10 border border-white/20 shadow-xl",
+                                        post.aura_settings.frameStyle === 'neon' && "rounded-lg bg-black/40 border-[0.5px] border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.05)]",
+                                        post.aura_settings.frameStyle === 'metal' && "rounded-md bg-gradient-to-br from-gray-700 to-black border border-white/20",
+                                        post.aura_settings.frameStyle === 'minimal' && "px-1"
+                                    )}
+                                >
+                                    <div 
+                                        className="w-1.5 h-1.5 rounded-full animate-pulse shrink-0"
+                                        style={{ backgroundColor: post.aura_settings.accentColor === 'default' ? '#6366f1' : post.aura_settings.accentColor }}
+                                    />
+                                    <span 
+                                        className={cn(
+                                            "text-[8px] font-black uppercase tracking-[0.3em] transition-all duration-500",
+                                            post.aura_settings.fontFamily === 'font-serif' && "font-serif",
+                                            post.aura_settings.fontFamily === 'font-mono' && "font-mono",
+                                            post.aura_settings.fontFamily === 'italic' && "italic",
+                                            post.aura_settings.fontFamily === 'font-pacifico' && "font-pacifico lowercase !tracking-widest",
+                                            post.aura_settings.fontFamily === 'font-satisfy' && "font-satisfy lowercase !tracking-widest",
+                                            post.aura_settings.fontFamily === 'font-playfair' && "font-playfair",
+                                        )}
+                                        style={{ 
+                                            color: (post.aura_settings.frameStyle === 'glass' || post.aura_settings.frameStyle === 'metal') ? '#FFFFFF' : '#FFFFFF',
+                                            textShadow: post.aura_settings.frameStyle === 'neon' ? `0 0 8px ${post.aura_settings.accentColor === 'default' ? '#6366f1' : post.aura_settings.accentColor}` : 'none'
+                                        }}
+                                    >
+                                        Pioneer
+                                    </span>
+                                    
+                                    {/* BADGES IN FEED PILL */}
+                                    <div className="flex items-center gap-0.5 border-l border-white/10 pl-1.5">
+                                        {(post.aura_settings.badges || []).map((bid: string) => {
+                                            if (bid === 'verified') return <ShieldCheck key={bid} className="w-2.5 h-2.5 text-emerald-400" />;
+                                            if (bid === 'premium') return <Crown key={bid} className="w-2.5 h-2.5 text-orange-400" />;
+                                            if (bid === 'walker') return <Footprints key={bid} className="w-2.5 h-2.5 text-cyan-400" />;
+                                            if (bid === 'sos') return <SOSZap key={bid} className="w-2.5 h-2.5 text-red-500" />;
+                                            return null;
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        <span className="text-[11px] text-zinc-400 font-medium drop-shadow-md">
+                            {post.username || `@${post.author?.toLowerCase().replace(/\s+/g, '_')}`}
                         </span>
                     </div>
                 </div>
 
                 <p className="text-xs text-white/90 leading-relaxed font-medium drop-shadow-md line-clamp-2 w-5/6 pl-1.5 pointer-events-none">
-                    {post.desc}
+                    {filterContent(post.desc)}
                 </p>
             </div>
 
@@ -490,7 +610,7 @@ export function ImmersivePostCard({
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: "100%", opacity: 0 }}
                         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                        className="absolute inset-x-0 bottom-0 h-[82%] bg-[#0a0a0b]/90 backdrop-blur-[40px] z-40 rounded-t-[2.5rem] border-t border-white/10 p-4 flex flex-col shadow-[0_-20px_80px_rgba(0,0,0,0.8)]"
+                        className="absolute inset-x-0 bottom-0 h-[82%] bg-background/90 backdrop-blur-[40px] z-40 rounded-t-[2.5rem] border-t border-card-border p-4 flex flex-col shadow-2xl"
                     >
                         {/* HANDLE */}
                         <div 
@@ -501,13 +621,13 @@ export function ImmersivePostCard({
                         </div>
 
                         {/* HEADER */}
-                        <div className="flex justify-between items-center mb-4 pb-4 border-b border-white/5">
-                            <h3 className="font-bold text-white flex items-center gap-2">
-                                <MessageCircle className="w-5 h-5 text-cyan-400" />
+                        <div className="flex justify-between items-center mb-4 pb-4 border-b border-foreground/5">
+                            <h3 className="font-bold text-foreground flex items-center gap-2">
+                                <MessageCircle className="w-5 h-5 text-accent" />
                                 {post.comments} Yorum
                             </h3>
-                            <button onClick={() => setShowComments(false)} className="bg-white/10 p-2 rounded-full hover:bg-white/20 transition-colors">
-                                <X className="w-4 h-4 text-white" />
+                            <button onClick={() => setShowComments(false)} className="bg-foreground/10 p-2 rounded-full hover:bg-foreground/20 transition-colors">
+                                <X className="w-4 h-4 text-foreground" />
                             </button>
                         </div>
 
@@ -532,6 +652,7 @@ export function ImmersivePostCard({
                                             }}
                                             onDelete={(cid) => onDeleteComment?.(cid)}
                                             onReport={(cid) => onReportComment?.(cid)}
+                                            filterContent={filterContent}
                                         />
                                     ))
                                 ) : (
@@ -661,7 +782,7 @@ export function ImmersivePostCard({
                                                         }}
                                                         className="relative w-32 h-32 rounded-2xl overflow-hidden shrink-0 border border-white/10 active:scale-95 transition-transform"
                                                     >
-                                                        <img src={gif.url} className="w-full h-full object-cover" />
+                                                        <Image src={gif.url} fill className="object-cover" alt="GIF" />
                                                         <div className="absolute inset-0 bg-black/10 hover:bg-transparent transition-colors" />
                                                     </button>
                                                 ))}
@@ -679,7 +800,7 @@ export function ImmersivePostCard({
                                             exit={{ opacity: 0, scale: 0.8 }}
                                             className="relative w-24 h-24 rounded-2xl overflow-hidden mb-3 border-2 border-cyan-500/50 shadow-lg ml-2"
                                         >
-                                            <img src={selectedMedia.url} className="w-full h-full object-cover" />
+                                            <Image src={selectedMedia.url} fill className="object-cover" alt="Selected Media" />
                                             <button
                                                 onClick={() => setSelectedMedia(null)}
                                                 className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white border border-white/20"
@@ -698,7 +819,9 @@ export function ImmersivePostCard({
                                         >
                                             <Plus className="w-4 h-4" />
                                         </button>
-                                        <img src={currentUser?.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} className="w-8 h-8 rounded-full border border-white/10" />
+                                        <div className="w-8 h-8 rounded-full border border-white/10 relative overflow-hidden">
+                                            <Image src={currentUser?.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} fill className="object-cover" alt="User" />
+                                        </div>
                                     </div>
 
                                     <input
@@ -792,10 +915,15 @@ function CommentItem({ comment, onLike, onReply, onEdit, onDelete, onReport, isR
                     ) : (
                         <motion.div
                             whileTap={{ scale: 0.9 }}
-                            onClick={() => router.push(comment.userId ? `/profile/${comment.userId}` : '/profile')}
+                            onClick={() => {
+                                const targetId = comment.userId || comment.user_id || comment.authorId;
+                                router.push(targetId ? `/profile/${targetId}` : '/profile');
+                            }}
                             className="relative cursor-pointer"
                         >
-                            <img src={comment.avatar || comment.userImg} className="w-8 h-8 rounded-full border border-white/10 object-cover shrink-0 shadow-sm" />
+                            <div className="w-8 h-8 rounded-full border border-white/10 relative overflow-hidden">
+                                <Image src={comment.avatar || comment.userImg} fill className="object-cover" alt="Commenter" />
+                            </div>
                             {comment.isLiked && (
                                 <motion.div
                                     initial={{ scale: 0 }}
@@ -827,7 +955,10 @@ function CommentItem({ comment, onLike, onReply, onEdit, onDelete, onReport, isR
                             <div className="flex items-center gap-2 mb-0.5">
                                 <div className="flex items-center gap-1.5 min-w-0 flex-1">
                                     <span
-                                        onClick={() => router.push(comment.userId ? `/profile/${comment.userId}` : '/profile')}
+                                        onClick={() => {
+                                            const targetId = comment.userId || comment.user_id || comment.authorId;
+                                            router.push(targetId ? `/profile/${targetId}` : '/profile');
+                                        }}
                                         className={cn("text-[13px] font-black truncate cursor-pointer hover:underline", comment.isSystem ? "text-cyan-400" : "text-white/90")}
                                     >
                                         {comment.author || comment.userName}
@@ -948,6 +1079,7 @@ function CommentItem({ comment, onLike, onReply, onEdit, onDelete, onReport, isR
                                     onEdit={onEdit}
                                     onDelete={onDelete}
                                     onReport={onReport}
+                                    filterContent={filterContent}
                                     isReply={true}
                                 />
                             ))}

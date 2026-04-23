@@ -1,14 +1,15 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
-import {
-    Heart, MessageCircle, Share2, MapPin,
-    PawPrint, ShieldCheck, Users, Grid,
-    Camera, Settings, Edit3, HeartPulse, Loader2
+import React, { useState } from "react";
+import { 
+    Camera, MapPin, Edit3, Plus, Share2, 
+    MoreHorizontal, Check, Loader2, MessageCircle, 
+    ShieldCheck, PawPrint, X, QrCode, Wallet, Settings,
+    Gift, EyeOff, Ban, ShieldAlert, Zap, Crown, Sparkles,
+    Users, HeartPulse, Grid
 } from "lucide-react";
-import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 
 interface ProfileHeaderProps {
@@ -19,233 +20,141 @@ interface ProfileHeaderProps {
         cover: string;
         bio: string;
         location: string;
+        is_premium?: boolean;
         stats: {
             pack: number;
             following: number;
             posts: number;
         };
-        isOwnProfile?: boolean;
+        isOwnProfile: boolean;
     };
-    isFollowingInitial?: boolean;
-    userId?: string;
-    onMessage?: () => void;
+    isFollowingInitial: boolean;
+    userId: string;
+    onMessage: () => void;
+    onEdit: () => void;
 }
 
-export default function ProfileHeader({ user, isFollowingInitial = false, userId, onMessage }: ProfileHeaderProps) {
-    const { user: currentUser } = useAuth();
+export default function ProfileHeader({ user, isFollowingInitial, userId, onMessage, onEdit }: ProfileHeaderProps) {
+    const stats = user.stats;
     const [isJoined, setIsJoined] = useState(isFollowingInitial);
     const [loading, setLoading] = useState(false);
-    const [patiSent, setPatiSent] = useState(false);
-    const [stats, setStats] = useState(user.stats);
-
-    // Sync state with props
-    useEffect(() => {
-        setIsJoined(isFollowingInitial);
-    }, [isFollowingInitial]);
+    const { user: currentUser } = useAuth();
+    const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
 
     const handleJoinPack = async () => {
-        if (!currentUser || !userId) return;
+        if (!currentUser) return;
         setLoading(true);
-
-        try {
-            if (isJoined) {
-                // Unfollow
-                const { error } = await supabase
-                    .from('follows')
-                    .delete()
-                    .eq('follower_id', currentUser.id)
-                    .eq('following_id', userId);
-
-                if (!error) {
-                    setIsJoined(false);
-                    setStats(prev => ({ ...prev, pack: prev.pack - 1 }));
-                }
-            } else {
-                // Follow
-                const { error } = await supabase
-                    .from('follows')
-                    .insert({
-                        follower_id: currentUser.id,
-                        following_id: userId
-                    });
-
-                if (!error) {
-                    setIsJoined(true);
-                    setStats(prev => ({ ...prev, pack: prev.pack + 1 }));
-                }
-            }
-        } catch (err) {
-            console.error("Join pack error:", err);
-        } finally {
+        // MOCK: Simulate network lag and toggle state
+        setTimeout(() => {
+            setIsJoined(!isJoined);
             setLoading(false);
-        }
-    };
-
-    const handleBark = () => {
-        if (onMessage) {
-            onMessage();
-        } else {
-            alert("Bark Box (Mesajlaşma) yakında aktif olacak! 🐾");
-        }
+        }, 300);
     };
 
     return (
-        <div className="relative w-full max-w-4xl mx-auto bg-[#0A0A0E] rounded-[3rem] overflow-hidden border border-white/5 shadow-2xl">
-
-            {/* 1. Cover Area (Apple Glass Style) */}
-            <div className="relative h-64 sm:h-80 w-full group overflow-hidden">
+        <div className="w-full relative">
+            {/* 1. Cover Photo */}
+            <div className="relative h-48 sm:h-64 w-full overflow-hidden">
                 <img
                     src={user.cover}
                     alt="Cover"
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    className="w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0E] via-transparent to-black/20" />
-
+                <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent" />
+                
                 {user.isOwnProfile && (
-                    <button className="absolute bottom-6 right-6 p-3 bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl text-white opacity-0 group-hover:opacity-100 transition-all hover:bg-black/60">
-                        <Camera className="w-5 h-5" />
+                    <button 
+                        onClick={() => window.dispatchEvent(new CustomEvent('open-moffi-settings'))}
+                        className="absolute top-4 right-4 p-2 bg-background/40 backdrop-blur-md rounded-full border border-card-border text-foreground hover:bg-foreground/20 transition-all active:scale-95"
+                    >
+                        <Settings className="w-5 h-5" />
                     </button>
                 )}
             </div>
 
-            {/* 2. Identity Content */}
-            <div className="px-8 pb-10 -mt-20 relative z-10">
-                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
-
-                    {/* Avatar & Basic Info */}
-                    <div className="flex flex-col sm:flex-row sm:items-end gap-6 text-center sm:text-left">
-                        <div className="relative group mx-auto sm:mx-0">
-                            <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-[2.5rem] blur-xl opacity-20 group-hover:opacity-40 transition-opacity" />
-                            <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-[2.5rem] p-1 bg-gradient-to-tr from-indigo-500 to-purple-500 shadow-2xl">
-                                <img
-                                    src={user.avatar}
-                                    alt={user.username}
-                                    className="w-full h-full object-cover rounded-[2.2rem] border-4 border-[#0A0A0E]"
-                                />
-                                <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 border-4 border-[#0A0A0E] rounded-full shadow-lg" />
-                            </div>
-                        </div>
-
-                        <div className="mb-2">
-                            <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
-                                <h1 className="text-3xl font-black text-white tracking-tighter">{user.username}</h1>
-                                <ShieldCheck className="w-5 h-5 text-indigo-400 fill-indigo-400/10" />
-                            </div>
-                            <p className="text-gray-400 font-bold text-sm mb-3 hidden sm:block">{user.fullName}</p>
-                            <div className="flex items-center justify-center sm:justify-start gap-4">
-                                <span className="flex items-center gap-1.5 text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                    <MapPin className="w-3.5 h-3.5 text-indigo-500" /> {user.location}
-                                </span>
-                            </div>
+            {/* 2. Identity Info Overlap */}
+            <div className="px-6 relative -mt-16 mb-6 z-10">
+                <div className="flex justify-between items-end mb-4">
+                    <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 border-background relative bg-card overflow-hidden shadow-2xl">
+                        <img src={user.avatar} className="w-full h-full object-cover" alt={user.username} />
+                        <div className="absolute bottom-1 right-1 w-6 h-6 bg-accent rounded-full flex items-center justify-center border-2 border-background">
+                            <Sparkles className="w-3 h-3 text-background" />
                         </div>
                     </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex items-center justify-center sm:justify-end gap-3">
+                    
+                    <div className="flex gap-2 mb-2">
                         {user.isOwnProfile ? (
-                            <button className="flex-1 sm:flex-none px-8 py-3.5 bg-white text-black rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-200 transition-all active:scale-95 flex items-center gap-2">
-                                <Edit3 className="w-4 h-4" /> Düzenle
-                            </button>
-                        ) : (
                             <>
-                                <button
-                                    onClick={handleJoinPack}
-                                    disabled={loading || !currentUser}
-                                    className={cn(
-                                        "flex-1 sm:flex-none px-8 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 min-w-[140px] justify-center",
-                                        isJoined
-                                            ? "bg-white/5 text-white border border-white/10"
-                                            : "bg-indigo-600 text-white shadow-xl shadow-indigo-500/20 hover:bg-indigo-500",
-                                        loading && "opacity-50 cursor-wait",
-                                        !currentUser && "opacity-30 cursor-not-allowed"
-                                    )}
-                                >
-                                    {loading ? (
-                                        <Loader2 className="w-4 h-4 animate-spin text-white" />
-                                    ) : (
-                                        <>
-                                            <Users className="w-4 h-4" />
-                                            {isJoined ? "Sürüdesin" : "Sürüye Katıl"}
-                                        </>
-                                    )}
-                                </button>
-
-                                <button
+                                <button 
                                     onClick={() => {
-                                        setPatiSent(true);
-                                        setTimeout(() => setPatiSent(false), 1000);
+                                        console.log("ProfileHeader: Dispatching open-moffi-hub event...");
+                                        window.dispatchEvent(new CustomEvent('open-moffi-hub'));
                                     }}
-                                    className="p-3.5 bg-white/5 border border-white/10 text-white rounded-2xl hover:bg-white/10 transition-all active:scale-95 relative group"
+                                    className="p-3 bg-foreground/5 border border-card-border rounded-full text-foreground hover:bg-accent/20 hover:border-accent/50 transition-all group"
+                                    title="Eylem Merkezi"
                                 >
-                                    <AnimatePresence>
-                                        {patiSent && (
-                                            <motion.div
-                                                initial={{ y: 0, opacity: 1, scale: 1 }}
-                                                animate={{ y: -50, opacity: 0, scale: 1.5 }}
-                                                className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                                            >
-                                                <PawPrint className="w-6 h-6 text-indigo-400" />
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                    <PawPrint className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                                    <Zap className="w-4 h-4 text-foreground group-hover:text-accent fill-current opacity-70 group-hover:opacity-100" />
                                 </button>
-
-                                <button
-                                    onClick={handleBark}
-                                    className="p-3.5 bg-white/5 border border-white/10 text-white rounded-2xl hover:bg-white/10 transition-all active:scale-95"
-                                    title="Bark Box (Mesaj Gönder)"
-                                >
-                                    <MessageCircle className="w-5 h-5" />
+                                <button onClick={onEdit} className="px-6 py-2 rounded-full border border-card-border font-bold text-xs bg-foreground/5 hover:bg-foreground/10 transition-colors flex items-center gap-2 text-foreground">
+                                    <Edit3 className="w-4 h-4" /> Düzenle
                                 </button>
                             </>
+                        ) : (
+                            <>
+                                <button onClick={handleJoinPack} className={cn("px-6 py-2 rounded-full font-bold text-xs transition-all", isJoined ? "bg-foreground/10 text-foreground" : "bg-foreground text-background")}>
+                                    {isJoined ? "Takiptesin" : "Takibe Al"}
+                                </button>
+                                <button onClick={onMessage} className="p-3 bg-foreground/5 border border-card-border rounded-full text-foreground"><MessageCircle className="w-4 h-4" /></button>
+                            </>
                         )}
-                        <button className="p-3.5 bg-white/5 border border-white/10 text-white rounded-2xl hover:bg-white/10 transition-all active:scale-95">
-                            <Share2 className="w-5 h-5" />
-                        </button>
+                        <button onClick={() => setIsActionSheetOpen(true)} className="p-3 bg-foreground/5 border border-card-border rounded-full text-foreground"><MoreHorizontal className="w-4 h-4" /></button>
                     </div>
                 </div>
 
-                {/* 3. Stats & Bio (ID Tag) */}
-                <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                <div className="space-y-1">
+                    <h1 className="text-2xl font-black text-foreground flex items-center gap-2">
+                        {user.username}
+                        {user.is_premium && <ShieldCheck className="w-5 h-5 text-accent" />}
+                    </h1>
+                    <p className="text-accent font-medium text-sm">@{user.username.toLowerCase().replace(/\s+/g, '')}</p>
+                    <p className="text-secondary text-sm mt-3 leading-relaxed max-w-xl">{user.bio || "Yeni Moffi üyesi ✨"}</p>
+                </div>
 
-                    {/* Bio & Details */}
-                    <div className="lg:col-span-2 space-y-6">
-                        <div className="bg-white/5 border border-white/5 rounded-3xl p-6">
-                            <h3 className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-3">Künye (Moffi ID)</h3>
-                            <p className="text-gray-300 font-medium leading-relaxed">
-                                {user.bio}
-                            </p>
-
-                            <div className="flex flex-wrap gap-3 mt-6">
-                                {['Aktif', 'Dost Canlısı', 'Eğitimli'].map((tag) => (
-                                    <span key={tag} className="px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-[10px] font-black text-indigo-400 uppercase tracking-widest">
-                                        #{tag}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
+                {/* 3. Horizontal Local Stats Bar (Classical) */}
+                <div className="flex gap-8 mt-6 border-y border-card-border py-4">
+                    <div className="flex flex-col">
+                        <span className="text-xl font-bold text-foreground leading-none">{stats.posts}</span>
+                        <span className="text-[10px] text-secondary font-black uppercase tracking-widest mt-1.5">Gönderi</span>
                     </div>
-
-                    {/* Quick Stats Grid */}
-                    <div className="grid grid-cols-3 lg:grid-cols-1 gap-3 w-full">
-                        {[
-                            { label: 'Sürü Üyesi', value: stats.pack, icon: Users },
-                            { label: 'Takip Ettiği', value: stats.following, icon: HeartPulse },
-                            { label: 'Paylaşım', value: stats.posts, icon: Grid }
-                        ].map((stat) => (
-                            <div key={stat.label} className="bg-white/5 border border-white/5 p-4 rounded-2xl group hover:bg-white/10 transition-all">
-                                <div className="flex items-center justify-between mb-1">
-                                    <stat.icon className="w-3.5 h-3.5 text-gray-500" />
-                                    <span className="text-lg font-black text-white">{stat.value}</span>
-                                </div>
-                                <p className="text-[8px] font-bold text-gray-600 uppercase tracking-widest">{stat.label}</p>
-                            </div>
-                        ))}
+                    <div className="flex flex-col border-l border-card-border pl-8">
+                        <span className="text-xl font-bold text-foreground leading-none">{stats.pack.toLocaleString()}</span>
+                        <span className="text-[10px] text-secondary font-black uppercase tracking-widest mt-1.5">Takipçi</span>
                     </div>
-
+                    <div className="flex flex-col border-l border-card-border pl-8">
+                        <span className="text-xl font-bold text-foreground leading-none">{stats.following}</span>
+                        <span className="text-[10px] text-secondary font-black uppercase tracking-widest mt-1.5">Takip</span>
+                    </div>
                 </div>
             </div>
+
+            {/* Action Sheet Modals */}
+            <AnimatePresence>
+                {isActionSheetOpen && (
+                    <>
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsActionSheetOpen(false)} className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[5000]" />
+                        <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 300 }} className="fixed bottom-0 inset-x-0 z-[5001] bg-background border-t border-card-border rounded-t-[3.5rem] p-8">
+                            <div className="w-12 h-1.5 bg-foreground/10 rounded-full mx-auto mb-10" />
+                            <div className="max-w-md mx-auto space-y-4 pb-10">
+                                <button className="w-full flex items-center gap-5 p-5 hover:bg-foreground/5 rounded-3xl group">
+                                    <div className="w-12 h-12 bg-accent/10 rounded-2xl flex items-center justify-center text-accent group-hover:scale-110 transition-transform"><QrCode className="w-6 h-6" /></div>
+                                    <div className="text-left font-black uppercase text-foreground"><p className="text-sm">QR Kimliğim</p><p className="text-[10px] text-secondary">Digital ID</p></div>
+                                </button>
+                                <button onClick={() => setIsActionSheetOpen(false)} className="w-full py-6 mt-8 bg-foreground text-background rounded-[2.2rem] font-black text-[10px] uppercase tracking-[0.3em]">Kapat</button>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

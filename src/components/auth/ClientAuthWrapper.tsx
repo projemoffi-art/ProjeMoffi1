@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
 // Routes that do NOT require authentication
-const PUBLIC_ROUTES = ["/", "/business-register", "/community", "/production-studio", "/sandbox-studio"];
+const PUBLIC_ROUTES = ["/", "/business-register", "/production-studio", "/sandbox-studio"];
 
 // Routes that require business role
 const BUSINESS_ROUTES_PREFIX = "/business";
@@ -22,7 +22,8 @@ export function ClientAuthWrapper({ children }: Props) {
     const pathname = usePathname() ?? "";
     const router = useRouter();
 
-    const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+    const isDemoRoute = pathname.startsWith("/demo");
+    const isPublicRoute = PUBLIC_ROUTES.includes(pathname) || isDemoRoute;
     const isBusinessRoute = pathname.startsWith(BUSINESS_ROUTES_PREFIX);
     const isAdminRoute = pathname.startsWith(ADMIN_ROUTES_PREFIX);
 

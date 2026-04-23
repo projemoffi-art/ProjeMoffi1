@@ -69,15 +69,30 @@ export function NotificationsDrawer({
                                 notifications.map((notif: any) => (
                                     <div key={notif.id} className={cn(
                                         "px-6 py-4 flex items-start gap-3 transition-colors active:bg-white/5 cursor-pointer relative",
-                                        !notif.read && "bg-cyan-500/5"
+                                        !notif.read && (notif.type === 'health' ? "bg-red-500/5" : "bg-cyan-500/5")
                                     )}>
-                                        {!notif.read && <div className="absolute left-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-cyan-500 rounded-full" />}
-                                        <div className="w-12 h-12 rounded-full border border-white/10 shrink-0 overflow-hidden">
-                                            <img src={notif.avatar} className="w-full h-full object-cover" />
+                                        {!notif.read && (
+                                            <div className={cn(
+                                                "absolute left-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full",
+                                                notif.type === 'health' ? "bg-red-500" : "bg-cyan-500"
+                                            )} />
+                                        )}
+                                        <div className={cn(
+                                            "w-12 h-12 rounded-full border shrink-0 overflow-hidden flex items-center justify-center bg-white/5",
+                                            notif.type === 'health' ? "border-red-500/30" : "border-white/10"
+                                        )}>
+                                            {notif.avatar && !notif.avatar.includes('cdn-icons') ? (
+                                                <img src={notif.avatar} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="text-xl">🩺</div>
+                                            )}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm text-white leading-snug">
-                                                <span className="font-bold text-cyan-400">{notif.user}</span> {notif.text}
+                                                <span className={cn(
+                                                    "font-bold",
+                                                    notif.type === 'health' ? "text-red-400" : "text-cyan-400"
+                                                )}>{notif.user}</span> {notif.text}
                                             </p>
                                             <p className="text-[11px] text-gray-500 font-medium mt-1">{notif.time}</p>
                                         </div>

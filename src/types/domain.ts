@@ -1,7 +1,13 @@
 export interface User {
     id: string;
     name: string;
+    username?: string;
+    display_name?: string;
     avatar: string;
+    bio?: string;
+    is_verified?: boolean;
+    subscription_status?: 'free' | 'plus' | 'pro';
+    joined_at?: string;
 }
 
 export interface FamilyMember extends User {
@@ -25,46 +31,31 @@ export interface InviteRequest {
     role: FamilyMember['role'];
 }
 
-// --- MEMORY / PAW DIARY ---
+// --- WEATHER ---
 export interface WeatherState {
     condition: 'sunny' | 'rainy' | 'cloudy' | 'snowy';
     temp: number;
 }
 
-export interface MemoryMoment {
-    id: string;
-    type: 'walk' | 'food' | 'vet' | 'social' | 'cozy';
-    title: string;
-    story: string; // The specific text for this event
-    mediaUrl: string; // The specific photo/video
-    priority: number; // For sorting slides
-}
-
-export interface DailyMemory {
-    id: string;
-    date: string;
-    userId: string;
-
-    // Aggregated Stats
-    walkDistance: number;
-    walkDuration: number;
-    weather: WeatherState;
-
-    moments: MemoryMoment[]; // Array of slides
-    mood: 'happy' | 'tired' | 'excited' | 'cozy';
-    title: string;
-}
-
-export interface DayContext {
-    walkDistance: number;
-    weather: WeatherState;
-    foodCount: number; // treats/meals
-    waterIntake: number; // ml usually, or just high/low stats
-    socialInteractions: number; // family logs
-    vetVisit: boolean;
-}
-
 // --- VET / HEALTH ---
+export interface VetDoctor {
+    id: string;
+    name: string;
+    specialization: string;
+    imageUrl: string;
+    bio: string;
+    workingHours: string;
+}
+
+export interface VetReview {
+    id: string;
+    userName: string;
+    userAvatar: string;
+    rating: number;
+    comment: string;
+    createdAt: string;
+}
+
 export interface VetClinic {
     id: string;
     name: string;
@@ -77,6 +68,8 @@ export interface VetClinic {
     imageUrl: string;
     isOpenNow?: boolean;
     distance?: string; // Calculated UI prop
+    doctors?: VetDoctor[];
+    reviews?: VetReview[];
 }
 
 export interface VetAppointment {
@@ -122,6 +115,37 @@ export interface UserVaccineRecord {
     vetName?: string;
 }
 
+// --- HEALTH EXTENSION ---
+export interface PetMedication {
+    id: string;
+    petId: string;
+    name: string;
+    dosage: string;
+    frequency: string;
+    instructions: string;
+    startDate: string; // ISO
+    endDate: string | null;
+    isActive: boolean;
+    lastLog?: string; // ISO of last taken time
+}
+
+export interface MedicationLog {
+    id: string;
+    medicationId: string;
+    loggedAt: string;
+}
+
+export interface NutritionPlan {
+    id: string;
+    petId: string;
+    foodName: string;
+    amountGrams: number;
+    mealsPerDay: number;
+    targetWeight: number;
+    notes: string;
+    isActive: boolean;
+}
+
 // --- PETSHOP ---
 export type ShopCategory = 'food' | 'snack' | 'toy' | 'care' | 'accessory';
 
@@ -138,6 +162,8 @@ export interface ShopProduct {
     tag?: string;
     inStock: boolean;
     stockCount?: number;
+    isRecentlyBought?: boolean;
+    isVetApproved?: boolean;
     description?: string;
 }
 

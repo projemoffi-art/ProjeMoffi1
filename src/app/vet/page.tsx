@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
     Search, MapPin, Phone, Star, Calendar,
-    ShieldAlert, ChevronRight, Syringe, Pill,
+    ShieldAlert, ChevronRight, Syringe, Utensils, Clock, Pill,
     Navigation, Coins, CheckCircle2, ChevronLeft,
     X, Filter, ShieldCheck
 } from "lucide-react";
@@ -15,24 +15,46 @@ import { VaccineModal } from "@/components/vet/VaccineModal";
 import { DentalCareModal } from "@/components/vet/DentalCareModal";
 import { PharmacyModal } from "@/components/vet/PharmacyModal";
 import { ClinicListModal } from "@/components/vet/ClinicListModal";
+import { ClinicDetailDrawer } from "@/components/vet/ClinicDetailDrawer";
+import { MedicationModal } from "@/components/vet/MedicationModal";
+import { NutritionModal } from "@/components/vet/NutritionModal";
 import { PetSwitcher } from "@/components/common/PetSwitcher";
 import { useVet } from "@/hooks/useVet";
-import { VetClinic } from "@/types/domain";
+import { VetClinic, Pet } from "@/types/domain";
+import { apiService } from "@/services/apiService";
 
 // Dynamic imports to prevent SSR issues
 const LiveMap = dynamic(() => import('@/components/walk/LiveMap'), { ssr: false, loading: () => <div className="h-48 bg-[var(--card-bg)] animate-pulse rounded-3xl mb-4" /> });
 
 export default function VetPage() {
     const router = useRouter();
-    const { featuredClinics, allClinics, userLocation, isLoading, bookAppointment } = useVet();
+    const { 
+        featuredClinics, allClinics, userLocation, isLoading, 
+        bookAppointment, searchByService, activeCategory 
+    } = useVet();
 
     // UI STATES
     const [searchQuery, setSearchQuery] = useState("");
     const [activeModal, setActiveModal] = useState<'appointment' | 'vaccine' | 'dental' | 'pharma' | 'sos' | 'success' | 'rating' | 'clinicList' | null>(null);
     const [selectedClinic, setSelectedClinic] = useState<VetClinic | null>(null);
+    const [detailClinicId, setDetailClinicId] = useState<string | null>(null);
+    const [isExplorerOpen, setIsExplorerOpen] = useState(false);
+    const [activePet, setActivePet] = useState<Pet | null>(null);
     const [successMessage, setSuccessMessage] = useState("Randevu Oluşturuldu ✨");
     const [userRating, setUserRating] = useState(0);
     const [userComment, setUserComment] = useState("");
+
+    // NEW HEALTH STATES
+    const [activeMedicationModal, setActiveMedicationModal] = useState(false);
+    const [activeNutritionModal, setActiveNutritionModal] = useState(false);
+
+    useEffect(() => {
+        const loadActivePet = async () => {
+            const pet = await apiService.getActivePet();
+            setActivePet(pet);
+        };
+        loadActivePet();
+    }, []);
 
     // APPOINTMENT FORM STATE
     const [selectedDate, setSelectedDate] = useState<string>("");
@@ -62,6 +84,8 @@ export default function VetPage() {
         if (action === 'vaccine') setActiveModal('vaccine');
         else if (action === 'dental') setActiveModal('dental');
         else if (action === 'pharma') setActiveModal('pharma');
+        else if (action === 'meds') setActiveMedicationModal(true);
+        else if (action === 'nutri') setActiveNutritionModal(true);
         else if (action === 'appointment') {
             setActiveModal('clinicList');
         }
@@ -134,16 +158,41 @@ export default function VetPage() {
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
+
+                    {/* CATEGORY CHIPS */}
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+                        {[
+                            { id: 'all', label: 'Tümü', icon: '✨' },
+                            { id: 'clinic', label: 'Klinikler', icon: '🏥' },
+                            { id: 'food', label: 'Mama', icon: '🍖' },
+                            { id: 'toy', label: 'Oyuncak', icon: '🎾' },
+                            { id: 'care', label: 'Sağlık', icon: '💊' }
+                        ].map(cat => (
+                            <button
+                                key={cat.id}
+                                onClick={() => searchByService(cat.id)}
+                                className={cn(
+                                    "px-5 py-2.5 rounded-2xl border flex items-center gap-2 whitespace-nowrap transition-all font-bold text-xs",
+                                    activeCategory === cat.id 
+                                        ? "bg-white text-black border-white shadow-[0_0_20px_rgba(255,255,255,0.2)]" 
+                                        : "bg-[var(--card-bg)] text-[var(--text-secondary)] border-white/10 hover:border-white/20"
+                                )}
+                            >
+                                <span>{cat.icon}</span>
+                                {cat.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </header>
 
             <main className="px-6 py-8 space-y-10 relative z-10">
 
                 {/* BENTO QUICK SERVICES - Glassmorphism 2.0 */}
-                <section className="grid grid-cols-6 grid-rows-2 gap-4 h-[260px]">
+                <section className="grid grid-cols-6 grid-rows-3 gap-4 h-[380px]">
                     {/* LARGE: Randevu Al */}
                     <motion.button
-                        whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+                        whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleServiceClick('appointment')}
                         className="col-span-4 row-span-2 bg-[#1C1C1E] border border-white/10 rounded-[2.8rem] p-7 text-left flex flex-col justify-between relative overflow-hidden group shadow-2xl"
@@ -172,7 +221,7 @@ export default function VetPage() {
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleServiceClick('vaccine')}
-                        className="col-span-2 row-span-1 bg-emerald-500/5 border border-emerald-500/20 rounded-[2.2rem] p-5 flex flex-col items-start justify-between group hover:bg-emerald-500/10 transition-all shadow-lg"
+                        className="col-span-2 row-span-1 bg-emerald-500/5 border border-emerald-500/10 rounded-[2.2rem] p-5 flex flex-col items-start justify-between group hover:bg-emerald-500/10 transition-all"
                     >
                         <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/20 group-hover:scale-110 transition-transform">
                             <Syringe className="w-5 h-5 text-emerald-400" />
@@ -188,14 +237,45 @@ export default function VetPage() {
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleServiceClick('pharma')}
-                        className="col-span-2 row-span-1 bg-purple-500/5 border border-purple-500/20 rounded-[2.2rem] p-5 flex flex-col items-start justify-between group hover:bg-purple-500/10 transition-all shadow-lg"
+                        className="col-span-2 row-span-1 bg-orange-500/5 border border-orange-500/10 rounded-[2.2rem] p-5 flex flex-col items-start justify-between group hover:bg-orange-500/10 transition-all font-sans"
                     >
-                        <div className="w-10 h-10 rounded-2xl bg-purple-500/20 flex items-center justify-center border border-purple-500/20 group-hover:scale-110 transition-transform">
-                            <Pill className="w-5 h-5 text-purple-400" />
+                        <div className="w-10 h-10 rounded-2xl bg-orange-500/20 flex items-center justify-center border border-orange-500/20 group-hover:scale-110 transition-transform">
+                            <Pill className="w-5 h-5 text-orange-400" />
                         </div>
                         <div>
-                            <span className="text-[10px] font-black text-purple-400 uppercase tracking-widest block mb-1">Nöbetçi</span>
-                            <span className="text-lg font-black text-white tracking-tighter uppercase italic leading-none">Eczane</span>
+                            <span className="text-[10px] font-black text-orange-400 uppercase tracking-widest block mb-1">Takip</span>
+                            <span className="text-lg font-black text-white tracking-tighter uppercase italic leading-none">İlaçlarım</span>
+                        </div>
+                    </motion.button>
+
+                    {/* NEW ROW: Health Extension */}
+                    <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleServiceClick('nutri')}
+                        className="col-span-3 row-span-1 bg-emerald-500/5 border border-white/5 rounded-[2.2rem] p-6 flex items-center gap-5 group hover:bg-emerald-500/10 transition-all"
+                    >
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/20 group-hover:rotate-12 transition-transform">
+                            <Utensils className="w-6 h-6 text-emerald-400" />
+                        </div>
+                        <div className="text-left">
+                            <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest block">Beslenme</span>
+                            <span className="text-xl font-black text-white tracking-tighter uppercase italic leading-none">Diyet Planı</span>
+                        </div>
+                    </motion.button>
+
+                    <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleServiceClick('meds')}
+                        className="col-span-3 row-span-1 bg-blue-500/5 border border-white/5 rounded-[2.2rem] p-6 flex items-center gap-5 group hover:bg-blue-500/10 transition-all"
+                    >
+                        <div className="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center border border-blue-500/20 group-hover:scale-110 transition-transform">
+                            <Clock className="w-6 h-6 text-blue-400" />
+                        </div>
+                        <div className="text-left">
+                            <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest block">Zamanlayıcı</span>
+                            <span className="text-xl font-black text-white tracking-tighter uppercase italic leading-none">İlaç Takibi</span>
                         </div>
                     </motion.button>
                 </section>
@@ -218,8 +298,11 @@ export default function VetPage() {
                             <div className="font-black text-lg text-[var(--foreground)] flex items-center gap-2"><MapPin className="w-5 h-5 text-orange-500" /> {allClinics.length} Klinik</div>
                             <div className="text-[10px] text-[var(--foreground)]/50 font-bold uppercase tracking-widest">Çevrendeki Aktif Noktalar</div>
                         </div>
-                        <button className="bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2 rounded-full text-[10px] font-black text-[var(--foreground)] pointer-events-auto hover:bg-white/20 transition-all">
-                            GENİŞLET
+                        <button 
+                            onClick={() => setIsExplorerOpen(true)}
+                            className="bg-white text-black px-6 py-2.5 rounded-full text-[10px] font-black pointer-events-auto hover:scale-105 active:scale-95 transition-all shadow-xl uppercase tracking-widest"
+                        >
+                            Keşfet
                         </button>
                     </div>
                 </section>
@@ -254,7 +337,7 @@ export default function VetPage() {
 
                                 <div className="flex flex-col gap-6 relative z-10">
                                     {/* Card Header: Main Image & floating data */}
-                                    <div className="relative h-56 rounded-[2rem] overflow-hidden border border-white/10">
+                                    <div className="relative h-56 rounded-[2rem] overflow-hidden border border-white/10 cursor-pointer" onClick={() => setDetailClinicId(clinic.id)}>
                                         <img src={clinic.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" />
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                                         
@@ -289,17 +372,20 @@ export default function VetPage() {
                                     {/* Card Footer: Features & Actions */}
                                     <div className="flex items-center justify-between">
                                         <div className="flex gap-2">
-                                            {clinic.features.slice(0, 3).map((f: string) => (
+                                            {(clinic.features || []).slice(0, 3).map((f: string) => (
                                                 <span key={f} className="text-[9px] font-black bg-white/5 text-white/40 px-3 py-1.5 rounded-lg border border-white/5 uppercase tracking-tighter">{f}</span>
                                             ))}
                                         </div>
                                         <div className="flex items-center gap-3">
-                                            <button className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 text-emerald-400 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all shadow-xl active:scale-90">
-                                                <Phone className="w-5 h-5 fill-current" />
+                                            <button 
+                                                onClick={() => setDetailClinicId(clinic.id)}
+                                                className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 text-white/40 flex items-center justify-center hover:bg-white/10 transition-all shadow-xl active:scale-90"
+                                            >
+                                                <ChevronRight className="w-5 h-5" />
                                             </button>
                                             <button
                                                 onClick={() => openAppointment(clinic)}
-                                                className="bg-white text-black h-12 px-8 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-white/90 transition-all shadow-2xl active:scale-95 whitespace-nowrap"
+                                                className="bg-white text-black h-12 px-8 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#5B4D9D] hover:text-white transition-all shadow-2xl active:scale-95 whitespace-nowrap"
                                             >
                                                 Randevu Al
                                             </button>
@@ -369,7 +455,7 @@ export default function VetPage() {
                             </div>
 
                             {/* TIME SELECTOR */}
-                            <div className="mb-8 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                            <div className="mb-8 flex-1 overflow-y-auto pr-2 no-scrollbar">
                                 <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-4 block px-1">Randevu Saati</label>
                                 <div className="grid grid-cols-4 gap-3">
                                     {timeSlots.map(time => (
@@ -527,6 +613,66 @@ export default function VetPage() {
                         </div>
                     </motion.div>
                 )}
+
+                {/* 4. CLINIC EXPLORER OVERLAY */}
+                {isExplorerOpen && (
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 1.1 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 1.1 }}
+                        className="fixed inset-0 z-[200] bg-black"
+                    >
+                        <div className="absolute inset-0">
+                            {userLocation && (
+                                <LiveMap
+                                    userPos={userLocation}
+                                    visitedPlaceIds={[]}
+                                    path={[]}
+                                    isTracking={true}
+                                    onPlaceClick={(place: any) => setDetailClinicId(place.id)}
+                                />
+                            )}
+                        </div>
+                        
+                        <div className="absolute top-8 left-8 right-8 z-[201] flex justify-between items-center pointer-events-none">
+                            <h3 className="bg-black/50 backdrop-blur-xl px-6 py-4 rounded-3xl border border-white/10 text-white font-black text-xl italic uppercase tracking-tighter pointer-events-auto">Klinik Keşfı</h3>
+                            <button 
+                                onClick={() => setIsExplorerOpen(false)}
+                                className="w-14 h-14 bg-white text-black rounded-full flex items-center justify-center shadow-2xl pointer-events-auto hover:bg-[#FF3B30] hover:text-white transition-all active:scale-90"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        <div className="absolute bottom-12 inset-x-8 z-[201] pointer-events-none flex justify-center">
+                            <div className="bg-black/80 backdrop-blur-2xl px-8 py-5 rounded-[2.5rem] border border-white/10 text-white/60 text-[10px] font-black uppercase tracking-[0.4em] pointer-events-auto shadow-2xl">
+                                Haritadaki pinlere dokunarak detayları gör
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* 5. SIDE DRAWER (Clinic Details) */}
+                <ClinicDetailDrawer 
+                    clinicId={detailClinicId} 
+                    onClose={() => setDetailClinicId(null)}
+                    onBookAppointment={(clinic) => {
+                        setDetailClinicId(null);
+                        openAppointment(clinic);
+                    }}
+                />
+
+                {/* 6. MEDICATION & NUTRITION MODALS */}
+                <MedicationModal 
+                    isOpen={activeMedicationModal} 
+                    onClose={() => setActiveMedicationModal(false)} 
+                    petId={activePet?.id || ''} 
+                />
+                <NutritionModal 
+                    isOpen={activeNutritionModal} 
+                    onClose={() => setActiveNutritionModal(false)} 
+                    petId={activePet?.id || ''} 
+                />
             </AnimatePresence>
         </div>
     );

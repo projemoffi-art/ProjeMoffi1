@@ -23,6 +23,7 @@ export interface Comment {
 export interface Post {
     id: string;
     userId: string;
+    petId?: string; // Link to PetContext
     userName: string; // Denormalized for MVP
     userImg: string;
     image: string;
@@ -38,6 +39,7 @@ export interface Post {
 export interface Story {
     id: string;
     userId: string;
+    petId?: string; // Link to PetContext
     userName: string;
     userImg: string;
     img: string;
@@ -57,6 +59,8 @@ interface SocialContextType {
     deleteComment: (postId: string, commentId: string) => void;
     editComment: (postId: string, commentId: string, newText: string) => void;
     reportComment: (postId: string, commentId: string) => void;
+    currentUser: any;
+    addMoffiPoints: (points: number) => void;
 }
 
 const SocialContext = createContext<SocialContextType | undefined>(undefined);
@@ -66,6 +70,7 @@ const INITIAL_POSTS: Post[] = [
     {
         id: '1',
         userId: 'moffi_official',
+        petId: 'pet-1', // Link to Milo
         userName: 'Moffi Official',
         userImg: 'https://images.unsplash.com/photo-1517849845537-4d257902454a?q=80&w=100',
         image: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?q=80&w=600',
@@ -80,6 +85,7 @@ const INITIAL_POSTS: Post[] = [
     {
         id: '2',
         userId: 'luna_cat',
+        petId: 'pet-2', // Link to Luna
         userName: 'Luna The Cat',
         userImg: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=100',
         image: 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?q=80&w=600',
@@ -94,19 +100,24 @@ const INITIAL_POSTS: Post[] = [
 ];
 
 const INITIAL_STORIES: Story[] = [
-    { id: 's1', userId: 'moffi', userName: 'Moffi', userImg: 'https://images.unsplash.com/photo-1517849845537-4d257902454a', img: 'https://images.unsplash.com/photo-1517849845537-4d257902454a', isLive: true, timestamp: Date.now() },
-    { id: 's2', userId: 'max', userName: 'Max', userImg: 'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8', img: 'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8', isLive: true, timestamp: Date.now() },
+    { id: 's1', userId: 'moffi', petId: 'pet-1', userName: 'Moffi', userImg: 'https://images.unsplash.com/photo-1517849845537-4d257902454a', img: 'https://images.unsplash.com/photo-1517849845537-4d257902454a', isLive: true, timestamp: Date.now() },
+    { id: 's2', userId: 'max', petId: 'pet-2', userName: 'Max', userImg: 'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8', img: 'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8', isLive: true, timestamp: Date.now() },
 ];
 
 export function SocialProvider({ children }: { children: React.ReactNode }) {
     const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
     const [stories, setStories] = useState<Story[]>(INITIAL_STORIES);
+    const [currentUser] = useState({
+        id: 'current_user',
+        name: 'Sen',
+        image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=100'
+    });
 
     // Load from local storage on mount
     useEffect(() => {
         const savedPosts = localStorage.getItem('moffi_social_posts');
         if (savedPosts) {
-            setPosts(JSON.parse(savedPosts));
+            try { setPosts(JSON.parse(savedPosts)); } catch {}
         }
     }, []);
 
@@ -115,12 +126,16 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('moffi_social_posts', JSON.stringify(posts));
     }, [posts]);
 
-    const addPost = (desc: string, image: string, location?: string, category: string = 'dogs') => {
+    const addMoffiPoints = React.useCallback((points: number) => {
+        console.log(`[Points] Added ${points} points.`);
+    }, []);
+
+    const addPost = React.useCallback((desc: string, image: string, location?: string, category: string = 'dogs') => {
         const newPost: Post = {
             id: Date.now().toString(),
-            userId: 'current_user', // In real app, get from AuthContext
-            userName: 'Sen', // Get from AuthContext
-            userImg: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=100', // Mock Current User Img
+            userId: 'current_user',
+            userName: 'Sen',
+            userImg: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=100',
             image,
             desc,
             likes: 0,
@@ -131,9 +146,9 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
             category: category as any
         };
         setPosts(prev => [newPost, ...prev]);
-    };
+    }, []);
 
-    const toggleLike = (postId: string) => {
+    const toggleLike = React.useCallback((postId: string) => {
         setPosts(prev => prev.map(p => {
             if (p.id === postId) {
                 return {
@@ -144,15 +159,19 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
             }
             return p;
         }));
-    };
+    }, []);
 
-    const addComment = (postId: string, text: string) => {
+    const addComment = React.useCallback((postId: string, text: string) => {
         const newComment: Comment = {
             id: Date.now().toString(),
             userId: 'current_user',
             userName: 'Sen',
+            userImg: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=100',
             text,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            likes: 0,
+            isLiked: false,
+            replies: []
         };
 
         setPosts(prev => prev.map(p => {
@@ -161,9 +180,9 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
             }
             return p;
         }));
-    };
+    }, []);
 
-    const addStory = (image: string) => {
+    const addStory = React.useCallback((image: string) => {
         const newStory: Story = {
             id: Date.now().toString(),
             userId: 'current_user',
@@ -174,12 +193,11 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
             timestamp: Date.now()
         };
         setStories(prev => [newStory, ...prev]);
-    };
+    }, []);
 
-    const toggleCommentLike = (postId: string, commentId: string) => {
+    const toggleCommentLike = React.useCallback((postId: string, commentId: string) => {
         setPosts(prev => prev.map(post => {
             if (post.id !== postId) return post;
-            
             const updateCommentLikes = (comments: Comment[]): Comment[] => {
                 return comments.map(c => {
                     if (c.id === commentId) {
@@ -195,17 +213,15 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
                     return c;
                 });
             };
-
             return { ...post, comments: updateCommentLikes(post.comments) };
         }));
-    };
+    }, []);
 
-    const addCommentReply = (postId: string, parentCommentId: string, text: string) => {
+    const addCommentReply = React.useCallback((postId: string, parentCommentId: string, text: string) => {
         if (!text.trim()) return;
-        
         const newReply: Comment = {
             id: Math.random().toString(36).substr(2, 9),
-            userId: 'current_user', // Mock user
+            userId: 'current_user',
             userName: 'Sen',
             userImg: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300',
             text,
@@ -214,10 +230,8 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
             isLiked: false,
             replies: []
         };
-
         setPosts(prev => prev.map(post => {
             if (post.id !== postId) return post;
-
             const updateCommentReplies = (comments: Comment[]): Comment[] => {
                 return comments.map(c => {
                     if (c.id === parentCommentId) {
@@ -229,68 +243,64 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
                     return c;
                 });
             };
-
             return { ...post, comments: updateCommentReplies(post.comments) };
         }));
-    };
+    }, []);
 
-    const deleteComment = (postId: string, commentId: string) => {
+    const deleteComment = React.useCallback((postId: string, commentId: string) => {
         setPosts(prev => prev.map(post => {
             if (post.id !== postId) return post;
-
             const removeComment = (comments: Comment[]): Comment[] => {
-                return comments
-                    .filter(c => c.id !== commentId)
-                    .map(c => ({
-                        ...c,
-                        replies: removeComment(c.replies)
-                    }));
+                return comments.filter(c => c.id !== commentId).map(c => ({
+                    ...c,
+                    replies: removeComment(c.replies)
+                }));
             };
-
             return { ...post, comments: removeComment(post.comments) };
         }));
-    };
+    }, []);
 
-    const editComment = (postId: string, commentId: string, newText: string) => {
+    const editComment = React.useCallback((postId: string, commentId: string, newText: string) => {
         setPosts(prev => prev.map(post => {
             if (post.id !== postId) return post;
-
             const updateText = (comments: Comment[]): Comment[] => {
                 return comments.map(c => {
-                    if (c.id === commentId) {
-                        return { ...c, text: newText };
-                    }
-                    if (c.replies.length > 0) {
-                        return { ...c, replies: updateText(c.replies) };
-                    }
+                    if (c.id === commentId) return { ...c, text: newText };
+                    if (c.replies.length > 0) return { ...c, replies: updateText(c.replies) };
                     return c;
                 });
             };
-
             return { ...post, comments: updateText(post.comments) };
         }));
-    };
+    }, []);
 
-    const reportComment = (postId: string, commentId: string) => {
-        console.log(`[REPORT] Comment ${commentId} in post ${postId} has been reported.`);
-        // In a real app, this would hit a Supabase table like 'reports'
-        alert("Bildiriminiz alındı. İncelemeye alacağız. Teşekkürler!");
-    };
+    const reportComment = React.useCallback((postId: string, commentId: string) => {
+        console.log(`[REPORT] Comment ${commentId} has been reported.`);
+    }, []);
+
+    const socialValue = React.useMemo(() => ({ 
+        posts, 
+        stories, 
+        addPost, 
+        toggleLike, 
+        addComment, 
+        addStory,
+        toggleCommentLike,
+        addCommentReply,
+        deleteComment,
+        editComment,
+        reportComment,
+        currentUser,
+        addMoffiPoints
+    }), [
+        posts, stories, currentUser,
+        addPost, toggleLike, addComment, addStory, 
+        toggleCommentLike, addCommentReply, deleteComment, 
+        editComment, reportComment, addMoffiPoints
+    ]);
 
     return (
-        <SocialContext.Provider value={{ 
-            posts, 
-            stories, 
-            addPost, 
-            toggleLike, 
-            addComment, 
-            addStory,
-            toggleCommentLike,
-            addCommentReply,
-            deleteComment,
-            editComment,
-            reportComment
-        }}>
+        <SocialContext.Provider value={socialValue}>
             {children}
         </SocialContext.Provider>
     );

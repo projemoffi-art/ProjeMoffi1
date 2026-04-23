@@ -78,7 +78,10 @@ export function VetQuickSheet({ isOpen, onClose, petId = "pet-1" }: VetQuickShee
                                 {isVetLoading ? (
                                     <div className="h-32 bg-white/5 animate-pulse rounded-[2rem]" />
                                 ) : nearestClinic ? (
-                                    <div className="bg-gradient-to-br from-white/[0.05] to-transparent border border-white/10 rounded-[2.2rem] p-5 relative group overflow-hidden">
+                                    <div 
+                                        onClick={() => { router.push(`/vet?clinicId=${nearestClinic.id}`); onClose(); }}
+                                        className="bg-gradient-to-br from-white/[0.05] to-transparent border border-white/10 rounded-[2.2rem] p-5 relative group overflow-hidden cursor-pointer active:scale-[0.98] transition-all"
+                                    >
                                         <div className="flex items-start gap-4 relative z-10">
                                             <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/10 shrink-0">
                                                 <img src={nearestClinic.imageUrl} className="w-full h-full object-cover" />
@@ -99,10 +102,16 @@ export function VetQuickSheet({ isOpen, onClose, petId = "pet-1" }: VetQuickShee
                                         </div>
 
                                         <div className="flex gap-2 mt-5">
-                                            <button className="flex-1 bg-white text-black h-12 rounded-xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all">
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${nearestClinic.phone || '02161234567'}`; }}
+                                                className="flex-1 bg-white text-black h-12 rounded-xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                            >
                                                 <Phone className="w-4 h-4 fill-current" /> Ara
                                             </button>
-                                            <button className="flex-1 bg-white/5 border border-white/10 text-white h-12 rounded-xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all">
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(nearestClinic.name)}`, '_blank'); }}
+                                                className="flex-1 bg-white/5 border border-white/10 text-white h-12 rounded-xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                            >
                                                 <Navigation className="w-4 h-4" /> Yol Tarifi
                                             </button>
                                         </div>

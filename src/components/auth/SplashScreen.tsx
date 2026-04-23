@@ -1,54 +1,56 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PawPrint } from "lucide-react";
+import { motion } from "framer-motion";
+import { PawPrint, Sparkles } from "lucide-react";
 
 interface SplashProps {
     onComplete: () => void;
 }
 
 export function SplashScreen({ onComplete }: SplashProps) {
-    const [progress, setProgress] = useState(0);
-
     useEffect(() => {
-        const timer = setInterval(() => {
-            setProgress((prev) => {
-                if (prev >= 100) {
-                    clearInterval(timer);
-                    setTimeout(onComplete, 200); // Short delay after full load
-                    return 100;
-                }
-                return prev + 10;
-            });
-        }, 100); // 100ms * 10 steps = 1s approx + delay = 1.2s
-
-        return () => clearInterval(timer);
+        const timer = setTimeout(onComplete, 3500);
+        return () => clearTimeout(timer);
     }, [onComplete]);
 
     return (
-        <div className="fixed inset-0 bg-gradient-to-br from-[#E0F7FA] to-[#E8F5E9] flex flex-col items-center justify-center z-50">
-            <div className="flex flex-col items-center animate-in fade-in zoom-in duration-700">
-                {/* Logo Area */}
-                <div className="w-24 h-24 bg-white rounded-3xl shadow-xl flex items-center justify-center mb-6 rotate-[-6deg]">
-                    <PawPrint className="w-12 h-12 text-moffi-purple-dark" />
+        <div className="h-full w-full flex flex-col items-center justify-center bg-transparent relative overflow-hidden">
+            {/* Pulsing Core */}
+            <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: [0.8, 1.1, 1], opacity: [0, 1, 1] }}
+                transition={{ duration: 1.5, ease: "easeOut" }}
+                className="relative"
+            >
+                <div className="absolute inset-0 bg-cyan-500/30 blur-[60px] rounded-full animate-pulse" />
+                <div className="w-32 h-32 bg-gradient-to-tr from-[#5B4D9D] to-[#8B5CF6] rounded-[2.8rem] flex items-center justify-center shadow-[0_20px_50px_rgba(91,77,157,0.4)] relative z-10">
+                    <PawPrint className="w-16 h-16 text-white" />
                 </div>
+            </motion.div>
 
-                <h1 className="text-3xl font-black text-moffi-purple-dark mb-2 tracking-tight font-poppins">
-                    MoffiPet<span className="text-moffi-primary">+</span>
+            <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 1, duration: 0.8 }}
+                className="mt-10 text-center z-10"
+            >
+                <h1 className="text-4xl font-black text-white tracking-widest uppercase italic italic leading-none">
+                    Moffi <span className="text-cyan-400">Core</span>
                 </h1>
-
-                <p className="text-gray-500 text-sm font-medium mb-12">
-                    Evcil dostlar için akıllı bir dünya.
-                </p>
-
-                {/* Loading Bar */}
-                <div className="w-48 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                        className="h-full bg-moffi-purple-dark rounded-full transition-all duration-300 ease-out"
-                        style={{ width: `${progress}%` }}
-                    />
+                <div className="flex items-center justify-center gap-3 mt-4 text-gray-500 text-[10px] font-black uppercase tracking-[0.5em]">
+                    <Sparkles className="w-3 h-3" />
+                    Sistem Başlatılıyor
                 </div>
-            </div>
+            </motion.div>
+
+            {/* Scanning Line Effect */}
+            <motion.div 
+                initial={{ top: "-10%" }}
+                animate={{ top: "110%" }}
+                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent z-20"
+            />
         </div>
     );
 }

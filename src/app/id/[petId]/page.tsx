@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { useRouter, useParams } from 'next/navigation';
 import { getPetStatusById } from '@/services/petIdService';
 import { PetIDState } from '@/types/pet-id';
+import { apiService } from '@/services/apiService';
 
 export default function PetIDPage() {
     const router = useRouter();
@@ -32,7 +33,20 @@ export default function PetIDPage() {
                 const data = await getPetStatusById(petId);
                 setPetData(data);
                 
-                // Simulate "Owner Notified" scan event
+                // Real-time Scan Alert: Add to Owner's Inbox
+                if (data) {
+                    await apiService.addInboxMessage({
+                        type: 'scan',
+                        user: 'Moffi Güvenlik',
+                        isSystem: true,
+                        text: `${data.pet.name} dostunuzun Pet-ID künyesi az önce tarandı.`,
+                        pet_name: data.pet.name,
+                        avatar: data.pet.avatarUrl,
+                        read: false
+                    });
+                }
+
+                // Simulate "Owner Notified" scan event toast for the finder
                 if (data && data.status === 'lost') {
                     setTimeout(() => setShowScanNotification(true), 2000);
                 }
@@ -76,7 +90,25 @@ export default function PetIDPage() {
 
     const handleSendLocation = () => {
         if (navigator.geolocation) {
-            alert("Konum izniniz isteniyor... Kabul edildiğinde anlık konumunuz sahibinin uygulamasına acil durum sinyali olarak düşecek!");
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const { latitude, longitude } = position.coords;
+                const googleMapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
+                
+                await apiService.addInboxMessage({
+                    type: 'location',
+                    user: 'Moffi GPS',
+                    isSystem: true,
+                    text: `${petData.pet.name} için bir konum paylaşıldı! Bulunduğu yer işaretlendi.`,
+                    location_link: googleMapsLink,
+                    avatar: 'https://cdn-icons-png.flaticon.com/512/854/854878.png', // Map icon
+                    read: false
+                });
+
+                alert("Konumunuz başarıyla sahibine iletildi. Yardımınız için teşekkürler! 🙏");
+            }, (error) => {
+                console.error("GPS Error:", error);
+                alert("Konum alınamadı. Lütfen tarayıcı izinlerini kontrol edin.");
+            });
         } else {
             alert("Cihazınız konum özelliğini desteklemiyor.");
         }
@@ -148,6 +180,36 @@ export default function PetIDPage() {
                     >
                         <Coins className="w-3.5 h-3.5" />
                         Ödüllü Kayıp: {sosConfig.rewardAmount} {sosConfig.rewardCurrency}
+                    </motion.div>
+                )}
+
+                {/* CRITICAL MEDICAL ALERT BANNER */}
+                {sosConfig.criticalHealthAlert && (
+                    <motion.div
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ 
+                            y: 0, 
+                            opacity: 1,
+                            scale: [1, 1.02, 1],
+                        }}
+                        transition={{ 
+                            delay: 0.3,
+                            scale: { repeat: Infinity, duration: 2, ease: "easeInOut" }
+                        }}
+                        className="w-full max-w-sm mb-6 bg-red-600 rounded-3xl p-4 shadow-[0_0_40px_rgba(220,38,38,0.5)] border-2 border-white/30 relative overflow-hidden"
+                    >
+                        <div className="absolute inset-0 bg-white/10 animate-shimmer" />
+                        <div className="flex items-center gap-4 relative z-10">
+                            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg shrink-0">
+                                <ShieldAlert className="w-7 h-7 text-red-600" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-black text-white/70 uppercase tracking-widest leading-none mb-1">Kritik Tıbbi Uyarı</span>
+                                <span className="text-sm font-black text-white leading-tight uppercase tracking-tight italic">
+                                    {sosConfig.criticalHealthAlert}
+                                </span>
+                            </div>
+                        </div>
                     </motion.div>
                 )}
 

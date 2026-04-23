@@ -1,9 +1,8 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
-import { supabase } from "@/lib/supabase";
 import { useEffect, useState } from "react";
-import { Star, MessageSquare, User, Clock, Search, Filter, Trash2, CheckCircle, AlertTriangle } from "lucide-react";
+import { Star, MessageSquare, Clock, Search, Trash2, CheckCircle, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function AdminFeedbacksPage() {
@@ -14,35 +13,32 @@ export default function AdminFeedbacksPage() {
     const [filterCategory, setFilterCategory] = useState<string>("all");
 
     useEffect(() => {
-        fetchFeedbacks();
+        // MOCK: Initial mock data
+        const mockFeedbacks = [
+            {
+                id: "fb-1",
+                rating: 5,
+                category: "positive",
+                comment: "Harika bir uygulama, tasarımı çok kaliteli!",
+                created_at: new Date().toISOString(),
+                profiles: { username: "Bella", avatar_url: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200" }
+            },
+            {
+                id: "fb-2",
+                rating: 2,
+                category: "bug",
+                comment: "Giriş yaparken hata alıyorum.",
+                created_at: new Date().toISOString(),
+                profiles: { username: "Milo_Admin", avatar_url: "https://images.unsplash.com/photo-1543852786-1cf6624b9987?q=80&w=200" }
+            }
+        ];
+        setFeedbacks(mockFeedbacks);
+        setLoading(false);
     }, []);
 
-    const fetchFeedbacks = async () => {
-        setLoading(true);
-        try {
-            const { data, error } = await supabase
-                .from('feedbacks')
-                .select('*, profiles(username, avatar_url, email)')
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            setFeedbacks(data || []);
-        } catch (error) {
-            console.error("fetchFeedbacks error:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const deleteFeedback = async (id: string) => {
+    const deleteFeedback = (id: string) => {
         if (!confirm("Bu geri bildirimi silmek istediğinize emin misiniz?")) return;
-        try {
-            const { error } = await supabase.from('feedbacks').delete().eq('id', id);
-            if (error) throw error;
-            setFeedbacks(feedbacks.filter(f => f.id !== id));
-        } catch (error) {
-            alert("Silme hatası");
-        }
+        setFeedbacks(feedbacks.filter(f => f.id !== id));
     };
 
     const filteredFeedbacks = feedbacks.filter(f => {

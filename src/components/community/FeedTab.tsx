@@ -5,6 +5,8 @@ import { motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ImmersivePostCard } from './ImmersivePostCard';
+import { PostSkeleton, Skeleton } from '../common/Skeleton';
+import Image from 'next/image';
 
 interface FeedTabProps {
     user: any;
@@ -46,9 +48,9 @@ export function FeedTab({
                 </div>
                 {storyGroups.map((group, index) => (
                     <div key={index} className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer" onClick={() => onStoryClick(index)}>
-                        <div className={cn("w-16 h-16 rounded-full p-[2.5px]", group.hasUnseen ? "bg-gradient-to-tr from-cyan-400 to-purple-600" : "bg-white/10")}>
-                            <div className="w-full h-full bg-[#0A0A0E] rounded-full border-2 border-[#0A0A0E] overflow-hidden">
-                                <img src={group.author_avatar} className="w-full h-full object-cover" />
+                        <div className={cn("w-16 h-16 rounded-full p-[2.5px] shrink-0", group.hasUnseen ? "bg-gradient-to-tr from-cyan-400 to-purple-600" : "bg-white/10")}>
+                            <div className="w-full h-full bg-[#0A0A0E] rounded-full border-2 border-[#0A0A0E] overflow-hidden relative">
+                                <Image src={group.author_avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} fill className="object-cover" alt={group.author_name} />
                             </div>
                         </div>
                         <span className="text-[10px] text-gray-500 font-bold truncate w-16 text-center">{group.author_name}</span>
@@ -58,7 +60,10 @@ export function FeedTab({
 
             {/* FEED */}
             {isLoading ? (
-                <div className="p-8 text-center text-gray-500 font-bold">Yükleniyor...</div>
+                <div className="space-y-4 px-4 mt-4">
+                    <PostSkeleton />
+                    <PostSkeleton />
+                </div>
             ) : (
                 posts.map((post) => (
                     <div key={post.id} className="w-full relative flex flex-col items-center justify-center py-2">

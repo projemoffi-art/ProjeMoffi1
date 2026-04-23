@@ -3,6 +3,8 @@
 import { X, Wallet, TrendingUp, History, Sparkles, Hexagon, Crown } from "lucide-react";
 import { useSocial } from "@/context/SocialContext";
 import { cn } from "@/lib/utils";
+import { apiService } from "@/services/mockApiService";
+import { useState, useEffect } from "react";
 
 interface MoffiWalletProps {
     isOpen: boolean;
@@ -10,11 +12,25 @@ interface MoffiWalletProps {
 }
 
 export function MoffiWallet({ isOpen, onClose }: MoffiWalletProps) {
-    const { economy } = useSocial(); // Use global state
+    const { economy } = useSocial() as any; // Use global state
+    const [userProfile, setUserProfile] = useState<any>(null);
+
+    useEffect(() => {
+        if (isOpen) {
+            apiService.getCurrentUser().then(setUserProfile);
+        }
+    }, [isOpen]);
+
+    const handleAddCoins = async (amount: number) => {
+        await apiService.addBalance(amount, 'coin');
+        const updated = await apiService.getCurrentUser();
+        setUserProfile(updated);
+        alert(`${amount} Moffi Coin cüzdanınıza eklendi! 💎`);
+    };
 
     if (!isOpen) return null;
 
-    const progressPercent = (economy.currentXP / economy.nextLevelXP) * 100;
+    const progressPercent = economy ? (economy.currentXP / economy.nextLevelXP) * 100 : 0;
 
     return (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center pointer-events-none">
@@ -52,18 +68,35 @@ export function MoffiWallet({ isOpen, onClose }: MoffiWalletProps) {
                     <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl opacity-50" />
 
                     <div className="relative z-10 flex flex-col items-center text-center">
-                        <div className="text-xs font-bold text-indigo-200 uppercase tracking-widest mb-1">Toplam Moffi Puan</div>
                         <div className="text-5xl font-black mb-2 flex items-center gap-2">
-                            <span className="text-yellow-400 text-3xl">✨</span>
-                            {economy.points.toLocaleString()}
+                            <span className="text-yellow-400 text-3xl">💎</span>
+                            {userProfile?.moffi_coins?.toLocaleString() || '0'}
+                        </div>
+                        <div className="text-[10px] font-bold text-white/50 mb-4">
+                            Moffi Coin Bakiyesi
+                        </div>
+
+                        <div className="flex gap-2 w-full mb-4">
+                            <button 
+                                onClick={() => handleAddCoins(100)}
+                                className="flex-1 bg-white/10 hover:bg-white/20 border border-white/10 py-2 rounded-xl text-[10px] font-bold transition-all"
+                            >
+                                +100💎
+                            </button>
+                            <button 
+                                onClick={() => handleAddCoins(500)}
+                                className="flex-1 bg-white/10 hover:bg-white/20 border border-white/10 py-2 rounded-xl text-[10px] font-bold transition-all"
+                            >
+                                +500💎
+                            </button>
                         </div>
 
                         <div className="w-full bg-black/20 h-10 rounded-xl mt-4 flex items-center px-4 justify-between border border-white/10">
                             <div className="flex items-center gap-2">
                                 <Crown className="w-4 h-4 text-yellow-400" />
-                                <span className="text-xs font-bold">Seviye {economy.level}</span>
+                                <span className="text-xs font-bold">Seviye {economy?.level || 1}</span>
                             </div>
-                            <span className="text-[10px] font-bold text-indigo-200">{economy.currentXP} / {economy.nextLevelXP} XP</span>
+                            <span className="text-[10px] font-bold text-indigo-200">{economy?.currentXP || 0} / {economy?.nextLevelXP || 100} XP</span>
                         </div>
                         {/* Progress Bar Inside Card */}
                         <div className="w-full h-1 bg-black/20 mt-[-1px] relative overflow-hidden">
@@ -80,7 +113,7 @@ export function MoffiWallet({ isOpen, onClose }: MoffiWalletProps) {
                     </h3>
 
                     <div className="space-y-3 max-h-48 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-700">
-                        {economy.history.map((tx) => (
+                        {economy?.history.map((tx: any) => (
                             <div key={tx.id} className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 transition-colors">
                                 <div className="flex items-center gap-3">
                                     <div className="text-xl">{tx.icon}</div>

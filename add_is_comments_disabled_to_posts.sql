@@ -1,1 +1,0 @@
-ALTER TABLE posts ADD COLUMN IF NOT EXISTS is_comments_disabled BOOLEAN DEFAULT false;

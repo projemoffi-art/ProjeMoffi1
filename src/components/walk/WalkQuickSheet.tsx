@@ -6,11 +6,12 @@ import {
     X, MapPin, Trophy, Flame, Timer, 
     Footprints, Play, ArrowRight, Star,
     Navigation, Activity, ChevronRight,
-    Cookie
+    Cookie, Sparkles, BrainCircuit
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWalk } from "@/hooks/useWalk";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 
 interface WalkQuickSheetProps {
     isOpen: boolean;
@@ -20,12 +21,13 @@ interface WalkQuickSheetProps {
 
 export function WalkQuickSheet({ isOpen, onClose, petId = "pet-1" }: WalkQuickSheetProps) {
     const router = useRouter();
+    const { user } = useAuth();
     const { stats, history, isLoading } = useWalk();
 
     // Calculate today's stats from history
     const todayStats = useMemo(() => {
         const today = new Date().toISOString().split('T')[0];
-        const todayWalks = history.filter(w => w.startTime.startsWith(today));
+        const todayWalks = history.filter(w => w.startTime?.startsWith(today));
         
         return {
             km: Math.round(todayWalks.reduce((sum, w) => sum + w.distanceKm, 0) * 10) / 10,
@@ -72,6 +74,45 @@ export function WalkQuickSheet({ isOpen, onClose, petId = "pet-1" }: WalkQuickSh
                         </div>
 
                         <div className="px-8 pb-12 space-y-8 overflow-y-auto no-scrollbar">
+                            
+                            {/* AI INSIGHT CARD (Moffi AI Lab Feature) */}
+                            {user?.settings?.ai?.walkAnalysis && (
+                                <motion.div 
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="bg-gradient-to-br from-violet-600/20 to-indigo-600/10 border border-violet-500/30 rounded-[2.2rem] p-6 relative overflow-hidden group"
+                                >
+                                    <div className="absolute top-0 right-0 p-4">
+                                        <Sparkles className="w-5 h-5 text-violet-400 animate-pulse" />
+                                    </div>
+                                    <div className="relative z-10">
+                                        <h4 className="text-[10px] font-black text-violet-400 uppercase tracking-[0.2em] mb-3">Moffi AI Analizi</h4>
+                                        <div className="space-y-4">
+                                            <div className="flex items-start gap-3">
+                                                <div className="w-8 h-8 rounded-xl bg-violet-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                                                    <BrainCircuit className="w-4 h-4 text-violet-300" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-bold text-white uppercase tracking-tight italic">Optimal Saat: 18:30 - 19:45</p>
+                                                    <p className="text-[9px] text-white/40 font-bold uppercase tracking-widest mt-1">Dostunun enerji seviyesi bu saatlerde zirve yapıyor.</p>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3 pt-2">
+                                                <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
+                                                    <p className="text-[7px] font-black text-white/30 uppercase mb-1">Rota Verimliliği</p>
+                                                    <p className="text-xs font-black text-emerald-400 tracking-widest">%94 SKOR</p>
+                                                </div>
+                                                <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
+                                                    <p className="text-[7px] font-black text-white/30 uppercase mb-1">Kalori Yakımı</p>
+                                                    <p className="text-xs font-black text-orange-400 tracking-widest">+12% ARTIŞ</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {/* Decorative mesh */}
+                                    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.05] pointer-events-none" />
+                                </motion.div>
+                            )}
                             
                             {/* 1. BENTO STATS BAR */}
                             <div className="grid grid-cols-3 gap-3">

@@ -4,9 +4,6 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, RotateCcw, Sparkles, Box, Camera, Info, Layers, Maximize, Wand2, Share2, Star, Zap, Scissors, Check, X, Crop, Move3d, SunMedium } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { OutfitCarousel } from "@/components/ai-dressing/OutfitCarousel";
-import { SmartSuggestions } from "@/components/ai-dressing/SmartSuggestions";
-import { ResultOverlay } from "@/components/ai-dressing/ResultOverlay";
 import { useSocial } from "@/context/SocialContext";
 
 // Mock Data for Clothes - Premium Images (More items for Carousel)
@@ -19,7 +16,39 @@ const OUTFITS = [
     { id: 6, name: "Summer Vibes", image: "https://images.unsplash.com/photo-1591871937573-74dbba515c4c?q=80&w=200&auto=format&fit=crop", type: 'top', color: "#EC4899", price: "250₺" },
 ];
 
-// --- MINI GAME COMPONENT (Refined) ---
+// --- Inline Components (Replacing missing ai-dressing module imports) ---
+function OutfitCarousel({ outfits, selectedId, onSelect }: { outfits: any[]; selectedId?: number; onSelect: (o: any) => void }) {
+    return (
+        <div className="flex gap-3 px-6 overflow-x-auto no-scrollbar pb-2">
+            {outfits.map(o => (
+                <button key={o.id} onClick={() => onSelect(o)}
+                    className={`shrink-0 w-20 h-24 rounded-2xl overflow-hidden border-2 transition-all ${
+                        selectedId === o.id ? 'border-indigo-500 scale-105 shadow-lg' : 'border-transparent opacity-60'
+                    }`}>
+                    <img src={o.image} className="w-full h-full object-cover" />
+                </button>
+            ))}
+        </div>
+    );
+}
+
+function SmartSuggestions({ petName }: { petName: string }) {
+    return (
+        <div className="absolute bottom-4 left-4 right-4 bg-black/50 backdrop-blur rounded-2xl p-3">
+            <p className="text-white text-xs font-bold">✨ {petName} için önerilen: Urban Hoodie</p>
+        </div>
+    );
+}
+
+function ResultOverlay({ resultImage, originalImage, onClose, onShare }: { resultImage: string; originalImage: string; onClose: () => void; onShare: (p: string) => void }) {
+    return (
+        <div className="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center gap-4">
+            <img src={resultImage || originalImage} className="w-64 h-64 object-cover rounded-3xl" />
+            <button onClick={onClose} className="px-6 py-2 bg-white text-black rounded-full font-bold text-sm">Kapat</button>
+        </div>
+    );
+}
+
 interface MiniGameProps {
     onComplete: () => void;
 }

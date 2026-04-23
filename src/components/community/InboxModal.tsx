@@ -176,11 +176,11 @@ export function InboxModal({
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex justify-between items-center mb-1">
-                                                    <h4 className="font-bold text-red-400 text-base">{sos.petName} KAYIP!</h4>
+                                                    <h4 className="font-bold text-red-400 text-base">{(sos.name || sos.petName)} KAYIP!</h4>
                                                     <span className="text-[10px] text-gray-600 font-bold uppercase tracking-tighter">{sos.time}</span>
                                                 </div>
                                                 <p className="text-sm text-gray-300 font-medium line-clamp-2 leading-relaxed">
-                                                    <span className="font-black text-white">{sos.location}</span> konumunda ihtar geçildi. Lütfen çevreye duyarlı olun.
+                                                    <span className="font-black text-white">{(sos.location || sos.last_seen_location || 'Bilinmeyen Konum')}</span> konumunda ihtar geçildi. Lütfen çevreye duyarlı olun.
                                                 </p>
                                                 {sos.unread && <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500 text-white text-[10px] font-black uppercase tracking-wider">Acil Durum</div>}
                                             </div>

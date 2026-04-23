@@ -1,10 +1,6 @@
 import { useState, useEffect } from "react";
-import { IVetService } from "@/services/interfaces";
-import { VetMockService } from "@/services/mock/VetMockService";
+import { apiService } from "@/services/apiService";
 import { VetClinic, VetAppointment } from "@/types/domain";
-
-// Singleton for now
-const vetService: IVetService = new VetMockService();
 
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
     const R = 6371;
@@ -18,8 +14,9 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 }
 
 export function useVet() {
-    const [featuredClinics, setFeaturedClinics] = useState<VetClinic[]>([]);
-    const [allClinics, setAllClinics] = useState<VetClinic[]>([]);
+    const [featuredClinics, setFeaturedClinics] = useState<any[]>([]);
+    const [allLocations, setAllLocations] = useState<any[]>([]);
+    const [activeCategory, setActiveCategory] = useState<'all' | 'clinic' | 'food' | 'toy' | 'care'>('all');
     const [isLoading, setIsLoading] = useState(false);
     const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
 
@@ -27,10 +24,34 @@ export function useVet() {
         init();
     }, []);
 
-    const init = async () => {
+    const simulateShops = (lat: number, lng: number): any[] => {
+        const categories = [
+            { id: 'sh-1', name: 'Pati Market', type: 'food', icon: '🍖', rating: 4.9 },
+            { id: 'sh-2', name: 'Moffi Toys', type: 'toy', icon: '🎾', rating: 4.7 },
+            { id: 'sh-3', name: 'Pet Care Center', type: 'care', icon: '✨', rating: 4.8 },
+            { id: 'sh-4', name: 'Gurme Mama', type: 'food', icon: '🍖', rating: 4.6 },
+        ];
+
+        return categories.map((shop, i) => {
+            const sLat = lat + (Math.random() - 0.5) * 0.02;
+            const sLng = lng + (Math.random() - 0.5) * 0.02;
+            const dist = calculateDistance(lat, lng, sLat, sLng);
+            return {
+                ...shop,
+                location: { lat: sLat, lng: sLng },
+                distance: dist.toFixed(1) + " km",
+                _distVal: dist,
+                is_premium: i === 0,
+                address: 'Yakınlarda bir yerde...',
+                features: []
+            };
+        });
+    };
+
+    const init = async (category: any = 'all') => {
         setIsLoading(true);
+        setActiveCategory(category);
         try {
-            // 1. Get Location
             let lat = 40.9850;
             let lng = 29.0300;
 
@@ -47,13 +68,10 @@ export function useVet() {
                 }
             }
 
-            // 2. Parallel Fetch
-            const [rawFeatured, rawAll] = await Promise.all([
-                vetService.getFeaturedClinics(),
-                vetService.getAllClinics()
-            ]);
+            const rawClinics = await apiService.getNearbyClinics(lat, lng);
+            const shops = simulateShops(lat, lng);
 
-            const enrich = (list: VetClinic[]) => list.map(c => {
+            const enrich = (list: any[]) => list.map(c => {
                 const distVal = calculateDistance(lat, lng, c.location.lat, c.location.lng);
                 return {
                     ...c,
@@ -62,8 +80,18 @@ export function useVet() {
                 };
             }).sort((a, b) => a._distVal - b._distVal);
 
-            setFeaturedClinics(enrich(rawFeatured));
-            setAllClinics(enrich(rawAll));
+            const allCombined = [...enrich(rawClinics), ...shops];
+            
+            let filtered = allCombined;
+            if (category !== 'all') {
+                filtered = allCombined.filter(loc => {
+                    if (category === 'clinic') return !loc.id.startsWith('sh-');
+                    return loc.type === category;
+                });
+            }
+
+            setFeaturedClinics(filtered.filter(c => c.is_premium || c.rating >= 4.8));
+            setAllLocations(filtered);
 
         } catch (err) {
             console.error(err);
@@ -72,21 +100,18 @@ export function useVet() {
         }
     };
 
-    const bookAppointment = async (clinic: VetClinic, date: string, time: string, type: VetAppointment['type']) => {
+    const bookAppointment = async (clinic: any, date: string, time: string, type: string) => {
         setIsLoading(true);
         try {
-            await vetService.createAppointment({
+            await apiService.createAppointment({
                 clinicId: clinic.id,
-                clinicName: clinic.name,
-                petId: 'pet-1', // Mock
-                petName: 'Moffi', // Mock
-                ownerName: 'Atlas',
-                date,
-                time,
-                type,
-                price: 650
+                petId: '349b89f8-c5e5-46e8-abf7-b2e41b29d39a', // Milo
+                appointmentDate: `${date}T${time}:00Z`,
+                notes: `Randevu tipi: ${type}`,
+                status: 'pending'
             });
-            // Refetch or update local state if needed
+        } catch (error) {
+            console.error("Appointment booking failed:", error);
         } finally {
             setIsLoading(false);
         }
@@ -94,10 +119,12 @@ export function useVet() {
 
     return {
         featuredClinics,
-        allClinics,
+        allClinics: allLocations,
         userLocation,
         isLoading,
+        activeCategory,
         bookAppointment,
-        refresh: init
+        searchByService: init,
+        refresh: () => init(activeCategory)
     };
 }

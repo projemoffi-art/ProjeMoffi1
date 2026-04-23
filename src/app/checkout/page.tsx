@@ -1,272 +1,243 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import {
-    CreditCard,
-    MapPin,
-    Truck,
-    CheckCircle2,
-    Lock,
-    ArrowRight,
-    ChevronDown
+import { 
+    ArrowLeft, CreditCard, MapPin, ShieldCheck, 
+    Truck, Sparkles, AlertCircle, ShoppingBag, Terminal, CheckCircle2
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-
-// --- STEPS ---
-const STEPS = [
-    { id: 1, title: 'Adres', icon: MapPin },
-    { id: 2, title: 'Kargo', icon: Truck },
-    { id: 3, title: 'Ödeme', icon: CreditCard },
-];
-
-import { useShop } from "@/context/ShopContext";
-
-// ... STEPS const ...
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function CheckoutPage() {
     const router = useRouter();
-    const { cartTotal, clearCart } = useShop();
-    const [currentStep, setCurrentStep] = useState(1);
-    const [isProcessing, setIsProcessing] = useState(false);
+    const [cart, setCart] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isCheckingOut, setIsCheckingOut] = useState(false);
+    const [orderComplete, setOrderComplete] = useState(false);
 
-    // Calc Total
-    const shipping = cartTotal > 750 ? 0 : 59;
-    const total = cartTotal + shipping;
+    // Form States
+    const [address, setAddress] = useState({ name: "", surname: "", phone: "", detail: "" });
+    const [card, setCard] = useState({ number: "", expiry: "", cvc: "", holder: "" });
+    const [errors, setErrors] = useState<string[]>([]);
 
-    const handleNext = () => {
-        if (currentStep < 3) {
-            setCurrentStep(currentStep + 1);
-        } else {
-            // FINISH
-            setIsProcessing(true);
-            setTimeout(() => {
-                clearCart(); // Clear global cart
-                router.push('/checkout/success');
-            }, 2500);
+    useEffect(() => {
+        const savedCart = JSON.parse(localStorage.getItem('moffi_cart') || '[]');
+        setCart(savedCart);
+        setIsLoading(false);
+    }, []);
+
+    const cartTotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    const shipping = cartTotal > 0 ? 0 : 0; 
+
+    const handleConfirmPayment = () => {
+        const newErrors = [];
+        // Strict Validation
+        if (!address.name || !address.surname || !address.phone || !address.detail) {
+            newErrors.push("Lütfen tüm teslimat adresi bilgilerini eksiksiz doldurun.");
         }
+        if (!card.number || card.number.length < 16) {
+            newErrors.push("Geçerli bir 16 haneli kart numarası giriniz.");
+        }
+        if (!card.expiry || !card.cvc || !card.holder) {
+            newErrors.push("Tüm kart bilgileri (Tarih, CVC, İsim) zorunludur.");
+        }
+
+        if (newErrors.length > 0) {
+            setErrors(newErrors);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
+
+        setErrors([]);
+        setIsCheckingOut(true);
+        setTimeout(() => {
+            setIsCheckingOut(false);
+            setOrderComplete(true);
+            localStorage.setItem('moffi_cart', '[]');
+            // (We no longer redirect immediately. We show an embedded success screen).
+        }, 2000);
     };
 
+    if (isLoading) {
+        return <div className="min-h-screen bg-[#05050A] flex items-center justify-center"><Sparkles className="w-8 h-8 text-cyan-500 animate-spin" /></div>;
+    }
+
+    if (orderComplete) {
+        return (
+            <main className="min-h-screen bg-[#05050A] flex flex-col items-center justify-center text-center p-6 relative overflow-hidden">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/20 blur-[100px] rounded-full" />
+                <motion.div 
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="w-32 h-32 bg-emerald-500/10 border-2 border-emerald-500/30 rounded-full flex items-center justify-center mb-8 relative z-10 shadow-[0_0_50px_rgba(16,185,129,0.4)]"
+                >
+                    <CheckCircle2 className="w-16 h-16 text-emerald-400" />
+                </motion.div>
+                <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter uppercase mb-6 relative z-10">Sipariş Alındı!</h1>
+                <p className="text-emerald-400 font-bold mb-2">Ödeme Başarılı - Üretim Başlıyor</p>
+                <p className="text-gray-400 max-w-sm mb-12 relative z-10 leading-relaxed font-medium">Satın aldığınız kurgusal POD tasarımları başarıyla sisteme aktarıldı. Gerçek baskı testlerini aşınca elinizde olacak.</p>
+                <button 
+                    onClick={() => router.push('/studio')}
+                    className="px-10 py-5 rounded-[2rem] bg-white text-black font-black uppercase tracking-widest text-sm hover:scale-105 transition-all shadow-[0_0_30px_rgba(255,255,255,0.3)] relative z-10"
+                >
+                    Yeni Tasarımlara Dön
+                </button>
+            </main>
+        );
+    }
+
+    if (cart.length === 0) {
+        return (
+            <main className="min-h-screen bg-[#05050A] flex flex-col items-center justify-center text-center p-6">
+                <div className="w-32 h-32 bg-white/5 border border-white/10 rounded-full flex items-center justify-center mb-8">
+                    <ShoppingBag className="w-12 h-12 text-white/20" />
+                </div>
+                <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase mb-4">Sepetiniz Boş</h1>
+                <p className="text-gray-500 max-w-sm mx-auto mb-10">Moffi Stüdyo'da yeni tasarımlar yaratarak tarzınızı sokağa taşıyabilirsiniz.</p>
+                <button 
+                    onClick={() => router.push('/studio')}
+                    className="px-10 py-5 rounded-[2rem] bg-cyan-500 text-black font-black uppercase tracking-widest text-sm hover:scale-105 transition-all shadow-[0_0_30px_rgba(34,211,238,0.3)]"
+                >
+                    Stüdyoya Dön
+                </button>
+            </main>
+        );
+    }
+
     return (
-        <main className="min-h-screen bg-[#F8F9FC] dark:bg-black font-sans pb-32 pt-10">
-            <div className="max-w-2xl mx-auto px-6">
+        <main className="min-h-screen bg-[#05050A] text-white p-6 md:p-12 font-sans selection:bg-cyan-500/30">
+            {/* Ambient Backgrounds */}
+            <div className="fixed inset-0 pointer-events-none z-0">
+                <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-cyan-500/10 blur-[150px] opacity-50" />
+                <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-500/10 blur-[120px] opacity-40" />
+            </div>
 
-                <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-8 text-center">Ödemeyi Tamamla</h1>
+            <header className="relative z-10 max-w-6xl mx-auto flex items-center justify-between mb-12">
+                <button 
+                    onClick={() => router.back()}
+                    className="w-12 h-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center hover:bg-white/10 transition-all group"
+                >
+                    <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+                </button>
+                <div className="flex items-center gap-4">
+                    <ShieldCheck className="w-6 h-6 text-emerald-500" />
+                    <span className="text-xs font-black uppercase tracking-[0.3em] text-gray-500">Güvenli Ödeme</span>
+                </div>
+            </header>
 
-                {/* STEPS INDICATOR */}
-                <div className="flex justify-between items-center mb-10 relative">
-                    <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-gray-200 dark:bg-gray-800 -z-10" />
-                    {STEPS.map((step) => (
-                        <div key={step.id} className="flex flex-col items-center gap-2 bg-[#F8F9FC] dark:bg-black px-2">
-                            <div className={cn(
-                                "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300",
-                                currentStep >= step.id
-                                    ? "bg-[#5B4D9D] border-[#5B4D9D] text-white shadow-lg shadow-purple-500/30"
-                                    : "bg-white dark:bg-[#1A1A1A] border-gray-200 dark:border-gray-800 text-gray-400"
-                            )}>
-                                {currentStep > step.id ? <CheckCircle2 className="w-5 h-5" /> : <step.icon className="w-4 h-4" />}
-                            </div>
-                            <span className={cn(
-                                "text-xs font-bold transition-colors",
-                                currentStep >= step.id ? "text-[#5B4D9D]" : "text-gray-400"
-                            )}>{step.title}</span>
+            <div className="relative z-10 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-24">
+                
+                {/* Left Side - Checkout Form */}
+                <div className="lg:col-span-7 flex flex-col gap-10">
+                    <div>
+                        <h1 className="text-4xl lg:text-5xl font-black italic tracking-tighter uppercase mb-2">Kasa</h1>
+                        <p className="text-gray-400 font-medium">Sipariş verilerini tamamla ve üretim bandına gönder.</p>
+                    </div>
+
+                    {errors.length > 0 && (
+                        <div className="bg-red-500/10 border border-red-500/50 rounded-2xl p-6">
+                            <h3 className="text-red-400 font-bold mb-3 flex items-center gap-2"><AlertCircle className="w-5 h-5" /> Lütfen Hataları Düzeltin:</h3>
+                            <ul className="list-disc pl-5 space-y-1 text-red-300 text-sm font-medium">
+                                {errors.map((err, i) => <li key={i}>{err}</li>)}
+                            </ul>
                         </div>
-                    ))}
+                    )}
+
+                    <div className="flex flex-col gap-8">
+                        {/* Teslimat Adresi */}
+                        <section className="bg-white/[0.02] border border-white/10 rounded-[2.5rem] p-8 backdrop-blur-xl">
+                            <div className="flex items-center gap-4 mb-8 text-cyan-400">
+                                <div className="p-3 bg-cyan-500/10 rounded-xl"><MapPin className="w-6 h-6" /></div>
+                                <h2 className="text-sm font-black uppercase tracking-widest text-white">Teslimat Adresi</h2>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <input type="text" placeholder="Adınız" value={address.name} onChange={e=>setAddress({...address, name:e.target.value})} className="col-span-1 bg-black/40 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-cyan-500/50 transition-all font-medium" />
+                                <input type="text" placeholder="Soyadınız" value={address.surname} onChange={e=>setAddress({...address, surname:e.target.value})} className="col-span-1 bg-black/40 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-cyan-500/50 transition-all font-medium" />
+                                <input type="tel" placeholder="Telefon Numarası" value={address.phone} onChange={e=>setAddress({...address, phone:e.target.value})} className="col-span-2 bg-black/40 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-cyan-500/50 transition-all font-medium" />
+                                <textarea rows={3} placeholder="Açık Adres" value={address.detail} onChange={e=>setAddress({...address, detail:e.target.value})} className="col-span-2 bg-black/40 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-cyan-500/50 transition-all font-medium resize-none"></textarea>
+                            </div>
+                        </section>
+
+                        {/* Ödeme Yöntemi */}
+                        <section className="bg-white/[0.02] border border-white/10 rounded-[2.5rem] p-8 backdrop-blur-xl">
+                            <div className="flex items-center gap-4 text-cyan-400 mb-8">
+                                <div className="p-3 bg-purple-500/10 rounded-xl"><CreditCard className="w-6 h-6 text-purple-400" /></div>
+                                <h2 className="text-sm font-black uppercase tracking-widest text-white">Ödeme Bilgileri</h2>
+                            </div>
+                            <div className="space-y-4">
+                                <input type="text" maxLength={16} placeholder="Kart Numarası (16 Hane)" value={card.number} onChange={e=>setCard({...card, number:e.target.value.replace(/\D/g,'')})} className="w-full bg-black/40 border border-white/10 rounded-2xl p-5 text-white focus:outline-none focus:border-purple-500/50 transition-all font-mono tracking-widest text-lg" />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <input type="text" maxLength={5} placeholder="AA/YY" value={card.expiry} onChange={e=>setCard({...card, expiry:e.target.value})} className="col-span-1 bg-black/40 border border-white/10 rounded-2xl p-5 text-white focus:outline-none focus:border-purple-500/50 transition-all font-mono tracking-widest text-lg" />
+                                    <input type="text" maxLength={3} placeholder="CVC" value={card.cvc} onChange={e=>setCard({...card, cvc:e.target.value.replace(/\D/g,'')})} className="col-span-1 bg-black/40 border border-white/10 rounded-2xl p-5 text-white focus:outline-none focus:border-purple-500/50 transition-all font-mono tracking-widest text-lg" />
+                                </div>
+                                <input type="text" placeholder="Kart Üzerindeki İsim" value={card.holder} onChange={e=>setCard({...card, holder:e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-purple-500/50 transition-all font-medium uppercase" />
+                            </div>
+                        </section>
+                    </div>
                 </div>
 
-                {/* ACCORDION CONTENT */}
-                <div className="bg-white dark:bg-[#1A1A1A] rounded-[2.5rem] shadow-xl border border-white/50 dark:border-white/5 overflow-hidden">
-
-                    {/* STEP 1: ADDRESS */}
-                    <StepSection
-                        step={1} currentStep={currentStep} setCurrentStep={setCurrentStep}
-                        title="Teslimat Adresi" icon={MapPin}
-                        summary="Caddebostan Mah. Bağdat Cad..."
-                    >
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <Input label="Ad" placeholder="Moffi" />
-                                <Input label="Soyad" placeholder="Pet" />
-                            </div>
-                            <Input label="Adres Başlığı" placeholder="Evim" />
-                            <Input label="Açık Adres" placeholder="Caddebostan Mah. Bağdat Cad. No:1" textarea />
-                            <div className="grid grid-cols-2 gap-4">
-                                <Input label="İlçe" placeholder="Kadıköy" />
-                                <Input label="Şehir" placeholder="İstanbul" />
-                            </div>
-                        </div>
-                    </StepSection>
-
-                    {/* STEP 2: SHIPPING */}
-                    <StepSection
-                        step={2} currentStep={currentStep} setCurrentStep={setCurrentStep}
-                        title="Kargo Seçimi" icon={Truck}
-                        summary="Yurtiçi Kargo (Ücretsiz)"
-                    >
-                        <div className="space-y-3">
-                            {[
-                                { name: "Yurtiçi Kargo", price: "Ücretsiz", time: "1-2 İş Günü", selected: true },
-                                { name: "MNG Kargo", price: "+15₺", time: "2-3 İş Günü", selected: false },
-                                { name: "Moffi Jet", price: "+49₺", time: "Aynı Gün", selected: false },
-                            ].map((opt, i) => (
-                                <div key={i} className={cn(
-                                    "p-4 rounded-2xl border flex items-center justify-between cursor-pointer transition-all",
-                                    opt.selected
-                                        ? "border-[#5B4D9D] bg-purple-50/50 dark:bg-purple-900/10"
-                                        : "border-gray-100 dark:border-white/5 hover:bg-gray-50"
-                                )}>
-                                    <div className="flex items-center gap-3">
-                                        <div className={cn("w-5 h-5 rounded-full border-2 flex items-center justify-center", opt.selected ? "border-[#5B4D9D]" : "border-gray-300")}>
-                                            {opt.selected && <div className="w-2.5 h-2.5 bg-[#5B4D9D] rounded-full" />}
-                                        </div>
-                                        <div>
-                                            <h4 className="font-bold text-sm text-gray-900 dark:text-white">{opt.name}</h4>
-                                            <p className="text-xs text-gray-500">{opt.time}</p>
-                                        </div>
+                {/* Right Side - Order Summary */}
+                <div className="lg:col-span-5">
+                    <div className="sticky top-12 bg-white/[0.03] border border-white/10 rounded-[3rem] p-8 backdrop-blur-2xl">
+                        <h2 className="text-xl font-black uppercase tracking-widest mb-8 flex items-center gap-3"><Terminal className="w-5 h-5 text-cyan-400" />Sipariş Özeti</h2>
+                        
+                        <div className="flex flex-col gap-6 mb-8 mt-4">
+                            {cart.map((item, idx) => (
+                                <div key={idx} className="flex gap-4 p-4 rounded-3xl bg-black/30 border border-white/5 relative overflow-hidden group">
+                                    <div className="w-24 h-24 rounded-2xl bg-white/10 relative shrink-0 overflow-hidden border border-white/10 flex items-center justify-center p-2">
+                                        {/* Fallback pattern in case image is missing */}
+                                        {item.garmentImage ? (
+                                            <img src={item.garmentImage} className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-50" alt="Garment" />
+                                        ) : (
+                                            <ShoppingBag className="w-8 h-8 text-white/20 absolute" />
+                                        )}
+                                        
+                                        {item.printDesign && (
+                                            <div className="relative z-10 w-full h-full flex items-center justify-center overflow-hidden">
+                                                <img src={item.printDesign} className={cn(
+                                                    "w-full h-full object-contain mb-2",
+                                                    item.printPosition === 'top-left' && "scale-50 -translate-x-4 -translate-y-4",
+                                                    item.printPosition === 'top-right' && "scale-50 translate-x-4 -translate-y-4",
+                                                    item.printPosition === 'bottom-center' && "scale-75 translate-y-6"
+                                                )} alt="Print" />
+                                            </div>
+                                        )}
                                     </div>
-                                    <span className="font-bold text-sm text-[#5B4D9D]">{opt.price}</span>
+                                    <div className="flex flex-col justify-center flex-1">
+                                        <h3 className="font-bold text-white text-base truncate">Moffi Özel Üretim</h3>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 rounded font-black text-[10px] uppercase">BEDEN: {item.size}</span>
+                                        </div>
+                                        <p className="mt-3 font-mono font-black text-white/80">{Number(item.price).toLocaleString('tr-TR')} ₺</p>
+                                    </div>
                                 </div>
                             ))}
                         </div>
-                    </StepSection>
 
-                    {/* STEP 3: PAYMENT */}
-                    <StepSection
-                        step={3} currentStep={currentStep} setCurrentStep={setCurrentStep}
-                        title="Ödeme Yöntemi" icon={CreditCard}
-                    >
-                        <div className="space-y-6">
-                            {/* Card Visual */}
-                            <div className="w-full h-48 rounded-2xl bg-gradient-to-br from-gray-900 to-black p-6 text-white shadow-xl relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
-                                <div className="relative z-10 flex flex-col justify-between h-full">
-                                    <div className="flex justify-between items-start">
-                                        <span className="font-mono text-sm opacity-70">Credit Card</span>
-                                        <div className="w-8 h-5 bg-white/20 rounded flex items-center justify-center text-[10px]">CHIP</div>
-                                    </div>
-                                    <div className="font-mono text-xl tracking-widest mt-4">**** **** **** 4242</div>
-                                    <div className="flex justify-between items-end">
-                                        <div>
-                                            <div className="text-[10px] opacity-70 uppercase mb-1">Card Holder</div>
-                                            <div className="text-sm font-bold">MOFFI USER</div>
-                                        </div>
-                                        <div className="w-10 h-6 bg-white/90 rounded-sm"></div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <form className="space-y-4">
-                                <Input label="Kart Numarası" placeholder="0000 0000 0000 0000" />
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Input label="Son Kullanma (AA/YY)" placeholder="12/25" />
-                                    <Input label="CVC" placeholder="123" />
-                                </div>
-                            </form>
-                        </div>
-                    </StepSection>
-
-                    {/* ACTION BAR */}
-                    <div className="p-6 border-t border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5">
-                        <div className="flex justify-between items-center mb-6">
-                            <span className="text-gray-500 font-medium">Toplam Tutar</span>
-                            <span className="text-2xl font-black text-[#5B4D9D]">{total}₺</span>
+                        <div className="space-y-4 pt-8 border-t border-white/10 mb-8">
+                            <div className="flex justify-between text-gray-400 text-sm font-semibold"><span>Ara Toplam</span><span>{cartTotal.toLocaleString('tr-TR')} ₺</span></div>
+                            <div className="flex justify-between text-white text-xl font-black tracking-widest pt-4 uppercase"><span>Toplam</span><span>{cartTotal.toLocaleString('tr-TR')} ₺</span></div>
                         </div>
 
-                        <button
-                            onClick={handleNext}
-                            disabled={isProcessing}
-                            className={cn(
-                                "w-full py-4 bg-[#5B4D9D] text-white rounded-2xl font-bold text-lg shadow-xl shadow-purple-500/20 flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95",
-                                isProcessing ? "opacity-80 cursor-not-allowed" : ""
-                            )}
+                        <button 
+                            disabled={isCheckingOut}
+                            onClick={handleConfirmPayment}
+                            className="w-full py-6 rounded-[2rem] bg-white text-black font-black uppercase tracking-[0.2em] hover:bg-cyan-400 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                         >
-                            {isProcessing ? (
-                                <>
-                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                    İşleniyor...
-                                </>
-                            ) : (
-                                <>
-                                    {currentStep === 3 ? "Siparişi Tamamla" : "Devam Et"}
-                                    <ArrowRight className="w-5 h-5" />
-                                </>
-                            )}
+                            {isCheckingOut ? <Sparkles className="w-6 h-6 animate-spin" /> : <>Ödemeyi Tamamla <ArrowLeft className="w-5 h-5 rotate-180" /></>}
+                        </button>
+
+                        {/* --- DEVELOPER NOTE FOR PHASE 2 --- */}
+                        <button 
+                            onClick={() => alert("FAZ-2 İYZİCO (GERÇEK ÖDEME) ENTEGRASYON PLANI:\n\n1) Resmi Şahıs veya Limited Şirketi aktif edilecek.\n2) İyzico platformuna başvurulup 'API_KEY' ve 'SECRET_KEY' alınacak.\n3) Geliştirici YZ'ye 'Şifreleri aldım, hadi İyzico'yu kuralım!' denilecek.\n4) Kasa sistemi Supabase veritabanı ile bağlanıp saatler içinde canlı E-Ticaret aktif edilecek. 🚀")}
+                            className="w-full mt-4 py-3 bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                        >
+                            <ShieldCheck className="w-4 h-4" /> Faz-2 İYZİCO Entegrasyon Notu
                         </button>
                     </div>
-
                 </div>
-
-                <p className="text-center text-xs text-gray-400 mt-6 flex items-center justify-center gap-2">
-                    <Lock className="w-3 h-3" /> Tüm işlemler 256-bit SSL ile şifrelenmektedir.
-                </p>
-
             </div>
         </main>
-    );
-}
-
-// --- SUB COMPONENTS ---
-
-function StepSection({ step, currentStep, setCurrentStep, title, icon: Icon, summary, children }: any) {
-    const isActive = step === currentStep;
-    const isCompleted = step < currentStep;
-
-    return (
-        <div className={cn("border-b border-gray-100 dark:border-white/5 last:border-0 transition-all", isActive ? "bg-white dark:bg-[#1A1A1A]" : "bg-gray-50/30 dark:bg-white/5")}>
-            <button
-                onClick={() => setCurrentStep(step)}
-                className="w-full flex items-center justify-between p-6 text-left"
-                disabled={!isCompleted && !isActive}
-            >
-                <div className="flex items-center gap-3">
-                    <div className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
-                        isActive ? "bg-[#5B4D9D]/10 text-[#5B4D9D]" : (isCompleted ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400")
-                    )}>
-                        {isCompleted ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
-                    </div>
-                    <div>
-                        <h3 className={cn("font-bold text-sm", isActive ? "text-gray-900 dark:text-white" : "text-gray-500")}>{title}</h3>
-                        {isCompleted && summary && <p className="text-xs text-gray-400 font-medium">{summary}</p>}
-                    </div>
-                </div>
-                <ChevronDown className={cn("w-4 h-4 text-gray-400 transition-transform", isActive ? "rotate-180" : "")} />
-            </button>
-
-            <AnimatePresence>
-                {isActive && (
-                    <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
-                    >
-                        <div className="px-6 pb-8 pt-0">
-                            {children}
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </div>
-    );
-}
-
-function Input({ label, textarea, ...props }: any) {
-    return (
-        <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-500 ml-1">{label}</label>
-            {textarea ? (
-                <textarea
-                    className="w-full p-4 bg-gray-50 dark:bg-black border border-gray-200 dark:border-white/10 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#5B4D9D]/50 transition-all resize-none h-24"
-                    {...props}
-                />
-            ) : (
-                <input
-                    className="w-full p-4 bg-gray-50 dark:bg-black border border-gray-200 dark:border-white/10 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#5B4D9D]/50 transition-all"
-                    {...props}
-                />
-            )}
-        </div>
     );
 }

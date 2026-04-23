@@ -3,6 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ShieldAlert, Trash2, MapPin, ChevronRight } from 'lucide-react';
+import { PetSwitcher } from '../common/PetSwitcher';
 
 interface RadarTabProps {
     onAddSOS: () => void;
@@ -29,9 +30,13 @@ export function RadarTab({
             exit={{ opacity: 0, scale: 0.98 }}
             className="h-full w-full overflow-y-auto no-scrollbar pb-32 bg-[#0A0A0E] flex flex-col items-center"
         >
-            <div className="w-full max-w-md mx-auto relative">
-                <div className="w-full pt-6 pb-2 px-0 border-b border-red-500/20 relative">
-                    <div className="px-6 mb-3 flex items-center justify-between">
+            <div className="w-full max-w-md mx-auto relative px-6 pt-8">
+                <div className="flex justify-center mb-8">
+                    <PetSwitcher onAddPet={onAddSOS} />
+                </div>
+                
+                <div className="w-full pt-2 pb-2 px-0 border-b border-red-500/20 relative">
+                    <div className="mb-3 flex items-center justify-between">
                         <h3 className="text-red-500 font-bold text-sm tracking-wide uppercase flex items-center gap-2"><ShieldAlert className="w-4 h-4" /> Aktif İhbarlar</h3>
                         <button onClick={onAddSOS} className="px-3 py-1.5 rounded-full bg-red-500/10 text-red-500 text-[10px] font-black uppercase tracking-wider hover:bg-red-500/20 active:scale-95 transition-all">
                             + İlan Ekle
@@ -56,8 +61,8 @@ export function RadarTab({
 
                                     <div className="flex gap-4 items-start">
                                         <div className="w-16 h-16 rounded-xl bg-red-500/20 flex flex-col items-center justify-center shrink-0 border border-red-500/30 shadow-inner group-hover:bg-red-500/30 transition-colors relative overflow-hidden">
-                                            {pet.media_url ? (
-                                                <img src={pet.media_url} className="w-full h-full object-cover" />
+                                            {pet.img ? (
+                                                <img src={pet.img} className="w-full h-full object-cover" />
                                             ) : (
                                                 <>
                                                     <div className="absolute inset-0 bg-red-500/20 animate-ping rounded-full" />
@@ -66,12 +71,19 @@ export function RadarTab({
                                             )}
                                         </div>
                                         <div className="flex-1 mt-0.5">
-                                            <h3 className="text-red-500 font-bold text-sm tracking-wide uppercase flex items-center gap-2">Dikkat Kayıp!</h3>
-                                            <p className="text-white font-black text-base mt-0.5 tracking-tight">{pet.pet_name} <span className="text-xs text-white/50 font-normal">({pet.pet_breed || "Bilinmiyor"})</span></p>
-                                            <p className="text-[10px] text-gray-500 mt-2 flex items-center gap-1 opacity-80"><MapPin className="w-3 h-3" /> {pet.last_location}</p>
+                                            <div className="flex items-center justify-between">
+                                                <h3 className="text-red-500 font-bold text-sm tracking-wide uppercase flex items-center gap-2">Dikkat Kayıp!</h3>
+                                                {pet.reward_enabled && pet.reward && (
+                                                    <span className="px-2 py-0.5 rounded-lg bg-orange-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-orange-500/20">
+                                                        Ödüllü
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-white font-black text-base mt-0.5 tracking-tight">{pet.name} <span className="text-xs text-white/50 font-normal">({pet.type || "Bilinmiyor"})</span></p>
+                                            <p className="text-[10px] text-gray-500 mt-2 flex items-center gap-1 opacity-100 font-bold"><MapPin className="w-3 h-3 text-cyan-400" /> {pet.last_seen_location || pet.location}</p>
                                         </div>
                                     </div>
-                                    <p className="text-gray-300 text-xs mt-1 leading-snug line-clamp-2 px-1">{pet.description || "Lütfen görünce acil dönüş yapın."}</p>
+                                    <p className="text-gray-300 text-[10px] mt-1 leading-snug line-clamp-2 px-1 italic">"{pet.description || "Lütfen görünce acil dönüş yapın."}"</p>
                                 </div>
                             ))}
                         </div>

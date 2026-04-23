@@ -1,21 +1,29 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
     Search, ShoppingBag, Heart, Star, ChevronLeft,
     ShoppingCart, Plus, Minus, X, Bone, Fish,
-    Package, Truck, CheckCircle2, Tag, Sparkles, AlertCircle
+    Package, Truck, CheckCircle2, Tag, Sparkles, AlertCircle, Info, ArrowRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { usePetShop } from "@/hooks/usePetShop";
 import type { ShopCategory, ShopProduct } from "@/types/domain";
+import AdvisorChat from "@/components/petshop/AdvisorChat";
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
+import { CheckoutForm } from '@/components/shop/CheckoutForm';
+import { OrderTrackingModal } from '@/components/shop/OrderTrackingModal';
+import confetti from 'canvas-confetti';
+
+const stripePromise = loadStripe('pk_test_51O7Lq8L0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k');
 
 // ==========================================
 // CATEGORY CONFIG
 // ==========================================
-const CATEGORIES: Array<{ id: ShopCategory | 'all'; label: string; icon: typeof Sparkles; color: string }> = [
+const CATEGORIES: Array<{ id: ShopCategory | 'all'; label: string; icon: any; color: string }> = [
     { id: 'all', label: 'Tümü', icon: Sparkles, color: 'from-purple-500 to-indigo-500' },
     { id: 'food', label: 'Mama', icon: Bone, color: 'from-amber-500 to-orange-500' },
     { id: 'snack', label: 'Atıştırmalık', icon: Fish, color: 'from-pink-500 to-rose-500' },
@@ -27,7 +35,7 @@ const CATEGORIES: Array<{ id: ShopCategory | 'all'; label: string; icon: typeof 
 // ==========================================
 // EMPTY STATE
 // ==========================================
-function EmptyState({ icon: Icon, title, description }: { icon: typeof AlertCircle; title: string; description: string }) {
+function EmptyState({ icon: Icon, title, description }: { icon: any; title: string; description: string }) {
     return (
         <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
             <div className="w-16 h-16 bg-gray-100 dark:bg-white/5 rounded-2xl flex items-center justify-center mb-4">
@@ -50,15 +58,44 @@ export default function PetShopPage() {
         fetchProducts, searchProducts,
         addToCart, updateCartItem, removeFromCart, clearCart,
         validateDiscount, createOrder,
+        subscriptions, subscribeToProduct
     } = usePetShop();
 
     const [activeCategory, setActiveCategory] = useState<ShopCategory | 'all'>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [showCart, setShowCart] = useState(false);
+    const [showAdvisor, setShowAdvisor] = useState(false);
     const [favorites, setFavorites] = useState<Set<string>>(new Set());
     const [sortBy, setSortBy] = useState<'popular' | 'price_low' | 'price_high'>('popular');
     const [discountCode, setDiscountCode] = useState('');
     const [discountResult, setDiscountResult] = useState<{ valid: boolean; discountPercent?: number; message?: string } | null>(null);
+    
+    // PAYMENT & TRACKING STATES
+    const [showCheckout, setShowCheckout] = useState(false);
+    const [paymentClientSecret, setPaymentClientSecret] = useState<string | null>(null);
+    const [showTracking, setShowTracking] = useState(false);
+    const [lastOrderId, setLastOrderId] = useState<string | null>(null);
+
+    // ECOSYSTEM PREFERENCES
+    const [isSmartShopEnabled, setIsSmartShopEnabled] = useState(true);
+    const [showSmartModal, setShowSmartModal] = useState(false);
+
+    useEffect(() => {
+        const smartSaved = localStorage.getItem('moffi_smart_shop_enabled');
+        if (smartSaved !== null) setIsSmartShopEnabled(smartSaved === 'true');
+
+        const modalShown = localStorage.getItem('moffi_smart_shop_modal_shown');
+        if (!modalShown && smartSaved === null) {
+            setTimeout(() => setShowSmartModal(true), 2000);
+        }
+    }, []);
+
+    const handleEnableSmart = (enable: boolean) => {
+        setIsSmartShopEnabled(enable);
+        localStorage.setItem('moffi_smart_shop_enabled', String(enable));
+        localStorage.setItem('moffi_smart_shop_modal_shown', 'true');
+        setShowSmartModal(false);
+    };
 
     // Handle category change
     const handleCategoryChange = (catId: ShopCategory | 'all') => {
@@ -99,47 +136,126 @@ export default function PetShopPage() {
         setDiscountResult(result);
     };
 
+    const handleCheckoutInit = async () => {
+        setIsLoading(true);
+        try {
+            const response = await fetch('/api/create-payment-intent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    amount: cartTotal,
+                    items: cart 
+                }),
+            });
+            const data = await response.json();
+            setPaymentClientSecret(data.clientSecret);
+            setShowCheckout(true);
+        } catch (err) {
+            console.error("Payment setup failed:", err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handlePaymentSuccess = async (paymentIntentId: string) => {
+        setShowCheckout(false);
+        setIsLoading(true);
+        try {
+            const order = await createOrder('Müşteri Adresi', discountCode);
+            if (order) {
+                setLastOrderId(order.id);
+                setShowCart(false);
+                setShowTracking(true);
+                confetti({
+                    particleCount: 150,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    colors: ['#5B4D9D', '#FF9500', '#FFFFFF']
+                });
+            }
+        } catch (err) {
+            console.error("Order creation failed:", err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Dynamic Filter for Quick Buy Bar
+    const quickBuyProducts = useMemo(() => {
+        if (isSmartShopEnabled) {
+            return products.filter(p => p.isRecentlyBought);
+        }
+        // Fallback: Trend Products (Top rated)
+        return products.filter(p => p.rating >= 4.8).slice(0, 5);
+    }, [products, isSmartShopEnabled]);
+
     return (
-        <div className="min-h-screen bg-[#FAFAFA] dark:bg-black pb-32 font-sans">
+        <div className="min-h-screen bg-[#F9FAFB] dark:bg-[#050505] pb-32 font-sans selection:bg-orange-500/30">
 
             {/* HEADER */}
-            <div className="sticky top-0 z-50 bg-white/80 dark:bg-black/80 backdrop-blur-2xl border-b border-gray-100 dark:border-white/5">
+            <div className="sticky top-0 z-50 bg-white/70 dark:bg-black/70 backdrop-blur-3xl border-b border-gray-100 dark:border-white/5 transition-colors">
                 <div className="flex items-center justify-between px-5 pt-4 pb-2">
                     <button 
                         onClick={() => {
-                            if (window.history.length > 2) {
-                                router.back();
-                            } else {
-                                router.push('/community');
-                            }
+                            if (window.history.length > 2) router.back();
+                            else router.push('/community');
                         }} 
-                        className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-white/5 rounded-full transition-colors"
+                        className="w-10 h-10 flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-all active:scale-95"
                     >
-                        <ChevronLeft className="w-6 h-6 text-gray-700 dark:text-white" />
+                        <ChevronLeft className="w-6 h-6 text-gray-900 dark:text-white" />
                     </button>
-
-                    <h1 className="text-xl font-black tracking-tight text-gray-900 dark:text-white">PetShop</h1>
-
-                    <button onClick={() => setShowCart(true)} className="relative w-10 h-10 flex items-center justify-center">
-                        <ShoppingCart className="w-6 h-6 text-gray-700 dark:text-white" />
+                    <h1 className="text-xl font-black tracking-tighter text-gray-900 dark:text-white italic uppercase">Moffi PetShop</h1>
+                    <button onClick={() => setShowCart(true)} className="relative w-10 h-10 flex items-center justify-center group">
+                        <ShoppingCart className="w-6 h-6 text-gray-900 dark:text-white group-active:scale-90 transition-transform" />
                         {cartCount > 0 && (
-                            <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-orange-500 text-white text-[10px] font-black rounded-full flex items-center justify-center">
+                            <motion.span 
+                                initial={{ scale: 0 }} animate={{ scale: 1 }}
+                                className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-orange-500 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-lg shadow-orange-500/30"
+                            >
                                 {cartCount}
-                            </span>
+                            </motion.span>
                         )}
                     </button>
                 </div>
 
                 {/* SEARCH */}
                 <div className="px-5 pb-3">
-                    <div className="relative">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <div className="relative group">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-orange-500 transition-colors" />
                         <input
                             value={searchQuery}
                             onChange={e => handleSearch(e.target.value)}
                             placeholder="Ürün veya marka ara..."
-                            className="w-full h-10 pl-10 pr-4 bg-gray-100 dark:bg-white/5 rounded-xl text-sm text-gray-800 dark:text-white placeholder:text-gray-400 outline-none border-none"
+                            className="w-full h-11 pl-10 pr-4 bg-gray-200/50 dark:bg-white/5 rounded-2xl text-sm text-gray-900 dark:text-white placeholder:text-gray-500 outline-none border-2 border-transparent focus:border-orange-500/10 focus:bg-white dark:focus:bg-black/20 transition-all font-medium"
                         />
+                    </div>
+                </div>
+            </div>
+
+            {/* QUICK BUY BAR (MILO'S FAVORITES or TREND) */}
+            <div className="px-5 pt-4 pb-2">
+                <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-[13px] font-black text-gray-900 dark:text-white uppercase tracking-tighter">
+                        {isSmartShopEnabled ? "Milo'nun Favorileri 🦴" : "Haftanın Trendleri 🔥"}
+                    </h2>
+                    <span className="text-[10px] font-bold text-orange-500 uppercase tracking-widest">Hızlı Al</span>
+                </div>
+                <div className="flex gap-3 overflow-x-auto no-scrollbar scroll-smooth pb-2">
+                    {quickBuyProducts.map(product => (
+                        <motion.button
+                            key={`quick-${product.id}`}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => addToCart(product.id)}
+                            className="flex flex-col items-center shrink-0 w-24 bg-white dark:bg-white/5 rounded-3xl p-3 border border-gray-100 dark:border-white/5 shadow-sm active:bg-orange-50 transition-colors"
+                        >
+                            <span className="text-3xl mb-2 drop-shadow-md">{product.image}</span>
+                            <span className="text-[9px] font-black text-gray-900 dark:text-white/80 text-center line-clamp-1 italic uppercase tracking-tighter">{product.name}</span>
+                            <span className="text-[10px] font-black text-orange-500 mt-1">₺{(product.price || 0).toLocaleString('tr-TR')}</span>
+                        </motion.button>
+                    ))}
+                    <div className="flex flex-col items-center justify-center shrink-0 w-24 bg-gray-50 dark:bg-white/5 rounded-3xl p-3 border border-dashed border-gray-200 dark:border-white/10">
+                        <Plus className="w-5 h-5 text-gray-400 mb-1" />
+                        <span className="text-[8px] font-bold text-gray-400 uppercase">Daha Fazla</span>
                     </div>
                 </div>
             </div>
@@ -161,16 +277,16 @@ export default function PetShopPage() {
 
             {/* CATEGORIES */}
             <div className="px-5 pt-4 pb-2">
-                <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth">
                     {CATEGORIES.map(cat => (
                         <button
                             key={cat.id}
                             onClick={() => handleCategoryChange(cat.id)}
                             className={cn(
-                                "flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all",
+                                "flex items-center gap-1.5 px-4 h-11 rounded-[1.2rem] text-xs font-black uppercase tracking-tighter whitespace-nowrap transition-all active:scale-95 shadow-sm",
                                 activeCategory === cat.id
-                                    ? `bg-gradient-to-r ${cat.color} text-white shadow-lg`
-                                    : "bg-white dark:bg-white/5 text-gray-600 dark:text-gray-400 border border-gray-100 dark:border-white/10"
+                                    ? `bg-gradient-to-r ${cat.color} text-white shadow-[0_10px_20px_-5px_rgba(0,0,0,0.15)] ring-2 ring-white/10`
+                                    : "bg-white dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-white/10 hover:border-orange-500/20"
                             )}
                         >
                             <cat.icon className="w-3.5 h-3.5" />
@@ -184,68 +300,35 @@ export default function PetShopPage() {
             <div className="px-5 py-2 flex items-center justify-between">
                 <span className="text-xs text-gray-400 font-medium">{sortedProducts.length} ürün</span>
                 <div className="flex gap-1.5">
-                    {[
-                        { key: 'popular' as const, label: 'Popüler' },
-                        { key: 'price_low' as const, label: 'En Ucuz' },
-                        { key: 'price_high' as const, label: 'En Pahalı' },
-                    ].map(s => (
+                    {(['popular', 'price_low', 'price_high'] as const).map(sKey => (
                         <button
-                            key={s.key}
-                            onClick={() => setSortBy(s.key)}
+                            key={sKey}
+                            onClick={() => setSortBy(sKey)}
                             className={cn(
                                 "px-3 py-1 rounded-lg text-[10px] font-bold transition-all",
-                                sortBy === s.key ? "bg-gray-900 dark:bg-white text-white dark:text-black" : "bg-gray-100 dark:bg-white/5 text-gray-500"
+                                sortBy === sKey ? "bg-gray-900 dark:bg-white text-white dark:text-black" : "bg-gray-100 dark:bg-white/5 text-gray-500"
                             )}
                         >
-                            {s.label}
+                            {sKey === 'popular' ? 'Popüler' : sKey === 'price_low' ? 'En Ucuz' : 'En Pahalı'}
                         </button>
                     ))}
                 </div>
             </div>
 
-            {/* BANNER */}
-            <div className="px-5 mb-4">
-                <div className="relative h-28 bg-gradient-to-r from-orange-500 to-amber-400 rounded-2xl overflow-hidden flex items-center px-6">
-                    <div className="absolute -right-4 -bottom-4 text-7xl opacity-30">🐱</div>
-                    <div>
-                        <p className="text-white/80 text-xs font-bold mb-1">🎉 İlk Siparişe Özel</p>
-                        <h2 className="text-white text-2xl font-black">%20 İndirim</h2>
-                        <p className="text-white/70 text-xs mt-1">MOFFI20 koduyla</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* LOADING SKELETON */}
-            {isLoading && sortedProducts.length === 0 && (
+            {/* PRODUCTS GRID */}
+            {isLoading && sortedProducts.length === 0 ? (
                 <div className="px-5 grid grid-cols-2 gap-3">
                     {Array.from({ length: 6 }).map((_, i) => (
-                        <div key={i} className="bg-white dark:bg-white/5 rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5 animate-pulse">
-                            <div className="h-32 bg-gray-100 dark:bg-white/5" />
-                            <div className="p-3 space-y-2">
-                                <div className="h-2 w-12 bg-gray-200 dark:bg-white/10 rounded" />
-                                <div className="h-3 w-full bg-gray-200 dark:bg-white/10 rounded" />
-                                <div className="h-3 w-2/3 bg-gray-200 dark:bg-white/10 rounded" />
-                                <div className="flex justify-between items-center mt-2">
-                                    <div className="h-4 w-14 bg-gray-200 dark:bg-white/10 rounded" />
-                                    <div className="h-8 w-8 bg-gray-200 dark:bg-white/10 rounded-xl" />
-                                </div>
-                            </div>
-                        </div>
+                        <div key={i} className="h-48 bg-gray-100 dark:bg-white/5 rounded-2xl animate-pulse" />
                     ))}
                 </div>
-            )}
-
-            {/* EMPTY STATE */}
-            {!isLoading && sortedProducts.length === 0 && (
+            ) : sortedProducts.length === 0 ? (
                 <EmptyState
                     icon={Search}
                     title="Ürün bulunamadı"
-                    description={searchQuery ? `"${searchQuery}" ile eşleşen ürün yok. Farklı bir arama deneyin.` : "Bu kategoride henüz ürün yok."}
+                    description={searchQuery ? `"${searchQuery}" ile eşleşen ürün yok.` : "Bu kategoride henüz ürün yok."}
                 />
-            )}
-
-            {/* PRODUCTS GRID */}
-            {sortedProducts.length > 0 && (
+            ) : (
                 <div className="px-5 grid grid-cols-2 gap-3">
                     {sortedProducts.map((product, i) => {
                         const qty = getCartQty(product.id);
@@ -255,80 +338,105 @@ export default function PetShopPage() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: i * 0.04 }}
-                                className="bg-white dark:bg-white/5 rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5 shadow-sm hover:shadow-md transition-all group"
+                                className="bg-white dark:bg-white/5 rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5 shadow-sm group"
                             >
-                                {/* Product Image Area */}
-                                <div className="relative h-32 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-white/5 dark:to-white/2 flex items-center justify-center">
-                                    <span className="text-5xl group-hover:scale-110 transition-transform">{product.image}</span>
-
+                                <div className="relative h-36 bg-gradient-to-br from-white to-gray-100/50 dark:from-white/5 dark:to-transparent flex items-center justify-center overflow-hidden">
+                                    <span className="text-5xl drop-shadow-2xl group-hover:scale-125 transition-transform duration-500">{product.image}</span>
                                     {product.tag && (
                                         <span className={cn(
-                                            "absolute top-2 left-2 px-2 py-0.5 rounded-md text-[9px] font-black text-white",
-                                            product.tag === 'Çok Satan' ? 'bg-red-500' :
-                                                product.tag === 'Premium' ? 'bg-purple-500' :
-                                                    product.tag === 'İndirimli' ? 'bg-green-500' :
-                                                        product.tag === 'Yeni' ? 'bg-blue-500' :
-                                                            product.tag === 'Favori' ? 'bg-pink-500' :
-                                                                product.tag === 'Popüler' ? 'bg-amber-500' : 'bg-gray-500'
+                                            "absolute top-2.5 left-2.5 px-2 py-0.5 rounded-lg text-[8px] font-black text-white uppercase tracking-widest shadow-xl border border-white/20",
+                                            product.tag === 'Çok Satan' ? 'bg-red-500/90' : 'bg-blue-500/90'
                                         )}>
                                             {product.tag}
                                         </span>
                                     )}
-
-                                    {!product.inStock && (
-                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                            <span className="text-white text-xs font-bold bg-black/60 px-3 py-1 rounded-lg">Stokta Yok</span>
+                                    <motion.button
+                                        whileTap={{ scale: 0.8 }}
+                                        onClick={e => { e.stopPropagation(); toggleFav(product.id); }}
+                                        className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-white/90 dark:bg-black/60 backdrop-blur-md flex items-center justify-center shadow-lg border border-white/20"
+                                    >
+                                        <Heart className={cn("w-4 h-4 transition-all", favorites.has(product.id) ? "fill-red-500 text-red-500" : "text-gray-400")} />
+                                    </motion.button>
+                                    
+                                    {/* Vet Approved Badge - Conditional */}
+                                    {product.isVetApproved && isSmartShopEnabled && (
+                                        <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-white/90 dark:bg-black/80 backdrop-blur-md px-1.5 py-0.5 rounded-lg border border-emerald-500/30 shadow-sm">
+                                            <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500" />
+                                            <span className="text-[7px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest leading-none">Vet Onaylı</span>
                                         </div>
                                     )}
-
-                                    <button
-                                        onClick={e => { e.stopPropagation(); toggleFav(product.id); }}
-                                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/80 dark:bg-black/40 flex items-center justify-center"
-                                    >
-                                        <Heart className={cn("w-3.5 h-3.5", favorites.has(product.id) ? "fill-red-500 text-red-500" : "text-gray-400")} />
-                                    </button>
                                 </div>
 
-                                {/* Info */}
-                                <div className="p-3">
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">{product.brand}</p>
-                                    <h3 className="text-xs font-bold text-gray-800 dark:text-white leading-tight line-clamp-2 mb-1.5">{product.name}</h3>
-
-                                    <div className="flex items-center gap-1 mb-2">
-                                        <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                                        <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300">{product.rating}</span>
-                                        <span className="text-[10px] text-gray-400">({product.reviews})</span>
+                                <div className="p-4 bg-white dark:bg-black/20">
+                                    <p className="text-[9px] text-gray-400 font-black uppercase tracking-wider mb-1 leading-none">{product.brand?.name || "Moffi"}</p>
+                                    <h3 className="text-xs font-black text-gray-900 dark:text-white leading-snug line-clamp-2 h-8 italic mb-2">{product.name}</h3>
+                                    
+                                    <div className="flex items-center gap-1.5 mb-3">
+                                        {product.category === 'snack' && isSmartShopEnabled && (
+                                            <div className="flex items-center gap-1 bg-blue-500/10 px-1.5 py-0.5 rounded-lg border border-blue-500/20">
+                                                <Sparkles className="w-2.5 h-2.5 text-blue-500" />
+                                                <span className="text-[7px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest leading-none">Walk Ödülü ⚡</span>
+                                            </div>
+                                        )}
+                                        {product.isRecentlyBought && isSmartShopEnabled && (
+                                            <span className="text-[8px] font-bold text-gray-400 italic">Milo bunu seviyor</span>
+                                        )}
                                     </div>
 
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <span className="text-sm font-black text-gray-900 dark:text-white">₺{product.price}</span>
-                                            {product.oldPrice && (
-                                                <span className="text-[10px] text-gray-400 line-through ml-1">₺{product.oldPrice}</span>
-                                            )}
+                                    {/* Auto-Ship Toggle Visual */}
+                                    <div 
+                                        onClick={() => subscribeToProduct(product.id)}
+                                        className={cn(
+                                            "flex items-center gap-2 mb-3 p-2 rounded-xl border transition-all cursor-pointer",
+                                            subscriptions.find(s => s.id === product.id)
+                                                ? "bg-orange-500 border-orange-600 shadow-md scale-[1.02]"
+                                                : "bg-gray-50 dark:bg-white/5 border-gray-100 dark:border-white/5 hover:bg-orange-50"
+                                        )}
+                                    >
+                                        <div className={cn(
+                                            "w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors",
+                                            subscriptions.find(s => s.id === product.id)
+                                                ? "border-white"
+                                                : "border-orange-500/30"
+                                        )}>
+                                            <div className={cn(
+                                                "w-2 h-2 rounded-full transition-all",
+                                                subscriptions.find(s => s.id === product.id)
+                                                    ? "bg-white scale-100"
+                                                    : "bg-orange-500 opacity-0 group-hover:opacity-100"
+                                            )} />
                                         </div>
+                                        <span className={cn(
+                                            "text-[8px] font-black uppercase tracking-widest leading-none transition-colors",
+                                            subscriptions.find(s => s.id === product.id)
+                                                ? "text-white"
+                                                : "text-gray-500 dark:text-gray-400"
+                                        )}>
+                                            {subscriptions.find(s => s.id === product.id) ? 'Abone Olundu!' : 'Aylık Abone Ol (%10)'}
+                                        </span>
+                                    </div>
 
+                                    <div className="flex items-center justify-between mt-auto">
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-black text-gray-950 dark:text-white">₺{(product.price || 0).toLocaleString('tr-TR')}</span>
+                                        </div>
                                         {qty > 0 ? (
-                                            <div className="flex items-center gap-1.5 bg-orange-500 rounded-lg px-1.5 py-0.5">
+                                            <div className="flex items-center gap-1 bg-orange-500 rounded-xl px-2 py-1 shadow-lg">
                                                 <button onClick={() => {
                                                     if (qty <= 1) removeFromCart(product.id);
                                                     else updateCartItem(product.id, qty - 1);
-                                                }} className="text-white">
-                                                    <Minus className="w-3 h-3" />
-                                                </button>
+                                                }} className="text-white hover:scale-125"><Minus className="w-3.5 h-3.5" /></button>
                                                 <span className="text-white text-xs font-black w-4 text-center">{qty}</span>
-                                                <button onClick={() => updateCartItem(product.id, qty + 1)} className="text-white">
-                                                    <Plus className="w-3 h-3" />
-                                                </button>
+                                                <button onClick={() => updateCartItem(product.id, qty + 1)} className="text-white hover:scale-125"><Plus className="w-3.5 h-3.5" /></button>
                                             </div>
                                         ) : (
-                                            <button
+                                            <motion.button
+                                                whileTap={{ scale: 0.8 }}
                                                 onClick={() => addToCart(product.id)}
-                                                disabled={!product.inStock}
-                                                className="w-8 h-8 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-xl flex items-center justify-center text-white transition-colors"
+                                                className="w-10 h-10 bg-orange-500 rounded-2xl flex items-center justify-center text-white shadow-lg"
                                             >
-                                                <Plus className="w-4 h-4" />
-                                            </button>
+                                                <Plus className="w-5 h-5" />
+                                            </motion.button>
                                         )}
                                     </div>
                                 </div>
@@ -339,17 +447,97 @@ export default function PetShopPage() {
             )}
 
             {/* DELIVERY INFO */}
-            <div className="px-5 mt-6 mb-4">
-                <div className="bg-white dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5 p-4 flex items-center gap-4">
-                    <div className="w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-xl flex items-center justify-center">
-                        <Truck className="w-6 h-6 text-green-600" />
+            <div className="px-5 mt-8 mb-4">
+                <div className="bg-white/40 dark:bg-white/5 backdrop-blur-md rounded-[2.2rem] border border-white/40 dark:border-white/10 p-5 flex items-center gap-5 group shadow-sm">
+                    <div className="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center border border-emerald-500/20">
+                        <Truck className="w-7 h-7 text-emerald-600" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-bold text-gray-800 dark:text-white">Ücretsiz Kargo</h3>
-                        <p className="text-xs text-gray-400">₺200 üzeri siparişlerde · Aynı gün kargo</p>
+                        <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter italic">Ücretsiz Kargo</h3>
+                        <p className="text-[11px] text-gray-500 font-bold mt-0.5">₺200 üzeri siparişlerde · Aynı gün kapında ⚡</p>
                     </div>
                 </div>
             </div>
+
+            {/* AI ADVISOR PULSE BUTTON */}
+            <motion.button
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setShowAdvisor(true)}
+                className="fixed bottom-32 right-6 z-40 w-14 h-14 bg-gray-900 dark:bg-white rounded-full flex items-center justify-center shadow-2xl group border-4 border-white dark:border-black transition-all"
+            >
+                <div className="absolute inset-0 bg-gray-900 dark:bg-white rounded-full animate-ping opacity-20" />
+                <Sparkles className="w-6 h-6 text-white dark:text-gray-900 group-hover:rotate-12 transition-transform" />
+            </motion.button>
+
+            {/* SMART INTEGRATION MODAL */}
+            <AnimatePresence>
+                {showSmartModal && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="fixed inset-0 z-[101] flex items-center justify-center px-6 pointer-events-none"
+                        >
+                            <div className="w-full max-w-sm bg-white dark:bg-[#0F0F0F] rounded-[2.5rem] overflow-hidden shadow-[0_32px_64px_rgba(0,0,0,0.5)] border border-white/20 pointer-events-auto">
+                                <div className="relative h-48 bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center">
+                                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20" />
+                                    <div className="relative">
+                                        <div className="w-24 h-24 bg-white/20 backdrop-blur-xl rounded-[2rem] flex items-center justify-center border border-white/30 shadow-2xl">
+                                            <Sparkles className="w-12 h-12 text-white animate-pulse" />
+                                        </div>
+                                        <motion.div
+                                            animate={{ y: [0, -10, 0] }}
+                                            transition={{ repeat: Infinity, duration: 2 }}
+                                            className="absolute -top-4 -right-4 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg"
+                                        >
+                                            <Bone className="w-6 h-6 text-orange-500" />
+                                        </motion.div>
+                                    </div>
+                                </div>
+                                <div className="p-8 text-center">
+                                    <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tighter italic leading-tight">
+                                        Akıllı Mağaza<br/>Deneyimine Hazır mısın?
+                                    </h3>
+                                    <p className="text-xs text-gray-500 font-medium mt-3 leading-relaxed px-2">
+                                        Milo'nun yürüyüş mesafesi, sağlık verileri ve iştah durumunu analiz ederek ona en uygun mama ve ödülleri önermemize izin ver.
+                                    </p>
+                                    
+                                    <div className="mt-8 space-y-3">
+                                        <button
+                                            onClick={() => handleEnableSmart(true)}
+                                            className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-black text-sm rounded-2xl shadow-xl shadow-orange-500/20 flex items-center justify-center gap-2 transition-all active:scale-95 uppercase tracking-widest italic"
+                                        >
+                                            Entegrasyonu Aç
+                                            <ArrowRight className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            onClick={() => handleEnableSmart(false)}
+                                            className="w-full h-12 text-[10px] font-black text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-widest"
+                                        >
+                                            Şimdilik Bağımsız Kalsın
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="mt-6 flex items-center justify-center gap-2 text-[8px] font-bold text-gray-400 uppercase tracking-widest border-t border-gray-100 dark:border-white/5 pt-6">
+                                        <Info className="w-3 h-3" />
+                                        İstediğin zaman ayarlardan değiştirebilirsin
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
 
             {/* FLOATING CART BAR */}
             <AnimatePresence>
@@ -358,19 +546,19 @@ export default function PetShopPage() {
                         initial={{ y: 100, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: 100, opacity: 0 }}
-                        className="fixed bottom-6 left-5 right-5 z-40"
+                        className="fixed bottom-8 left-6 right-6 z-40"
                     >
                         <button
                             onClick={() => setShowCart(true)}
-                            className="w-full h-14 bg-orange-500 hover:bg-orange-600 rounded-2xl flex items-center justify-between px-6 text-white shadow-2xl shadow-orange-500/30 transition-colors"
+                            className="w-full h-16 bg-orange-500 rounded-[2rem] flex items-center justify-between px-8 text-white shadow-2xl active:scale-95 transition-all group overflow-hidden"
                         >
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                                    <ShoppingCart className="w-4 h-4" />
+                            <div className="flex items-center gap-4 relative z-10">
+                                <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center border border-white/20">
+                                    <ShoppingBag className="w-4 h-4" />
                                 </div>
-                                <span className="font-bold">{cartCount} ürün</span>
+                                <span className="font-black text-sm uppercase tracking-widest">{cartCount} ÜRÜN SEPETTE</span>
                             </div>
-                            <span className="font-black text-lg">₺{cartTotal.toLocaleString('tr-TR')}</span>
+                            <span className="font-black text-xl italic relative z-10">₺{(cartTotal || 0).toLocaleString('tr-TR')}</span>
                         </button>
                     </motion.div>
                 )}
@@ -391,112 +579,80 @@ export default function PetShopPage() {
                             initial={{ y: '100%' }}
                             animate={{ y: 0 }}
                             exit={{ y: '100%' }}
-                            transition={{ type: 'spring', damping: 25 }}
-                            className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 rounded-t-3xl max-h-[75vh] overflow-y-auto"
+                            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                            className="fixed bottom-0 left-0 right-0 z-[60] bg-[#F9FAFB] dark:bg-[#0A0A0A] rounded-t-[3rem] max-h-[85vh] overflow-hidden flex flex-col shadow-2xl"
                         >
+                            <div className="w-12 h-1.5 bg-gray-200 dark:bg-white/10 rounded-full mx-auto mt-3 mb-1 shrink-0" />
+
                             {/* Cart Header */}
-                            <div className="sticky top-0 bg-white dark:bg-gray-900 px-5 pt-4 pb-3 border-b border-gray-100 dark:border-white/5 flex items-center justify-between">
-                                <h2 className="text-lg font-black text-gray-900 dark:text-white">Sepetim</h2>
-                                <button onClick={() => setShowCart(false)} className="w-8 h-8 bg-gray-100 dark:bg-white/10 rounded-full flex items-center justify-center">
-                                    <X className="w-4 h-4 text-gray-500" />
+                            <div className="px-8 pt-4 pb-6 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-white/50 dark:bg-black/20 backdrop-blur-md">
+                                <div>
+                                    <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tighter italic uppercase">Sepetim</h2>
+                                    <p className="text-[10px] text-orange-500 font-black uppercase tracking-widest mt-1">ÖDEME ADIMINA HAZIR</p>
+                                </div>
+                                <button onClick={() => setShowCart(false)} className="w-10 h-10 bg-gray-100 dark:bg-white/10 rounded-full flex items-center justify-center">
+                                    <X className="w-5 h-5 text-gray-500" />
                                 </button>
                             </div>
 
-                            {/* Cart Empty */}
-                            {cart.length === 0 && (
-                                <EmptyState
-                                    icon={ShoppingCart}
-                                    title="Sepet boş"
-                                    description="Ürünleri sepete ekleyerek alışverişe başla!"
-                                />
-                            )}
-
-                            {/* Cart Items */}
-                            {cart.length > 0 && (
-                                <div className="p-5 space-y-3">
-                                    {cart.map(item => {
-                                        const product = products.find(p => p.id === item.productId);
-                                        if (!product) return null;
-                                        return (
-                                            <div key={item.productId} className="flex items-center gap-3 bg-gray-50 dark:bg-white/5 rounded-xl p-3">
-                                                <span className="text-3xl">{product.image}</span>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-xs font-bold text-gray-800 dark:text-white truncate">{product.name}</p>
-                                                    <p className="text-sm font-black text-orange-500 mt-0.5">₺{(product.price * item.quantity).toLocaleString('tr-TR')}</p>
+                            <div className="flex-1 overflow-y-auto no-scrollbar">
+                                {cart.length === 0 ? (
+                                    <EmptyState
+                                        icon={ShoppingCart}
+                                        title="Sepetin şu an boş"
+                                        description="Milo için harika ürünler keşfetmeye ne dersin?"
+                                    />
+                                ) : (
+                                    <div className="p-8 space-y-4">
+                                        {cart.map(item => {
+                                            const product = products.find(p => p.id === item.productId);
+                                            if (!product) return null;
+                                            return (
+                                                <div key={item.productId} className="flex items-center gap-5 bg-white dark:bg-white/5 rounded-[1.8rem] p-4 border border-gray-100 dark:border-white/5 shadow-sm">
+                                                    <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center text-4xl">{product.image}</div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h4 className="text-sm font-bold text-gray-900 dark:text-white truncate italic">{product.name}</h4>
+                                                        <p className="text-base font-black text-orange-500 mt-1.5 leading-none">₺{((product.price || 0) * (item.quantity || 1)).toLocaleString('tr-TR')}</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 bg-gray-100 dark:bg-white/10 rounded-xl px-2 py-1.5">
+                                                        <button onClick={() => {
+                                                            if (item.quantity <= 1) removeFromCart(item.productId);
+                                                            else updateCartItem(item.productId, item.quantity - 1);
+                                                        }}><Minus className="w-4 h-4 text-gray-500" /></button>
+                                                        <span className="text-sm font-black text-gray-900 dark:text-white w-5 text-center">{item.quantity}</span>
+                                                        <button onClick={() => updateCartItem(item.productId, item.quantity + 1)}>
+                                                            <Plus className="w-4 h-4 text-gray-500" />
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-2 bg-white dark:bg-white/10 rounded-lg px-2 py-1 border border-gray-200 dark:border-white/10">
-                                                    <button onClick={() => {
-                                                        if (item.quantity <= 1) removeFromCart(item.productId);
-                                                        else updateCartItem(item.productId, item.quantity - 1);
-                                                    }}><Minus className="w-3.5 h-3.5 text-gray-500" /></button>
-                                                    <span className="text-sm font-black text-gray-800 dark:text-white w-4 text-center">{item.quantity}</span>
-                                                    <button onClick={() => updateCartItem(item.productId, item.quantity + 1)}>
-                                                        <Plus className="w-3.5 h-3.5 text-gray-500" />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-
-                                    {/* Discount Code */}
-                                    <div className="flex gap-2 pt-2">
-                                        <input
-                                            value={discountCode}
-                                            onChange={e => { setDiscountCode(e.target.value); setDiscountResult(null); }}
-                                            placeholder="İndirim kodu..."
-                                            className="flex-1 h-10 px-3 bg-gray-100 dark:bg-white/5 rounded-xl text-sm text-gray-800 dark:text-white placeholder:text-gray-400 outline-none border border-gray-200 dark:border-white/10"
-                                        />
-                                        <button
-                                            onClick={handleApplyDiscount}
-                                            className="px-4 h-10 bg-gray-900 dark:bg-white text-white dark:text-black text-xs font-bold rounded-xl"
-                                        >
-                                            Uygula
-                                        </button>
+                                            );
+                                        })}
+                                        
+                                        <div className="flex gap-3 pt-4">
+                                            <input
+                                                value={discountCode}
+                                                onChange={e => { setDiscountCode(e.target.value); setDiscountResult(null); }}
+                                                placeholder="İndirim kodu..."
+                                                className="flex-1 h-12 px-5 bg-white dark:bg-white/5 rounded-2xl text-sm border-2 border-transparent focus:border-orange-500/20 outline-none"
+                                            />
+                                            <button onClick={handleApplyDiscount} className="px-6 h-12 bg-gray-950 dark:bg-white text-white dark:text-black text-[11px] font-black uppercase rounded-2xl">Uygula</button>
+                                        </div>
                                     </div>
-                                    {discountResult && (
-                                        <p className={cn(
-                                            "text-xs font-medium",
-                                            discountResult.valid ? "text-green-600" : "text-red-500"
-                                        )}>
-                                            {discountResult.message}
-                                        </p>
-                                    )}
-                                </div>
-                            )}
+                                )}
+                            </div>
 
-                            {/* Cart Footer */}
                             {cart.length > 0 && (
-                                <div className="sticky bottom-0 bg-white dark:bg-gray-900 px-5 py-4 border-t border-gray-100 dark:border-white/5">
-                                    <div className="flex items-center justify-between mb-1">
-                                        <span className="text-xs text-gray-400">Ara toplam</span>
-                                        <span className="text-sm font-bold text-gray-600 dark:text-gray-400">₺{cartTotal.toLocaleString('tr-TR')}</span>
+                                <div className="sticky bottom-0 bg-white/80 dark:bg-black/60 backdrop-blur-2xl px-8 py-8 border-t border-gray-100 dark:border-white/5">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <span className="text-base font-black text-gray-900 dark:text-white uppercase tracking-tighter italic">Toplam</span>
+                                        <span className="text-2xl font-black text-gray-950 dark:text-white italic">₺{(cartTotal || 0).toLocaleString('tr-TR')}</span>
                                     </div>
-                                    {discountResult?.valid && discountResult.discountPercent && (
-                                        <div className="flex items-center justify-between mb-1">
-                                            <span className="text-xs text-green-600">İndirim (%{discountResult.discountPercent})</span>
-                                            <span className="text-sm font-bold text-green-600">-₺{Math.round(cartTotal * discountResult.discountPercent / 100).toLocaleString('tr-TR')}</span>
-                                        </div>
-                                    )}
-                                    <div className="flex items-center justify-between mb-3">
-                                        <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Toplam</span>
-                                        <span className="text-xl font-black text-gray-900 dark:text-white">
-                                            ₺{(discountResult?.valid && discountResult.discountPercent
-                                                ? Math.round(cartTotal * (1 - discountResult.discountPercent / 100))
-                                                : cartTotal
-                                            ).toLocaleString('tr-TR')}
-                                        </span>
-                                    </div>
-                                    {cartTotal >= 200 && (
-                                        <div className="flex items-center gap-2 mb-3 text-green-600">
-                                            <CheckCircle2 className="w-4 h-4" />
-                                            <span className="text-xs font-bold">Ücretsiz kargo hakkı kazandın!</span>
-                                        </div>
-                                    )}
                                     <button
-                                        onClick={() => createOrder('Test Adres')}
-                                        className="w-full h-13 bg-orange-500 hover:bg-orange-600 text-white font-black text-base rounded-2xl transition-colors py-3.5"
+                                        onClick={handleCheckoutInit}
+                                        disabled={isLoading}
+                                        className="w-full h-16 bg-orange-500 text-white font-black text-base rounded-[1.8rem] shadow-xl uppercase italic disabled:opacity-50"
                                     >
-                                        Siparişi Tamamla
+                                        {isLoading ? 'Hazırlanıyor...' : 'Siparişi Tamamla'}
                                     </button>
                                 </div>
                             )}
@@ -504,6 +660,56 @@ export default function PetShopPage() {
                     </>
                 )}
             </AnimatePresence>
+
+            {/* STRIPE CHECKOUT MODAL */}
+            <AnimatePresence>
+                {showCheckout && paymentClientSecret && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-xl"
+                            onClick={() => setShowCheckout(false)}
+                        />
+                        <motion.div
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            className="fixed bottom-0 left-0 right-0 z-[111] bg-[#0a0a0a] rounded-t-[3rem] p-8 border-t border-white/10"
+                        >
+                            <div className="max-w-md mx-auto">
+                                <div className="flex items-center justify-between mb-8">
+                                    <h2 className="text-xl font-black text-white italic uppercase tracking-tighter">Güvenli Ödeme</h2>
+                                    <button onClick={() => setShowCheckout(false)} className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center">
+                                        <X size={20} className="text-white/50" />
+                                    </button>
+                                </div>
+                                <Elements stripe={stripePromise} options={{ clientSecret: paymentClientSecret, appearance: { theme: 'night' } }}>
+                                    <CheckoutForm 
+                                        amount={cartTotal} 
+                                        onSuccess={handlePaymentSuccess} 
+                                        onCancel={() => setShowCheckout(false)} 
+                                    />
+                                </Elements>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* HYBRID TRACKING MODAL */}
+            {lastOrderId && (
+                <OrderTrackingModal 
+                    isOpen={showTracking}
+                    onClose={() => setShowTracking(false)}
+                    orderId={lastOrderId}
+                    status="out_for_delivery"
+                />
+            )}
+
+            {/* ADVISOR CHAT */}
+            <AdvisorChat isOpen={showAdvisor} onClose={() => setShowAdvisor(false)} isSmartEnabled={isSmartShopEnabled} />
         </div>
     );
 }

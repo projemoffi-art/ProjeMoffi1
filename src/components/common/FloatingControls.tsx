@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { MoffiAssistant } from "@/components/ai/MoffiAssistant";
 import { AlertTriangle, Car, Skull, AlertOctagon, Footprints, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 

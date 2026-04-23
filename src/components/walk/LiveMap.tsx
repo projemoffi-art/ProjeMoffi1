@@ -19,6 +19,8 @@ interface LiveMapProps {
     visitedPlaceIds: string[];
     onPlaceClick?: (place: Place) => void;
     guardianMode?: boolean;
+    deliveryPos?: [number, number];
+    deliveryPath?: [number, number][];
 }
 
 // --- CUSTOM ICON ---
@@ -32,6 +34,9 @@ const createCustomIcon = (type: string, isPremium: boolean, isVisited: boolean) 
         case 'cafe': colorClass = isVisited ? "bg-gray-400" : "bg-orange-500"; iconEmoji = "☕"; break;
         case 'park': colorClass = isVisited ? "bg-gray-400" : "bg-green-500"; iconEmoji = "🌳"; break;
         case 'shop': colorClass = isVisited ? "bg-gray-400" : "bg-purple-500"; iconEmoji = "🛍️"; break;
+        case 'food': colorClass = isVisited ? "bg-gray-400" : "bg-amber-500"; iconEmoji = "🍖"; break;
+        case 'toy': colorClass = isVisited ? "bg-gray-400" : "bg-blue-400"; iconEmoji = "🎾"; break;
+        case 'care': colorClass = isVisited ? "bg-gray-400" : "bg-emerald-500"; iconEmoji = "💊"; break;
     }
 
     if (isPremium && !isVisited) {
@@ -125,7 +130,10 @@ function MapEngine({ center, searchQuery, filterType, setRouteTo }: { center: [n
     return null;
 }
 
-export default function LiveMap({ userPos, path, isTracking, visitedPlaceIds, onPlaceClick, guardianMode }: LiveMapProps) {
+export default function LiveMap({ 
+    userPos, path, isTracking, visitedPlaceIds, 
+    onPlaceClick, guardianMode, deliveryPos, deliveryPath 
+}: LiveMapProps) {
     // UI State
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<any[]>([]); // Real Address Results
@@ -432,6 +440,42 @@ export default function LiveMap({ userPos, path, isTracking, visitedPlaceIds, on
                         radius={50}
                         pathOptions={{ color: '#5B4D9D', fillColor: '#5B4D9D', fillOpacity: 0.1, weight: 1 }}
                     />
+                )}
+
+                {/* DELIVERY TRACKING VISUALIZATION */}
+                {deliveryPos && (
+                    <>
+                        {/* Courier Path */}
+                        {deliveryPath && (
+                            <Polyline
+                                positions={deliveryPath}
+                                pathOptions={{ 
+                                    color: '#FF9500', 
+                                    weight: 4, 
+                                    opacity: 0.6, 
+                                    dashArray: '10, 10' 
+                                }}
+                            />
+                        )}
+                        {/* Courier Marker */}
+                        <Marker
+                            position={deliveryPos}
+                            icon={L.divIcon({
+                                className: 'courier-icon',
+                                html: `
+                                    <div style="
+                                        width: 40px; height: 40px; background: #FF9500; 
+                                        border: 3px solid white; border-radius: 50%; shadow: 0 4px 15px rgba(255,149,0,0.4);
+                                        display: flex; align-items: center; justify-content: center; font-size: 20px;
+                                    ">
+                                        🛵
+                                    </div>
+                                `,
+                                iconSize: [40, 40],
+                                iconAnchor: [20, 20]
+                            })}
+                        />
+                    </>
                 )}
 
                 <Marker

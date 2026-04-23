@@ -113,7 +113,7 @@ export function ClinicListModal({ isOpen, onClose, clinics, onSelectClinic, isLo
                                                     <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-orange-500" /> {clinic.address}</span>
                                                 </div>
                                                 <div className="flex gap-1.5 mt-3">
-                                                    {clinic.features.slice(0, 2).map(f => (
+                                                    {(clinic.features || []).slice(0, 2).map(f => (
                                                         <span key={f} className="text-[8px] font-black bg-white/5 text-white/20 px-2 py-1 rounded-md border border-white/5 uppercase tracking-tighter">{f}</span>
                                                     ))}
                                                 </div>

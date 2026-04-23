@@ -2,269 +2,330 @@
 
 import { useAuth } from "@/context/AuthContext";
 import {
-    Users, Eye, MousePointer2, Megaphone, Plus, Wallet, MapPin,
-    Shield, Activity, Zap, MessageSquare, Heart, AlertCircle,
-    TrendingUp, Globe, Sparkles, Store, Dog, Building2, Map
+    Users, Plus, Zap, MessageSquare, AlertCircle,
+    TrendingUp, Globe, Sparkles, Store, Dog, Building2, Map, Activity, Shield, Megaphone,
+    Cpu, Radio, Fingerprint, Database, Rocket, LayoutDashboard
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
+import Link from 'next/link';
 
-// -- COMPONENTS --
+// -- PREMIUM COMPONENTS --
 
-const StatPulse = ({ label, value, icon: Icon, color, trend }: any) => (
-    <div className="relative group bg-[#12121A] border border-white/5 rounded-[2rem] p-6 overflow-hidden transition-all hover:border-white/10 hover:shadow-2xl hover:shadow-indigo-500/10 active:scale-[0.98]">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-[50px] rounded-full -mr-16 -mt-16 group-hover:bg-indigo-500/10 transition-colors" />
-
-        <div className="relative z-10">
-            <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110", color)}>
-                <Icon className="w-6 h-6" />
-            </div>
-
-            <div className="flex items-end justify-between">
-                <div>
-                    <h3 className="text-3xl font-black text-white mb-1 tracking-tight">{value}</h3>
-                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">{label}</p>
-                </div>
-                {trend && (
-                    <div className="flex items-center gap-1 text-[10px] font-black text-green-400 bg-green-400/10 px-2 py-1 rounded-lg">
-                        <TrendingUp className="w-3 h-3" />
-                        {trend}
-                    </div>
-                )}
-            </div>
-        </div>
+const GlassCard = ({ children, className, glowColor = "rgba(99, 102, 241, 0.1)" }: any) => (
+    <div className={cn(
+        "relative overflow-hidden bg-black/40 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] shadow-2xl",
+        className
+    )}>
+        {/* Ambient Glow */}
+        <div 
+            className="absolute -top-24 -right-24 w-64 h-64 blur-[100px] pointer-events-none rounded-full"
+            style={{ backgroundColor: glowColor }}
+        />
+        <div className="relative z-10">{children}</div>
     </div>
 );
 
-export default function MoffiCommandCenter() {
+const StatPulse = ({ label, value, icon: Icon, color, trend, delay = 0 }: any) => (
+    <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay }}
+        className="group relative"
+    >
+        <GlassCard className="p-7 border-white/10 hover:border-white/20 transition-all active:scale-[0.98]">
+            <div className="flex items-start justify-between mb-6">
+                <div className={cn("p-3 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 group-hover:rotate-6", color)}>
+                    <Icon className="w-6 h-6" />
+                </div>
+                {trend && (
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="flex items-center gap-1.5 text-[10px] font-black text-green-400 bg-green-400/10 px-3 py-1.5 rounded-full border border-green-400/20 shadow-[0_0_15px_rgba(74,222,128,0.1)]"
+                    >
+                        <TrendingUp className="w-3.5 h-3.5" />
+                        {trend}
+                    </motion.div>
+                )}
+            </div>
+
+            <div className="flex flex-col">
+                <div className="flex items-baseline gap-2">
+                    <h3 className="text-4xl font-black text-white tracking-tighter tabular-nums drop-shadow-2xl">{value}</h3>
+                    <motion.div 
+                        animate={{ opacity: [0.2, 0.5, 0.2] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                        className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]"
+                    />
+                </div>
+                <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] mt-2 translate-y-0 group-hover:text-white/50 transition-colors">{label}</p>
+            </div>
+
+            {/* SCAN LINE EFFECT */}
+            <motion.div 
+                className="absolute inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none"
+                animate={{ top: ["0%", "100%", "0%"] }}
+                transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+            />
+        </GlassCard>
+    </motion.div>
+);
+
+export default function MoffiCoreDashboard() {
     const { user } = useAuth();
-    const [stats, setStats] = useState({
-        users: 0,
-        posts: 0,
-        feedbacks: 0,
-        sos: 0
+    const [currentTime, setCurrentTime] = useState(new Date());
+    const [stats] = useState({
+        users: 1240,
+        posts: 854,
+        feedbacks: 42,
+        sos: 3
     });
-    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                // Use Promise.all for parallel execution - much faster!
-                const [userRes, postRes, fbRes] = await Promise.all([
-                    supabase.from('profiles').select('*', { count: 'exact', head: true }),
-                    supabase.from('posts').select('*', { count: 'exact', head: true }),
-                    supabase.from('feedbacks').select('*', { count: 'exact', head: true })
-                ]);
-
-                setStats({
-                    users: userRes.count || 1240,
-                    posts: postRes.count || 854,
-                    feedbacks: fbRes.count || 42,
-                    sos: 3
-                });
-            } catch (error) {
-                console.error("Stats fetch error:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchStats();
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+        return () => clearInterval(timer);
     }, []);
 
     return (
-        <div className="space-y-10 pb-20">
-            {/* Mission Control Header */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 pb-8 border-b border-white/5">
-                <div className="relative">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="px-2 py-1 bg-red-500/10 border border-red-500/20 rounded-md text-[10px] font-bold text-red-500 uppercase tracking-widest animate-pulse">
-                            Live System
+        <div className="space-y-12 pb-32 max-w-7xl mx-auto px-4 lg:px-0">
+            {/* --- CORE CONTROL HEADER --- */}
+            <div className="relative group">
+                <div className="absolute -inset-10 bg-gradient-to-r from-indigo-500/10 via-cyan-500/10 to-purple-500/10 blur-[80px] opacity-50 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                
+                <div className="relative flex flex-col lg:flex-row lg:items-end justify-between gap-10">
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-4 flex-wrap">
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-cyan-500/10 border border-cyan-500/20 rounded-full">
+                                <Radio className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                                <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">Core Active</span>
+                            </div>
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full">
+                                <Fingerprint className="w-3.5 h-3.5 text-white/40" />
+                                <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Admin Authorization: Valid</span>
+                            </div>
+                            <div className="text-[10px] font-mono text-white/20 uppercase tracking-widest">
+                                {currentTime.toLocaleTimeString()} • {currentTime.toLocaleDateString()}
+                            </div>
                         </div>
-                        <span className="text-gray-600 text-[10px] font-bold uppercase tracking-widest">MCC v1.0.4</span>
-                    </div>
-                    <h1 className="text-5xl font-black text-white tracking-tighter leading-none mb-2">
-                        MOFFI <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600">COMMAND CENTER</span>
-                    </h1>
-                    <p className="text-gray-500 font-medium">Platformun tüm kalbi ve kontrolü senin ellerinde.</p>
-                </div>
 
-                <div className="flex items-center gap-4">
-                    <div className="hidden sm:flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-5 py-3 backdrop-blur-xl">
-                        <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center">
-                            <Zap className="w-4 h-4 text-indigo-400" />
-                        </div>
                         <div>
-                            <p className="text-[10px] font-bold text-gray-500 uppercase">Sistem Durumu</p>
-                            <p className="text-xs font-bold text-green-400">Tüm Servisler Aktif</p>
+                            <motion.h1 
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="text-6xl lg:text-8xl font-black text-white tracking-tighter flex flex-col uppercase leading-none"
+                            >
+                                <span className="opacity-40">Moffi</span>
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white/80 to-white/40 italic drop-shadow-[0_0_30px_rgba(255,255,255,0.2)]">
+                                    Core Center
+                                </span>
+                            </motion.h1>
+                            <p className="text-white/40 font-medium text-lg mt-4 max-w-xl">
+                                Ecosystem synchronization and planetary synchronization protocol active. All systems within nominal parameters.
+                            </p>
                         </div>
                     </div>
-                    <button className="bg-white text-black px-8 py-4 rounded-2xl font-black text-sm shadow-[0_20px_40px_rgba(255,255,255,0.1)] hover:bg-gray-200 transition-all active:scale-95 flex items-center gap-2">
-                        <Plus className="w-5 h-5" />
-                        Sistem Duyurusu Yayınla
-                    </button>
+
+                    <div className="flex items-center gap-4">
+                        <motion.button 
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="px-8 py-5 bg-white text-black rounded-[2rem] font-black text-sm shadow-[0_20px_60px_rgba(255,255,255,0.2)] flex items-center gap-3 transition-all hover:pr-10 group"
+                        >
+                            <Megaphone className="w-5 h-5 transition-transform group-hover:-rotate-12" />
+                            System Broadcast
+                        </motion.button>
+                        <div className="w-16 h-16 rounded-[1.5rem] bg-white/5 border border-white/10 flex items-center justify-center backdrop-blur-xl relative group cursor-help">
+                            <Activity className="w-6 h-6 text-white/40" />
+                            <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 rounded-[1.5rem] transition-opacity" />
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Pulsing Stats Grid */}
+            {/* --- SYNCHRONIZED STATS GRID --- */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatPulse
-                    label="Aktif Kullanıcı"
+                    label="Active Guardians"
                     value={stats.users.toLocaleString()}
                     icon={Users}
-                    color="bg-blue-500/10 text-blue-400"
+                    color="bg-cyan-500/10 text-cyan-400"
                     trend="+12%"
+                    delay={0.1}
                 />
                 <StatPulse
-                    label="Günlük Paylaşım"
+                    label="Planetary Stories"
                     value={stats.posts.toLocaleString()}
-                    icon={Sparkles}
+                    icon={Database}
                     color="bg-purple-500/10 text-purple-400"
                     trend="+18%"
+                    delay={0.2}
                 />
                 <StatPulse
-                    label="Geri Bildirimler"
+                    label="Neural Feedback"
                     value={stats.feedbacks.toLocaleString()}
-                    icon={MessageSquare}
-                    color="bg-cyan-500/10 text-cyan-400"
+                    icon={Cpu}
+                    color="bg-emerald-500/10 text-emerald-400"
+                    delay={0.3}
                 />
                 <StatPulse
-                    label="SOS Alarmları"
+                    label="SOS Priority"
                     value={stats.sos}
-                    icon={AlertCircle}
+                    icon={Rocket}
                     color="bg-red-500/10 text-red-500"
+                    delay={0.4}
                 />
             </div>
 
-            {/* Visual Control Grid */}
+            {/* --- THE HUB: ACTION MATRICES --- */}
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-
-                {/* Module Control: Community */}
-                <div className="xl:col-span-2 bg-[#12121A] rounded-[3rem] border border-white/5 p-10 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                        <Globe className="w-64 h-64 text-blue-500" />
-                    </div>
-
-                    <div className="relative z-10">
-                        <div className="flex items-center justify-between mb-10">
-                            <div>
-                                <h2 className="text-3xl font-black text-white tracking-tight mb-2">Topluluk Navigasyonu</h2>
-                                <p className="text-gray-500 text-sm font-medium">Platformdaki etkileşim ve moderasyon odağı.</p>
+                
+                {/* --- MODULE: MODERATION MATRIX --- */}
+                <GlassCard className="xl:col-span-2 p-1 pt-12 group/matrix" glowColor="rgba(34, 211, 238, 0.05)">
+                    <div className="px-10 pb-10">
+                        <div className="flex items-center justify-between mb-12">
+                            <div className="space-y-2">
+                                <h2 className="text-3xl font-black text-white tracking-tighter uppercase">Moderation Matrix</h2>
+                                <p className="text-white/30 text-xs font-bold uppercase tracking-[0.2em]">Synchronization Level: 99.8%</p>
                             </div>
-                            <div className="flex gap-2">
-                                <Activity className="w-6 h-6 text-indigo-500 animate-pulse" />
+                            <div className="flex gap-1">
+                                {[1,2,3,4].map(i => <motion.div key={i} animate={{ height: [4, 12, 4] }} transition={{ duration: 1, repeat: Infinity, delay: i * 0.1 }} className="w-1 bg-cyan-500/30 rounded-full" />)}
                             </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {[
-                                { title: "İçerik Moderasyonu", desc: "Raporlanan postları ve yorumları incele.", icon: Shield, action: "İncele" },
-                                { title: "Kullanıcı Yönetimi", desc: "Üyeleri yetkilendir veya askıya al.", icon: Users, action: "Yönet" },
-                                { title: "Reklam & Sponsor", desc: "Sponsorlu içerikleri kontrol et.", icon: Megaphone, action: "Ayarlar" },
-                                { title: "Trend Analizi", desc: "En popüler mood ve hashtagler.", icon: TrendingUp, action: "Görüntele" }
+                                { title: "Content Moderation", desc: "Review reported data nodes and social echoes.", icon: Shield, action: "Launch", href: "/admin/moderation" },
+                                { title: "Guardian Control", desc: "Authorize or suspend planetary agents.", icon: Fingerprint, action: "Access", href: "/admin/users" },
+                                { title: "Ecosystem Alerts", desc: "Manage priority broadcasts and SOS signals.", icon: Radio, action: "Sync", href: "/admin/alerts" },
+                                { title: "Nexus Metrics", desc: "Deep dive into behavioral trend analysis.", icon: TrendingUp, action: "Analyze", href: "/admin/analytics" }
                             ].map((item, i) => (
-                                <div key={i} className="bg-white/5 border border-white/5 p-6 rounded-3xl hover:bg-white/10 transition-colors">
-                                    <div className="flex items-center gap-4 mb-4">
-                                        <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center border border-indigo-500/20">
-                                            <item.icon className="w-5 h-5 text-indigo-400" />
+                                <Link href={item.href || '#'} key={i} className="group/item">
+                                    <div className="bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] hover:bg-white/[0.08] hover:border-white/10 transition-all active:scale-[0.97]">
+                                        <div className="flex items-center gap-5 mb-5">
+                                            <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover/item:bg-white/10 group-hover/item:border-white/20 transition-all">
+                                                <item.icon className="w-5 h-5 text-white/60 group-hover/item:text-white" />
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <h4 className="font-black text-white text-[15px] uppercase tracking-wide">{item.title}</h4>
+                                                <span className="text-[10px] text-white/20 font-bold uppercase tracking-widest">Sub-Module 0{i+1}</span>
+                                            </div>
                                         </div>
-                                        <h4 className="font-bold text-white">{item.title}</h4>
+                                        <p className="text-xs text-white/30 mb-8 leading-relaxed font-medium">{item.desc}</p>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">{item.action} Matrix</span>
+                                            <Plus className="w-4 h-4 text-white/20 group-hover/item:rotate-90 group-hover/item:text-white transition-all" />
+                                        </div>
                                     </div>
-                                    <p className="text-xs text-gray-400 mb-6 leading-relaxed">{item.desc}</p>
-                                    <button className="w-full py-3 bg-white/5 rounded-xl text-xs font-black text-indigo-400 hover:bg-indigo-500 hover:text-white transition-all uppercase tracking-widest">
-                                        {item.action}
-                                    </button>
-                                </div>
+                                </Link>
                             ))}
                         </div>
                     </div>
-                </div>
+                </GlassCard>
 
-                {/* System Focus Card */}
-                <div className="flex flex-col gap-6">
-                    <div className="flex-1 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-[3rem] p-10 text-white relative flex flex-col justify-between shadow-2xl shadow-indigo-500/20 group">
-                        <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent)] pointer-events-none" />
-
-                        <div>
-                            <div className="w-14 h-14 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center mb-8 border border-white/20 group-hover:scale-110 transition-transform">
-                                <Heart className="w-7 h-7 text-white fill-white" />
+                {/* --- MODULE: SYSTEM STATUS --- */}
+                <div className="flex flex-col gap-8">
+                    <GlassCard className="flex-1 bg-gradient-to-br from-indigo-900/40 via-purple-900/20 to-black p-10 group" glowColor="rgba(139, 92, 246, 0.2)">
+                        <div className="h-full flex flex-col justify-between">
+                            <div>
+                                <div className="w-16 h-16 bg-white/5 backdrop-blur-xl rounded-[1.5rem] flex items-center justify-center mb-10 border border-white/10 group-hover:scale-110 group-hover:rotate-3 transition-transform">
+                                    <Sparkles className="w-8 h-8 text-white" />
+                                </div>
+                                <h3 className="text-4xl font-black text-white tracking-tighter leading-none mb-4 uppercase">Care Protocol</h3>
+                                <p className="text-white/40 text-sm leading-relaxed font-medium">
+                                    Manage veterinary verifications, health credentials, and priority medical signals.
+                                </p>
                             </div>
-                            <h3 className="text-4xl font-black mb-4 tracking-tighter leading-none">Moffi Care & SOS</h3>
-                            <p className="text-indigo-100/70 text-sm leading-relaxed font-medium">
-                                Acil durum bildirimleri, veteriner doğrulamaları ve pet sağlığı sistemini tek tıkla yönet.
-                            </p>
-                        </div>
 
-                        <div className="mt-10 space-y-3">
-                            <button className="w-full py-5 bg-white text-indigo-600 rounded-2xl font-black text-sm hover:shadow-xl active:scale-95 transition-all">
-                                Canlı SOS Haritasını Aç
-                            </button>
-                            <button className="w-full py-5 bg-white/10 backdrop-blur-md rounded-2xl font-bold text-sm text-white hover:bg-white/20 transition-all border border-white/10">
-                                Veteriner Onayları (8)
-                            </button>
+                            <div className="mt-16 space-y-4">
+                                <motion.button 
+                                    whileHover={{ y: -5 }}
+                                    className="w-full py-5 bg-white text-black rounded-[1.5rem] font-black text-xs uppercase tracking-widest shadow-2xl transition-all"
+                                >
+                                    Live SOS Interface
+                                </motion.button>
+                                <motion.button 
+                                    whileHover={{ y: -5 }}
+                                    className="w-full py-5 bg-white/5 border border-white/10 rounded-[1.5rem] font-black text-xs text-white/60 uppercase tracking-widest hover:bg-white/10 transition-all"
+                                >
+                                    Vet Credentials (8)
+                                </motion.button>
+                            </div>
                         </div>
-                    </div>
+                    </GlassCard>
                 </div>
-
             </div>
 
-            {/* Second Row: Store & Activity */}
+            {/* --- BOTTOM GRID: COMMERCE & EXPLORATORY --- */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-                {/* Module: Store & Marketplace */}
-                <div className="bg-[#12121A] rounded-[3rem] border border-white/5 p-10 relative overflow-hidden group">
-                    <div className="flex items-center justify-between mb-8">
-                        <div>
-                            <h2 className="text-3xl font-black text-white tracking-tight mb-2">Pazar Yeri & İlanlar</h2>
-                            <p className="text-gray-500 text-sm font-medium">Sahiplendirme ve ürün trafiği kontrolü.</p>
+                
+                {/* --- MODULE: MARKET NODE --- */}
+                <GlassCard className="p-10" glowColor="rgba(245, 158, 11, 0.05)">
+                    <div className="flex items-center justify-between mb-10">
+                        <div className="space-y-1">
+                            <h2 className="text-3xl font-black text-white tracking-tighter uppercase">Market Node</h2>
+                            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Commerce Synchronization active</p>
                         </div>
-                        <div className="w-12 h-12 bg-amber-500/10 rounded-2xl flex items-center justify-center border border-amber-500/20">
-                            <Store className="w-6 h-6 text-amber-500" />
+                        <div className="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center border border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.1)]">
+                            <Store className="w-7 h-7 text-amber-500" />
                         </div>
                     </div>
 
                     <div className="space-y-4">
                         {[
-                            { title: "Sahiplendirme Onayları", val: "12 Bekliyor", icon: Dog, color: "text-amber-400" },
-                            { title: "Mağaza Başvuruları", val: "3 Yeni", icon: Building2, color: "text-blue-400" },
-                            { title: "Raporlanan İlanlar", val: "0 Temiz", icon: Shield, color: "text-green-400" }
+                            { title: "Adoption Verifications", val: "12 Node", icon: Dog, color: "text-amber-400" },
+                            { title: "Merchant Admissions", val: "3 Node", icon: Building2, color: "text-blue-400" },
+                            { title: "Reported Exchanges", val: "Status: Nominal", icon: Shield, color: "text-green-400" }
                         ].map((item, i) => (
-                            <div key={i} className="flex items-center justify-between p-5 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors cursor-pointer group/item">
+                            <motion.div 
+                                key={i} 
+                                whileHover={{ x: 5 }}
+                                className="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/5 hover:border-white/10 transition-all cursor-pointer group"
+                            >
                                 <div className="flex items-center gap-4">
-                                    <item.icon className={cn("w-5 h-5", item.color)} />
-                                    <span className="font-bold text-white group-hover/item:translate-x-1 transition-transform">{item.title}</span>
+                                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center transition-colors group-hover:bg-white/10">
+                                        <item.icon className={cn("w-5 h-5", item.color)} />
+                                    </div>
+                                    <span className="font-black text-white/80 text-sm uppercase tracking-wide group-hover:text-white transition-colors">{item.title}</span>
                                 </div>
-                                <span className="text-[10px] font-black text-gray-500 uppercase">{item.val}</span>
-                            </div>
+                                <span className="text-[10px] font-black text-white/20 uppercase tracking-widest group-hover:text-cyan-400 transition-colors">{item.val}</span>
+                            </motion.div>
                         ))}
                     </div>
-                </div>
+                </GlassCard>
 
-                {/* Module: Walk & Activity */}
-                <div className="bg-[#12121A] rounded-[3rem] border border-white/5 p-10 relative overflow-hidden group">
-                    <div className="flex items-center justify-between mb-8">
-                        <div>
-                            <h2 className="text-3xl font-black text-white tracking-tight mb-2">Yürüyüş & Quest</h2>
-                            <p className="text-gray-500 text-sm font-medium">Aktif rotalar ve oyunlaştırılmış görevler.</p>
+                {/* --- MODULE: EXPLORATION MATRIX --- */}
+                <GlassCard className="p-10" glowColor="rgba(34, 197, 94, 0.05)">
+                    <div className="flex items-center justify-between mb-10">
+                        <div className="space-y-1">
+                            <h2 className="text-3xl font-black text-white tracking-tighter uppercase">Quest Matrix</h2>
+                            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Active route monitoring protocol</p>
                         </div>
-                        <div className="w-12 h-12 bg-green-500/10 rounded-2xl flex items-center justify-center border border-green-500/20">
-                            <Map className="w-6 h-6 text-green-500" />
+                        <div className="w-14 h-14 bg-green-500/10 rounded-2xl flex items-center justify-center border border-green-500/20 shadow-[0_0_20px_rgba(34,197,94,0.1)]">
+                            <Map className="w-7 h-7 text-green-500" />
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 p-6 rounded-[2rem] border border-white/5">
-                            <p className="text-[10px] font-black text-gray-500 uppercase mb-2">Canlı Rotalar</p>
-                            <h4 className="text-2xl font-black text-white">42</h4>
-                            <p className="text-xs text-green-500 mt-1 font-bold">Aktif Yürüyüş</p>
+                        <div className="bg-white/5 border border-white/5 p-8 rounded-[2.5rem] hover:bg-white/[0.08] transition-all">
+                            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-3">Live Reroutes</p>
+                            <h4 className="text-5xl font-black text-white tracking-tighter">42</h4>
+                            <div className="flex items-center gap-2 mt-2">
+                                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                                <span className="text-[10px] text-green-500 font-bold uppercase">Active Pathing</span>
+                            </div>
                         </div>
-                        <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 p-6 rounded-[2rem] border border-white/5">
-                            <p className="text-[10px] font-black text-black/40 uppercase mb-2">Bekleyen Quest</p>
-                            <h4 className="text-2xl font-black text-white">7</h4>
-                            <p className="text-xs text-indigo-400 mt-1 font-bold">Onay Bekliyor</p>
+                        <div className="bg-white/5 border border-white/5 p-8 rounded-[2.5rem] hover:bg-white/[0.08] transition-all">
+                            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-3">Pending Quests</p>
+                            <h4 className="text-5xl font-black text-white tracking-tighter">7</h4>
+                            <div className="flex items-center gap-2 mt-2">
+                                <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+                                <span className="text-[10px] text-cyan-500 font-bold uppercase">Awaiting Sync</span>
+                            </div>
                         </div>
                     </div>
-                </div>
+                </GlassCard>
 
             </div>
         </div>

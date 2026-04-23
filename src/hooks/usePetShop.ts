@@ -1,15 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { IPetShopService } from "@/services/interfaces";
-import { PetShopMockService } from "@/services/mock/PetShopMockService";
-import { ShopProduct, ShopCategory, ShopCartItem } from "@/types/domain";
-
-// Singleton — swap to FirebasePetShopService later
-const petShopService: IPetShopService = new PetShopMockService();
-const MOCK_USER_ID = 'user-1';
+import { apiService } from "@/services/apiService";
+import { ShopProduct, ShopCategory, ShopCartItem } from "@/services/types";
 
 export function usePetShop() {
     const [products, setProducts] = useState<ShopProduct[]>([]);
     const [cart, setCart] = useState<ShopCartItem[]>([]);
+    const [subscriptions, setSubscriptions] = useState<ShopProduct[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -18,7 +14,7 @@ export function usePetShop() {
         setIsLoading(true);
         setError(null);
         try {
-            const result = await petShopService.getProducts(category);
+            const result = await apiService.getProducts(category);
             setProducts(result);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Ürünler yüklenemedi');
@@ -33,8 +29,10 @@ export function usePetShop() {
         setIsLoading(true);
         setError(null);
         try {
-            const result = await petShopService.searchProducts(query);
-            setProducts(result);
+            // Note: IApiService doesn't have searchProducts yet, we can use getProducts and filter or add it
+            const all = await apiService.getProducts();
+            const filtered = all.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
+            setProducts(filtered);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Arama başarısız');
         } finally {
@@ -45,7 +43,7 @@ export function usePetShop() {
     // Cart operations
     const fetchCart = useCallback(async () => {
         try {
-            const items = await petShopService.getCart(MOCK_USER_ID);
+            const items = await apiService.getCart();
             setCart(items);
         } catch (err) {
             console.error('Cart fetch error:', err);
@@ -55,7 +53,7 @@ export function usePetShop() {
     const addToCart = useCallback(async (productId: string, quantity = 1) => {
         setError(null);
         try {
-            await petShopService.addToCart(MOCK_USER_ID, productId, quantity);
+            await apiService.addToCart(productId, quantity);
             await fetchCart();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Sepete eklenemedi');
@@ -65,7 +63,7 @@ export function usePetShop() {
     const updateCartItem = useCallback(async (productId: string, quantity: number) => {
         setError(null);
         try {
-            await petShopService.updateCartItem(MOCK_USER_ID, productId, quantity);
+            await apiService.updateCartItem(productId, quantity);
             await fetchCart();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Güncellenemedi');
@@ -74,7 +72,7 @@ export function usePetShop() {
 
     const removeFromCart = useCallback(async (productId: string) => {
         try {
-            await petShopService.removeFromCart(MOCK_USER_ID, productId);
+            await apiService.removeFromCart(productId);
             await fetchCart();
         } catch (err) {
             console.error('Remove error:', err);
@@ -83,45 +81,36 @@ export function usePetShop() {
 
     const clearCart = useCallback(async () => {
         try {
-            await petShopService.clearCart(MOCK_USER_ID);
+            await apiService.clearCart();
             setCart([]);
         } catch (err) {
             console.error('Clear cart error:', err);
         }
     }, []);
 
-    // Discount validation
-    const validateDiscount = useCallback(async (code: string) => {
-        return petShopService.validateDiscount(code);
-    }, []);
-
     // Order
     const createOrder = useCallback(async (shippingAddress: string, discountCode?: string) => {
         setError(null);
         try {
-            const cartItems = await petShopService.getCart(MOCK_USER_ID);
+            const cartItems = await apiService.getCart();
             if (cartItems.length === 0) throw new Error('Sepet boş');
 
-            const productDetails = await Promise.all(
-                cartItems.map(async item => {
-                    const product = await petShopService.getProductById(item.productId);
-                    return { product: product!, quantity: item.quantity };
-                })
-            );
+            const allProducts = await apiService.getProducts();
+            const productDetails = cartItems.map(item => {
+                const product = allProducts.find(p => p.id === item.productId);
+                return { product: product!, quantity: item.quantity };
+            });
 
             let totalPrice = productDetails.reduce((s, i) => s + i.product.price * i.quantity, 0);
             let discountAmount = 0;
 
-            if (discountCode) {
-                const discount = await petShopService.validateDiscount(discountCode);
-                if (discount.valid && discount.discountPercent) {
-                    discountAmount = Math.round(totalPrice * discount.discountPercent / 100);
-                    totalPrice -= discountAmount;
-                }
+            // Simple mock discount logic moved here for now
+            if (discountCode === 'MOFFI20') {
+               discountAmount = Math.round(totalPrice * 0.20);
+               totalPrice -= discountAmount;
             }
 
-            const order = await petShopService.createOrder({
-                userId: MOCK_USER_ID,
+            const order = await apiService.createOrder({
                 items: productDetails,
                 totalPrice,
                 discountCode,
@@ -137,11 +126,39 @@ export function usePetShop() {
         }
     }, []);
 
+    // Subscriptions
+    const fetchSubscriptions = useCallback(async () => {
+        try {
+            const subs = await apiService.getSubscriptions();
+            setSubscriptions(subs);
+        } catch (err) {
+            console.error('Subscriptions fetch error:', err);
+        }
+    }, []);
+
+    const subscribeToProduct = useCallback(async (productId: string) => {
+        setError(null);
+        try {
+            await apiService.subscribeToProduct(productId);
+            await fetchSubscriptions();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Abone olunamadı');
+        }
+    }, [fetchSubscriptions]);
+
+    // Discount validation
+    const validateDiscount = useCallback(async (code: string) => {
+        if (code === 'MOFFI20') return { valid: true, discountPercent: 20, message: '%20 indirim uygulandı!' };
+        if (code === 'WELCOME10') return { valid: true, discountPercent: 10, message: '%10 indirim uygulandı!' };
+        return { valid: false, message: 'Geçersiz kod' };
+    }, []);
+
     // Initial load
     useEffect(() => {
         fetchProducts();
         fetchCart();
-    }, [fetchProducts, fetchCart]);
+        fetchSubscriptions();
+    }, [fetchProducts, fetchCart, fetchSubscriptions]);
 
     // Cart totals
     const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
@@ -167,5 +184,8 @@ export function usePetShop() {
         clearCart,
         validateDiscount,
         createOrder,
+        subscriptions,
+        subscribeToProduct,
+        fetchSubscriptions,
     };
 }

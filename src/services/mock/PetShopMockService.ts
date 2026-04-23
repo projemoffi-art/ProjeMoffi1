@@ -6,25 +6,25 @@ import { ShopProduct, ShopCategory, ShopOrder, ShopCartItem } from "@/types/doma
 // ==========================================
 const MOCK_PRODUCTS: ShopProduct[] = [
     // MAMA
-    { id: 'ps-1', name: 'Pro Plan Adult Kedi Maması', brand: 'Purina', price: 649, oldPrice: 799, rating: 4.8, reviews: 1243, image: '🐱', category: 'food', tag: 'Çok Satan', inStock: true, stockCount: 45 },
-    { id: 'ps-2', name: 'Royal Canin Indoor', brand: 'Royal Canin', price: 879, rating: 4.9, reviews: 892, image: '🏠', category: 'food', tag: 'Premium', inStock: true, stockCount: 30 },
-    { id: 'ps-3', name: 'Acana Wild Prairie', brand: 'Acana', price: 1249, rating: 4.7, reviews: 456, image: '🌾', category: 'food', inStock: true, stockCount: 18 },
+    { id: 'ps-1', name: 'Pro Plan Adult Kedi Maması', brand: 'Purina', price: 649, oldPrice: 799, rating: 4.8, reviews: 1243, image: '🐱', category: 'food', tag: 'Çok Satan', inStock: true, stockCount: 45, isRecentlyBought: true, isVetApproved: true },
+    { id: 'ps-2', name: 'Royal Canin Indoor', brand: 'Royal Canin', price: 879, rating: 4.9, reviews: 892, image: '🏠', category: 'food', tag: 'Premium', inStock: true, stockCount: 30, isVetApproved: true },
+    { id: 'ps-3', name: 'Acana Wild Prairie', brand: 'Acana', price: 1249, rating: 4.7, reviews: 456, image: '🌾', category: 'food', inStock: true, stockCount: 18, isVetApproved: true },
     { id: 'ps-4', name: 'Hills Science Diet Kitten', brand: 'Hills', price: 549, oldPrice: 699, rating: 4.6, reviews: 678, image: '🍼', category: 'food', tag: 'İndirimli', inStock: true, stockCount: 22 },
     // ATIŞTIRMALIK
-    { id: 'ps-5', name: 'Dreamies Peynirli Kedi Ödülü', brand: 'Dreamies', price: 49, rating: 4.9, reviews: 2341, image: '🧀', category: 'snack', tag: 'Favori', inStock: true, stockCount: 120 },
+    { id: 'ps-5', name: 'Dreamies Peynirli Kedi Ödülü', brand: 'Dreamies', price: 49, rating: 4.9, reviews: 2341, image: '🧀', category: 'snack', tag: 'Favori', inStock: true, stockCount: 120, isRecentlyBought: true },
     { id: 'ps-6', name: 'Inaba Churu Ton Balıklı', brand: 'Inaba', price: 89, oldPrice: 119, rating: 4.8, reviews: 1567, image: '🐟', category: 'snack', inStock: true, stockCount: 85 },
-    { id: 'ps-7', name: 'Vitakraft Yürekli Sticks', brand: 'Vitakraft', price: 39, rating: 4.5, reviews: 345, image: '💛', category: 'snack', inStock: true, stockCount: 65 },
+    { id: 'ps-7', name: 'Vitakraft Yürekli Sticks', brand: 'Vitakraft', price: 39, rating: 4.5, reviews: 345, image: '💛', category: 'snack', inStock: true, stockCount: 65, isRecentlyBought: true },
     // OYUNCAK
     { id: 'ps-8', name: 'Lazer Pointer Kedi Oyuncağı', brand: 'PetFun', price: 129, rating: 4.7, reviews: 892, image: '🔴', category: 'toy', tag: 'Popüler', inStock: true, stockCount: 34 },
     { id: 'ps-9', name: 'Tüylü Olta Kedi Oyuncağı', brand: 'CatPlay', price: 79, rating: 4.6, reviews: 567, image: '🪶', category: 'toy', inStock: true, stockCount: 50 },
     { id: 'ps-10', name: 'Kedi Tüneli (3 Yollu)', brand: 'PetPalace', price: 249, oldPrice: 349, rating: 4.8, reviews: 234, image: '🌀', category: 'toy', tag: 'İndirimli', inStock: true, stockCount: 12 },
     // BAKIM
-    { id: 'ps-11', name: 'Furminator Tüy Bakım Fırçası', brand: 'Furminator', price: 399, rating: 4.9, reviews: 1890, image: '✨', category: 'care', tag: 'Çok Satan', inStock: true, stockCount: 28 },
-    { id: 'ps-12', name: 'Pire & Kene Damlası (3lü)', brand: 'Frontline', price: 329, rating: 4.7, reviews: 1123, image: '💧', category: 'care', inStock: true, stockCount: 40 },
+    { id: 'ps-11', name: 'Furminator Tüy Bakım Fırçası', brand: 'Furminator', price: 399, rating: 4.9, reviews: 1890, image: '✨', category: 'care', tag: 'Çok Satan', inStock: true, stockCount: 28, isRecentlyBought: true, isVetApproved: true },
+    { id: 'ps-12', name: 'Pire & Kene Damlası (3lü)', brand: 'Frontline', price: 329, rating: 4.7, reviews: 1123, image: '💧', category: 'care', inStock: true, stockCount: 40, isVetApproved: true },
     { id: 'ps-13', name: 'Kedi Şampuanı Doğal', brand: 'BioGroom', price: 189, oldPrice: 229, rating: 4.5, reviews: 456, image: '🫧', category: 'care', inStock: true, stockCount: 55 },
     // AKSESUAR
     { id: 'ps-14', name: 'GPS Takip Tasması', brand: 'PetTrack', price: 599, rating: 4.6, reviews: 789, image: '📍', category: 'accessory', tag: 'Yeni', inStock: true, stockCount: 15 },
-    { id: 'ps-15', name: 'Akıllı Kedi Kapısı', brand: 'SureFlap', price: 1899, rating: 4.8, reviews: 234, image: '🚪', category: 'accessory', tag: 'Premium', inStock: true, stockCount: 8 },
+    { id: 'ps-15', name: 'Akıllı Kedi Kapısı', brand: 'SureFlap', price: 1899, rating: 4.8, reviews: 234, image: '🚪', category: 'accessory', tag: 'Premium', inStock: true, stockCount: 8, isVetApproved: true },
     { id: 'ps-16', name: 'Kedi Yatağı — Donut', brand: 'PetNest', price: 279, oldPrice: 399, rating: 4.7, reviews: 567, image: '🍩', category: 'accessory', tag: 'İndirimli', inStock: true, stockCount: 20 },
 ];
 

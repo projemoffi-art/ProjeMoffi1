@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, memo, useMemo } from 'react';
-import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform, useMotionValueEvent, useMotionValue } from 'framer-motion';
 import {
     Heart, MessageCircle, Share2, MapPin,
     Flame, Bone, Plus, Camera, Compass,
@@ -9,19 +9,18 @@ import {
     Settings, Grid3X3, List, Edit3, Bookmark, Edit2, Trash2,
     LogOut, ChevronRight, ChevronLeft, User, Bell, Lock, HelpCircle, Check, HeartHandshake, CheckCheck, ShieldAlert, ChevronDown,
     AlertTriangle, PhoneCall, BadgeCheck, Radar, Palette, ShoppingBag, Gamepad2, Stethoscope, Globe,
-    Coins, Package, Calendar, Plane, ShieldCheck, Route, TrendingUp, Timer, Footprints, Play, Download, Clock, Syringe
+    Coins, Package, Calendar, Plane, ShieldCheck, Route, TrendingUp, Timer, Footprints, Play, Download, Clock, Syringe, Moon
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import AuthModal from '../../components/auth/AuthModal';
 import { useAuth } from '../../context/AuthContext';
 import { useStories } from '../../hooks/useStories';
 import { useTheme } from '../../context/ThemeContext';
 import { PetSettingsModal } from '../../components/profile/PetSettingsModal';
 import { SOSCommandCenter } from '../../components/profile/SOSCommandCenter';
-import { HubOverlay } from '../../components/community/HubOverlay';
-import { supabase } from '../../lib/supabase';
 import { QRCodeSVG } from 'qrcode.react';
+import { InboxModal } from '../../components/community/InboxModal';
 
 import { ShareSheet } from '../../components/community/ShareSheet';
 import { NotificationsDrawer } from '../../components/community/NotificationsDrawer';
@@ -30,92 +29,43 @@ import { ImmersivePostCard } from '../../components/community/ImmersivePostCard'
 import { ProfileTab } from '@/components/community/ProfileTab';
 import { VetQuickSheet } from '@/components/vet/VetQuickSheet';
 import { WalkQuickSheet } from '@/components/walk/WalkQuickSheet';
+import { MarketQuickSheet } from '@/components/shop/MarketQuickSheet';
+import { StudioQuickSheet } from '@/components/studio/StudioQuickSheet';
+import { GameQuickSheet } from '@/components/game/GameQuickSheet';
+import { PetSwitcher } from '@/components/common/PetSwitcher';
+import { usePet } from '@/context/PetContext';
+import { useWellbeing } from '@/context/WellbeingContext';
+import { EcosystemPortal } from '@/components/community/EcosystemPortal';
+import { SpotlightSearch } from '@/components/community/SpotlightSearch';
+import { apiService } from '../../services/apiService';
 
-// -- MOCK DATA --
-const MOCK_PETS = [
-    {
-        id: 1,
-        author: "Bella The Golden",
-        owner: "@sarah_logs",
-        avatar: "https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=200",
-        media: "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=800",
-        likes: 1240,
-        comments: 3,
-        desc: "Parktaki en iyi sopayı ben buldum! 🦴🌳 #goldenretriever",
-        distance: "300m uzakta",
-        mood: "Enerjik ⚡",
-        isLiked: false,
-        commentsList: [
-            { id: 101, author: "@puppy_love", avatar: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=100", text: "Bu tam bir şaheser! 😍🐶 Ne zaman parka gidiyoruz?", time: "2 saat önce" },
-            { id: 102, author: "@cat_boss", avatar: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=100", text: "Kediler daha tatlı bence. Ama sen de fena değilsin. 😎🐾", time: "5 saat önce" },
-            { id: 103, author: "@moffi_admin", avatar: "", isSystem: true, text: "Günün en güzel karesi ödülüne çok yakınsın! 🏆", time: "1 gün önce" }
-        ]
-    },
-    {
-        id: 2,
-        author: "Milo & Luna",
-        owner: "@cat_diaries",
-        avatar: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=200",
-        media: "https://images.unsplash.com/photo-1573865526739-10659fec78a5?q=80&w=800",
-        likes: 5800,
-        comments: 0,
-        desc: "Öğle uykusu sendromu... Lütfen rahatsız etmeyin. 😴🐾",
-        distance: "1.2km uzakta",
-        mood: "Uykulu 💤",
-        isLiked: true,
-        commentsList: []
-    },
-    {
-        id: 3,
-        author: "Max",
-        owner: "@husky_max",
-        avatar: "https://images.unsplash.com/photo-1605568427561-40dd23c2acea?q=80&w=200",
-        media: "https://images.unsplash.com/photo-1517849845537-4d257902454a?q=80&w=800",
-        likes: 892,
-        comments: 0,
-        desc: "Kar ne zaman yağacak? Beklemekten sıkıldım! ❄️🐺",
-        distance: "5km uzakta",
-        mood: "Sabırsız 🥶",
-        isLiked: false,
-        commentsList: []
-    }
-];
-
-const MOCK_LOST_PETS = [
-    { id: '1', pet_name: "Gofret", breed: "Golden Retriever", last_seen_location: "Kadiköy Sahil", description: "Tasması yok, çok uysal.", photos: ["https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=400"] },
-    { id: '2', pet_name: "Mırmır", breed: "Tekir", last_seen_location: "Beşiktaş", description: "Sol kulağı kesik.", photos: ["https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=400"] }
-];
-
-const MOCK_ADOPTIONS = [
-    { id: '1', pet_name: "Pamuk", breed: "Ankara Kedisi", age: "2 Aylık", description: "Yuva arıyor.", photos: ["https://images.unsplash.com/photo-1573865526739-10659fec78a5?q=80&w=400"], type: "cat" },
-    { id: '2', pet_name: "Duman", breed: "Russian Blue", age: "1 Yaşında", description: "Çok sakin.", photos: ["https://images.unsplash.com/photo-1592194996308-7b43878e84a6?q=80&w=400"], type: "cat" }
-];
-
-const MOCK_NOTIFICATIONS = [
-    { id: 2, type: 'comment', user: '@moffi_admin', avatar: '', isSystem: true, text: 'Günün en güzel karesi ödülüne çok yakınsın! 🏆', time: '1 gün önce', read: true }
-];
-
-const ORDERS = [
-    { id: 'ord-1', item: "Premium Köpek Maması", status: "Teslim Edildi", date: "12 Ara 2025", price: "450 TL", img: "https://images.unsplash.com/photo-1589924691195-41432c84c161?q=80&w=100" },
-    { id: 'ord-2', item: "Moffi Özel Tasarım Tasma", status: "Kargoda", date: "14 Ara 2025", price: "250 TL", img: "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?q=80&w=100" },
-];
-
-const APPOINTMENTS = [
-    { id: 'apt-1', clinic: "VetLife Clinic", type: "Genel Muayene", date: "18 Ara, 14:30", status: "Onaylandı" }
-];
+import { 
+    MOCK_PETS, MOCK_ADOPTIONS, 
+    MOCK_NOTIFICATIONS, ORDERS, APPOINTMENTS 
+} from '@/lib/mockData';
+import Image from 'next/image';
+import { HubOverlay } from '../../components/community/HubOverlay';
 
 export default function MoffiSocialMasterpiece() {
-    const { user, logout, updateProfile, showAIAssistant, setShowAIAssistant } = useAuth();
-    const { theme, setTheme } = useTheme();
-    const { storyGroups, uploadStory } = useStories();
+    const { user, logout, updateProfile, updateSettings, showAIAssistant, setShowAIAssistant } = useAuth();
+    const { theme, setTheme } = useTheme(); // Restored
+    const { storyGroups, uploadStory } = useStories(); // Restored
+    const { pets: userPets, activePet, switchPet, updatePet } = usePet();
+    const { isQuietModeActive } = useWellbeing();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [activeTab, setActiveTab] = useState('feed'); 
     const [radarTabMode, setRadarTabMode] = useState<'lost' | 'adopt'>('lost');
     const [posts, setPosts] = useState<any[]>(MOCK_PETS);
-    const [userPets, setUserPets] = useState<any[]>([]);
+    const [activeChatUserId, setActiveChatUserId] = useState<string | null>(null);
+
     const userPosts = useMemo(() => {
         return posts.filter(p => p.author === `@${user?.username || 'moffi_user'}` || p.user_id === user?.id);
     }, [posts, user]);
+    
+    // Check if any owned pet is in SOS mode AND header alert is enabled
+    const isAnyPetLost = useMemo(() => userPets.some((p: any) => p.is_lost && (p.sos_settings?.header_sos_alert_enabled !== false)), [userPets]);
+
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isPublishing, setIsPublishing] = useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -123,156 +73,278 @@ export default function MoffiSocialMasterpiece() {
     const [isLoadingLost, setIsLoadingLost] = useState(false);
     const [isLoadingAdoptions, setIsLoadingAdoptions] = useState(false);
     
-    // Unified Header Scroll Logic (Works for all tabs)
-    const globalScrollRef = useRef<HTMLDivElement>(null);
-    const { scrollY } = useScroll({ container: globalScrollRef });
-    
-    // NOTIFICATIONS & SHARE SHEET
-    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-    const [notificationsList, setNotificationsList] = useState<any[]>(MOCK_NOTIFICATIONS);
-    const [selectedSharePost, setSelectedSharePost] = useState<any>(null);
+    // ACTION HUB STATE (LIFTED FROM PROFILETAB)
+    const [isAuraVisible, setIsAuraVisible] = useState(true);
+    const [isAuraStudioOpen, setIsAuraStudioOpen] = useState(false);
+    const [auraSettings, setAuraSettings] = useState({
+        fontFamily: 'font-sans',
+        frameStyle: 'minimal' as 'minimal' | 'glass' | 'neon' | 'metal',
+        accentColor: 'default',
+        badges: ['verified']
+    });
 
+    // Load initial Aura settings from user profile - STABLE JSON DEPS
     useEffect(() => {
-        fetchPosts();
-        fetchLostPets();
-        fetchAdoptionAds();
+        if (user?.aura_settings) {
+            setAuraSettings(user.aura_settings);
+        }
+    }, [user?.id, JSON.stringify(user?.aura_settings)]);
+
+    const handleUpdateAuraSettings = async (newSettings: any) => {
+        setAuraSettings(newSettings);
+        try {
+            await apiService.updateAuraSettings(newSettings);
+            
+            // Sync with global appearance settings for the background engine
+            updateSettings('appearance', {
+                auraStyle: newSettings.frameStyle,
+                accentColor: newSettings.accentColor,
+                font: newSettings.fontFamily
+            });
+            
+            console.log("Aura settings persisted and synced successfully");
+        } catch (err) {
+            console.error("Failed to persist aura settings:", err);
+        }
+    };
+    const [profileSubView, setProfileSubView] = useState<'main' | 'family' | 'passport' | 'orders' | 'wallet' | 'appointments' | 'routes' | 'impact' | 'bookmarks'>('main');
+    
+    // Global Navigation & Hub Controller (Restored)
+    useEffect(() => {
+        const handleNavigate = (e: any) => {
+            const id = e.detail;
+            const profileViews = ['wallet', 'passport', 'family', 'orders', 'appointments', 'routes', 'bookmarks'];
+            
+            if (profileViews.includes(id)) {
+                setActiveTab('profile');
+                setProfileSubView(id as any);
+            } else if (id === 'settings') {
+                window.dispatchEvent(new CustomEvent('open-moffi-settings'));
+            } else if (id === 'feed' || id === 'radar') {
+                setActiveTab(id);
+            }
+        };
+
+        window.addEventListener('moffi-navigate', handleNavigate);
+        return () => window.removeEventListener('moffi-navigate', handleNavigate);
     }, []);
 
-    useEffect(() => {
-        if (user) {
-            fetchUserPets();
+    // Unified Header Scroll Logic (Works for all tabs)
+    const globalScrollRef = useRef<HTMLDivElement>(null);
+    const scrollY = useMotionValue(0); // Manual scroll tracking to fix hydration error
+    
+    const [isNavVisible, setIsNavVisible] = useState(true);
+    const lastScrollY = useRef(0);
+    const lastInboxScroll = useRef(0);
+    
+    // Unified Scroll Handler (Main Container)
+    const handleMainScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const current = e.currentTarget.scrollTop;
+        scrollY.set(current); // Synchronize motion value for header animations
+        
+        // Navigation Hide/Show Logic
+        if (current > lastScrollY.current && current > 150) {
+            setIsNavVisible(false);
+        } else if (current < lastScrollY.current - 10 || current < 80) {
+            setIsNavVisible(true);
         }
-    }, [user]);
-
-    const fetchUserPets = async () => {
-        // SUPABASE_DISABLED: Bağlantı sorunu nedeniyle şimdilik boş dizi
-        setUserPets([]);
-        /*
-        if (!user) return;
-        try {
-            const { data, error } = await supabase
-                .from('pets')
-                .select('*')
-                .eq('owner_id', user.id)
-                .eq('is_deleted', false) // Important for soft delete filtering
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            if (data) setUserPets(data);
-        } catch (err) {
-            console.error("Evcil dostlar yüklenemedi:", err);
-        }
-        */
+        lastScrollY.current = current;
     };
+
+    // Sub-Panel Scroll Handler (Messaging/SOS Alerts)
+    const handleInboxScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const current = e.currentTarget.scrollTop;
+        if (current > lastInboxScroll.current && current > 100) {
+            setIsNavVisible(false);
+        } else {
+            setIsNavVisible(true);
+        }
+        lastInboxScroll.current = current;
+    };
+
+
+
+    // NOTIFICATIONS & SHARE SHEET
+    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+    const [notificationsList, setNotificationsList] = useState<any[]>([]);
+    const [selectedSharePost, setSelectedSharePost] = useState<any>(null);
+
+    // SOS Alerts state for the Inbox/SOS Tab
+    const [inboxMessages, setInboxMessages] = useState<any[]>([]);
+    const [sosAlerts, setSosAlerts] = useState<any[]>([]);
+
+    useEffect(() => {
+        const loadInitialData = async () => {
+            await Promise.all([
+                fetchPosts(),
+                fetchLostPets(),
+                fetchAdoptionAds(),
+                fetchNotifications(),
+                fetchConversations() // Load chat list
+            ]);
+        };
+        loadInitialData();
+    }, []);
+
+    const fetchNotifications = async () => {
+        try {
+            const data = await apiService.getInboxMessages();
+            setNotificationsList(data);
+            setUnreadInboxCount(data.filter((n: any) => !n.read).length);
+        } catch (err) {
+            console.error("Bildirimler çekilirken hata:", err);
+        }
+    };
+
+    // REAL-TIME MESH CONTROL (MOCK MODE: Supabase subscriptions removed)
+    useEffect(() => {
+        if (!user) return;
+        
+        // In mock mode, we use local state or periodic polling if needed.
+        // For now, initial load covers the needs.
+        
+    }, [user, activeChatUserId, userPets, activeTab]);
+
+    const fetchConversations = async () => {
+        try {
+            const data = await apiService.getChatConversations();
+            setInboxMessages(data);
+        } catch (err) {
+            console.error("Konuşmalar çekilirken hata:", err);
+        }
+    };
+
+    const fetchMessagesForActiveChat = async (userId: string) => {
+        // Find conversation ID between current user and userId
+        const conv = inboxMessages.find(m => m.userId === userId);
+        if (!conv) return;
+
+        try {
+            const data = await apiService.getChatMessages(conv.id);
+            // We'll update the 'messages' array within that conversation in inboxMessages
+            setInboxMessages(prev => prev.map(c => 
+                c.id === conv.id ? { ...c, messages: data } : c
+            ));
+        } catch (err) {
+            console.error("Mesajlar çekilirken hata:", err);
+        }
+    };
+
+    useEffect(() => {
+        if (activeChatUserId) {
+            fetchMessagesForActiveChat(activeChatUserId);
+            // Mark as read
+            const conv = inboxMessages.find(m => m.userId === activeChatUserId);
+            if (conv) apiService.markChatAsRead(conv.id);
+        }
+    }, [activeChatUserId]);
+
+    const handleSendReply = async () => {
+        if (!replyMessage.trim() || !activeChatUserId) return;
+        setIsReplying(true);
+        try {
+            await apiService.sendChatMessage(activeChatUserId, replyMessage);
+            setReplyMessage('');
+            await fetchMessagesForActiveChat(activeChatUserId);
+            await fetchConversations();
+            scrollToBottom();
+        } catch (err) {
+            console.error("Mesaj gönderme hatası:", err);
+            showToast("Hata", "Mesaj gönderilemedi.", "error");
+        } finally {
+            setIsReplying(false);
+        }
+    };
+
+    // HANDLE DEEP LINKING TO CHAT
+    useEffect(() => {
+        const chatWithId = searchParams.get('chat');
+        if (chatWithId) {
+            setActiveChatUserId(chatWithId);
+            setInboxTab('chats');
+            setIsInboxOpen(true);
+            
+            // Optionally clear the param so it doesn't reopen on every mount?
+            // Actually, keep it for now as it's standard deep link behavior.
+        }
+    }, [searchParams]);
+
 
     const fetchPosts = async () => {
         setIsLoadingPosts(true);
-        // SUPABASE_DISABLED: Hız için direkt Mock Data'ya düşüyoruz
-        console.warn("Supabase devre dışı, Mock Data kullanılıyor.");
-        setPosts(MOCK_PETS);
-        setIsLoadingPosts(false);
-        /*
         try {
-            const { data, error } = await supabase
-                .from('posts')
-                .select('*')
-                .order('created_at', { ascending: false });
+            const data = await apiService.getFeedContent();
+            
+            // 1. Filter out Blocked Users
+            const blockedIds = (user?.settings?.moderation?.blockedUsers || []).map((u: any) => u.id);
+            const filteredData = data.filter((post: any) => {
+                const authorId = post.user_id || post.userId || post.authorId || post.owner_id || post.user?.id;
+                return !blockedIds.includes(authorId);
+            });
 
-            if (error) throw error;
-
-            if (data && data.length > 0) {
-                const formattedPosts = data.map(p => ({
-                    id: p.id,
-                    user_id: p.user_id,
-                    author: p.author_name || "Moffi Üyesi",
-                    owner: "@" + (p.author_name ? p.author_name.toLowerCase().replace(/\s+/g, '') : "gizli_uye"),
-                    avatar: p.author_avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300",
-                    media: p.media_url,
-                    likes: p.likes_count || 0,
-                    comments: p.comments_count || 0,
-                    desc: p.description || "",
-                    distance: p.location_name || null,
-                    mood: p.mood || null,
-                    isLiked: false,
-                    commentsList: []
-                }));
-                setPosts([...formattedPosts, ...MOCK_PETS]);
-                setIsLoadingPosts(false);
-            } else {
-                throw new Error("No real posts found");
-            }
+            // 2. Apply initial sorting
+            const sortType = user?.settings?.feed?.defaultSort || 'new';
+            const sortedData = sortPostsLocally(filteredData, sortType);
+            
+            setPosts(sortedData);
         } catch (err) {
-            console.error("Gönderiler çekilirken hata oluştu, mock data'ya dönülüyor:", err);
+            console.error("Gönderiler çekilirken hata:", err);
             setPosts(MOCK_PETS);
+        } finally {
             setIsLoadingPosts(false);
         }
-        */
     };
 
-    const loadMorePosts = () => {
-        setPosts(prev => [...prev, ...MOCK_PETS]);
-    };
-
-    const fetchLostPets = async () => {
-        setIsLoadingLost(true);
-        // SUPABASE_DISABLED
-        setLostPets(MOCK_LOST_PETS);
-        setIsLoadingLost(false);
-        /*
-        try {
-            const { data, error } = await supabase
-                .from('lost_pets')
-                .select('*')
-                .eq('status', 'lost')
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-
-            if (data && data.length > 0) {
-                setLostPets([...data, ...MOCK_LOST_PETS]);
-                setIsLoadingLost(false);
-            } else {
-                throw new Error("No real lost pets found");
-            }
-        } catch (err) {
-            console.error("Kayıp ilanları yüklenemedi, mock data'ya dönülüyor:", err);
-            setLostPets(MOCK_LOST_PETS);
-            setIsLoadingLost(false);
+    const sortPostsLocally = (data: any[], sortType: string) => {
+        const sorted = [...data];
+        if (sortType === 'popular') {
+            return sorted.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+        } else {
+            // Newest first: Sort by ID descending (Date.now proxy) or index
+            return sorted.sort((a, b) => {
+                const idA = typeof a.id === 'string' ? (parseInt(a.id.split('-').pop() || '0') || 0) : a.id;
+                const idB = typeof b.id === 'string' ? (parseInt(b.id.split('-').pop() || '0') || 0) : b.id;
+                return idB - idA;
+            });
         }
-        */
     };
+
+    // Reactive Re-sorting when preference changes
+    useEffect(() => {
+        if (posts.length > 0) {
+            const sortType = user?.settings?.feed?.defaultSort || 'new';
+            const sorted = sortPostsLocally(posts, sortType);
+            
+            // Only update if order actually changed to avoid infinite loop
+            const orderChanged = sorted.some((p, i) => p.id !== posts[i].id);
+            if (orderChanged) {
+                setPosts(sorted);
+                
+                // Pure Apple UX: Scroll to top when sorting changes
+                if (globalScrollRef.current) {
+                    globalScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }
+        }
+    }, [user?.settings?.feed?.defaultSort]);
+
+
     const fetchAdoptionAds = async () => {
         setIsLoadingAdoptions(true);
-        // SUPABASE_DISABLED
-        setAdoptionAds(MOCK_ADOPTIONS);
-        setIsLoadingAdoptions(false);
-        /*
         try {
-            const { data, error } = await supabase
-                .from('adoption_ads')
-                .select('*')
-                .eq('status', 'active')
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-
-            if (data && data.length > 0) {
-                setAdoptionAds([...data, ...MOCK_ADOPTIONS]);
-                setIsLoadingAdoptions(false);
-            } else {
-                throw new Error("No real adoption ads found");
-            }
+            const data = await apiService.getAdoptions();
+            setAdoptionAds(data);
         } catch (err) {
-            console.error(`Sahiplendirme ilanları yüklenemedi, mock data'ya dönülüyor:`, err);
+            console.error("Sahiplendirme ilanları çekilirken hata:", err);
             setAdoptionAds(MOCK_ADOPTIONS);
+        } finally {
             setIsLoadingAdoptions(false);
         }
-        */
     };
+
 
     const [profileViewMode, setProfileViewMode] = useState('grid'); // grid, list, saved
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     // EDIT PROFILE STATES
     const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
@@ -313,6 +385,7 @@ export default function MoffiSocialMasterpiece() {
     const [settingsPet, setSettingsPet] = useState<any>(null);
     const [isSOSCommandCenterOpen, setIsSOSCommandCenterOpen] = useState(false);
     const [sosActivePet, setSosActivePet] = useState<any>(null);
+    const [isSosFromHub, setIsSosFromHub] = useState(false);
 
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
@@ -333,6 +406,13 @@ export default function MoffiSocialMasterpiece() {
     const [isAddAdoptionModalOpen, setIsAddAdoptionModalOpen] = useState(false);
     const [adoptionAds, setAdoptionAds] = useState<any[]>([]);
     const [selectedAdoptionCategory, setSelectedAdoptionCategory] = useState("Hepsi");
+
+    // Sync Adoption Radar Category with User Preference
+    useEffect(() => {
+        if (user?.settings?.adoption?.defaultCategory) {
+            setSelectedAdoptionCategory(user.settings.adoption.defaultCategory);
+        }
+    }, [user?.settings?.adoption?.defaultCategory]);
 
     // NEW ADOPTION FORM STATES
     const [adoptionPetName, setAdoptionPetName] = useState("");
@@ -403,9 +483,7 @@ export default function MoffiSocialMasterpiece() {
     const [isHubLongPressing, setIsHubLongPressing] = useState(false);
     const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
-    // INBOX DATA STATES
-    const [inboxMessages, setInboxMessages] = useState<any[]>([]);
-    const [sosAlerts, setSosAlerts] = useState<any[]>([]);
+    // INBOX & SOS DATA STATES (Consolidated at top level)
     const [activeTimePicker, setActiveTimePicker] = useState<'from' | 'to' | null>(null);
 
     // TIME WHEEL HELPER COMPONENT
@@ -440,7 +518,6 @@ export default function MoffiSocialMasterpiece() {
     const [unreadInboxCount, setUnreadInboxCount] = useState(0);
     const [replyMessage, setReplyMessage] = useState('');
     const [isReplying, setIsReplying] = useState(false);
-    const [activeChatUserId, setActiveChatUserId] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -448,6 +525,11 @@ export default function MoffiSocialMasterpiece() {
     const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
     const [isVetQuickSheetOpen, setIsVetQuickSheetOpen] = useState(false);
     const [isWalkQuickSheetOpen, setIsWalkQuickSheetOpen] = useState(false);
+    const [isMarketQuickSheetOpen, setIsMarketQuickSheetOpen] = useState(false);
+    const [isStudioQuickSheetOpen, setIsStudioQuickSheetOpen] = useState(false);
+    const [isGameQuickSheetOpen, setIsGameQuickSheetOpen] = useState(false);
+    const [isEcosystemPortalOpen, setIsEcosystemPortalOpen] = useState(false);
+    const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
 
 
     const scrollToBottom = () => {
@@ -468,22 +550,9 @@ export default function MoffiSocialMasterpiece() {
     };
 
     // SETTINGS / KVKK STATES
-    const [activeSettingsView, setActiveSettingsView] = useState<'main' | 'privacy' | 'notifications' | 'help'>('main');
-    const [kvkkToggles, setKvkkToggles] = useState({
-        location: false,
-        publicProfile: true,
-        messages: true,
-        aiModeration: true,
-        marketing: false,
-        pushNotifications: true,
-        emailNotifications: false,
-        allowComments: true,
-        sosNotifications: true,
-        sosRadius: 5,
-        sosQuietHours: { enabled: false, from: '23:00', to: '07:00' },
-        sosPetTypes: ['dog', 'cat', 'bird', 'other'],
-        sosEmergencyBypass: true,
-    });
+    const [isSOSOpen, setIsSOSOpen] = useState(false);
+
+
 
 
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -569,37 +638,24 @@ export default function MoffiSocialMasterpiece() {
 
     const cameraInputRef = useRef<HTMLInputElement>(null);
 
-    const toggleLike = (id: number) => {
-        setPosts(prev => prev.map(p => {
-            if (p.id === id) {
-                return { ...p, isLiked: !p.isLiked, likes: p.isLiked ? p.likes - 1 : p.likes + 1 };
-            }
-            return p;
-        }));
+    const toggleLike = async (id: string) => {
+        try {
+            await apiService.reactToPost(id, '❤️');
+            fetchPosts(); // Refresh to see updated counts/state
+        } catch (err) {
+            console.error("Beğeni hatası:", err);
+        }
     };
 
-    const addComment = (postId: number, text: string) => {
+    const addComment = async (postId: string, text: string) => {
         if (!text.trim()) return;
-        setPosts(prev => prev.map(p => {
-            if (p.id === postId) {
-                const newComment = {
-                    id: Date.now(),
-                    author: `@${user?.username || 'moffi_user'}`,
-                    avatar: user?.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300",
-                    text: text,
-                    time: "Şimdi",
-                    likes: 0,
-                    isLiked: false,
-                    replies: []
-                };
-                return {
-                    ...p,
-                    comments: p.comments + 1,
-                    commentsList: [newComment, ...(p.commentsList || [])]
-                };
-            }
-            return p;
-        }));
+        try {
+            await apiService.addComment(postId, text);
+            fetchPosts();
+            showToast("Yorum Eklendi", "Yorumunuz paylaşıldı.", "success");
+        } catch (err) {
+            console.error("Yorum hatası:", err);
+        }
     };
 
     const toggleCommentLike = (postId: number, commentId: number) => {
@@ -713,48 +769,34 @@ export default function MoffiSocialMasterpiece() {
 
     const deletePost = async () => {
         if (!postToDelete) return;
-        // SUPABASE_DISABLED: Mock delete logic
-        setPosts(prev => prev.filter(p => p.id !== postToDelete));
-        setPostToDelete(null);
-        showToast("Gönderi Silindi", "Gönderiniz başarıyla kaldırıldı (Mock)", "success");
-        /*
         try {
-            const { error } = await supabase.from('posts').delete().eq('id', postToDelete).eq('user_id', user?.id);
-            if (error) throw error;
+            await apiService.deletePost(postToDelete);
             setPosts(prev => prev.filter(p => p.id !== postToDelete));
             setPostToDelete(null);
+            showToast("Gönderi Silindi", "Gönderiniz başarıyla kaldırıldı.", "success");
         } catch (err: any) {
             console.error(err);
-            alert("Gönderi silinemedi: " + err.message);
+            showToast("Hata", "Gönderi silinemedi.", "error");
         }
-        */
     };
 
     const saveEditPost = async () => {
         if (!editingPost) return;
         setIsPublishing(true);
-        // SUPABASE_DISABLED: Mock edit logic
-        setPosts(prev => prev.map(p => p.id === editingPost.id ? { ...p, desc: editingPost.desc, mood: editingPost.mood } : p));
-        setEditingPost(null);
-        setIsPublishing(false);
-        showToast("Güncellendi", "Değişiklikler kaydedildi (Mock)", "success");
-        /*
         try {
-            const { error } = await supabase.from('posts').update({
-                description: editingPost.desc,
+            await apiService.updatePost(editingPost.id, {
+                desc: editingPost.desc,
                 mood: editingPost.mood
-            }).eq('id', editingPost.id).eq('user_id', user?.id);
-            if (error) throw error;
-
+            });
             setPosts(prev => prev.map(p => p.id === editingPost.id ? { ...p, desc: editingPost.desc, mood: editingPost.mood } : p));
             setEditingPost(null);
+            showToast("Güncellendi", "Değişiklikler kaydedildi.", "success");
         } catch (err: any) {
             console.error(err);
-            alert("Gönderi güncellenemedi: " + err.message);
+            showToast("Hata", "Gönderi güncellenemedi.", "error");
         } finally {
             setIsPublishing(false);
         }
-        */
     };
 
     const handleCameraUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -776,24 +818,19 @@ export default function MoffiSocialMasterpiece() {
         }
 
         setIsPublishing(true);
-        // SUPABASE_DISABLED: Mock publish logic
-        setTimeout(() => {
-            const newPost = {
-                id: Date.now(),
-                user_id: user.id,
-                author: user.username,
-                owner: "@" + user.username.toLowerCase(),
-                avatar: user.avatar,
-                media: uploadImageURL,
-                likes: 0,
-                comments: 0,
-                desc: uploadCaption,
-                distance: "Şimdi",
+        try {
+            // 1. Upload to Storage
+            const publicUrl = await apiService.uploadMedia(selectedFile, 'posts');
+
+            // 2. Add Post to DB
+            await apiService.addPost({
+                media: publicUrl,
+                caption: uploadCaption,
                 mood: uploadMood || null,
-                isLiked: false,
-                commentsList: []
-            };
-            setPosts([newPost, ...posts]);
+            });
+
+            await fetchPosts();
+            
             setIsPublishing(false);
             setIsUploadModalOpen(false);
             setUploadImageURL(null);
@@ -802,55 +839,13 @@ export default function MoffiSocialMasterpiece() {
             setUploadMood(null);
             setUploadLocationEnabled(false);
             setActiveTab('feed');
-            showToast("Paylaşıldı", "Yeni gönderiniz yayında! (Mock)", "success");
-        }, 1000);
-
-        /*
-        try {
-            const fileExt = selectedFile.name.split('.').pop();
-            const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-            const { data: uploadData, error: uploadError } = await supabase.storage
-                .from('post_images')
-                .upload(fileName, selectedFile);
-
-            if (uploadError) throw uploadError;
-
-            const { data: { publicUrl } } = supabase.storage
-                .from('post_images')
-                .getPublicUrl(fileName);
-
-            const { data: postData, error: postError } = await supabase
-                .from('posts')
-                .insert([{
-                    user_id: user.id,
-                    author_name: user.username,
-                    author_avatar: user.avatar,
-                    media_url: publicUrl,
-                    description: uploadCaption,
-                    mood: uploadMood || null,
-                    location_name: uploadLocationEnabled ? "Gönderildiği Konumdan" : null
-                }])
-                .select()
-                .single();
-
-            if (postError) throw postError;
-
-            await fetchPosts();
-
-            setIsUploadModalOpen(false);
-            setUploadImageURL(null);
-            setSelectedFile(null);
-            setUploadCaption('');
-            setUploadMood(null);
-            setUploadLocationEnabled(false);
-            setActiveTab('feed');
+            showToast("Paylaşıldı", "Yeni gönderiniz yayında!", "success");
         } catch (error: any) {
             console.error("Post upload error:", error);
             alert("Paylaşım yapılamadı: " + error.message);
         } finally {
             setIsPublishing(false);
         }
-        */
     };
 
     const handleSosImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -878,47 +873,30 @@ export default function MoffiSocialMasterpiece() {
         setIsSubmittingSOS(true);
         try {
             const photoUrls: string[] = [];
-            // 1. Upload Images
+            // 1. Upload Images using apiService (Mockable)
             for (const photo of lostPetPhotos) {
-                const fileExt = photo.file.name.split('.').pop();
-                const fileName = `${user.id}-sos-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-                const { error: uploadError } = await supabase.storage
-                    .from('sos_images')
-                    .upload(fileName, photo.file);
-
-                if (uploadError) {
-                    console.error("SOS fotoğraf yükleme hatası:", uploadError);
-                    continue;
-                }
-
-                const { data: { publicUrl } } = supabase.storage
-                    .from('sos_images')
-                    .getPublicUrl(fileName);
-
+                const publicUrl = await apiService.uploadMedia(photo.file, 'posts');
                 if (publicUrl) photoUrls.push(publicUrl);
             }
 
-            // 2. Insert Record
-            const { error: insertError } = await supabase
-                .from('lost_pets')
-                .insert([{
-                    user_id: user.id,
-                    author_name: user.username,
-                    author_avatar: user.avatar,
-                    pet_name: lostPetName,
-                    pet_breed: lostPetBreed,
-                    last_location: lostPetLocation,
-                    description: lostPetDesc,
-                    media_url: photoUrls[0] || null,
-                    images: photoUrls, // Also store as array if possible
-                    status: 'lost'
-                }]);
+            // 2. Insert Record via local simulation (Mock mode)
+            setSosAlerts(prev => [{
+                id: `lost-${Date.now()}`,
+                user_id: user.id,
+                author_name: user.username,
+                author_avatar: user.avatar,
+                pet_name: lostPetName,
+                pet_breed: lostPetBreed,
+                last_location: lostPetLocation,
+                description: lostPetDesc,
+                media_url: photoUrls[0] || null,
+                images: photoUrls,
+                status: 'lost',
+                time: 'Şimdi'
+            }, ...prev]);
 
-            if (insertError) throw insertError;
+            showToast("GÜÇLÜ SİNYAL GÖNDERİLDİ!", "Acil Durum İlanınız 5km çapındaki herkese ulaştı.", "success");
 
-            alert("GÜÇLÜ SİNYAL GÖNDERİLDİ! Acil Durum İlanınız 5km çapındaki herkese ulaştı.");
-
-            await fetchLostPets();
             setIsLostAdModalOpen(false);
             setLostPetName("");
             setLostPetBreed("");
@@ -928,7 +906,8 @@ export default function MoffiSocialMasterpiece() {
 
         } catch (error: any) {
             console.error("SOS submission error:", error);
-            alert("İlan gönderilirken hata oluştu: " + error.message);
+            showToast("Hata", "İlan gönderilirken hata oluştu.", "error");
+        } finally {
             setIsSubmittingSOS(false);
         }
     };
@@ -936,12 +915,11 @@ export default function MoffiSocialMasterpiece() {
     const handleDeleteLostPet = async (petId: string) => {
         if (!window.confirm("Kayıp ilanını sistemden kaldırmak/silmek istediğinize emin misiniz?")) return;
         try {
-            const { error } = await supabase.from('lost_pets').delete().eq('id', petId);
-            if (error) throw error;
-            alert("İlanınız başarıyla sistemden kaldırıldı ve Moffi ağına iletildi.");
-            fetchLostPets();
+            // Mock delete logic
+            setSosAlerts(prev => prev.filter(p => p.id !== petId));
+            showToast("İlan Kaldırıldı", "İlanınız başarıyla sistemden kaldırıldı.", "success");
         } catch (err: any) {
-            alert("Hata: İlan silinemedi. " + err.message);
+            showToast("Hata", "İlan silinemedi.", "error");
         }
     };
 
@@ -959,68 +937,37 @@ export default function MoffiSocialMasterpiece() {
         }
 
         setIsSubmittingAdoption(true);
-        showToast('Yükleniyor...', 'Fotoğraflar yükleniyor ve Moffi AI denetimi başlatılıyor...', 'info');
+        showToast('Yükleniyor...', 'Fotoğraflar işleniyor ve Moffi AI denetimi başlatılıyor...', 'info');
         try {
             const photoUrls: string[] = [];
-            // 1. Upload Photos
+            // 1. Upload Photos using apiService (Mockable)
             for (const photo of adoptionPetPhotos) {
-                const fileExt = photo.file.name.split('.').pop();
-                const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
-                const filePath = `adoption/${fileName}`;
-
-                const { error: uploadError } = await supabase.storage
-                    .from('pet-images')
-                    .upload(filePath, photo.file);
-
-                if (uploadError) {
-                    console.error("Adoption fotoğraf yükleme hatası:", uploadError);
-                    continue;
-                }
-
-                const { data: { publicUrl } } = supabase.storage
-                    .from('pet-images')
-                    .getPublicUrl(filePath);
-
+                const publicUrl = await apiService.uploadMedia(photo.file, 'posts');
                 if (publicUrl) photoUrls.push(publicUrl);
             }
 
-            // 2. Save to adoption_ads with pending status (AI will activate)
-            const { data: insertedAd, error: dbError } = await supabase
-                .from('adoption_ads')
-                .insert({
-                    user_id: user.id,
-                    name: adoptionPetName,
-                    breed: adoptionPetBreed,
-                    age: adoptionPetAge,
-                    description: adoptionPetDesc,
-                    image_url: photoUrls[0] || null,
-                    images: photoUrls, // Storing all photos
-                    author_name: user.username,
-                    author_avatar: user.avatar || null,
-                    pet_type: adoptionPetType,
-                    status: 'pending' // AI will decide final status
-                })
-                .select()
-                .single();
+            // 2. Add to local state (Mock mode)
+            const newAd = {
+                id: `adopt-${Date.now()}`,
+                user_id: user.id,
+                name: adoptionPetName,
+                breed: adoptionPetBreed,
+                age: adoptionPetAge,
+                description: adoptionPetDesc,
+                image_url: photoUrls[0] || null,
+                images: photoUrls,
+                author_name: user.username,
+                author_avatar: user.avatar || null,
+                pet_type: adoptionPetType,
+                status: 'active'
+            };
 
-            if (dbError) throw dbError;
+            setAdoptionAds(prev => [newAd, ...prev]);
 
-            // 3. Call Moffi AI Moderation
-            showToast('Moffi AI İnceliyor...', 'Yapay zeka ilanınızı güvenlik açısından analiz ediyor...', 'info');
-
-            const modResponse = await fetch('/api/adoption/moderate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    adId: insertedAd.id,
-                    name: adoptionPetName,
-                    breed: adoptionPetBreed,
-                    age: adoptionPetAge,
-                    description: adoptionPetDesc
-                })
-            });
-
-            const modResult = await modResponse.json();
+            // Simulation: Artificial delay for "AI Moderation"
+            setTimeout(() => {
+                showToast('✅ İlan Yayınlandı!', 'Moffi AI denetiminden geçti. İlanınız görünmeye başladı.', 'success');
+            }, 1000);
 
             // Reset form
             setIsAddAdoptionModalOpen(false);
@@ -1031,15 +978,8 @@ export default function MoffiSocialMasterpiece() {
             setAdoptionPetPhotos([]);
             setAdoptionPetType("cat");
 
-            if (modResult.safe !== false) {
-                showToast('✅ İlan Yayınlandı!', 'Moffi AI denetiminden geçti. İlanınız görünmeye başladı.', 'success');
-                fetchAdoptionAds();
-            } else {
-                showToast('⚠️ İlan Kaldırıldı', `Moffi AI: ${modResult.reason || 'Kural ihlali tespit edildi.'}`, 'error');
-            }
-
         } catch (err: any) {
-            showToast('Hata', err.message, 'error');
+            showToast('Hata', "İlan oluşturulamadı.", 'error');
         } finally {
             setIsSubmittingAdoption(false);
         }
@@ -1048,15 +988,10 @@ export default function MoffiSocialMasterpiece() {
     const handleDeleteAdoptionAd = async (adId: string) => {
         if (!confirm('Bu ilanı kaldırmak istediğinizden emin misiniz?')) return;
         try {
-            const { error } = await supabase
-                .from('adoption_ads')
-                .delete()
-                .eq('id', adId);
-            if (error) throw error;
+            setAdoptionAds(prev => prev.filter(ad => ad.id !== adId));
             showToast('İlan Kaldırıldı', 'Sahiplendirme ilanınız silindi.', 'success');
-            fetchAdoptionAds();
         } catch (err: any) {
-            showToast('Hata', err.message, 'error');
+            showToast('Hata', "İlan silinemedi.", 'error');
         }
     };
 
@@ -1104,23 +1039,13 @@ export default function MoffiSocialMasterpiece() {
         if (!user || !selectedAdoptionPet) return;
         setIsSubmittingApp(true);
         try {
-            const { error } = await supabase.from('adoption_applications').insert([{
-                ad_id: selectedAdoptionPet.id,
-                applicant_id: user.id,
-                applicant_notes: appNote,
-                experience_level: appExperience,
-                home_conditions: appHomeType,
-                status: 'pending'
-            }]);
-
-            if (error) throw error;
-
+            // Mock submission
             showToast("Başvuru İletildi! ❤️", "İlan sahibi başvurunuzu inceledikten sonra size dönecek.", "success");
             setIsApplicationFormOpen(false);
             setAppNote("");
-            setSelectedAdoptionPet(null); // Close the detail view too
+            setSelectedAdoptionPet(null);
         } catch (err: any) {
-            showToast("Hata", err.message, "error");
+            showToast("Hata", "Başvuru yapılamadı.", "error");
         } finally {
             setIsSubmittingApp(false);
         }
@@ -1196,106 +1121,53 @@ export default function MoffiSocialMasterpiece() {
         try {
             if (anonModalType === 'report' || anonModalType === 'message') {
                 const isMsg = anonModalType === 'message';
-                const { error } = await supabase.from('sos_sightings').insert([{
-                    lost_pet_id: selectedLostPet.id,
-                    reporter_id: user?.id,
-                    seen_area: isMsg ? `[MESAJ] ${anonMessage.trim()}` : `[GÖRÜLDÜ] ${anonMessage.trim()}`,
-                    anonymity_enabled: true
-                }]);
-                if (error) throw error;
+                // Mock sighting submission
                 showToast("Sinyal İletildi", isMsg ? "Moffi Acil İhbar Hattına şifreli mesajınız ulaştı." : "Bölge bilgisini güvenle ulaştırdık.", "success");
             }
             setAnonModalType(null);
             setAnonMessage("");
         } catch (err: any) {
-            showToast("Bağlantı Hatası", "İşlem sırasında beklenmedik bir hata oluştu: " + err.message, "error");
+            showToast("Bağlantı Hatası", "İşlem sırasında beklenmedik bir hata oluştu.", "error");
         } finally {
             setIsSubmittingAnon(false);
         }
     };
 
     const fetchInbox = async () => {
-        // SUPABASE_DISABLED: Mock Message Data
-        const mockMessages = [
-            { id: 'msg-1', sender_id: 'user-2', receiver_id: user?.id || 'mock-id', content: 'Merhaba! Dost\'u en son parkta görmüştüm. 🐾', created_at: new Date().toISOString(), read_status: false },
-            { id: 'msg-2', sender_id: user?.id || 'mock-id', receiver_id: 'user-3', content: 'Teşekkürler, hemen bakıyorum!', created_at: new Date().toISOString(), read_status: true }
-        ];
-        setInboxMessages(mockMessages);
-        setUnreadInboxCount(1);
-
-        /*
         if (!user) return;
         try {
-            const { data, error } = await supabase
-                .from('messages')
-                .select('*')
-                .or(`receiver_id.eq.${user.id},sender_id.eq.${user.id}`)
-                .order('created_at', { ascending: true }); // ASC so newest are at bottom
-
-            if (error) throw error;
-            if (data) {
-                setInboxMessages(data);
-                // Count unread (only ones sent TO us and not read yet)
-                const unread = data.filter(m => m.receiver_id === user.id && m.read_status === false).length;
-                setUnreadInboxCount(unread);
-            }
+            const data = await apiService.getInboxMessages();
+            setInboxMessages(data || []);
+            // Count unread
+            const unread = (data || []).filter((m: any) => m.receiver_id === user.id && m.read_status === false).length;
+            setUnreadInboxCount(unread);
         } catch (err) {
-            console.error("Mesajlar yüklenemedi:", err);
+            console.error("Inbox yükleme hatası:", err);
         }
-        */
     };
 
 
-    const fetchSosAlerts = async () => {
-        // SUPABASE_DISABLED: Use high-fidelity Mock SOS Data
-        const mockSos = [
-            { id: 'sos-1', petName: 'Dost', location: 'Merkez Parkı civarı', time: '5dk önce', type: 'dog', distance: 0.5, unread: true },
-            { id: 'sos-2', petName: 'Pamuk', location: 'Atatürk Cad. No:12', time: '12dk önce', type: 'cat', distance: 3.2, unread: true },
-            { id: 'sos-3', petName: 'Maviş', location: 'Gül Sokak', time: '25dk önce', type: 'bird', distance: 12.5, unread: false },
-            { id: 'sos-4', petName: 'Gece', location: 'Deniz Kenarı', time: '40dk önce', type: 'dog', distance: 0.8, unread: false },
-            { id: 'sos-5', petName: 'Karamel', location: 'Sanayi bölgesi', time: '1sa önce', type: 'other', distance: 18.2, unread: false }
-        ];
-        setSosAlerts(mockSos);
-        
-        /*
-        if (!user) return;
+    // Unified SOS/Lost Pet fetcher used across the component
+    const fetchLostPets = async () => {
+        setIsLoadingLost(true);
         try {
-            const { data: myPets, error: petsError } = await supabase
-                .from('lost_pets')
-                .select('id, pet_name')
-                .eq('user_id', user.id);
-            if (petsError) throw petsError;
-            if (!myPets || myPets.length === 0) {
-                setSosAlerts([]);
-                return;
-            }
-            const petIds = myPets.map(p => p.id);
-            const { data: sightings, error: sightingsError } = await supabase
-                .from('sos_sightings')
-                .select('*')
-                .in('lost_pet_id', petIds)
-                .order('created_at', { ascending: false });
-            if (sightingsError) throw sightingsError;
-
-            const mapped = sightings?.map(s => {
-                const pet = myPets.find(p => p.id === s.lost_pet_id);
-                return { ...s, pet_name: pet?.pet_name };
-            }) || [];
-
-            setSosAlerts(mapped);
+            const data = await apiService.getLostPets();
+            setLostPets(data || []);
+            setSosAlerts(data || []);
         } catch (err) {
-            console.error("SOS ihbarları yüklenemedi:", err);
+            console.error("Kayıp ilanlar çekilirken hata:", err);
+            setLostPets([]);
+            setSosAlerts([]);
+        } finally {
+            setIsLoadingLost(false);
         }
-        */
     };
 
 
     const markMessagesAsRead = async (chatId?: string) => {
         if (!user || unreadInboxCount === 0) return;
         setUnreadInboxCount(0);
-        let query = supabase.from('messages').update({ read_status: true }).eq('receiver_id', user.id).eq('read_status', false);
-        if (chatId) query = query.eq('sender_id', chatId);
-        await query;
+        // Persistence update would normally happen here via apiService
     };
 
     const handleReply = async () => {
@@ -1303,26 +1175,11 @@ export default function MoffiSocialMasterpiece() {
 
         setIsReplying(true);
         try {
-            if (editingMessageId) {
-                const { error } = await supabase.from('messages')
-                    .update({ content: replyMessage.trim(), is_edited: true })
-                    .eq('id', editingMessageId)
-                    .eq('sender_id', user.id);
-                if (error) throw error;
-                setEditingMessageId(null);
-            } else {
-                const { error } = await supabase.from('messages').insert([{
-                    sender_id: user.id,
-                    receiver_id: activeChatUserId,
-                    content: replyMessage.trim(),
-                    read_status: false
-                }]);
-                if (error) throw error;
-            }
+            await apiService.sendChatMessage(activeChatUserId, replyMessage.trim());
             setReplyMessage("");
             fetchInbox();
         } catch (err: any) {
-            showToast("Gönderilemedi", err.message, "error");
+            showToast("Gönderilemedi", "Mesaj iletilemedi.", "error");
         } finally {
             setIsReplying(false);
         }
@@ -1330,13 +1187,12 @@ export default function MoffiSocialMasterpiece() {
 
     const handleDeleteMessage = async (msgId: string) => {
         try {
-            const { error } = await supabase.from('messages').delete().eq('id', msgId).eq('sender_id', user?.id);
-            if (error) throw error;
+            // Mock delete
             setActiveMessageMenuId(null);
             if (editingMessageId === msgId) { setEditingMessageId(null); setReplyMessage(""); }
-            fetchInbox();
+            showToast("Mesaj Silindi", "Mesaj başarıyla kaldırıldı.", "success");
         } catch (err: any) {
-            showToast("Mesaj Silinemedi", err.message, "error");
+            showToast("Mesaj Silinemedi", "Hata oluştu.", "error");
         }
     };
 
@@ -1349,13 +1205,7 @@ export default function MoffiSocialMasterpiece() {
     const handleAcceptChat = async () => {
         if (!user || !activeChatUserId) return;
         try {
-            const { error } = await supabase.from('messages').insert([{
-                sender_id: user.id,
-                receiver_id: activeChatUserId,
-                content: '[SYSTEM_ACCEPT]',
-                read_status: true
-            }]);
-            if (error) throw error;
+            await apiService.sendChatMessage(activeChatUserId, '[SYSTEM_ACCEPT]');
             fetchInbox();
         } catch (err: any) {
             console.error("Chat onaylanamadı:", err);
@@ -1383,19 +1233,26 @@ export default function MoffiSocialMasterpiece() {
 
     // REAL-TIME SOS RADAR FILTERING LOGIC
     const filteredSosAlerts = React.useMemo(() => {
+        const sosSettings = user?.settings?.sos || {
+            radius: 5,
+            quietHours: { enabled: false, from: '23:00', to: '07:00' },
+            petTypes: ['dog', 'cat', 'bird', 'other'],
+            emergencyBypass: true
+        };
+
         return sosAlerts.filter(alert => {
             // 1. Radius Filter
-            if (alert.distance > kvkkToggles.sosRadius) return false;
+            if (alert.distance > (sosSettings.radius || 5)) return false;
 
             // 2. Pet Type Filter
-            if (!kvkkToggles.sosPetTypes.includes(alert.type)) return false;
+            if (!(sosSettings.petTypes || []).includes(alert.type)) return false;
 
             // 3. Quiet Hours & Emergency Bypass Logic
-            if (kvkkToggles.sosQuietHours.enabled) {
+            if (sosSettings.quietHours?.enabled) {
                 const now = new Date();
                 const currentMins = now.getHours() * 60 + now.getMinutes();
-                const [fromH, fromM] = kvkkToggles.sosQuietHours.from.split(':').map(Number);
-                const [toH, toM] = kvkkToggles.sosQuietHours.to.split(':').map(Number);
+                const [fromH, fromM] = (sosSettings.quietHours.from || '23:00').split(':').map(Number);
+                const [toH, toM] = (sosSettings.quietHours.to || '07:00').split(':').map(Number);
                 const fromMins = fromH * 60 + fromM;
                 const toMins = toH * 60 + toM;
 
@@ -1408,7 +1265,7 @@ export default function MoffiSocialMasterpiece() {
 
                 if (isQuietTime) {
                     // EMERGENCY BYPASS: If enabled, show very close alerts (< 1km) regardless of quiet hours
-                    if (kvkkToggles.sosEmergencyBypass && alert.distance < 1.0) {
+                    if (sosSettings.emergencyBypass && alert.distance < 1.0) {
                         return true;
                     }
                     return false;
@@ -1417,23 +1274,13 @@ export default function MoffiSocialMasterpiece() {
 
             return true;
         });
-    }, [sosAlerts, kvkkToggles]);
+    }, [sosAlerts, user?.settings?.sos]);
 
 
     useEffect(() => {
         if (user) {
-            // Initial fetch to get unread counts when user logs in
             fetchInbox();
-
-            // Setup real-time listener for incoming messages to increment counter or refresh
-            const channel = supabase.channel('messages_changes')
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, (payload) => {
-                    fetchInbox();
-                    showToast("Yeni Mesaj MİYAVLADI! 🐾", "Birinden yeni bir gizli mesaj aldınız.", "info");
-                })
-                .subscribe();
-
-            return () => { supabase.removeChannel(channel); }
+            // Supabase real-time message triggers removed for mock mode.
         }
     }, [user]);
 
@@ -1443,7 +1290,7 @@ export default function MoffiSocialMasterpiece() {
                 fetchInbox();
                 markMessagesAsRead();
             } else {
-                fetchSosAlerts();
+                fetchLostPets();
             }
         }
     }, [isInboxOpen, inboxTab]);
@@ -1523,6 +1370,30 @@ export default function MoffiSocialMasterpiece() {
                                 Moffi
                                 <span className="text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]">.</span>
                             </motion.h1>
+                            
+                            {/* SOS ACTIVE INDICATOR (HEADER) */}
+                            {isAnyPetLost && (
+                                <motion.div 
+                                    initial={{ opacity: 0, x: -10 }} 
+                                    animate={{ opacity: 1, x: 0 }}
+                                    className="flex items-center gap-1.5 ml-2 mt-0.5"
+                                >
+                                    <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
+                                    <span className="text-[9px] font-black text-red-500 uppercase tracking-widest italic drop-shadow-sm">SOS Aktif</span>
+                                </motion.div>
+                            )}
+
+                            {/* QUIET MODE INDICATOR */}
+                            {isQuietModeActive && (
+                                <motion.div 
+                                    initial={{ opacity: 0, x: -10 }} 
+                                    animate={{ opacity: 1, x: 0 }}
+                                    className="flex items-center gap-1.5 ml-2 mt-0.5"
+                                >
+                                    <Moon className="w-3 h-3 text-indigo-400 fill-indigo-400" />
+                                    <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest italic drop-shadow-sm">Sessiz Mod</span>
+                                </motion.div>
+                            )}
                         </div>
                     </div>
                     <div className="flex gap-3 items-center">
@@ -1562,6 +1433,7 @@ export default function MoffiSocialMasterpiece() {
             {/* MAIN IMMERSIVE CONTENT - Unified Scroll per tab */}
             <main 
                 ref={globalScrollRef}
+                onScroll={handleMainScroll}
                 className="flex-1 relative z-10 w-full overflow-y-auto no-scrollbar overscroll-contain"
             >
                 <AnimatePresence>
@@ -1630,7 +1502,38 @@ export default function MoffiSocialMasterpiece() {
                                 ))}
                             </div>
 
-                            {/* Feed Posts */}
+                            {/* Feed SOS Alerts (Respecting Privacy Settings) */}
+                            {activePet?.is_lost && activePet.sos_settings?.auto_post_sos !== false && (
+                                <motion.div 
+                                    initial={{ scale: 0.9, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    className="px-4 -mt-2 mb-4"
+                                >
+                                    <div className="bg-red-500/10 border border-red-500/30 rounded-[2.5rem] p-6 backdrop-blur-xl relative overflow-hidden group">
+                                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-orange-500 to-red-500 animate-pulse" />
+                                        <div className="flex items-center justify-between relative z-10">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-14 h-14 rounded-2xl bg-red-500 flex items-center justify-center shadow-[0_0_20px_rgba(239,68,68,0.4)] animate-bounce">
+                                                    <ShieldAlert className="w-8 h-8 text-white" />
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <h3 className="text-lg font-black text-white uppercase italic tracking-tighter leading-none">{activePet.name} <span className="text-red-400">Kayıp Alarmı</span></h3>
+                                                    <p className="text-[10px] font-bold text-red-200/60 uppercase tracking-widest mt-1">Arama Kurtarma Sinyali Gönderiliyor</p>
+                                                </div>
+                                            </div>
+                                            <button 
+                                                onClick={() => {
+                                                    setSosActivePet(activePet);
+                                                    setIsSOSCommandCenterOpen(true);
+                                                }}
+                                                className="px-6 py-2.5 bg-red-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-red-500/20"
+                                            >
+                                                YÖNET
+                                            </button>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
                             {isLoadingPosts ? (
                                 Array(3).fill(0).map((_, i) => (
                                     <div key={i} className="w-full relative flex flex-col items-center justify-center px-4 shrink-0" style={{ height: "calc(100vh - 180px)" }}>
@@ -1723,8 +1626,12 @@ export default function MoffiSocialMasterpiece() {
                                         </button>
                                     </div>
                                     
-                                    {/* Empty spacer for visual balance in the header */}
                                     <div className="w-10 h-10" />
+                                </div>
+
+                                {/* Pet Switcher for Radar Context */}
+                                <div className="flex justify-center mt-6 mb-2">
+                                    <PetSwitcher onAddPet={() => setIsLostAdModalOpen(true)} />
                                 </div>
 
                                 {radarTabMode === 'lost' ? (
@@ -1757,8 +1664,8 @@ export default function MoffiSocialMasterpiece() {
 
                                                             <div className="flex gap-4 items-center">
                                                                 <div className="w-16 h-16 rounded-2xl bg-red-500/20 flex items-center justify-center shrink-0 border border-red-500/30 shadow-inner overflow-hidden">
-                                                                    {pet.media_url ? (
-                                                                        <img src={pet.media_url} className="w-full h-full object-cover" />
+                                                                    {pet.img ? (
+                                                                        <img src={pet.img} className="w-full h-full object-cover" />
                                                                     ) : (
                                                                         <div className="flex flex-col items-center">
                                                                             <ShieldAlert className="w-6 h-6 text-red-500" />
@@ -1767,16 +1674,35 @@ export default function MoffiSocialMasterpiece() {
                                                                     )}
                                                                 </div>
                                                                 <div className="flex-1 overflow-hidden">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <p className="text-red-500 font-black text-lg tracking-tight truncate">{pet.pet_name}</p>
-                                                                        <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-500 text-[10px] font-bold border border-red-500/30">Kayıp</span>
+                                                                    <div className="flex items-center justify-between">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <p className="text-red-500 font-black text-lg tracking-tight truncate">{pet.name}</p>
+                                                                            <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-500 text-[10px] font-bold border border-red-500/30">Kayıp</span>
+                                                                        </div>
+                                                                        {pet.reward_enabled && pet.reward && (
+                                                                            <span className="px-2 py-0.5 rounded-lg bg-orange-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg -mt-1">ÖDÜL</span>
+                                                                        )}
                                                                     </div>
-                                                                    <p className="text-[var(--secondary-text)] text-xs font-medium truncate">{pet.pet_breed || "Bilinmiyor"}</p>
-                                                                    <p className="text-[10px] text-red-400/80 mt-1.5 flex items-center gap-1 font-bold"><MapPin className="w-3 h-3" /> {pet.last_location}</p>
+                                                                    <p className="text-[var(--secondary-text)] text-xs font-medium truncate">{pet.type || "Bilinmiyor"}</p>
+                                                                    <p className="text-[10px] text-red-400/80 mt-1.5 flex items-center gap-1 font-black"><MapPin className="w-3 h-3 text-cyan-400" /> {pet.last_seen_location || pet.location}</p>
                                                                 </div>
                                                                 <ChevronRight className="w-5 h-5 text-red-500/50" />
                                                             </div>
-                                                            <p className="text-[var(--foreground)]/70 text-xs mt-1 leading-snug line-clamp-2 px-1 font-medium">{pet.description || "Lütfen görünce acil dönüş yapın."}</p>
+                                                            <p className="text-[var(--foreground)]/70 text-[11px] mt-1 leading-snug line-clamp-2 px-1 font-medium italic">"{pet.description || "Lütfen görünce acil dönüş yapın."}"</p>
+                                                            
+                                                            <div className="mt-2 flex gap-2">
+                                                                <button 
+                                                                    onClick={(e) => { e.stopPropagation(); /* Logic to open chat */ }}
+                                                                    className="flex-1 py-3 rounded-2xl bg-white text-black text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg"
+                                                                >
+                                                                    İletişime Geç
+                                                                </button>
+                                                                <button 
+                                                                    className="px-4 py-3 rounded-2xl bg-white/10 text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all border border-white/5"
+                                                                >
+                                                                    Konum Paylaş
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -1910,500 +1836,32 @@ export default function MoffiSocialMasterpiece() {
                     {activeTab === 'profile' && (
                         <ProfileTab 
                             user={user}
-                            userPets={userPets}
+                            showAuraBadge={isAuraVisible}
                             onEditProfile={() => setIsEditProfileOpen(true)}
                             onAddPet={() => setIsAddPetOpen(true)}
-                            onSettings={() => { setActiveSettingsView('main'); setIsSettingsOpen(true); }}
-                            onPetQR={(pet) => { setQrModalPet({ name: pet.name, id: pet.id, avatar: pet.cover_photo || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200" }); }}
+                            onSettings={() => window.dispatchEvent(new CustomEvent('open-moffi-settings'))}
+                            onPetQR={(pet) => { setQrModalPet({ name: pet.name, id: pet.id, avatar: pet.image || pet.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200" }); }}
                             onSOSSettings={(pet) => { setSosActivePet(pet); setIsSOSCommandCenterOpen(true); }}
+                            onOpenActionHub={() => window.dispatchEvent(new CustomEvent('open-moffi-hub'))}
                             posts={userPosts}
                             onLike={toggleLike}
-                            isCommentsDisabled={!kvkkToggles.allowComments}
+                            activeSubView={profileSubView}
+                            onSubViewChange={setProfileSubView}
+                            isCommentsDisabled={!user?.settings?.privacy?.allowComments}
+                            isSmartShopEnabled={user?.settings?.privacy?.smartShopEnabled}
+                            isAuraStudioOpen={isAuraStudioOpen}
+                            setIsAuraStudioOpen={setIsAuraStudioOpen}
+                            auraSettings={auraSettings}
+                            setAuraSettings={handleUpdateAuraSettings}
                         />
                     )}
 
                 </AnimatePresence>
             </main >
 
-            {/* Hidden input for camera upload - used by global bottom nav */}
             <input type="file" ref={cameraInputRef} className="hidden" accept="image/*,video/*" onChange={handleCameraUpload} />
 
             {/* MODALS AND DRAWERS */}
-
-            {/* SETTINGS DRAWER */}
-            <AnimatePresence>
-                {isSettingsOpen && (
-                    <>
-                        {/* Backdrop */}
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setIsSettingsOpen(false)}
-                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[150]"
-                        />
-                        <motion.div
-                            initial={{ y: "100%", opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            exit={{ y: "100%", opacity: 0 }}
-                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                            className="fixed inset-x-0 bottom-0 h-[80%] bg-[var(--background)] backdrop-blur-3xl z-[200] rounded-t-[2.5rem] border-t border-white/10 p-6 flex flex-col shadow-[0_-20px_50px_rgba(0,0,0,0.8)] overflow-hidden"
-                        >
-                        <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-6 cursor-pointer" onClick={() => { setIsSettingsOpen(false); setActiveSettingsView('main'); }} />
-
-                        <AnimatePresence mode="wait">
-                            {/* MAIN SETTINGS VIEW */}
-                            {activeSettingsView === 'main' && (
-                                <motion.div
-                                    key="main"
-                                    initial={{ x: -20, opacity: 0 }}
-                                    animate={{ x: 0, opacity: 1 }}
-                                    exit={{ x: -20, opacity: 0 }}
-                                    transition={{ duration: 0.15, ease: "easeOut" }}
-                                    className="flex flex-col h-full"
-                                >
-                                    <div className="flex items-center justify-between mb-6">
-                                        <h2 className="text-2xl font-black text-[var(--foreground)]">Ayarlar</h2>
-                                        <button 
-                                            onClick={() => setIsSettingsOpen(false)}
-                                            className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors"
-                                        >
-                                            <X className="w-5 h-5 text-gray-400" />
-                                        </button>
-                                    </div>
-                                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-6">
-                                        
-                                        {/* Tema Seçici */}
-                                        <div className="space-y-3">
-                                            <p className="text-xs font-bold text-[var(--secondary-text)] uppercase tracking-widest px-1">Görünüm</p>
-                                            <div className="grid grid-cols-3 gap-3">
-                                                {[
-                                                    { id: 'apple-light', label: 'Apple Light', color: 'bg-[#FFFFFF]', border: 'border-blue-500/50' },
-                                                    { id: 'apple-midnight', label: 'Apple Midnight', color: 'bg-[#1C1C1E]', border: 'border-blue-500/50' },
-                                                    { id: 'neo-dark', label: 'Neo Dark', color: 'bg-[#0A0A0E]', border: 'border-white/20' },
-                                                    { id: 'glass-pink', label: 'Glass Pink', color: 'bg-[#1A0B14]', border: 'border-pink-500/30' },
-                                                    { id: 'mint-fresh', label: 'Mint Fresh', color: 'bg-[#0B1A14]', border: 'border-emerald-500/30' }
-                                                ].map((t) => (
-                                                    <button
-                                                        key={t.id}
-                                                        onClick={() => setTheme(t.id as any)}
-                                                        className={cn(
-                                                            "relative h-20 rounded-2xl border-2 transition-all overflow-hidden active:scale-95",
-                                                            theme === t.id ? t.border : "border-transparent bg-[var(--card-bg)]"
-                                                        )}
-                                                    >
-                                                        <div className={cn("absolute inset-0 opacity-40", t.color)} />
-                                                        <div className="relative h-full flex flex-col items-center justify-center gap-1">
-                                                            {theme === t.id && (
-                                                                <div className="absolute top-2 right-2">
-                                                                    <Check className="w-4 h-4 text-[var(--foreground)]" />
-                                                                </div>
-                                                            )}
-                                                            <span className={cn("text-[10px] font-black uppercase", t.id === 'apple-light' ? "text-black" : "text-[var(--foreground)]")}>{t.label}</span>
-                                                        </div>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <SettingsRow icon={User} label="Hesap Bilgileri / Giriş" onClick={() => { setIsSettingsOpen(false); setIsAuthModalOpen(true); }} />
-                                            <SettingsRow icon={Bell} label="Bildirim Tercihleri" onClick={() => setActiveSettingsView('notifications')} />
-                                            <SettingsRow icon={Lock} label="KVKK, Gizlilik ve Güvenlik" onClick={() => setActiveSettingsView('privacy')} />
-                                            <SettingsRow icon={Bookmark} label="Kaydedilenler" onClick={() => { setProfileViewMode('saved'); setIsSettingsOpen(false); }} />
-
-                                            <hr className="border-[var(--card-border)] my-4" />
-
-                                            <SettingsRow icon={HelpCircle} label="Yardım ve Destek" onClick={() => setActiveSettingsView('help')} />
-                                            {user ? (
-                                                <SettingsRow icon={LogOut} label="Çıkış Yap" danger onClick={async () => { await logout(); router.push('/'); }} />
-                                            ) : (
-                                                <SettingsRow icon={LogOut} label="Üye Ol / Çıkış" danger onClick={() => router.push('/')} />
-                                            )}
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )}
-
-                            {/* PRIVACY & KVKK VIEW */}
-                            {activeSettingsView === 'privacy' && (
-                                <motion.div
-                                    key="privacy"
-                                    initial={{ x: 20, opacity: 0 }}
-                                    animate={{ x: 0, opacity: 1 }}
-                                    exit={{ x: 20, opacity: 0 }}
-                                    transition={{ duration: 0.15, ease: "easeOut" }}
-                                    className="flex flex-col h-full overflow-hidden"
-                                >
-                                    <div className="flex items-center gap-4 mb-6">
-                                        <button onClick={() => setActiveSettingsView('main')} className="w-10 h-10 rounded-full bg-[var(--card-bg)] flex items-center justify-center hover:bg-white/10 transition-colors">
-                                            <ChevronLeft className="w-6 h-6 text-[var(--foreground)]" />
-                                        </button>
-                                        <h2 className="text-xl font-black text-[var(--foreground)]">Gizlilik & KVKK</h2>
-                                    </div>
-
-                                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-6 pb-20">
-
-                                        {/* Section 1 */}
-                                        <div className="space-y-4">
-                                            <h3 className="text-[11px] font-bold text-cyan-400 tracking-widest uppercase ml-1">Görünürlük ve İletişim</h3>
-
-                                            <div className="bg-[var(--card-bg)] rounded-2xl p-4 border border-[var(--card-border)] flex items-center justify-between">
-                                                <div>
-                                                    <p className="text-sm font-bold text-[var(--foreground)]">Tam Konum Paylaşımı</p>
-                                                    <p className="text-xs text-[var(--secondary-text)] mt-1 max-w-[200px]">Diğerleri canlı radar üzerinde sizi nokta atışı görebilir.</p>
-                                                </div>
-                                                <button onClick={() => setKvkkToggles(p => ({ ...p, location: !p.location }))} className={cn("w-12 h-6 rounded-full transition-colors relative flex items-center", kvkkToggles.location ? "bg-cyan-500" : "bg-gray-700")}>
-                                                    <div className={cn("w-4 h-4 bg-white rounded-full absolute transition-transform", kvkkToggles.location ? "translate-x-7" : "translate-x-1")} />
-                                                </button>
-                                            </div>
-
-                                            <div className="bg-[var(--card-bg)] rounded-2xl p-4 border border-[var(--card-border)] flex items-center justify-between">
-                                                <div>
-                                                    <p className="text-sm font-bold text-[var(--foreground)]">Profilim Herkese Açık</p>
-                                                    <p className="text-xs text-[var(--secondary-text)] mt-1 max-w-[200px]">Sadece onaylı kişiler mi yoksa tüm topluluk mu görebilir?</p>
-                                                </div>
-                                                <button onClick={() => setKvkkToggles(p => ({ ...p, publicProfile: !p.publicProfile }))} className={cn("w-12 h-6 rounded-full transition-colors relative flex items-center", kvkkToggles.publicProfile ? "bg-cyan-500" : "bg-gray-700")}>
-                                                    <div className={cn("w-4 h-4 bg-white rounded-full absolute transition-transform", kvkkToggles.publicProfile ? "translate-x-7" : "translate-x-1")} />
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* Section 2 */}
-                                        <div className="space-y-4">
-                                            <h3 className="text-[11px] font-bold text-purple-400 tracking-widest uppercase ml-1">Akıllı Sistemler & İzinler</h3>
-                                            
-                                            <div className="bg-[var(--card-bg)] rounded-2xl p-4 border border-[var(--card-border)] flex items-center justify-between">
-                                                <div>
-                                                    <p className="text-sm font-bold text-[var(--foreground)]">Yorumları Yönet</p>
-                                                    <p className="text-xs text-[var(--secondary-text)] mt-1 max-w-[200px]">Gönderilerinizdeki yorum bölümünü tüm topluluk için açın veya kapatın.</p>
-                                                </div>
-                                                <button onClick={() => setKvkkToggles(p => ({ ...p, allowComments: !p.allowComments }))} className={cn("w-12 h-6 rounded-full transition-colors relative flex items-center", kvkkToggles.allowComments ? "bg-cyan-500" : "bg-gray-700")}>
-                                                    <div className={cn("w-4 h-4 bg-white rounded-full absolute transition-transform", kvkkToggles.allowComments ? "translate-x-7" : "translate-x-1")} />
-                                                </button>
-                                            </div>
-
-                                            <div className="bg-[var(--card-bg)] rounded-2xl p-4 border border-[var(--card-border)] flex items-center justify-between">
-                                                <div>
-                                                    <p className="text-sm font-bold text-[var(--foreground)]">Moffi AI Asistanı</p>
-                                                    <p className="text-xs text-[var(--secondary-text)] mt-1 max-w-[200px]">Asistan baloncuğunu tüm sayfalarda göster veya gizle.</p>
-                                                </div>
-                                                <button onClick={() => setShowAIAssistant(!showAIAssistant)} className={cn("w-12 h-6 rounded-full transition-colors relative flex items-center", showAIAssistant ? "bg-cyan-500" : "bg-gray-700")}>
-                                                    <div className={cn("w-4 h-4 bg-white rounded-full absolute transition-transform", showAIAssistant ? "translate-x-7" : "translate-x-1")} />
-                                                </button>
-                                            </div>
-
-                                            <div className="bg-[var(--card-bg)] rounded-2xl p-4 border border-[var(--card-border)] flex items-center justify-between">
-                                                <div>
-                                                    <p className="text-sm font-bold text-[var(--foreground)]">Yapay Zeka Moderasyonu</p>
-                                                    <p className="text-xs text-[var(--secondary-text)] mt-1 max-w-[200px]">Gönderilerinizin Moffi AI tarafından içerik taramasına izin verin.</p>
-                                                </div>
-                                                <button onClick={() => setKvkkToggles(p => ({ ...p, aiModeration: !p.aiModeration }))} className={cn("w-12 h-6 rounded-full transition-colors relative flex items-center", kvkkToggles.aiModeration ? "bg-purple-500" : "bg-gray-700")}>
-                                                    <div className={cn("w-4 h-4 bg-white rounded-full absolute transition-transform", kvkkToggles.aiModeration ? "translate-x-7" : "translate-x-1")} />
-                                                </button>
-                                            </div>
-
-                                            <div className="bg-[var(--card-bg)] rounded-2xl p-4 border border-[var(--card-border)] flex items-center justify-between">
-                                                <div>
-                                                    <p className="text-sm font-bold text-[var(--foreground)]">E-Bülten & SMS Onayı</p>
-                                                    <p className="text-xs text-[var(--secondary-text)] mt-1 max-w-[200px]">Kampanyalardan ilk siz haberdar olun (İstediğiniz an iptal edilebilir).</p>
-                                                </div>
-                                                <button onClick={() => setKvkkToggles(p => ({ ...p, marketing: !p.marketing }))} className={cn("w-12 h-6 rounded-full transition-colors relative flex items-center", kvkkToggles.marketing ? "bg-purple-500" : "bg-gray-700")}>
-                                                    <div className={cn("w-4 h-4 bg-white rounded-full absolute transition-transform", kvkkToggles.marketing ? "translate-x-7" : "translate-x-1")} />
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* Section 3 (Danger Zone) */}
-                                        <div className="space-y-4 pt-4 border-t border-[var(--card-border)]">
-                                            <h3 className="text-[11px] font-bold text-red-500 tracking-widest uppercase ml-1">Veri Yönetimi</h3>
-
-                                            <button onClick={() => alert("Kişisel verileriniz KVKK kapsamında .zip olarak indirilmek üzere hazırlanıyor. Linkiniz e-posta adresinize gönderilecektir.")} className="w-full bg-[var(--card-bg)] hover:bg-[var(--card-bg)] transition-colors rounded-2xl p-4 border border-[var(--card-border)] flex items-center justify-between text-left">
-                                                <div>
-                                                    <p className="text-sm font-bold text-[var(--foreground)]">Verilerimi İndir (.ZIP)</p>
-                                                    <p className="text-xs text-[var(--secondary-text)] mt-1">Sistemimizdeki tüm kişisel verilerinizin bir kopyasını alın.</p>
-                                                </div>
-                                            </button>
-
-                                            <button onClick={() => { if (window.confirm("Bu işlem GERİ ALINAMAZ! Hesabınız ve tüm verileriniz kalıcı olarak silinecektir. Emin misiniz?")) alert("Hesap silme talebi alındı."); }} className="w-full bg-red-500/10 hover:bg-red-500/20 transition-colors rounded-2xl p-4 border border-red-500/20 flex items-center justify-between text-left group">
-                                                <div>
-                                                    <p className="text-sm font-bold text-red-500 group-hover:text-red-400">Hesabımı ve Verilerimi Sil</p>
-                                                    <p className="text-xs text-red-500/60 mt-1">Sunucularımızdaki aktif kaydınızı tamamen yok edin.</p>
-                                                </div>
-                                            </button>
-                                        </div>
-
-                                    </div>
-                                </motion.div>
-                            )}
-
-                            {/* NOTIFICATIONS VIEW */}
-                            {activeSettingsView === 'notifications' && (
-                                <motion.div
-                                    key="notifications"
-                                    initial={{ x: 20, opacity: 0 }}
-                                    animate={{ x: 0, opacity: 1 }}
-                                    exit={{ x: 20, opacity: 0 }}
-                                    transition={{ duration: 0.15, ease: "easeOut" }}
-                                    className="flex flex-col h-full overflow-hidden"
-                                >
-                                    <div className="flex items-center gap-4 mb-6">
-                                        <button onClick={() => setActiveSettingsView('main')} className="w-10 h-10 rounded-full bg-[var(--card-bg)] flex items-center justify-center hover:bg-white/10 transition-colors">
-                                            <ChevronLeft className="w-6 h-6 text-[var(--foreground)]" />
-                                        </button>
-                                        <h2 className="text-xl font-black text-[var(--foreground)]">Bildirimler</h2>
-                                    </div>
-
-                                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-20">
-                                        <div className="bg-[var(--card-bg)] rounded-2xl p-4 border border-[var(--card-border)] flex items-center justify-between">
-                                            <div>
-                                                <p className="text-sm font-bold text-[var(--foreground)]">Anlık Bildirimler</p>
-                                                <p className="text-xs text-[var(--secondary-text)] mt-1 max-w-[200px]">Beğeni, yorum ve eşleşmeler için telefon bildirimleri.</p>
-                                            </div>
-                                            <button onClick={() => setKvkkToggles(p => ({ ...p, pushNotifications: !p.pushNotifications }))} className={cn("w-12 h-6 rounded-full transition-colors relative flex items-center", kvkkToggles.pushNotifications ? "bg-cyan-500" : "bg-gray-700")}>
-                                                <div className={cn("w-4 h-4 bg-white rounded-full absolute transition-transform", kvkkToggles.pushNotifications ? "translate-x-7" : "translate-x-1")} />
-                                            </button>
-                                        </div>
-
-                                        <div className="bg-[var(--card-bg)] rounded-2xl p-4 border border-[var(--card-border)] flex items-center justify-between">
-                                            <div>
-                                                <p className="text-sm font-bold text-[var(--foreground)]">E-Posta Özetleri</p>
-                                                <p className="text-xs text-[var(--secondary-text)] mt-1 max-w-[200px]">Haftalık topluluk trendleri ve arkadaş önerileri alın.</p>
-                                            </div>
-                                            <button onClick={() => setKvkkToggles(p => ({ ...p, emailNotifications: !p.emailNotifications }))} className={cn("w-12 h-6 rounded-full transition-colors relative flex items-center", kvkkToggles.emailNotifications ? "bg-cyan-500" : "bg-gray-700")}>
-                                                <div className={cn("w-4 h-4 bg-white rounded-full absolute transition-transform", kvkkToggles.emailNotifications ? "translate-x-7" : "translate-x-1")} />
-                                            </button>
-                                        </div>
-
-                                        {/* SOS RADAR SETTINGS */}
-                                        <div className="pt-4 mt-2 border-t border-white/5 space-y-4">
-                                            <h3 className="text-[11px] font-bold text-red-500 tracking-widest uppercase ml-1 flex items-center gap-2">
-                                                <ShieldAlert className="w-3 h-3" /> SOS Radar Ayarları
-                                            </h3>
-                                            
-                                            <div className="bg-red-500/5 rounded-2xl p-4 border border-red-500/10 flex items-center justify-between">
-                                                <div>
-                                                    <p className="text-sm font-bold text-white">Acil Durum (SOS) Bildirimleri</p>
-                                                    <p className="text-xs text-white/40 mt-1 max-w-[200px]">Yakınınızdaki kayıp hayvan ilanları için anlık uyarı alın.</p>
-                                                </div>
-                                                <button onClick={() => setKvkkToggles(p => ({ ...p, sosNotifications: !p.sosNotifications }))} className={cn("w-12 h-6 rounded-full transition-colors relative flex items-center", kvkkToggles.sosNotifications ? "bg-red-500" : "bg-gray-700")}>
-                                                    <div className={cn("w-4 h-4 bg-white rounded-full absolute transition-transform", kvkkToggles.sosNotifications ? "translate-x-7" : "translate-x-1")} />
-                                                </button>
-                                            </div>
-
-                                            {kvkkToggles.sosNotifications && (
-                                                <div className="bg-[var(--card-bg)] rounded-2xl p-4 border border-[var(--card-border)] space-y-6">
-                                                    {/* Radius Selector */}
-                                                    <div className="space-y-3">
-                                                        <div className="flex justify-between items-center">
-                                                            <p className="text-sm font-bold text-[var(--foreground)]">Radar Etki Çapı</p>
-                                                            <span className="text-xs font-black text-cyan-400 bg-cyan-400/10 px-2 py-1 rounded-md">{kvkkToggles.sosRadius} KM</span>
-                                                        </div>
-                                                        <div className="flex gap-2">
-                                                            {[2, 5, 10, 20].map((radius) => (
-                                                                <button
-                                                                    key={radius}
-                                                                    onClick={() => setKvkkToggles(p => ({ ...p, sosRadius: radius }))}
-                                                                    className={cn(
-                                                                        "flex-1 py-2 rounded-xl text-[10px] font-bold transition-all border",
-                                                                        kvkkToggles.sosRadius === radius 
-                                                                            ? "bg-cyan-500 border-cyan-400 text-black shadow-lg shadow-cyan-500/20" 
-                                                                            : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10"
-                                                                    )}
-                                                                >
-                                                                    {radius} KM
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Pet Type Filter */}
-                                                    <div className="space-y-3">
-                                                        <p className="text-sm font-bold text-[var(--foreground)]">İlgilendiğim Pet Türleri</p>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {[
-                                                                { id: 'dog', label: 'Köpek', icon: '🐕' },
-                                                                { id: 'cat', label: 'Kedi', icon: '🐈' },
-                                                                { id: 'bird', label: 'Kuş', icon: '🦜' },
-                                                                { id: 'other', label: 'Diğer', icon: '🐢' }
-                                                            ].map((type) => (
-                                                                <button
-                                                                    key={type.id}
-                                                                    onClick={() => {
-                                                                        const current = kvkkToggles.sosPetTypes;
-                                                                        const next = current.includes(type.id)
-                                                                            ? current.filter(t => t !== type.id)
-                                                                            : [...current, type.id];
-                                                                        setKvkkToggles(p => ({ ...p, sosPetTypes: next }));
-                                                                    }}
-                                                                    className={cn(
-                                                                        "px-4 py-2 rounded-xl text-[11px] font-bold transition-all border flex items-center gap-2",
-                                                                        kvkkToggles.sosPetTypes.includes(type.id)
-                                                                            ? "bg-white/10 border-cyan-400/50 text-white" 
-                                                                            : "bg-black/20 border-white/5 text-white/30"
-                                                                    )}
-                                                                >
-                                                                    <span>{type.icon}</span>
-                                                                    {type.label}
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Quiet Hours */}
-                                                    <div className="pt-4 border-t border-white/5 space-y-4">
-                                                        <div className="flex items-center justify-between">
-                                                            <div>
-                                                                <p className="text-sm font-bold text-white">Sessiz Saatler</p>
-                                                                <p className="text-[10px] text-white/30 mt-0.5">Belirli saatlerde bildirimleri sustur.</p>
-                                                            </div>
-                                                            <button onClick={() => setKvkkToggles(p => ({ ...p, sosQuietHours: { ...p.sosQuietHours, enabled: !p.sosQuietHours.enabled } }))} className={cn("w-10 h-5 rounded-full transition-colors relative flex items-center", kvkkToggles.sosQuietHours.enabled ? "bg-purple-500" : "bg-gray-800")}>
-                                                                <div className={cn("w-3.5 h-3.5 bg-white rounded-full absolute transition-transform", kvkkToggles.sosQuietHours.enabled ? "translate-x-6" : "translate-x-0.5")} />
-                                                            </button>
-                                                        </div>
-
-                                                        {kvkkToggles.sosQuietHours.enabled && (
-                                                            <div className="space-y-4">
-                                                                <div className="flex items-center gap-3 animate-in fade-in slide-in-from-top-1 duration-300">
-                                                                    <button 
-                                                                        onClick={() => setActiveTimePicker(activeTimePicker === 'from' ? null : 'from')}
-                                                                        className={cn(
-                                                                            "flex-1 border rounded-2xl p-4 flex flex-col items-center transition-all",
-                                                                            activeTimePicker === 'from' ? "bg-cyan-500/10 border-cyan-500/50" : "bg-white/5 border-white/10"
-                                                                        )}
-                                                                    >
-                                                                        <span className="text-[10px] font-black text-white/40 mb-2 uppercase tracking-widest leading-none">Başlangıç</span>
-                                                                        <span className="text-white text-2xl font-black">{kvkkToggles.sosQuietHours.from}</span>
-                                                                    </button>
-
-                                                                    <div className="w-2 h-0.5 bg-white/10 rounded-full shrink-0" />
-
-                                                                    <button 
-                                                                        onClick={() => setActiveTimePicker(activeTimePicker === 'to' ? null : 'to')}
-                                                                        className={cn(
-                                                                            "flex-1 border rounded-2xl p-4 flex flex-col items-center transition-all",
-                                                                            activeTimePicker === 'to' ? "bg-purple-500/10 border-purple-500/50" : "bg-white/5 border-white/10"
-                                                                        )}
-                                                                    >
-                                                                        <span className="text-[10px] font-black text-white/40 mb-2 uppercase tracking-widest leading-none">Bitiş</span>
-                                                                        <span className="text-white text-2xl font-black">{kvkkToggles.sosQuietHours.to}</span>
-                                                                    </button>
-                                                                </div>
-
-                                                                <AnimatePresence>
-                                                                    {activeTimePicker && (
-                                                                        <motion.div
-                                                                            initial={{ height: 0, opacity: 0 }}
-                                                                            animate={{ height: "auto", opacity: 1 }}
-                                                                            exit={{ height: 0, opacity: 0 }}
-                                                                            className="overflow-hidden bg-black/40 border border-white/5 rounded-3xl p-6"
-                                                                        >
-                                                                            <div className="flex justify-center items-center gap-8">
-                                                                                <TimeWheel 
-                                                                                    label="Saat"
-                                                                                    value={Number(kvkkToggles.sosQuietHours[activeTimePicker].split(':')[0])}
-                                                                                    max={23}
-                                                                                    onChange={(h) => {
-                                                                                        const current = kvkkToggles.sosQuietHours[activeTimePicker].split(':');
-                                                                                        const nextVal = `${h.toString().padStart(2, '0')}:${current[1]}`;
-                                                                                        setKvkkToggles(p => ({ ...p, sosQuietHours: { ...p.sosQuietHours, [activeTimePicker]: nextVal } }));
-                                                                                    }}
-                                                                                />
-                                                                                <div className="text-white/20 font-black text-2xl self-end mb-11">:</div>
-                                                                                <TimeWheel 
-                                                                                    label="Dakika"
-                                                                                    value={Number(kvkkToggles.sosQuietHours[activeTimePicker].split(':')[1])}
-                                                                                    max={59}
-                                                                                    onChange={(m) => {
-                                                                                        const current = kvkkToggles.sosQuietHours[activeTimePicker].split(':');
-                                                                                        const nextVal = `${current[0]}:${m.toString().padStart(2, '0')}`;
-                                                                                        setKvkkToggles(p => ({ ...p, sosQuietHours: { ...p.sosQuietHours, [activeTimePicker]: nextVal } }));
-                                                                                    }}
-                                                                                />
-                                                                            </div>
-                                                                            <button 
-                                                                                onClick={() => setActiveTimePicker(null)}
-                                                                                className="w-full mt-6 py-3 bg-white/10 hover:bg-white/15 text-white font-bold rounded-xl text-xs transition-colors"
-                                                                            >
-                                                                                Tamam
-                                                                            </button>
-                                                                        </motion.div>
-                                                                    )}
-                                                                </AnimatePresence>
-                                                            </div>
-                                                        )}
-
-
-
-                                                        <div className="flex items-center justify-between group cursor-pointer" onClick={() => setKvkkToggles(p => ({ ...p, sosEmergencyBypass: !p.sosEmergencyBypass }))}>
-                                                            <div>
-                                                                <p className="text-[11px] font-bold text-white group-hover:text-cyan-400 transition-colors">Kritik İhbar Bypass</p>
-                                                                <p className="text-[9px] text-white/30">Çok yakın ve acil durumlarda sessiz modu del.</p>
-                                                            </div>
-                                                            <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all", kvkkToggles.sosEmergencyBypass ? "border-cyan-400 bg-cyan-400" : "border-white/10")}>
-                                                                {kvkkToggles.sosEmergencyBypass && <Check className="w-3 h-3 text-black stroke-[4px]" />}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )}
-
-                            {/* HELP & SUPPORT VIEW */}
-                            {activeSettingsView === 'help' && (
-                                <motion.div
-                                    key="help"
-                                    initial={{ x: 20, opacity: 0 }}
-                                    animate={{ x: 0, opacity: 1 }}
-                                    exit={{ x: 20, opacity: 0 }}
-                                    transition={{ duration: 0.15, ease: "easeOut" }}
-                                    className="flex flex-col h-full overflow-hidden"
-                                >
-                                    <div className="flex items-center gap-4 mb-6">
-                                        <button onClick={() => setActiveSettingsView('main')} className="w-10 h-10 rounded-full bg-[var(--card-bg)] flex items-center justify-center hover:bg-white/10 transition-colors">
-                                            <ChevronLeft className="w-6 h-6 text-[var(--foreground)]" />
-                                        </button>
-                                        <h2 className="text-xl font-black text-[var(--foreground)]">Yardım & Destek</h2>
-                                    </div>
-
-                                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-20">
-                                        <div className="p-6 bg-gradient-to-br from-cyan-500/10 to-purple-500/10 rounded-[2rem] border border-white/10 text-center">
-                                            <div className="w-16 h-16 rounded-full bg-cyan-500/20 flex items-center justify-center mx-auto mb-4 border border-cyan-400/30">
-                                                <MessageCircle className="w-8 h-8 text-cyan-400" />
-                                            </div>
-                                            <h3 className="text-xl font-black text-[var(--foreground)] mb-2">Nasıl Yardımcı Olabiliriz?</h3>
-                                            <p className="text-sm text-[var(--secondary-text)] leading-relaxed mb-6">
-                                                Uygulama ile ilgili teknik bir sorun yaşıyorsanız veya hesabınızla ilgili detaylı desteğe ihtiyacınız varsa 7/24 bizimle iletişime geçebilirsiniz.
-                                            </p>
-                                            <a href="mailto:moffidestek@gmail.com" className="w-full inline-flex items-center justify-center gap-2 bg-cyan-500 text-black py-4 rounded-xl font-bold hover:bg-cyan-400 transition-colors shadow-[0_0_20px_rgba(6,182,212,0.2)]">
-                                                <Send className="w-4 h-4" />
-                                                moffidestek@gmail.com
-                                            </a>
-                                        </div>
-
-                                        <div className="bg-[var(--card-bg)] rounded-2xl p-4 border border-[var(--card-border)] flex items-center justify-between cursor-pointer hover:bg-[var(--card-bg)] transition-colors mt-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-[var(--card-bg)] flex items-center justify-center">
-                                                    <HelpCircle className="w-5 h-5 text-[var(--secondary-text)]" />
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-bold text-[var(--foreground)]">Sıkça Sorulan Sorular</p>
-                                                    <p className="text-xs text-[var(--secondary-text)]">Moffi hakkında en çok merak edilenler</p>
-                                                </div>
-                                            </div>
-                                            <ChevronRight className="w-5 h-5 text-[var(--secondary-text)]" />
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </motion.div>
-                </>
-                )}
-            </AnimatePresence>
 
             {/* EDIT PROFILE MODAL (Apple Modern Style) */}
             <AnimatePresence>
@@ -2434,44 +1892,32 @@ export default function MoffiSocialMasterpiece() {
                                     onClick={async () => {
                                         if (!user) return;
                                         setIsSavingProfile(true);
-                                        let finalAvatarUrl = null;
-
-                                        if (editAvatarFile) {
-                                            const fileExt = editAvatarFile.name.split('.').pop();
-                                            const fileName = `${user.id}/profile_${Date.now()}.${fileExt}`;
-                                            const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, editAvatarFile, { upsert: true });
-                                            if (!uploadError) {
-                                                const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
-                                                finalAvatarUrl = data.publicUrl;
-                                            } else {
-                                                setIsSavingProfile(false);
-                                                return;
+                                        try {
+                                            let finalAvatarUrl = null;
+                                            if (editAvatarFile) {
+                                                finalAvatarUrl = await apiService.uploadMedia(editAvatarFile, 'avatars');
                                             }
-                                        }
 
-                                        let finalCoverUrl = null;
-                                        if (editCoverFile) {
-                                            const fileExt = editCoverFile.name.split('.').pop();
-                                            const fileName = `${user.id}/cover_${Date.now()}.${fileExt}`;
-                                            const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, editCoverFile, { upsert: true });
-                                            if (!uploadError) {
-                                                const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
-                                                finalCoverUrl = data.publicUrl;
-                                            } else {
-                                                setIsSavingProfile(false);
-                                                return;
+                                            let finalCoverUrl = null;
+                                            if (editCoverFile) {
+                                                finalCoverUrl = await apiService.uploadMedia(editCoverFile, 'avatars');
                                             }
+
+                                            await updateProfile({
+                                                username: editUsername, // Use username correctly
+                                                name: editName,
+                                                bio: editBio,
+                                                ...(finalAvatarUrl && { avatar: finalAvatarUrl }),
+                                                ...(finalCoverUrl && { cover_photo: finalCoverUrl })
+                                            });
+
+                                            setIsEditProfileOpen(false);
+                                        } catch (err) {
+                                            console.error("Profile update error:", err);
+                                            showToast("Hata", "Profil güncellenemedi.", "error");
+                                        } finally {
+                                            setIsSavingProfile(false);
                                         }
-
-                                        await updateProfile({
-                                            username: editName,
-                                            bio: editBio,
-                                            ...(finalAvatarUrl && { avatar: finalAvatarUrl }),
-                                            ...(finalCoverUrl && { cover_photo: finalCoverUrl })
-                                        });
-
-                                        setIsSavingProfile(false);
-                                        setIsEditProfileOpen(false);
                                     }}
                                     className="text-sm font-black text-cyan-400 hover:text-cyan-300 transition-colors disabled:opacity-50"
                                 >
@@ -2816,33 +2262,15 @@ export default function MoffiSocialMasterpiece() {
                                                 setIsSavingPet(true);
 
                                                 try {
-                                                    // 1. Upload Photos
+                                                    // 1. Upload Photos using apiService
                                                     const photoUrls: string[] = [];
                                                     for (const photo of newPetPhotos) {
-                                                        const fileExt = photo.file.name.split('.').pop();
-                                                        const fileName = `${user.id}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-
-                                                        const { data: uploadData, error: uploadError } = await supabase.storage
-                                                            .from('pet-media')
-                                                            .upload(fileName, photo.file);
-
-                                                        if (uploadError) {
-                                                            console.error("Fotoğraf yükleme hatası:", uploadError);
-                                                            continue;
-                                                        }
-
-                                                        const { data: publicUrlData } = supabase.storage
-                                                            .from('pet-media')
-                                                            .getPublicUrl(fileName);
-
-                                                        if (publicUrlData) {
-                                                            photoUrls.push(publicUrlData.publicUrl);
-                                                        }
+                                                        const publicUrl = await apiService.uploadMedia(photo.file, 'posts');
+                                                        if (publicUrl) photoUrls.push(publicUrl);
                                                     }
 
-                                                    // 2. Insert into Pets Table
-                                                    const petData = {
-                                                        owner_id: user.id,
+                                                    // 2. Add Pet via apiService
+                                                    await apiService.addPet({
                                                         name: newPetName,
                                                         type: newPetType,
                                                         breed: newPetBreed,
@@ -2855,35 +2283,24 @@ export default function MoffiSocialMasterpiece() {
                                                         character_notes: newPetCharacter,
                                                         microchip_number: newPetMicrochip,
                                                         communication_preference: newPetShowPhone ? 'public_phone' : 'anonymous_only',
-                                                        photos: photoUrls,
-                                                        cover_photo: photoUrls.length > 0 ? photoUrls[0] : null,
-                                                        status: 'safe'
-                                                    };
+                                                        avatar: photoUrls[0] || null,
+                                                        image: photoUrls[0] || null,
+                                                        images: photoUrls,
+                                                    });
 
-                                                    const { data: savedPet, error: dbError } = await supabase
-                                                        .from('pets')
-                                                        .insert(petData)
-                                                        .select()
-                                                        .single();
-
-                                                    if (dbError) throw dbError;
-
-                                                    alert("Harika! Profil hazırlandı ve bu pet'e özel Moffi-ID QR Altyapısı başarıyla kuruldu.");
-
-                                                    // Refetch user pets immediately so UI updates
-                                                    fetchUserPets();
-
-                                                    setIsSavingPet(false);
+                                                    showToast("Hoş Geldin! 🐾", `${newPetName} Moffi ailesine katıldı.`, "success");
                                                     setIsAddPetOpen(false);
                                                     setAddPetStep(1);
-                                                    setNewPetName(""); setNewPetBreed(""); setNewPetAge("");
+                                                    
+                                                    // Reset form
+                                                    setNewPetName("");
+                                                    setNewPetBreed("");
+                                                    setNewPetAge("");
                                                     setNewPetPhotos([]);
-                                                    setNewPetGender("Erkek"); setNewPetNeutered("Evet"); setNewPetSize("Küçük");
-                                                    setNewPetHealth(""); setNewPetFeatures(""); setNewPetCharacter("");
-                                                    setNewPetMicrochip(""); setNewPetShowPhone(false);
-                                                } catch (error: any) {
-                                                    console.error("Pet kayıt hatası:", error);
-                                                    alert("Kaydedilirken bir hata oluştu: " + error.message);
+                                                } catch (err: any) {
+                                                    console.error("Pet saving error:", err);
+                                                    showToast("Hata", "Dostunuz kaydedilemedi.", "error");
+                                                } finally {
                                                     setIsSavingPet(false);
                                                 }
                                             }}
@@ -3505,7 +2922,7 @@ export default function MoffiSocialMasterpiece() {
 
                         {!activeChatUserId && inboxTab === 'chats' && (
                             // CHAT LIST (CONVERSATIONS)
-                            <div className="flex-1 overflow-y-auto px-4 py-2 flex flex-col gap-1">
+                            <div onScroll={handleInboxScroll} className="flex-1 overflow-y-auto px-4 py-2 flex flex-col gap-1">
                                 {chatGroups.length > 0 ? (
                                     chatGroups.map(([otherId, msgs]) => {
                                         const visibleMsgs = msgs.filter((m: any) => m.content !== '[SYSTEM_ACCEPT]');
@@ -3553,7 +2970,7 @@ export default function MoffiSocialMasterpiece() {
 
                         {!activeChatUserId && inboxTab === 'sos' && (
                             // SOS ALERTS LIST
-                            <div className="flex-1 overflow-y-auto px-4 py-2 flex flex-col gap-3">
+                            <div onScroll={handleInboxScroll} className="flex-1 overflow-y-auto px-4 py-2 flex flex-col gap-3">
                                 <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 mb-2">
                                     <h4 className="text-red-400 font-bold flex items-center gap-2 mb-1"><ShieldAlert className="w-5 h-5" /> Acil İhbar Hattı</h4>
                                     <p className="text-xs text-[var(--secondary-text)] leading-relaxed font-medium">Bu ekranda sadece Pet-ID (QR Kod) üzerinden size gelen anonim ihbarlar, son görüldü konumları ve acil mesajlar listelenir. Sıradan mesajlar buraya düşmez.</p>
@@ -3561,7 +2978,9 @@ export default function MoffiSocialMasterpiece() {
 
                                 {sosAlerts.length > 0 ? (
                                     sosAlerts.map(alert => {
-                                        const isMessage = alert.seen_area.startsWith('[MESAJ]');
+                                        const seenArea = alert.seen_area || alert.location || alert.last_seen_location || '';
+                                        const isMessage = seenArea.startsWith('[MESAJ]');
+                                        const petName = alert.name || alert.pet_name || 'İsimsiz Dost';
                                         return (
                                             <div key={alert.id} className="bg-[var(--card-bg)] border border-red-500/10 p-4 rounded-2xl flex items-start gap-4 shadow-lg shadow-black/40">
                                                 <div className={cn("w-10 h-10 rounded-full flex items-center justify-center shrink-0 border", isMessage ? "bg-blue-500/10 border-blue-500/30 text-blue-400" : "bg-red-500/10 border-red-500/40 text-red-500")}>
@@ -3569,11 +2988,11 @@ export default function MoffiSocialMasterpiece() {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex justify-between items-baseline mb-1">
-                                                        <h4 className={cn("text-[15px] font-bold", isMessage ? "text-blue-400" : "text-red-500")}>{alert.pet_name} için <span className="opacity-80 font-medium">{isMessage ? "Mesaj" : "İhbar"}</span></h4>
+                                                        <h4 className={cn("text-[15px] font-bold", isMessage ? "text-blue-400" : "text-red-500")}>{petName} için <span className="opacity-80 font-medium">{isMessage ? "Mesaj" : "İhbar"}</span></h4>
                                                         <span className="text-[11px] text-[var(--secondary-text)] font-medium">{new Date(alert.created_at).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                                                     </div>
                                                     <p className="text-sm font-medium text-[var(--foreground)]/90 leading-relaxed mt-1">
-                                                        {alert.seen_area.replace(/\[.*?\]\s*/, '')}
+                                                        {seenArea.replace(/\[.*?\]\s*/, '')}
                                                     </p>
                                                     {!isMessage && (
                                                         <button className="text-[11px] font-bold text-red-400 mt-2.5 bg-red-500/10 px-3 py-1.5 rounded-full border border-red-500/20 active:scale-95 transition-transform inline-flex items-center gap-1.5">
@@ -3604,7 +3023,7 @@ export default function MoffiSocialMasterpiece() {
                         {activeChatUserId && (
                             // ACTIVE CHAT THREAD (iMessage BUBBLES)
                             <>
-                                <div className="flex-1 overflow-y-auto px-4 py-6 flex flex-col gap-4">
+                                <div onScroll={handleInboxScroll} className="flex-1 overflow-y-auto px-4 py-6 flex flex-col gap-4">
                                     {(() => {
                                         const rawThread = chatGroups.find(g => g[0] === activeChatUserId)?.[1] || [];
                                         const threadMsgs = rawThread.filter((m: any) => m.content !== '[SYSTEM_ACCEPT]');
@@ -4576,13 +3995,27 @@ export default function MoffiSocialMasterpiece() {
                         onClick={() => setIsProfileMenuOpen(false)}
                     >
                         <motion.div
-                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            initial={{ scale: 0.9, opacity: 0, y: 100 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
-                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="w-full max-w-sm"
+                            exit={{ scale: 0.9, opacity: 0, y: 100 }}
+                            drag="y"
+                            dragConstraints={{ top: 0, bottom: 0 }}
+                            dragElastic={0.4}
+                            onDragEnd={(_, info) => {
+                                if (info.offset.y > 100) setIsProfileMenuOpen(false);
+                            }}
+                            className="w-full max-w-sm bg-[#0A0A0E]/60 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-8 pb-12 shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <div className="text-center mb-8">
+                            {/* CLOSE HANDLE - Enhanced Area */}
+                            <div 
+                                onClick={() => setIsProfileMenuOpen(false)}
+                                className="absolute top-0 left-0 right-0 h-10 flex justify-center items-center cursor-pointer active:opacity-50 transition-opacity z-50"
+                            >
+                                <div className="w-16 h-1.5 bg-white/20 rounded-full" />
+                            </div>
+
+                            <div className="text-center mb-8 mt-4">
                                 <h3 className="text-[11px] font-black text-[var(--foreground)]/40 uppercase tracking-[0.4em]">Profil Kategorileri</h3>
                                 <p className="text-2xl font-black text-[var(--foreground)] mt-1">Nereye gitmek istersin?</p>
                             </div>
@@ -4635,7 +4068,12 @@ export default function MoffiSocialMasterpiece() {
             </AnimatePresence >
 
             {/* GLOBAL BOTTOM TAB BAR - Simplified Apple iOS Style */}
-            <nav className="fixed bottom-0 left-0 right-0 z-[100] safe-area-bottom">
+            <motion.nav 
+                initial={false}
+                animate={{ y: isNavVisible ? 0 : 100, opacity: isNavVisible ? 1 : 0 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                className="fixed bottom-0 left-0 right-0 z-[100] safe-area-bottom"
+            >
                 <div className="bg-[var(--background)]/80 backdrop-blur-2xl border-t border-[var(--card-border)] px-2 pb-6 pt-3">
                     <div className="flex items-center justify-between max-w-lg mx-auto relative h-12">
                         
@@ -4703,7 +4141,7 @@ export default function MoffiSocialMasterpiece() {
                                     setIsHubLongPressing(false);
                                 }}
                                 onClick={() => {
-                                    // Standard click logic
+                                    // Trigger Local Hub Overlay (+)
                                     const newState = !isHubOpen;
                                     setIsHubOpen(newState);
                                     if (newState) {
@@ -4774,7 +4212,7 @@ export default function MoffiSocialMasterpiece() {
 
                     </div>
                 </div>
-            </nav>
+            </motion.nav>
             {/* NEW ADDITIONS: SHARE SHEET & NOTIFICATIONS DRAWER */}
             {selectedSharePost && (
                 <ShareSheet 
@@ -4803,39 +4241,27 @@ export default function MoffiSocialMasterpiece() {
                 onSave={(updatedFields) => {
                     if (settingsPet) {
                         const updatedPet = { ...settingsPet, ...updatedFields };
-                        setUserPets(prev => prev.map(p => p.id === settingsPet.id ? updatedPet : p));
+                        updatePet(settingsPet.id, updatedFields);
                     }
                     alert(`${updatedFields.name} için resmi pasaport bilgileri Moffi Cloud'a kaydedildi ve mühürlendi!`);
                 }}
             />
 
             <SOSCommandCenter 
+                key="global-sos-center"
                 isOpen={isSOSCommandCenterOpen}
                 onClose={() => setIsSOSCommandCenterOpen(false)}
                 pet={sosActivePet}
+                allPets={userPets}
+                onPetChange={(p) => setSosActivePet(p)}
                 sosData={null}
-                onUpdate={(newSosData) => {
+                onUpdate={(newSosStatusData) => {
+                    if (sosActivePet) {
+                        updatePet(sosActivePet.id, { is_lost: newSosStatusData.status === 'lost' });
+                    }
                     showToast(`${sosActivePet?.name} için acil durum ayarları güncellendi.`, "Moffi Radar sistemi tetiklendi.", "success");
                     setIsSOSCommandCenterOpen(false);
                 }}
-            />
-
-            <HubOverlay 
-                isOpen={isHubOpen} 
-                onClose={() => setIsHubOpen(false)} 
-                onSOSClick={() => {
-                    setSosActivePet(userPets[0] || { name: 'Mochi', id: 'pet-1' });
-                    setIsSOSCommandCenterOpen(true); 
-                    setIsHubOpen(false); 
-                }}
-                onMoffinetClick={() => window.open('https://moffi.net', '_blank')}
-                onMarketClick={() => router.push('/petshop')}
-                onWalkClick={() => { setIsWalkQuickSheetOpen(true); setIsHubOpen(false); }}
-                onStudioClick={() => router.push('/studio')}
-                onVetClick={() => { setIsVetQuickSheetOpen(true); setIsHubOpen(false); }}
-                onGameClick={() => router.push('/game')}
-                onSearchClick={() => { setProfileViewMode('saved'); setIsHubOpen(false); }}
-                onCommunityRadarClick={() => { setActiveTab('radar'); setIsHubOpen(false); }}
             />
 
             <VetQuickSheet 
@@ -4848,6 +4274,93 @@ export default function MoffiSocialMasterpiece() {
                 isOpen={isWalkQuickSheetOpen} 
                 onClose={() => setIsWalkQuickSheetOpen(false)}
                 petId={userPets[0]?.id || 'pet-1'}
+            />
+
+            <MarketQuickSheet
+                isOpen={isMarketQuickSheetOpen}
+                onClose={() => setIsMarketQuickSheetOpen(false)}
+                petName={userPets[0]?.name || 'Dostun'}
+            />
+
+            <StudioQuickSheet
+                isOpen={isStudioQuickSheetOpen}
+                onClose={() => setIsStudioQuickSheetOpen(false)}
+                petName={userPets[0]?.name || 'Moffi'}
+            />
+
+            <GameQuickSheet
+                isOpen={isGameQuickSheetOpen}
+                onClose={() => setIsGameQuickSheetOpen(false)}
+                petName={userPets[0]?.name || 'Moffi'}
+            />
+
+            <EcosystemPortal 
+                isOpen={isEcosystemPortalOpen}
+                onClose={() => setIsEcosystemPortalOpen(false)}
+            />
+
+            <SpotlightSearch 
+                isOpen={isSpotlightOpen}
+                onClose={() => setIsSpotlightOpen(false)}
+                onNavigate={(type, id) => {
+                    if (type === 'pet') { 
+                        const petId = id.startsWith('pet-') ? id : `pet-${id}`;
+                        switchPet(petId); 
+                        setActiveTab('profile'); 
+                        setProfileViewMode('grid');
+                    }
+                    if (type === 'action' && id === 'vax') { 
+                        setActiveTab('profile');
+                        setProfileViewMode('appointments'); 
+                    }
+                }}
+            />
+
+
+            <InboxModal
+                isOpen={isInboxOpen}
+                onClose={() => setIsInboxOpen(false)}
+                tab={inboxTab}
+                setTab={setInboxTab}
+                messages={inboxMessages}
+                sosAlerts={sosAlerts}
+                activeChatUserId={activeChatUserId}
+                setActiveChatUserId={setActiveChatUserId}
+                replyMessage={replyMessage}
+                setReplyMessage={setReplyMessage}
+                onSendReply={handleSendReply}
+                isReplying={isReplying}
+                messagesEndRef={messagesEndRef}
+                editingMessageId={editingMessageId}
+                activeMessageMenuId={activeMessageMenuId}
+                setActiveMessageMenuId={setActiveMessageMenuId}
+                isAttachMenuOpen={isAttachMenuOpen}
+                setIsAttachMenuOpen={setIsAttachMenuOpen}
+                user={user}
+            />
+
+            <MoffiAssistant 
+                isOpenOverride={showAIAssistant}
+                onCloseOverride={() => setShowAIAssistant(false)}
+            />
+
+            {/* RESTORED ORIGINAL HUB OVERLAY */}
+            <HubOverlay 
+                isOpen={isHubOpen}
+                onClose={() => setIsHubOpen(false)}
+                onMarketClick={() => setIsMarketQuickSheetOpen(true)}
+                onWalkClick={() => setIsWalkQuickSheetOpen(true)}
+                onVetClick={() => setIsVetQuickSheetOpen(true)}
+                onStudioClick={() => setIsStudioQuickSheetOpen(true)}
+                onGameClick={() => setIsGameQuickSheetOpen(true)}
+                onMoffinetClick={() => setIsEcosystemPortalOpen(true)}
+                onSearchClick={() => setIsSearchOpen(true)}
+                onCommunityRadarClick={() => setActiveTab('radar')}
+                onAIAsistantClick={() => setShowAIAssistant(true)}
+                onSOSClick={() => {
+                    setIsSOSCommandCenterOpen(true);
+                    setSosActivePet(userPets[0]);
+                }}
             />
 
         </div>
@@ -4880,6 +4393,4 @@ function NavBtn({ icon: Icon, active, onClick }: { icon: any, active: boolean, o
         </button>
     );
 }
-
-// -- IMMERSIVE POST CARD --
 
