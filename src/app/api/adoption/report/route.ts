@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+const supabaseAdmin = (supabaseUrl && supabaseKey)
+    ? createClient(supabaseUrl, supabaseKey)
+    : null;
 
 /**
  * Adoption Ad Report Endpoint
@@ -16,6 +18,11 @@ export async function POST(req: Request) {
 
         if (!adId || !reason) {
             return NextResponse.json({ error: "adId and reason required" }, { status: 400 });
+        }
+
+        if (!supabaseAdmin) {
+            console.warn("Supabase not configured, skipping report save.");
+            return NextResponse.json({ success: true, message: "Report received (not saved)" });
         }
 
         // Save report to adoption_reports table

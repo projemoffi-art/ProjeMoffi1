@@ -5,10 +5,12 @@ import { createClient } from "@supabase/supabase-js";
 const API_KEY = process.env.GEMINI_API_KEY || "AIzaSyBnUBpO38MhK4lImGdzk0xVcus73JXGoTQ";
 const genAI = new GoogleGenerativeAI(API_KEY);
 
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+const supabaseAdmin = (supabaseUrl && supabaseKey)
+    ? createClient(supabaseUrl, supabaseKey)
+    : null;
 
 // ─── KVKK & GÜVENLİK: Regex Tabanlı Hızlı Tarayıcı ────────────────────────
 const REGEX_RULES: { pattern: RegExp; reason: string; category: string }[] = [
@@ -179,6 +181,18 @@ YANIT FORMAT (sadece JSON):
         }
 
         // ─── ADIM 4: Supabase Güncelleme ────────────────────────────────────
+        if (!supabaseAdmin) {
+            console.warn("Supabase not configured, skipping database update.");
+            return NextResponse.json({
+                success: true,
+                safe: isSafe,
+                reason: isSafe ? "İçerik güvenli (Veritabanı kaydı atlandı)" : `❌ ${violationReason}`,
+                category: violationCategory || "safe",
+                confidence,
+                newStatus: isSafe ? "active" : "removed"
+            });
+        }
+
         const newStatus = isSafe ? "active" : "removed";
         await supabaseAdmin
             .from("adoption_ads")
