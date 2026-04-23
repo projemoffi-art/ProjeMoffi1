@@ -14,6 +14,7 @@ import { GlobalIdentitySync } from "@/components/common/GlobalIdentitySync";
 import { WellbeingProvider } from "@/context/WellbeingContext";
 import { GlobalAuraBackground } from "@/components/common/GlobalAuraBackground";
 import { WellbeingOverlay } from "@/components/common/WellbeingOverlay";
+import GlobalFeedback from "@/components/common/GlobalFeedback";
 
 const poppins = Poppins({
   weight: ['400', '600', '700', '900'],
@@ -91,6 +92,7 @@ export default function RootLayout({
 
                       <DynamicNavigation />
                       <AIWidgetLoader />
+                      <GlobalFeedback />
                     </ClientAuthWrapper>
                   </ShopProvider>
                 </SocialProvider>
