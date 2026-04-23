@@ -44,8 +44,12 @@ export function MoffiAssistant() {
     // Initialize messages
     useEffect(() => {
         setIsMounted(true);
-        if (globalAssistantMounted) return;
-        globalAssistantMounted = true;
+        // DOM-based singleton check to prevent duplicate portals
+        const existing = document.querySelector('.moffi-assistant-portal-root');
+        if (existing && !isOpen) {
+            setIsMounted(false);
+            return;
+        }
 
         if (messages.length === 0) {
             setMessages([{
@@ -57,7 +61,7 @@ export function MoffiAssistant() {
             }]);
         }
         return () => setIsMounted(false);
-    }, [isPro, user?.username]);
+    }, [isPro, user?.username, isOpen]);
 
     // Auto-scroll
     useEffect(() => {
@@ -67,12 +71,6 @@ export function MoffiAssistant() {
     }, [messages, isTyping]);
 
     if (!isMounted || !showAIAssistant) return null;
-
-    // Singleton guard: if another instance is already mounted, don't mount this one.
-    // (Helps prevent duplication bugs on some route changes)
-    if (isMounted && globalAssistantMounted && !isOpen) {
-        return null;
-    }
 
     const handleSend = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
