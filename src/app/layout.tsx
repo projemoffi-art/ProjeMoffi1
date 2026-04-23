@@ -53,13 +53,13 @@ export const viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Moffi Pro",
+  title: "Moffi Demo",
   description: "Advanced Customization Engine",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Moffi Pro",
+    title: "Moffi Demo",
   },
 };
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, X, Send, Star, Zap, Layout, Bug, Lightbulb } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -14,25 +14,33 @@ const categories = [
 
 export default function GlobalFeedback() {
     const [isOpen, setIsOpen] = useState(false);
-    const [step, setStep] = useState(1); // 1: Form, 2: Success
+    const [step, setStep] = useState(1); 
     const [rating, setRating] = useState(0);
     const [category, setCategory] = useState('performance');
     const [comment, setComment] = useState('');
     const [isSending, setIsSending] = useState(false);
+    const [showNudge, setShowNudge] = useState(false);
+
+    // Show a sweet nudge after 90 seconds
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (!isOpen) setShowNudge(true);
+        }, 90000);
+
+        return () => clearTimeout(timer);
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSending(true);
 
-        // API'ye gönderim simülasyonu
         try {
-            const response = await fetch('/api/feedback', {
+            await fetch('/api/feedback', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ rating, category, comment, timestamp: new Date().toISOString() }),
             });
 
-            // Başarılı sayıyoruz (Supabase olmasa bile API hata vermeyecek şekilde ayarlandı)
             setStep(2);
             setTimeout(() => {
                 setIsOpen(false);
@@ -51,18 +59,40 @@ export default function GlobalFeedback() {
 
     return (
         <>
-            {/* Floating Toggle Button */}
-            <motion.button
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setIsOpen(true)}
-                className="fixed bottom-28 right-6 z-[90] flex items-center justify-center w-12 h-12 bg-white/10 backdrop-blur-2xl border border-white/20 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] hover:bg-white/20 transition-all duration-500 group"
-            >
-                <MessageSquare className="w-5 h-5 text-white/80 group-hover:text-white transition-colors" />
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-purple-500/10 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </motion.button>
+            {/* Top-Right Floating Button (Near Bell) */}
+            <div className="fixed top-12 right-24 z-[100] flex flex-col items-end">
+                <AnimatePresence>
+                    {showNudge && !isOpen && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="absolute bottom-full mb-3 w-48 p-3 bg-white text-black rounded-2xl shadow-2xl text-[11px] font-bold leading-tight"
+                        >
+                            Bizi değerlendirmek ister misin? 😊
+                            <div className="absolute -bottom-1 right-6 w-2 h-2 bg-white rotate-45" />
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); setShowNudge(false); }}
+                                className="absolute -top-1 -right-1 w-4 h-4 bg-black text-white rounded-full flex items-center justify-center text-[8px]"
+                            >
+                                <X size={8} />
+                            </button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                <motion.button
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => { setIsOpen(true); setShowNudge(false); }}
+                    className="flex items-center gap-2 px-3 py-2 bg-white/10 backdrop-blur-2xl border border-white/20 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] hover:bg-white/20 transition-all duration-500 group"
+                >
+                    <MessageSquare className="w-4 h-4 text-white/80 group-hover:text-white" />
+                    <span className="text-[10px] font-bold text-white/90 uppercase tracking-wider">Geri Bildirim</span>
+                </motion.button>
+            </div>
 
             {/* Feedback Modal */}
             <AnimatePresence>
@@ -85,7 +115,7 @@ export default function GlobalFeedback() {
                             {/* Header */}
                             <div className="p-6 border-b border-white/5 flex items-center justify-between">
                                 <div>
-                                    <h3 className="text-xl font-bold text-white">Moffi'yi Değerlendir</h3>
+                                    <h3 className="text-xl font-bold text-white">Moffi Demo'yu Değerlendir</h3>
                                     <p className="text-sm text-zinc-400">Deneyimini bizimle paylaş, birlikte geliştirelim.</p>
                                 </div>
                                 <button 

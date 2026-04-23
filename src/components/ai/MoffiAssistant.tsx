@@ -24,6 +24,9 @@ interface Message {
  * Powered by Portal Technology.
  * Uses manual state management for maximum build compatibility in Next 16/React 19.
  */
+
+let globalAssistantMounted = false;
+
 export function MoffiAssistant() {
     const { user, showAIAssistant } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
@@ -41,6 +44,9 @@ export function MoffiAssistant() {
     // Initialize messages
     useEffect(() => {
         setIsMounted(true);
+        if (globalAssistantMounted) return;
+        globalAssistantMounted = true;
+
         if (messages.length === 0) {
             setMessages([{
                 id: 'welcome',
@@ -61,6 +67,12 @@ export function MoffiAssistant() {
     }, [messages, isTyping]);
 
     if (!isMounted || !showAIAssistant) return null;
+
+    // Singleton guard: if another instance is already mounted, don't mount this one.
+    // (Helps prevent duplication bugs on some route changes)
+    if (isMounted && globalAssistantMounted && !isOpen) {
+        return null;
+    }
 
     const handleSend = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
@@ -137,7 +149,7 @@ export function MoffiAssistant() {
                                     {isPro ? <Crown className="w-5 h-5 text-white" /> : <Bot className="w-5 h-5 text-white" />}
                                 </div>
                                 <div className="text-left">
-                                    <h3 className="text-[15px] font-black text-foreground uppercase tracking-tighter leading-none">{isPro ? "M+ Concierge" : "Moffi AI Asistan"}</h3>
+                                    <h3 className="text-[15px] font-black text-foreground uppercase tracking-tighter leading-none">{isPro ? "M+ Concierge" : "Moffi Demo Asistan"}</h3>
                                     <p className="text-[10px] text-secondary font-bold uppercase mt-1 tracking-widest flex items-center gap-1.5">{isTyping ? "Düşünüyor..." : "Çevrimiçi"}</p>
                                 </div>
                             </div>
