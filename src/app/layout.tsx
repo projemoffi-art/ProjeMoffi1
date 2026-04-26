@@ -7,6 +7,7 @@ import { ShopProvider } from "@/context/ShopContext";
 import { PetProvider } from "@/context/PetContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { AIWidgetLoader } from "@/components/ai/AIWidgetLoader";
+import { Suspense } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ClientAuthWrapper } from "@/components/auth/ClientAuthWrapper";
 import { DynamicNavigation } from "@/components/common/DynamicNavigation";
@@ -98,7 +99,9 @@ export default function RootLayout({
                               </ErrorBoundary>
                             </div>
 
-                            <DynamicNavigation />
+                            <Suspense fallback={null}>
+                              <DynamicNavigation />
+                            </Suspense>
                             <AIWidgetLoader />
                             <GlobalFeedback />
                           </RootOnboardingWrapper>
