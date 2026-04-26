@@ -14,6 +14,7 @@ import { useSocial } from '@/context/SocialContext';
 import { cn } from '@/lib/utils';
 import { ShieldCheck, Crown, Footprints, Zap as SOSZap } from 'lucide-react';
 import Image from 'next/image';
+import { apiService } from '@/services/apiService';
 
 interface ImmersivePostCardProps {
     post: any;
@@ -53,7 +54,8 @@ export function ImmersivePostCard({
     const [showComments, setShowComments] = useState(false);
     const [commentInput, setCommentInput] = useState('');
     const [isMoreOpen, setIsMoreOpen] = useState(false);
-    const [isEnhanced, setIsEnhanced] = useState(false);
+    const allowComments = post?.allow_comments ?? post?.allowComments ?? true;
+    const hiddenWords = currentUser?.settings?.content?.hiddenWords || [];
     const [isAddingToStory, setIsAddingToStory] = useState(false);
     const [replyingTo, setReplyingTo] = useState<any>(null);
     const [showAISuggestions, setShowAISuggestions] = useState(false);
@@ -62,9 +64,36 @@ export function ImmersivePostCard({
     const [showGIFPicker, setShowGIFPicker] = useState(false);
     const [editingComment, setEditingComment] = useState<any>(null);
     const [isMuted, setIsMuted] = useState(true);
+    const [isVisible, setIsVisible] = useState(false);
+    const videoRef = React.useRef<HTMLVideoElement>(null);
+    const containerRef = React.useRef<HTMLDivElement>(null);
     const { stories } = useSocial();
-    const hiddenWords = currentUser?.settings?.content?.hiddenWords || [];
-    const allowComments = currentUser?.settings?.privacy?.allowComments ?? true;
+
+    // INTERSECTION OBSERVER FOR SMART PLAY/PAUSE
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                setIsVisible(entry.isIntersecting);
+            },
+            { threshold: 0.6 } // Needs 60% visibility to play
+        );
+
+        if (containerRef.current) {
+            observer.observe(containerRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
+        if (videoRef.current) {
+            if (isVisible) {
+                videoRef.current.play().catch(() => {});
+            } else {
+                videoRef.current.pause();
+            }
+        }
+    }, [isVisible]);
 
     // Censorship Logic
     const filterContent = (text: string) => {
@@ -151,6 +180,15 @@ export function ImmersivePostCard({
 
     const isOwner = currentUser?.id === post.user_id || currentUser?.username === post.author?.replace('@', '');
 
+    const handleProfileNavigation = () => {
+        if (isOwner) {
+            window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'profile' }));
+        } else {
+            const targetId = post.user_id || post.userId || post.authorId || post.owner_id || post.user?.id;
+            if (targetId) router.push(`/profile/${targetId}`);
+        }
+    };
+
     const handleDoubleTap = () => {
         if (!post.isLiked) onLike();
         setTapHeart(true);
@@ -195,40 +233,42 @@ export function ImmersivePostCard({
         
         if (isMoreOpen || showComments) {
             document.body.style.overflow = 'hidden';
-            document.body.style.touchAction = 'none'; 
             if (scrollContainer) {
                 scrollContainer.style.overflow = 'hidden';
-                scrollContainer.style.touchAction = 'none';
             }
         } else {
             document.body.style.overflow = '';
-            document.body.style.touchAction = '';
             if (scrollContainer) {
-                scrollContainer.style.overflow = 'auto';
-                scrollContainer.style.touchAction = '';
+                // Keep it empty to allow CSS classes (snap-scroll) to work
+                scrollContainer.style.overflow = '';
             }
         }
         return () => {
             document.body.style.overflow = '';
-            document.body.style.touchAction = '';
             if (scrollContainer) {
-                scrollContainer.style.overflow = 'auto';
-                scrollContainer.style.touchAction = '';
+                scrollContainer.style.overflow = '';
             }
         };
     }, [isMoreOpen, showComments]);
 
     return (
         <motion.div
+            ref={containerRef}
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true, amount: 0.1 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className="relative w-full aspect-[4/5] max-h-[82vh] rounded-none overflow-hidden bg-gray-900 border-b border-white/10 shadow-2xl group"
+            className="relative w-full aspect-[4/5] sm:aspect-[4/5] max-h-[85vh] sm:max-h-[82vh] rounded-none sm:rounded-[3rem] overflow-hidden bg-background border-b border-card-border shadow-2xl group"
         >
             {/* MEDIA */}
             <div 
-                className={cn("absolute inset-0 bg-black cursor-pointer touch-none", isZooming ? "z-[100]" : "z-0")} 
+                className={cn("absolute inset-0 bg-black cursor-pointer touch-pan-y", isZooming ? "z-[100] touch-none" : "z-0")} 
+                onClick={() => {
+                    const isVideo = post?.is_video || (post?.media && (/\.(mp4|webm|ogg|mov|avi|m4v|mkv|flv|wmv)$/i.test(post.media)));
+                    if (isVideo) {
+                        setIsMuted(!isMuted);
+                    }
+                }}
                 onDoubleClick={handleDoubleTap}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
@@ -242,25 +282,27 @@ export function ImmersivePostCard({
                     }}
                     className="w-full h-full relative"
                 >
-                    {post.media?.match(/\.(mp4|webm|ogg)$/) || post.is_video ? (
+                    { (post?.is_video || (post?.media && (/\.(mp4|webm|ogg|mov|avi|m4v|mkv|flv|wmv)$/i.test(post.media) || post.media.toLowerCase().includes('video') || post.media.toLowerCase().includes('storage')) )) ? (
                         <video
-                            src={post.media}
-                            autoPlay={currentUser?.settings?.feed?.autoplay ?? true}
+                            ref={videoRef}
+                            src={post?.media || post?.media_url || ""}
                             muted={isMuted}
                             loop
                             playsInline
-                            className="w-full h-full object-cover opacity-90 transition-transform duration-[10s] group-hover:scale-110"
+                            preload="metadata"
+                            className="w-full h-full object-cover opacity-90"
                         />
                     ) : (
                         <Image 
-                            src={post.media || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} 
+                            src={post?.media || post?.media_url || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=800"} 
+                            alt={post?.caption || "Moffi Gönderisi"}
                             fill
                             priority={priority}
-                            className="object-cover opacity-90 transition-transform duration-[10s] group-hover:scale-110 pointer-events-none" 
-                            alt="Post Media"
+                            className="object-cover opacity-90"
+                            sizes="(max-width: 768px) 100vw, 50vw"
                         />
                     )}
-                    <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90 pointer-events-none" />
+                    <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-background via-background/40 to-transparent opacity-90 pointer-events-none" />
                 </motion.div>
             </div>
 
@@ -268,7 +310,7 @@ export function ImmersivePostCard({
             {(post.media?.match(/\.(mp4|webm|ogg)$/) || post.is_video) && (
                 <button 
                     onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
-                    className="absolute bottom-32 right-6 w-10 h-10 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white z-30 active:scale-90 transition-all hover:bg-white/10"
+                    className="absolute bottom-32 right-6 w-10 h-10 rounded-full bg-card/40 backdrop-blur-xl border border-card-border flex items-center justify-center text-foreground z-30 active:scale-90 transition-all hover:bg-foreground/10"
                 >
                     {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                 </button>
@@ -278,13 +320,13 @@ export function ImmersivePostCard({
             <div className="absolute top-5 left-5 right-5 flex justify-between items-start z-20 pointer-events-none">
                 <div className="flex gap-2">
                     {post.mood && (
-                        <span className="bg-black/40 backdrop-blur-xl border border-white/10 px-3 py-1.5 rounded-full text-[10px] font-bold text-white flex items-center gap-1.5 shadow-lg relative overflow-hidden group/badge">
+                        <div className="bg-card/40 backdrop-blur-xl border border-card-border px-3 py-1.5 rounded-full text-[10px] font-bold text-foreground flex items-center gap-1.5 shadow-lg relative overflow-hidden group/badge">
                             <span className="relative z-10">{post.mood}</span>
-                            <div className="absolute inset-0 bg-white/20 -translate-x-full group-hover/badge:translate-x-full transition-transform duration-700 pointer-events-none" />
-                        </span>
+                            <div className="absolute inset-0 bg-white/10 -translate-x-full group-hover/badge:translate-x-full transition-transform duration-700 pointer-events-none" />
+                        </div>
                     )}
                 </div>
-                <button onClick={() => setIsMoreOpen(true)} className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors pointer-events-auto">
+                <button onClick={() => setIsMoreOpen(true)} className="w-8 h-8 rounded-full bg-card/40 backdrop-blur-xl border border-card-border flex items-center justify-center text-foreground hover:bg-foreground/10 transition-colors pointer-events-auto">
                     <MoreHorizontal className="w-4 h-4" />
                 </button>
             </div>
@@ -303,7 +345,7 @@ export function ImmersivePostCard({
                             animate={{ y: 0 }}
                             exit={{ y: "100%" }}
                             transition={{ type: "spring", damping: 30, stiffness: 350, mass: 0.8 }}
-                            className="absolute bottom-0 left-0 right-0 z-50 bg-background/60 backdrop-blur-[50px] border-t border-card-border rounded-t-[48px] shadow-2xl flex flex-col pointer-events-auto overflow-hidden max-h-[92%]"
+                            className="absolute bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-[50px] border-t border-card-border rounded-t-[48px] shadow-2xl flex flex-col pointer-events-auto overflow-hidden max-h-[92%]"
                         >
                             <div 
                                 onClick={() => setIsMoreOpen(false)}
@@ -314,7 +356,7 @@ export function ImmersivePostCard({
 
                             <div className="flex-1 overflow-y-auto no-scrollbar px-6 space-y-6 pb-32 overscroll-contain text-white">
                                 {/* AI SMART ANALYSIS SECTION */}
-                                <div className="flex flex-col bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-[32px] border border-white/10 overflow-hidden">
+                                <div className="flex flex-col bg-gradient-to-br from-accent/10 to-accent/5 rounded-[32px] border border-card-border overflow-hidden">
                                     <button 
                                         onClick={() => { setIsMoreOpen(false); alert('AI Akıllı Analiz başlatılıyor... ✨'); }}
                                         className="w-full px-6 py-6 flex items-center justify-between active:bg-white/10 transition-all group"
@@ -336,9 +378,8 @@ export function ImmersivePostCard({
                                 <div className="flex flex-col bg-white/[0.03] rounded-[32px] border border-white/[0.08] divide-y divide-white/[0.05] overflow-hidden">
                                     <button 
                                         onClick={() => { 
-                                            const targetId = post.user_id || post.userId || post.authorId || post.owner_id || post.user?.id;
                                             setIsMoreOpen(false); 
-                                            router.push(targetId ? `/profile/${targetId}` : '/profile'); 
+                                            handleProfileNavigation();
                                         }}
                                         className="w-full px-6 py-5 flex items-center justify-between active:bg-white/[0.07] transition-all group"
                                     >
@@ -422,10 +463,10 @@ export function ImmersivePostCard({
                                 )}
                             </div>
 
-                            <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black via-black/90 to-transparent pt-12 shrink-0">
+                            <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background via-background/90 to-transparent pt-12 shrink-0">
                                 <button 
                                     onClick={() => setIsMoreOpen(false)}
-                                    className="w-full py-5 bg-white text-black rounded-[28px] font-black text-[18px] active:scale-[0.97] transition-all shadow-xl"
+                                    className="w-full py-5 bg-foreground text-background rounded-[28px] font-black text-[18px] active:scale-[0.97] transition-all shadow-xl"
                                 >
                                     Vazgeç
                                 </button>
@@ -453,8 +494,8 @@ export function ImmersivePostCard({
             </AnimatePresence>
 
             {/* USER INFO & CAPTION & ACTIONS */}
-            <div className="absolute bottom-6 left-6 right-6 z-20 flex flex-col gap-3">
-                <div className="absolute right-0 bottom-0 flex flex-col gap-4 z-30 translate-y-[-2rem]">
+            <div className="absolute bottom-6 sm:bottom-6 left-5 sm:left-6 right-5 sm:right-6 z-20 flex flex-col gap-3">
+                <div className="absolute right-0 sm:right-0 bottom-0 flex flex-col gap-5 sm:gap-4 z-30 translate-y-[-2.5rem] sm:translate-y-[-2rem]">
                     <div className="flex flex-col items-center gap-1">
                         <button onClick={onLike} className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center transition-transform active:scale-90 hover:bg-white/20 shadow-xl">
                             {post.isLiked ? (
@@ -463,7 +504,7 @@ export function ImmersivePostCard({
                                 <Heart className="w-6 h-6 text-white drop-shadow-md" />
                             )}
                         </button>
-                        <span className="text-[10px] font-bold text-white drop-shadow-md">{post.likes}</span>
+                        <span className="text-[10px] font-bold text-white drop-shadow-md">{post.likes ?? post.likes_count ?? 0}</span>
                     </div>
 
                     <div className="flex flex-col items-center gap-1">
@@ -486,7 +527,7 @@ export function ImmersivePostCard({
                             <MessageCircle className={cn("w-6 h-6 drop-shadow-md", (isCommentsDisabled || (!allowComments && isOwner)) ? "text-white/20" : "text-white")} />
                         </button>
                         <span className={cn("text-[10px] font-bold drop-shadow-md", (isCommentsDisabled || (!allowComments && isOwner)) ? "text-white/20" : "text-white")}>
-                            {(isCommentsDisabled || (!allowComments && isOwner)) ? '-' : post.comments}
+                            {(isCommentsDisabled || (!allowComments && isOwner)) ? '-' : (post.comments ?? post.comments_count ?? 0)}
                         </span>
                     </div>
 
@@ -500,13 +541,10 @@ export function ImmersivePostCard({
 
                 <div className="pr-16 w-full flex items-center gap-3">
                     <div 
-                        onClick={() => {
-                            const targetId = post.user_id || post.userId || post.authorId || post.owner_id || post.user?.id;
-                            router.push(targetId ? `/profile/${targetId}` : '/profile');
-                        }}
+                        onClick={handleProfileNavigation}
                         className="w-12 h-12 rounded-full border-2 border-white/20 p-0.5 relative pointer-events-auto cursor-pointer active:scale-95 transition-transform"
                     >
-                        <Image src={(isOwner ? (currentUser?.avatar || post.avatar) : post.avatar) || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} fill className="rounded-full object-cover" alt="Author" />
+                        <Image src={(isOwner ? (currentUser?.avatar || post.avatar || post.author_avatar || post.user?.avatar) : (post.avatar || post.author_avatar || post.user?.avatar)) || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} fill className="rounded-full object-cover" alt="Author" />
                         {!isOwner && (
                             <motion.div 
                                 className="absolute -bottom-1 -right-1 w-5 h-5 bg-cyan-500 rounded-full flex items-center justify-center border-2 border-black cursor-pointer shadow-lg shadow-cyan-500/40" 
@@ -515,7 +553,8 @@ export function ImmersivePostCard({
                                     try {
                                         await apiService.followUser(post.user_id || post.userId);
                                         // Visual feedback: brief scale pop and background pulse
-                                        showToast("Takip Edildi", `${post.author} takip listenize eklendi.`, "success");
+                                        // showToast("Takip Edildi", `${post.author} takip listenize eklendi.`, "success");
+                                        alert(`${post.author} takip listenize eklendi! ✨`);
                                     } catch (err) {
                                         console.error(err);
                                     }
@@ -536,13 +575,10 @@ export function ImmersivePostCard({
                             </motion.div>
                         )}
                     </div>
-                    <div className="flex flex-col pointer-events-auto cursor-pointer active:opacity-70 transition-opacity" onClick={() => {
-                        const targetId = post.user_id || post.userId || post.authorId || post.owner_id || post.user?.id;
-                        router.push(targetId ? `/profile/${targetId}` : '/profile');
-                    }}>
+                    <div className="flex flex-col pointer-events-auto cursor-pointer active:opacity-70 transition-opacity" onClick={handleProfileNavigation}>
                         <div className="flex items-center gap-2 mb-0.5">
                             <span className="text-sm font-black text-white drop-shadow-lg leading-tight">
-                                {post.author}
+                                {post.author || post.author_name || post.user?.name || 'Anonim'}
                             </span>
                             {/* AURA BADGE IN FEED */}
                             {post.aura_settings && (
@@ -591,17 +627,17 @@ export function ImmersivePostCard({
                             )}
                         </div>
                         <span className="text-[11px] text-zinc-400 font-medium drop-shadow-md">
-                            {post.username || `@${post.author?.toLowerCase().replace(/\s+/g, '_')}`}
+                            {post.username || post.author_name || (post.author ? `@${post.author.toLowerCase().replace(/\s+/g, '_')}` : (post.user?.name ? `@${post.user.name.toLowerCase().replace(/\s+/g, '_')}` : '@anonim'))}
                         </span>
                     </div>
                 </div>
 
-                <p className="text-xs text-white/90 leading-relaxed font-medium drop-shadow-md line-clamp-2 w-5/6 pl-1.5 pointer-events-none">
-                    {filterContent(post.desc)}
+                <p className="text-[13px] sm:text-xs text-white/90 leading-relaxed font-medium drop-shadow-md line-clamp-2 w-5/6 pl-1.5 pointer-events-none">
+                    {filterContent(post.desc || post.caption || post.description || '')}
                 </p>
             </div>
 
-            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black via-black/40 to-transparent pointer-events-none" />
+            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-background via-background/40 to-transparent pointer-events-none" />
 
             <AnimatePresence>
                 {showComments && (
@@ -732,81 +768,24 @@ export function ImmersivePostCard({
                                             </div>
                                             <div className="max-h-48 overflow-y-auto no-scrollbar divide-y divide-white/5">
                                                 {MOCK_USERS.filter(u => u.username.includes(mentionSearch.slice(1))).map(u => (
-                                                    <button
-                                                        key={u.id}
-                                                        onClick={() => {
-                                                            setCommentInput(prev => prev.replace(mentionSearch, `@${u.username} `));
-                                                            setMentionSearch('');
-                                                        }}
-                                                        className="w-full px-5 py-3 flex items-center gap-3 hover:bg-white/5 active:bg-white/10 transition-colors"
-                                                    >
-                                                        <div className="w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 font-bold text-xs">
-                                                            {u.username[0].toUpperCase()}
-                                                        </div>
-                                                        <div className="flex flex-col items-start text-left">
-                                                            <span className="text-sm font-bold text-white">@{u.username}</span>
-                                                            <span className="text-[10px] text-white/40">{u.name}</span>
-                                                        </div>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-
-                                {/* GIF PICKER overlay */}
-                                <AnimatePresence>
-                                    {showGIFPicker && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                            className="absolute bottom-full left-0 right-0 mb-4 bg-[#1a1b1e]/95 backdrop-blur-3xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl z-50 flex flex-col mx-2"
-                                        >
-                                            <div className="p-4 border-b border-white/5 flex justify-between items-center bg-white/5">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                                                    <span className="text-[11px] font-black text-white/60 uppercase tracking-widest">Pati GIF'leri</span>
-                                                </div>
-                                                <button onClick={() => setShowGIFPicker(false)} className="text-white/40 hover:text-white transition-colors">
-                                                    <X className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                            <div className="p-4 flex gap-3 overflow-x-auto no-scrollbar scroll-smooth">
-                                                {MOCK_GIFS.map(gif => (
-                                                    <button
-                                                        key={gif.id}
-                                                        onClick={() => {
-                                                            setSelectedMedia({ type: 'gif', url: gif.url });
-                                                            setShowGIFPicker(false);
-                                                        }}
-                                                        className="relative w-32 h-32 rounded-2xl overflow-hidden shrink-0 border border-white/10 active:scale-95 transition-transform"
-                                                    >
-                                                        <Image src={gif.url} fill className="object-cover" alt="GIF" />
-                                                        <div className="absolute inset-0 bg-black/10 hover:bg-transparent transition-colors" />
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-
-                                {/* SELECTED MEDIA preview */}
-                                <AnimatePresence>
-                                    {selectedMedia && (
-                                        <motion.div
-                                            initial={{ opacity: 0, scale: 0.8 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            exit={{ opacity: 0, scale: 0.8 }}
-                                            className="relative w-24 h-24 rounded-2xl overflow-hidden mb-3 border-2 border-cyan-500/50 shadow-lg ml-2"
-                                        >
-                                            <Image src={selectedMedia.url} fill className="object-cover" alt="Selected Media" />
-                                            <button
-                                                onClick={() => setSelectedMedia(null)}
-                                                className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white border border-white/20"
-                                            >
-                                                <X className="w-3.5 h-3.5" />
-                                            </button>
+                                                     <button
+                                                         key={u.id}
+                                                         onClick={() => {
+                                                             setCommentInput(prev => prev.replace(mentionSearch, `@${u.username} `));
+                                                             setMentionSearch('');
+                                                         }}
+                                                         className="w-full px-5 py-3 flex items-center gap-3 hover:bg-white/5 active:bg-white/10 transition-colors"
+                                                     >
+                                                         <div className="w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 font-bold text-xs">
+                                                             {u.username[0].toUpperCase()}
+                                                         </div>
+                                                         <div className="flex flex-col items-start text-left">
+                                                             <span className="text-sm font-bold text-white">@{u.username}</span>
+                                                             <span className="text-[10px] text-white/40">{u.name}</span>
+                                                         </div>
+                                                     </button>
+                                                 ))}
+                                             </div>
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
@@ -874,7 +853,25 @@ export function ImmersivePostCard({
 }
 
 // RENDER HELPER FOR COMMENTS
-function CommentItem({ comment, onLike, onReply, onEdit, onDelete, onReport, isReply = false }: { comment: any, onLike: (commentId: string) => void, onReply: (comment: any) => void, onEdit: (comment: any) => void, onDelete: (commentId: string) => void, onReport: (commentId: string) => void, isReply?: boolean }) {
+function CommentItem({ 
+    comment, 
+    onLike, 
+    onReply, 
+    onEdit, 
+    onDelete, 
+    onReport, 
+    filterContent,
+    isReply = false 
+}: { 
+    comment: any, 
+    onLike: (commentId: string) => void, 
+    onReply: (comment: any) => void, 
+    onEdit: (comment: any) => void, 
+    onDelete: (commentId: string) => void, 
+    onReport: (commentId: string) => void, 
+    filterContent: (text: string) => string,
+    isReply?: boolean 
+}) {
     const [showReplies, setShowReplies] = useState(false);
     const [showContextMenu, setShowContextMenu] = useState(false);
     const [longPressTimer, setLongPressTimer] = useState<any>(null);
@@ -972,7 +969,7 @@ function CommentItem({ comment, onLike, onReply, onEdit, onDelete, onReport, isR
                                     </span>
                                 )}
                             </div>
-                            <p className="text-[13px] text-white/80 leading-relaxed font-medium font-sans break-words">{comment.text}</p>
+                            <p className="text-[13px] text-white/80 leading-relaxed font-medium font-sans break-words">{filterContent(comment.text)}</p>
 
                             {comment.media && (
                                 <div className="mt-2 rounded-2xl overflow-hidden border border-white/5 shadow-2xl max-w-[200px]">

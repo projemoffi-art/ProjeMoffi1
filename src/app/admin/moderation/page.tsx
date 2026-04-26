@@ -45,7 +45,7 @@ export default function ModerationMatrix() {
         // MOCK: Simulate data fetch
         setTimeout(() => {
             const mockAds = [
-                { id: "ad-1", name: "Pamuk", breed: "Golden", status: "pending", author_name: "Bella", created_at: new Date().toISOString(), location: "İstanbul", desc: "Çok uysal bir Golden, yeni yuvasını bekliyor." },
+                { id: "ad-1", name: "Pamuk", breed: "Golden", status: "pending", author_name: "MoffiOfficial", created_at: new Date().toISOString(), location: "İstanbul", desc: "Çok uysal bir Golden, yeni yuvasını bekliyor." },
                 { id: "ad-2", name: "Milo", breed: "Tekir", status: "active", author_name: "Ayşe", created_at: new Date().toISOString(), location: "İzmir", desc: "Sokakta bulduğumuz Milo'yu sahiplendirmek istiyoruz." },
                 { id: "ad-3", name: "Zeytin", breed: "Siyam", status: "removed", author_name: "Can", created_at: new Date().toISOString(), location: "Ankara", desc: "Siyam kedisi Zeytin için ilan." }
             ];

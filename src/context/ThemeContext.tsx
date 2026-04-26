@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
 
-type Theme = 'apple-light' | 'apple-midnight' | 'neo-dark' | 'glass-pink' | 'mint-fresh';
+type Theme = 'apple-midnight' | 'apple-light' | 'pastel-soft' | 'prime-cyber';
 type FontSize = 'small' | 'medium' | 'large';
 type ColorBlindMode = 'none' | 'protanopia' | 'deuteranopia' | 'tritanopia';
 
@@ -51,10 +51,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         const root = document.documentElement;
         
-        // Classes cleanup
         const classesToRemove = [
-            'apple-light', 'apple-midnight', 'neo-dark', 'glass-pink', 'mint-fresh',
+            'apple-midnight', 'apple-light', 'pastel-soft', 'prime-cyber',
             'font-size-small', 'font-size-medium', 'font-size-large',
+            'font-sans', 'font-serif', 'font-mono', 'font-pacifico', 'font-satisfy', 'font-playfair',
             'cb-protanopia', 'cb-deuteranopia', 'cb-tritanopia',
             'bold-text', 'high-contrast', 'reduce-motion', 'reduce-transparency'
         ];
@@ -63,6 +63,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         // Apply new classes
         root.classList.add(theme);
         root.classList.add(`font-size-${fontSize}`);
+        
+        // Apply Global Font from settings if exists
+        const activeFont = user?.settings?.appearance?.font || 'font-sans';
+        root.classList.add(activeFont);
+
         if (colorBlindMode !== 'none') root.classList.add(`cb-${colorBlindMode}`);
         if (boldText) root.classList.add('bold-text');
         if (highContrast) root.classList.add('high-contrast');

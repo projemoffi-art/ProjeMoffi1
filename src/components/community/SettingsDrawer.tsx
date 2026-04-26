@@ -19,13 +19,14 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { exportUserData } from '@/lib/utils/dataExport';
+import { PremiumUpgradeModal } from './modals/PremiumUpgradeModal';
 
 interface SettingsDrawerProps {
     isOpen: boolean;
     onClose: () => void;
 }
 
-type DrawerView = 'main' | 'activity' | 'blocked' | 'words' | 'stories' | 'wellbeing' | 'accessibility' | 'password' | 'privacy' | 'notifications' | 'sos_config' | 'appearance_detail';
+type DrawerView = 'main' | 'activity' | 'blocked' | 'words' | 'stories' | 'wellbeing' | 'accessibility' | 'password' | 'privacy' | 'notifications' | 'sos_config' | 'appearance_detail' | 'sidebar_config' | 'ai_assistant';
 
 // --- Shared Interfaces ---
 interface SectionProps {
@@ -120,7 +121,7 @@ const ToggleRow = React.memo(({ icon: Icon, label, desc, category, id, color, us
             <div 
                 className={cn(
                     "w-8 h-4.5 rounded-full transition-all relative border border-card-border shrink-0",
-                    isActive ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)] border-transparent" : "bg-foreground/5"
+                    isActive ? "bg-accent shadow-[0_0_10px_var(--color-accent)] border-transparent" : "bg-foreground/5"
                 )}
             >
                 <div className={cn("absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white transition-all shadow-sm", isActive ? "left-4" : "left-0.5")} />
@@ -227,7 +228,12 @@ const MainView = ({ user, setView, handleToggle, handleExport, isExporting, expo
 
         <Section title="Erişilebilirlik ve Görünüm">
             <ActionRow icon={Palette} label="Tema ve Arayüz Seçimi" desc="Karanlık/Açık mod ve özel temalar." onClick={() => setView('appearance_detail')} />
+            <ActionRow icon={Layers} label="Kenar Paneli Ayarları" desc="Paneldeki hızlı erişim butonlarını seç." onClick={() => setView('sidebar_config')} />
             <ActionRow icon={Type} label="Metin ve Renk Ayarları" desc="Yazı boyutu ve görme desteği." onClick={() => setView('accessibility')} />
+        </Section>
+        
+        <Section title="Moffi AI & Akıllı Asistan">
+            <ActionRow icon={BrainCircuit} label="AI Asistan Yapılandırması" desc="Asistanın karakterini ve zekasını yönet." onClick={() => setView('ai_assistant')} />
         </Section>
 
         <Section title="Akış & İçerik Tercihleri">
@@ -364,120 +370,7 @@ const MainView = ({ user, setView, handleToggle, handleExport, isExporting, expo
             </div>
         </Section>
 
-        <Section title="Moffi AI Lab">
-            <div className="space-y-6 px-1">
-                <ToggleRow user={user} onToggle={handleToggle} category="ai" id="enabled" icon={Zap} color="violet" label="Yapay Zeka Asistanı" desc="Global yüzen asistanı aktif eder." />
-                
-                {/* APPLE STYLE PERSONALITY SEGMENTED CONTROL */}
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between px-1">
-                        <p className="text-[10px] font-black text-foreground/20 uppercase tracking-[0.2em]">Asistan Kişiliği</p>
-                        <span className="text-[9px] font-black text-violet-400 uppercase tracking-widest bg-violet-400/10 px-2 py-0.5 rounded-full border border-violet-400/20">Labs</span>
-                    </div>
-                    <div className="bg-foreground/5 p-1 rounded-2xl flex relative h-14 border border-foreground/5 backdrop-blur-sm overflow-hidden">
-                        {/* Sliding Background */}
-                        <motion.div 
-                            className="absolute bg-violet-500 rounded-xl shadow-[0_4px_15px_rgba(139,92,246,0.3)] border border-violet-400/30"
-                            initial={false}
-                            animate={{ 
-                                x: user?.settings?.ai?.personality === 'casual' ? '0%' : 
-                                   user?.settings?.ai?.personality === 'professional' ? '100%' : '200%',
-                                width: '33.33%' 
-                            }}
-                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                            style={{ height: 'calc(100% - 8px)', top: '4px', left: '4px' }}
-                        />
-                        {[
-                            { id: 'casual', label: 'Samimi', icon: MessageSquare },
-                            { id: 'professional', label: 'Ciddi', icon: Briefcase },
-                            { id: 'technical', label: 'Teknik', icon: Cpu },
-                        ].map((p) => (
-                            <button
-                                key={p.id}
-                                onClick={() => updateSettings('ai', { personality: p.id })}
-                                className={cn(
-                                    "flex-1 flex flex-col items-center justify-center relative z-10 transition-colors duration-300",
-                                    user?.settings?.ai?.personality === p.id ? "text-background" : "text-foreground/30 hover:text-foreground/50"
-                                )}
-                            >
-                                <p.icon className={cn("w-4 h-4 mb-0.5 transition-transform", user?.settings?.ai?.personality === p.id && "scale-110")} />
-                                <span className="text-[9px] font-black uppercase tracking-widest">{p.label}</span>
-                            </button>
-                        ))}
-                    </div>
-                </div>
 
-                {/* APPLE STYLE SLIDERS */}
-                <div className="space-y-5 py-2">
-                    {/* Creativity Slider */}
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between px-1">
-                            <div className="flex items-center gap-2">
-                                <Sparkles className="w-3.5 h-3.5 text-violet-400" />
-                                <p className="text-[10px] font-black text-foreground/40 uppercase tracking-[0.2em]">Yaratıcılık Oranı</p>
-                            </div>
-                            <span className="text-[11px] font-mono text-foreground/80 font-black">%{Math.round((user?.settings?.ai?.creativity || 0.7) * 100)}</span>
-                        </div>
-                        <div className="relative h-6 flex items-center group">
-                            <div className="absolute w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                <motion.div 
-                                    className="h-full bg-violet-500" 
-                                    animate={{ width: `${(user?.settings?.ai?.creativity || 0.7) * 100}%` }}
-                                />
-                            </div>
-                            <input 
-                                type="range" 
-                                min="0" max="1" step="0.1"
-                                value={user?.settings?.ai?.creativity || 0.7}
-                                onChange={(e) => updateSettings('ai', { creativity: parseFloat(e.target.value) })}
-                                className="absolute w-full h-full opacity-0 cursor-pointer z-10"
-                            />
-                            {/* Thumb Mock */}
-                            <motion.div 
-                                className="absolute w-5 h-5 bg-white rounded-full shadow-xl border-4 border-violet-600 z-0 pointer-events-none"
-                                animate={{ left: `calc(${(user?.settings?.ai?.creativity || 0.7) * 100}% - 10px)` }}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Detail Level Choice */}
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-2 px-1">
-                            <Layers className="w-3.5 h-3.5 text-violet-400" />
-                            <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">Yanıt Derinliği</p>
-                        </div>
-                        <div className="flex gap-2">
-                            {[
-                                { id: 'short', label: 'Öz', color: 'bg-emerald-500' },
-                                { id: 'medium', label: 'Dengeli', color: 'bg-violet-500' },
-                                { id: 'long', label: 'Detaylı', color: 'bg-indigo-500' }
-                            ].map((d) => (
-                                <button
-                                    key={d.id}
-                                    onClick={() => updateSettings('ai', { detailLevel: d.id })}
-                                    className={cn(
-                                        "flex-1 py-3 rounded-2xl border transition-all text-[9.5px] font-black uppercase tracking-widest",
-                                        user?.settings?.ai?.detailLevel === d.id 
-                                            ? `border-transparent text-white shadow-lg ${d.color}` 
-                                            : "bg-white/[0.03] border-white/5 text-white/30 hover:bg-white/10"
-                                    )}
-                                >
-                                    {d.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                <div className="pt-2">
-                    <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-4 space-y-1">
-                        <ToggleRow user={user} onToggle={handleToggle} category="ai" id="autoSuggest" icon={Sparkles} color="violet" label="Akıllı Öneriler" desc="Kişiselleştirilmiş içerik ve dost tavsiyeleri." />
-                        <ToggleRow user={user} onToggle={handleToggle} category="ai" id="walkAnalysis" icon={Footprints} color="violet" label="Akıllı Yürüyüş Analizi" desc="Yürüyüş verilerini AI ile anlamlandır." />
-                        <ToggleRow user={user} onToggle={handleToggle} category="ai" id="photoEnhancer" icon={Palette} color="violet" label="AI Fotoğraf İyileştirici" desc="Görselleri otomatik netleştir ve canlandır." />
-                    </div>
-                </div>
-            </div>
-        </Section>
 
         <Section title="SOS & GÜVENLİK RADARI">
             <div className="space-y-1">
@@ -524,12 +417,12 @@ const MainView = ({ user, setView, handleToggle, handleExport, isExporting, expo
 );
 
 const AppearanceDetailView = ({ user, setView, theme, setTheme, updateSettings }: ViewProps) => {
+    const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
     const themes = [
-        { id: 'apple-midnight', label: 'Gece Mavisi', color: 'bg-[#0a0a1a]', icon: Moon },
-        { id: 'apple-light', label: 'Gümüş Işığı', color: 'bg-gray-100', icon: Sun },
-        { id: 'neo-dark', label: 'Modern Siyah', color: 'bg-black', icon: Monitor },
-        { id: 'glass-pink', label: 'Kristal Pembe', color: 'bg-rose-500', icon: Sparkles },
-        { id: 'mint-fresh', label: 'Nane Ferahlığı', color: 'bg-emerald-500', icon: Coffee },
+        { id: 'apple-midnight', label: 'Moffi Midnight', color: 'bg-black', icon: Moon, desc: 'Premium Karanlık' },
+        { id: 'apple-light', label: 'Moffi Light', color: 'bg-[#F5F5F7]', icon: Sun, desc: 'Aydınlık & Sade' },
+        { id: 'pastel-soft', label: 'Moffi Pastel', color: 'bg-[#FBE4FF]', icon: Sparkles, desc: 'Yumuşak & Estetik' },
+        { id: 'prime-cyber', label: 'Cyber Neon', color: 'bg-gradient-to-br from-[#020205] to-[#00F3FF]/40', icon: Zap, desc: 'Futuristik Prime', isPrime: true },
     ];
 
     return (
@@ -544,7 +437,13 @@ const AppearanceDetailView = ({ user, setView, theme, setTheme, updateSettings }
                         {themes.map((t) => (
                             <button 
                                 key={t.id} 
-                                onClick={() => setTheme?.(t.id as any)}
+                                onClick={() => {
+                                    if (t.isPrime && !user?.is_prime) {
+                                        setIsUpgradeModalOpen(true);
+                                        return;
+                                    }
+                                    setTheme?.(t.id as any);
+                                }}
                                 className={cn(
                                     "flex flex-col gap-3 p-4 rounded-[3rem] transition-all border group relative overflow-hidden",
                                     theme === t.id 
@@ -553,15 +452,29 @@ const AppearanceDetailView = ({ user, setView, theme, setTheme, updateSettings }
                                 )}
                             >
                                 <div className={cn("w-full h-16 rounded-2xl mb-1 shadow-inner", t.color)} />
-                                <div className="flex items-center justify-between px-1">
-                                    <span className={cn("text-[9.5px] font-black uppercase tracking-widest", theme === t.id ? "text-background" : "text-secondary")}>{t.label}</span>
-                                    <t.icon className={cn("w-3.5 h-3.5", theme === t.id ? "text-background" : "text-secondary/50")} />
+                                <div className="flex flex-col px-1">
+                                    <div className="flex items-center justify-between">
+                                        <span className={cn("text-[10px] font-black uppercase tracking-widest leading-tight", theme === t.id ? "text-background" : "text-foreground")}>{t.label}</span>
+                                        <t.icon className={cn("w-4 h-4 transition-transform group-hover:scale-110", theme === t.id ? "text-background" : "text-foreground/40")} />
+                                    </div>
+                                    <span className={cn("text-[8px] font-bold uppercase tracking-tighter mt-1 opacity-60", theme === t.id ? "text-background" : "text-secondary")}>{(t as any).desc}</span>
                                 </div>
+                                {t.isPrime && (
+                                    <div className="absolute top-4 left-4 flex items-center gap-1 bg-accent/20 backdrop-blur-md px-2 py-0.5 rounded-full border border-accent/30 scale-75 origin-top-left">
+                                        <Crown className="w-2.5 h-2.5 text-accent" />
+                                        <span className="text-[7px] font-black text-accent uppercase tracking-widest">PRIME</span>
+                                    </div>
+                                )}
                                 {theme === t.id && <motion.div layoutId="theme-check" className="absolute top-2 right-2 w-5 h-5 bg-background rounded-full flex items-center justify-center"><Check className="w-3 h-3 text-foreground" /></motion.div>}
                             </button>
                         ))}
                     </div>
                 </div>
+
+                <PremiumUpgradeModal 
+                    isOpen={isUpgradeModalOpen} 
+                    onClose={() => setIsUpgradeModalOpen(false)} 
+                />
 
                 <div className="space-y-3">
                     <p className="text-[9px] font-black text-secondary uppercase tracking-[0.2em] px-1">Gelişmiş Görsel Özellikler</p>
@@ -569,13 +482,27 @@ const AppearanceDetailView = ({ user, setView, theme, setTheme, updateSettings }
                         <ToggleRow user={user} onToggle={(c, i) => updateSettings('appearance', { auraVisible: !user?.settings?.appearance?.auraVisible })} category="appearance" id="auraVisible" icon={Sparkles} label="Global Aura Görünürlüğü" desc="Profil aura efektini her yerde aktif eder." />
                         <div className="py-2 px-3">
                              <p className="text-[10px] font-black text-secondary uppercase mb-2">Varsayılan Yazı Tipi</p>
-                             <div className="flex gap-2">
+                             <div className="grid grid-cols-3 gap-2">
                                  {[
-                                     { id: 'font-sans', label: 'Inter' },
-                                     { id: 'font-serif', label: 'Serif' },
-                                     { id: 'font-pacifico', label: 'Pacifico' }
+                                     { id: 'font-sans', label: 'Standart' },
+                                     { id: 'font-serif', label: 'Zarif' },
+                                     { id: 'font-mono', label: 'Teknik' },
+                                     { id: 'font-pacifico', label: 'Retro' },
+                                     { id: 'font-satisfy', label: 'El Yazısı' },
+                                     { id: 'font-playfair', label: 'Klasik' }
                                  ].map(f => (
-                                     <button key={f.id} onClick={() => updateSettings('appearance', { font: f.id })} className={cn("flex-1 py-2.5 rounded-xl text-[9px] font-black uppercase transition-all", user?.settings?.appearance?.font === f.id ? "bg-foreground text-background" : "bg-foreground/[0.05] text-secondary")}>{f.label}</button>
+                                     <button 
+                                       key={f.id} 
+                                       onClick={() => updateSettings('appearance', { font: f.id })} 
+                                       className={cn(
+                                         "py-3 rounded-2xl text-[9px] font-black uppercase transition-all border", 
+                                         (user?.settings?.appearance?.font || 'font-sans') === f.id 
+                                           ? "bg-foreground text-background border-transparent shadow-lg" 
+                                           : "bg-foreground/[0.05] text-secondary border-card-border hover:bg-foreground/[0.08]"
+                                       )}
+                                     >
+                                       {f.label}
+                                     </button>
                                  ))}
                              </div>
                         </div>
@@ -1096,6 +1023,7 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
     const [isExporting, setIsExporting] = useState(false);
     const [exportStatus, setExportStatus] = useState('');
     const [newWord, setNewWord] = useState('');
+    const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
     const handleToggle = (category: any, settingId: string) => {
         const currentValue = (user?.settings as any)?.[category]?.[settingId];
@@ -1263,6 +1191,10 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
                                     <SOSConfigView key="sos" {...viewProps} />
                                 ) : view === 'appearance_detail' ? (
                                     <AppearanceDetailView key="appearance" {...viewProps} />
+                                ) : view === 'sidebar_config' ? (
+                                    <SidebarConfigView key="sidebar" {...viewProps} />
+                                ) : view === 'ai_assistant' ? (
+                                    <AIAssistantView key="ai" {...viewProps} />
                                 ) : (
                                     <AccessibilityView key="accessibility" {...viewProps} />
                                 )}
@@ -1274,3 +1206,178 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
         </AnimatePresence>
     );
 }
+
+const SidebarConfigView = ({ user, setView, updateSettings }: ViewProps) => {
+    const activeActions = user?.settings?.sidebar?.activeActions || ['ai', 'post', 'qr', 'mood'];
+    
+    const actions = [
+        { id: 'ai', label: 'AI Asistan', icon: Sparkles, desc: 'Yapay zeka asistanına hızlı erişim.' },
+        { id: 'post', label: 'Hızlı Paylaş', icon: Plus, desc: 'Anında fotoğraf veya video yükle.' },
+        { id: 'qr', label: 'QR Pasaport', icon: QrCode, desc: 'Dijital pasaportuna anında ulaş.' },
+        { id: 'mood', label: 'Ruh Halim', icon: Zap, desc: 'Profil durumunu tek tıkla güncelle.' },
+        { id: 'sos', label: 'SOS Alert', icon: ShieldAlert, desc: 'Acil durum merkezine hızlı giriş.' },
+        { id: 'studio', label: 'Aura Studio', icon: Palette, desc: 'Profil aura ayarlarına git.' }
+    ];
+
+    const toggleAction = (id: string) => {
+        let newActions = [...activeActions];
+        if (newActions.includes(id)) {
+            if (newActions.length <= 1) return;
+            newActions = newActions.filter(a => a !== id);
+        } else {
+            if (newActions.length >= 6) return;
+            newActions.push(id);
+        }
+        updateSettings('sidebar', { activeActions: newActions });
+    };
+
+    return (
+        <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(94vh - 180px)' }}>
+            <div className="space-y-8 pb-10 px-2">
+                <div className="space-y-4">
+                    <div className="flex items-center gap-3 px-1">
+                        <div className="w-8 h-8 rounded-2xl bg-cyan-500/10 flex items-center justify-center"><Layers className="w-4 h-4 text-cyan-400" /></div>
+                        <h3 className="text-[12px] font-black text-foreground uppercase tracking-[0.2em]">Kenar Paneli Özelleştirme</h3>
+                    </div>
+                    <p className="text-[10px] text-secondary font-bold uppercase tracking-widest px-1 leading-relaxed opacity-60">
+                        Ekranın sağ kenarındaki ince çubuğu çekince görünecek olan özellikleri buradan seçebilirsin. (En fazla 6 özellik)
+                    </p>
+                    <div className="space-y-1 bg-foreground/[0.02] rounded-[2.5rem] p-2 border border-card-border">
+                        {actions.map(action => (
+                            <button 
+                                key={action.id}
+                                onClick={() => toggleAction(action.id)}
+                                className="w-full flex items-center justify-between py-4 px-4 hover:bg-foreground/[0.03] transition-all rounded-3xl border-b border-card-border last:border-0 text-left"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className={cn(
+                                        "w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg transition-all",
+                                        activeActions.includes(action.id) ? "bg-cyan-500 text-black shadow-cyan-500/20" : "bg-foreground/5 text-foreground/40"
+                                    )}>
+                                        <action.icon className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[12px] font-black text-foreground uppercase tracking-tight">{action.label}</p>
+                                        <p className="text-[9px] text-secondary mt-1 font-bold uppercase tracking-tighter">{action.desc}</p>
+                                    </div>
+                                </div>
+                                <div className={cn(
+                                    "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
+                                    activeActions.includes(action.id) ? "bg-cyan-500 border-cyan-400" : "border-card-border"
+                                )}>
+                                    {activeActions.includes(action.id) && <Check className="w-3 h-3 text-black" strokeWidth={4} />}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+            <button onClick={() => setView('main')} className="mt-4 w-full py-5 rounded-[2.5rem] bg-foreground/[0.05] text-foreground font-black text-[12px] uppercase tracking-[0.2em] hover:bg-foreground/10 transition-all flex items-center justify-center gap-3"><ArrowLeft className="w-4 h-4" /> Geri Dön</button>
+        </motion.div>
+    );
+};
+
+// --- AI Assistant View ---
+const AIAssistantView = ({ user, setView, updateSettings }: ViewProps) => {
+    const ai = user?.settings?.ai || { 
+        name: 'Moffi AI', 
+        personality: 'friendly', 
+        autoHealthTips: true, 
+        smartModeration: true,
+        voiceFeedback: false
+    };
+
+    return (
+        <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(94vh - 180px)' }}>
+            <div className="space-y-8 pb-10 px-2">
+                <div className="space-y-4">
+                    <div className="flex items-center gap-3 px-1">
+                        <div className="w-8 h-8 rounded-2xl bg-cyan-500/10 flex items-center justify-center"><BrainCircuit className="w-4 h-4 text-cyan-400" /></div>
+                        <h3 className="text-[12px] font-black text-foreground uppercase tracking-[0.2em]">Asistan Kimliği</h3>
+                    </div>
+                    
+                    <div className="bg-foreground/[0.03] rounded-[2.5rem] p-6 border border-card-border">
+                        <p className="text-[10px] font-black text-secondary uppercase tracking-widest mb-3 px-1">Asistan Adı</p>
+                        <input 
+                            type="text" 
+                            value={ai.name}
+                            onChange={(e) => updateSettings('ai', { name: e.target.value })}
+                            placeholder="Örn: Moffi AI"
+                            className="w-full bg-background border border-card-border rounded-2xl px-5 py-4 text-sm font-bold text-foreground focus:outline-none focus:border-cyan-500 transition-all placeholder:text-secondary/30"
+                        />
+                        <p className="text-[9px] text-secondary mt-3 px-1 uppercase font-bold tracking-tighter italic">Bu isim, asistan seninle konuştuğunda görünecek.</p>
+                    </div>
+                </div>
+
+                <div className="space-y-3">
+                    <p className="text-[9px] font-black text-secondary uppercase tracking-[0.2em] px-1">Karakter ve Tonlama</p>
+                    <div className="grid grid-cols-1 gap-2">
+                        {[
+                            { id: 'friendly', label: 'Dost Canlısı', desc: 'Sıcak, enerjik ve samimi bir dil kullanır.', icon: Heart },
+                            { id: 'professional', label: 'Bilgiç / Teknik', desc: 'Daha ciddi, veriye dayalı ve net bilgiler sunar.', icon: Cpu },
+                            { id: 'protective', label: 'Koruyucu / Ebeveyn', desc: 'Sağlık ve güvenlik konularında daha uyarıcıdır.', icon: ShieldCheck }
+                        ].map((p) => (
+                            <button 
+                                key={p.id} 
+                                onClick={() => updateSettings('ai', { personality: p.id })}
+                                className={cn(
+                                    "w-full p-5 rounded-[2.5rem] border text-left transition-all relative group",
+                                    ai.personality === p.id ? "bg-foreground text-background border-transparent shadow-xl" : "bg-foreground/[0.03] border-card-border hover:bg-foreground/10"
+                                )}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center", ai.personality === p.id ? "bg-background/10" : "bg-foreground/5")}>
+                                            <p.icon className={cn("w-5 h-5", ai.personality === p.id ? "text-background" : "text-foreground/40")} />
+                                        </div>
+                                        <div>
+                                            <span className={cn("text-[13px] font-black uppercase tracking-widest", ai.personality === p.id ? "text-background" : "text-foreground")}>{p.label}</span>
+                                            <p className={cn("text-[10px] mt-1 font-bold uppercase tracking-tighter opacity-60", ai.personality === p.id ? "text-background" : "text-secondary")}>{p.desc}</p>
+                                        </div>
+                                    </div>
+                                    {ai.personality === p.id && <Check className="w-5 h-5 text-background" />}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="space-y-3">
+                    <p className="text-[9px] font-black text-secondary uppercase tracking-[0.2em] px-1">Proaktif Zeka Özellikleri</p>
+                    <div className="space-y-1 bg-foreground/[0.02] rounded-[2.5rem] p-2 border border-card-border">
+                         <div className="w-full flex items-center justify-between py-2.5 px-2 hover:bg-foreground/[0.03] transition-all group border-b border-card-border last:border-0 rounded-2xl transform-gpu will-change-transform text-left" onClick={() => updateSettings('ai', { autoHealthTips: !ai.autoHealthTips })}>
+                             <div className="flex items-center gap-3">
+                                 <div className="flex items-center justify-center transition-transform group-hover:scale-110 text-foreground/40">
+                                     <Activity className="w-4 h-4" />
+                                 </div>
+                                 <div>
+                                     <p className="text-[12px] font-black text-foreground uppercase tracking-tight leading-none">Otomatik Sağlık Önerileri</p>
+                                     <p className="text-[9px] text-secondary mt-1 leading-none font-bold max-w-[200px] uppercase tracking-tighter">Asistanın evcil hayvanın için ipuçları versin.</p>
+                                 </div>
+                             </div>
+                             <div className={cn("w-8 h-4.5 rounded-full transition-all relative border border-card-border shrink-0", ai.autoHealthTips ? "bg-accent shadow-[0_0_10px_var(--color-accent)] border-transparent" : "bg-foreground/5")}>
+                                 <div className={cn("absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white transition-all shadow-sm", ai.autoHealthTips ? "left-4" : "left-0.5")} />
+                             </div>
+                         </div>
+
+                         <div className="w-full flex items-center justify-between py-2.5 px-2 hover:bg-foreground/[0.03] transition-all group border-b border-card-border last:border-0 rounded-2xl transform-gpu will-change-transform text-left" onClick={() => updateSettings('ai', { smartModeration: !ai.smartModeration })}>
+                             <div className="flex items-center gap-3">
+                                 <div className="flex items-center justify-center transition-transform group-hover:scale-110 text-foreground/40">
+                                     <Shield className="w-4 h-4" />
+                                 </div>
+                                 <div>
+                                     <p className="text-[12px] font-black text-foreground uppercase tracking-tight leading-none">Akıllı İçerik Filtresi</p>
+                                     <p className="text-[9px] text-secondary mt-1 leading-none font-bold max-w-[200px] uppercase tracking-tighter">Spam ve kötü niyetli yorumları önler.</p>
+                                 </div>
+                             </div>
+                             <div className={cn("w-8 h-4.5 rounded-full transition-all relative border border-card-border shrink-0", ai.smartModeration ? "bg-accent shadow-[0_0_10px_var(--color-accent)] border-transparent" : "bg-foreground/5")}>
+                                 <div className={cn("absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white transition-all shadow-sm", ai.smartModeration ? "left-4" : "left-0.5")} />
+                             </div>
+                         </div>
+                    </div>
+                </div>
+            </div>
+            <button onClick={() => setView('main')} className="mt-4 w-full py-5 rounded-[2.5rem] bg-foreground/[0.05] text-foreground font-black text-[12px] uppercase tracking-[0.2em] hover:bg-foreground/10 transition-all flex items-center justify-center gap-3"><ArrowLeft className="w-4 h-4" /> Geri Dön</button>
+        </motion.div>
+    );
+};

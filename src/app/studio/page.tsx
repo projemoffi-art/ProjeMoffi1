@@ -9,7 +9,7 @@ import {
     Maximize2, RefreshCcw, Save, Type, Sliders, Wand2, ArrowLeftRight, ArrowUpDown, Upload, Globe, Smartphone, X 
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { cn } from '@/lib/utils';
+import { cn, showToast } from '@/lib/utils';
 import { generateImageAction } from '@/app/actions/ai';
 export default function ProductionStudio() {
     const router = useRouter();
@@ -73,7 +73,7 @@ export default function ProductionStudio() {
     ];
 
     const generateAIModel = async () => {
-        if (!activePrompt) return alert("Lütfen basılacak grafik için bir komut gir!");
+        if (!activePrompt) return showToast("Lütfen grafik için bir komut gir!", "Zap", "text-amber-500");
         setIsGenerating(true);
         // FORCE POD LOGIC: Must be a flat vector on a pure white background so multiply blend removes the background!
         const finalPrompt = `A cute flat vector graphic illustration suitable for apparel print. Solid pure white background. Centered isolated object. No ambient scene or full body context. Theme: ${activePrompt}`;
@@ -83,11 +83,11 @@ export default function ProductionStudio() {
                 setPrintDesign(res.url);
                 setHistory(prev => [res.url, ...prev].slice(0, 5));
             } else {
-                alert((res as any).error || "Görsel üretilemedi.");
+                showToast((res as any).error || "Görsel üretilemedi.", "ShieldAlert", "text-red-500");
             }
         } catch (error) {
             console.error(error);
-            alert("Sistemde bir hata oluştu.");
+            showToast("Sistemde bir hata oluştu.", "ShieldAlert", "text-red-500");
         } finally {
             setIsGenerating(false);
         }
@@ -99,7 +99,7 @@ export default function ProductionStudio() {
         
         // Ensure file is an image
         if (!file.type.startsWith('image/')) {
-            return alert("Lütfen geçerli bir resim formatı seçiniz (PNG, JPG).");
+            return showToast("Geçerli bir resim formatı seçin (PNG, JPG).", "Upload", "text-amber-500");
         }
 
         const reader = new FileReader();
@@ -113,7 +113,7 @@ export default function ProductionStudio() {
     };
 
     const handleDownloadGraphic = async () => {
-        if (!printDesign) return alert("İndirilecek bir grafik yok! Önce üretin veya yükleyin.");
+        if (!printDesign) return showToast("İndirilecek bir grafik yok!", "Download", "text-amber-500");
         try {
             const response = await fetch(printDesign);
             const blob = await response.blob();
@@ -139,7 +139,7 @@ export default function ProductionStudio() {
     };
 
     const handleSaveToWardrobe = () => {
-        if (!printDesign) return alert("Kaydedilecek bir tasarım yok.");
+        if (!printDesign) return showToast("Kaydedilecek bir tasarım yok.", "Save", "text-amber-500");
         const currentItems = JSON.parse(localStorage.getItem('moffi_wardrobe') || '[]');
         const newItem = {
             id: Date.now(),
@@ -150,11 +150,11 @@ export default function ProductionStudio() {
         const updatedWardrobe = [newItem, ...currentItems].slice(0, 20); // Keep last 20
         localStorage.setItem('moffi_wardrobe', JSON.stringify(updatedWardrobe));
         setWardrobe(updatedWardrobe); // Update React State
-        alert("✨ Tasarımın başarıyla Dijital Gardıroba mühürlendi! Sağ panelden istediğin zaman geri çağırabilirsin.");
+        showToast("Tasarımın Dijital Gardıroba mühürlendi!", "Sparkles", "text-brand-purple");
     };
 
     const handleShareToCommunity = () => {
-        if (!printDesign) return alert("Lütfen önce tasarımınızı hazırlayın!");
+        if (!printDesign) return showToast("Önce tasarımınızı hazırlayın!", "Sparkles", "text-amber-500");
         const currentPosts = JSON.parse(localStorage.getItem('moffi_kesfet_posts') || '[]');
         const newPost = {
             id: `studio_post_${Date.now()}`,
@@ -168,12 +168,12 @@ export default function ProductionStudio() {
             timestamp: "Az önce"
         };
         localStorage.setItem('moffi_kesfet_posts', JSON.stringify([newPost, ...currentPosts]));
-        alert("🚀 Tasarımın başarıyla Moffi Keşfet ağına yüklendi! Herkes görebilir.");
+        showToast("Tasarımın Moffi Keşfet ağına yüklendi!", "Globe", "text-cyan-500");
         setIsShareMenuOpen(false);
     };
 
     const handleShareToDevice = () => {
-        if (!printDesign) return alert("Önce tasarımı hazırlayın!");
+        if (!printDesign) return showToast("Önce tasarımı hazırlayın!", "Sparkles", "text-amber-500");
         if (navigator.share) {
             navigator.share({
                 title: 'Moffi Stüdyo Tasarımım',
@@ -181,13 +181,13 @@ export default function ProductionStudio() {
                 url: window.location.href,
             }).catch(console.error);
         } else {
-            alert("Cihazınız native paylaşımı desteklemiyor.");
+            showToast("Cihazınız paylaşımı desteklemiyor.", "Share2", "text-red-500");
         }
         setIsShareMenuOpen(false);
     };
 
     const handleSiparis = () => {
-        if (!printDesign) return alert("Sipariş vermeden önce lütfen bir baskı motifi oluşturun! (Sihirli değneğe basarak AI ile üretebilirsiniz)");
+        if (!printDesign) return showToast("Önce bir baskı motifi oluşturun!", "Wand2", "text-amber-500");
         setIsCheckoutModalOpen(true);
     };
 
@@ -226,7 +226,7 @@ export default function ProductionStudio() {
     };
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-cyan-500/30 overflow-hidden flex flex-col">
+        <div className="min-h-screen bg-[background] text-white font-sans selection:bg-cyan-500/30 overflow-hidden flex flex-col">
             
             {/* AMBIENT BACKGROUND */}
             <div className="fixed inset-0 pointer-events-none">
@@ -261,7 +261,7 @@ export default function ProductionStudio() {
                                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                className="absolute top-16 right-[180px] w-64 bg-[#0a0a0a] backdrop-blur-3xl border border-white/10 rounded-2xl p-4 shadow-[0_0_50px_rgba(0,0,0,0.8)] z-50 flex flex-col gap-2"
+                                className="absolute top-16 right-[180px] w-64 bg-[card] backdrop-blur-3xl border border-white/10 rounded-2xl p-4 shadow-[0_0_50px_rgba(0,0,0,0.8)] z-50 flex flex-col gap-2"
                             >
                                 <div className="flex items-center justify-between px-2 mb-2">
                                     <h4 className="text-[10px] uppercase tracking-widest text-white/50 font-black">Paylaşım Ağı</h4>
@@ -700,7 +700,7 @@ export default function ProductionStudio() {
                                 initial={{ scale: 0.95, y: 30 }}
                                 animate={{ scale: 1, y: 0 }}
                                 exit={{ scale: 0.95, y: 30 }}
-                                className="w-full max-w-md bg-[#0a0a0a] border border-white/10 shadow-[0_0_100px_rgba(34,211,238,0.15)] rounded-3xl overflow-hidden flex flex-col"
+                                className="w-full max-w-md bg-[card] border border-white/10 shadow-[0_0_100px_rgba(34,211,238,0.15)] rounded-3xl overflow-hidden flex flex-col"
                             >
                                 {/* Header */}
                                 <div className="p-6 border-b border-white/5 flex items-center justify-between">

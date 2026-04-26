@@ -107,10 +107,10 @@ export default function VetPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[var(--background)] pb-32 font-sans relative text-[var(--foreground)] selection:bg-[#5B4D9D]/30">
+        <div className="min-h-screen bg-[var(--background)] pb-32 font-sans relative text-[var(--foreground)] selection:bg-brand-purple/30">
             {/* AMBIENT BACKGROUND GLOWS */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden">
-                <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-[#5B4D9D]/10 blur-[120px] rounded-full animate-pulse" />
+                <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-brand-purple/10 blur-[120px] rounded-full animate-pulse" />
                 <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/5 blur-[100px] rounded-full" />
             </div>
 
@@ -148,12 +148,12 @@ export default function VetPage() {
 
                     {/* MINIMALIST SEARCH */}
                     <div className="relative group">
-                        <div className="absolute inset-0 bg-[#5B4D9D]/10 rounded-2xl blur-md opacity-0 group-focus-within:opacity-100 transition-opacity" />
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--foreground)]/30 group-focus-within:text-[#5B4D9D] transition-colors" />
+                        <div className="absolute inset-0 bg-brand-purple/10 rounded-2xl blur-md opacity-0 group-focus-within:opacity-100 transition-opacity" />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--foreground)]/30 group-focus-within:text-brand-purple transition-colors" />
                         <input
                             type="text"
                             placeholder="Klinik, veteriner veya uzmanlık ara..."
-                            className="w-full h-14 pl-12 pr-4 bg-[var(--card-bg)] rounded-2xl border border-white/10 outline-none font-bold text-sm text-[var(--foreground)] placeholder:text-[var(--foreground)]/20 focus:border-[#5B4D9D]/50 focus:bg-white/[0.08] transition-all relative z-10 text-center"
+                            className="w-full h-14 pl-12 pr-4 bg-[var(--card-bg)] rounded-2xl border border-white/10 outline-none font-bold text-sm text-[var(--foreground)] placeholder:text-[var(--foreground)]/20 focus:border-brand-purple/50 focus:bg-white/[0.08] transition-all relative z-10 text-center"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -198,7 +198,7 @@ export default function VetPage() {
                         className="col-span-4 row-span-2 bg-[#1C1C1E] border border-white/10 rounded-[2.8rem] p-7 text-left flex flex-col justify-between relative overflow-hidden group shadow-2xl"
                     >
                         {/* Mesh Glow Background */}
-                        <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-[#5B4D9D]/20 blur-[80px] rounded-full group-hover:bg-[#5B4D9D]/30 transition-colors duration-500" />
+                        <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-brand-purple/20 blur-[80px] rounded-full group-hover:bg-brand-purple/30 transition-colors duration-500" />
                         <div className="absolute bottom-[-10%] left-[-10%] w-32 h-32 bg-blue-500/10 blur-[60px] rounded-full" />
                         
                         <div className="w-16 h-16 rounded-[1.8rem] bg-white/5 backdrop-blur-2xl flex items-center justify-center border border-white/10 shadow-xl relative z-10">
@@ -206,7 +206,7 @@ export default function VetPage() {
                         </div>
                         
                         <div className="relative z-10">
-                            <p className="text-[#5B4D9D] text-[10px] font-black uppercase tracking-[0.3em] mb-1">Moffi Health</p>
+                            <p className="text-brand-purple text-[10px] font-black uppercase tracking-[0.3em] mb-1">Moffi Health</p>
                             <h3 className="text-3xl font-black text-white tracking-tighter leading-none italic uppercase">Randevu Al</h3>
                             <p className="text-white/40 text-[11px] font-bold mt-2 uppercase tracking-widest max-w-[140px]">En Yakın Kliniklere Hızlı Erişim</p>
                         </div>
@@ -385,7 +385,7 @@ export default function VetPage() {
                                             </button>
                                             <button
                                                 onClick={() => openAppointment(clinic)}
-                                                className="bg-white text-black h-12 px-8 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#5B4D9D] hover:text-white transition-all shadow-2xl active:scale-95 whitespace-nowrap"
+                                                className="bg-white text-black h-12 px-8 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-brand-purple hover:text-white transition-all shadow-2xl active:scale-95 whitespace-nowrap"
                                             >
                                                 Randevu Al
                                             </button>
@@ -430,7 +430,7 @@ export default function VetPage() {
                             <div className="mb-8">
                                 <div className="flex items-center justify-between mb-4 px-1">
                                     <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Randevu Günü</label>
-                                    <span className="text-[10px] font-black text-[#5B4D9D] uppercase tracking-widest">En Erken Bugüne</span>
+                                    <span className="text-[10px] font-black text-brand-purple uppercase tracking-widest">En Erken Bugüne</span>
                                 </div>
                                 <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar -mx-1 px-1">
                                     {dateOptions.map((day) => (
@@ -465,7 +465,7 @@ export default function VetPage() {
                                             className={cn(
                                                 "py-4 rounded-2xl text-[13px] font-black border transition-all",
                                                 selectedTime === time 
-                                                    ? "bg-[#5B4D9D] text-white border-[#5B4D9D] shadow-[0_10px_30px_rgba(91,77,157,0.4)]" 
+                                                    ? "bg-brand-purple text-white border-brand-purple shadow-[0_10px_30px_rgba(91,77,157,0.4)]" 
                                                     : "border-white/5 bg-white/5 text-white/40 hover:bg-white/10 hover:border-white/10"
                                             )}
                                         >
@@ -500,7 +500,7 @@ export default function VetPage() {
 
                 {/* 2. SOS MODAL - Critical Apple Alert */}
                 {activeModal === 'sos' && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-[#FF3B30] flex flex-col items-center justify-center p-8 text-center text-white relative overflow-hidden">
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-emergency flex flex-col items-center justify-center p-8 text-center text-white relative overflow-hidden">
                         {/* Background Pulsing Radiance */}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                         <motion.div 
@@ -512,7 +512,7 @@ export default function VetPage() {
                         <motion.div 
                             initial={{ scale: 0.5, opacity: 0 }} 
                             animate={{ scale: 1, opacity: 1 }} 
-                            className="bg-white text-[#FF3B30] p-12 rounded-[3.5rem] mb-10 shadow-[0_50px_100px_rgba(0,0,0,0.3)] relative z-10"
+                            className="bg-white text-emergency p-12 rounded-[3.5rem] mb-10 shadow-[0_50px_100px_rgba(0,0,0,0.3)] relative z-10"
                         >
                             <ShieldAlert className="w-24 h-24 fill-current animate-pulse" />
                         </motion.div>
@@ -528,7 +528,7 @@ export default function VetPage() {
                             </div>
 
                             <div className="flex flex-col gap-5 w-80 mx-auto">
-                                <button className="bg-white text-[#FF3B30] py-6 rounded-[2.5rem] font-black text-xl flex items-center justify-center gap-4 shadow-2xl active:scale-95 transition-all uppercase tracking-widest">
+                                <button className="bg-white text-emergency py-6 rounded-[2.5rem] font-black text-xl flex items-center justify-center gap-4 shadow-2xl active:scale-95 transition-all uppercase tracking-widest">
                                     <Phone className="w-8 h-8 fill-current" /> ŞİMDİ ARA
                                 </button>
                                 <button className="bg-black/40 text-white py-6 rounded-[2.5rem] font-black flex items-center justify-center gap-3 border border-white/10 backdrop-blur-md hover:bg-black/60 transition-all uppercase text-sm tracking-widest">
@@ -638,7 +638,7 @@ export default function VetPage() {
                             <h3 className="bg-black/50 backdrop-blur-xl px-6 py-4 rounded-3xl border border-white/10 text-white font-black text-xl italic uppercase tracking-tighter pointer-events-auto">Klinik Keşfı</h3>
                             <button 
                                 onClick={() => setIsExplorerOpen(false)}
-                                className="w-14 h-14 bg-white text-black rounded-full flex items-center justify-center shadow-2xl pointer-events-auto hover:bg-[#FF3B30] hover:text-white transition-all active:scale-90"
+                                className="w-14 h-14 bg-white text-black rounded-full flex items-center justify-center shadow-2xl pointer-events-auto hover:bg-emergency hover:text-white transition-all active:scale-90"
                             >
                                 <X className="w-6 h-6" />
                             </button>

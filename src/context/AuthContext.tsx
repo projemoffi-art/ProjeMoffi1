@@ -13,6 +13,7 @@ export interface User {
     avatar?: string;
     cover_photo?: string;
     bio?: string;
+    is_prime?: boolean;
     joinedAt: string; // ISO String
     stats: {
         posts: number;
@@ -58,7 +59,6 @@ export interface User {
             soundAlerts: boolean;
         };
         ai: {
-            enabled: boolean;
             personality: 'casual' | 'professional' | 'technical';
             creativity: number; // 0 to 1
             detailLevel: 'short' | 'medium' | 'long';
@@ -102,8 +102,15 @@ export interface User {
             };
         };
         accessibility: {
-            fontSize: 'small' | 'medium' | 'large';
+            fontSize: 'medium' | 'large' | 'small';
             colorBlindMode: 'none' | 'protanopia' | 'deuteranopia' | 'tritanopia';
+        };
+        edge: {
+            hapticsEnabled: boolean;
+            handleOpacity: number;
+            glassBlur: number;
+            capsulePrivate: boolean;
+            activeActions: string[];
         };
     };
     loginActivity?: Array<{
@@ -134,22 +141,21 @@ interface AuthContextType {
     terminateSession: (sessionId: string) => void;
     terminateAllOtherSessions: () => void;
     changePassword: (oldPass: string, newPass: string) => Promise<{ success: boolean; error?: string }>;
-    showAIAssistant: boolean;
-    setShowAIAssistant: (val: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // --- STABLE MOCK DATA ---
 const MOCK_USER_BASE: User = {
-    id: 'user-bella',
-    username: 'Bella_Moffi',
-    email: 'bella@moffi.com',
+    id: 'user-moffi-official',
+    username: 'MoffiOfficial',
+    email: 'official@moffi.com',
     role: 'admin',
-    avatar: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300",
-    bio: "Moffi Premium Üyesi 🎀",
+    avatar: "https://images.unsplash.com/photo-1628157588553-5eeea00af15c?q=80&w=400",
+    bio: "Moffi Dünyasının Resmi Haber ve Destek Merkezi. 🐾 Geleceğin evcil hayvan ekosistemini birlikte inşa ediyoruz.",
+    is_prime: true,
     joinedAt: "2024-01-01T00:00:00.000Z", // Stable for hydration
-    stats: { posts: 124, followers: 2450, following: 180 },
+    stats: { posts: 8, followers: 154200, following: 12 },
     settings: {
         appearance: { auraStyle: 'minimal', accentColor: 'cyan', font: 'font-sans', auraVisible: true, auraIntensity: 100 },
         privacy: { 
@@ -170,7 +176,6 @@ const MOCK_USER_BASE: User = {
             soundAlerts: true
         },
         ai: {
-            enabled: true,
             personality: 'casual',
             creativity: 0.7,
             detailLevel: 'medium',
@@ -196,6 +201,13 @@ const MOCK_USER_BASE: User = {
         accessibility: {
             fontSize: 'medium',
             colorBlindMode: 'none'
+        },
+        edge: {
+            hapticsEnabled: true,
+            handleOpacity: 0.2,
+            glassBlur: 80,
+            capsulePrivate: false,
+            activeActions: ['ai', 'post', 'qr', 'mood', 'steps', 'weather']
         }
     },
     loginActivity: [
@@ -226,10 +238,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             try {
                 const parsed = JSON.parse(savedUser);
+                
+                // MIGRATION: If we are still using old IDs, force reset to MoffiOfficial
+                if (parsed.id === 'user-milo' || parsed.id === 'user-1' || !parsed.id.startsWith('user-moffi')) {
+                    console.log("Auth: Migrating legacy session to MoffiOfficial...");
+                    localStorage.removeItem('moffi_mock_user');
+                    setUser(MOCK_USER_BASE);
+                    setIsLoading(false);
+                    return;
+                }
+
                 const merged = {
                     ...MOCK_USER_BASE,
                     ...parsed,
-                    role: parsed.id === 'user-bella' ? 'admin' : parsed.role || 'user',
+                    role: 'admin', // Force admin for this development stage
                     settings: {
                         ...MOCK_USER_BASE.settings,
                         ...(parsed.settings || {})
@@ -246,9 +268,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     }
                 });
 
-                setUser(merged);
+                setUser({ ...merged, is_prime: true });
             } catch (e) {
-                setUser(MOCK_USER_BASE);
+                setUser({ ...MOCK_USER_BASE, is_prime: true });
             } finally {
                 setIsLoading(false);
             }
@@ -286,11 +308,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
     }, []);
 
-    // Derive AI Assistant state from user data - SINGLE SOURCE OF TRUTH
-    const showAIAssistant = user?.settings?.ai?.enabled ?? true;
-    const setShowAIAssistant = React.useCallback((val: boolean) => {
-        updateSettings('ai', { enabled: val });
-    }, [updateSettings]);
 
     // --- PERSISTENCE EFFECT (Watch for Changes) ---
     useEffect(() => {
@@ -397,14 +414,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user, isLoading, login, signup, logout,
         updateProfile, updateSettings, forgotPassword, registerBusiness,
         blockUser, unblockUser, addHiddenWord, removeHiddenWord,
-        terminateSession, terminateAllOtherSessions, changePassword,
-        showAIAssistant, setShowAIAssistant
+        terminateSession, terminateAllOtherSessions, changePassword
     }), [
         user, isLoading, login, signup, logout,
         updateProfile, updateSettings, forgotPassword, registerBusiness,
         blockUser, unblockUser, addHiddenWord, removeHiddenWord,
-        terminateSession, terminateAllOtherSessions, changePassword,
-        showAIAssistant
+        terminateSession, terminateAllOtherSessions, changePassword
     ]);
 
     return (

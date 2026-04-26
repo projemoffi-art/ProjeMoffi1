@@ -15,10 +15,10 @@ export class ProfileMockService implements IProfileService {
 
     constructor() {
         // Default profile
-        this.profiles.set('user-1', {
-            id: 'user-1',
-            username: 'Atlas',
-            email: 'atlas@moffi.net',
+        this.profiles.set('user-milo', {
+            id: 'user-milo',
+            username: 'MiloAndLuna',
+            email: 'milo@moffi.com',
             bio: 'Moffi ile her gün yeni maceralar 🐾',
             joinedAt: '2025-06-15T10:00:00Z',
             stats: { posts: 42, followers: 128, following: 67 },

@@ -5,22 +5,24 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Crown, Check, X, Sparkles, Shield, Rocket, Palette, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export function PremiumUpgradeModal() {
-    const [isOpen, setIsOpen] = useState(false);
+export function PremiumUpgradeModal({ isOpen: isOpenProp, onClose: onCloseProp }: { isOpen?: boolean, onClose?: () => void }) {
+    const [isOpenInternal, setIsOpenInternal] = useState(false);
     const [isBuying, setIsBuying] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
 
+    // Support both controlled (props) and uncontrolled (event) modes
+    const isOpen = isOpenProp !== undefined ? isOpenProp : isOpenInternal;
+    const handleClose = onCloseProp !== undefined ? onCloseProp : () => {
+        if (isBuying) return;
+        setIsOpenInternal(false);
+        setIsSuccess(false);
+    };
+
     useEffect(() => {
-        const handleOpen = () => setIsOpen(true);
+        const handleOpen = () => setIsOpenInternal(true);
         window.addEventListener('open-premium-modal', handleOpen);
         return () => window.removeEventListener('open-premium-modal', handleOpen);
     }, []);
-
-    const handleClose = () => {
-        if (isBuying) return;
-        setIsOpen(false);
-        setIsSuccess(false);
-    };
 
     const handleUpgrade = () => {
         setIsBuying(true);
@@ -64,12 +66,12 @@ export function PremiumUpgradeModal() {
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
                         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                        className="fixed inset-0 m-auto w-full max-w-lg h-fit max-h-[90vh] overflow-y-auto no-scrollbar bg-[#0A0A0E] border border-[#D4AF37]/30 rounded-[3rem] shadow-[0_20px_100px_rgba(212,175,55,0.15)] z-[9999] text-white"
+                        className="fixed inset-0 m-auto w-full max-w-lg h-fit max-h-[90vh] overflow-y-auto no-scrollbar bg-background border border-[#D4AF37]/30 rounded-[3rem] shadow-[0_20px_100px_rgba(212,175,55,0.15)] z-[9999] text-foreground"
                     >
                         {/* Kapat Ma */}
                         <button 
                             onClick={handleClose}
-                            className="absolute top-6 right-6 w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 transition-colors z-20"
+                            className="absolute top-6 right-6 w-10 h-10 bg-foreground/5 rounded-full flex items-center justify-center text-foreground/50 hover:text-foreground hover:bg-foreground/10 transition-colors z-20"
                         >
                             <X className="w-5 h-5" />
                         </button>
@@ -84,7 +86,7 @@ export function PremiumUpgradeModal() {
                                 transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
                                 className="w-24 h-24 bg-gradient-to-br from-[#FFD700] via-[#D4AF37] to-[#B8860B] rounded-[2.5rem] p-0.5 shadow-[0_0_50px_rgba(255,215,0,0.4)] mb-8 shrink-0 relative"
                             >
-                                <div className="w-full h-full bg-[#0A0A0E] rounded-[2.4rem] flex items-center justify-center overflow-hidden relative">
+                                <div className="w-full h-full bg-background rounded-[2.4rem] flex items-center justify-center overflow-hidden relative">
                                     <div className="absolute inset-0 bg-gradient-to-br from-[#FFD700]/20 to-transparent" />
                                     <Crown className="w-12 h-12 text-[#FFD700] drop-shadow-[0_0_15px_rgba(255,215,0,0.5)] z-10" />
                                 </div>
@@ -93,7 +95,7 @@ export function PremiumUpgradeModal() {
                             <h2 className="text-4xl font-black tracking-tighter mb-4">
                                 Moffi <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FFD700] to-[#B8860B]">Prime</span>
                             </h2>
-                            <p className="text-gray-400 font-medium leading-relaxed mb-10 max-w-sm">
+                            <p className="text-secondary font-medium leading-relaxed mb-10 max-w-sm">
                                 Ekosistemin en prestijli kulübüne katıl. Moffi evrenindeki gücünü zirveye taşı.
                             </p>
 
@@ -104,13 +106,13 @@ export function PremiumUpgradeModal() {
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: i * 0.1 + 0.3 }}
                                         key={i} 
-                                        className="flex items-start gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 text-left"
+                                        className="flex items-start gap-4 p-4 rounded-2xl bg-foreground/5 border border-glass-border text-left"
                                     >
                                         <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#D4AF37]/20 to-[#FFD700]/10 flex items-center justify-center shrink-0 border border-[#D4AF37]/20">
                                             <benefit.icon className="w-5 h-5 text-[#FFD700]" />
                                         </div>
                                         <div>
-                                            <h4 className="font-bold text-white text-sm mb-1">{benefit.title}</h4>
+                                            <h4 className="font-bold text-foreground text-sm mb-1">{benefit.title}</h4>
                                             <p className="text-xs text-gray-500">{benefit.desc}</p>
                                         </div>
                                     </motion.div>

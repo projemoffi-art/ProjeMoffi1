@@ -4,27 +4,31 @@ import { useState, useRef, useEffect } from "react";
 import { X, Send, Sparkles, MessageCircle, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { usePet } from "@/context/PetContext";
 
 interface Message {
     role: "user" | "ai";
     content: string;
 }
 
-const QUICK_QUESTIONS = [
-    "Milo için en iyi mama hangisi?",
-    "Bugün çok yürüdük, ne yedirmeliyim?",
-    "Tüy dökülmesi için ne önerirsin?",
-    "Diş sağlığı için bir tavsiyen var mı?"
-];
-
 export default function AdvisorChat({ isOpen, onClose, isSmartEnabled = true }: { isOpen: boolean; onClose: () => void; isSmartEnabled?: boolean }) {
+    const { activePet } = usePet();
+    const petName = activePet?.name || "Dostunuz";
+    
+    const QUICK_QUESTIONS = [
+        `${petName} için en iyi mama hangisi?`,
+        "Bugün çok yürüdük, ne yedirmeliyim?",
+        "Tüy dökülmesi için ne önerirsin?",
+        "Diş sağlığı için bir tavsiyen var mı?"
+    ];
+
     const [messages, setMessages] = useState<Message[]>([]);
 
     useEffect(() => {
         if (isOpen && messages.length === 0) {
             const initialMsg = isSmartEnabled 
-                ? "Selam! Ben Moffi AI Beslenme Danışmanı. Milo'nun bugünkü verilerine baktım, oldukça hareketli bir gün geçirmiş. Ona nasıl yardımcı olabilirim? ✨"
-                : "Selam! Ben Moffi AI. Gizlilik tercihlerinden dolayı şu an Milo'nun verilerine erişemiyorum ama sana genel ürün tavsiyeleri vermekten mutluluk duyarım. 😊";
+                ? `Selam! Ben Moffi AI Beslenme Danışmanı. ${petName}'nun bugünkü verilerine baktım, oldukça hareketli bir gün geçirmiş. Ona nasıl yardımcı olabilirim? ✨`
+                : `Selam! Ben Moffi AI. Gizlilik tercihlerinden dolayı şu an ${petName}'nun verilerine erişemiyorum ama sana genel ürün tavsiyeleri vermekten mutluluk duyarım. 😊`;
             setMessages([{ role: "ai", content: initialMsg }]);
         }
     }, [isOpen, isSmartEnabled, messages.length]);
@@ -51,11 +55,11 @@ export default function AdvisorChat({ isOpen, onClose, isSmartEnabled = true }: 
             let aiResponse = "";
             
             if (!isSmartEnabled) {
-                aiResponse = "Milo'nun özel verilerine erişemediğim için genel bir öneri yapabilirim: 'Pro Plan' serisi çoğu evcil hayvan için dengeli bir başlangıçtır. Daha spesifik bir öneri istersen ayarlardan akıllı mağazayı açabilirsin!";
+                aiResponse = `${petName}'nun özel verilerine erişemediğim için genel bir öneri yapabilirim: 'Pro Plan' serisi çoğu evcil hayvan için dengeli bir başlangıçtır. Daha spesifik bir öneri istersen ayarlardan akıllı mağazayı açabilirsin!`;
             } else {
-                aiResponse = "Anlıyorum. Milo'nun aktif yaşam tarzı için yüksek proteinli mamalar harika bir seçenek olacaktır. Özellikle 'Acana Wild Prairie' bu ara çok tercih ediliyor.";
+                aiResponse = `Anlıyorum. ${petName}'nun aktif yaşam tarzı için yüksek proteinli mamalar harika bir seçenek olacaktır. Özellikle 'Acana Wild Prairie' bu ara çok tercih ediliyor.`;
                 if (text.toLocaleLowerCase().includes("yürüdük")) {
-                    aiResponse = "Harika bir yürüyüş! 🐾 Milo'nun kas gelişimi ve toparlanması için yüksek enerjili 'Churu Ton Balıklı' gibi ödülleri tavsiye ederim. Antrenman sonrası için idealdir.";
+                    aiResponse = `Harika bir yürüyüş! 🐾 ${petName}'nun kas gelişimi ve toparlanması için yüksek enerjili 'Churu Ton Balıklı' gibi ödülleri tavsiye ederim. Antrenman sonrası için idealdir.`;
                 } else if (text.toLocaleLowerCase().includes("tüy")) {
                     aiResponse = "Mevsim geçişlerinde tüy dökülmesi normaldir, ancak 'Furminator' bakım fırçası ve somon yağlı mamalar bu süreci çok daha konforlu hale getirir.";
                 }
@@ -149,7 +153,7 @@ export default function AdvisorChat({ isOpen, onClose, isSmartEnabled = true }: 
                                     value={input}
                                     onChange={e => setInput(e.target.value)}
                                     onKeyDown={e => e.key === "Enter" && handleSend(input)}
-                                    placeholder="Milo için bir soru sor..."
+                                    placeholder={`${petName} için bir soru sor...`}
                                     className="w-full h-14 pl-6 pr-16 bg-gray-100 dark:bg-white/5 rounded-2xl text-sm font-medium focus:bg-white dark:focus:bg-black/20 outline-none transition-all"
                                 />
                                 <button
@@ -161,7 +165,7 @@ export default function AdvisorChat({ isOpen, onClose, isSmartEnabled = true }: 
                             </div>
                             <p className="flex items-center gap-1.5 text-[9px] font-black text-gray-400 mt-3 uppercase tracking-widest justify-center">
                                 <Info className="w-3 h-3" />
-                                Öneriler Milo'nun güncel sağlık verilerine dayalıdır
+                                Öneriler {petName}'nun güncel sağlık verilerine dayalıdır
                             </p>
                         </div>
                     </motion.div>

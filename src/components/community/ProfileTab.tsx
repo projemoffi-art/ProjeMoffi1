@@ -20,8 +20,8 @@ import { usePet } from "@/context/PetContext";
 import { WalletTab } from "../profile/WalletTab";
 import { OrdersTab } from "../profile/OrdersTab";
 import { AppointmentsTab } from "../profile/AppointmentsTab";
+import { AddVaccineModal } from "../profile/AddVaccineModal";
 import { RoutesTab } from "../profile/RoutesTab";
-import { useAuraEngine } from "@/hooks/useAuraEngine";
 
 const ACCENT_COLORS = [
     { id: 'default', color: '#6366F1' }, 
@@ -38,7 +38,7 @@ const getColorHex = (id: string, defaultColor: string) => {
     const color = ACCENT_COLORS.find(c => c.id === id);
     return id === 'default' ? defaultColor : (color ? color.color : defaultColor);
 };
-import AuraStyleStudio from "../profile/AuraStyleStudio";
+
 
 interface ProfileTabProps {
     user: any;
@@ -51,15 +51,7 @@ interface ProfileTabProps {
     isCommentsDisabled?: boolean;
     posts?: any[];
     isSmartShopEnabled?: boolean;
-    showAuraBadge?: boolean;
-    onOpenActionHub?: () => void;
-    activeSubView?: 'main' | 'family' | 'passport' | 'orders' | 'wallet' | 'appointments' | 'routes' | 'impact' | 'bookmarks';
     onSubViewChange?: (view: any) => void;
-    // New Props for State Unification
-    isAuraStudioOpen: boolean;
-    setIsAuraStudioOpen: (open: boolean) => void;
-    auraSettings: any;
-    setAuraSettings: (settings: any) => void;
 }
 
 function StatItem({ value, label }: { value: any, label: string }) {
@@ -271,8 +263,6 @@ export function ProfileTab({
     const [viewMode, setViewMode] = useState<'personal' | 'pets'>('pets');
     const [isAuraVisible, setIsAuraVisible] = useState(true);
     
-    const { aura } = useAuraEngine();
-    
     const activePetIndex = pets.findIndex(p => p.id === activePet?.id);
     const safeActivePetIndex = activePetIndex === -1 ? 0 : activePetIndex;
 
@@ -287,12 +277,7 @@ export function ProfileTab({
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [recordIdToDelete, setRecordIdToDelete] = useState<string | null>(null);
 
-    // Global listener for opening Aura Studio from other components (ActionHubDrawer)
-    useEffect(() => {
-        const handleOpenStudio = () => setIsAuraStudioOpen(true);
-        (window as any).dispatchOpenAuraStudio = handleOpenStudio;
-        return () => { (window as any).dispatchOpenAuraStudio = undefined; };
-    }, []);
+
 
     const currentOrders = activePet?.id ? (globalOrders[activePet.id] || []) : [];
     const currentAppointments = activePet?.id ? (globalAppointments[activePet.id] || []) : [];
@@ -327,6 +312,13 @@ export function ProfileTab({
         }
     };
 
+    const handleAddRecord = (record: any) => {
+        if (activePet?.id) {
+            const current = (globalCustomRecords[activePet.id] || []);
+            updateGlobalCustomRecords(activePet.id, [...current, record]);
+        }
+    };
+
     return (
         <div className="h-auto w-full pb-32 bg-background">
             <AnimatePresence mode="wait">
@@ -351,7 +343,7 @@ export function ProfileTab({
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex gap-6 pr-4">
+                                <div className="flex gap-4 sm:gap-6 pr-0 sm:pr-4">
                                     <StatItem value={posts.length} label="Gönderi" />
                                     <StatItem value="1.2k" label="Takipçi" />
                                     <StatItem value="840" label="Takip" />
@@ -360,70 +352,10 @@ export function ProfileTab({
 
                             <div className="flex justify-between items-start">
                                 <div className="flex-1">
-                                    {/* SYSTEM PILL (DYNAMIC ISLAND AURA) */}
-                                    {showAuraBadge && isAuraVisible && (
-                                        <motion.div
-                                            key={aura.id + auraSettings.frameStyle + auraSettings.fontFamily}
-                                            initial={{ opacity: 0, x: -10 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            onClick={() => setIsAuraStudioOpen(true)}
-                                            className={cn(
-                                                "w-fit mb-4 flex items-center gap-2.5 cursor-pointer transition-all active:scale-95 group/pill relative",
-                                                auraSettings.frameStyle === 'minimal' && "px-0 py-1 border-b border-white/10",
-                                                auraSettings.frameStyle === 'glass' && "px-4 py-1.5 rounded-full bg-white/[0.03] backdrop-blur-[40px] border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)]",
-                                                auraSettings.frameStyle === 'neon' && "px-4 py-1.5 rounded-xl bg-black/60 border-[0.5px] border-white/20 shadow-[0_0_20px_rgba(255,255,255,0.05)]",
-                                                auraSettings.frameStyle === 'metal' && "px-4 py-1.5 rounded-lg bg-gradient-to-br from-gray-600/20 via-gray-400/10 to-gray-800/20 border border-white/10 shadow-inner"
-                                            )}
-                                        >
-                                            {/* Subtle Glow Behind Pill */}
-                                            {auraSettings.frameStyle !== 'minimal' && (
-                                                <div 
-                                                    className="absolute inset-0 blur-[20px] opacity-10 group-hover/pill:opacity-20 transition-opacity rounded-full"
-                                                    style={{ backgroundColor: getColorHex(auraSettings.accentColor, aura.color) }}
-                                                />
-                                            )}
 
-                                            <div 
-                                                className="w-2 h-2 rounded-full animate-pulse relative z-10"
-                                                style={{ 
-                                                    backgroundColor: getColorHex(auraSettings.accentColor, aura.color),
-                                                    boxShadow: `0 0 10px ${getColorHex(auraSettings.accentColor, aura.color)}80` 
-                                                }}
-                                            />
-                                            <span 
-                                                className={cn(
-                                                    "relative z-10 text-[9px] font-black uppercase tracking-[0.5em] transition-all duration-500",
-                                                    auraSettings.fontFamily === 'font-serif' && "font-serif",
-                                                    auraSettings.fontFamily === 'font-mono' && "font-mono",
-                                                    auraSettings.fontFamily === 'italic' && "italic",
-                                                    auraSettings.fontFamily === 'font-pacifico' && "font-pacifico lowercase !tracking-widest",
-                                                    auraSettings.fontFamily === 'font-satisfy' && "font-satisfy lowercase !tracking-widest",
-                                                    auraSettings.fontFamily === 'font-playfair' && "font-playfair",
-                                                )}
-                                                style={{ 
-                                                    color: (auraSettings.frameStyle === 'glass' || auraSettings.frameStyle === 'metal') ? '#FFFFFF' : getColorHex(auraSettings.accentColor, aura.color),
-                                                    textShadow: auraSettings.frameStyle === 'neon' ? `0 0 10px ${getColorHex(auraSettings.accentColor, aura.color)}` : 
-                                                               auraSettings.frameStyle === 'glass' ? `0 2px 4px rgba(0,0,0,0.3)` : 'none'
-                                                }}
-                                            >
-                                                                            {aura.name}
-                                            </span>
-
-                                            {/* BADGES IN PROFILE PILL */}
-                                            <div className="flex items-center gap-1 relative z-10 border-l border-white/10 pl-2 ml-1">
-                                                {(auraSettings.badges || []).map((bid: string) => {
-                                                    if (bid === 'verified') return <ShieldCheck key={bid} className="w-3 h-3 text-emerald-400" />;
-                                                    if (bid === 'premium') return <Crown key={bid} className="w-3 h-3 text-orange-400" />;
-                                                    if (bid === 'walker') return <Footprints key={bid} className="w-3 h-3 text-cyan-400" />;
-                                                    if (bid === 'sos') return <SOSZap key={bid} className="w-3 h-3 text-red-500" />;
-                                                    return null;
-                                                })}
-                                            </div>
-                                        </motion.div>
-                                    )}
 
                                     <div className="flex items-center gap-2">
-                                        <h2 className="text-2xl font-black text-foreground leading-tight italic tracking-tighter uppercase">{user?.display_name || user?.name || 'Kullanıcı'}</h2>
+                                        <h2 className="text-2xl font-black text-foreground leading-tight italic tracking-tighter uppercase">{user?.display_name || user?.name || 'Moffi Official'}</h2>
                                         <div className="flex items-center gap-1.5 mt-0.5">
                                             {user?.is_verified && <BadgeCheck className="w-5 h-5 text-accent" />}
                                             {(user?.subscription_status === 'plus' || user?.subscription_status === 'pro') && (
@@ -433,13 +365,13 @@ export function ProfileTab({
                                     </div>
                                     <p className="text-accent font-bold text-xs mt-0.5 tracking-widest">@{user?.username?.toLowerCase() || 'moffi_user'}</p>
                                 </div>
-                                <div className="flex items-center gap-2 mt-2">
-                                    <button onClick={onEditProfile} className="px-6 py-2.5 rounded-2xl border border-card-border font-black text-[10px] uppercase tracking-widest bg-foreground/5 active:scale-95 transition-all text-foreground">Düzenle</button>
+                                <div className="flex items-center gap-2 mt-2 sm:mt-0">
+                                    <button onClick={onEditProfile} className="px-4 sm:px-6 py-2.5 rounded-2xl border border-card-border font-black text-[10px] uppercase tracking-widest bg-foreground/5 active:scale-95 transition-all text-foreground whitespace-nowrap">Düzenle</button>
                                     <button onClick={() => {
                                         onOpenActionHub?.();
                                         // Fail-safe global event for unified experience
                                         window.dispatchEvent(new CustomEvent('open-moffi-hub'));
-                                    }} className="w-11 h-11 rounded-2xl border border-card-border bg-accent/10 flex items-center justify-center text-accent active:scale-95 transition-all"><Zap className="w-5 h-5" /></button>
+                                    }} className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl border border-card-border bg-accent/10 flex items-center justify-center text-accent active:scale-95 transition-all flex-shrink-0"><Zap className="w-5 h-5" /></button>
                                 </div>
                             </div>
                             <p className="text-secondary text-sm mt-4 leading-relaxed line-clamp-3 mb-6">{user?.bio || 'Moffi Ekosistemine Hoşgeldiniz ✨'}</p>
@@ -513,12 +445,11 @@ export function ProfileTab({
             </AnimatePresence>
 
             <EcosystemReportSheet isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} onViewPassport={() => onSubViewChange?.('passport')} pet={activePet} isSmartShopEnabled={isSmartShopEnabled} />
-            <AuraStyleStudio 
-                isOpen={isAuraStudioOpen} 
-                onClose={() => setIsAuraStudioOpen(false)} 
-                isPremium={user?.subscription_status === 'pro'}
-                currentSettings={auraSettings}
-                onUpdateSettings={setAuraSettings}
+
+            <AddVaccineModal 
+                isOpen={isAddVaccineModalOpen}
+                onClose={() => setIsAddVaccineModalOpen(false)}
+                onAdd={handleAddRecord}
             />
             <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*" />
         </div>
@@ -552,9 +483,9 @@ function PetDashboardView({ pets, activePet, switchPet, onAddPet, posts, safeAct
         <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="py-8 space-y-12">
             
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between px-1">
                 <h3 className="text-xl font-black text-foreground italic uppercase tracking-tighter">Patilerim</h3>
-                <button onClick={onAddPet} className="text-[9px] font-black text-accent uppercase tracking-widest">+ EKLE</button>
+                <button onClick={onAddPet} className="px-3 py-1.5 bg-accent/10 border border-accent/20 rounded-lg text-[10px] sm:text-xs font-black text-accent uppercase tracking-widest active:scale-90 transition-all hover:bg-accent/20">+ EKLE</button>
             </div>
             <div className="flex gap-4 overflow-x-auto no-scrollbar pb-6">
                 {pets.map((pet: any) => (
@@ -567,7 +498,7 @@ function PetDashboardView({ pets, activePet, switchPet, onAddPet, posts, safeAct
 
             {/* PREMIUM ECOSYSTEM DASHBOARD */}
             <div className="mt-10 mb-10">
-                <div className="relative overflow-hidden bg-gradient-to-br from-[#1A1A2E] via-[#0F0F1A] to-[#0A0A0E] rounded-[3.5rem] p-8 border border-white/10 shadow-2xl group/card">
+                <div className="relative overflow-hidden bg-glass backdrop-blur-3xl rounded-[3.5rem] p-8 border border-glass-border shadow-2xl group/card">
                     {/* PET ICON MINI-STRIP */}
                     <div className="flex items-center gap-2 mb-8 relative z-10 bg-white/5 p-1.5 rounded-2xl w-fit">
                         {pets.map((p: any) => (
@@ -587,15 +518,15 @@ function PetDashboardView({ pets, activePet, switchPet, onAddPet, posts, safeAct
                     <div className="flex items-start justify-between relative z-10">
                         <div className="space-y-6">
                             <div>
-                                <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-none">Ekosistem <span className="text-cyan-400">Verisi</span></h3>
-                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1.5">Gerçek Zamanlı Analiz</p>
+                                <h3 className="text-2xl font-black text-foreground italic tracking-tighter uppercase leading-none">Ekosistem <span className="text-accent">Verisi</span></h3>
+                                <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mt-1.5">Gerçek Zamanlı Analiz</p>
                             </div>
                             <div className="space-y-4">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center border border-orange-500/10"><Zap className="w-5 h-5 text-orange-400" /></div>
                                     <div>
-                                        <p className="text-[10px] font-black text-white/30 uppercase tracking-widest">Modu</p>
-                                        <p className="text-xs font-black text-white uppercase italic tracking-tighter">{(PET_PERSONALITIES[activePet?.name] || PET_PERSONALITIES['default']).mood}</p>
+                                        <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest">Modu</p>
+                                        <p className="text-xs font-black text-foreground uppercase italic tracking-tighter">{(PET_PERSONALITIES[activePet?.name] || PET_PERSONALITIES['default']).mood}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
@@ -606,10 +537,10 @@ function PetDashboardView({ pets, activePet, switchPet, onAddPet, posts, safeAct
                                         <ShieldCheck className={cn("w-5 h-5", activePet?.is_lost ? "text-red-500" : "text-emerald-400")} />
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-black text-white/30 uppercase tracking-widest">Güvenlik</p>
+                                        <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest">Güvenlik</p>
                                         <p className={cn(
                                             "text-xs font-black uppercase italic tracking-tighter",
-                                            activePet?.is_lost ? "text-red-500" : "text-white"
+                                            activePet?.is_lost ? "text-red-500" : "text-foreground"
                                         )}>
                                             {activePet?.is_lost ? "KRİTİK DURUM ⚠️" : "Aşılar Korunaklı 🛡️"}
                                         </p>
@@ -635,11 +566,11 @@ function PetDashboardView({ pets, activePet, switchPet, onAddPet, posts, safeAct
                             <div className="text-center">
                                 <p className={cn(
                                     "text-2xl font-black leading-none",
-                                    activePet?.is_lost ? "text-red-500" : "text-white"
+                                    activePet?.is_lost ? "text-red-500" : "text-foreground"
                                 )}>
                                     {activePet?.is_lost ? "SOS" : `%${safeActivePetIndex === 0 ? 74 : 92}`}
                                 </p>
-                                <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mt-1">
+                                <p className="text-[8px] font-black text-secondary uppercase tracking-widest mt-1">
                                     {activePet?.is_lost ? "KRİTİK" : "Emniyet"}
                                 </p>
                             </div>
@@ -661,7 +592,6 @@ function PetDashboardView({ pets, activePet, switchPet, onAddPet, posts, safeAct
                 </div>
             </div>
 
-
             <div className="grid grid-cols-3 gap-0.5 rounded-3xl overflow-hidden">
                 {posts
                     .filter((post: any) => {
@@ -671,7 +601,7 @@ function PetDashboardView({ pets, activePet, switchPet, onAddPet, posts, safeAct
                     })
                     .map((post: any) => (
                     <div key={post.id} className="aspect-square bg-gray-900 relative">
-                        <Image src={post.media} fill className="object-cover" alt="Post" />
+                        <Image src={post.media || post.media_url || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} fill className="object-cover" alt="Post" />
                     </div>
                 ))}
             </div>
@@ -684,17 +614,17 @@ function MenuCard({ icon, label, onClick, fullWidth }: any) {
         <button 
             onClick={onClick} 
             className={cn(
-                "bg-[#12121A] border border-white/10 rounded-[2.5rem] flex flex-col items-center gap-4 transition-all active:scale-[0.98]",
-                fullWidth ? "w-full p-12 bg-gradient-to-br from-[#1A1A2E] to-[#12121A]" : "p-8"
+                "bg-card border border-card-border rounded-[2.2rem] flex flex-col items-center gap-2 transition-all active:scale-[0.98] hover:bg-foreground/5",
+                fullWidth ? "w-full p-12 bg-glass" : "p-4 py-6"
             )}
         >
             <div className={cn(
-                "bg-white/5 rounded-2xl flex items-center justify-center",
-                fullWidth ? "w-20 h-20" : "w-12 h-12"
+                "bg-foreground/5 rounded-xl flex items-center justify-center",
+                fullWidth ? "w-20 h-20" : "w-10 h-10"
             )}>{icon}</div>
             <span className={cn(
-                "font-black text-white uppercase tracking-widest text-center",
-                fullWidth ? "text-sm" : "text-[10px]"
+                "font-black text-foreground uppercase tracking-[0.2em] text-center",
+                fullWidth ? "text-sm" : "text-[8px]"
             )}>{label}</span>
         </button>
     );
@@ -702,15 +632,15 @@ function MenuCard({ icon, label, onClick, fullWidth }: any) {
 
 function ActionListItem({ icon, title, subtitle, onClick }: any) {
     return (
-        <button onClick={onClick} className="w-full bg-[#12121A] border border-white/5 p-6 rounded-[2.5rem] flex items-center justify-between">
+        <button onClick={onClick} className="w-full bg-card border border-card-border p-6 rounded-[2.5rem] flex items-center justify-between">
             <div className="flex items-center gap-5">
-                <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center">{icon}</div>
+                <div className="w-12 h-12 bg-foreground/5 rounded-2xl flex items-center justify-center">{icon}</div>
                 <div className="text-left">
-                    <h4 className="text-white font-black text-sm uppercase">{title}</h4>
-                    <p className="text-[9px] text-gray-500 font-bold uppercase mt-0.5">{subtitle}</p>
+                    <h4 className="text-foreground font-black text-sm uppercase">{title}</h4>
+                    <p className="text-[9px] text-secondary font-bold uppercase mt-0.5">{subtitle}</p>
                 </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-gray-600" />
+            <ChevronRight className="w-5 h-5 text-secondary/40" />
         </button>
     );
 }

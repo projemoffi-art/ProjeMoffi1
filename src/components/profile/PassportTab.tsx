@@ -91,10 +91,10 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                     ref={cardRef}
                     whileHover={{ rotateY: 2, rotateX: -2, scale: 1.02 }}
                     transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                    className="bg-gradient-to-br from-[#1C1C1E] via-[#0A0A0E] to-[#1C1C1E] rounded-[3.5rem] p-10 border border-white/20 shadow-[0_50px_100px_rgba(0,0,0,0.6)] relative overflow-hidden flex flex-col min-h-[520px]"
+                    className="bg-gradient-to-br from-[#1C1C1E] via-[#0A0A0E] to-[#1C1C1E] rounded-[2.5rem] sm:rounded-[3.5rem] p-6 sm:p-10 border border-white/20 shadow-[0_50px_100px_rgba(0,0,0,0.6)] relative overflow-hidden flex flex-col min-h-[480px] sm:min-h-[520px]"
                 >
                     {/* Apple Style Glass Header */}
-                    <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+                    <div className="absolute top-0 left-0 right-0 h-20 sm:h-24 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
                     
                     {/* Holographic Mesh Background */}
                     <div className="absolute inset-0 opacity-20 pointer-events-none">
@@ -103,10 +103,10 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                     </div>
 
                     {/* Travel Readiness Badge */}
-                    <div className="absolute top-8 left-1/2 -translate-x-1/2 z-30">
-                        <div className="flex items-center gap-2 bg-black/40 backdrop-blur-2xl px-5 py-2 rounded-full border border-white/10 shadow-2xl">
-                            <Plane className="w-3.5 h-3.5 text-emerald-400" />
-                            <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Seyahate Uygun (AB)</span>
+                    <div className="absolute top-6 sm:top-8 left-1/2 -translate-x-1/2 z-30">
+                        <div className="flex items-center gap-2 bg-black/40 backdrop-blur-2xl px-4 sm:px-5 py-1.5 sm:py-2 rounded-full border border-white/10 shadow-2xl whitespace-nowrap">
+                            <Plane className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-400" />
+                            <span className="text-[9px] sm:text-[10px] font-black text-white uppercase tracking-[0.2em]">Seyahate Uygun (AB)</span>
                         </div>
                     </div>
 
@@ -118,35 +118,35 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                     />
 
                     {/* Content Header */}
-                    <div className="flex justify-between items-start mb-12 relative z-10 pt-6">
-                        <div className="flex gap-6 items-center">
-                            <div className="relative">
-                                <img src={petData.avatar} className="w-28 h-28 rounded-[2.5rem] object-cover border-4 border-[#0A0A0E] shadow-2xl relative z-10 scale-110 rotate-[-2deg]" />
-                                <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-2 rounded-2xl border-4 border-[#0A0A0E] z-20 shadow-xl">
-                                    <ShieldCheck className="w-6 h-6" />
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 sm:mb-12 relative z-10 pt-4 sm:pt-6 gap-6 sm:gap-0">
+                        <div className="flex gap-4 sm:gap-6 items-center">
+                            <div className="relative shrink-0">
+                                <img src={petData.avatar} className="w-20 h-20 sm:w-28 sm:h-28 rounded-2xl sm:rounded-[2.5rem] object-cover border-4 border-[#0A0A0E] shadow-2xl relative z-10 scale-105 sm:scale-110 rotate-[-2deg]" />
+                                <div className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 bg-emerald-500 text-white p-1.5 sm:p-2 rounded-xl sm:rounded-2xl border-2 sm:border-4 border-[#0A0A0E] z-20 shadow-xl">
+                                    <ShieldCheck className="w-4 h-4 sm:w-6 sm:h-6" />
                                 </div>
                             </div>
-                            <div className="text-left ml-4">
-                                <p className="text-[11px] font-black text-emerald-400 uppercase tracking-[0.4em] mb-1">Moffi Passport</p>
-                                <h1 className="text-6xl font-black text-white tracking-tighter leading-none italic uppercase">{petData.name}</h1>
-                                <div className="mt-4 flex items-center gap-2 bg-white/5 px-3 py-1 rounded-lg w-fit border border-white/5">
-                                    <Fingerprint className="w-3.5 h-3.5 text-white/40" />
-                                    <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Digital Verified</span>
+                            <div className="text-left ml-2 sm:ml-4">
+                                <p className="text-[9px] sm:text-[11px] font-black text-emerald-400 uppercase tracking-[0.3em] sm:tracking-[0.4em] mb-1">Moffi Passport</p>
+                                <h1 className="text-4xl sm:text-6xl font-black text-white tracking-tighter leading-none italic uppercase">{petData.name}</h1>
+                                <div className="mt-2 sm:mt-4 flex items-center gap-1.5 sm:gap-2 bg-white/5 px-2.5 sm:px-3 py-1 rounded-lg w-fit border border-white/5">
+                                    <Fingerprint className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white/40" />
+                                    <span className="text-[8px] sm:text-[10px] font-black text-white/40 uppercase tracking-widest">Digital Verified</span>
                                 </div>
                             </div>
                         </div>
-                        <div className="flex flex-col gap-3 items-end">
+                        <div className="flex flex-row sm:flex-col gap-3 items-center sm:items-end w-full sm:w-auto">
                             <div 
                                 onClick={() => setIsQRExpanded(true)}
-                                className="bg-white p-3 rounded-[2rem] shadow-[0_20px_40px_rgba(255,255,255,0.1)] hover:scale-110 active:scale-95 transition-all cursor-pointer relative overflow-hidden group/qr"
+                                className="bg-white p-2 sm:p-3 rounded-2xl sm:rounded-[2rem] shadow-[0_20px_40px_rgba(255,255,255,0.1)] hover:scale-110 active:scale-95 transition-all cursor-pointer relative overflow-hidden group/qr"
                             >
                                 <div className="absolute inset-0 bg-cyan-500/10 opacity-0 group-hover/qr:opacity-100 transition-opacity" />
-                                <QRCodeSVG value={`moffi://id/${petData.id}`} size={72} fgColor="#000000" bgColor="#FFFFFF" level="H" />
+                                <QRCodeSVG value={`moffi://id/${petData.id}`} size={64} fgColor="#000000" bgColor="#FFFFFF" level="H" />
                             </div>
                             {onEdit && !isPublic && (
                                 <button 
                                     onClick={onEdit}
-                                    className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10 text-white hover:bg-white/20 transition-all active:scale-90 shadow-xl"
+                                    className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10 text-white hover:bg-white/20 transition-all active:scale-90 shadow-xl ml-auto sm:ml-0"
                                 >
                                     <Zap className="w-5 h-5 text-yellow-400" />
                                 </button>
@@ -245,29 +245,27 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                 {/* Moffi Hybrid Tag Activation */}
                 <div 
                     onClick={() => setIsTagModalOpen(true)}
-                    className="col-span-2 bg-[#12121A] border border-cyan-500/20 rounded-[2.5rem] p-8 flex flex-col gap-6 relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all"
+                    className="col-span-2 bg-[#12121A] border border-cyan-500/20 rounded-[2.5rem] p-6 sm:p-8 flex flex-col gap-4 sm:gap-6 relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all"
                 >
                     <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 blur-3xl rounded-full" />
                     <div className="flex items-center justify-between">
-                        <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.4em]">Moffi Hybrid Tag</h4>
+                        <h4 className="text-[9px] sm:text-[10px] font-black text-cyan-400 uppercase tracking-[0.4em]">Moffi Hybrid Tag</h4>
                         <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">NFC + QR Koruma</span>
+                            <span className="hidden sm:inline text-[10px] font-bold text-gray-500 uppercase tracking-widest">NFC + QR Koruma</span>
                             <Smartphone className="w-4 h-4 text-cyan-400 opacity-40" />
                         </div>
                     </div>
-                    <div className="flex items-center gap-6">
-                        <div className="w-16 h-16 rounded-[1.5rem] bg-cyan-500/20 flex items-center justify-center text-cyan-400 group-hover:scale-110 transition-transform">
-                            <Radio className="w-8 h-8 animate-pulse" />
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-[1.5rem] bg-cyan-500/20 flex items-center justify-center text-cyan-400 group-hover:scale-110 transition-transform">
+                            <Radio className="w-6 h-6 sm:w-8 sm:h-8 animate-pulse" />
                         </div>
-                        <div>
-                            <p className="text-xl font-black text-white tracking-tight">Kayıp Önleme Künyesi</p>
-                            <p className="text-xs text-gray-500 font-medium mt-1">Fiziksel künyeni petinle eşleştirerek korumayı başlat.</p>
+                        <div className="flex-1">
+                            <p className="text-lg sm:text-xl font-black text-white tracking-tight">Kayıp Önleme Künyesi</p>
+                            <p className="text-[11px] sm:text-xs text-gray-500 font-medium mt-0.5 sm:mt-1">Fiziksel künyeni petinle eşleştirerek korumayı başlat.</p>
                         </div>
-                        <div className="ml-auto">
-                            <button className="bg-cyan-500 text-black px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-cyan-500/20">
-                                Şimdi Eşleştir
-                            </button>
-                        </div>
+                        <button className="w-full sm:w-auto bg-cyan-500 text-black px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-cyan-500/20 mt-2 sm:mt-0">
+                            Şimdi Eşleştir
+                        </button>
                     </div>
                 </div>
 
@@ -296,22 +294,6 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                 )}
             </div>
 
-            {/* 4. EXPORT SECTION - Hide for Public */}
-            {!isPublic && (
-                <div className="px-2">
-                    <button 
-                        onClick={handleGenerate}
-                    className="w-full bg-[#12121A] border-2 border-white/10 py-8 rounded-[3rem] group hover:bg-white/5 transition-all active:scale-[0.98] shadow-2xl relative overflow-hidden"
-                >
-                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-transparent to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="w-16 h-16 rounded-[1.5rem] bg-white/5 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                        <Download className="w-7 h-7 text-white/40 group-hover:text-white transition-colors" />
-                    </div>
-                    <h4 className="text-lg font-black text-white">Resmi Karne Oluştur (PDF)</h4>
-                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em] mt-1 px-4">Veteriner Hekim Onaylı Dijital Mühür Dahildir</p>
-                </button>
-                </div>
-            )}
 
             {/* FULL SCREEN QR EXPANSION MODAL */}
             <AnimatePresence>

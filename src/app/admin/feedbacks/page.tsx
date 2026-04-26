@@ -21,7 +21,7 @@ export default function AdminFeedbacksPage() {
                 category: "positive",
                 comment: "Harika bir uygulama, tasarımı çok kaliteli!",
                 created_at: new Date().toISOString(),
-                profiles: { username: "Bella", avatar_url: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200" }
+                profiles: { username: "MoffiOfficial", avatar_url: "https://images.unsplash.com/photo-1628157588553-5eeea00af15c?q=80&w=200" }
             },
             {
                 id: "fb-2",

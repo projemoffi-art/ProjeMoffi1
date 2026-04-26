@@ -44,15 +44,15 @@ export function AdoptionTab({
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.98 }}
-            className="h-full w-full overflow-y-auto no-scrollbar pb-32 bg-[#0A0A0E] flex flex-col items-center"
+            className="h-full w-full overflow-y-auto no-scrollbar pb-32 bg-background flex flex-col items-center"
         >
             <div className="w-full max-w-md mx-auto relative mt-2">
                 <div className="px-6 mb-8 mt-2 flex items-center justify-between">
                     <div>
-                        <p className="text-gray-400 text-[11px] font-bold uppercase tracking-widest mb-1">
+                        <p className="text-secondary text-[11px] font-bold uppercase tracking-widest mb-1">
                             Bugün Sahiplen
                         </p>
-                        <h2 className="text-3xl font-black text-white tracking-tight mt-1">Sıcak Bir Yuva</h2>
+                        <h2 className="text-3xl font-black text-foreground tracking-tight mt-1">Sıcak Bir Yuva</h2>
                     </div>
                     <button onClick={onAddAd} className="px-4 py-2 rounded-full bg-cyan-500/10 text-cyan-400 text-xs font-black uppercase tracking-wider hover:bg-cyan-500/20 active:scale-95 transition-all outline outline-1 outline-cyan-500/30 flex items-center gap-1.5 shadow-[0_0_15px_rgba(6,182,212,0.15)]">
                         <Plus className="w-4 h-4" /> İlan Ver
@@ -67,8 +67,8 @@ export function AdoptionTab({
                             className={cn(
                                 "snap-start whitespace-nowrap px-4 py-2 rounded-full text-[13px] font-bold transition-all active:scale-95",
                                 selectedCategory === pill
-                                    ? "bg-white text-black shadow-lg shadow-white/20"
-                                    : "bg-[#1C1C1E] text-[#8E8E93] border border-white/5 hover:bg-white/10 hover:text-white"
+                                    ? "bg-foreground text-background shadow-lg shadow-foreground/20"
+                                    : "bg-foreground/5 text-secondary border border-glass-border hover:bg-foreground/10 hover:text-foreground"
                             )}
                         >
                             {pill}
@@ -140,7 +140,7 @@ export function AdoptionTab({
                             {filtered.map((ad) => (
                                 <div
                                     key={ad.id}
-                                    className="flex flex-row items-center gap-4 bg-[#12121A] p-3 rounded-2xl border border-white/5 active:bg-white/5 transition-colors cursor-pointer relative"
+                                    className="flex flex-row items-center gap-4 bg-background p-3 rounded-2xl border border-glass-border active:bg-foreground/5 transition-colors cursor-pointer relative"
                                     onClick={() => onAdClick({
                                         id: ad.id,
                                         name: ad.name,

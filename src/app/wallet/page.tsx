@@ -13,15 +13,15 @@ export default function WalletPage() {
     const [activeWallet, setActiveWallet] = useState<'fiat' | 'coin'>('fiat');
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-[#121212] font-sans pb-24">
+        <div className="min-h-screen bg-background dark:bg-[background] font-sans pb-24">
 
             {/* Header */}
-            <header className="sticky top-0 z-30 bg-white/80 dark:bg-[#121212]/80 backdrop-blur-xl border-b border-gray-100 dark:border-white/5 px-6 py-4 flex items-center justify-between">
-                <button onClick={() => router.back()} className="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center text-gray-700 dark:text-white">
+            <header className="sticky top-0 z-30 bg-card/80 dark:bg-[background]/80 backdrop-blur-xl border-b border-gray-100 dark:border-white/5 px-6 py-4 flex items-center justify-between">
+                <button onClick={() => router.back()} className="w-10 h-10 rounded-full bg-gray-100 dark:bg-card/5 flex items-center justify-center text-gray-700 dark:text-white">
                     <ArrowLeft className="w-5 h-5" />
                 </button>
                 <h1 className="text-lg font-black text-gray-900 dark:text-white">Cüzdan</h1>
-                <button className="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center text-gray-700 dark:text-white">
+                <button className="w-10 h-10 rounded-full bg-gray-100 dark:bg-card/5 flex items-center justify-center text-gray-700 dark:text-white">
                     <MoreHorizontal className="w-5 h-5" />
                 </button>
             </header>
@@ -38,7 +38,7 @@ export default function WalletPage() {
                         <div
                             onClick={() => setActiveWallet('fiat')}
                             className={cn("snap-center shrink-0 w-[85%] relative h-48 rounded-[2rem] p-6 overflow-hidden transition-all duration-300 group shadow-xl cursor-pointer border-2",
-                                activeWallet === 'fiat' ? "border-[#5B4D9D] scale-100 opacity-100 shadow-[#5B4D9D]/20" : "border-transparent scale-95 opacity-60 bg-gray-200 dark:bg-white/5"
+                                activeWallet === 'fiat' ? "border-[brand-purple] scale-100 opacity-100 shadow-[brand-purple]/20" : "border-transparent scale-95 opacity-60 bg-gray-200 dark:bg-card/5"
                             )}
                         >
                             {/* Card Look */}
@@ -50,7 +50,7 @@ export default function WalletPage() {
                             <div className="relative z-10 flex flex-col justify-between h-full text-white dark:text-black">
                                 <div className="flex justify-between items-start">
                                     <Wallet className="w-6 h-6 opacity-80" />
-                                    <div className="px-2 py-0.5 bg-white/10 dark:bg-black/10 backdrop-blur rounded-full text-[8px] font-bold tracking-widest uppercase border border-white/10">
+                                    <div className="px-2 py-0.5 bg-card/10 dark:bg-black/10 backdrop-blur rounded-full text-[8px] font-bold tracking-widest uppercase border border-white/10">
                                         Moffi Bank
                                     </div>
                                 </div>
@@ -72,7 +72,7 @@ export default function WalletPage() {
                         <div
                             onClick={() => setActiveWallet('coin')}
                             className={cn("snap-center shrink-0 w-[85%] relative h-48 rounded-[2rem] p-6 overflow-hidden transition-all duration-300 group shadow-xl cursor-pointer border-2",
-                                activeWallet === 'coin' ? "border-yellow-400 scale-100 opacity-100 shadow-yellow-500/20" : "border-transparent scale-95 opacity-60 bg-gray-200 dark:bg-white/5"
+                                activeWallet === 'coin' ? "border-yellow-400 scale-100 opacity-100 shadow-yellow-500/20" : "border-transparent scale-95 opacity-60 bg-gray-200 dark:bg-card/5"
                             )}
                         >
                             <div className={cn("absolute inset-0 bg-gradient-to-br from-yellow-400 to-orange-500 transition-opacity", activeWallet === 'coin' ? 'opacity-100' : 'opacity-0')} />
@@ -101,8 +101,8 @@ export default function WalletPage() {
 
                     {/* Pagination Dots */}
                     <div className="flex justify-center gap-2 mt-2">
-                        <div className={cn("w-2 h-2 rounded-full transition-colors", activeWallet === 'fiat' ? "bg-gray-800 dark:bg-white" : "bg-gray-300 dark:bg-white/20")} />
-                        <div className={cn("w-2 h-2 rounded-full transition-colors", activeWallet === 'coin' ? "bg-yellow-400" : "bg-gray-300 dark:bg-white/20")} />
+                        <div className={cn("w-2 h-2 rounded-full transition-colors", activeWallet === 'fiat' ? "bg-gray-800 dark:bg-card" : "bg-gray-300 dark:bg-card/20")} />
+                        <div className={cn("w-2 h-2 rounded-full transition-colors", activeWallet === 'coin' ? "bg-yellow-400" : "bg-gray-300 dark:bg-card/20")} />
                     </div>
                 </div>
 
@@ -113,7 +113,7 @@ export default function WalletPage() {
                 {activeWallet === 'fiat' && (
                     <div className="space-y-6 animate-in slide-in-from-right duration-500">
                         {/* Monthly Overview */}
-                        <div className="bg-white dark:bg-[#1A1A1A] rounded-[2rem] p-6 shadow-sm border border-gray-100 dark:border-white/5">
+                        <div className="bg-card dark:bg-[card] rounded-[2rem] p-6 shadow-sm border border-gray-100 dark:border-white/5">
                             <h2 className="text-lg font-black text-gray-900 dark:text-white mb-4">Aylık Harcama</h2>
                             <div className="flex items-center gap-6">
                                 <div className="w-1/2">
@@ -128,9 +128,9 @@ export default function WalletPage() {
                                                     {Math.round((cat.spent / cat.limit) * 100)}%
                                                 </span>
                                             </div>
-                                            <div className="h-1.5 w-full bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden">
+                                            <div className="h-1.5 w-full bg-gray-100 dark:bg-card/10 rounded-full overflow-hidden">
                                                 <div
-                                                    className={cn("h-full rounded-full", cat.spent > cat.limit ? "bg-red-500" : "bg-gray-900 dark:bg-white")}
+                                                    className={cn("h-full rounded-full", cat.spent > cat.limit ? "bg-red-500" : "bg-gray-900 dark:bg-card")}
                                                     style={{ width: `${Math.min((cat.spent / cat.limit) * 100, 100)}%` }}
                                                 />
                                             </div>
@@ -148,9 +148,9 @@ export default function WalletPage() {
                             </div>
                             <div className="space-y-4">
                                 {MOCK_TRANSACTIONS.map((t) => (
-                                    <div key={t.id} className="flex items-center justify-between p-4 bg-white dark:bg-[#1A1A1A] rounded-2xl border border-gray-100 dark:border-white/5">
+                                    <div key={t.id} className="flex items-center justify-between p-4 bg-card dark:bg-[card] rounded-2xl border border-gray-100 dark:border-white/5">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 rounded-xl bg-gray-50 dark:bg-white/5 flex items-center justify-center text-2xl">
+                                            <div className="w-12 h-12 rounded-xl bg-background dark:bg-card/5 flex items-center justify-center text-2xl">
                                                 {t.icon}
                                             </div>
                                             <div>
@@ -195,12 +195,12 @@ export default function WalletPage() {
                         </div>
 
                         {/* History */}
-                        <div className="bg-white dark:bg-[#1A1A1A] rounded-[2rem] p-6 shadow-sm border border-gray-100 dark:border-white/5">
+                        <div className="bg-card dark:bg-[card] rounded-[2rem] p-6 shadow-sm border border-gray-100 dark:border-white/5">
                             <div className="flex justify-between items-center mb-6">
                                 <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                     <Clock className="w-4 h-4 text-gray-400" /> Coin Geçmişi
                                 </h3>
-                                <button className="w-8 h-8 rounded-full bg-gray-50 dark:bg-white/5 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                                <button className="w-8 h-8 rounded-full bg-background dark:bg-card/5 flex items-center justify-center hover:bg-gray-100 transition-colors">
                                     <ChevronRight className="w-4 h-4 text-gray-500" />
                                 </button>
                             </div>
@@ -209,7 +209,7 @@ export default function WalletPage() {
                                 {COIN_HISTORY.map((t) => (
                                     <div key={t.id} className="relative">
                                         {/* Dot */}
-                                        <div className={cn("absolute -left-[31px] w-4 h-4 rounded-full border-2 border-white dark:border-[#1A1A1A] shadow-sm",
+                                        <div className={cn("absolute -left-[31px] w-4 h-4 rounded-full border-2 border-white dark:border-[card] shadow-sm",
                                             t.type === 'earn' ? "bg-green-500" : "bg-red-500"
                                         )} />
 
@@ -233,7 +233,7 @@ export default function WalletPage() {
 
             {/* Floating Action Button */}
             <div className="fixed bottom-6 right-6 z-40">
-                <button className="w-14 h-14 bg-black dark:bg-white text-white dark:text-black rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform">
+                <button className="w-14 h-14 bg-black dark:bg-card text-white dark:text-black rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform">
                     <Plus className="w-6 h-6" />
                 </button>
             </div>

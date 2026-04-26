@@ -28,7 +28,7 @@ interface Message {
 let globalAssistantMounted = false;
 
 export function MoffiAssistant() {
-    const { user, showAIAssistant } = useAuth();
+    const { user } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
     const [input, setInput] = useState("");
@@ -36,15 +36,23 @@ export function MoffiAssistant() {
     const [messages, setMessages] = useState<Message[]>([]);
     
     const scrollRef = useRef<HTMLDivElement>(null);
-    const isDraggingRef = useRef(false);
+
+    // Listen for global open event
+    useEffect(() => {
+        const handleOpen = () => setIsOpen(true);
+        window.addEventListener('open-ai-assistant', handleOpen);
+        return () => window.removeEventListener('open-ai-assistant', handleOpen);
+    }, []);
 
     // M+ Status
     const isPro = user?.role === 'admin' || user?.is_pro === true;
 
-    // Initialize messages
+    // --- AI LOGIC CORE ---
+    const aiSettings = user?.settings?.ai || { personality: 'casual', creativity: 0.7, detailLevel: 'medium' };
+
+    // Initialize messages based on settings
     useEffect(() => {
         setIsMounted(true);
-        // DOM-based singleton check to prevent duplicate portals
         const existing = document.querySelector('.moffi-assistant-portal-root');
         if (existing && !isOpen) {
             setIsMounted(false);
@@ -52,16 +60,21 @@ export function MoffiAssistant() {
         }
 
         if (messages.length === 0) {
-            setMessages([{
-                id: 'welcome',
-                role: 'assistant',
-                content: isPro 
-                    ? `Merhaba ${user?.username || 'Moffi Üyesi'}! Ben M+ Concierge. Patili dostunun tıbbi geçmişi ve sağlık verileri bende asılı duruyor. Sana bugün nasıl bir uzman yardımı sağlayabilirim? ✨`
-                    : `Selam! Moffi Asistanın burada. Patin hakkında sormak istediğin her şeyi sorabilirsin! 🦴`
-            }]);
+            let greeting = "";
+            if (aiSettings.personality === 'technical') {
+                greeting = `Sistem Hazır. ${user?.username || 'Kullanıcı'} verileri senkronize edildi. Analiz için bir komut bekliyorum. ⚡`;
+            } else if (aiSettings.personality === 'professional') {
+                greeting = `İyi günler Sayın ${user?.username || 'Moffi Üyesi'}. M+ Concierge servisine hoş geldiniz. Size profesyonel düzeyde nasıl yardımcı olabilirim?`;
+            } else {
+                greeting = isPro 
+                    ? `Selam ${user?.username || 'Dostum'}! M+ Concierge burada. Patili dostunun tüm verileri bende, hadi bugün harika bir şeyler yapalım! ✨`
+                    : `Selam! Moffi Asistanın burada. Patin hakkında ne istersen sorabilirsin, her zaman hazırım! 🦴`;
+            }
+
+            setMessages([{ id: 'welcome', role: 'assistant', content: greeting }]);
         }
         return () => setIsMounted(false);
-    }, [isPro, user?.username, isOpen]);
+    }, [isPro, user?.username, isOpen, aiSettings.personality]);
 
     // Auto-scroll
     useEffect(() => {
@@ -70,7 +83,7 @@ export function MoffiAssistant() {
         }
     }, [messages, isTyping]);
 
-    if (!isMounted || !showAIAssistant) return null;
+    if (!isMounted) return null;
 
     const handleSend = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
@@ -81,18 +94,34 @@ export function MoffiAssistant() {
         setInput("");
         setIsTyping(true);
 
-        // Simulated AI Logic (Stable for Build)
+        // Simulation logic that ACTUALLY respects settings
         setTimeout(() => {
+            let response = "";
+            
+            // 1. Personalization Logic
+            if (aiSettings.personality === 'technical') {
+                response = "Veri girişi algılandı. Biyometrik değerler ve aktivite logları inceleniyor. Optimizasyon önerisi: Su tüketimi %12 artırılmalı.";
+            } else if (aiSettings.personality === 'professional') {
+                response = "İsteğiniz kaydedilmiştir. Veri analizlerimiz sonucunda patili dostunuzun sağlık parametrelerinin ideal seviyede olduğu gözlemlenmiştir.";
+            } else {
+                response = "Harika bir soru! Patili dostun için en iyisini düşündüğünden eminim. Bence bugün biraz daha fazla oyun oynamalısınız! 🐾❤️";
+            }
+
+            // 2. Detail Level Logic (Trim or Expand)
+            if (aiSettings.detailLevel === 'short') {
+                response = response.split('.')[0] + ". ✅";
+            } else if (aiSettings.detailLevel === 'long') {
+                response += " Ayrıca, son yürüyüş verilerine göre dostunun kondisyonu mükemmel ilerliyor. Moffi ekosistemi olarak her adımda yanınızdayız.";
+            }
+
             const aiMsg: Message = { 
                 id: (Date.now() + 1).toString(), 
                 role: 'assistant', 
-                content: isPro 
-                    ? "Verileri analiz ettim. Patili dostunun son yürüyüş mesafesi %15 artmış, bu harika! Beslenmesine ek protein eklemeyi düşünebilirsin. Moffi M+ ekosistemi her zaman yanında! 🐾⚡"
-                    : "Anlıyorum! Patin için harika bir gün. Ben her zaman buradayım, sormak istediğin başka bir şey olursa hazır bekliyorum! 😊"
+                content: response
             };
             setMessages(prev => [...prev, aiMsg]);
             setIsTyping(false);
-        }, 1500);
+        }, 1000 + (aiSettings.creativity * 1000)); // Creativity affects response time simulation
     };
 
     const clearChat = () => {
@@ -106,34 +135,6 @@ export function MoffiAssistant() {
     const assistantContent = (
         <div className="moffi-assistant-portal-root">
             <AnimatePresence>
-                {!isOpen && (
-                    <motion.button
-                        drag
-                        dragMomentum={false}
-                        onDragStart={() => isDraggingRef.current = true}
-                        onDragEnd={() => setTimeout(() => isDraggingRef.current = false, 100)}
-                        initial={{ scale: 0, opacity: 0, y: 20 }}
-                        animate={{ scale: 1, opacity: 1, y: 0 }}
-                        exit={{ scale: 0, opacity: 0, y: 20 }}
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => !isDraggingRef.current && setIsOpen(true)}
-                        className={cn(
-                            "fixed bottom-24 right-6 z-[999999] w-14 h-14 rounded-full flex items-center justify-center cursor-grab active:cursor-grabbing shadow-[0_0_40px_rgba(139,92,246,0.4)] transition-all overflow-hidden",
-                            isPro ? "bg-gradient-to-tr from-violet-600 to-indigo-600 border-2 border-white/20" : "bg-black border-2 border-white/10"
-                        )}
-                    >
-                        <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-50" />
-                        <motion.div 
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                            className="absolute -inset-2 bg-gradient-to-tr from-violet-500/20 via-transparent to-cyan-500/20 rounded-full blur-xl" 
-                        />
-                        {isPro ? <Sparkles className="w-6 h-6 text-white animate-pulse" /> : <Zap className="w-6 h-6 text-white" />}
-                        {isPro && <div className="absolute top-1 right-1 w-2 h-2 bg-emerald-400 rounded-full border-2 border-white animate-pulse" />}
-                    </motion.button>
-                )}
-
                 {isOpen && (
                     <motion.div
                         initial={{ opacity: 0, y: 40, scale: 0.9, filter: 'blur(10px)' }}

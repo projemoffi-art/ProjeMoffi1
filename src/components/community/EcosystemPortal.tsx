@@ -35,7 +35,7 @@ export function EcosystemPortal({ isOpen, onClose }: EcosystemPortalProps) {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[3000] backdrop-blur-3xl overflow-y-auto no-scrollbar flex flex-col pt-safe bg-[#050505]/95"
+                    className="fixed inset-0 z-[3000] backdrop-blur-3xl overflow-y-auto no-scrollbar flex flex-col pt-safe bg-background/95 text-foreground"
                 >
                     {/* AMBIENT BACKGROUND */}
                     <div className="fixed inset-0 pointer-events-none">
@@ -61,7 +61,7 @@ export function EcosystemPortal({ isOpen, onClose }: EcosystemPortalProps) {
                                     rel="noopener noreferrer"
                                     className="block group/title"
                                 >
-                                    <h2 className="text-3xl font-black text-white italic tracking-tighter uppercase leading-none group-hover/title:text-cyan-400 transition-colors">Moffi.net</h2>
+                                    <h2 className="text-3xl font-black text-foreground italic tracking-tighter uppercase leading-none group-hover/title:text-accent transition-colors">Moffi.net</h2>
                                 </a>
                                 <a 
                                     href="https://moffi.net" 
@@ -75,7 +75,7 @@ export function EcosystemPortal({ isOpen, onClose }: EcosystemPortalProps) {
                         </div>
                         <button 
                             onClick={onClose}
-                            className="w-14 h-14 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white active:scale-95 transition-all outline-none"
+                            className="w-14 h-14 rounded-full bg-foreground/5 border border-card-border flex items-center justify-center text-foreground active:scale-95 transition-all outline-none"
                         >
                             <X className="w-8 h-8" />
                         </button>
@@ -91,15 +91,15 @@ export function EcosystemPortal({ isOpen, onClose }: EcosystemPortalProps) {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: i * 0.1 }}
-                                    className="bg-white/5 border border-white/10 p-8 rounded-[3rem] flex flex-col gap-4 relative overflow-hidden group"
+                                    className="bg-card border border-card-border p-8 rounded-[3rem] flex flex-col gap-4 relative overflow-hidden group"
                                 >
-                                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    <div className={cn("w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center", stat.color)}>
+                                    <div className="absolute inset-0 bg-gradient-to-br from-foreground/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    <div className={cn("w-12 h-12 rounded-2xl bg-foreground/5 flex items-center justify-center", stat.color)}>
                                         {stat.icon}
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">{stat.label}</p>
-                                        <p className="text-4xl font-black text-white tracking-tighter italic mt-1">{stat.value}</p>
+                                        <p className="text-[10px] font-black text-secondary uppercase tracking-[0.3em]">{stat.label}</p>
+                                        <p className="text-4xl font-black text-foreground tracking-tighter italic mt-1">{stat.value}</p>
                                     </div>
                                 </motion.div>
                             ))}
@@ -108,35 +108,35 @@ export function EcosystemPortal({ isOpen, onClose }: EcosystemPortalProps) {
                         {/* 2. COMMUNITY GOVERNANCE (NEW) */}
                         <div className="space-y-6">
                             <div className="flex items-center justify-between px-2">
-                                <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Topluluk Oylamaları</h3>
+                                <h3 className="text-xl font-black text-foreground italic uppercase tracking-tighter">Topluluk Oylamaları</h3>
                                 <Vote className="w-5 h-5 text-purple-400 animate-bounce" />
                             </div>
                             <div className="grid grid-cols-1 gap-4">
                                 {proposals.map((prop) => (
-                                    <div key={prop.id} className="bg-[#12121A] border border-white/10 p-8 rounded-[3rem] space-y-6 group hover:border-purple-500/30 transition-all">
+                                    <div key={prop.id} className="bg-card border border-card-border p-8 rounded-[3rem] space-y-6 group hover:border-accent/30 transition-all">
                                         <div className="flex justify-between items-start">
                                             <div>
-                                                <h4 className="text-lg font-black text-white uppercase tracking-tight">{prop.title}</h4>
-                                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">Aktif Oylama: {prop.votes} Katılım</p>
+                                                <h4 className="text-lg font-black text-foreground uppercase tracking-tight">{prop.title}</h4>
+                                                <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mt-1">Aktif Oylama: {prop.votes} Katılım</p>
                                             </div>
-                                            <div className="px-4 py-1.5 bg-purple-500/10 border border-purple-500/20 rounded-full text-[9px] font-black text-purple-400 uppercase tracking-widest">
+                                            <div className="px-4 py-1.5 bg-accent/10 border border-accent/20 rounded-full text-[9px] font-black text-accent uppercase tracking-widest">
                                                 {prop.status}
                                             </div>
                                         </div>
                                         <div className="space-y-2">
-                                            <div className="flex justify-between text-[10px] font-black text-white/40 uppercase tracking-widest">
+                                            <div className="flex justify-between text-[10px] font-black text-foreground/40 uppercase tracking-widest">
                                                 <span>Hedef</span>
                                                 <span>%{prop.progress}</span>
                                             </div>
-                                            <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                                            <div className="w-full h-2 bg-foreground/5 rounded-full overflow-hidden">
                                                 <motion.div 
                                                     initial={{ width: 0 }}
                                                     animate={{ width: `${prop.progress}%` }}
-                                                    className="h-full bg-gradient-to-r from-purple-500 to-blue-500" 
+                                                    className="h-full bg-accent" 
                                                 />
                                             </div>
                                         </div>
-                                        <button className="w-full py-4 bg-white/5 border border-white/10 rounded-2xl font-black text-[11px] uppercase tracking-widest text-white hover:bg-white/10 transition-all">
+                                        <button className="w-full py-4 bg-foreground/5 border border-card-border rounded-2xl font-black text-[11px] uppercase tracking-widest text-foreground hover:bg-foreground/10 transition-all">
                                             Oyunu Kullan
                                         </button>
                                     </div>
@@ -146,23 +146,23 @@ export function EcosystemPortal({ isOpen, onClose }: EcosystemPortalProps) {
 
                         {/* 3. ECOSYSTEM NEWS */}
                         <div className="space-y-6">
-                            <h3 className="text-xl font-black text-white italic uppercase tracking-tighter px-2">Ekosistemden Haberler</h3>
+                            <h3 className="text-xl font-black text-foreground italic uppercase tracking-tighter px-2">Ekosistemden Haberler</h3>
                             <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4">
                                 {[
                                     { title: 'Sokak Hayvanları İçin Yeni Bağış Modeli', date: 'Bugün', img: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=400' },
                                     { title: 'Global Akıllı Künye Ağı Genişliyor', date: 'Dün', img: 'https://images.unsplash.com/photo-1550439062-609e1531270e?q=80&w=400' },
                                     { title: 'Moffi+ Pro Üyelerine Özel Hediyeler', date: '12 Ara', img: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?q=80&w=400' }
                                 ].map((news, i) => (
-                                    <div key={i} className="min-w-[280px] bg-white/5 border border-white/10 rounded-[2.5rem] overflow-hidden group active:scale-95 transition-all">
+                                    <div key={i} className="min-w-[280px] bg-card border border-card-border rounded-[2.5rem] overflow-hidden group active:scale-95 transition-all">
                                         <div className="h-44 relative overflow-hidden">
                                             <Image src={news.img} fill className="object-cover transition-transform group-hover:scale-110 duration-700" alt={news.title} />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-6">
-                                                <p className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">{news.date}</p>
+                                                <p className="text-[10px] font-black text-accent uppercase tracking-widest">{news.date}</p>
                                             </div>
                                         </div>
                                         <div className="p-6">
-                                            <h4 className="text-sm font-black text-white uppercase leading-snug tracking-tight">{news.title}</h4>
-                                            <button className="flex items-center gap-2 mt-4 text-[9px] font-black text-white/40 uppercase tracking-widest group-hover:text-white transition-colors">
+                                            <h4 className="text-sm font-black text-foreground uppercase leading-snug tracking-tight">{news.title}</h4>
+                                            <button className="flex items-center gap-2 mt-4 text-[9px] font-black text-foreground/40 uppercase tracking-widest group-hover:text-foreground transition-colors">
                                                 Devamını Oku <ArrowUpRight className="w-3 h-3" />
                                             </button>
                                         </div>

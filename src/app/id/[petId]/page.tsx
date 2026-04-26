@@ -7,7 +7,7 @@ import {
     ShieldAlert, BadgeCheck, AlertTriangle, ArrowLeft, 
     Send, PawPrint, Loader2, Coins, BellRing
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, showToast } from '@/lib/utils';
 import { useRouter, useParams } from 'next/navigation';
 import { getPetStatusById } from '@/services/petIdService';
 import { PetIDState } from '@/types/pet-id';
@@ -85,7 +85,7 @@ export default function PetIDPage() {
     // --- SOS ACTIONS ---
     const handleCallOwner = () => {
         if (!sosConfig.allowProxyCalls) return;
-        alert(`Sahibine 'Moffi Güvenli Arama' üzerinden bağlanılıyor...`);
+        showToast(`Sahibine 'Moffi Güvenli Arama' üzerinden bağlanılıyor...`, "PhoneCall", "text-cyan-500");
     };
 
     const handleSendLocation = () => {
@@ -104,13 +104,13 @@ export default function PetIDPage() {
                     read: false
                 });
 
-                alert("Konumunuz başarıyla sahibine iletildi. Yardımınız için teşekkürler! 🙏");
+                showToast("Konumunuz başarıyla sahibine iletildi. Yardımınız için teşekkürler! 🙏", "MapPin", "text-green-500");
             }, (error) => {
                 console.error("GPS Error:", error);
-                alert("Konum alınamadı. Lütfen tarayıcı izinlerini kontrol edin.");
+                showToast("Konum alınamadı. Lütfen tarayıcı izinlerini kontrol edin.", "ShieldAlert", "text-red-500");
             });
         } else {
-            alert("Cihazınız konum özelliğini desteklemiyor.");
+            showToast("Cihazınız konum özelliğini desteklemiyor.", "ShieldAlert", "text-red-500");
         }
     };
 
@@ -121,7 +121,7 @@ export default function PetIDPage() {
             setIsSending(false);
             setAnonMessage("");
             setShowMessageBox(false);
-            alert("Mesajınız başarıyla ve anonim olarak sahibine iletildi!");
+            showToast("Mesajınız başarıyla ve anonim olarak sahibine iletildi!", "Send", "text-cyan-500");
         }, 1500);
     };
 

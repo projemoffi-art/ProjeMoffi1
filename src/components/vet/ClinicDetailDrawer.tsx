@@ -17,7 +17,10 @@ interface ClinicDetailDrawerProps {
     onBookAppointment: (clinic: VetClinic) => void;
 }
 
+import { useChat } from "@/context/ChatContext";
+
 export function ClinicDetailDrawer({ clinicId, onClose, onBookAppointment }: ClinicDetailDrawerProps) {
+    const { openChat } = useChat();
     const [clinic, setClinic] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<'info' | 'doctors' | 'reviews'>('info');
@@ -120,7 +123,7 @@ export function ClinicDetailDrawer({ clinicId, onClose, onBookAppointment }: Cli
                                         <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">Yol Tarifi</span>
                                     </button>
                                     <button 
-                                        onClick={() => { alert("Bilgi: Mesajlaşma özelliği yakında Moffi Chat ile entegre edilecek! 🐾"); }}
+                                        onClick={() => { if (clinicId) openChat(clinicId); }}
                                         className="flex flex-col items-center justify-center gap-2 py-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all active:scale-95"
                                     >
                                         <MessageSquare className="w-5 h-5 text-blue-400" />

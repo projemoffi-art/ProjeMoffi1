@@ -28,7 +28,7 @@ export function RadarTab({
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.98 }}
-            className="h-full w-full overflow-y-auto no-scrollbar pb-32 bg-[#0A0A0E] flex flex-col items-center"
+            className="h-full w-full overflow-y-auto no-scrollbar pb-32 bg-background flex flex-col items-center"
         >
             <div className="w-full max-w-md mx-auto relative px-6 pt-8">
                 <div className="flex justify-center mb-8">
@@ -45,14 +45,14 @@ export function RadarTab({
 
                     {isLoading ? (
                         <div className="px-6 py-4 animate-pulse">
-                            <div className="h-24 bg-white/5 rounded-2xl w-full" />
+                            <div className="h-24 bg-foreground/5 rounded-2xl w-full" />
                         </div>
                     ) : lostPets.length > 0 ? (
                         <div className="flex gap-4 overflow-x-auto no-scrollbar px-6 pb-4 snap-x snap-mandatory">
                             {lostPets.map((pet) => (
                                 <div key={pet.id} className="shrink-0 w-[85vw] max-w-[320px] snap-center bg-red-500/10 border border-red-500/30 rounded-none p-4 flex flex-col gap-3 cursor-pointer hover:bg-red-500/20 transition-colors shadow-sm relative group" onClick={() => onPetClick(pet)}>
                                     {user?.id === pet.user_id ? (
-                                        <button onClick={(e) => { e.stopPropagation(); onDeleteSOS(pet.id); }} className="absolute right-3 top-3 px-3 py-1.5 rounded-full bg-[#12121A] border border-red-500/30 text-red-400 text-[10px] font-bold uppercase transition-transform hover:scale-105 active:scale-95 flex items-center gap-1 z-10 shadow-lg shadow-black/50">
+                                        <button onClick={(e) => { e.stopPropagation(); onDeleteSOS(pet.id); }} className="absolute right-3 top-3 px-3 py-1.5 rounded-full bg-background border border-red-500/30 text-red-400 text-[10px] font-bold uppercase transition-transform hover:scale-105 active:scale-95 flex items-center gap-1 z-10 shadow-lg shadow-black/50">
                                             <Trash2 className="w-3 h-3" /> Sil
                                         </button>
                                     ) : (
@@ -80,16 +80,16 @@ export function RadarTab({
                                                 )}
                                             </div>
                                             <p className="text-white font-black text-base mt-0.5 tracking-tight">{pet.name} <span className="text-xs text-white/50 font-normal">({pet.type || "Bilinmiyor"})</span></p>
-                                            <p className="text-[10px] text-gray-500 mt-2 flex items-center gap-1 opacity-100 font-bold"><MapPin className="w-3 h-3 text-cyan-400" /> {pet.last_seen_location || pet.location}</p>
+                                            <p className="text-[10px] text-secondary mt-2 flex items-center gap-1 opacity-100 font-bold"><MapPin className="w-3 h-3 text-accent" /> {pet.last_seen_location || pet.location}</p>
                                         </div>
                                     </div>
-                                    <p className="text-gray-300 text-[10px] mt-1 leading-snug line-clamp-2 px-1 italic">"{pet.description || "Lütfen görünce acil dönüş yapın."}"</p>
+                                    <p className="text-foreground/70 text-[10px] mt-1 leading-snug line-clamp-2 px-1 italic">"{pet.description || "Lütfen görünce acil dönüş yapın."}"</p>
                                 </div>
                             ))}
                         </div>
                     ) : (
-                        <div className="text-center py-6 mx-6 mb-4 bg-white/5 rounded-2xl border border-white/10">
-                            <p className="text-xs text-gray-400 font-medium tracking-wide">Yakınlarda aktif bir kayıp ilanı bulunmuyor. İyiyiz! 🐾</p>
+                        <div className="text-center py-6 mx-6 mb-4 bg-foreground/5 rounded-2xl border border-card-border">
+                            <p className="text-xs text-secondary font-medium tracking-wide">Yakınlarda aktif bir kayıp ilanı bulunmuyor. İyiyiz! 🐾</p>
                         </div>
                     )}
                 </div>

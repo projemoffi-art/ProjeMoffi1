@@ -53,7 +53,7 @@ export function OrdersTab({ orders: initialOrders }: { orders: any[] }) {
             <h3 className="px-2 text-xl font-black text-white italic uppercase tracking-tighter decoration-emerald-500/50">Siparişlerim</h3>
 
             <div className="space-y-4">
-                {orders.map(order => {
+                {Array.isArray(orders) && orders.map(order => {
                     const sim = getSimulatedStatus(order);
                     const isExpanded = expandedOrder === order.id;
                     const firstItem = order.items[0];

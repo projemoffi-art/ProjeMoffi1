@@ -1,81 +1,74 @@
 "use client";
 
 import ProfileHeader from "@/components/profile/ProfileHeader";
-import { Grid, Heart, Map, Settings } from "lucide-react";
-import { useState } from "react";
-import { cn } from "@/lib/utils";
+import ProfileTabs from "@/components/profile/ProfileTabs";
+import { useAuth } from "@/context/AuthContext";
 
-// Demo Data for UI Review
+// Demo Data for UI Review (Matches Milo's style)
 const MOCK_USER = {
+    id: 'user-test',
     username: "moffi_official",
-    fullName: "Moffi the Corgi",
-    avatar: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=400",
-    cover: "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1200",
+    full_name: "Moffi the Corgi",
+    avatar_url: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=400",
+    cover_url: "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1200",
     bio: "Moffi'nin resmi temsilcisi! 🐾 Burada yeni rotalar keşfediyor, en iyi kemikleri puanlıyor ve sülalecek takılıyoruz. Tüm sorularınız için havlayabilirsiniz!",
     location: "İstanbul, TR",
-    stats: {
-        pack: 1240,
-        following: 850,
-        posts: 42
-    },
-    isOwnProfile: false
+    followers_count: 1240,
+    following_count: 850,
+    posts_count: 42,
+    is_premium: true
 };
 
-const TABS = [
-    { id: 'posts', label: 'Anılar', icon: Grid },
-    { id: 'maps', label: 'Rotalar', icon: Map },
-    { id: 'liked', label: 'Favoriler', icon: Heart },
+const MOCK_PETS = [
+    { id: 'pet-1', name: 'Milo', breed: 'Corgi', avatar: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200" },
+    { id: 'pet-2', name: 'Bella', breed: 'Border Collie', avatar: "https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=200" }
 ];
 
 export default function ProfileTestPage() {
-    const [activeTab, setActiveTab] = useState('posts');
+    const { user: currentUser } = useAuth();
+    const isOwnProfile = currentUser?.id === MOCK_USER.id;
 
     return (
-        <main className="min-h-screen bg-[#050508] pt-24 pb-20 px-4">
+        <main className="min-h-screen bg-background pb-20">
+            {/* Unified Header */}
+            <ProfileHeader 
+                user={MOCK_USER} 
+                isOwnProfile={isOwnProfile}
+                isFollowingInitial={false}
+            />
 
-            {/* Header Section */}
-            <ProfileHeader user={MOCK_USER} />
-
-            {/* Content Tabs */}
-            <div className="max-w-4xl mx-auto mt-12">
-                <div className="flex items-center justify-center gap-8 border-b border-white/5 pb-6">
-                    {TABS.map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={cn(
-                                "flex items-center gap-2 group transition-all relative",
-                                activeTab === tab.id ? "text-white" : "text-gray-600 hover:text-white"
-                            )}
-                        >
-                            <tab.icon className={cn("w-4 h-4", activeTab === tab.id ? "text-indigo-500" : "group-hover:text-indigo-400")} />
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">{tab.label}</span>
-
-                            {activeTab === tab.id && (
-                                <div className="absolute -bottom-6 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent rounded-full shadow-[0_0_10px_rgba(99,102,241,0.5)]" />
-                            )}
-                        </button>
-                    ))}
-                </div>
-
-                {/* Empty State Grid (Showcasing Aesthetic) */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 mt-1">
-                    {[1, 2, 3, 4, 5, 6].map((i) => (
-                        <div
-                            key={i}
-                            className="aspect-square bg-[#12121A] border border-white/5 animate-pulse relative group cursor-pointer overflow-hidden"
-                        >
-                            <div className="absolute inset-0 bg-indigo-500/0 group-hover:bg-indigo-500/10 transition-colors" />
-                            <div className="absolute bottom-4 left-4 flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <span className="flex items-center gap-1 text-[10px] font-black text-white">
-                                    <Heart className="w-3 h-3 text-red-500 fill-red-500" /> 1.2k
-                                </span>
+            <div className="max-w-7xl mx-auto px-6">
+                {/* Unified PETS SECTION */}
+                <section className="mt-12 mb-16">
+                    <div className="flex items-center justify-between mb-8 px-2">
+                        <h3 className="text-2xl font-black text-foreground uppercase tracking-tight italic">Patiler</h3>
+                    </div>
+                    
+                    <div className="flex gap-6 overflow-x-auto no-scrollbar pb-4">
+                        {MOCK_PETS.map((pet) => (
+                            <div 
+                                key={pet.id}
+                                className="min-w-[240px] bg-card border border-card-border rounded-[2.5rem] p-6 flex flex-col items-center gap-4 shadow-sm"
+                            >
+                                <div className="w-24 h-24 rounded-full border-2 border-accent/20 p-1 bg-background shadow-lg">
+                                    <img src={pet.avatar} className="w-full h-full object-cover rounded-full" alt={pet.name} />
+                                </div>
+                                <div className="text-center">
+                                    <h4 className="text-xl font-black text-foreground uppercase leading-none mb-1">{pet.name}</h4>
+                                    <p className="text-[9px] text-secondary font-bold uppercase tracking-widest leading-none">{pet.breed}</p>
+                                </div>
                             </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
+                        ))}
+                    </div>
+                </section>
 
+                {/* Unified Tabs Area */}
+                <ProfileTabs 
+                    userId={MOCK_USER.id} 
+                    isOwnProfile={isOwnProfile}
+                    themeColor="cyan"
+                />
+            </div>
         </main>
     );
 }

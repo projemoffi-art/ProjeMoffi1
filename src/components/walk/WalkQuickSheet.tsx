@@ -6,12 +6,12 @@ import {
     X, MapPin, Trophy, Flame, Timer, 
     Footprints, Play, ArrowRight, Star,
     Navigation, Activity, ChevronRight,
-    Cookie, Sparkles, BrainCircuit
+    Cookie, Sparkles, BrainCircuit, Square
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useWalk } from "@/hooks/useWalk";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useActivity } from "@/context/ActivityContext";
 
 interface WalkQuickSheetProps {
     isOpen: boolean;
@@ -22,19 +22,14 @@ interface WalkQuickSheetProps {
 export function WalkQuickSheet({ isOpen, onClose, petId = "pet-1" }: WalkQuickSheetProps) {
     const router = useRouter();
     const { user } = useAuth();
-    const { stats, history, isLoading } = useWalk();
+    const { walkData, startWalk, stopWalk } = useActivity();
 
-    // Calculate today's stats from history
-    const todayStats = useMemo(() => {
-        const today = new Date().toISOString().split('T')[0];
-        const todayWalks = history.filter(w => w.startTime?.startsWith(today));
-        
-        return {
-            km: Math.round(todayWalks.reduce((sum, w) => sum + w.distanceKm, 0) * 10) / 10,
-            minutes: todayWalks.reduce((sum, w) => sum + w.durationMinutes, 0),
-            kcal: todayWalks.reduce((sum, w) => sum + (w.caloriesBurned || 0), 0)
-        };
-    }, [history]);
+    // Helper to format time (MM:SS)
+    const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
 
     return (
         <AnimatePresence>
@@ -63,7 +58,12 @@ export function WalkQuickSheet({ isOpen, onClose, petId = "pet-1" }: WalkQuickSh
                         <div className="px-8 pt-10 pb-6 flex items-center justify-between">
                             <div>
                                 <h3 className="text-2xl font-black text-white tracking-tighter uppercase italic leading-none">Moffi Yürüyüş</h3>
-                                <p className="text-[10px] text-orange-500 font-black uppercase tracking-[0.3em] mt-2">Günlük İstatistikler</p>
+                                <p className={cn(
+                                    "text-[10px] font-black uppercase tracking-[0.3em] mt-2",
+                                    walkData.isActive ? "text-emerald-400 animate-pulse" : "text-orange-500"
+                                )}>
+                                    {walkData.isActive ? "Şu An Aktif" : "Günlük İstatistikler"}
+                                </p>
                             </div>
                             <button 
                                 onClick={onClose}
@@ -114,28 +114,49 @@ export function WalkQuickSheet({ isOpen, onClose, petId = "pet-1" }: WalkQuickSh
                                 </motion.div>
                             )}
                             
-                            {/* 1. BENTO STATS BAR */}
+                            {/* 1. BENTO STATS BAR - LIVE SYNC */}
                             <div className="grid grid-cols-3 gap-3">
-                                <div className="bg-white/5 border border-white/5 rounded-[1.8rem] p-4 flex flex-col items-center justify-center gap-1 group hover:border-orange-500/30 transition-all">
-                                    <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-500 mb-1 group-hover:scale-110 transition-transform">
+                                <div className={cn(
+                                    "bg-white/5 border rounded-[1.8rem] p-4 flex flex-col items-center justify-center gap-1 transition-all",
+                                    walkData.isActive ? "border-orange-500/40 shadow-[0_0_20px_rgba(249,115,22,0.1)]" : "border-white/5"
+                                )}>
+                                    <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-500 mb-1">
                                         <Flame className="w-4 h-4" />
                                     </div>
-                                    <span className="text-xl font-black text-white">{todayStats.kcal || "240"}</span>
+                                    <span className="text-xl font-black text-white">
+                                        {walkData.isActive ? Math.floor(walkData.distance / 12) : "240"}
+                                    </span>
                                     <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Kcal</span>
                                 </div>
-                                <div className="bg-white/5 border border-white/5 rounded-[1.8rem] p-4 flex flex-col items-center justify-center gap-1 group hover:border-blue-500/30 transition-all">
-                                    <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500 mb-1 group-hover:scale-110 transition-transform">
+                                <div className={cn(
+                                    "bg-white/5 border rounded-[1.8rem] p-4 flex flex-col items-center justify-center gap-1 transition-all",
+                                    walkData.isActive ? "border-blue-500/40 shadow-[0_0_20px_rgba(59,130,246,0.1)]" : "border-white/5"
+                                )}>
+                                    <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500 mb-1">
                                         <Footprints className="w-4 h-4" />
                                     </div>
-                                    <span className="text-xl font-black text-white">{todayStats.km || "3.2"}</span>
-                                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Km</span>
+                                    <span className="text-xl font-black text-white">
+                                        {walkData.isActive 
+                                            ? (walkData.distance >= 1000 ? (walkData.distance / 1000).toFixed(1) : Math.floor(walkData.distance)) 
+                                            : "3.2"}
+                                    </span>
+                                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">
+                                        {walkData.isActive ? (walkData.distance >= 1000 ? 'Km' : 'Metre') : 'Km'}
+                                    </span>
                                 </div>
-                                <div className="bg-white/5 border border-white/5 rounded-[1.8rem] p-4 flex flex-col items-center justify-center gap-1 group hover:border-purple-500/30 transition-all">
-                                    <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-500 mb-1 group-hover:scale-110 transition-transform">
+                                <div className={cn(
+                                    "bg-white/5 border rounded-[1.8rem] p-4 flex flex-col items-center justify-center gap-1 transition-all",
+                                    walkData.isActive ? "border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.1)]" : "border-white/5"
+                                )}>
+                                    <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500 mb-1">
                                         <Timer className="w-4 h-4" />
                                     </div>
-                                    <span className="text-xl font-black text-white">{todayStats.minutes || "45"}</span>
-                                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Dk</span>
+                                    <span className="text-xl font-black text-white">
+                                        {walkData.isActive ? formatTime(walkData.time) : "45"}
+                                    </span>
+                                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">
+                                        {walkData.isActive ? "Canlı" : "Dk"}
+                                    </span>
                                 </div>
                             </div>
 
@@ -188,22 +209,32 @@ export function WalkQuickSheet({ isOpen, onClose, petId = "pet-1" }: WalkQuickSh
                                 </div>
                             </div>
 
-                            {/* 4. ACTIONS */}
+                            {/* 4. ACTIONS - SYNCED WITH GLOBAL STATE */}
                             <div className="space-y-4">
-                                <button
-                                    onClick={() => { router.push('/walk/tracking'); onClose(); }}
-                                    className="w-full h-16 bg-white text-black rounded-[1.8rem] flex items-center justify-center gap-3 active:scale-95 transition-all group overflow-hidden relative"
-                                >
-                                    <div className="absolute inset-0 bg-gradient-to-r from-orange-500/0 via-orange-500/10 to-orange-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                                    <Play className="w-6 h-6 fill-current" />
-                                    <span className="text-sm font-black uppercase tracking-[0.2em]">Yürüyüşü Başlat</span>
-                                </button>
+                                {walkData.isActive ? (
+                                    <button
+                                        onClick={() => { stopWalk(); onClose(); }}
+                                        className="w-full h-16 bg-red-500 text-white rounded-[1.8rem] flex items-center justify-center gap-3 active:scale-95 transition-all shadow-[0_10px_30px_rgba(239,68,68,0.3)]"
+                                    >
+                                        <Square className="w-6 h-6 fill-current" />
+                                        <span className="text-sm font-black uppercase tracking-[0.2em]">Yürüyüşü Bitir</span>
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => { startWalk(); router.push('/walk/tracking'); onClose(); }}
+                                        className="w-full h-16 bg-white text-black rounded-[1.8rem] flex items-center justify-center gap-3 active:scale-95 transition-all group overflow-hidden relative"
+                                    >
+                                        <div className="absolute inset-0 bg-gradient-to-r from-orange-500/0 via-orange-500/10 to-orange-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                                        <Play className="w-6 h-6 fill-current" />
+                                        <span className="text-sm font-black uppercase tracking-[0.2em]">Yürüyüşü Başlat</span>
+                                    </button>
+                                )}
 
                                 <button
                                     onClick={() => { router.push('/walk'); onClose(); }}
                                     className="w-full bg-white/5 border border-white/10 py-5 rounded-[2rem] flex items-center justify-center gap-3 group hover:bg-white hover:text-black transition-all"
                                 >
-                                    <span className="text-[11px] font-black uppercase tracking-[0.3em]">Tüm Detayları Gör</span>
+                                    <span className="text-[11px] font-black uppercase tracking-[0.3em]">Detaylı Panele Git</span>
                                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                                 </button>
                             </div>

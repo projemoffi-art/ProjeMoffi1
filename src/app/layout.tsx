@@ -64,6 +64,11 @@ export const metadata: Metadata = {
 };
 
 
+import { RootOnboardingWrapper } from "@/components/onboarding/RootOnboardingWrapper";
+
+import { ChatProvider } from "@/context/ChatContext";
+import { ActivityProvider } from "@/context/ActivityContext";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -75,30 +80,36 @@ export default function RootLayout({
         className={`${poppins.variable} ${inter.variable} ${pacificoFont.variable} ${satisfyFont.variable} ${playfairFont.variable} font-sans antialiased`}
       >
         <AuthProvider>
-          <WellbeingProvider>
-            <ThemeProvider>
-              <PetProvider>
-                <SocialProvider>
-                  <ShopProvider>
-                    <ClientAuthWrapper>
-                      <GlobalIdentitySync />
-                      <GlobalAuraBackground />
-                      <WellbeingOverlay />
-                      <div className="min-h-screen relative overflow-hidden">
-                        <ErrorBoundary>
-                          {children}
-                        </ErrorBoundary>
-                      </div>
+          <ActivityProvider>
+            <ChatProvider>
+              <WellbeingProvider>
+                <ThemeProvider>
+                  <PetProvider>
+                    <SocialProvider>
+                      <ShopProvider>
+                        <ClientAuthWrapper>
+                          <RootOnboardingWrapper>
+                            <GlobalIdentitySync />
+                            <GlobalAuraBackground />
+                            <WellbeingOverlay />
+                            <div className="min-h-screen relative overflow-hidden">
+                              <ErrorBoundary>
+                                {children}
+                              </ErrorBoundary>
+                            </div>
 
-                      <DynamicNavigation />
-                      <AIWidgetLoader />
-                      <GlobalFeedback />
-                    </ClientAuthWrapper>
-                  </ShopProvider>
-                </SocialProvider>
-              </PetProvider>
-            </ThemeProvider>
-          </WellbeingProvider>
+                            <DynamicNavigation />
+                            <AIWidgetLoader />
+                            <GlobalFeedback />
+                          </RootOnboardingWrapper>
+                        </ClientAuthWrapper>
+                      </ShopProvider>
+                    </SocialProvider>
+                  </PetProvider>
+                </ThemeProvider>
+              </WellbeingProvider>
+            </ChatProvider>
+          </ActivityProvider>
         </AuthProvider>
       </body>
     </html>

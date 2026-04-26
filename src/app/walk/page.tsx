@@ -4,12 +4,14 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
     MapPin, Trophy, ChevronRight, ChevronLeft,
-    Flame, Cookie, Timer, Footprints, Play
+    Flame, Cookie, Timer, Footprints, Play, Square
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { PLACES } from "@/data/mockPlaces";
 import dynamic from "next/dynamic";
 import { WalkDeals } from "@/components/walk/WalkDeals";
 import { PetSwitcher } from "@/components/common/PetSwitcher";
+import { useActivity } from "@/context/ActivityContext";
 
 // Dynamic Import for Google Map
 const GoogleLiveMap = dynamic(() => import('@/components/walk/GoogleLiveMap'), {
@@ -19,7 +21,13 @@ const GoogleLiveMap = dynamic(() => import('@/components/walk/GoogleLiveMap'), {
 
 export default function WalkPage() {
     const router = useRouter();
+    const { walkData, startWalk, stopWalk } = useActivity();
     const [userPos, setUserPos] = useState<[number, number]>([41.0082, 28.9784]);
+
+    const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        return mins;
+    };
 
     // Initial GPS
     useEffect(() => {
@@ -93,27 +101,35 @@ export default function WalkPage() {
                     </div>
                 </div>
 
-                {/* 3. STATS SUMMARY COMPONENT (Premium Bento) */}
+                {/* 3. STATS SUMMARY COMPONENT (Sync with Sidebar) */}
                 <div className="grid grid-cols-3 gap-3">
                     <div className="bg-white dark:bg-[#1A1A1A] p-4 rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/5 flex flex-col items-center justify-center gap-1 group truncate">
                         <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-500/20 flex items-center justify-center text-orange-500 mb-1 group-hover:scale-110 transition-transform">
                             <Flame className="w-5 h-5" />
                         </div>
-                        <span className="text-xl font-black text-gray-900 dark:text-white">324</span>
+                        <span className="text-xl font-black text-gray-900 dark:text-white">
+                            {Math.floor(walkData.distance / 12)}
+                        </span>
                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Kcal</span>
                     </div>
                     <div className="bg-white dark:bg-[#1A1A1A] p-4 rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/5 flex flex-col items-center justify-center gap-1 group truncate">
                         <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center text-blue-500 mb-1 group-hover:scale-110 transition-transform">
                             <Footprints className="w-5 h-5" />
                         </div>
-                        <span className="text-xl font-black text-gray-900 dark:text-white">4.2</span>
-                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Km</span>
+                        <span className="text-xl font-black text-gray-900 dark:text-white">
+                            {walkData.distance >= 1000 ? (walkData.distance / 1000).toFixed(1) : Math.floor(walkData.distance)}
+                        </span>
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                            {walkData.distance >= 1000 ? 'Km' : 'Metre'}
+                        </span>
                     </div>
                     <div className="bg-white dark:bg-[#1A1A1A] p-4 rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/5 flex flex-col items-center justify-center gap-1 group truncate">
                         <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-500/20 flex items-center justify-center text-purple-500 mb-1 group-hover:scale-110 transition-transform">
                             <Timer className="w-5 h-5" />
                         </div>
-                        <span className="text-xl font-black text-gray-900 dark:text-white">45</span>
+                        <span className="text-xl font-black text-gray-900 dark:text-white">
+                            {formatTime(walkData.time)}
+                        </span>
                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Dk</span>
                     </div>
                 </div>
@@ -123,7 +139,7 @@ export default function WalkPage() {
                     <GoogleLiveMap
                         userPos={userPos}
                         path={[]}
-                        isTracking={false}
+                        isTracking={walkData.isActive}
                         visitedPlaceIds={[]}
                         places={PLACES}
                         marks={[]}
@@ -141,15 +157,32 @@ export default function WalkPage() {
 
                     <div className="absolute bottom-6 left-6 right-6 z-10 flex flex-col gap-4">
                         <div className="bg-black/20 backdrop-blur-sm p-4 rounded-[2rem] border border-white/10">
-                            <h2 className="text-white font-black text-xl mb-0.5 tracking-tight uppercase italic">Keşfe Çık</h2>
-                            <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest leading-normal">Çevredeki parkları, kafeleri keşfet ve ödülleri topla.</p>
+                            <h2 className="text-white font-black text-xl mb-0.5 tracking-tight uppercase italic">
+                                {walkData.isActive ? 'Yürüyüş Takibi' : 'Keşfe Çık'}
+                            </h2>
+                            <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest leading-normal">
+                                {walkData.isActive ? 'Yürüyüşün canlı olarak kaydediliyor...' : 'Çevredeki parkları, kafeleri keşfet ve ödülleri topla.'}
+                            </p>
                         </div>
                         <button
-                            onClick={() => router.push('/walk/tracking')}
-                            className="w-full h-16 bg-white text-black rounded-[2rem] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all shadow-2xl active:scale-95 group overflow-hidden"
+                            onClick={() => {
+                                if (walkData.isActive) {
+                                    stopWalk();
+                                } else {
+                                    startWalk();
+                                    router.push('/walk/tracking');
+                                }
+                            }}
+                            className={cn(
+                                "w-full h-16 rounded-[2rem] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all shadow-2xl active:scale-95 group overflow-hidden",
+                                walkData.isActive ? "bg-red-500 text-white" : "bg-white text-black"
+                            )}
                         >
-                            <div className="absolute inset-0 bg-gradient-to-r from-orange-500/0 via-orange-500/10 to-orange-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                            <Play className="w-6 h-6 fill-current" /> Yürüyüşü Başlat
+                            {walkData.isActive ? (
+                                <><Square className="w-6 h-6 fill-current" /> Yürüyüşü Bitir</>
+                            ) : (
+                                <><Play className="w-6 h-6 fill-current" /> Yürüyüşü Başlat</>
+                            )}
                         </button>
                     </div>
                 </div>

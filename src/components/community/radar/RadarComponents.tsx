@@ -54,10 +54,10 @@ export function AddLostPetModal({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: "100%" }}
                     transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                    className="fixed inset-0 z-[120] bg-[#0A0A0E] flex flex-col pt-12 text-white"
+                    className="fixed inset-0 z-[120] bg-background flex flex-col pt-12 text-foreground"
                 >
                     <div className="flex justify-between items-center px-6 pb-4 border-b border-red-500/20">
-                        <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center -ml-2 hover:bg-white/10 transition-colors">
+                        <button onClick={onClose} className="w-10 h-10 rounded-full bg-foreground/5 flex items-center justify-center -ml-2 hover:bg-foreground/10 transition-colors">
                             <ChevronLeft className="w-6 h-6" />
                         </button>
                         <h2 className="text-lg font-black text-red-500 tracking-wider">ACİL DURUM İLANI</h2>
@@ -70,7 +70,7 @@ export function AddLostPetModal({
                             <div className="w-16 h-16 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center mx-auto mb-4 border border-red-500/30">
                                 <MapPin className="w-8 h-8" />
                             </div>
-                            <h3 className="text-xl font-bold text-white mb-2">Çevredeki Herkesi Uyar!</h3>
+                            <h3 className="text-xl font-bold text-foreground mb-2">Çevredeki Herkesi Uyar!</h3>
                             <p className="text-sm text-red-500 font-medium leading-relaxed">
                                 Kaybolan dostunuzun bilgilerini girdiğinizde, 5 km çapındaki tüm Moffi üyelerine anında acil durum (SOS) bildirimi gönderilecektir.
                             </p>
@@ -78,20 +78,20 @@ export function AddLostPetModal({
 
                         <div className="space-y-4">
                             <div>
-                                <label className="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1">İsim</label>
-                                <input value={lostPetName} onChange={e => setLostPetName(e.target.value)} type="text" placeholder="Örn: Buster" className="w-full mt-1.5 bg-[#12121A] border border-white/10 rounded-2xl py-4 px-5 text-white outline-none focus:border-red-500 transition-colors" />
+                                <label className="text-[11px] font-black text-secondary uppercase tracking-widest ml-1">İsim</label>
+                                <input value={lostPetName} onChange={e => setLostPetName(e.target.value)} type="text" placeholder="Örn: Buster" className="w-full mt-1.5 bg-foreground/5 border border-glass-border rounded-2xl py-4 px-5 text-foreground outline-none focus:border-red-500 transition-colors" />
                             </div>
                             <div>
-                                <label className="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1">Tür / Irk</label>
-                                <input value={lostPetBreed} onChange={e => setLostPetBreed(e.target.value)} type="text" placeholder="Örn: Golden Retriever" className="w-full mt-1.5 bg-[#12121A] border border-white/10 rounded-2xl py-4 px-5 text-white outline-none focus:border-red-500 transition-colors" />
+                                <label className="text-[11px] font-black text-secondary uppercase tracking-widest ml-1">Tür / Irk</label>
+                                <input value={lostPetBreed} onChange={e => setLostPetBreed(e.target.value)} type="text" placeholder="Örn: Golden Retriever" className="w-full mt-1.5 bg-foreground/5 border border-glass-border rounded-2xl py-4 px-5 text-foreground outline-none focus:border-red-500 transition-colors" />
                             </div>
                             <div>
-                                <label className="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1">Son Görüldüğü Yer</label>
-                                <input value={lostPetLocation} onChange={e => setLostPetLocation(e.target.value)} type="text" placeholder="Örn: Kadıköy Moda Sahili" className="w-full mt-1.5 bg-[#12121A] border border-white/10 rounded-2xl py-4 px-5 text-white outline-none focus:border-red-500 transition-colors" />
+                                <label className="text-[11px] font-black text-secondary uppercase tracking-widest ml-1">Son Görüldüğü Yer</label>
+                                <input value={lostPetLocation} onChange={e => setLostPetLocation(e.target.value)} type="text" placeholder="Örn: Kadıköy Moda Sahili" className="w-full mt-1.5 bg-foreground/5 border border-glass-border rounded-2xl py-4 px-5 text-foreground outline-none focus:border-red-500 transition-colors" />
                             </div>
                             <div>
-                                <label className="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1">Detaylar / Not</label>
-                                <textarea value={lostPetDesc} onChange={e => setLostPetDesc(e.target.value)} placeholder="Tasma rengi, belirgin özelliği..." className="w-full mt-1.5 bg-[#12121A] border border-white/10 rounded-2xl py-4 px-5 text-white outline-none focus:border-red-500 transition-colors resize-none h-24" />
+                                <label className="text-[11px] font-black text-secondary uppercase tracking-widest ml-1">Detaylar / Not</label>
+                                <textarea value={lostPetDesc} onChange={e => setLostPetDesc(e.target.value)} placeholder="Tasma rengi, belirgin özelliği..." className="w-full mt-1.5 bg-foreground/5 border border-glass-border rounded-2xl py-4 px-5 text-foreground outline-none focus:border-red-500 transition-colors resize-none h-24" />
                             </div>
 
                             <div>
@@ -121,7 +121,7 @@ export function AddLostPetModal({
                         </div>
                     </div>
 
-                    <div className="p-6 border-t border-red-500/20 bg-[#0A0A0E] shrink-0">
+                    <div className="p-6 border-t border-red-500/20 bg-background shrink-0">
                         <button
                             onClick={onSubmit}
                             disabled={isSubmitting}
@@ -165,7 +165,7 @@ export function LostPetDetailModal({
             >
                 <div className="relative w-full h-[55vh] shrink-0 overflow-hidden">
                     <img src={pet.media_url || pet.avatar} className="w-full h-full object-cover opacity-90" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0E] via-[#0A0A0E]/40 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
                     
                     <div className="absolute top-0 inset-x-0 p-6 flex justify-between items-center z-10 bg-gradient-to-b from-black/80 to-transparent pt-12">
                         <button onClick={onClose} className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center"><ChevronLeft className="w-6 h-6" /></button>
@@ -182,7 +182,7 @@ export function LostPetDetailModal({
                     </div>
                 </div>
 
-                <div className="flex-1 bg-[#0A0A0E] overflow-y-auto no-scrollbar pb-32">
+                <div className="flex-1 bg-background overflow-y-auto no-scrollbar pb-32">
                     <div className="p-6 space-y-8 max-w-lg mx-auto">
                         <div className="flex gap-4">
                             <div className="flex-1 bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col items-center gap-1.5">

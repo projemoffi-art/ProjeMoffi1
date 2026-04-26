@@ -7,17 +7,17 @@ import { Profile, Pet, Post } from "@/types/database";
 
 export const MOCK_PROFILES: Profile[] = [
     {
-        id: 'user-bella',
-        username: 'BellaTheGolden',
-        full_name: 'Bella The Golden',
-        avatar_url: "https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=400",
-        cover_url: "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=1200",
-        bio: "Parktaki en iyi sopayı ben buldum! 🦴🌳 #goldenretriever",
-        location: "İstanbul, Kadıköy",
+        id: 'user-moffi-official',
+        username: 'MoffiOfficial',
+        full_name: 'Moffi Official',
+        avatar_url: 'https://images.unsplash.com/photo-1628157588553-5eeea00af15c?q=80&w=400',
+        cover_url: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=1200',
+        bio: 'Moffi Dünyasının Resmi Haber ve Destek Merkezi. 🐾 Geleceğin evcil hayvan ekosistemini birlikte inşa ediyoruz. #MoffiOfficial',
+        location: 'Moffi HQ, Global',
         is_premium: true,
-        followers_count: 1240,
-        following_count: 450,
-        posts_count: 2
+        followers_count: 154200,
+        following_count: 12,
+        posts_count: 8
     },
     {
         id: 'user-milo',
@@ -28,9 +28,9 @@ export const MOCK_PROFILES: Profile[] = [
         bio: "Öğle uykusu sendromu... Lütfen rahatsız etmeyin. 😴🐾",
         location: "Beşiktaş, TR",
         is_premium: true,
-        followers_count: 5800,
-        following_count: 120,
-        posts_count: 1
+        followers_count: 1240,
+        following_count: 850,
+        posts_count: 42
     },
     {
         id: 'user-max',
@@ -40,26 +40,27 @@ export const MOCK_PROFILES: Profile[] = [
         cover_url: "https://images.unsplash.com/photo-1517849845537-4d257902454a?q=80&w=1200",
         bio: "Kar ne zaman yağacak? Beklemekten sıkıldım! ❄️🐺",
         location: "Sarıyer, TR",
+        is_premium: true,
+        followers_count: 1240,
+        following_count: 850,
+        posts_count: 42
+    },
+    {
+        id: 'user-stranger',
+        username: 'StrangerPaws',
+        full_name: 'Yabancı Pati',
+        avatar_url: "https://images.unsplash.com/photo-1605568427561-40dd23c2acea?q=80&w=400",
+        cover_url: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=1200",
+        bio: "Yeni yerler keşfetmeyi seviyorum! 🌲",
+        location: "Kadıköy, TR",
         is_premium: false,
-        followers_count: 892,
-        following_count: 240,
-        posts_count: 1
+        followers_count: 320,
+        following_count: 150,
+        posts_count: 12
     }
 ];
 
 export const MOCK_PETS: Pet[] = [
-    {
-        id: 'pet-bella',
-        owner_id: 'user-bella',
-        name: 'Bella',
-        type: 'dog',
-        breed: 'Golden Retriever',
-        birth_date: '2021-04-15',
-        gender: 'Dişi',
-        avatar_url: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=800',
-        microchip_id: '900888777666555',
-        is_lost: false
-    },
     {
         id: 'pet-milo',
         owner_id: 'user-milo',
@@ -88,40 +89,56 @@ export const MOCK_PETS: Pet[] = [
 
 export const MOCK_POSTS: Post[] = [
     {
-        id: 'post-1',
-        user_id: 'user-bella',
-        author_name: 'BellaTheGolden',
-        author_avatar: 'https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=400',
-        media_url: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=800',
-        caption: 'Günün en güzel karesi! 🦴🌳 #gardenlife',
-        likes_count: 42,
-        comments_count: 3,
+        id: 'post-official-1',
+        user_id: 'user-moffi-official',
+        author_name: 'MoffiOfficial',
+        author_avatar: 'https://images.unsplash.com/photo-1628157588553-5eeea00af15c?q=80&w=400',
+        media_url: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=800',
+        caption: 'Moffi Prime Ekosistemine Hoş Geldiniz! 🚀 Evcil hayvanlarınız için geleceğin dijital dünyasını inşa ediyoruz. #MoffiOfficial #Prime',
+        theme: 'premium',
+        likes_count: 5420,
+        comments_count: 124,
         is_liked: false,
-        created_at: '2025-04-01T12:00:00Z'
+        created_at: new Date().toISOString()
     },
     {
-        id: 'post-2',
-        user_id: 'user-bella',
-        author_name: 'BellaTheGolden',
-        author_avatar: 'https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=400',
-        media_url: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?q=80&w=800',
-        caption: 'Sessiz oyun zamanı... 🐾😴',
-        likes_count: 120,
-        comments_count: 8,
-        is_liked: true,
-        created_at: '2025-04-02T15:30:00Z'
+        id: 'post-official-2',
+        user_id: 'user-moffi-official',
+        author_name: 'MoffiOfficial',
+        author_avatar: 'https://images.unsplash.com/photo-1628157588553-5eeea00af15c?q=80&w=400',
+        media_url: 'https://images.unsplash.com/photo-1576091160550-2173bdd99625?q=80&w=800',
+        caption: 'Yapay Zeka Destekli "Neural Link" özelliği çok yakında tüm pet pasaportlarında aktif olacak. 🧠🐾 #MoffiTech',
+        theme: 'ai',
+        likes_count: 3210,
+        comments_count: 85,
+        is_liked: false,
+        created_at: new Date().toISOString()
     },
     {
-        id: 'post-milo-1',
+        id: 'post-test-owner',
         user_id: 'user-milo',
         author_name: 'MiloAndLuna',
         author_avatar: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=400',
-        media_url: 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?q=80&w=800',
-        caption: 'Öğle uykusu sendromu... 😴🐾',
-        likes_count: 580,
-        comments_count: 12,
+        media_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=800',
+        caption: 'Moffi Ekosistemine hoş geldin! Bu kendi postum. Tıklayınca Yönetim Merkezi açılmalı. 🐾⚡',
+        theme: 'social',
+        likes_count: 500,
+        comments_count: 10,
         is_liked: true,
-        created_at: '2025-04-03T10:00:00Z'
+        created_at: '2025-04-05T15:00:00Z'
+    },
+    {
+        id: 'post-test-stranger',
+        user_id: 'user-stranger',
+        author_name: 'StrangerPaws',
+        author_avatar: 'https://images.unsplash.com/photo-1605568427561-40dd23c2acea?q=80&w=400',
+        media_url: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=800',
+        caption: 'Harika bir keşif turu! Bu başkasının postu. Tıklayınca Ziyaretçi Ekranı açılmalı. 🌲📍',
+        theme: 'social',
+        likes_count: 320,
+        comments_count: 8,
+        is_liked: false,
+        created_at: '2025-04-06T11:00:00Z'
     }
 ];
 

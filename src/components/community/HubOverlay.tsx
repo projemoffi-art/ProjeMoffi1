@@ -242,7 +242,7 @@ export function HubOverlay({
                         </div>
                         <div className="flex gap-4 overflow-x-auto no-scrollbar px-4">
                             {fastBasket.map((item) => (
-                                <div key={item.id} className="min-w-[140px] bg-white/[0.03] border border-white/5 rounded-[2.5rem] p-4 flex flex-col gap-3 group">
+                                <div key={item.id} className="min-w-[140px] bg-foreground/[0.03] border border-glass-border rounded-[2.5rem] p-4 flex flex-col gap-3 group">
                                     <div className="w-full aspect-square rounded-2xl overflow-hidden relative">
                                         <img src={item.img} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
                                         <button className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg active:scale-90 transition-all">
@@ -250,7 +250,7 @@ export function HubOverlay({
                                         </button>
                                     </div>
                                     <div className="text-left">
-                                        <p className="text-[9px] font-black text-white leading-tight uppercase truncate">{item.name}</p>
+                                        <p className="text-[9px] font-black text-foreground leading-tight uppercase truncate">{item.name}</p>
                                         <p className="text-xs font-black text-orange-400 mt-1 italic">{item.price}</p>
                                     </div>
                                 </div>
@@ -300,23 +300,27 @@ export function HubOverlay({
                         <h3 className="text-[11px] font-black text-[var(--secondary-text)] uppercase tracking-[0.3em] mb-6">En Yakın Klinik Radarı</h3>
                         <div className="space-y-3">
                             {nearbyClinics.map((clinic, i) => (
-                                <div key={i} className="bg-white/5 border border-white/10 rounded-[2.5rem] p-5 flex items-center justify-between group hover:border-emerald-500/20 transition-all">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
+                                <button 
+                                    key={i} 
+                                    onClick={() => { onVetClick(); onClose(); }}
+                                    className="w-full bg-foreground/5 border border-glass-border rounded-[2.5rem] p-5 flex items-center justify-between group hover:border-emerald-500/20 hover:bg-foreground/10 transition-all active:scale-[0.98]"
+                                >
+                                    <div className="flex items-center gap-4 text-left">
+                                        <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all shadow-lg shadow-emerald-500/0 group-hover:shadow-emerald-500/20">
                                             <MapPin size={22} />
                                         </div>
                                         <div>
-                                            <h4 className="text-sm font-black text-white italic tracking-tight uppercase">{clinic.name}</h4>
+                                            <h4 className="text-sm font-black text-foreground italic tracking-tight uppercase">{clinic.name}</h4>
                                             <p className="text-[9px] text-emerald-400 font-bold uppercase mt-0.5">{clinic.status}</p>
                                         </div>
                                     </div>
                                     <div className="text-right flex items-center gap-3">
-                                        <span className="text-lg font-black text-white italic">{clinic.dist}</span>
-                                        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/20 group-hover:text-white transition-colors">
+                                        <span className="text-lg font-black text-foreground italic">{clinic.dist}</span>
+                                        <div className="w-8 h-8 rounded-full bg-foreground/5 flex items-center justify-center text-secondary group-hover:text-foreground group-hover:bg-foreground/10 transition-all">
                                             <ChevronRight size={16} />
                                         </div>
                                     </div>
-                                </div>
+                                </button>
                             ))}
                         </div>
                     </div>
@@ -348,7 +352,7 @@ export function HubOverlay({
 
                     {/* APPLE STYLE BOTTOM SERVICES GROUP */}
                     <div className="mb-safe-bottom pb-12">
-                        <div className="bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-8 shadow-2xl">
+                        <div className="bg-glass backdrop-blur-3xl border border-glass-border rounded-[3rem] p-8 shadow-2xl">
                             <div className="grid grid-cols-3 gap-8">
                                 {[
                                     { icon: Palette, label: 'Stüdyo', color: 'text-purple-400', bg: 'bg-purple-500/10', onClick: onStudioClick },
@@ -363,15 +367,10 @@ export function HubOverlay({
                                         onClick={() => { service.onClick(); onClose(); }}
                                         className="flex flex-col items-center gap-3 active:scale-95 transition-all group"
                                     >
-                                        <div className={cn("w-16 h-16 rounded-[1.8rem] flex items-center justify-center border border-white/5 relative shadow-lg group-hover:shadow-white/5 transition-all", service.bg)}>
+                                        <div className={cn("w-16 h-16 rounded-[1.8rem] flex items-center justify-center border border-glass-border relative shadow-lg group-hover:shadow-foreground/5 transition-all", service.bg)}>
                                             <service.icon className={cn("w-7 h-7", service.color)} />
-                                            {service.badge && service.badge > 0 && (
-                                                <div className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full border-2 border-[#1A1A1A] flex items-center justify-center shadow-lg">
-                                                    <span className="text-[10px] font-black text-white">{service.badge}</span>
-                                                </div>
-                                            )}
                                         </div>
-                                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest group-hover:text-white transition-colors">{service.label}</span>
+                                        <span className="text-[10px] font-black text-secondary uppercase tracking-widest group-hover:text-foreground transition-colors">{service.label}</span>
                                     </motion.button>
                                 ))}
                             </div>

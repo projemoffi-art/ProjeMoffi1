@@ -68,11 +68,7 @@ export const GlobalAuraBackground = React.memo(function GlobalAuraBackground() {
 
     return (
         <div className={cn(
-            "fixed inset-0 z-[-1] transition-colors duration-1000 transform-gpu",
-            auraStyle === 'minimal' && "bg-[#050508]",
-            auraStyle === 'glass' && "bg-[#0A0A0F]",
-            auraStyle === 'neon' && "bg-[#020205]",
-            auraStyle === 'metal' && "bg-[#08080A]"
+            "fixed inset-0 z-[-1] transition-colors duration-1000 transform-gpu bg-background",
         )}>
             {/* Global Deep Shadow */}
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/10 to-black/40" />

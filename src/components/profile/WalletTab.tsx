@@ -47,29 +47,29 @@ export function WalletTab() {
         <div className="space-y-12 pb-24 relative">
             
             {/* 1. ADVANCED APPLE WALLET STACK */}
-            <div className="relative h-[480px] mt-4 px-2 perspective-[1500px]">
+            <div className="relative h-[420px] sm:h-[480px] mt-4 px-1 sm:px-2 perspective-[1500px]">
                 <div className="relative h-full w-full">
                     {cards.map((card, index) => {
                         const isExpanded = expandedCard === card.id;
                         const isAnyExpanded = expandedCard !== null;
                         
                         // Calculate position based on state
-                        let y = index * 55; // Stacked position
+                        let y = index * 45; // Tighter stack for mobile
                         let opacity = 1;
                         let scale = 1 - (index * 0.03);
                         let zIndex = 10 - index;
-                        let rotateX = -12; // Base 3D tilt
+                        let rotateX = -10; // Base 3D tilt
 
                         if (isExpanded) {
                             y = 0;
-                            scale = 1.05;
+                            scale = 1.02;
                             zIndex = 100;
                             rotateX = 0;
                         } else if (isAnyExpanded) {
-                            y = 420 + (index * 20); // Push down when someone else is expanded
+                            y = 360 + (index * 15); // Push down more compactly
                             opacity = 0.4;
                             scale = 0.9;
-                            rotateX = -20;
+                            rotateX = -15;
                         }
 
                         return (
@@ -91,12 +91,12 @@ export function WalletTab() {
                                     }
                                 }}
                                 whileHover={{ 
-                                    y: isExpanded ? 0 : (index * 55) - 15,
+                                    y: isExpanded ? 0 : (index * 45) - 10,
                                     transition: { duration: 0.2 } 
                                 }}
                                 whileTap={{ scale: 0.98 }}
                                 className={cn(
-                                    "absolute inset-x-0 h-64 rounded-[3.5rem] p-10 cursor-pointer shadow-[0_30px_60px_-15px_rgba(0,0,0,0.7)] overflow-hidden border-t border-white/20 bg-gradient-to-br",
+                                    "absolute inset-x-0 h-56 sm:h-64 rounded-[2.5rem] sm:rounded-[3.5rem] p-6 sm:p-10 cursor-pointer shadow-[0_30px_60px_-15px_rgba(0,0,0,0.7)] overflow-hidden border-t border-white/20 bg-gradient-to-br",
                                     card.color
                                 )}
                                 style={{ transformStyle: "preserve-3d" }}
@@ -121,31 +121,31 @@ export function WalletTab() {
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-white/40 animate-pulse" />
-                                                <p className="text-[10px] font-black text-white/50 uppercase tracking-[0.4em]">{card.sub}</p>
+                                                <p className="text-[9px] sm:text-[10px] font-black text-white/50 uppercase tracking-[0.3em] sm:tracking-[0.4em]">{card.sub}</p>
                                             </div>
-                                            <h3 className="text-3xl font-black text-white tracking-tighter uppercase italic leading-none drop-shadow-lg">{card.title}</h3>
+                                            <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tighter uppercase italic leading-none drop-shadow-lg">{card.title}</h3>
                                         </div>
-                                        <div className="w-16 h-16 bg-white/10 backdrop-blur-3xl rounded-[1.8rem] flex items-center justify-center border border-white/20 shadow-2xl relative group-hover:scale-110 transition-transform">
-                                            <div className="absolute inset-0 bg-white/5 rounded-[1.8rem] animate-pulse" />
-                                            {card.icon}
+                                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/10 backdrop-blur-3xl rounded-2xl sm:rounded-[1.8rem] flex items-center justify-center border border-white/20 shadow-2xl relative group-hover:scale-110 transition-transform">
+                                            <div className="absolute inset-0 bg-white/5 rounded-2xl sm:rounded-[1.8rem] animate-pulse" />
+                                            {React.cloneElement(card.icon as React.ReactElement, { className: "w-6 h-6 sm:w-8 sm:h-8" })}
                                         </div>
                                     </div>
 
                                     <div className="flex justify-between items-end">
-                                        <div className="space-y-3">
-                                            <div className="flex items-center gap-1.5">
+                                        <div className="space-y-2 sm:space-y-3">
+                                            <div className="flex items-center gap-1">
                                                  {[1,2,3,4].map(i => (
-                                                     <div key={i} className="w-1.5 h-4 bg-white/20 rounded-full" />
+                                                     <div key={i} className="w-1 h-3 sm:w-1.5 sm:h-4 bg-white/20 rounded-full" />
                                                  ))}
                                             </div>
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-7 bg-gradient-to-br from-zinc-400 to-zinc-600 rounded-md opacity-40 shadow-inner" />
-                                                <p className="text-[11px] font-black text-white/40 font-mono tracking-[0.35em]">**** 2024</p>
+                                            <div className="flex items-center gap-2 sm:gap-3">
+                                                <div className="w-8 h-5 sm:w-10 sm:h-7 bg-gradient-to-br from-zinc-400 to-zinc-600 rounded-md opacity-40 shadow-inner" />
+                                                <p className="text-[9px] sm:text-[11px] font-black text-white/40 font-mono tracking-[0.2em] sm:tracking-[0.35em]">**** 2024</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-4xl font-black text-white italic tracking-tighter drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]">{card.value}</p>
-                                            <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.3em] mt-1">Sizin Dünyanız</p>
+                                            <p className="text-3xl sm:text-4xl font-black text-white italic tracking-tighter drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]">{card.value}</p>
+                                            <p className="text-[7px] sm:text-[8px] font-black text-white/30 uppercase tracking-[0.3em] mt-1">Sizin Dünyanız</p>
                                         </div>
                                     </div>
                                 </div>
@@ -201,33 +201,33 @@ export function WalletTab() {
                     </div>
                 </div>
 
-                <div className="space-y-4 px-2">
+                <div className="space-y-4 px-1 sm:px-2">
                     {transactions.map(tx => (
-                        <div key={tx.id} className="bg-white/[0.02] border border-white/5 p-7 rounded-[3rem] flex items-center justify-between group hover:bg-white/5 transition-all cursor-pointer relative overflow-hidden">
+                        <div key={tx.id} className="bg-white/[0.02] border border-white/5 p-4 sm:p-7 rounded-[2rem] sm:rounded-[3rem] flex items-center justify-between group hover:bg-white/5 transition-all cursor-pointer relative overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <div className="flex items-center gap-6 relative z-10">
-                                <div className="w-16 h-16 bg-black/40 rounded-2xl flex items-center justify-center transition-transform group-hover:rotate-12 shadow-2xl border border-white/5">
-                                    <div className="text-white/80">{tx.icon}</div>
+                            <div className="flex items-center gap-4 sm:gap-6 relative z-10">
+                                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-black/40 rounded-xl sm:rounded-2xl flex items-center justify-center transition-transform group-hover:rotate-12 shadow-2xl border border-white/5">
+                                    <div className="text-white/80 scale-75 sm:scale-100">{tx.icon}</div>
                                 </div>
                                 <div className="text-left">
-                                    <h4 className="text-white font-black text-base uppercase tracking-tight italic">{tx.label}</h4>
-                                    <div className="flex items-center gap-2 mt-1.5">
+                                    <h4 className="text-white font-black text-sm sm:text-base uppercase tracking-tight italic">{tx.label}</h4>
+                                    <div className="flex items-center gap-1.5 mt-1 sm:mt-1.5">
                                         <div className="w-1 h-1 rounded-full bg-orange-500" />
-                                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">{tx.date}</p>
+                                        <p className="text-[9px] sm:text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">{tx.date}</p>
                                     </div>
                                 </div>
                             </div>
                             <div className="text-right relative z-10">
                                 <div className="flex items-baseline gap-1">
                                     <p className={cn(
-                                        "text-2xl font-black italic tracking-tighter",
+                                        "text-xl sm:text-2xl font-black italic tracking-tighter",
                                         tx.amount > 0 ? "text-emerald-400" : "text-white"
                                     )}>
                                         {tx.amount > 0 ? `+${tx.amount.toLocaleString()}` : tx.amount.toLocaleString()}
                                     </p>
-                                    <span className="text-[10px] font-black text-white/30 tracking-tighter uppercase">PC</span>
+                                    <span className="text-[9px] sm:text-[10px] font-black text-white/30 tracking-tighter uppercase">PC</span>
                                 </div>
-                                <p className="text-[9px] font-black text-white/10 uppercase tracking-[0.3em] mt-1">İşlem Tamamlandı</p>
+                                <p className="text-[8px] sm:text-[9px] font-black text-white/10 uppercase tracking-[0.3em] mt-1">Tamamlandı</p>
                             </div>
                         </div>
                     ))}
@@ -235,8 +235,8 @@ export function WalletTab() {
             </div>
 
             {/* EARN INFO */}
-            <div className={cn("px-2 transition-all duration-500", expandedCard ? "opacity-0" : "opacity-100")}>
-                <div className="bg-gradient-to-br from-orange-500/10 via-orange-500/5 to-transparent border border-orange-500/20 p-10 rounded-[4rem] flex flex-col items-center text-center gap-6 relative overflow-hidden group">
+            <div className={cn("px-1 sm:px-2 transition-all duration-500", expandedCard ? "opacity-0" : "opacity-100")}>
+                <div className="bg-gradient-to-br from-orange-500/10 via-orange-500/5 to-transparent border border-orange-500/20 p-8 sm:p-10 rounded-[2.5rem] sm:rounded-[4rem] flex flex-col items-center text-center gap-4 sm:gap-6 relative overflow-hidden group">
                     <motion.div 
                         animate={{ 
                             scale: [1, 1.2, 1],
@@ -245,16 +245,16 @@ export function WalletTab() {
                         transition={{ duration: 4, repeat: Infinity }}
                         className="absolute inset-0 bg-orange-500/10 blur-[80px] rounded-full" 
                     />
-                    <div className="w-20 h-20 rounded-3xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shadow-2xl shadow-orange-500/20">
-                        <Sparkles className="w-10 h-10 text-orange-400" />
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shadow-2xl shadow-orange-500/20">
+                        <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-orange-400" />
                     </div>
                     <div className="relative z-10">
-                        <h4 className="text-white font-black text-2xl uppercase italic tracking-tighter">İyilik İçin Harca</h4>
-                        <p className="text-[11px] text-orange-400/70 font-bold uppercase tracking-widest mt-4 leading-relaxed max-w-[280px] mx-auto">
+                        <h4 className="text-white font-black text-xl sm:text-2xl uppercase italic tracking-tighter">İyilik İçin Harca</h4>
+                        <p className="text-[10px] sm:text-[11px] text-orange-400/70 font-bold uppercase tracking-widest mt-2 sm:mt-4 leading-relaxed max-w-[280px] mx-auto">
                             Moffi'de kazandığın her PawCoin ile barınaklara yardım edebilir veya petin için premium ürünler alabilirsin.
                         </p>
                     </div>
-                    <button className="relative z-10 mt-2 px-8 py-4 bg-orange-500 rounded-full text-white font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all shadow-xl shadow-orange-500/40">
+                    <button className="relative z-10 mt-2 px-6 py-3 sm:px-8 sm:py-4 bg-orange-500 rounded-full text-white font-black text-[9px] sm:text-[10px] uppercase tracking-widest active:scale-95 transition-all shadow-xl shadow-orange-500/40">
                         Hemen Keşfet
                     </button>
                 </div>

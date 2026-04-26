@@ -60,11 +60,12 @@ export function ActionHubDrawer({
     };
 
     const identityActions = [
+        { id: 'appointments', icon: HeartPulse, label: 'Sağlık & Takvim', sub: 'Aşı ve Randevular', color: 'text-red-400', bg: 'bg-red-500/10' },
         { id: 'wallet', icon: Wallet, label: 'Moffi Pay Cüzdanım', sub: 'Bakiye ve Harcamalar', color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
         { id: 'passport', icon: QrCode, label: 'Dijital Pet Pasaportu', sub: 'Resmi Kimlik Kaydı', color: 'text-blue-400', bg: 'bg-blue-500/10' },
         { id: 'family', icon: Users, label: 'Aile ve Paylaşım', sub: 'Ortak Hesap Yönetimi', color: 'text-purple-400', bg: 'bg-purple-500/10' },
         { id: 'orders', icon: Package, label: 'Market Siparişlerim', sub: 'Kargo Takibi', color: 'text-amber-400', bg: 'bg-amber-500/10' },
-        { id: 'routes', icon: Map, label: 'Kayıtlı Rotalar', sub: 'Yürüyüş Geçmişi', color: 'text-indigo-400', bg: 'bg-indigo-500/10' },
+        { id: 'activity', icon: Activity, label: 'Yürüyüş ve Aktivite', sub: 'Egzersiz Geçmişi', color: 'text-rose-400', bg: 'bg-rose-500/10' },
     ];
 
     return (
@@ -91,92 +92,92 @@ export function ActionHubDrawer({
                         onDragEnd={(_, info) => {
                             if (info.offset.y > 100) onClose();
                         }}
-                        className="fixed bottom-0 left-0 right-0 z-[7001] bg-background border-t border-card-border rounded-t-[3.5rem] p-8 pb-12 shadow-[0_-20px_100px_rgba(0,0,0,0.5)] max-h-[92vh] overflow-y-auto no-scrollbar"
+                        className="fixed bottom-0 left-0 right-0 z-[7001] bg-background border-t border-card-border rounded-t-[2.5rem] sm:rounded-t-[3.5rem] p-5 sm:p-8 pb-10 sm:pb-12 shadow-[0_-20px_100px_rgba(0,0,0,0.5)] max-h-[92vh] overflow-y-auto no-scrollbar"
                     >
                         {/* Apple Handle */}
-                        <div className="absolute top-0 left-0 right-0 h-10 flex items-center justify-center cursor-pointer pt-2">
-                            <div className="w-12 h-1.5 bg-foreground/10 rounded-full" />
+                        <div className="absolute top-0 left-0 right-0 h-8 sm:h-10 flex items-center justify-center cursor-pointer pt-2">
+                            <div className="w-10 sm:w-12 h-1 sm:h-1.5 bg-foreground/10 rounded-full" />
                         </div>
 
                         {/* TITLE BAR (Sleek Identity Style) */}
-                        <div className="flex justify-between items-center py-4 mb-2 mt-2">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-4 mb-2 mt-2 gap-4 sm:gap-0">
                             <div className="flex items-center gap-3">
-                                 <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center shadow-lg shadow-accent/20">
-                                    <Zap className="text-background w-6 h-6" />
+                                 <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-accent flex items-center justify-center shadow-lg shadow-accent/20">
+                                    <Zap className="text-background w-5 h-5 sm:w-6 sm:h-6" />
                                  </div>
                                  <div>
-                                    <h2 className="text-2xl font-black text-foreground tracking-tighter italic uppercase leading-none">Moffi Kimliğim</h2>
-                                    <p className="text-[9px] text-accent font-black uppercase tracking-[0.2em] mt-1">Kişisel Erişim Portalı</p>
+                                    <h2 className="text-xl sm:text-2xl font-black text-foreground tracking-tighter italic uppercase leading-none">Moffi Kimliğim</h2>
+                                    <p className="text-[8px] sm:text-[9px] text-accent font-black uppercase tracking-[0.2em] mt-1">Kişisel Erişim Portalı</p>
                                  </div>
                             </div>
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 w-full sm:w-auto">
                                 <PetSwitcher />
                                 <button 
                                     onClick={onClose}
-                                    className="w-12 h-12 rounded-full bg-foreground/5 border border-foreground/10 flex items-center justify-center text-foreground active:scale-95 transition-all outline-none"
+                                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-foreground/5 border border-foreground/10 flex items-center justify-center text-foreground active:scale-95 transition-all outline-none"
                                 >
-                                    <X className="w-6 h-6" />
+                                    <X className="w-5 h-5 sm:w-6 sm:h-6" />
                                 </button>
                             </div>
                         </div>
 
                         {/* PREMIUM STATUS BAR */}
                         {isPro && (
-                            <div className="mb-8 p-5 rounded-[2rem] bg-accent/5 border border-accent/20 flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center shrink-0">
-                                    <Crown className="text-background w-5 h-5" />
+                            <div className="mb-6 sm:mb-8 p-4 sm:p-5 rounded-[1.5rem] sm:rounded-[2rem] bg-accent/5 border border-accent/20 flex items-center gap-3 sm:gap-4">
+                                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-accent flex items-center justify-center shrink-0">
+                                    <Crown className="text-background w-4 h-4 sm:w-5 sm:h-5" />
                                 </div>
                                 <div>
-                                    <h5 className="text-[11px] font-black text-accent uppercase italic">Premium Plus Status</h5>
-                                    <p className="text-[9px] text-secondary font-bold uppercase tracking-widest">Tüm kimlik ve finans araçları yetkilendirildi.</p>
+                                    <h5 className="text-[10px] sm:text-[11px] font-black text-accent uppercase italic">Premium Plus Status</h5>
+                                    <p className="text-[8px] sm:text-[9px] text-secondary font-bold uppercase tracking-widest">Tüm araçlar yetkilendirildi.</p>
                                 </div>
                             </div>
                         )}
 
                         {/* MOFFI HEALTH SUMMARY PANEL (RESTORED) */}
-                        <div className="mb-8">
-                            <div className="bg-card border border-card-border rounded-[2.5rem] p-6 shadow-sm">
-                                <div className="flex items-center justify-between mb-6">
+                        <div className="mb-6 sm:mb-8">
+                            <div className="bg-card border border-card-border rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-6 shadow-sm">
+                                <div className="flex items-center justify-between mb-5 sm:mb-6">
                                     <div className="flex items-center gap-3">
                                         {activePet?.image || activePet?.avatar ? (
-                                            <div className="w-10 h-10 rounded-xl border-2 border-accent/30 overflow-hidden shadow-lg">
+                                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border-2 border-accent/30 overflow-hidden shadow-lg">
                                                 <img src={activePet.image || activePet.avatar} alt={activePet.name} className="w-full h-full object-cover" />
                                             </div>
                                         ) : (
-                                            <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center text-background">
-                                                <PawPrint size={20} />
+                                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-accent flex items-center justify-center text-background">
+                                                <PawPrint size={18} />
                                             </div>
                                         )}
                                         <div className="flex flex-col">
-                                            <h3 className="text-[12px] font-black text-foreground uppercase tracking-tight">{activePet?.name || "Pet"} Sağlık Durumu</h3>
-                                            <span className="text-[8px] font-black text-accent uppercase tracking-[0.2em] opacity-80">Aktif Kimlik Takibi</span>
+                                            <h3 className="text-[11px] sm:text-[12px] font-black text-foreground uppercase tracking-tight">{activePet?.name || "Pet"} Sağlık</h3>
+                                            <span className="text-[7px] sm:text-[8px] font-black text-accent uppercase tracking-[0.2em] opacity-80">Aktif Kimlik Takibi</span>
                                         </div>
                                     </div>
                                     {nextHealthAlert ? (
-                                        <div className="px-3 py-1 bg-red-500/20 rounded-full border border-red-500/30 animate-pulse">
-                                            <span className="text-[8px] font-black text-red-400 uppercase">Kritik Aşı: {nextHealthAlert.daysLeft} Gün</span>
+                                        <div className="px-2.5 py-1 bg-red-500/20 rounded-full border border-red-500/30 animate-pulse">
+                                            <span className="text-[7px] sm:text-[8px] font-black text-red-400 uppercase">{nextHealthAlert.daysLeft} GÜN</span>
                                         </div>
                                     ) : (
-                                        <div className="px-3 py-1 bg-emerald-500/20 rounded-full border border-emerald-500/30">
-                                            <span className="text-[8px] font-black text-emerald-400 uppercase">Stabil</span>
+                                        <div className="px-2.5 py-1 bg-emerald-500/20 rounded-full border border-emerald-500/30">
+                                            <span className="text-[7px] sm:text-[8px] font-black text-emerald-400 uppercase">STABİL</span>
                                         </div>
                                     )}
                                 </div>
-                                <div className="grid grid-cols-3 gap-3">
-                                    <div className="flex flex-col items-center p-3 bg-foreground/5 rounded-2xl border border-foreground/5">
-                                        <Scale className="text-accent mb-1" size={16} />
-                                        <span className="text-sm font-black text-foreground italic">{activePet?.weight?.toString().replace(/[^0-9.]/g, '') || "12.4"} <small className="text-[8px] not-italic opacity-50">kg</small></span>
+                                <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                                    <div className="flex flex-col items-center p-2.5 sm:p-3 bg-foreground/5 rounded-xl sm:rounded-2xl border border-foreground/5">
+                                        <Scale className="text-accent mb-1" size={14} />
+                                        <span className="text-xs sm:text-sm font-black text-foreground italic">{activePet?.weight?.toString().replace(/[^0-9.]/g, '') || "12.4"} <small className="text-[8px] not-italic opacity-50">kg</small></span>
                                         <span className="text-[7px] font-bold text-secondary uppercase tracking-tighter mt-1">Kilo</span>
                                     </div>
-                                    <div className="flex flex-col items-center p-3 bg-foreground/5 rounded-2xl border border-foreground/5">
-                                        <Activity className="text-red-400 mb-1" size={16} />
-                                        <span className="text-sm font-black text-foreground italic">{activePet ? getPetPulse(activePet.id) : 82} <small className="text-[8px] not-italic opacity-50">bpm</small></span>
+                                    <div className="flex flex-col items-center p-2.5 sm:p-3 bg-foreground/5 rounded-xl sm:rounded-2xl border border-foreground/5">
+                                        <Activity className="text-red-400 mb-1" size={14} />
+                                        <span className="text-xs sm:text-sm font-black text-foreground italic">{activePet ? getPetPulse(activePet.id) : 82} <small className="text-[8px] not-italic opacity-50">bpm</small></span>
                                         <span className="text-[7px] font-bold text-secondary uppercase tracking-tighter mt-1">Nabız</span>
                                     </div>
-                                    <div className="flex flex-col items-center p-3 bg-foreground/5 rounded-2xl border border-foreground/5">
-                                        <Sparkles className="text-yellow-400 mb-1" size={16} />
-                                        <span className="text-sm font-black text-foreground italic">{getPetAge(activePet)} <small className="text-[8px] not-italic opacity-50">yıl</small></span>
-                                        <span className="text-[7px] font-bold text-secondary uppercase tracking-tighter mt-1">Biyolojik</span>
+                                    <div className="flex flex-col items-center p-2.5 sm:p-3 bg-foreground/5 rounded-xl sm:rounded-2xl border border-foreground/5">
+                                        <Sparkles className="text-yellow-400 mb-1" size={14} />
+                                        <span className="text-xs sm:text-sm font-black text-foreground italic">{getPetAge(activePet)} <small className="text-[8px] not-italic opacity-50">yıl</small></span>
+                                        <span className="text-[7px] font-bold text-secondary uppercase tracking-tighter mt-1">Yaş</span>
                                     </div>
                                 </div>
                             </div>

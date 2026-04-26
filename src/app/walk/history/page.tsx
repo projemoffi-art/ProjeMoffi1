@@ -4,19 +4,24 @@ import { useState } from "react";
 import { ArrowLeft, Trophy, Calendar, TrendingUp, Lock, MapPin, Clock, Footprints, ChevronUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSocial } from "@/context/SocialContext";
+import { useActivity } from "@/context/ActivityContext";
 import { cn } from "@/lib/utils";
 
 // Mock History Data with "Map" visuals
-const HISTORY_WALKS = [
-    { id: 1, date: "Bugün, 09:30", duration: "45dk", distance: "3.2km", steps: 5400, mapImage: "https://img.freepik.com/free-vector/city-map-navigation-app_23-2148530386.jpg" },
-    { id: 2, date: "Dün, 18:15", duration: "32dk", distance: "2.1km", steps: 3800, mapImage: "https://img.freepik.com/free-vector/gps-navigation-screen-design_23-2148512133.jpg" },
-    { id: 3, date: "7 Ara, 08:00", duration: "60dk", distance: "5.5km", steps: 8200, mapImage: "https://img.freepik.com/free-vector/dashboard-interface-user-panel-template_23-2148545800.jpg" },
+// Mock History Data (Fallback)
+const MOCK_HISTORY_WALKS = [
+    { id: 'm1', date: "Dün, 18:15", duration: "32dk", distance: "2.1km", steps: 3800, mapImage: "https://img.freepik.com/free-vector/gps-navigation-screen-design_23-2148512133.jpg" },
+    { id: 'm2', date: "7 Ara, 08:00", duration: "60dk", distance: "5.5km", steps: 8200, mapImage: "https://img.freepik.com/free-vector/dashboard-interface-user-panel-template_23-2148545800.jpg" },
 ];
 
 export default function WalkHistoryPage() {
     const router = useRouter();
     const { currentUser } = useSocial();
+    const { walkHistory } = useActivity();
     const [activeTab, setActiveTab] = useState<'list' | 'stats'>('list');
+
+    // Combine real history with mock data for a richer look
+    const displayWalks = [...walkHistory, ...MOCK_HISTORY_WALKS];
 
     return (
         <main className="min-h-screen bg-gray-50 pb-20 max-w-md mx-auto relative shadow-2xl overflow-hidden font-sans flex flex-col border-x border-gray-100">
@@ -58,13 +63,13 @@ export default function WalkHistoryPage() {
 
                 {activeTab === 'list' && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        {HISTORY_WALKS.map((walk) => (
+                        {displayWalks.map((walk) => (
                             <div key={walk.id} className="bg-white rounded-[2rem] p-3 shadow-md border border-gray-100 group hover:scale-[1.02] transition-transform">
                                 {/* Map Visual Area */}
                                 <div className="h-32 w-full rounded-[1.5rem] bg-gray-100 relative overflow-hidden mb-3">
-                                    <img src={walk.mapImage} className="w-full h-full object-cover opacity-80 mix-blend-multiply" />
+                                    <img src={(walk as any).mapImage || "https://img.freepik.com/free-vector/city-map-navigation-app_23-2148530386.jpg"} className="w-full h-full object-cover opacity-80 mix-blend-multiply" />
 
-                                    {/* Overlay Path (Simulated) */}
+                                    {/* Overlay Path (Simulated or Real Path visualization) */}
                                     <svg className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-md" viewBox="0 0 100 100" preserveAspectRatio="none">
                                         <path d="M10,90 Q30,60 50,50 T90,20" fill="none" stroke="#4F46E5" strokeWidth="4" strokeLinecap="round" strokeDasharray="5,5" className="animate-pulse" />
                                         <circle cx="90" cy="20" r="3" fill="#4F46E5" />

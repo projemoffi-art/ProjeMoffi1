@@ -11,7 +11,7 @@ import {
     AlertTriangle, PhoneCall, BadgeCheck, Radar, Palette, ShoppingBag, Gamepad2, Stethoscope, Globe,
     Coins, Package, Calendar, Plane, ShieldCheck, Route, TrendingUp, Timer, Footprints, Play, Download, Clock, Syringe, Moon
 } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn, showToast } from '@/lib/utils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AuthModal from '../../components/auth/AuthModal';
 import { useAuth } from '../../context/AuthContext';
@@ -21,6 +21,8 @@ import { PetSettingsModal } from '../../components/profile/PetSettingsModal';
 import { SOSCommandCenter } from '../../components/profile/SOSCommandCenter';
 import { QRCodeSVG } from 'qrcode.react';
 import { InboxModal } from '../../components/community/InboxModal';
+import { FeedbackModal } from '../../components/community/modals/FeedbackModal';
+import { MessageSquareHeart } from 'lucide-react';
 
 import { ShareSheet } from '../../components/community/ShareSheet';
 import { NotificationsDrawer } from '../../components/community/NotificationsDrawer';
@@ -37,17 +39,31 @@ import { usePet } from '@/context/PetContext';
 import { useWellbeing } from '@/context/WellbeingContext';
 import { EcosystemPortal } from '@/components/community/EcosystemPortal';
 import { SpotlightSearch } from '@/components/community/SpotlightSearch';
+import { DiaryModal } from '@/components/community/DiaryModal';
 import { apiService } from '../../services/apiService';
+import { HubOverlay } from '../../components/community/HubOverlay';
+import { MoffiBottomNav } from '@/components/common/MoffiBottomNav';
 
 import { 
     MOCK_PETS, MOCK_ADOPTIONS, 
-    MOCK_NOTIFICATIONS, ORDERS, APPOINTMENTS 
+    MOCK_NOTIFICATIONS, ORDERS, APPOINTMENTS, MOCK_POSTS 
 } from '@/lib/mockData';
 import Image from 'next/image';
-import { HubOverlay } from '../../components/community/HubOverlay';
+
+import { useChat } from '@/context/ChatContext';
 
 export default function MoffiSocialMasterpiece() {
-    const { user, logout, updateProfile, updateSettings, showAIAssistant, setShowAIAssistant } = useAuth();
+    const { user, logout, updateProfile, updateSettings } = useAuth();
+    const { 
+        isInboxOpen, setIsInboxOpen, 
+        inboxTab, setInboxTab, 
+        unreadCount, 
+        openChat,
+        activeChatUserId, setActiveChatUserId,
+        replyMessage, setReplyMessage,
+        onSendReply, isReplying,
+        sosAlerts, setSosAlerts, inboxMessages
+    } = useChat();
     const { theme, setTheme } = useTheme(); // Restored
     const { storyGroups, uploadStory } = useStories(); // Restored
     const { pets: userPets, activePet, switchPet, updatePet } = usePet();
@@ -56,8 +72,7 @@ export default function MoffiSocialMasterpiece() {
     const searchParams = useSearchParams();
     const [activeTab, setActiveTab] = useState('feed'); 
     const [radarTabMode, setRadarTabMode] = useState<'lost' | 'adopt'>('lost');
-    const [posts, setPosts] = useState<any[]>(MOCK_PETS);
-    const [activeChatUserId, setActiveChatUserId] = useState<string | null>(null);
+    const [posts, setPosts] = useState<any[]>([]);
 
     const userPosts = useMemo(() => {
         return posts.filter(p => p.author === `@${user?.username || 'moffi_user'}` || p.user_id === user?.id);
@@ -74,39 +89,9 @@ export default function MoffiSocialMasterpiece() {
     const [isLoadingAdoptions, setIsLoadingAdoptions] = useState(false);
     
     // ACTION HUB STATE (LIFTED FROM PROFILETAB)
-    const [isAuraVisible, setIsAuraVisible] = useState(true);
-    const [isAuraStudioOpen, setIsAuraStudioOpen] = useState(false);
-    const [auraSettings, setAuraSettings] = useState({
-        fontFamily: 'font-sans',
-        frameStyle: 'minimal' as 'minimal' | 'glass' | 'neon' | 'metal',
-        accentColor: 'default',
-        badges: ['verified']
-    });
 
-    // Load initial Aura settings from user profile - STABLE JSON DEPS
-    useEffect(() => {
-        if (user?.aura_settings) {
-            setAuraSettings(user.aura_settings);
-        }
-    }, [user?.id, JSON.stringify(user?.aura_settings)]);
 
-    const handleUpdateAuraSettings = async (newSettings: any) => {
-        setAuraSettings(newSettings);
-        try {
-            await apiService.updateAuraSettings(newSettings);
-            
-            // Sync with global appearance settings for the background engine
-            updateSettings('appearance', {
-                auraStyle: newSettings.frameStyle,
-                accentColor: newSettings.accentColor,
-                font: newSettings.fontFamily
-            });
-            
-            console.log("Aura settings persisted and synced successfully");
-        } catch (err) {
-            console.error("Failed to persist aura settings:", err);
-        }
-    };
+
     const [profileSubView, setProfileSubView] = useState<'main' | 'family' | 'passport' | 'orders' | 'wallet' | 'appointments' | 'routes' | 'impact' | 'bookmarks'>('main');
     
     // Global Navigation & Hub Controller (Restored)
@@ -115,9 +100,15 @@ export default function MoffiSocialMasterpiece() {
             const id = e.detail;
             const profileViews = ['wallet', 'passport', 'family', 'orders', 'appointments', 'routes', 'bookmarks'];
             
-            if (profileViews.includes(id)) {
-                setActiveTab('profile');
-                setProfileSubView(id as any);
+            if (!user?.id) {
+                console.warn("Navigation: User ID not found in session. Falling back to login or error state.");
+                return;
+            }
+
+            if (id === 'profile') {
+                router.push(`/profile/${user.id}`);
+            } else if (profileViews.includes(id)) {
+                router.push(`/profile/${user.id}?view=${id}`);
             } else if (id === 'settings') {
                 window.dispatchEvent(new CustomEvent('open-moffi-settings'));
             } else if (id === 'feed' || id === 'radar') {
@@ -125,15 +116,51 @@ export default function MoffiSocialMasterpiece() {
             }
         };
 
+        const handleOpenAI = () => window.dispatchEvent(new CustomEvent('open-ai-assistant'));
+        const handleOpenPost = () => {
+            window.dispatchEvent(new CustomEvent('moffi-toast', { 
+                detail: { 
+                    message: 'Yeni gönderi oluşturma merkezi hazırlanıyor... 📸', 
+                    icon: 'Sparkles', 
+                    color: 'text-cyan-400' 
+                } 
+            }));
+        };
+        const handleOpenSOS = () => {
+            // Toggle SOS view or state
+            window.dispatchEvent(new CustomEvent('open-sos-command'));
+        };
+
+        const handleOpenSpotlight = () => setIsSpotlightOpen(true);
+        const handleOpenDiary = () => setIsDiaryOpen(true);
+
         window.addEventListener('moffi-navigate', handleNavigate);
-        return () => window.removeEventListener('moffi-navigate', handleNavigate);
-    }, []);
+        window.addEventListener('open-ai-assistant', handleOpenAI);
+        window.addEventListener('open-add-post', handleOpenPost);
+        window.addEventListener('open-sos-center', handleOpenSOS);
+        window.addEventListener('open-moffi-spotlight', handleOpenSpotlight);
+        window.addEventListener('open-moffi-diary', handleOpenDiary);
+        
+        const handleChangeTab = (e: any) => {
+            setActiveTab(e.detail);
+        };
+        window.addEventListener('moffi-change-tab', handleChangeTab);
+
+        return () => {
+            window.removeEventListener('moffi-navigate', handleNavigate);
+            window.removeEventListener('open-ai-assistant', handleOpenAI);
+            window.removeEventListener('open-add-post', handleOpenPost);
+            window.removeEventListener('open-sos-center', handleOpenSOS);
+            window.removeEventListener('open-moffi-spotlight', handleOpenSpotlight);
+            window.removeEventListener('open-moffi-diary', handleOpenDiary);
+            window.removeEventListener('moffi-change-tab', handleChangeTab);
+        };
+    }, [router]);
 
     // Unified Header Scroll Logic (Works for all tabs)
     const globalScrollRef = useRef<HTMLDivElement>(null);
     const scrollY = useMotionValue(0); // Manual scroll tracking to fix hydration error
     
-    const [isNavVisible, setIsNavVisible] = useState(true);
     const lastScrollY = useRef(0);
     const lastInboxScroll = useRef(0);
     
@@ -142,36 +169,21 @@ export default function MoffiSocialMasterpiece() {
         const current = e.currentTarget.scrollTop;
         scrollY.set(current); // Synchronize motion value for header animations
         
-        // Navigation Hide/Show Logic
+        // Navigation Hide/Show Logic (Global)
         if (current > lastScrollY.current && current > 150) {
-            setIsNavVisible(false);
+            window.dispatchEvent(new CustomEvent('moffi-toggle-nav', { detail: false }));
         } else if (current < lastScrollY.current - 10 || current < 80) {
-            setIsNavVisible(true);
+            window.dispatchEvent(new CustomEvent('moffi-toggle-nav', { detail: true }));
         }
         lastScrollY.current = current;
     };
 
-    // Sub-Panel Scroll Handler (Messaging/SOS Alerts)
-    const handleInboxScroll = (e: React.UIEvent<HTMLDivElement>) => {
-        const current = e.currentTarget.scrollTop;
-        if (current > lastInboxScroll.current && current > 100) {
-            setIsNavVisible(false);
-        } else {
-            setIsNavVisible(true);
-        }
-        lastInboxScroll.current = current;
-    };
-
-
+    const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
     // NOTIFICATIONS & SHARE SHEET
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     const [notificationsList, setNotificationsList] = useState<any[]>([]);
     const [selectedSharePost, setSelectedSharePost] = useState<any>(null);
-
-    // SOS Alerts state for the Inbox/SOS Tab
-    const [inboxMessages, setInboxMessages] = useState<any[]>([]);
-    const [sosAlerts, setSosAlerts] = useState<any[]>([]);
 
     useEffect(() => {
         const loadInitialData = async () => {
@@ -180,7 +192,6 @@ export default function MoffiSocialMasterpiece() {
                 fetchLostPets(),
                 fetchAdoptionAds(),
                 fetchNotifications(),
-                fetchConversations() // Load chat list
             ]);
         };
         loadInitialData();
@@ -190,7 +201,7 @@ export default function MoffiSocialMasterpiece() {
         try {
             const data = await apiService.getInboxMessages();
             setNotificationsList(data);
-            setUnreadInboxCount(data.filter((n: any) => !n.read).length);
+            // setUnreadInboxCount removed - managed by ChatContext
         } catch (err) {
             console.error("Bildirimler çekilirken hata:", err);
         }
@@ -205,69 +216,35 @@ export default function MoffiSocialMasterpiece() {
         
     }, [user, activeChatUserId, userPets, activeTab]);
 
-    const fetchConversations = async () => {
-        try {
-            const data = await apiService.getChatConversations();
-            setInboxMessages(data);
-        } catch (err) {
-            console.error("Konuşmalar çekilirken hata:", err);
-        }
-    };
 
-    const fetchMessagesForActiveChat = async (userId: string) => {
-        // Find conversation ID between current user and userId
-        const conv = inboxMessages.find(m => m.userId === userId);
-        if (!conv) return;
-
-        try {
-            const data = await apiService.getChatMessages(conv.id);
-            // We'll update the 'messages' array within that conversation in inboxMessages
-            setInboxMessages(prev => prev.map(c => 
-                c.id === conv.id ? { ...c, messages: data } : c
-            ));
-        } catch (err) {
-            console.error("Mesajlar çekilirken hata:", err);
-        }
-    };
-
-    useEffect(() => {
-        if (activeChatUserId) {
-            fetchMessagesForActiveChat(activeChatUserId);
-            // Mark as read
-            const conv = inboxMessages.find(m => m.userId === activeChatUserId);
-            if (conv) apiService.markChatAsRead(conv.id);
-        }
-    }, [activeChatUserId]);
-
-    const handleSendReply = async () => {
-        if (!replyMessage.trim() || !activeChatUserId) return;
-        setIsReplying(true);
-        try {
-            await apiService.sendChatMessage(activeChatUserId, replyMessage);
-            setReplyMessage('');
-            await fetchMessagesForActiveChat(activeChatUserId);
-            await fetchConversations();
-            scrollToBottom();
-        } catch (err) {
-            console.error("Mesaj gönderme hatası:", err);
-            showToast("Hata", "Mesaj gönderilemedi.", "error");
-        } finally {
-            setIsReplying(false);
-        }
-    };
-
-    // HANDLE DEEP LINKING TO CHAT
+    // HANDLE DEEP LINKING (TABS & CHAT)
     useEffect(() => {
         const chatWithId = searchParams.get('chat');
         if (chatWithId) {
             setActiveChatUserId(chatWithId);
             setInboxTab('chats');
             setIsInboxOpen(true);
-            
-            // Optionally clear the param so it doesn't reopen on every mount?
-            // Actually, keep it for now as it's standard deep link behavior.
+        }
+
+        const tab = searchParams.get('tab');
+        if (tab === 'profile') {
+            setActiveTab('profile');
+        } else if (tab === 'feed' || tab === 'radar') {
+            setActiveTab(tab as any);
         }
     }, [searchParams]);
+    
+    // Keyboard Shortcut for AI Spotlight (Cmd+K / Ctrl+K)
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                setIsSpotlightOpen(prev => !prev);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
 
     const fetchPosts = async () => {
@@ -288,8 +265,7 @@ export default function MoffiSocialMasterpiece() {
             
             setPosts(sortedData);
         } catch (err) {
-            console.error("Gönderiler çekilirken hata:", err);
-            setPosts(MOCK_PETS);
+            setPosts(MOCK_POSTS);
         } finally {
             setIsLoadingPosts(false);
         }
@@ -387,8 +363,6 @@ export default function MoffiSocialMasterpiece() {
     const [sosActivePet, setSosActivePet] = useState<any>(null);
     const [isSosFromHub, setIsSosFromHub] = useState(false);
 
-    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-
     // LOST AD STATES
     const [isLostAdModalOpen, setIsLostAdModalOpen] = useState(false);
     const [selectedLostPet, setSelectedLostPet] = useState<any | null>(null);
@@ -424,8 +398,6 @@ export default function MoffiSocialMasterpiece() {
     const [isSubmittingAdoption, setIsSubmittingAdoption] = useState(false);
 
 
-    const [isInboxOpen, setIsInboxOpen] = useState(false);
-    const [inboxTab, setInboxTab] = useState<'chats' | 'sos'>('chats');
 
     // Premium Header Transformations (Apple-Style) - Defined after activeTab
     // Reactive MotionValues for Search State
@@ -515,14 +487,13 @@ export default function MoffiSocialMasterpiece() {
             </div>
         );
     };
-    const [unreadInboxCount, setUnreadInboxCount] = useState(0);
-    const [replyMessage, setReplyMessage] = useState('');
-    const [isReplying, setIsReplying] = useState(false);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
+    
+    
+    
 
     const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
     const [activeMessageMenuId, setActiveMessageMenuId] = useState<string | null>(null);
-    const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
+    
     const [isVetQuickSheetOpen, setIsVetQuickSheetOpen] = useState(false);
     const [isWalkQuickSheetOpen, setIsWalkQuickSheetOpen] = useState(false);
     const [isMarketQuickSheetOpen, setIsMarketQuickSheetOpen] = useState(false);
@@ -530,6 +501,7 @@ export default function MoffiSocialMasterpiece() {
     const [isGameQuickSheetOpen, setIsGameQuickSheetOpen] = useState(false);
     const [isEcosystemPortalOpen, setIsEcosystemPortalOpen] = useState(false);
     const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
+    const [isDiaryOpen, setIsDiaryOpen] = useState(false);
 
 
     const scrollToBottom = () => {
@@ -813,7 +785,8 @@ export default function MoffiSocialMasterpiece() {
     const publishPost = async () => {
         if (!uploadImageURL || !selectedFile) return;
         if (!user) {
-            alert("Paylaşım yapmak için giriş yapmalısınız.");
+            showToast("Giriş Gerekli", "Paylaşım yapmak için giriş yapmalısınız.", "Zap");
+            window.dispatchEvent(new CustomEvent('open-auth-modal'));
             return;
         }
 
@@ -827,6 +800,7 @@ export default function MoffiSocialMasterpiece() {
                 media: publicUrl,
                 caption: uploadCaption,
                 mood: uploadMood || null,
+                is_video: selectedFile.type.startsWith('video/')
             });
 
             await fetchPosts();
@@ -842,7 +816,7 @@ export default function MoffiSocialMasterpiece() {
             showToast("Paylaşıldı", "Yeni gönderiniz yayında!", "success");
         } catch (error: any) {
             console.error("Post upload error:", error);
-            alert("Paylaşım yapılamadı: " + error.message);
+            showToast("Hata", "Paylaşım yapılamadı: " + error.message, "error");
         } finally {
             setIsPublishing(false);
         }
@@ -862,11 +836,12 @@ export default function MoffiSocialMasterpiece() {
 
     const submitSos = async () => {
         if (!lostPetName || !lostPetLocation) {
-            alert("Lütfen isim ve son görüldüğü yer alanlarını doldurun!");
+            showToast("Eksik Bilgi", "Lütfen isim ve son görüldüğü yer alanlarını doldurun!", "error");
             return;
         }
         if (!user) {
-            alert("Kayıp ilanı verebilmek için üye girişi yapmalısınız!");
+            showToast("Giriş Gerekli", "Kayıp ilanı verebilmek için üye girişi yapmalısınız!", "Zap");
+            window.dispatchEvent(new CustomEvent('open-auth-modal'));
             return;
         }
 
@@ -1077,7 +1052,8 @@ export default function MoffiSocialMasterpiece() {
 
     const handleReportLocation = () => {
         if (!user) {
-            alert("Anonim olarak ihbar verebilmek için üye girişi yapmalısınız.");
+            showToast("Giriş Gerekli", "Anonim olarak ihbar verebilmek için üye girişi yapmalısınız.", "Zap");
+            window.dispatchEvent(new CustomEvent('open-auth-modal'));
             return;
         }
         setAnonModalType('report');
@@ -1087,7 +1063,8 @@ export default function MoffiSocialMasterpiece() {
 
     const handleMessageOwner = () => {
         if (!user) {
-            alert("Mesaj atabilmek için giriş yapmalısınız.");
+            showToast("Giriş Gerekli", "Mesaj atabilmek için giriş yapmalısınız.", "Zap");
+            window.dispatchEvent(new CustomEvent('open-auth-modal'));
             return;
         }
         setAnonModalType('message');
@@ -1140,7 +1117,7 @@ export default function MoffiSocialMasterpiece() {
             setInboxMessages(data || []);
             // Count unread
             const unread = (data || []).filter((m: any) => m.receiver_id === user.id && m.read_status === false).length;
-            setUnreadInboxCount(unread);
+            // setUnreadInboxCount removed
         } catch (err) {
             console.error("Inbox yükleme hatası:", err);
         }
@@ -1163,77 +1140,8 @@ export default function MoffiSocialMasterpiece() {
         }
     };
 
-
-    const markMessagesAsRead = async (chatId?: string) => {
-        if (!user || unreadInboxCount === 0) return;
-        setUnreadInboxCount(0);
-        // Persistence update would normally happen here via apiService
-    };
-
-    const handleReply = async () => {
-        if (!replyMessage.trim() || !user || !activeChatUserId) return;
-
-        setIsReplying(true);
-        try {
-            await apiService.sendChatMessage(activeChatUserId, replyMessage.trim());
-            setReplyMessage("");
-            fetchInbox();
-        } catch (err: any) {
-            showToast("Gönderilemedi", "Mesaj iletilemedi.", "error");
-        } finally {
-            setIsReplying(false);
-        }
-    };
-
-    const handleDeleteMessage = async (msgId: string) => {
-        try {
-            // Mock delete
-            setActiveMessageMenuId(null);
-            if (editingMessageId === msgId) { setEditingMessageId(null); setReplyMessage(""); }
-            showToast("Mesaj Silindi", "Mesaj başarıyla kaldırıldı.", "success");
-        } catch (err: any) {
-            showToast("Mesaj Silinemedi", "Hata oluştu.", "error");
-        }
-    };
-
-    const startEditingMessage = (msgId: string, content: string) => {
-        setEditingMessageId(msgId);
-        setReplyMessage(content);
-        setActiveMessageMenuId(null);
-    };
-
-    const handleAcceptChat = async () => {
-        if (!user || !activeChatUserId) return;
-        try {
-            await apiService.sendChatMessage(activeChatUserId, '[SYSTEM_ACCEPT]');
-            fetchInbox();
-        } catch (err: any) {
-            console.error("Chat onaylanamadı:", err);
-        }
-    };
-
-    const chatGroups = React.useMemo(() => {
-        if (!user) return [];
-        const groups: Record<string, any[]> = {};
-        inboxMessages.forEach(msg => {
-            const otherId = msg.sender_id === user.id && msg.receiver_id === user.id
-                ? user.id
-                : (msg.sender_id === user.id ? msg.receiver_id : msg.sender_id);
-
-            if (!groups[otherId]) groups[otherId] = [];
-            groups[otherId].push(msg);
-        });
-
-        return Object.entries(groups).sort((a, b) => {
-            const lastA = a[1][a[1].length - 1];
-            const lastB = b[1][b[1].length - 1];
-            return new Date(lastB.created_at).getTime() - new Date(lastA.created_at).getTime();
-        });
-    }, [inboxMessages, user]);
-
-    // REAL-TIME SOS RADAR FILTERING LOGIC
-    const filteredSosAlerts = React.useMemo(() => {
-        const sosSettings = user?.settings?.sos || {
+    const filteredSOSAlerts = useMemo(() => {
+        const sosSettings = {
             radius: 5,
             quietHours: { enabled: false, from: '23:00', to: '07:00' },
             petTypes: ['dog', 'cat', 'bird', 'other'],
@@ -1277,23 +1185,6 @@ export default function MoffiSocialMasterpiece() {
     }, [sosAlerts, user?.settings?.sos]);
 
 
-    useEffect(() => {
-        if (user) {
-            fetchInbox();
-            // Supabase real-time message triggers removed for mock mode.
-        }
-    }, [user]);
-
-    useEffect(() => {
-        if (isInboxOpen) {
-            if (inboxTab === 'chats') {
-                fetchInbox();
-                markMessagesAsRead();
-            } else {
-                fetchLostPets();
-            }
-        }
-    }, [isInboxOpen, inboxTab]);
 
 
     return (
@@ -1345,30 +1236,35 @@ export default function MoffiSocialMasterpiece() {
                 style={{ 
                     height: headerHeightTransform,
                     padding: headerPadding,
-                    backgroundColor: useTransform(headerBgOpacity, (o) => `rgba(10, 10, 11, ${o})`),
                     backdropFilter: useTransform(headerBlur, (b) => `blur(${b}px)`),
-                    borderBottomColor: useTransform(headerBorderOpacity, (o) => `rgba(255, 255, 255, ${o})`)
                 }}
-                className="fixed top-0 left-0 right-0 z-40 flex flex-col shrink-0 border-b border-white/0 transition-shadow duration-300"
+                className="fixed top-0 left-0 right-0 z-40 flex flex-col shrink-0 bg-glass border-b border-glass-border transition-all duration-300"
             >
                 <div className="flex justify-between items-center w-full max-w-4xl mx-auto">
                     <div className="flex items-center gap-4">
                         <motion.button
                             style={{ scale: iconScale }}
-                            onClick={() => cameraInputRef.current?.click()}
-                            className="w-11 h-11 rounded-full bg-white/5 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all active:scale-90 shadow-[0_8px_32px_rgba(0,0,0,0.3)] group/cam"
+                            onClick={() => {
+                                if (!user) {
+                                    showToast("Giriş Gerekli", "Lütfen önce giriş yapın.", "Zap");
+                                    window.dispatchEvent(new CustomEvent('open-auth-modal'));
+                                    return;
+                                }
+                                setIsUploadModalOpen(true);
+                            }}
+                            className="w-11 h-11 rounded-full bg-foreground/5 backdrop-blur-xl border border-glass-border flex items-center justify-center hover:bg-foreground/10 transition-all active:scale-90 shadow-xl group/cam"
                         >
-                            <Camera className="w-5 h-5 text-white/70 group-hover/cam:text-white transition-colors" strokeWidth={1.5} />
+                            <Camera className="w-5 h-5 text-foreground/60 group-hover/cam:text-foreground transition-colors" strokeWidth={1.5} />
                         </motion.button>
                         <div className="flex flex-col">
                             <motion.h1
                                 style={{ scale: logoScale, y: logoY }}
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                className="text-3xl font-bold tracking-tight bg-gradient-to-b from-white to-white/70 bg-clip-text text-transparent drop-shadow-sm select-none origin-left"
+                                className="text-3xl font-bold tracking-tight bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent select-none origin-left"
                             >
                                 Moffi
-                                <span className="text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]">.</span>
+                                <span className="text-accent drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]">.</span>
                             </motion.h1>
                             
                             {/* SOS ACTIVE INDICATOR (HEADER) */}
@@ -1399,11 +1295,24 @@ export default function MoffiSocialMasterpiece() {
                     <div className="flex gap-3 items-center">
                         <motion.button 
                             style={{ scale: iconScale }}
-                            onClick={() => setIsNotificationsOpen(true)} 
-                            className="relative p-2.5 bg-white/5 border border-white/10 rounded-full hover:bg-white/10 transition-colors backdrop-blur-md"
+                            onClick={() => setIsInboxOpen(true)} 
+                            className="relative p-2.5 bg-foreground/5 border border-glass-border rounded-full hover:bg-foreground/10 transition-colors backdrop-blur-md"
                         >
-                            <Bell className="w-5 h-5 text-white/80" />
-                            <div className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0a0a0b]"></div>
+                            <MessageCircle className="w-5 h-5 text-foreground/70" />
+                            {unreadCount > 0 && (
+                                <div className="absolute top-0 right-0 w-4 h-4 bg-cyan-400 rounded-full border-2 border-background flex items-center justify-center">
+                                    <span className="text-[8px] font-black text-black">{unreadCount}</span>
+                                </div>
+                            )}
+                        </motion.button>
+
+                        <motion.button 
+                            style={{ scale: iconScale }}
+                            onClick={() => setIsNotificationsOpen(true)} 
+                            className="relative p-2.5 bg-foreground/5 border border-glass-border rounded-full hover:bg-foreground/10 transition-colors backdrop-blur-md"
+                        >
+                            <Bell className="w-5 h-5 text-foreground/70" />
+                            <div className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-background"></div>
                         </motion.button>
                     </div>
                 </div>
@@ -1432,9 +1341,10 @@ export default function MoffiSocialMasterpiece() {
 
             {/* MAIN IMMERSIVE CONTENT - Unified Scroll per tab */}
             <main 
+                id="community-scroll-container"
                 ref={globalScrollRef}
                 onScroll={handleMainScroll}
-                className="flex-1 relative z-10 w-full overflow-y-auto no-scrollbar overscroll-contain"
+                className="flex-1 relative z-10 w-full overflow-y-auto no-scrollbar overscroll-contain snap-y snap-mandatory"
             >
                 <AnimatePresence>
 
@@ -1460,8 +1370,8 @@ export default function MoffiSocialMasterpiece() {
                                             const file = e.target.files?.[0];
                                             if (file) {
                                                 const res = await uploadStory(file);
-                                                if (res.success) alert("Hikaye başarıyla yüklendi! 🚀");
-                                                else alert("Yükleme hatası: " + res.error);
+                                                if (res.success) showToast("Hikaye başarıyla yüklendi! 🚀", "Sparkles", "text-cyan-400");
+                                                else showToast("Yükleme hatası: " + res.error, "X", "text-red-500");
                                             }
                                         }} />
                                         
@@ -1503,11 +1413,13 @@ export default function MoffiSocialMasterpiece() {
                             </div>
 
                             {/* Feed SOS Alerts (Respecting Privacy Settings) */}
+
+                            {/* Feed SOS Alerts (Respecting Privacy Settings) */}
                             {activePet?.is_lost && activePet.sos_settings?.auto_post_sos !== false && (
                                 <motion.div 
                                     initial={{ scale: 0.9, opacity: 0 }}
                                     animate={{ scale: 1, opacity: 1 }}
-                                    className="px-4 -mt-2 mb-4"
+                                    className="px-4 -mt-2 mb-4 snap-start"
                                 >
                                     <div className="bg-red-500/10 border border-red-500/30 rounded-[2.5rem] p-6 backdrop-blur-xl relative overflow-hidden group">
                                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-orange-500 to-red-500 animate-pulse" />
@@ -1560,7 +1472,7 @@ export default function MoffiSocialMasterpiece() {
                                 ))
                             ) : (
                                 posts.map((post, feedIdx) => (
-                                    <div key={post.id} className="w-full relative flex flex-col items-center justify-center px-0 shrink-0" style={{ height: "calc(100vh - 160px)" }}>
+                                    <div key={post.id} className="w-full relative flex flex-col items-center justify-center px-0 shrink-0 snap-start" style={{ height: "calc(100vh - 160px)" }}>
                                         <ImmersivePostCard
                                             post={post}
                                             currentUser={user}
@@ -1575,6 +1487,7 @@ export default function MoffiSocialMasterpiece() {
                                             onDeletePost={() => setPostToDelete(post.id)}
                                             onEditPost={() => setEditingPost({ id: post.id, desc: post.desc, mood: post.mood, media: post.media })}
                                             priority={feedIdx === 0}
+                                            isCommentsDisabled={!user?.settings?.privacy?.allowComments}
                                         />
                                     </div>
                                 ))
@@ -1832,29 +1745,7 @@ export default function MoffiSocialMasterpiece() {
                         </motion.div>
                     )}
 
-                    {/* PROFILE TAB (Real Architecture) */}
-                    {activeTab === 'profile' && (
-                        <ProfileTab 
-                            user={user}
-                            showAuraBadge={isAuraVisible}
-                            onEditProfile={() => setIsEditProfileOpen(true)}
-                            onAddPet={() => setIsAddPetOpen(true)}
-                            onSettings={() => window.dispatchEvent(new CustomEvent('open-moffi-settings'))}
-                            onPetQR={(pet) => { setQrModalPet({ name: pet.name, id: pet.id, avatar: pet.image || pet.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200" }); }}
-                            onSOSSettings={(pet) => { setSosActivePet(pet); setIsSOSCommandCenterOpen(true); }}
-                            onOpenActionHub={() => window.dispatchEvent(new CustomEvent('open-moffi-hub'))}
-                            posts={userPosts}
-                            onLike={toggleLike}
-                            activeSubView={profileSubView}
-                            onSubViewChange={setProfileSubView}
-                            isCommentsDisabled={!user?.settings?.privacy?.allowComments}
-                            isSmartShopEnabled={user?.settings?.privacy?.smartShopEnabled}
-                            isAuraStudioOpen={isAuraStudioOpen}
-                            setIsAuraStudioOpen={setIsAuraStudioOpen}
-                            auraSettings={auraSettings}
-                            setAuraSettings={handleUpdateAuraSettings}
-                        />
-                    )}
+
 
                 </AnimatePresence>
             </main >
@@ -2258,7 +2149,11 @@ export default function MoffiSocialMasterpiece() {
                                         <button
                                             disabled={isSavingPet || !user}
                                             onClick={async () => {
-                                                if (!user) return alert("Lütfen önce giriş yapın.");
+                                                if (!user) {
+                                                    showToast("Giriş Gerekli", "Lütfen önce giriş yapın.", "Zap");
+                                                    window.dispatchEvent(new CustomEvent('open-auth-modal'));
+                                                    return;
+                                                }
                                                 setIsSavingPet(true);
 
                                                 try {
@@ -2339,7 +2234,7 @@ export default function MoffiSocialMasterpiece() {
                                 onClick={() => { setIsUploadModalOpen(false); setUploadImageURL(null); setUploadCaption(''); setUploadMood(null); }}
                                 className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center -ml-2"
                             >
-                                <X className="w-5 h-5 text-[var(--foreground)]" />
+                                <X className="w-5 h-5" />
                             </button>
                             <h2 className="text-xl font-black text-[var(--foreground)]">Yeni Gönderi</h2>
                             <div className="w-10" />
@@ -2351,7 +2246,11 @@ export default function MoffiSocialMasterpiece() {
                             {/* PREVIEW */}
                             {uploadImageURL && (
                                 <div className="w-full aspect-[4/5] rounded-3xl overflow-hidden bg-gray-900 border border-white/10 relative shadow-2xl">
-                                    <img src={uploadImageURL} className="w-full h-full object-cover" />
+                                    {selectedFile?.type.startsWith('video/') ? (
+                                        <video src={uploadImageURL} className="w-full h-full object-cover" autoPlay muted loop playsInline />
+                                    ) : (
+                                        <img src={uploadImageURL} className="w-full h-full object-cover" />
+                                    )}
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
                                     <div className="absolute bottom-4 left-4 flex gap-2">
                                         {uploadMood && (
@@ -2726,7 +2625,7 @@ export default function MoffiSocialMasterpiece() {
                                     <ChevronLeft className="w-6 h-6 text-[var(--foreground)]" />
                                 </button>
                                 <div className="flex gap-3">
-                                    <button className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors active:scale-95" onClick={() => alert("SOS İlanı Paylaşılıyor...")}>
+                                    <button className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors active:scale-95" onClick={() => showToast("SOS Modu Aktif", "İlanınız hazırlanıyor...", "Zap")}>
                                         <Share2 className="w-5 h-5 text-[var(--foreground)]" />
                                     </button>
                                 </div>
@@ -2878,293 +2777,6 @@ export default function MoffiSocialMasterpiece() {
                 )}
             </AnimatePresence>
 
-            {/* INBOX (MESSAGES) MODAL */}
-            <AnimatePresence>
-                {isInboxOpen && (
-                    <motion.div
-                        initial={{ opacity: 0, x: "100%" }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: "100%" }}
-                        transition={{ type: "spring", damping: 30, stiffness: 400 }}
-                        className="fixed inset-0 z-50 flex flex-col sm:pb-0"
-                        style={{ background: 'var(--background)' }}
-                    >
-                        <div 
-                            className="px-5 pt-14 pb-3 flex items-center justify-between backdrop-blur-xl shrink-0 z-10 sticky top-0 border-b border-white/10"
-                            style={{ background: 'var(--card-bg)' }}
-                        >
-                            <h2 className="text-[22px] font-bold flex items-center gap-1 tracking-tight">
-                                {activeChatUserId ? (
-                                    <button onClick={() => setActiveChatUserId(null)} className="flex items-center gap-0.5 active:scale-95 transition-transform">
-                                        <ChevronLeft className="w-8 h-8 text-[#0A84FF] -ml-2" strokeWidth={2.5} />
-                                    </button>
-                                ) : (
-                                    <span className={cn(inboxTab === 'sos' && "text-red-500 flex items-center gap-2")}>
-                                        {inboxTab === 'sos' ? <><ShieldAlert className="w-6 h-6" /> Acil İhbarlar</> : "Mesajlar"}
-                                    </span>
-                                )}
-                                {activeChatUserId && (
-                                    <div className="flex flex-col items-center absolute left-1/2 -translate-x-1/2">
-                                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-700 to-gray-500 flex items-center justify-center mb-0.5 shadow-sm border border-white/10 text-xs">
-                                            {activeChatUserId === user?.id ? <Activity className="w-4 h-4 text-[var(--foreground)]" /> : <User className="w-4 h-4 text-[var(--foreground)]" />}
-                                        </div>
-                                        <span className="text-[12px] font-medium tracking-tight text-[#E5E5EA]">{activeChatUserId === user?.id ? "Siz" : "Anonim"}</span>
-                                        <span className="text-[10px] text-[var(--secondary-text)] font-medium -mt-0.5"><ChevronRight className="w-3 h-3 inline pb-0.5" /></span>
-                                    </div>
-                                )}
-                            </h2>
-                            {!activeChatUserId && (
-                                <button onClick={() => setIsInboxOpen(false)} className="px-2 py-1 text-[#0A84FF] text-[17px] font-medium active:opacity-60 transition-opacity">
-                                    Bitti
-                                </button>
-                            )}
-                        </div>
-
-                        {!activeChatUserId && inboxTab === 'chats' && (
-                            // CHAT LIST (CONVERSATIONS)
-                            <div onScroll={handleInboxScroll} className="flex-1 overflow-y-auto px-4 py-2 flex flex-col gap-1">
-                                {chatGroups.length > 0 ? (
-                                    chatGroups.map(([otherId, msgs]) => {
-                                        const visibleMsgs = msgs.filter((m: any) => m.content !== '[SYSTEM_ACCEPT]');
-                                        if (visibleMsgs.length === 0) return null;
-                                        const lastMsg = visibleMsgs[visibleMsgs.length - 1];
-                                        const isUnread = lastMsg.receiver_id === user?.id && !lastMsg.read_status;
-                                        const isSelf = otherId === user?.id;
-
-                                        return (
-                                            <button
-                                                key={otherId}
-                                                onClick={() => { setActiveChatUserId(otherId); markMessagesAsRead(otherId); }}
-                                                className="flex items-center gap-4 py-3 border-b border-[var(--card-border)] hover:bg-[var(--card-bg)] active:bg-white/10 px-2 rounded-2xl transition-all text-left w-full"
-                                            >
-                                                <div className="relative w-14 h-14 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center text-xl font-bold shadow-lg shrink-0 border border-white/10">
-                                                    {isSelf ? <Activity className="w-6 h-6 text-cyan-400" /> : <User className="w-6 h-6 text-[var(--foreground)]" />}
-                                                    {isUnread && <div className="absolute top-0 right-0 w-3.5 h-3.5 bg-blue-500 border-2 border-[var(--background)] rounded-full animate-pulse" />}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex justify-between items-baseline mb-1">
-                                                        <h4 className="font-bold text-[17px] text-[var(--foreground)]/95 truncate">{isSelf ? "Test: Kendimle Sohbet" : "Anonim Kullanıcı"}</h4>
-                                                        <span className="text-sm font-medium text-[var(--secondary-text)]">{new Date(lastMsg.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5 opacity-80">
-                                                        {lastMsg.sender_id === user?.id && (
-                                                            lastMsg.read_status ? <CheckCheck className="w-4 h-4 text-blue-500 shrink-0" /> : <Check className="w-4 h-4 text-[var(--secondary-text)] shrink-0" />
-                                                        )}
-                                                        <p className={cn("text-[15px] truncate", isUnread ? "text-[var(--foreground)] font-semibold" : "text-[var(--secondary-text)] font-medium")}>
-                                                            {lastMsg.sender_id === user?.id ? "Siz: " : ""}{lastMsg.content}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </button>
-                                        )
-                                    })
-                                ) : (
-                                    <div className="h-full flex flex-col items-center justify-center text-center px-6 opacity-60">
-                                        <MessageCircle className="w-16 h-16 mb-4 stroke-1 text-[var(--secondary-text)]" />
-                                        <h3 className="text-xl font-bold mb-2">Henüz Sohbetiniz Yok</h3>
-                                        <p className="text-[15px] max-w-xs text-[var(--secondary-text)]">Keşfet ekranındaki diğer evcil dostlar ile mesajlaştığınızda burada görünecektir.</p>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {!activeChatUserId && inboxTab === 'sos' && (
-                            // SOS ALERTS LIST
-                            <div onScroll={handleInboxScroll} className="flex-1 overflow-y-auto px-4 py-2 flex flex-col gap-3">
-                                <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 mb-2">
-                                    <h4 className="text-red-400 font-bold flex items-center gap-2 mb-1"><ShieldAlert className="w-5 h-5" /> Acil İhbar Hattı</h4>
-                                    <p className="text-xs text-[var(--secondary-text)] leading-relaxed font-medium">Bu ekranda sadece Pet-ID (QR Kod) üzerinden size gelen anonim ihbarlar, son görüldü konumları ve acil mesajlar listelenir. Sıradan mesajlar buraya düşmez.</p>
-                                </div>
-
-                                {sosAlerts.length > 0 ? (
-                                    sosAlerts.map(alert => {
-                                        const seenArea = alert.seen_area || alert.location || alert.last_seen_location || '';
-                                        const isMessage = seenArea.startsWith('[MESAJ]');
-                                        const petName = alert.name || alert.pet_name || 'İsimsiz Dost';
-                                        return (
-                                            <div key={alert.id} className="bg-[var(--card-bg)] border border-red-500/10 p-4 rounded-2xl flex items-start gap-4 shadow-lg shadow-black/40">
-                                                <div className={cn("w-10 h-10 rounded-full flex items-center justify-center shrink-0 border", isMessage ? "bg-blue-500/10 border-blue-500/30 text-blue-400" : "bg-red-500/10 border-red-500/40 text-red-500")}>
-                                                    {isMessage ? <MessageCircle className="w-5 h-5" /> : <MapPin className="w-5 h-5" />}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex justify-between items-baseline mb-1">
-                                                        <h4 className={cn("text-[15px] font-bold", isMessage ? "text-blue-400" : "text-red-500")}>{petName} için <span className="opacity-80 font-medium">{isMessage ? "Mesaj" : "İhbar"}</span></h4>
-                                                        <span className="text-[11px] text-[var(--secondary-text)] font-medium">{new Date(alert.created_at).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
-                                                    </div>
-                                                    <p className="text-sm font-medium text-[var(--foreground)]/90 leading-relaxed mt-1">
-                                                        {seenArea.replace(/\[.*?\]\s*/, '')}
-                                                    </p>
-                                                    {!isMessage && (
-                                                        <button className="text-[11px] font-bold text-red-400 mt-2.5 bg-red-500/10 px-3 py-1.5 rounded-full border border-red-500/20 active:scale-95 transition-transform inline-flex items-center gap-1.5">
-                                                            <MapPin className="w-3 h-3" /> Haritada Gör
-                                                        </button>
-                                                    )}
-                                                    {isMessage && (
-                                                        <button className="text-[11px] font-bold text-blue-400 mt-2.5 bg-blue-500/10 px-3 py-1.5 rounded-full border border-blue-500/20 active:scale-95 transition-transform inline-flex items-center gap-1.5">
-                                                            <MessageCircle className="w-3 h-3" /> Hemen Yanıtla
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )
-                                    })
-                                ) : (
-                                    <div className="h-48 flex flex-col items-center justify-center text-center px-6">
-                                        <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
-                                            <AlertTriangle className="w-8 h-8 text-red-500/50" />
-                                        </div>
-                                        <h3 className="text-xl font-bold mb-2 text-[var(--foreground)]/50">İhbar Kaydı Bulunamadı</h3>
-                                        <p className="text-[14px] text-[var(--secondary-text)] font-medium">Şu ana kadar QR kodunuz üzerinden herhangi bir kayıp/ihbar logu iletilmemiş. İyi haber!</p>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {activeChatUserId && (
-                            // ACTIVE CHAT THREAD (iMessage BUBBLES)
-                            <>
-                                <div onScroll={handleInboxScroll} className="flex-1 overflow-y-auto px-4 py-6 flex flex-col gap-4">
-                                    {(() => {
-                                        const rawThread = chatGroups.find(g => g[0] === activeChatUserId)?.[1] || [];
-                                        const threadMsgs = rawThread.filter((m: any) => m.content !== '[SYSTEM_ACCEPT]');
-                                        return threadMsgs.map((msg: any) => {
-                                            const isMe = msg.sender_id === user?.id;
-                                            return (
-                                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={msg.id} className={cn("max-w-[80%] flex flex-col gap-1 group/msg", isMe ? "self-end" : "self-start")}>
-                                                    <div className={cn(
-                                                        "px-4 py-2 text-[15.5px] font-medium leading-[1.35] max-w-full break-words shadow-sm relative transition-all",
-                                                        isMe ? "bg-[#2C2C2E] text-[var(--foreground)] rounded-[22px] rounded-br-[6px]" : "bg-[#1C1C1E] text-[#E5E5EA] border border-[var(--card-border)] rounded-[22px] rounded-bl-[6px]",
-                                                        editingMessageId === msg.id && "ring-2 ring-white/40 ring-offset-2 ring-offset-black scale-[1.02]"
-                                                    )}>
-                                                        {msg.content}
-                                                    </div>
-                                                    <div className={cn("flex items-center gap-1.5 px-1 relative", isMe ? "justify-end" : "justify-start")}>
-                                                        {msg.is_edited && <span className="text-[10px] text-[var(--secondary-text)] font-medium opacity-80">Düzenlendi</span>}
-                                                        <span className="text-[11px] font-semibold text-[var(--secondary-text)]">
-                                                            {new Date(msg.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                                                        </span>
-                                                        {isMe && (
-                                                            msg.read_status ? <CheckCheck className="w-3.5 h-3.5 text-[#E5E5EA]" strokeWidth={2.5} /> : <Check className="w-3.5 h-3.5 text-[var(--secondary-text)]" strokeWidth={2.5} />
-                                                        )}
-                                                        {isMe && (
-                                                            <div className="relative flex items-center">
-                                                                <button onClick={() => setActiveMessageMenuId(activeMessageMenuId === msg.id ? null : msg.id)} className="p-1 hover:bg-white/10 rounded-full transition-colors opacity-50 hover:opacity-100 peer ml-0.5">
-                                                                    <MoreHorizontal className="w-4 h-4 text-[var(--secondary-text)] hover:text-[var(--foreground)] transition-colors" />
-                                                                </button>
-                                                                {activeMessageMenuId === msg.id && (
-                                                                    <div className="absolute bottom-full right-0 mb-2 w-36 bg-[#2C2C2E] rounded-xl shadow-xl border border-white/10 py-1.5 z-50 flex flex-col drop-shadow-2xl backdrop-blur-3xl">
-                                                                        <button onClick={() => startEditingMessage(msg.id, msg.content)} className="px-4 py-2 text-left text-[14px] text-[var(--foreground)] hover:bg-white/10 transition-colors flex items-center justify-between font-medium">Düzenle <Edit2 className="w-3.5 h-3.5 opacity-70" /></button>
-                                                                        <div className="h-[1px] bg-white/10 w-full my-1" />
-                                                                        <button onClick={() => handleDeleteMessage(msg.id)} className="px-4 py-2 text-left text-[14px] text-red-400 hover:bg-red-400/10 transition-colors flex items-center justify-between font-medium">Geri Al <Trash2 className="w-3.5 h-3.5 opacity-70" /></button>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </motion.div>
-                                            )
-                                        })
-                                    })()}
-                                    <div ref={messagesEndRef} className="h-2" />
-                                </div>
-
-                                {/* Thread Reply Input Box OR Accept Chat Request Block */}
-                                {(() => {
-                                    const rawThread = chatGroups.find(g => g[0] === activeChatUserId)?.[1] || [];
-                                    const iHaveReplied = rawThread.some((m: any) => m.sender_id === user?.id);
-                                    const isPending = !iHaveReplied && rawThread.length > 0;
-
-                                    if (isPending) {
-                                        return (
-                                            <div className="p-4 bg-[#1C1C1E] flex flex-col items-center gap-4 shrink-0 pb-8 snap-start border-t border-[#2C2C2E]/50">
-                                                <p className="text-[13px] text-[#8E8E93] font-medium text-center">Bu kişiyle iletişime geçmek için mesaj isteğini onaylayın.</p>
-                                                <div className="flex w-full gap-3">
-                                                    <button onClick={() => setIsInboxOpen(false)} className="flex-1 py-3 rounded-[14px] bg-[#2C2C2E] text-[var(--foreground)] font-semibold active:opacity-70 transition-opacity">
-                                                        Yoksay
-                                                    </button>
-                                                    <button onClick={handleAcceptChat} className="flex-1 py-3 rounded-[14px] bg-white text-black font-semibold active:opacity-70 transition-opacity shadow-sm">
-                                                        Onayla
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        );
-                                    }
-
-                                    return (
-                                        <div className="relative p-3 bg-black/95 flex items-end gap-3 shrink-0 pb-7 snap-start backdrop-blur-2xl border-t border-[var(--card-border)]">
-                                            {/* Plus / X Button */}
-                                            <button
-                                                onClick={() => setIsAttachMenuOpen(!isAttachMenuOpen)}
-                                                className={cn("w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center mb-0.5 transition-all duration-300",
-                                                    isAttachMenuOpen ? "bg-white/10 text-[var(--foreground)] rotate-45" : "text-[var(--foreground)]/50 hover:text-[var(--foreground)]"
-                                                )}>
-                                                <Plus className="w-7 h-7" strokeWidth={2} />
-                                            </button>
-
-                                            {/* Attach Menu Slide Up */}
-                                            <AnimatePresence>
-                                                {isAttachMenuOpen && (
-                                                    <motion.div
-                                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                        transition={{ duration: 0.2, type: "spring", stiffness: 300, damping: 25 }}
-                                                        className="absolute bottom-full left-3 mb-2 w-[220px] bg-[#2C2C2E] rounded-[24px] shadow-2xl border border-white/10 p-2 z-50 flex flex-col gap-1 backdrop-blur-3xl overflow-hidden"
-                                                    >
-                                                        <button onClick={() => { setIsAttachMenuOpen(false); showToast("Yakında!", "Kamera entegrasyonu ekleniyor."); }} className="flex items-center gap-3 w-full p-2.5 rounded-[16px] hover:bg-white/10 transition-colors text-left group">
-                                                            <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center group-hover:scale-105 transition-transform"><Camera className="w-4 h-4" /></div>
-                                                            <span className="text-[15px] font-medium text-[var(--foreground)]/95">Kamera</span>
-                                                        </button>
-                                                        <button onClick={() => { setIsAttachMenuOpen(false); showToast("Yakında!", "Fotoğraf galerisi erişimi ekleniyor."); }} className="flex items-center gap-3 w-full p-2.5 rounded-[16px] hover:bg-white/10 transition-colors text-left group">
-                                                            <div className="w-8 h-8 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center group-hover:scale-105 transition-transform"><ImageIcon className="w-4 h-4" /></div>
-                                                            <span className="text-[15px] font-medium text-[var(--foreground)]/95">Fotoğraflar</span>
-                                                        </button>
-                                                        <div className="h-[1px] bg-[var(--card-bg)] my-1 w-full" />
-                                                        <button onClick={() => { setIsAttachMenuOpen(false); showToast("Yakında!", "Harita üzerinden konum paylaşımı ekleniyor."); }} className="flex items-center gap-3 w-full p-2.5 rounded-[16px] hover:bg-white/10 transition-colors text-left group">
-                                                            <div className="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center group-hover:scale-105 transition-transform"><MapPin className="w-4 h-4" /></div>
-                                                            <span className="text-[15px] font-medium text-[var(--foreground)]/95">Konum Paylaş</span>
-                                                        </button>
-                                                        <button onClick={() => { setIsAttachMenuOpen(false); showToast("Yakında!", "Acil SOS konum paylaşımı ekleniyor.", "error"); }} className="flex items-center gap-3 w-full p-2.5 rounded-[16px] hover:bg-red-500/10 transition-colors text-left group">
-                                                            <div className="w-8 h-8 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center group-hover:scale-105 transition-transform"><Flame className="w-4 h-4" /></div>
-                                                            <span className="text-[15px] font-medium text-red-400">Hızlı SOS Gönder</span>
-                                                        </button>
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-
-                                            <div className="flex-1 bg-[#1C1C1E] border border-[#2C2C2E] rounded-[20px] flex items-end min-h-[36px] p-1 pr-1.5 transition-colors">
-                                                <input
-                                                    type="text"
-                                                    placeholder="Mesaj..."
-                                                    className="flex-1 bg-transparent px-3 py-1 text-[16px] text-[var(--foreground)] outline-none -mt-0.5 placeholder:text-[#8E8E93]"
-                                                    value={replyMessage}
-                                                    onChange={(e) => setReplyMessage(e.target.value)}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter') handleReply();
-                                                    }}
-                                                />
-                                                {replyMessage.trim() ? (
-                                                    <button
-                                                        disabled={isReplying}
-                                                        className="w-[28px] h-[28px] rounded-full flex items-center justify-center shrink-0 transition-opacity ml-1 mb-0.5 bg-white text-black active:scale-95"
-                                                        onClick={handleReply}
-                                                    >
-                                                        {isReplying ? <div className="w-3.5 h-3.5 border-[2px] border-black/30 border-t-black rounded-full animate-spin" /> : <Send className="w-[14px] h-[14px] ml-0.5" strokeWidth={2.5} />}
-                                                    </button>
-                                                ) : (
-                                                    <button className="w-[28px] h-[28px] rounded-full flex items-center justify-center shrink-0 transition-opacity ml-1 mb-0.5 text-[var(--foreground)]/40 hover:text-[var(--foreground)] hover:bg-white/10">
-                                                        <Mic className="w-[16px] h-[16px]" strokeWidth={2} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })()}
-                            </>
-                        )}
-                    </motion.div>
-                )}
-            </AnimatePresence>
 
             {/* ADD ADOPTION PET MODAL (Apple Bottom Sheet Style) */}
             <AnimatePresence>
@@ -3356,7 +2968,6 @@ export default function MoffiSocialMasterpiece() {
                 )}
             </AnimatePresence>
 
-            <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
 
             {/* APPLE BOTTOM SHEET - ADOPTION DETAY MODAL */}
             <AnimatePresence>
@@ -3825,43 +3436,36 @@ export default function MoffiSocialMasterpiece() {
                                 <div className="absolute inset-x-0 bottom-0 p-4 z-30 flex items-center gap-3">
                                     {storyGroups[viewerStoryGroupIndex].user_id === user?.id ? (
                                         <div className="flex items-center justify-between w-full text-[var(--foreground)]">
-                                            <button className="flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); alert("Hikayeyi Görenler: Luna, Felix, Buster ve 12 diğer kişi."); }}>
-                                                <div className="flex -space-x-2">
-                                                    <img src="https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=100" className="w-6 h-6 rounded-full border border-black z-20 object-cover" />
-                                                    <img src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=100" className="w-6 h-6 rounded-full border border-black z-10 object-cover" />
-                                                    <div className="w-6 h-6 rounded-full border border-black bg-white/20 backdrop-blur-md flex items-center justify-center text-[8px] font-bold z-0">+12</div>
+                                            <button className="flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); showToast("İstatistikler", "Luna, Felix ve 12 diğer kişi gördü.", "Users"); }}>
+                                                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                                                    <Activity className="w-4 h-4 text-white" />
                                                 </div>
-                                                <span className="text-[11px] font-medium opacity-90">Etkinlikler</span>
+                                                <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Görüntüleme</span>
                                             </button>
                                             <div className="flex gap-4">
-                                                <button className="flex flex-col items-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); alert("Öne Çıkarılıyor..."); }}>
-                                                    <Heart className="w-6 h-6" />
-                                                    <span className="text-[10px]">Öne Çıkar</span>
+                                                <button className="flex flex-col items-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); showToast("Öne Çıkarılıyor", "Hikayeniz vitrine taşınıyor...", "Sparkles"); }}>
+                                                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                                                        <Heart className="w-4 h-4 text-white" />
+                                                    </div>
+                                                    <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Öne Çıkar</span>
                                                 </button>
-                                                <button className="flex flex-col items-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); alert("Tıklanabilir Seçenekler: Kopyala, Arşivle, Sil"); }}>
-                                                    <MoreHorizontal className="w-6 h-6" />
-                                                    <span className="text-[10px]">Daha Fazla</span>
+                                                <button className="flex flex-col items-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); showToast("Seçenekler", "İşlem menüsü açılıyor...", "List"); }}>
+                                                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                                                        <MoreHorizontal className="w-4 h-4 text-white" />
+                                                    </div>
+                                                    <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Daha Fazla</span>
                                                 </button>
                                             </div>
                                         </div>
                                     ) : (
-                                        <>
-                                            {/* Reply Box */}
-                                            <div className="flex-1 bg-black/20 backdrop-blur-xl border border-white/20 rounded-full flex items-center px-4 h-12 pointer-events-auto">
-                                                <input
-                                                    type="text"
-                                                    placeholder={`Mesaj Gönder...`}
-                                                    className="bg-transparent text-[var(--foreground)] w-full text-sm outline-none placeholder:text-[var(--foreground)]/70"
-                                                    onClick={(e) => e.stopPropagation()}
-                                                />
-                                            </div>
-                                            <button className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-[var(--foreground)] active:scale-90 transition-transform pointer-events-auto" onClick={(e) => { e.stopPropagation(); alert("Hikaye beğenildi!"); }}>
-                                                <Heart className="w-7 h-7 hover:fill-red-500 hover:text-red-500 transition-colors" />
+                                        <div className="flex gap-8 pointer-events-auto">
+                                            <button className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-[var(--foreground)] active:scale-90 transition-transform pointer-events-auto" onClick={(e) => { e.stopPropagation(); showToast("Beğenildi", "Desteğin iletildi! ❤️", "Heart"); }}>
+                                                <Heart className="w-7 h-7 text-white" />
                                             </button>
-                                            <button className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-[var(--foreground)] active:scale-90 transition-transform pointer-events-auto" onClick={(e) => { e.stopPropagation(); alert("Paylaşım menüsü açılıyor..."); }}>
-                                                <Send className="w-6 h-6 -ml-1" />
+                                            <button className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-[var(--foreground)] active:scale-90 transition-transform pointer-events-auto" onClick={(e) => { e.stopPropagation(); showToast("Paylaşım", "Paylaşım seçenekleri açılıyor...", "Share2"); }}>
+                                                <Share2 className="w-7 h-7 text-white" />
                                             </button>
-                                        </>
+                                        </div>
                                     )}
                                 </div>
                             </div>
@@ -3913,8 +3517,9 @@ export default function MoffiSocialMasterpiece() {
                                     </div>
 
                                     <div className="flex gap-2 w-full">
-                                        <button className="flex-1 bg-white text-black font-bold py-3 rounded-2xl flex items-center justify-center gap-2" onClick={() => alert("QR Yüksek Kalitede (PDF) İndirildi!")}>
-                                            İndir & Yazdır
+                                        <button className="flex-1 bg-white text-black font-bold py-3 rounded-2xl flex items-center justify-center gap-2" onClick={() => showToast("İndirme Başlatıldı", "QR Kimlik PDF formatında hazırlandı.", "Download")}>
+                                            <Download className="w-4 h-4" />
+                                            Yüksek Kalite İndir
                                         </button>
                                         <button className="flex-1 bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 font-bold py-3 rounded-2xl flex items-center justify-center gap-2" onClick={() => window.open(`${window.location.origin}/id/${qrModalPet.id}`, '_blank')}>
                                             Test Et (Aç)
@@ -4067,152 +3672,6 @@ export default function MoffiSocialMasterpiece() {
                 )}
             </AnimatePresence >
 
-            {/* GLOBAL BOTTOM TAB BAR - Simplified Apple iOS Style */}
-            <motion.nav 
-                initial={false}
-                animate={{ y: isNavVisible ? 0 : 100, opacity: isNavVisible ? 1 : 0 }}
-                transition={{ duration: 0.3, ease: "easeInOut" }}
-                className="fixed bottom-0 left-0 right-0 z-[100] safe-area-bottom"
-            >
-                <div className="bg-[var(--background)]/80 backdrop-blur-2xl border-t border-[var(--card-border)] px-2 pb-6 pt-3">
-                    <div className="flex items-center justify-between max-w-lg mx-auto relative h-12">
-                        
-                        {/* 1. KEŞFET (REVERTED FROM AI) */}
-                        <button
-                            onClick={() => {
-                                setActiveTab('feed');
-                                setIsInboxOpen(false);
-                                setIsHubOpen(false);
-                                setIsSearchOpen(false);
-                                setIsNotificationsOpen(false);
-                                setIsProfileMenuOpen(false);
-                            }}
-                            className={cn("flex-1 flex flex-col items-center gap-1 transition-all active:scale-90", activeTab === 'feed' ? "text-cyan-400" : "text-[var(--secondary-text)]")}
-                        >
-                            <Compass className="w-6 h-6" />
-                            <span className="text-[9px] font-black uppercase tracking-widest">Keşfet</span>
-                        </button>
-
-                        {/* 2. SEARCH */}
-                        <button
-                            onClick={() => {
-                                setIsSearchOpen(!isSearchOpen);
-                                if (!isSearchOpen) {
-                                    setIsInboxOpen(false);
-                                    setIsHubOpen(false);
-                                    setIsNotificationsOpen(false);
-                                }
-                            }}
-                            className={cn("flex-1 flex flex-col items-center gap-1 transition-all active:scale-90", isSearchOpen ? "text-cyan-400" : "text-[var(--secondary-text)]")}
-                        >
-                            <Search className="w-6 h-6" />
-                        </button>
-
-                        {/* 3. CENTER: MAIN HUB BUTTON */}
-                        <div className="flex-1 flex justify-center relative">
-                            <button
-                                onPointerDown={(e) => {
-                                    // Start long press timer
-                                    longPressTimer.current = setTimeout(() => {
-                                        setIsHubLongPressing(true);
-                                        // Haptic feedback
-                                        if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                                            navigator.vibrate(10);
-                                        }
-                                        // Execute SOS directly
-                                        setIsSOSOpen(true);
-                                        setIsHubOpen(false);
-                                        // Reset state after a delay
-                                        setTimeout(() => setIsHubLongPressing(false), 800);
-                                    }, 500);
-                                }}
-                                onPointerUp={() => {
-                                    if (longPressTimer.current) {
-                                        clearTimeout(longPressTimer.current);
-                                        longPressTimer.current = null;
-                                    }
-                                    setIsHubLongPressing(false);
-                                }}
-                                onPointerLeave={() => {
-                                    if (longPressTimer.current) {
-                                        clearTimeout(longPressTimer.current);
-                                        longPressTimer.current = null;
-                                    }
-                                    setIsHubLongPressing(false);
-                                }}
-                                onClick={() => {
-                                    // Trigger Local Hub Overlay (+)
-                                    const newState = !isHubOpen;
-                                    setIsHubOpen(newState);
-                                    if (newState) {
-                                        setIsInboxOpen(false);
-                                        setIsSearchOpen(false);
-                                        setIsNotificationsOpen(false);
-                                    }
-                                }}
-                                className={cn(
-                                    "w-16 h-16 rounded-full flex items-center justify-center border-4 border-[var(--background)] active:scale-95 transition-all group absolute -top-10",
-                                    isHubLongPressing 
-                                        ? "bg-red-600 scale-110 shadow-[0_0_30px_rgba(220,38,38,0.8)] border-red-400" 
-                                        : (isHubOpen 
-                                            ? "bg-white text-black shadow-[0_15px_35px_rgba(255,255,255,0.2)]" 
-                                            : "bg-gradient-to-tr from-cyan-400 via-blue-500 to-purple-600 text-[var(--foreground)] shadow-[0_15px_35px_rgba(34,211,238,0.4)]")
-                                )}
-                            >
-                                {isHubOpen ? (
-                                    <X className="w-8 h-8 rotate-90 transition-transform" />
-                                ) : (
-                                    <Plus className={cn("w-8 h-8 transition-transform duration-500", isHubLongPressing ? "scale-125 rotate-45" : "group-hover:rotate-90")} />
-                                )}
-                            </button>
-                            <div className="h-10" /> {/* Spacer */}
-                        </div>
-
-                        {/* 4. MESSAGES */}
-                        <button
-                            onClick={() => { 
-                                setInboxTab('chats'); 
-                                setIsInboxOpen(true); 
-                                setIsHubOpen(false);
-                                setIsSearchOpen(false);
-                                setIsNotificationsOpen(false);
-                            }}
-                            className={cn("flex-1 flex flex-col items-center gap-1 transition-all active:scale-90 text-[var(--secondary-text)]")}
-                        >
-                            <div className="relative">
-                                <MessageCircle className="w-6 h-6" />
-                                {unreadInboxCount > 0 && (
-                                    <div className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] bg-red-500 rounded-full flex items-center justify-center text-[8px] font-black text-[var(--foreground)] px-1 border border-[var(--background)]">
-                                        {unreadInboxCount}
-                                    </div>
-                                )}
-                            </div>
-                        </button>
-
-                        {/* 5. PROFILE */}
-                        <button
-                            onClick={() => {
-                                setActiveTab('profile');
-                                setIsInboxOpen(false);
-                                setIsHubOpen(false);
-                                setIsSearchOpen(false);
-                                setIsNotificationsOpen(false);
-                                setIsProfileMenuOpen(false);
-                            }}
-                            className={cn("flex-1 flex flex-col items-center gap-1 transition-all active:scale-90", activeTab === 'profile' ? "text-cyan-400" : "text-[var(--secondary-text)]")}
-                        >
-                            {user?.avatar ? (
-                                <div className={cn("w-6 h-6 rounded-full border overflow-hidden transition-colors", activeTab === 'profile' ? "border-cyan-400" : "border-gray-500")}>
-                                    <img src={user.avatar} className="w-full h-full object-cover" />
-                                </div>
-                            ) : (
-                                <User className="w-6 h-6" />
-                            )}
-                        </button>
-
-                    </div>
-                </div>
-            </motion.nav>
             {/* NEW ADDITIONS: SHARE SHEET & NOTIFICATIONS DRAWER */}
             {selectedSharePost && (
                 <ShareSheet 
@@ -4247,22 +3706,6 @@ export default function MoffiSocialMasterpiece() {
                 }}
             />
 
-            <SOSCommandCenter 
-                key="global-sos-center"
-                isOpen={isSOSCommandCenterOpen}
-                onClose={() => setIsSOSCommandCenterOpen(false)}
-                pet={sosActivePet}
-                allPets={userPets}
-                onPetChange={(p) => setSosActivePet(p)}
-                sosData={null}
-                onUpdate={(newSosStatusData) => {
-                    if (sosActivePet) {
-                        updatePet(sosActivePet.id, { is_lost: newSosStatusData.status === 'lost' });
-                    }
-                    showToast(`${sosActivePet?.name} için acil durum ayarları güncellendi.`, "Moffi Radar sistemi tetiklendi.", "success");
-                    setIsSOSCommandCenterOpen(false);
-                }}
-            />
 
             <VetQuickSheet 
                 isOpen={isVetQuickSheetOpen} 
@@ -4309,59 +3752,32 @@ export default function MoffiSocialMasterpiece() {
                         setActiveTab('profile'); 
                         setProfileViewMode('grid');
                     }
-                    if (type === 'action' && id === 'vax') { 
+                    if (type === 'user') {
+                        // For mock users, we can just switch to profile tab or deep link
+                        // In a real app, router.push(`/profile/${id}`)
+                        setActiveTab('profile');
+                        setProfileViewMode('grid');
+                    }
+                    if (id === 'vax') { 
                         setActiveTab('profile');
                         setProfileViewMode('appointments'); 
+                    }
+                    if (id === 'vet') {
+                        setIsVetQuickSheetOpen(true);
+                    }
+                    if (id === 'market' || type === 'link') {
+                        setIsMarketQuickSheetOpen(true);
                     }
                 }}
             />
 
-
-            <InboxModal
-                isOpen={isInboxOpen}
-                onClose={() => setIsInboxOpen(false)}
-                tab={inboxTab}
-                setTab={setInboxTab}
-                messages={inboxMessages}
-                sosAlerts={sosAlerts}
-                activeChatUserId={activeChatUserId}
-                setActiveChatUserId={setActiveChatUserId}
-                replyMessage={replyMessage}
-                setReplyMessage={setReplyMessage}
-                onSendReply={handleSendReply}
-                isReplying={isReplying}
-                messagesEndRef={messagesEndRef}
-                editingMessageId={editingMessageId}
-                activeMessageMenuId={activeMessageMenuId}
-                setActiveMessageMenuId={setActiveMessageMenuId}
-                isAttachMenuOpen={isAttachMenuOpen}
-                setIsAttachMenuOpen={setIsAttachMenuOpen}
-                user={user}
+            <DiaryModal 
+                isOpen={isDiaryOpen}
+                onClose={() => setIsDiaryOpen(false)}
             />
 
-            <MoffiAssistant 
-                isOpenOverride={showAIAssistant}
-                onCloseOverride={() => setShowAIAssistant(false)}
-            />
+            <MoffiAssistant />
 
-            {/* RESTORED ORIGINAL HUB OVERLAY */}
-            <HubOverlay 
-                isOpen={isHubOpen}
-                onClose={() => setIsHubOpen(false)}
-                onMarketClick={() => setIsMarketQuickSheetOpen(true)}
-                onWalkClick={() => setIsWalkQuickSheetOpen(true)}
-                onVetClick={() => setIsVetQuickSheetOpen(true)}
-                onStudioClick={() => setIsStudioQuickSheetOpen(true)}
-                onGameClick={() => setIsGameQuickSheetOpen(true)}
-                onMoffinetClick={() => setIsEcosystemPortalOpen(true)}
-                onSearchClick={() => setIsSearchOpen(true)}
-                onCommunityRadarClick={() => setActiveTab('radar')}
-                onAIAsistantClick={() => setShowAIAssistant(true)}
-                onSOSClick={() => {
-                    setIsSOSCommandCenterOpen(true);
-                    setSosActivePet(userPets[0]);
-                }}
-            />
 
         </div>
     );

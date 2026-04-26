@@ -36,6 +36,18 @@ export function FeedTab({
             animate={{ opacity: 1, filter: "blur(0px)" }}
             exit={{ opacity: 0, filter: "blur(10px)" }}
             transition={{ duration: 0.3 }}
+            onScroll={(e) => {
+                const target = e.currentTarget;
+                const current = target.scrollTop;
+                const last = (target as any)._lastScrollY || 0;
+                
+                if (current > last && current > 100) {
+                    window.dispatchEvent(new CustomEvent('moffi-toggle-nav', { detail: false }));
+                } else if (current < last - 5 || current < 50) {
+                    window.dispatchEvent(new CustomEvent('moffi-toggle-nav', { detail: true }));
+                }
+                (target as any)._lastScrollY = current;
+            }}
             className="h-full w-full overflow-y-scroll no-scrollbar pb-32 flex flex-col gap-4"
         >
             {/* STORIES BAR */}

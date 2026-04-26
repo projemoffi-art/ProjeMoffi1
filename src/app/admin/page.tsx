@@ -76,7 +76,7 @@ const StatPulse = ({ label, value, icon: Icon, color, trend, delay = 0 }: any) =
 export default function MoffiCoreDashboard() {
     const { user } = useAuth();
     const [currentTime, setCurrentTime] = useState(new Date());
-    const [stats] = useState({
+    const [stats, setStats] = useState({
         users: 1240,
         posts: 854,
         feedbacks: 42,
@@ -85,7 +85,31 @@ export default function MoffiCoreDashboard() {
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        return () => clearInterval(timer);
+        
+        // Real-time Moderation Listener (Cross-Tab Radio)
+        const bc = new BroadcastChannel('moffi_moderation');
+        
+        bc.onmessage = (event) => {
+            if (event.data.type === 'ADMIN_SIGNAL') {
+                const { message, severity } = event.data;
+                console.log("Admin Dashboard: Received Broadcast Signal", event.data);
+                
+                setStats(prev => ({
+                    ...prev,
+                    feedbacks: prev.feedbacks + 1,
+                    sos: severity === 'high' ? prev.sos + 1 : prev.sos
+                }));
+
+                if (severity === 'high') {
+                    alert(`🚨 KRİTİK ŞİKAYET BİLDİRİMİ:\n${message}`);
+                }
+            }
+        };
+        
+        return () => {
+            clearInterval(timer);
+            bc.close();
+        };
     }, []);
 
     return (

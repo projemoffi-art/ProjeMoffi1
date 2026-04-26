@@ -21,6 +21,19 @@ interface LiveMapProps {
     guardianMode?: boolean;
     deliveryPos?: [number, number];
     deliveryPath?: [number, number][];
+    // External Controls
+    externalSearchQuery?: string;
+    externalFilterType?: string | null;
+    forceGuardianMode?: boolean;
+    markers?: Array<{
+        id: string;
+        lat: number;
+        lng: number;
+        type: 'lost' | 'friend' | 'vet' | 'cafe' | 'park' | 'shop';
+        title: string;
+        desc?: string;
+        img?: string;
+    }>;
 }
 
 // --- CUSTOM ICON ---
@@ -132,15 +145,25 @@ function MapEngine({ center, searchQuery, filterType, setRouteTo }: { center: [n
 
 export default function LiveMap({ 
     userPos, path, isTracking, visitedPlaceIds, 
-    onPlaceClick, guardianMode, deliveryPos, deliveryPath 
+    onPlaceClick, guardianMode, deliveryPos, deliveryPath,
+    externalSearchQuery, externalFilterType, forceGuardianMode, markers: externalMarkers
 }: LiveMapProps) {
     // UI State
-    const [searchQuery, setSearchQuery] = useState("");
+    const [searchQuery, setSearchQuery] = useState(externalSearchQuery || "");
     const [searchResults, setSearchResults] = useState<any[]>([]); // Real Address Results
     const [isSearchFocused, setIsSearchFocused] = useState(false);
-    const [filterType, setFilterType] = useState<string | null>(null);
+    const [filterType, setFilterType] = useState<string | null>(externalFilterType || null);
     const [routeTo, setRouteTo] = useState<[number, number] | null>(null);
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Sync with external controls
+    useEffect(() => {
+        if (externalSearchQuery !== undefined) setSearchQuery(externalSearchQuery);
+    }, [externalSearchQuery]);
+
+    useEffect(() => {
+        if (externalFilterType !== undefined) setFilterType(externalFilterType);
+    }, [externalFilterType]);
 
     // Moffi World State
     const [marks, setMarks] = useState<MapMark[]>(MOCK_MARKS);
@@ -149,8 +172,10 @@ export default function LiveMap({
     // Guardian Mode State
     const [searchParty, setSearchParty] = useState<{ id: string, lat: number, lng: number }[]>([]);
 
+    const isSOSActive = guardianMode || forceGuardianMode;
+
     useEffect(() => {
-        if (guardianMode) {
+        if (isSOSActive) {
             // Generate fake search party members around the user
             const newParty = Array.from({ length: 12 }).map((_, i) => ({
                 id: `sp-${i}`,
@@ -161,7 +186,7 @@ export default function LiveMap({
         } else {
             setSearchParty([]);
         }
-    }, [guardianMode, userPos]);
+    }, [isSOSActive, userPos]);
 
     // REAL SEARCH LOGIC (Nominatim)
     useEffect(() => {
@@ -384,33 +409,38 @@ export default function LiveMap({
                     );
                 })}
 
-                {/* MOFFI WORLD MARKS */}
-                {marks.map((mark) => (
+                {/* EXTERNAL DYNAMIC MARKERS (Lost Pets, Friends, etc.) */}
+                {externalMarkers?.map((marker) => (
                     <Marker
-                        key={mark.id}
-                        position={[mark.lat, mark.lng]}
-                        icon={createMarkIcon(mark)}
+                        key={marker.id}
+                        position={[marker.lat, marker.lng]}
+                        icon={createCustomIcon(marker.type === 'lost' ? 'vet' : marker.type === 'friend' ? 'social' : marker.type, false, false)}
                     >
-                        <Popup className="custom-popup-mark">
-                            <div className="p-2 min-w-[200px] text-center">
-                                <div className="text-4xl mb-2">{mark.emoji}</div>
-                                <p className="font-medium text-gray-800 text-sm mb-2">"{mark.message}"</p>
-                                <div className="flex items-center justify-between text-xs text-gray-500 border-t pt-2">
-                                    <span className="font-bold">{mark.user}</span>
-                                    <span>{mark.timestamp}</span>
+                        <Popup className="custom-popup">
+                            <div className="p-2 min-w-[150px]">
+                                <div className="flex items-center gap-2 mb-2">
+                                    {marker.img && <img src={marker.img} className="w-8 h-8 rounded-full object-cover border border-gray-200" />}
+                                    <div>
+                                        <h3 className="font-bold text-sm text-gray-900">{marker.title}</h3>
+                                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                                            {marker.type === 'lost' ? '⚠️ KAYIP ALARMI' : '👤 MOFFI DOSTU'}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="mt-2 flex justify-center">
-                                    <button className="flex items-center gap-1 bg-red-50 text-red-500 px-3 py-1 rounded-full text-xs font-bold hover:bg-red-100 transition-colors">
-                                        <Heart className="w-3 h-3" /> {mark.likes}
-                                    </button>
-                                </div>
+                                {marker.desc && <p className="text-xs text-gray-600 mb-2">{marker.desc}</p>}
+                                <button 
+                                    onClick={() => setRouteTo([marker.lat, marker.lng])}
+                                    className="w-full py-1.5 bg-blue-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-1"
+                                >
+                                    <Navigation className="w-3 h-3" /> Yol Tarifi
+                                </button>
                             </div>
                         </Popup>
                     </Marker>
                 ))}
 
                 {/* USER POSITION */}
-                {guardianMode ? (
+                {isSOSActive ? (
                     <>
                         {/* Emergency Hot Zone */}
                         <Circle

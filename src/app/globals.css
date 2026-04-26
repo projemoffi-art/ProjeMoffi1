@@ -1,5 +1,136 @@
 @import "tailwindcss";
 
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --card-bg: rgba(255, 255, 255, 0.7);
+  --card-border: rgba(0, 0, 0, 0.08);
+  --accent: #22C55E;
+  --secondary-text: #6B7280;
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(0, 0, 0, 0.05);
+  --emergency: #FF3B30;
+  --brand-purple: #5B4D9D;
+}
+
+.apple-midnight {
+  --background: #000000;
+  --foreground: #F5F5F7;
+  --card-bg: #0A0A0B;
+  --card-border: rgba(255, 255, 255, 0.05);
+  --accent: #0A84FF;
+  --secondary-text: #86868B;
+  --glass-bg: rgba(0, 0, 0, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --emergency: #FF453A;
+  --brand-purple: #5B4D9D;
+}
+
+.apple-light {
+  --background: #F5F5F7;
+  --foreground: #1D1D1F;
+  --card-bg: #FFFFFF;
+  --card-border: rgba(0, 0, 0, 0.12);
+  --accent: #007AFF;
+  --secondary-text: #636366;
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(0, 0, 0, 0.08);
+}
+
+.pastel-soft {
+  --background: #FBE4FF;
+  --foreground: #4A1D5A;
+  --card-bg: rgba(255, 255, 255, 0.75);
+  --card-border: rgba(186, 104, 225, 0.3);
+  --accent: #D886FF;
+  --secondary-text: #5E3A63;
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(186, 104, 225, 0.2);
+}
+
+/* --- PRIME SERIES (EXCLUSIVE) --- */
+.prime-cyber {
+  --background: #020205 !important;
+  --foreground: #F0F0FF !important;
+  --card-bg: #0A0A1F !important;
+  --card-border: rgba(0, 243, 255, 0.15) !important;
+  --accent: #00F3FF !important;
+  --secondary-text: #7D7DBE !important;
+  --glass-bg: rgba(2, 2, 8, 0.9) !important;
+  --glass-border: rgba(0, 243, 255, 0.2) !important;
+}
+
+/* --- PRIME SERIES (EXCLUSIVE) --- */
+.prime-cyber {
+  --background: #020205 !important;
+  --foreground: #F0F0FF !important;
+  --card-bg: #0A0A1F !important;
+  --card-border: rgba(0, 243, 255, 0.15) !important;
+  --accent: #00F3FF !important;
+  --secondary-text: #7D7DBE !important;
+  --glass-bg: rgba(2, 2, 8, 0.9) !important;
+  --glass-border: rgba(0, 243, 255, 0.2) !important;
+}
+
+/* FORCED THEME DOMINANCE - TARGETING ALL PANELS */
+.prime-cyber div[class*="bg-"], 
+.prime-cyber header, 
+.prime-cyber aside, 
+.prime-cyber main,
+.prime-cyber [role="dialog"] {
+  background-color: var(--background) !important;
+  border-color: var(--card-border) !important;
+}
+
+/* Specific overrides for nested cards to use card-bg */
+.prime-cyber .bg-card, .prime-cyber [class*="card"] {
+  background-color: #0A0A1F !important;
+}
+
+/* CUSTOM SELECTION COLORS */
+.prime-cyber *::selection {
+  background-color: rgba(0, 243, 255, 0.3);
+  color: #ffffff;
+}
+
+.prime-gold *::selection {
+  background-color: rgba(255, 215, 0, 0.3);
+  color: #ffffff;
+}
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card-bg);
+  --color-card-border: var(--card-border);
+  --color-accent: var(--accent);
+  --color-secondary: var(--secondary-text);
+  --color-glass: var(--glass-bg);
+  --color-glass-border: var(--glass-border);
+  --color-emergency: var(--emergency);
+  --color-brand-purple: var(--brand-purple);
+
+  --font-sans: var(--font-poppins);
+  --font-serif: var(--font-playfair);
+  --font-mono: var(--font-inter);
+  --font-pacifico: var(--font-pacifico);
+  --font-satisfy: var(--font-satisfy);
+  --font-playfair: var(--font-playfair);
+
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 2rem;
+  
+  --color-moffi-primary: #22C55E;
+}
+
+/* SMART FONT INHERITANCE: Overrides --font-sans globally when a theme font is active */
+.font-serif { --font-sans: var(--font-playfair) !important; font-family: var(--font-playfair) !important; }
+.font-mono { --font-sans: var(--font-inter) !important; font-family: var(--font-inter) !important; }
+.font-pacifico { --font-sans: var(--font-pacifico) !important; font-family: var(--font-pacifico) !important; }
+.font-satisfy { --font-sans: var(--font-satisfy) !important; font-family: var(--font-satisfy) !important; }
+.font-playfair { --font-sans: var(--font-playfair) !important; font-family: var(--font-playfair) !important; }
+
 @utility animate-nebula-glow {
   animation: nebula-glow 8s infinite alternate ease-in-out;
 }
@@ -78,94 +209,30 @@
   .cb-tritanopia { filter: sepia(0.3) saturate(1.5) hue-rotate(50deg); }
 }
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --card-bg: rgba(255, 255, 255, 0.7);
-  --card-border: rgba(0, 0, 0, 0.08);
-  --accent: #22C55E;
-  --secondary-text: #6B7280;
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(0, 0, 0, 0.05);
-}
-
-.apple-light {
-  --background: #F5F5F7;
-  --foreground: #1D1D1F;
-  --card-bg: #FFFFFF;
-  --card-border: rgba(0, 0, 0, 0.08);
-  --accent: #007AFF;
-  --secondary-text: #86868B;
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(0, 0, 0, 0.05);
-}
-
-.apple-midnight {
-  --background: #0A0A0E;
-  --foreground: #F5F5F7;
-  --card-bg: #1C1C1E;
-  --card-border: rgba(255, 255, 255, 0.08);
-  --accent: #0A84FF;
-  --secondary-text: #86868B;
-  --glass-bg: rgba(28, 28, 30, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.05);
-}
-
-.glass-pink {
-  --background: #0D0509;
-  --foreground: #FFFFFF;
-  --card-bg: rgba(244, 114, 182, 0.08);
-  --card-border: rgba(244, 114, 182, 0.15);
-  --accent: #F472B6;
-  --secondary-text: rgba(255, 255, 255, 0.5);
-  --glass-bg: rgba(244, 114, 182, 0.05);
-  --glass-border: rgba(244, 114, 182, 0.1);
-}
-
-.mint-fresh {
-  --background: #050D08;
-  --foreground: #FFFFFF;
-  --card-bg: rgba(16, 185, 129, 0.08);
-  --card-border: rgba(16, 185, 129, 0.15);
-  --accent: #10B981;
-  --secondary-text: rgba(255, 255, 255, 0.5);
-  --glass-bg: rgba(16, 185, 129, 0.05);
-  --glass-border: rgba(16, 185, 129, 0.1);
-}
-
-.neo-dark {
-  --background: #050505;
-  --foreground: #ffffff;
-  --card-bg: #111111;
-  --card-border: rgba(255, 255, 255, 0.08);
-  --accent: #22C55E;
-  --secondary-text: #9CA3AF;
-  --glass-bg: rgba(255, 255, 255, 0.03);
-  --glass-border: rgba(255, 255, 255, 0.05);
-}
-
-@theme {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card-bg);
-  --color-card-border: var(--card-border);
-  --color-accent: var(--accent);
-  --color-secondary: var(--secondary-text);
-  --color-glass: var(--glass-bg);
-  --color-glass-border: var(--glass-border);
-
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-pacifico: var(--font-pacifico);
-  --font-satisfy: var(--font-satisfy);
-  --font-playfair: var(--font-playfair);
-
-  --radius-xl: 1rem;
-  --radius-2xl: 1.5rem;
-  --radius-3xl: 2rem;
+/* --- MOBILE OPTIMIZATION UTILITIES --- */
+@layer utilities {
+  .safe-area-pt { padding-top: env(safe-area-inset-top, 0px); }
+  .safe-area-pb { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .safe-area-pl { padding-left: env(safe-area-inset-left, 0px); }
+  .safe-area-pr { padding-right: env(safe-area-inset-right, 0px); }
   
-  /* Moffi Legacy Colors */
-  --color-moffi-primary: #22C55E;
+  .safe-area-mt { margin-top: env(safe-area-inset-top, 0px); }
+  .safe-area-mb { margin-bottom: env(safe-area-inset-bottom, 0px); }
+  
+  .safe-area-bottom { bottom: env(safe-area-inset-bottom, 0px); }
+  .safe-area-top { top: env(safe-area-inset-top, 0px); }
+
+  .tap-highlight-transparent { -webkit-tap-highlight-color: transparent; }
+  .momentum-scroll { -webkit-overflow-scrolling: touch; }
+  .overscroll-contain { overscroll-behavior: contain; }
+  .overscroll-none { overscroll-behavior: none; }
+  
+  .touch-none { touch-action: none; }
+  .touch-pan-y { touch-action: pan-y; }
+  
+  /* Mobile Specific Full Height (Fixes 100vh issue on mobile browsers) */
+  .h-mobile-screen { height: 100dvh; }
+  .min-h-mobile-screen { min-height: 100dvh; }
 }
 
 body {
@@ -175,12 +242,16 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.5s ease, color 0.5s ease, font-size 0.3s ease;
+  overscroll-behavior-y: none; /* Prevents pull-to-refresh on root if desired */
+  width: 100%;
+  overflow-x: hidden;
 }
 
 /* Global scrollbar hiding while maintaining functionality */
 * {
   scrollbar-width: none !important; /* Firefox */
   -ms-overflow-style: none !important; /* Edge */
+  -webkit-tap-highlight-color: transparent;
 }
 
 *::-webkit-scrollbar {
