@@ -153,10 +153,10 @@ export function MoffiSidebar() {
                 // Massive invisible hit area, perfectly fixed to the right edge
                 className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-auto cursor-pointer w-12 h-36 flex items-center justify-end pr-[2px] touch-none z-[9998]"
             >
-                {/* The visible premium bar */}
+                {/* The visible premium bar - Dynamic Theme Support */}
                 <div 
                     style={{ opacity: Math.max(0.3, handleOpacity) }}
-                    className="w-1.5 h-24 bg-white/90 backdrop-blur-3xl shadow-[0_0_15px_rgba(255,255,255,0.4)] rounded-l-full group-hover:bg-white group-hover:shadow-[0_0_20px_rgba(255,255,255,0.7)] transition-all duration-300" 
+                    className="w-1.5 h-24 bg-foreground/20 backdrop-blur-3xl shadow-[0_0_15px_rgba(0,0,0,0.1)] dark:shadow-[0_0_15px_rgba(255,255,255,0.2)] rounded-l-full group-hover:bg-foreground/40 transition-all duration-300" 
                 />
             </motion.div>
 
