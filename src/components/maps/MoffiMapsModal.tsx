@@ -56,54 +56,59 @@ export function MoffiMapsModal({ isOpen, onClose }: MoffiMapsModalProps) {
                     exit={{ opacity: 0, scale: 1.1 }}
                     className="fixed inset-0 z-[8000] bg-background overflow-hidden flex flex-col"
                 >
-                    {/* TOP NAVIGATION OVERLAY */}
-                    <div className="absolute top-0 inset-x-0 z-[8005] p-6 pointer-events-none">
-                        <div className="flex items-center justify-between gap-4 max-w-5xl mx-auto">
-                            <button 
-                                onClick={onClose}
-                                className="w-12 h-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white pointer-events-auto active:scale-90 transition-all shadow-2xl"
-                            >
-                                <ArrowLeft className="w-6 h-6" />
-                            </button>
+                    {/* TOP NAVIGATION OVERLAY - PROFESSIONAL STACK */}
+                    <div className="absolute top-0 inset-x-0 z-[8005] pt-safe px-4 pb-6 pointer-events-none bg-gradient-to-b from-black/60 to-transparent">
+                        <div className="flex flex-col gap-4 max-w-5xl mx-auto mt-2">
+                            {/* SEARCH ROW */}
+                            <div className="flex items-center gap-3 pointer-events-auto">
+                                <button 
+                                    onClick={onClose}
+                                    className="w-11 h-11 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white active:scale-90 transition-all shadow-2xl"
+                                >
+                                    <ArrowLeft className="w-5 h-5" />
+                                </button>
 
-                            <div className="flex-1 max-w-md bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-1 pointer-events-auto shadow-2xl flex items-center">
-                                <div className="p-3">
-                                    <Search className="w-4 h-4 text-white/40" />
+                                <div className="flex-1 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl p-0.5 shadow-2xl flex items-center">
+                                    <div className="p-3">
+                                        <Search className="w-4 h-4 text-white/40" />
+                                    </div>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Şehir veya mekan ara..."
+                                        className="flex-1 bg-transparent border-none outline-none text-xs sm:text-sm text-white placeholder-white/30 font-bold"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                    />
+                                    {searchQuery && (
+                                        <button className="p-3 text-white/40" onClick={() => setSearchQuery("")}>
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    )}
                                 </div>
-                                <input 
-                                    type="text" 
-                                    placeholder="Şehri veya mekanı keşfet..."
-                                    className="flex-1 bg-transparent border-none outline-none text-sm text-white placeholder-white/30 font-bold"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                                <button className="p-3 text-accent" onClick={() => setSearchQuery("")}>
-                                    {searchQuery ? <X className="w-4 h-4" /> : <Compass className="w-4 h-4" />}
+
+                                <button className="w-11 h-11 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white active:scale-90 transition-all shadow-2xl">
+                                    <Layers className="w-5 h-5" />
                                 </button>
                             </div>
 
-                            <button className="w-12 h-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white pointer-events-auto active:scale-90 transition-all shadow-2xl">
-                                <Layers className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        {/* QUICK FILTERS */}
-                        <div className="mt-6 flex gap-2 overflow-x-auto no-scrollbar pointer-events-auto max-w-5xl mx-auto px-2">
-                            {filters.map((f) => (
-                                <button
-                                    key={f.id}
-                                    onClick={() => setActiveFilter(activeFilter === f.id ? null : f.id)}
-                                    className={cn(
-                                        "px-4 py-2.5 rounded-full backdrop-blur-xl border transition-all flex items-center gap-2 whitespace-nowrap active:scale-95",
-                                        activeFilter === f.id 
-                                            ? "bg-accent border-accent text-white shadow-lg shadow-accent/20" 
-                                            : "bg-black/40 border-white/10 text-white/60 hover:bg-black/60"
-                                    )}
-                                >
-                                    <f.icon className={cn("w-4 h-4", activeFilter === f.id ? "text-white" : f.color)} />
-                                    <span className="text-[11px] font-black uppercase tracking-widest">{f.label}</span>
-                                </button>
-                            ))}
+                            {/* QUICK FILTERS ROW - MOVED DOWN */}
+                            <div className="flex gap-2 overflow-x-auto no-scrollbar pointer-events-auto px-1">
+                                {filters.map((f) => (
+                                    <button
+                                        key={f.id}
+                                        onClick={() => setActiveFilter(activeFilter === f.id ? null : f.id)}
+                                        className={cn(
+                                            "px-4 py-2.5 rounded-xl backdrop-blur-xl border transition-all flex items-center gap-2 whitespace-nowrap active:scale-95 shadow-lg",
+                                            activeFilter === f.id 
+                                                ? "bg-accent border-accent text-white" 
+                                                : "bg-black/60 border-white/10 text-white/60 hover:bg-black/80"
+                                        )}
+                                    >
+                                        <f.icon className={cn("w-3.5 h-3.5", activeFilter === f.id ? "text-white" : f.color)} />
+                                        <span className="text-[10px] font-black uppercase tracking-widest">{f.label}</span>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
 

@@ -200,14 +200,20 @@ export default function LiveMap({
 
         searchTimeoutRef.current = setTimeout(async () => {
             try {
-                // Search in Turkey mostly (viewbox could be added but simpler is query)
-                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&accept-language=tr&limit=5`);
+                const res = await fetch(
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&accept-language=tr&limit=5`,
+                    {
+                        headers: {
+                            'User-Agent': 'Moffi-App-V1'
+                        }
+                    }
+                );
                 const data = await res.json();
                 setSearchResults(data);
             } catch (e) {
                 console.error("Search Error", e);
             }
-        }, 500); // 500ms delay
+        }, 600); 
 
         return () => {
             if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
