@@ -58,6 +58,17 @@ export function HubOverlay({
     ];
 
     useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [isOpen]);
+
+    useEffect(() => {
         if (!isOpen) return;
         const timer = setInterval(() => {
             setCurrentTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
@@ -130,11 +141,12 @@ export function HubOverlay({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="fixed inset-0 z-[2000] backdrop-blur-3xl overflow-y-auto no-scrollbar flex flex-col pt-safe px-6 pb-20"
+                    className="fixed inset-0 z-[2000] backdrop-blur-3xl overflow-y-auto overflow-x-hidden no-scrollbar flex flex-col pt-safe px-4 sm:px-6 pb-24 touch-none"
                     style={{ background: 'var(--background)' }}
                 >
+                    <div className="flex-1 flex flex-col w-full max-w-full pointer-events-auto touch-auto">
                     {/* TOP HEADER: TITLE & VET-LINE QUICK ACCESS */}
-                    <div className="flex justify-between items-start py-8">
+                    <div className="flex justify-between items-start py-4 sm:py-8">
                         <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -235,7 +247,7 @@ export function HubOverlay({
                     )}
 
                     {/* HIZLI SEPET (SMART BASKET) */}
-                    <div className="mt-10 mb-6">
+                    <div className="mt-6 mb-4">
                         <div className="flex items-center justify-between mb-6 px-4">
                             <h3 className="text-[11px] font-black text-[var(--secondary-text)] uppercase tracking-[0.3em]">Hızlı Sepet</h3>
                             <button onClick={onMarketClick} className="text-[9px] font-black text-orange-400 uppercase tracking-widest">Tümünü Gör</button>
@@ -296,8 +308,8 @@ export function HubOverlay({
                     </div>
 
                     {/* EN YAKIN KLİNİK RADARI */}
-                    <div className="mt-10 px-4">
-                        <h3 className="text-[11px] font-black text-[var(--secondary-text)] uppercase tracking-[0.3em] mb-6">En Yakın Klinik Radarı</h3>
+                    <div className="mt-6 px-2">
+                        <h3 className="text-[11px] font-black text-[var(--secondary-text)] uppercase tracking-[0.3em] mb-4">En Yakın Klinik Radarı</h3>
                         <div className="space-y-3">
                             {nearbyClinics.map((clinic, i) => (
                                 <button 
@@ -351,8 +363,8 @@ export function HubOverlay({
                     <div className="mt-8" />
 
                     {/* APPLE STYLE BOTTOM SERVICES GROUP */}
-                    <div className="mb-safe-bottom pb-12">
-                        <div className="bg-glass backdrop-blur-3xl border border-glass-border rounded-[3rem] p-8 shadow-2xl">
+                    <div className="mb-safe-bottom pb-8">
+                        <div className="bg-glass backdrop-blur-3xl border border-glass-border rounded-[2.5rem] p-6 shadow-2xl">
                             <div className="grid grid-cols-3 gap-8">
                                 {[
                                     { icon: Palette, label: 'Stüdyo', color: 'text-purple-400', bg: 'bg-purple-500/10', onClick: onStudioClick },
