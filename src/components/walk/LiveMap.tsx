@@ -361,7 +361,8 @@ export default function LiveMap({
                         ))}
                     </div>
                 )}
-            </div>
+                </div>
+            )}
 
             {/* 3. SOS & LOCATION BUTTONS (Bottom Right) */}
             <div className="absolute bottom-24 right-4 z-[500] flex flex-col gap-3 pointer-events-auto">
