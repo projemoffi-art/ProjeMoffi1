@@ -741,7 +741,7 @@ export function MoffiSidebar() {
                                                 ))}
                                             </div>
                                         </div>
-                                        <button onClick={() => setIsConfiguring(false)} className="mt-6 w-full py-4 bg-white text-black rounded-[1.5rem] font-black text-[12px]">KAYDET</button>
+
                                     </motion.div>
                                 )}
                             </AnimatePresence>
