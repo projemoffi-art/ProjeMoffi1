@@ -67,32 +67,46 @@ export function MoffiSidebar() {
         }
     }, [user?.settings?.edge]);
 
-    // Live Weather Consultant Logic - Proactive fetching
+    // Live Weather Consultant Logic - Proactive fetching with permission check
     useEffect(() => {
         const fetchWeather = async () => {
             if (isWeatherLoading || weatherData) return;
-            console.log("MoffiWeather: Fetching weather data...");
             setIsWeatherLoading(true);
             
             if (typeof window !== 'undefined' && navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(async (position) => {
-                    console.log("MoffiWeather: Position acquired", position.coords);
-                    const data = await getWeather(position.coords.latitude, position.coords.longitude);
-                    setWeatherData(data);
-                    setIsWeatherLoading(false);
-                }, (error) => {
-                    console.error("MoffiWeather: Geolocation error", error);
-                    setIsWeatherLoading(false);
-                }, { timeout: 10000 }); // 10 second timeout
+                // Check permission status first
+                if (navigator.permissions && navigator.permissions.query) {
+                    navigator.permissions.query({ name: 'geolocation' as PermissionName }).then(status => {
+                        if (status.state === 'denied') {
+                            console.warn("MoffiWeather: Permission denied via browser settings");
+                            setIsWeatherLoading(false);
+                            return;
+                        }
+                        
+                        // Proceed to request position
+                        requestPosition();
+                    }).catch(() => requestPosition()); // Fallback to direct request
+                } else {
+                    requestPosition();
+                }
             } else {
-                console.warn("MoffiWeather: Geolocation not supported");
                 setIsWeatherLoading(false);
             }
         };
 
-        // Fetch on mount or when sidebar is opened
+        const requestPosition = () => {
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const data = await getWeather(position.coords.latitude, position.coords.longitude);
+                setWeatherData(data);
+                setIsWeatherLoading(false);
+            }, (error) => {
+                console.error("MoffiWeather: Geolocation error", error);
+                setIsWeatherLoading(false);
+            }, { timeout: 10000 });
+        };
+
         fetchWeather();
-    }, [isOpen, weatherData]); // Trigger on mount and check on open
+    }, [isOpen, weatherData]); 
 
     const triggerHaptic = useCallback((intensity: number = 10) => {
         if (!hapticsEnabled) return;
@@ -143,9 +157,9 @@ export function MoffiSidebar() {
                 if (!weatherData) {
                     window.dispatchEvent(new CustomEvent('moffi-toast', { 
                         detail: { 
-                            message: 'Hava durumu için konum izni gerekli! 📍 Lütfen tarayıcı ayarlarını kontrol et.', 
-                            icon: 'MapPin', 
-                            color: 'text-rose-400' 
+                            message: 'Konum izni kapalı! 📍 Adres çubuğundaki KİLİT 🔒 ikonuna basıp izni sıfırla kral.', 
+                            icon: 'ShieldAlert', 
+                            color: 'text-amber-400' 
                         } 
                     }));
                 } else {
