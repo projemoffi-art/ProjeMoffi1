@@ -116,7 +116,6 @@ export default function MoffiSocialMasterpiece() {
             }
         };
 
-        const handleOpenAI = () => window.dispatchEvent(new CustomEvent('open-ai-assistant'));
         const handleOpenPost = () => {
             window.dispatchEvent(new CustomEvent('moffi-toast', { 
                 detail: { 
@@ -135,7 +134,6 @@ export default function MoffiSocialMasterpiece() {
         const handleOpenDiary = () => setIsDiaryOpen(true);
 
         window.addEventListener('moffi-navigate', handleNavigate);
-        window.addEventListener('open-ai-assistant', handleOpenAI);
         window.addEventListener('open-add-post', handleOpenPost);
         window.addEventListener('open-sos-center', handleOpenSOS);
         window.addEventListener('open-moffi-spotlight', handleOpenSpotlight);
@@ -148,7 +146,6 @@ export default function MoffiSocialMasterpiece() {
 
         return () => {
             window.removeEventListener('moffi-navigate', handleNavigate);
-            window.removeEventListener('open-ai-assistant', handleOpenAI);
             window.removeEventListener('open-add-post', handleOpenPost);
             window.removeEventListener('open-sos-center', handleOpenSOS);
             window.removeEventListener('open-moffi-spotlight', handleOpenSpotlight);

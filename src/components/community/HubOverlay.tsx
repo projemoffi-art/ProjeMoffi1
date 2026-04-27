@@ -156,7 +156,7 @@ export function HubOverlay({
                             </div>
                             <div className="flex gap-2.5">
                                 <button 
-                                    onClick={() => { onAIAsistantClick?.(); onClose(); }}
+                                    onClick={() => onAIAsistantClick?.()}
                                     className="h-10 w-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center border border-purple-500/20 active:scale-95 transition-all"
                                 >
                                     <Sparkles size={18} />
@@ -261,14 +261,14 @@ export function HubOverlay({
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
-                                <button onClick={() => { onSOSClick(); onClose(); }} className="bg-red-500/10 border border-red-500/20 rounded-[2rem] p-6 flex flex-col items-start gap-3 active:scale-95 transition-all">
+                                <button onClick={() => onSOSClick()} className="bg-red-500/10 border border-red-500/20 rounded-[2rem] p-6 flex flex-col items-start gap-3 active:scale-95 transition-all">
                                     <div className="w-10 h-10 rounded-xl bg-red-500 flex items-center justify-center text-white"><ShieldAlert size={20} /></div>
                                     <div className="text-left">
                                         <h3 className="text-xs font-black text-white uppercase tracking-wider">ACİL DURUM</h3>
                                         <p className="text-[9px] text-red-500/70 font-bold uppercase mt-0.5">SOS Gönder</p>
                                     </div>
                                 </button>
-                                <button onClick={() => { onCommunityRadarClick(); onClose(); }} className="bg-cyan-500/10 border border-cyan-500/20 rounded-[2rem] p-6 flex flex-col items-start gap-3 active:scale-95 transition-all">
+                                <button onClick={() => onCommunityRadarClick()} className="bg-cyan-500/10 border border-cyan-500/20 rounded-[2rem] p-6 flex flex-col items-start gap-3 active:scale-95 transition-all">
                                     <div className="w-10 h-10 rounded-xl bg-cyan-500 flex items-center justify-center text-white"><Radar size={20} /></div>
                                     <div className="text-left">
                                         <h3 className="text-xs font-black text-white uppercase tracking-wider">RADAR</h3>
@@ -280,7 +280,7 @@ export function HubOverlay({
                             <div className="space-y-4 px-1">
                                 <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Yakın Klinikler</h3>
                                 {nearbyClinics.map((clinic, i) => (
-                                    <button key={i} onClick={() => { onVetClick(); onClose(); }} className="w-full bg-foreground/5 border border-white/5 rounded-[2rem] p-5 flex items-center justify-between active:scale-[0.98] transition-all">
+                                    <button key={i} onClick={() => onVetClick()} className="w-full bg-foreground/5 border border-white/5 rounded-[2rem] p-5 flex items-center justify-between active:scale-[0.98] transition-all">
                                         <div className="flex items-center gap-4 text-left">
                                             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400"><MapPin size={18} /></div>
                                             <div>
@@ -297,7 +297,7 @@ export function HubOverlay({
                                 <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest text-center">Marketler & Servisler</h3>
                                 <div className="grid grid-cols-3 gap-4">
                                     {marketCategories.map((service, i) => (
-                                        <button key={i} onClick={() => { service.onClick(); onClose(); }} className="flex flex-col items-center gap-2">
+                                        <button key={i} onClick={() => service.onClick()} className="flex flex-col items-center gap-2">
                                             <div className={cn("w-14 h-14 rounded-[1.5rem] flex items-center justify-center active:scale-90 transition-all border", service.bg)}>
                                                 <service.icon className={cn("w-6 h-6", service.color)} />
                                             </div>
@@ -315,7 +315,7 @@ export function HubOverlay({
                                             { icon: Gamepad2, label: 'Oyun', color: 'text-indigo-400', bg: 'bg-indigo-500/10', onClick: onGameClick },
                                             { icon: PawPrint, label: 'Yürüyüş', color: 'text-emerald-400', bg: 'bg-emerald-500/10', onClick: onWalkClick },
                                         ].map((service, i) => (
-                                            <button key={i} onClick={() => { service.onClick(); onClose(); }} className="flex flex-col items-center gap-2.5 active:scale-95 transition-all">
+                                            <button key={i} onClick={() => service.onClick()} className="flex flex-col items-center gap-2.5 active:scale-95 transition-all">
                                                 <div className={cn("w-14 h-14 rounded-[1.5rem] flex items-center justify-center border border-white/5 shadow-lg shadow-black/20", service.bg)}>
                                                     <service.icon className={cn("w-6 h-6", service.color)} />
                                                 </div>
