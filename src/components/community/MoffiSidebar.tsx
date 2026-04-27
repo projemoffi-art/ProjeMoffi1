@@ -139,13 +139,25 @@ export function MoffiSidebar() {
                   weatherData?.icon === 'Cloud' ? Cloud : Sun, 
             color: 'from-yellow-400 to-orange-500', 
             value: isWeatherLoading ? '...' : (weatherData ? `${weatherData.temp}°` : 'Konum?'), 
-            action: () => window.dispatchEvent(new CustomEvent('moffi-toast', { 
-                detail: { 
-                    message: weatherData?.recommendation || 'Hava bugün 24°C, yürüyüş için ideal! ☀️', 
-                    icon: weatherData?.icon || 'Sun', 
-                    color: 'text-yellow-400' 
-                } 
-            })) 
+            action: () => {
+                if (!weatherData) {
+                    window.dispatchEvent(new CustomEvent('moffi-toast', { 
+                        detail: { 
+                            message: 'Hava durumu için konum izni gerekli! 📍 Lütfen tarayıcı ayarlarını kontrol et.', 
+                            icon: 'MapPin', 
+                            color: 'text-rose-400' 
+                        } 
+                    }));
+                } else {
+                    window.dispatchEvent(new CustomEvent('moffi-toast', { 
+                        detail: { 
+                            message: weatherData.recommendation, 
+                            icon: weatherData.icon, 
+                            color: 'text-yellow-400' 
+                        } 
+                    }));
+                }
+            } 
         },
         { id: 'water', label: 'Su', icon: Droplets, color: 'from-cyan-400 to-blue-500', value: '80%', action: () => window.dispatchEvent(new CustomEvent('moffi-toast', { detail: { message: 'Dostun bugün 800ml su içti. 💧', icon: 'Droplets', color: 'text-cyan-400' } })) },
         { id: 'health', label: 'Sağlık', icon: Heart, color: 'from-rose-400 to-red-500', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'vet' })) },
