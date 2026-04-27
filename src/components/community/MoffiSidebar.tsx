@@ -138,38 +138,27 @@ export function MoffiSidebar() {
 
     return (
         <div className="fixed inset-y-0 right-0 z-[9999] pointer-events-none flex items-center">
-            {/* PREMIUM EDGE HANDLE (SAMSUNG STYLE) */}
-            <AnimatePresence>
-                {!isOpen && (
-                    <motion.div
-                        key="edge-handle"
-                        initial={{ x: 10, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        exit={{ x: 10, opacity: 0 }}
-                        transition={{ type: "spring", damping: 20, stiffness: 250 }}
-                        whileHover={{ scaleY: 1.05 }}
-                        onClick={() => { triggerHaptic(20); setIsOpen(true); }}
-                        drag="x"
-                        dragConstraints={{ left: 0, right: 0 }}
-                        dragElastic={{ left: 0.2, right: 0 }}
-                        onDragEnd={(_, info) => {
-                            // If swiped left with sufficient distance or velocity
-                            if (info.offset.x < -15 || info.velocity.x < -100) {
-                                triggerHaptic(25);
-                                setIsOpen(true);
-                            }
-                        }}
-                        // Massive invisible hit area for easy touch access
-                        className="pointer-events-auto cursor-pointer w-12 h-36 flex items-center justify-end pr-[2px] touch-none"
-                    >
-                        {/* The visible premium bar */}
-                        <div 
-                            style={{ opacity: Math.max(0.3, handleOpacity) }}
-                            className="w-1.5 h-24 bg-white/90 backdrop-blur-3xl shadow-[0_0_15px_rgba(255,255,255,0.4)] rounded-l-full group-hover:bg-white group-hover:shadow-[0_0_20px_rgba(255,255,255,0.7)] transition-all duration-300" 
-                        />
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            {/* PERMANENT EDGE HANDLE (SAMSUNG STYLE) */}
+            <motion.div
+                key="edge-handle"
+                whileHover={{ scaleY: 1.05 }}
+                onClick={() => { triggerHaptic(20); setIsOpen(true); }}
+                onPanEnd={(_, info) => {
+                    // Trigger panel on left swipe without moving the handle physically
+                    if (info.offset.x < -15 || info.velocity.x < -100) {
+                        triggerHaptic(25);
+                        setIsOpen(true);
+                    }
+                }}
+                // Massive invisible hit area, perfectly fixed to the right edge
+                className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-auto cursor-pointer w-12 h-36 flex items-center justify-end pr-[2px] touch-none z-[9998]"
+            >
+                {/* The visible premium bar */}
+                <div 
+                    style={{ opacity: Math.max(0.3, handleOpacity) }}
+                    className="w-1.5 h-24 bg-white/90 backdrop-blur-3xl shadow-[0_0_15px_rgba(255,255,255,0.4)] rounded-l-full group-hover:bg-white group-hover:shadow-[0_0_20px_rgba(255,255,255,0.7)] transition-all duration-300" 
+                />
+            </motion.div>
 
             <AnimatePresence>
                 {isOpen && (
