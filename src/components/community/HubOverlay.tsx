@@ -385,11 +385,12 @@ export function HubOverlay({
                                         <span className="text-[10px] font-black text-secondary uppercase tracking-widest group-hover:text-foreground transition-colors">{service.label}</span>
                                     </motion.button>
                                 ))}
+                            </div>
                         </div>
                     </div>
-                    </div>
-                </motion.div>
-            )}
-        </AnimatePresence>
-    );
+                </div>
+            </motion.div>
+        )}
+    </AnimatePresence>
+);
 }
