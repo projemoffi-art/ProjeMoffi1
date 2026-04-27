@@ -155,8 +155,8 @@ export function MoffiSidebar() {
             >
                 {/* The visible premium bar - High Contrast Dynamic Support */}
                 <div 
-                    style={{ opacity: Math.max(0.5, handleOpacity) }}
-                    className="w-1.5 h-24 bg-foreground/40 backdrop-blur-3xl shadow-[0_0_20px_rgba(0,0,0,0.15)] dark:shadow-[0_0_20px_rgba(255,255,255,0.25)] rounded-l-full group-hover:bg-foreground/60 transition-all duration-300" 
+                    style={{ opacity: handleOpacity }}
+                    className="w-1.5 h-24 bg-foreground/60 backdrop-blur-3xl shadow-[0_0_20px_rgba(0,0,0,0.15)] dark:shadow-[0_0_20px_rgba(255,255,255,0.25)] rounded-l-full group-hover:bg-foreground/80 transition-all duration-300" 
                 />
             </motion.div>
 
