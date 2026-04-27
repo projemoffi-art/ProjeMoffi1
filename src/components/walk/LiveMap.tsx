@@ -25,6 +25,7 @@ interface LiveMapProps {
     externalSearchQuery?: string;
     externalFilterType?: string | null;
     forceGuardianMode?: boolean;
+    hideInternalUI?: boolean;
     markers?: Array<{
         id: string;
         lat: number;
@@ -113,7 +114,7 @@ const createMarkIcon = (mark: MapMark) => {
 };
 
 // --- MAP CONTROLS ENGINE (The Brain) ---
-function MapEngine({ center, searchQuery, filterType, setRouteTo }: { center: [number, number], searchQuery: string, filterType: string | null, setRouteTo: (p: [number, number] | null) => void }) {
+function MapEngine({ center, searchQuery, filterType, setRouteTo, userPos }: { center: [number, number], searchQuery: string, filterType: string | null, setRouteTo: (p: [number, number] | null) => void, userPos: [number, number] }) {
     const map = useMap();
 
     // Auto-center on route or search
@@ -128,17 +129,10 @@ function MapEngine({ center, searchQuery, filterType, setRouteTo }: { center: [n
         }
     }, [searchQuery, map]);
 
-    // Update center only if significantly moved (to avoid jitter during drag)
-    // Actually for 'tracking' we want smooth follow.
-    // We let Layout handle center updates via component re-render mostly, but flyTo is smoother.
-    // Avoiding constant re-render flyTo if manual drag is active would be better but complex.
-    // For now:
+    // Initial center on user or when userPos changes significantly
     useEffect(() => {
-        // Only fly if not searching/interacting heavily
-        // map.flyTo(center, map.getZoom()); 
-        // Disabled auto-fly on every prop update to let user drag map.
-        // We only fly on init or explicit button press.
-    }, []);
+        map.flyTo(userPos, 15);
+    }, [userPos]);
 
     return null;
 }
@@ -146,7 +140,8 @@ function MapEngine({ center, searchQuery, filterType, setRouteTo }: { center: [n
 export default function LiveMap({ 
     userPos, path, isTracking, visitedPlaceIds, 
     onPlaceClick, guardianMode, deliveryPos, deliveryPath,
-    externalSearchQuery, externalFilterType, forceGuardianMode, markers: externalMarkers
+    externalSearchQuery, externalFilterType, forceGuardianMode, 
+    hideInternalUI, markers: externalMarkers
 }: LiveMapProps) {
     // UI State
     const [searchQuery, setSearchQuery] = useState(externalSearchQuery || "");
@@ -154,6 +149,7 @@ export default function LiveMap({
     const [isSearchFocused, setIsSearchFocused] = useState(false);
     const [filterType, setFilterType] = useState<string | null>(externalFilterType || null);
     const [routeTo, setRouteTo] = useState<[number, number] | null>(null);
+    const [routePath, setRoutePath] = useState<[number, number][]>([]);
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Sync with external controls
@@ -164,6 +160,32 @@ export default function LiveMap({
     useEffect(() => {
         if (externalFilterType !== undefined) setFilterType(externalFilterType);
     }, [externalFilterType]);
+
+    // REAL STREET ROUTING (OSRM)
+    useEffect(() => {
+        if (!routeTo) {
+            setRoutePath([]);
+            return;
+        }
+
+        const fetchRoute = async () => {
+            try {
+                // OSRM coordinates are [lng, lat]
+                const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${userPos[1]},${userPos[0]};${routeTo[1]},${routeTo[0]}?overview=full&geometries=geojson`);
+                const data = await res.json();
+                if (data.routes && data.routes[0]) {
+                    const coords = data.routes[0].geometry.coordinates.map((c: any) => [c[1], c[0]]);
+                    setRoutePath(coords);
+                }
+            } catch (e) {
+                console.error("Routing Error", e);
+                // Fallback to straight line
+                setRoutePath([userPos, routeTo]);
+            }
+        };
+
+        fetchRoute();
+    }, [routeTo, userPos]);
 
     // Moffi World State
     const [marks, setMarks] = useState<MapMark[]>(MOCK_MARKS);
@@ -273,8 +295,8 @@ export default function LiveMap({
             />
 
             {/* --- GOOGLE STYLE FLOATING UI --- */}
-            {/* Adjusted top position to top-24 to clear the Dashboard/Tracking Headers */}
-            <div className={cn("absolute top-24 left-4 right-4 z-[5000] flex flex-col gap-3 pointer-events-none transition-all duration-500", isTracking ? "translate-y-12" : "translate-y-0")}>
+            {!hideInternalUI && (
+                <div className={cn("absolute top-24 left-4 right-4 z-[5000] flex flex-col gap-3 pointer-events-none transition-all duration-500", isTracking ? "translate-y-12" : "translate-y-0")}>
 
                 {/* 1. SEARCH BAR */}
                 <div className="shadow-xl relative z-[5001] pointer-events-auto">
@@ -370,13 +392,13 @@ export default function LiveMap({
                     attribution='&copy; OpenStreetMap &copy; CARTO'
                 />
 
-                <MapEngine center={userPos} searchQuery={searchQuery} filterType={filterType} setRouteTo={setRouteTo} />
+                <MapEngine center={userPos} searchQuery={searchQuery} filterType={filterType} setRouteTo={setRouteTo} userPos={userPos} />
 
                 {/* ROUTES (Navigation Line) */}
-                {routeTo && (
+                {routePath.length > 0 && (
                     <Polyline
-                        positions={[userPos, routeTo]}
-                        pathOptions={{ color: '#3B82F6', weight: 6, opacity: 0.8, dashArray: '1, 10' }}
+                        positions={routePath}
+                        pathOptions={{ color: '#3B82F6', weight: 6, opacity: 0.8, lineCap: 'round' }}
                     />
                 )}
 

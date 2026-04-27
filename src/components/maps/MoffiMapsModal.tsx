@@ -31,6 +31,18 @@ export function MoffiMapsModal({ isOpen, onClose }: MoffiMapsModalProps) {
     const [searchQuery, setSearchQuery] = useState("");
     const [activeFilter, setActiveFilter] = useState<string | null>(null);
     const [isSOSActive, setIsSOSActive] = useState(false);
+    const [userPos, setUserPos] = useState<[number, number]>([41.0082, 28.9784]); // Fallback
+
+    // SYNC USER LOCATION
+    useEffect(() => {
+        if (isOpen && "geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => setUserPos([pos.coords.latitude, pos.coords.longitude]),
+                (err) => console.error("Map Geo Error:", err),
+                { enableHighAccuracy: true }
+            );
+        }
+    }, [isOpen]);
 
     const filters = [
         { id: 'vet', label: 'Veteriner', icon: Stethoscope, color: 'text-red-400', bg: 'bg-red-500/10' },
@@ -39,12 +51,10 @@ export function MoffiMapsModal({ isOpen, onClose }: MoffiMapsModalProps) {
         { id: 'shop', label: 'Pet Shop', icon: ShoppingBag, color: 'text-purple-400', bg: 'bg-purple-500/10' },
     ];
 
-    // Mock Dynamic Markers (Lost Pets & Friends)
+    // Mock Dynamic Markers (RELATIVE TO REAL USER POSITION)
     const dynamicMarkers: any[] = [
-        { id: 'lost-1', lat: 41.0122, lng: 28.9854, type: 'lost', title: 'LUNA KAYIP', desc: 'Sarı Tasma, Altınbaşak Sokak civarı.', img: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200' },
-        { id: 'lost-2', lat: 41.0052, lng: 28.9724, type: 'lost', title: 'FELIX KAYIP', desc: 'Siyah Kedi, Çip Numarası: 123...', img: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=200' },
-        { id: 'friend-1', lat: 41.0092, lng: 28.9804, type: 'friend', title: 'Can & Max', desc: 'Yürüyüşte, sohbete açık!', img: 'https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=200' },
-        { id: 'friend-2', lat: 41.0072, lng: 28.9764, type: 'friend', title: 'Zeynep & Pamuk', desc: 'Parkta oyun oynuyoruz.', img: 'https://images.unsplash.com/photo-1548191265-cc70d3d45ba1?q=80&w=200' },
+        { id: 'lost-1', lat: userPos[0] + 0.002, lng: userPos[1] + 0.003, type: 'lost', title: 'LUNA KAYIP', desc: 'Sarı Tasma, Bölge civarı.', img: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200' },
+        { id: 'friend-1', lat: userPos[0] - 0.001, lng: userPos[1] + 0.002, type: 'friend', title: 'Can & Max', desc: 'Yürüyüşte, sohbete açık!', img: 'https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=200' },
     ];
 
     return (
@@ -115,7 +125,7 @@ export function MoffiMapsModal({ isOpen, onClose }: MoffiMapsModalProps) {
                     {/* MAIN MAP AREA */}
                     <div className="flex-1 w-full relative">
                         <LiveMap 
-                            userPos={[41.0082, 28.9784]} // Default Istanbul
+                            userPos={userPos} 
                             path={[]}
                             isTracking={false}
                             visitedPlaceIds={[]}
@@ -124,6 +134,7 @@ export function MoffiMapsModal({ isOpen, onClose }: MoffiMapsModalProps) {
                             externalFilterType={activeFilter}
                             forceGuardianMode={isSOSActive}
                             markers={dynamicMarkers}
+                            hideInternalUI={true}
                         />
                     </div>
 
