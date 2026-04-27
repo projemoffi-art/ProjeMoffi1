@@ -8,12 +8,14 @@ import {
     Footprints, Droplets, Heart, Sun, MapPin, Bell,
     Mic, X, Save, Navigation, Flag,
     ShoppingBag, Stethoscope, Gamepad2, Wallet, Radar, Syringe,
-    Tv, Users, Edit3, Map, Search, HeartHandshake, Megaphone, Eye
+    Tv, Users, Edit3, Map, Search, HeartHandshake, Megaphone, Eye,
+    CloudRain, CloudSun, Snowflake, CloudLightning, Cloud
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useActivity } from '@/context/ActivityContext';
 import { useRouter } from 'next/navigation';
+import { getWeather, WeatherData } from '@/services/weatherService';
 
 interface SidebarWidget {
     id: string;
@@ -46,6 +48,8 @@ export function MoffiSidebar() {
     const [isConfiguring, setIsConfiguring] = useState(false);
     const [showPanelPrefs, setShowPanelPrefs] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
+    const [isWeatherLoading, setIsWeatherLoading] = useState(false);
 
     // Local states for instant feedback (Optimistic UI)
     const [hapticsEnabled, setHapticsEnabled] = useState(edgeSettings.hapticsEnabled);
@@ -62,6 +66,31 @@ export function MoffiSidebar() {
             setCapsulePrivate(user.settings.edge.capsulePrivate);
         }
     }, [user?.settings?.edge]);
+
+    // Live Weather Consultant Logic
+    useEffect(() => {
+        const fetchWeather = async () => {
+            if (isWeatherLoading) return;
+            setIsWeatherLoading(true);
+            
+            if (typeof window !== 'undefined' && navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(async (position) => {
+                    const data = await getWeather(position.coords.latitude, position.coords.longitude);
+                    setWeatherData(data);
+                    setIsWeatherLoading(false);
+                }, (error) => {
+                    console.error("Location access denied for weather", error);
+                    setIsWeatherLoading(false);
+                });
+            } else {
+                setIsWeatherLoading(false);
+            }
+        };
+
+        if (isOpen && !weatherData) {
+            fetchWeather();
+        }
+    }, [isOpen, weatherData]);
 
     const triggerHaptic = useCallback((intensity: number = 10) => {
         if (!hapticsEnabled) return;
@@ -98,7 +127,24 @@ export function MoffiSidebar() {
         { id: 'studio', label: 'Aura', icon: Palette, color: 'from-cyan-400 to-blue-600', action: () => window.dispatchEvent(new CustomEvent('open-aura-studio')) },
         { id: 'voice', label: 'Sesli Not', icon: Mic, color: 'from-orange-400 to-red-500', action: () => { triggerHaptic(30); setActiveMode('voice'); setIsOpen(true); } },
         { id: 'steps', label: 'Yürüyüş', icon: Footprints, color: 'from-blue-400 to-indigo-500', value: '4.2k', action: () => { triggerHaptic(30); startWalk(); setIsOpen(true); } },
-        { id: 'weather', label: 'Hava', icon: Sun, color: 'from-yellow-400 to-orange-500', value: '24°', action: () => window.dispatchEvent(new CustomEvent('moffi-toast', { detail: { message: 'Hava bugün 24°C, yürüyüş için ideal! ☀️', icon: 'Sun', color: 'text-yellow-400' } })) },
+        { 
+            id: 'weather', 
+            label: 'Hava', 
+            icon: weatherData?.icon === 'CloudRain' ? CloudRain : 
+                  weatherData?.icon === 'CloudSun' ? CloudSun :
+                  weatherData?.icon === 'Snowflake' ? Snowflake :
+                  weatherData?.icon === 'CloudLightning' ? CloudLightning :
+                  weatherData?.icon === 'Cloud' ? Cloud : Sun, 
+            color: 'from-yellow-400 to-orange-500', 
+            value: isWeatherLoading ? '...' : (weatherData ? `${weatherData.temp}°` : '24°'), 
+            action: () => window.dispatchEvent(new CustomEvent('moffi-toast', { 
+                detail: { 
+                    message: weatherData?.recommendation || 'Hava bugün 24°C, yürüyüş için ideal! ☀️', 
+                    icon: weatherData?.icon || 'Sun', 
+                    color: 'text-yellow-400' 
+                } 
+            })) 
+        },
         { id: 'water', label: 'Su', icon: Droplets, color: 'from-cyan-400 to-blue-500', value: '80%', action: () => window.dispatchEvent(new CustomEvent('moffi-toast', { detail: { message: 'Dostun bugün 800ml su içti. 💧', icon: 'Droplets', color: 'text-cyan-400' } })) },
         { id: 'health', label: 'Sağlık', icon: Heart, color: 'from-rose-400 to-red-500', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'vet' })) },
         { id: 'map', label: 'Konum', icon: MapPin, color: 'from-emerald-400 to-green-600', action: () => window.dispatchEvent(new CustomEvent('open-moffi-maps')) },
