@@ -67,30 +67,32 @@ export function MoffiSidebar() {
         }
     }, [user?.settings?.edge]);
 
-    // Live Weather Consultant Logic
+    // Live Weather Consultant Logic - Proactive fetching
     useEffect(() => {
         const fetchWeather = async () => {
-            if (isWeatherLoading) return;
+            if (isWeatherLoading || weatherData) return;
+            console.log("MoffiWeather: Fetching weather data...");
             setIsWeatherLoading(true);
             
             if (typeof window !== 'undefined' && navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(async (position) => {
+                    console.log("MoffiWeather: Position acquired", position.coords);
                     const data = await getWeather(position.coords.latitude, position.coords.longitude);
                     setWeatherData(data);
                     setIsWeatherLoading(false);
                 }, (error) => {
-                    console.error("Location access denied for weather", error);
+                    console.error("MoffiWeather: Geolocation error", error);
                     setIsWeatherLoading(false);
-                });
+                }, { timeout: 10000 }); // 10 second timeout
             } else {
+                console.warn("MoffiWeather: Geolocation not supported");
                 setIsWeatherLoading(false);
             }
         };
 
-        if (isOpen && !weatherData) {
-            fetchWeather();
-        }
-    }, [isOpen, weatherData]);
+        // Fetch on mount or when sidebar is opened
+        fetchWeather();
+    }, [isOpen, weatherData]); // Trigger on mount and check on open
 
     const triggerHaptic = useCallback((intensity: number = 10) => {
         if (!hapticsEnabled) return;
@@ -136,7 +138,7 @@ export function MoffiSidebar() {
                   weatherData?.icon === 'CloudLightning' ? CloudLightning :
                   weatherData?.icon === 'Cloud' ? Cloud : Sun, 
             color: 'from-yellow-400 to-orange-500', 
-            value: isWeatherLoading ? '...' : (weatherData ? `${weatherData.temp}°` : '24°'), 
+            value: isWeatherLoading ? '...' : (weatherData ? `${weatherData.temp}°` : 'Konum?'), 
             action: () => window.dispatchEvent(new CustomEvent('moffi-toast', { 
                 detail: { 
                     message: weatherData?.recommendation || 'Hava bugün 24°C, yürüyüş için ideal! ☀️', 
