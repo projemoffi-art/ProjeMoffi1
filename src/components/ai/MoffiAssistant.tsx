@@ -37,11 +37,16 @@ export function MoffiAssistant() {
     
     const scrollRef = useRef<HTMLDivElement>(null);
 
-    // Listen for global open event
+    // Listen for global open/close events
     useEffect(() => {
         const handleOpen = () => setIsOpen(true);
+        const handleClose = () => setIsOpen(false);
         window.addEventListener('open-ai-assistant', handleOpen);
-        return () => window.removeEventListener('open-ai-assistant', handleOpen);
+        window.addEventListener('close-ai-assistant', handleClose);
+        return () => {
+            window.removeEventListener('open-ai-assistant', handleOpen);
+            window.removeEventListener('close-ai-assistant', handleClose);
+        };
     }, []);
 
     // M+ Status
@@ -154,7 +159,7 @@ export function MoffiAssistant() {
                             </div>
                             <div className="flex items-center gap-2">
                                 <button onClick={clearChat} className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-secondary hover:text-red-400 transition-colors"><Trash2 className="w-4 h-4" /></button>
-                                <button onClick={() => setIsOpen(false)} className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-foreground hover:bg-white/10 transition-all border border-card-border"><X className="w-5 h-5" /></button>
+                                <button onClick={() => { setIsOpen(false); window.history.back(); }} className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-foreground hover:bg-white/10 transition-all border border-card-border"><X className="w-5 h-5" /></button>
                             </div>
                         </div>
 

@@ -139,21 +139,29 @@ export function DynamicNavigation() {
             setIsAuthOpen(true);
         };
 
-        // BACK BUTTON INTERCEPTOR
+        // BACK BUTTON INTERCEPTOR - STACK NAVIGATION
         const handlePopState = (e: PopStateEvent) => {
-            // Close all modals if we detect a back navigation
-            setIsActionHubOpen(false);
-            setIsWalkOpen(false);
-            setIsSettingsOpen(false);
-            setIsMapsOpen(false);
-            setIsActionHubOverlayOpen(false);
-            setIsSOSOpen(false);
-            setIsVetOpen(false);
-            setIsMarketOpen(false);
-            setIsStudioOpen(false);
-            setIsGameOpen(false);
-            setIsSpotlightOpen(false);
-            setIsAuthOpen(false);
+            const modal = e.state?.modal;
+
+            setIsActionHubOpen(modal === 'action-hub');
+            setIsWalkOpen(modal === 'walk');
+            setIsSettingsOpen(modal === 'settings');
+            setIsMapsOpen(modal === 'maps');
+            setIsActionHubOverlayOpen(modal === 'action-overlay');
+            setIsSOSOpen(modal === 'sos');
+            setIsVetOpen(modal === 'vet');
+            setIsMarketOpen(modal === 'market');
+            setIsStudioOpen(modal === 'studio');
+            setIsGameOpen(modal === 'game');
+            setIsSpotlightOpen(modal === 'spotlight');
+            setIsAuthOpen(modal === 'auth');
+
+            // Handle external modals like AI Assistant
+            if (modal !== 'ai') {
+                window.dispatchEvent(new CustomEvent('close-ai-assistant'));
+            } else {
+                window.dispatchEvent(new CustomEvent('open-ai-assistant'));
+            }
         };
 
         window.addEventListener('popstate', handlePopState);
@@ -277,16 +285,20 @@ export function DynamicNavigation() {
             <HubOverlay 
                 isOpen={isActionHubOverlayOpen}
                 onClose={() => setIsActionHubOverlayOpen(false)}
-                onMarketClick={() => { setIsActionHubOverlayOpen(false); window.dispatchEvent(new CustomEvent('open-market-portal')); }}
-                onWalkClick={() => { setIsActionHubOverlayOpen(false); window.dispatchEvent(new CustomEvent('open-walk-panel')); }}
-                onVetClick={() => { setIsActionHubOverlayOpen(false); window.dispatchEvent(new CustomEvent('open-vet-portal')); }}
-                onStudioClick={() => { setIsActionHubOverlayOpen(false); window.dispatchEvent(new CustomEvent('open-studio-portal')); }}
-                onGameClick={() => { setIsActionHubOverlayOpen(false); window.dispatchEvent(new CustomEvent('open-game-portal')); }}
-                onMoffinetClick={() => { setIsActionHubOverlayOpen(false); window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'moffinet' })); }}
-                onSearchClick={() => { setIsActionHubOverlayOpen(false); window.dispatchEvent(new CustomEvent('open-moffi-spotlight')); }}
-                onCommunityRadarClick={() => { setIsActionHubOverlayOpen(false); window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'radar' })); }}
-                onAIAsistantClick={() => { setIsActionHubOverlayOpen(false); window.dispatchEvent(new CustomEvent('open-ai-assistant')); }}
-                onSOSClick={() => { setIsActionHubOverlayOpen(false); setIsSOSOpen(true); }}
+                onMarketClick={() => window.dispatchEvent(new CustomEvent('open-market-portal'))}
+                onWalkClick={() => window.dispatchEvent(new CustomEvent('open-walk-panel'))}
+                onVetClick={() => window.dispatchEvent(new CustomEvent('open-vet-portal'))}
+                onStudioClick={() => window.dispatchEvent(new CustomEvent('open-studio-portal'))}
+                onGameClick={() => window.dispatchEvent(new CustomEvent('open-game-portal'))}
+                onMoffinetClick={() => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'moffinet' }))}
+                onSearchClick={() => window.dispatchEvent(new CustomEvent('open-moffi-spotlight'))}
+                onCommunityRadarClick={() => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'radar' }))}
+                onAIAsistantClick={() => {
+                    window.history.pushState({ modal: 'ai' }, "");
+                    setIsActionHubOverlayOpen(false);
+                    window.dispatchEvent(new CustomEvent('open-ai-assistant'));
+                }}
+                onSOSClick={() => window.dispatchEvent(new CustomEvent('open-sos-center'))}
             />
 
             <SOSCommandCenter 
