@@ -141,46 +141,46 @@ export function HubOverlay({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="fixed inset-0 z-[2000] backdrop-blur-3xl overflow-y-auto overflow-x-hidden no-scrollbar flex flex-col pt-safe px-4 sm:px-6 pb-24 touch-none"
+                    className="fixed inset-0 h-[100dvh] w-screen z-[2000] backdrop-blur-3xl overflow-y-auto overflow-x-hidden no-scrollbar flex flex-col pt-safe px-4 sm:px-6 pb-24 touch-none"
                     style={{ background: 'var(--background)' }}
                 >
                     <div className="flex-1 flex flex-col w-full max-w-full pointer-events-auto touch-auto">
-                    {/* TOP HEADER: TITLE & VET-LINE QUICK ACCESS */}
-                    <div className="flex justify-between items-start py-4 sm:py-8">
-                        <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em]">Live Moffi Pro</p>
+                        {/* TOP HEADER: TITLE & VET-LINE QUICK ACCESS */}
+                        <div className="flex justify-between items-start py-4 sm:py-8">
+                            <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em]">Live Moffi Pro</p>
+                                </div>
+                                <h2 className="text-4xl font-black text-[var(--foreground)] tracking-tighter uppercase italic">Control Hub</h2>
                             </div>
-                            <h2 className="text-4xl font-black text-[var(--foreground)] tracking-tighter uppercase italic">Control Hub</h2>
-                        </div>
-                        
-                        <div className="flex flex-col items-end gap-4">
-                            <div className="flex gap-3">
-                                <button 
-                                    onClick={() => { onAIAsistantClick?.(); onClose(); }}
-                                    className="h-12 w-12 rounded-2xl bg-purple-500 text-white flex items-center justify-center shadow-lg shadow-purple-500/20 active:scale-95 transition-all"
-                                    title="Moffi AI Asistan"
-                                >
-                                    <Sparkles size={22} />
-                                </button>
-                                <button 
-                                    onClick={() => alert("Vet-Line 7/24 Canlı Destek Başlatılıyor...")}
-                                    className="h-12 px-4 rounded-2xl bg-indigo-500 text-white flex items-center gap-2 shadow-lg shadow-indigo-500/20 active:scale-95 transition-all text-[10px] font-black uppercase tracking-widest"
-                                >
-                                    <PhoneCall size={16} />
-                                    <span>Vet-Line</span>
-                                </button>
-                                <button 
-                                    onClick={onClose}
-                                    className="w-12 h-12 rounded-2xl bg-[var(--card-bg)] border border-[var(--card-border)] flex items-center justify-center text-[var(--foreground)] active:scale-95 transition-all"
-                                >
-                                    <X className="w-6 h-6" />
-                                </button>
+                            
+                            <div className="flex flex-col items-end gap-4">
+                                <div className="flex gap-3">
+                                    <button 
+                                        onClick={() => { onAIAsistantClick?.(); onClose(); }}
+                                        className="h-12 w-12 rounded-2xl bg-purple-500 text-white flex items-center justify-center shadow-lg shadow-purple-500/20 active:scale-95 transition-all"
+                                        title="Moffi AI Asistan"
+                                    >
+                                        <Sparkles size={22} />
+                                    </button>
+                                    <button 
+                                        onClick={() => alert("Vet-Line 7/24 Canlı Destek Başlatılıyor...")}
+                                        className="h-12 px-4 rounded-2xl bg-indigo-500 text-white flex items-center gap-2 shadow-lg shadow-indigo-500/20 active:scale-95 transition-all text-[10px] font-black uppercase tracking-widest"
+                                    >
+                                        <PhoneCall size={16} />
+                                        <span>Vet-Line</span>
+                                    </button>
+                                    <button 
+                                        onClick={onClose}
+                                        className="w-12 h-12 rounded-2xl bg-[var(--card-bg)] border border-[var(--card-border)] flex items-center justify-center text-[var(--foreground)] active:scale-95 transition-all"
+                                    >
+                                        <X className="w-6 h-6" />
+                                    </button>
+                                </div>
+                                <p className="text-2xl font-black text-[var(--foreground)] italic opacity-40">{currentTime}</p>
                             </div>
-                            <p className="text-2xl font-black text-[var(--foreground)] italic opacity-40">{currentTime}</p>
                         </div>
-                    </div>
 
 
                     {/* LIVE STATUS WIDGETS (SOCIAL & HEALTH) */}
@@ -385,8 +385,8 @@ export function HubOverlay({
                                         <span className="text-[10px] font-black text-secondary uppercase tracking-widest group-hover:text-foreground transition-colors">{service.label}</span>
                                     </motion.button>
                                 ))}
-                            </div>
                         </div>
+                    </div>
                     </div>
                 </motion.div>
             )}
