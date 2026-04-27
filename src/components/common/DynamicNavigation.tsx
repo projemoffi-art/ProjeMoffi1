@@ -60,19 +60,21 @@ export function DynamicNavigation() {
     // Global Event Listeners for Drawers
     useEffect(() => {
         const handleOpenActionHub = () => {
+            window.history.pushState({ modal: 'action-hub' }, "");
             setIsSettingsOpen(false);
             setIsWalkOpen(false);
             setIsActionHubOpen(true);
         };
 
         const handleOpenWalk = () => {
+            window.history.pushState({ modal: 'walk' }, "");
             setIsActionHubOpen(false);
             setIsSettingsOpen(false);
             setIsWalkOpen(true);
         };
 
-
         const handleOpenSettings = () => {
+            window.history.pushState({ modal: 'settings' }, "");
             setIsActionHubOpen(false);
             setIsWalkOpen(false);
             setIsMapsOpen(false);
@@ -80,6 +82,7 @@ export function DynamicNavigation() {
         };
 
         const handleOpenMaps = () => {
+            window.history.pushState({ modal: 'maps' }, "");
             setIsActionHubOpen(false);
             setIsWalkOpen(false);
             setIsSettingsOpen(false);
@@ -87,17 +90,20 @@ export function DynamicNavigation() {
         };
 
         const handleOpenActionHubOverlay = () => {
+            window.history.pushState({ modal: 'action-overlay' }, "");
             setIsActionHubOpen(false);
             setIsSettingsOpen(false);
             setIsActionHubOverlayOpen(true);
         };
 
         const handleOpenSOS = () => {
+            window.history.pushState({ modal: 'sos' }, "");
             setIsActionHubOverlayOpen(false);
             setIsSOSOpen(true);
         };
 
         const handleOpenVet = () => {
+            window.history.pushState({ modal: 'vet' }, "");
             setIsActionHubOpen(false);
             setIsSettingsOpen(false);
             setIsActionHubOverlayOpen(false);
@@ -105,28 +111,52 @@ export function DynamicNavigation() {
         };
 
         const handleOpenMarket = () => {
+            window.history.pushState({ modal: 'market' }, "");
             setIsActionHubOverlayOpen(false);
             setIsMarketOpen(true);
         };
 
         const handleOpenStudio = () => {
+            window.history.pushState({ modal: 'studio' }, "");
             setIsActionHubOverlayOpen(false);
             setIsStudioOpen(true);
         };
 
         const handleOpenGame = () => {
+            window.history.pushState({ modal: 'game' }, "");
             setIsActionHubOverlayOpen(false);
             setIsGameOpen(true);
         };
 
         const handleOpenSpotlight = () => {
+            window.history.pushState({ modal: 'spotlight' }, "");
             setIsActionHubOverlayOpen(false);
             setIsSpotlightOpen(true);
         };
 
         const handleOpenAuth = () => {
+            window.history.pushState({ modal: 'auth' }, "");
             setIsAuthOpen(true);
         };
+
+        // BACK BUTTON INTERCEPTOR
+        const handlePopState = (e: PopStateEvent) => {
+            // Close all modals if we detect a back navigation
+            setIsActionHubOpen(false);
+            setIsWalkOpen(false);
+            setIsSettingsOpen(false);
+            setIsMapsOpen(false);
+            setIsActionHubOverlayOpen(false);
+            setIsSOSOpen(false);
+            setIsVetOpen(false);
+            setIsMarketOpen(false);
+            setIsStudioOpen(false);
+            setIsGameOpen(false);
+            setIsSpotlightOpen(false);
+            setIsAuthOpen(false);
+        };
+
+        window.addEventListener('popstate', handlePopState);
 
         window.addEventListener('open-moffi-hub', handleOpenActionHub);
         window.addEventListener('open-walk-panel', handleOpenWalk);
@@ -194,6 +224,7 @@ export function DynamicNavigation() {
             window.removeEventListener('open-moffi-spotlight', handleOpenSpotlight);
             window.removeEventListener('open-auth-modal', handleOpenAuth);
             window.removeEventListener('moffi-toggle-nav', handleToggleNav);
+            window.removeEventListener('popstate', handlePopState);
             window.removeEventListener('scroll', handleGlobalScroll);
         };
     }, []);
