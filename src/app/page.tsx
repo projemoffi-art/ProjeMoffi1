@@ -79,7 +79,7 @@ export default function Home() {
           <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
       </div>
 
-      <div className="w-full max-w-md h-[100dvh] bg-transparent overflow-hidden relative z-10">
+      <div className="w-full max-w-md h-[100dvh] bg-transparent relative z-10">
         <AnimatePresence mode="wait">
             <motion.div
                 key={step}

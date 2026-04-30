@@ -18,7 +18,7 @@ const formVariants = {
 // --- Auth Landing Component ---
 export function AuthLanding({ setView }: { setView: (v: AuthView) => void }) {
     return (
-        <div className="flex flex-col h-full p-10 pt-16 items-center bg-transparent relative">
+        <div className="flex flex-col h-full p-10 pt-16 items-center bg-transparent relative overflow-y-auto">
             {/* Logo Section */}
             <motion.div 
                 initial={{ opacity: 0, y: -20 }}
