@@ -10,6 +10,8 @@ import { SupabaseApiService } from './supabaseApiService';
 // Set NEXT_PUBLIC_FORCE_MOCK=true ONLY for isolated UI testing without backend.
 const forceMock = process.env.NEXT_PUBLIC_FORCE_MOCK === 'true';
 
+export const isSupabaseEnabled = !forceMock;
+
 export const apiService: IApiService = forceMock
     ? new MockApiService()
     : new SupabaseApiService();
