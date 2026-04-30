@@ -14,6 +14,12 @@ export interface Pet {
     personality?: string;
     is_lost?: boolean;
     microchip_id?: string;
+    is_neutered?: boolean;
+    size?: 'small' | 'medium' | 'large';
+    health_notes?: string;
+    species?: string;
+    photo_url?: string;
+    owner_id?: string;
     sos_settings?: {
         auto_post_sos: boolean;
         sos_radius: '2km' | '5km' | '10km' | 'city';
@@ -37,12 +43,15 @@ export interface Post {
         avatar: string;
         is_verified?: boolean;
     };
+    user_id?: string;
     media: string;
     caption: string;
+    desc?: string; // Legacy mapping
     likes: number;
     comments: number;
     time: string;
     type?: 'image' | 'video';
+    mood?: string;
 }
 
 export interface UserProfile {

@@ -31,6 +31,10 @@ export class MockApiService implements IApiService {
         return newUser;
     }
 
+    async getUserProfile(id: string): Promise<UserProfile | null> {
+        return this.getCurrentUser();
+    }
+
     async updateProfile(updates: Partial<UserProfile>): Promise<UserProfile> {
         const current = await this.getCurrentUser();
         
@@ -110,15 +114,25 @@ export class MockApiService implements IApiService {
     }
 
     async getLostPets(): Promise<LostPet[]> {
-        const saved = await this.loadData<LostPet[]>('lost_pets');
-        // If we have saved data (even empty), use it; otherwise fallback to mocks
-        if (saved !== null) return saved;
-        return (MOCK_LOST_PETS as any);
+        return await this.loadData<LostPet[]>('lost_pets') || (MOCK_LOST_PETS as any);
+    }
+
+    async addLostPet(data: Partial<LostPet>): Promise<LostPet> {
+        const pets = await this.getLostPets();
+        const newPet = { id: `lost-${Date.now()}`, ...data } as LostPet;
+        await this.saveData('lost_pets', [...pets, newPet]);
+        return newPet;
     }
 
     async getAdoptions(): Promise<AdoptionPet[]> {
-        const saved = await this.loadData<AdoptionPet[]>('adoptions');
-        return saved || (MOCK_ADOPTIONS as any);
+        return await this.loadData<AdoptionPet[]>('adoptions') || (MOCK_ADOPTIONS as any);
+    }
+
+    async addAdoption(data: Partial<AdoptionPet>): Promise<AdoptionPet> {
+        const pets = await this.getAdoptions();
+        const newPet = { id: `adopt-${Date.now()}`, ...data } as AdoptionPet;
+        await this.saveData('adoptions', [...pets, newPet]);
+        return newPet;
     }
 
     async getInboxMessages(): Promise<any[]> {
@@ -453,66 +467,26 @@ export class MockApiService implements IApiService {
     async getAppointments(userId: string): Promise<any[]> { return []; }
     async cancelAppointment(id: string): Promise<void> { }
 
-    // Health Extension (Mock)
+    // Health Extension
     async getPetMedications(petId: string): Promise<any[]> {
-        const saved = await this.loadData<any[]>(`meds_${petId}`);
-        if (saved) return saved;
-        
-        const initial = [
-            {
-                id: 'm-1',
-                petId,
-                name: 'VetLife Vitamin Complex',
-                dosage: '1 tablet',
-                frequency: 'Günde 1 kez',
-                instructions: 'Sabah tok karnına',
-                startDate: new Date().toISOString(),
-                endDate: null,
-                isActive: true,
-                lastLog: null
-            }
-        ];
-        await this.saveData(`meds_${petId}`, initial);
-        return initial;
+        return await this.loadData<any[]>(`medications_${petId}`) || [];
     }
 
-    async recordMedicationDose(medId: string): Promise<void> {
-        const activePet = await this.getActivePet();
-        if (!activePet) return;
-        
-        const meds = await this.getPetMedications(activePet.id);
-        const medIndex = meds.findIndex(m => m.id === medId);
-        if (medIndex > -1) {
-            meds[medIndex].lastLog = new Date().toISOString();
-            await this.saveData(`meds_${activePet.id}`, meds);
-            
-            // Log to medication_logs for history if needed
-            const logs = await this.loadData<any[]>(`med_logs_${medId}`) || [];
-            logs.push({ id: Date.now(), medicationId: medId, loggedAt: new Date().toISOString() });
-            await this.saveData(`med_logs_${medId}`, logs);
-        }
+    async addPetMedication(med: any): Promise<any> {
+        const meds = await this.getPetMedications(med.pet_id);
+        const newMed = { id: `med-${Date.now()}`, ...med };
+        await this.saveData(`medications_${med.pet_id}`, [...meds, newMed]);
+        return newMed;
     }
+
+    async recordMedicationDose(medId: string): Promise<void> {}
 
     async getNutritionPlan(petId: string): Promise<any | null> {
-        const saved = await this.loadData<any>(`nutrition_${petId}`);
-        if (saved) return saved;
-        
-        const initial = {
-            id: 'n-1',
-            petId,
-            foodName: 'Royal Canin Adult',
-            amountGrams: 150,
-            mealsPerDay: 2,
-            targetWeight: 4.5,
-            notes: 'Tahılsız mama kullanımı tavsiye edilir.',
-            isActive: true
-        };
-        await this.saveData(`nutrition_${petId}`, initial);
-        return initial;
+        return await this.loadData(`nutrition_${petId}`);
     }
 
     async updateNutritionPlan(petId: string, plan: any): Promise<void> {
-        await this.saveData(`nutrition_${petId}`, { ...plan, petId });
+        await this.saveData(`nutrition_${petId}`, plan);
     }
 
     // Walk & Tracking
@@ -523,120 +497,23 @@ export class MockApiService implements IApiService {
     async getWalkStats(userId: string): Promise<any> { return {}; }
     async getWalkById(id: string): Promise<any> { return {}; }
 
-    async getPostComments(postId: string): Promise<any[]> { return []; }
+    // Social Media
+    async getStories(): Promise<any[]> { return []; }
+    async addStory(story: any): Promise<any> { return story; }
+    async getPostReactions(postId: string): Promise<any[]> { return []; }
     
     // User Discovery & Social Interactions
-    async followUser(targetId: string): Promise<void> {
-        const follows = await this.loadData<string[]>('my_follows') || [];
-        if (!follows.includes(targetId)) {
-            await this.saveData('my_follows', [...follows, targetId]);
-            
-            // Mock Notification
-            await this.addInboxMessage({
-                user_id: targetId,
-                title: '🎉 Yeni Takipçi',
-                content: 'Bir kullanıcı sizi takip etmeye başladı!',
-                type: 'social',
-                avatar: '',
-                user: 'Moffi User',
-                text: 'Sizi takip etmeye başladı.',
-                time: 'Şimdi'
-            });
-        }
-    }
-
-    async unfollowUser(targetId: string): Promise<void> {
-        const follows = await this.loadData<string[]>('my_follows') || [];
-        await this.saveData('my_follows', follows.filter(id => id !== targetId));
-    }
-
-    async isFollowing(targetId: string): Promise<boolean> {
-        const follows = await this.loadData<string[]>('my_follows') || [];
-        return follows.includes(targetId);
-    }
-
-    async blockUser(targetId: string): Promise<void> {
-        const blocks = await this.loadData<string[]>('my_blocks') || [];
-        if (!blocks.includes(targetId)) {
-            await this.saveData('my_blocks', [...blocks, targetId]);
-        }
-        await this.unfollowUser(targetId);
-    }
-
-    async reportUser(targetId: string, reason: string): Promise<void> {
-        const reports = await this.loadData<any[]>('my_reports') || [];
-        reports.push({ targetId, reason, time: new Date().toISOString() });
-        await this.saveData('my_reports', reports);
-    }
+    async followUser(targetId: string): Promise<void> {}
+    async unfollowUser(targetId: string): Promise<void> {}
+    async isFollowing(targetId: string): Promise<boolean> { return false; }
+    async blockUser(targetId: string): Promise<void> {}
+    async reportUser(targetId: string, reason: string): Promise<void> {}
     
     // Direct Messaging (Chat)
-    async getChatConversations(): Promise<any[]> {
-        const saved = await this.loadData<any[]>('conversations');
-        if (saved) return saved;
-
-        const initial = [
-            {
-                id: 'conv-1',
-                userId: 'user-milo',
-                userName: 'Milo (Moffi Pro)',
-                userAvatar: 'https://images.unsplash.com/photo-1544568100-847a948585b9?q=80&w=200',
-                latestMessage: 'Merhaba! Tanıştığımıza memnun oldum. 🐾',
-                latestTime: '2s',
-                unread: true,
-                messages: [
-                    { id: 'm1', text: 'Merhaba! Tanıştığımıza memnun oldum. 🐾', sentByMe: false, time: '2s' }
-                ]
-            }
-        ];
-        await this.saveData('conversations', initial);
-        return initial;
-    }
-
-    async getChatMessages(conversationId: string): Promise<any[]> {
-        const convs = await this.getChatConversations();
-        const conv = convs.find(c => c.id === conversationId);
-        return conv ? conv.messages : [];
-    }
-
-    async sendChatMessage(receiverId: string, content: string): Promise<any> {
-        const convs = await this.getChatConversations();
-        let conv = convs.find(c => c.userId === receiverId);
-        
-        if (!conv) {
-            conv = {
-                id: `conv-${Date.now()}`,
-                userId: receiverId,
-                userName: 'Moffi User',
-                userAvatar: '',
-                messages: []
-            };
-            convs.push(conv);
-        }
-
-        const newMessage = {
-            id: `m-${Date.now()}`,
-            text: content,
-            sentByMe: true,
-            time: 'Şimdi'
-        };
-
-        conv.messages.push(newMessage);
-        conv.latestMessage = content;
-        conv.latestTime = 'Şimdi';
-        conv.unread = false;
-
-        await this.saveData('conversations', convs);
-        return newMessage;
-    }
-
-    async markChatAsRead(conversationId: string): Promise<void> {
-        const convs = await this.getChatConversations();
-        const conv = convs.find(c => c.id === conversationId);
-        if (conv) {
-            conv.unread = false;
-            await this.saveData('conversations', convs);
-        }
-    }
+    async getChatConversations(): Promise<any[]> { return []; }
+    async getChatMessages(conversationId: string): Promise<any[]> { return []; }
+    async sendChatMessage(receiverId: string, content: string): Promise<any> { return { id: Date.now(), content }; }
+    async markChatAsRead(conversationId: string): Promise<void> {}
 
     async reactToPost(postId: string | number, reaction: string): Promise<void> {
         const posts = await this.getFeedContent();
@@ -657,6 +534,8 @@ export class MockApiService implements IApiService {
             await this.saveData('feed_posts', posts);
         }
     }
+
+    async getPostComments(postId: string): Promise<any[]> { return []; }
 
     async updateAuraSettings(settings: any): Promise<void> {
         await this.updateProfile({ aura_settings: settings });
