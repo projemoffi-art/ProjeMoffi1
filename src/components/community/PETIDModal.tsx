@@ -24,6 +24,12 @@ export function PETIDModal({ pet, onClose }: PETIDModalProps) {
     const shimmerX = useTransform(mouseX, [-200, 200], ["0%", "100%"]);
     const shimmerY = useTransform(mouseY, [-200, 200], ["0%", "100%"]);
 
+    const holographicBackground = useTransform(
+        [shimmerX, shimmerY],
+        ([x, y]) => `radial-gradient(circle at ${x} ${y}, rgba(255,255,255,0.15) 0%, transparent 60%), 
+                     linear-gradient(${x}, rgba(34,211,238,0.1) 0%, rgba(168,85,247,0.1) 50%, rgba(34,211,238,0.1) 100%)`
+    );
+
     if (!pet) return null;
 
     const handleMouseMove = (e: React.MouseEvent) => {
@@ -67,13 +73,7 @@ export function PETIDModal({ pet, onClose }: PETIDModalProps) {
                     >
                         {/* HOLOGRAPHIC FOIL OVERLAY */}
                         <motion.div 
-                            style={{
-                                background: useTransform(
-                                    [shimmerX, shimmerY],
-                                    ([x, y]) => `radial-gradient(circle at ${x} ${y}, rgba(255,255,255,0.15) 0%, transparent 60%), 
-                                                 linear-gradient(${x}, rgba(34,211,238,0.1) 0%, rgba(168,85,247,0.1) 50%, rgba(34,211,238,0.1) 100%)`
-                                )
-                            }}
+                            style={{ background: holographicBackground }}
                             className="absolute inset-0 pointer-events-none mix-blend-overlay opacity-60 group-hover:opacity-100 transition-opacity duration-500"
                         />
 

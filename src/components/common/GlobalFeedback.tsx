@@ -19,7 +19,10 @@ const PING_MESSAGES = [
     { text: "Harika bir gün geçirmen dileğiyle! Moffi her zaman seninle. 😊", icon: Heart, color: "text-red-400" },
 ];
 
+import { usePathname } from 'next/navigation';
+
 export default function GlobalFeedback() {
+    const pathname = usePathname();
     const [currentMessage, setCurrentMessage] = useState(0);
     const [isVisible, setIsVisible] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
@@ -53,6 +56,9 @@ export default function GlobalFeedback() {
             clearTimeout(initialTimer);
         };
     }, []);
+
+    // Hide feedback system on login/landing flows (Moved after hooks)
+    if (pathname === '/') return null;
 
     const [customMessage, setCustomMessage] = useState<any>(null);
 

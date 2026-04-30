@@ -3,11 +3,11 @@ import { apiService } from "@/services/apiService";
 import { WalkSession, WalkStats } from "@/types/domain";
 
 import { usePet } from "@/context/PetContext";
-
-const REAL_USER_ID = '11a97534-a7a5-4d22-993b-680161231b2e';
+import { useAuth } from "@/context/AuthContext";
 
 export function useWalk() {
     const { activePet } = usePet();
+    const { user } = useAuth(); // ← Real authenticated user (not hardcoded)
     const [activeSession, setActiveSession] = useState<WalkSession | null>(null);
     const [history, setHistory] = useState<WalkSession[]>([]);
     const [stats, setStats] = useState<WalkStats | null>(null);
@@ -18,30 +18,31 @@ export function useWalk() {
     const offlineQueue = useRef<{lat: number, lng: number, timestamp: string}[]>([]);
 
     const fetchHistory = useCallback(async () => {
+        if (!user?.id) return;
         try {
-            const data = await apiService.getWalkHistory(REAL_USER_ID);
+            const data = await apiService.getWalkHistory(user.id);
             setHistory(data);
         } catch (err) {
             console.error('Walk history error:', err);
         }
-    }, []);
+    }, [user?.id]);
 
     const fetchStats = useCallback(async () => {
-        if (!activePet) return;
+        if (!activePet || !user?.id) return;
         try {
-            const data = await apiService.getWalkStats(REAL_USER_ID);
+            const data = await apiService.getWalkStats(user.id);
             setStats(data);
         } catch (err) {
             console.error('Walk stats error:', err);
         }
-    }, [activePet]);
+    }, [activePet, user?.id]);
 
     const startWalk = useCallback(async () => {
-        if (!activePet) return null;
+        if (!activePet || !user?.id) return null;
         setIsLoading(true);
         setError(null);
         try {
-            const session = await apiService.startWalk(REAL_USER_ID, activePet.id);
+            const session = await apiService.startWalk(user.id, activePet.id);
             setActiveSession(session);
 
             // Start GPS tracking with Offline-First Sync
@@ -196,13 +197,14 @@ export function useWalk() {
         };
     }, [activeSession]);
 
-    // Initial load & Re-fetch on Pet Switch
+    // Initial load & Re-fetch on Pet Switch or User Login
     useEffect(() => {
-        if (activePet) {
+        if (activePet && user?.id) {
             fetchHistory();
             fetchStats();
         }
-    }, [fetchHistory, fetchStats, activePet?.id]);
+    }, [fetchHistory, fetchStats, activePet?.id, user?.id]);
+
 
     return {
         activeSession,

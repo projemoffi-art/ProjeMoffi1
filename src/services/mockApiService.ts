@@ -1,7 +1,6 @@
-import { IApiService } from './apiService';
 import { 
     Pet, Post, UserProfile, LostPet, AdoptionPet,
-    ShopCategory, ShopProduct, ShopCartItem, ShopOrder
+    ShopCategory, ShopProduct, ShopCartItem, ShopOrder, IApiService
 } from './types';
 import { 
     MOCK_PETS, MOCK_LOST_PETS, MOCK_ADOPTIONS, 
@@ -97,15 +96,14 @@ export class MockApiService implements IApiService {
     async getFeedContent(): Promise<Post[]> {
         const saved = await this.loadData<Post[]>('feed_posts');
         
-        // Ensure our mandatory test posts are always in the feed for routing verification
         const mandatoryIds = MOCK_POSTS.map(p => String(p.id));
         const existingPosts = saved || [];
         
-        // Filter out any older versions of mandatory posts to avoid duplicates
+        // Sadece kullanıcının sonradan eklediği postları al (Mock'ları temizle)
         const userPosts = existingPosts.filter(p => !mandatoryIds.includes(String(p.id)));
         
-        // Combine: Mandatory Test Posts + User's locally added posts
-        const finalPosts = [...MOCK_POSTS, ...existingPosts];
+        // Kullanıcı postlarını en başa (zirveye) koy, sonra mockları ekle
+        const finalPosts = [...userPosts, ...MOCK_POSTS];
         
         await this.saveData('feed_posts', finalPosts);
         return finalPosts as any;
@@ -144,7 +142,7 @@ export class MockApiService implements IApiService {
         const currentUser = await this.getCurrentUser();
         
         const newPost: Post = {
-            id: Math.random().toString(36).substr(2, 9),
+            id: Date.now().toString(), // Timestamp bazlı ID (Sıralama için kritik)
             user_id: currentUser?.id || 'unknown',
             user: {
                 name: currentUser?.username || 'Moffi User', 

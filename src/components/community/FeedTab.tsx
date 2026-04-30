@@ -32,9 +32,9 @@ export function FeedTab({
     return (
         <motion.div
             key="feed"
-            initial={{ opacity: 0, filter: "blur(10px)" }}
-            animate={{ opacity: 1, filter: "blur(0px)" }}
-            exit={{ opacity: 0, filter: "blur(10px)" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
             onScroll={(e) => {
                 const target = e.currentTarget;
@@ -75,6 +75,12 @@ export function FeedTab({
                 <div className="space-y-4 px-4 mt-4">
                     <PostSkeleton />
                     <PostSkeleton />
+                </div>
+            ) : posts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 px-10 text-center opacity-40">
+                    <PawPrint className="w-12 h-12 mb-4" />
+                    <p className="text-sm font-bold uppercase tracking-widest">Henüz buralar çok ıssız... 🐾</p>
+                    <p className="text-[10px] mt-2 font-medium">İlk gönderiyi sen paylaşarak buraları canlandır!</p>
                 </div>
             ) : (
                 posts.map((post) => (

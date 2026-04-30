@@ -13,7 +13,7 @@ import { MoffiBottomNav } from "@/components/common/MoffiBottomNav";
 // Lazy loaded components for better performance
 const ActionHubDrawer = dynamic(() => import("@/components/community/ActionHubDrawer").then(mod => mod.ActionHubDrawer), { ssr: false });
 const WalkQuickSheet = dynamic(() => import("@/components/walk/WalkQuickSheet").then(mod => mod.WalkQuickSheet), { ssr: false });
-const VetQuickSheet = dynamic(() => import("@/components/vet/VetQuickSheet").then(mod => mod.VetQuickSheet).catch(() => import("@/components/vet/VetQuickSheet").then(mod => mod.default)), { ssr: false });
+const VetQuickSheet = dynamic(() => import("@/components/vet/VetQuickSheet").then(mod => ({ default: mod.VetQuickSheet })), { ssr: false });
 const SettingsDrawer = dynamic(() => import("@/components/community/SettingsDrawer").then(mod => mod.SettingsDrawer), { ssr: false });
 const InboxModal = dynamic(() => import("@/components/community/InboxModal").then(mod => mod.InboxModal), { ssr: false });
 const MoffiMapsModal = dynamic(() => import("@/components/maps/MoffiMapsModal").then(mod => mod.MoffiMapsModal), { ssr: false });
@@ -26,7 +26,7 @@ const SpotlightSearch = dynamic(() => import("@/components/community/SpotlightSe
 const AuthModal = dynamic(() => import("@/components/auth/AuthModal").then(mod => mod.default), { ssr: false });
 
 
-const HIDDEN_ROUTES = ['/studio', '/lab', '/production-studio'];
+const HIDDEN_ROUTES = ['/', '/studio', '/lab', '/production-studio'];
 
 export function DynamicNavigation() {
     const pathname = usePathname();
@@ -238,7 +238,9 @@ export function DynamicNavigation() {
     }, []);
 
     // Hide global components on studio/lab/walk routes
-    const shouldHide = pathname && HIDDEN_ROUTES.some(route => pathname.startsWith(route));
+    const shouldHide = pathname && HIDDEN_ROUTES.some(route => 
+        route === '/' ? pathname === '/' : pathname.startsWith(route)
+    );
 
     if (shouldHide) return null;
 
@@ -336,6 +338,18 @@ export function DynamicNavigation() {
             <SpotlightSearch 
                 isOpen={isSpotlightOpen}
                 onClose={() => setIsSpotlightOpen(false)}
+                onNavigate={(type, id) => {
+                    setIsSpotlightOpen(false);
+                    if (type === 'action') {
+                        window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: id }));
+                    } else if (type === 'pet') {
+                        window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'passport' }));
+                    } else if (type === 'user') {
+                        router.push(`/profile/${id}`);
+                    } else if (type === 'link') {
+                        if (id === 'market') window.dispatchEvent(new CustomEvent('open-market-portal'));
+                    }
+                }}
             />
 
             <AuthModal 
@@ -348,10 +362,12 @@ export function DynamicNavigation() {
                 activeTab={searchParams?.get('tab') || (pathname?.startsWith('/profile') ? 'profile' : 'feed')}
                 isVisible={isNavVisible}
                 onTabChange={(tab) => {
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.set('tab', tab);
+                    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+                    
                     if (pathname === '/community') {
                         window.dispatchEvent(new CustomEvent('moffi-change-tab', { detail: tab }));
-                    } else {
-                        router.push(`/community?tab=${tab}`);
                     }
                 }}
             />

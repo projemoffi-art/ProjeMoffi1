@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import dynamic from 'next/dynamic';
 
 // Lazy load the map to avoid SSR issues and performance hits
-const LiveMap = dynamic(() => import('@/components/walk/LiveMap'), { 
+const LiveMap = dynamic(() => import('@/components/maps/MapboxLiveMap'), { 
     ssr: false,
     loading: () => (
         <div className="w-full h-full bg-[#111] flex flex-col items-center justify-center gap-4">

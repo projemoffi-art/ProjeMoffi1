@@ -16,6 +16,7 @@ export function InboxModal() {
         inboxTab, setInboxTab,
         inboxMessages, sosAlerts,
         activeChatUserId, setActiveChatUserId,
+        activeMessages,
         replyMessage, setReplyMessage,
         onSendReply, isReplying
     } = useChat();
@@ -24,7 +25,7 @@ export function InboxModal() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const activeChatPartner = inboxMessages.find(m => m.userId === activeChatUserId)?.partnerName || 'Sohbet';
-    const currentChatMessages = inboxMessages.find(m => m.userId === activeChatUserId)?.messages || [];
+    const currentChatMessages = activeMessages; // ← Now from Supabase via ChatContext
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

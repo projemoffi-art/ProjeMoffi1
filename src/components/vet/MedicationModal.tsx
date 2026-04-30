@@ -64,20 +64,14 @@ export function MedicationModal({ isOpen, onClose, petId }: MedicationModalProps
     const handleAddMed = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            // Simplification: use saveData via apiService or add explicit addMedication to IApiService
-            // For now, assume it's handled or we use a generic add logic
-            const currentMeds = await apiService.getPetMedications(petId);
             const newEntry = {
-                id: `m-${Date.now()}`,
                 petId,
                 ...newMed,
                 isActive: true,
                 lastLog: null
             };
             
-            // Note: In a real app we'd call apiService.addMedication
-            // For this implementation, I'll assume we can use current patterns
-            await apiService.saveData(`meds_${petId}`, [...currentMeds, newEntry]);
+            await apiService.addPetMedication(newEntry);
             
             setNewMed({
                 name: '',

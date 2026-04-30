@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSocial } from '@/context/SocialContext';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface ShareSheetProps {
     isOpen: boolean;
@@ -248,8 +249,13 @@ export function ShareSheet({
                                     className="bg-[#1C1C1E] p-8 rounded-[40px] border border-white/10 flex flex-col items-center gap-6 max-w-sm w-full shadow-2xl"
                                     onClick={(e) => e.stopPropagation()}
                                 >
-                                    <div className="w-48 h-48 bg-white p-4 rounded-3xl flex items-center justify-center shadow-inner">
-                                        <QrCode className="w-full h-full text-black" />
+                                    <div className="bg-white p-4 rounded-[2rem] shadow-inner flex items-center justify-center">
+                                        <QRCodeSVG 
+                                            value={`${window.location.origin}/post/${selectedPost?.id}`}
+                                            size={200}
+                                            level="H"
+                                            includeMargin={false}
+                                        />
                                     </div>
                                     <div className="text-center px-4">
                                         <h3 className="text-xl font-bold text-white mb-2">Moffi QR-ID</h3>

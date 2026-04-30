@@ -8,8 +8,8 @@ import {
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
-// Leaflet dynamic import
-const LiveMap = dynamic(() => import('@/components/walk/LiveMap'), { 
+// Mapbox dynamic import
+const MapboxLiveMap = dynamic(() => import('@/components/maps/MapboxLiveMap'), { 
   ssr: false, 
   loading: () => <div className="h-full w-full bg-[#111] animate-pulse rounded-3xl" /> 
 });
@@ -63,10 +63,11 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ isOpen, 
         >
           {/* Left: Map (Hybrid Component) */}
           <div className="relative w-full md:w-1/2 h-1/2 md:h-full bg-[#111]">
-            <LiveMap 
+            <MapboxLiveMap 
+                userPos={userPos}
+                deliveryPos={courierPos}
                 isTracking={true}
-                liveLocation={{ lat: courierPos[0], lng: courierPos[1] }}
-                // We'll simulate a delivery pet icon in the map component later
+                hideInternalUI={true}
             />
             
             {/* Map Overlay Info */}

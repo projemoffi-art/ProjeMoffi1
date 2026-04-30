@@ -24,7 +24,10 @@ import { VetClinic, Pet } from "@/types/domain";
 import { apiService } from "@/services/apiService";
 
 // Dynamic imports to prevent SSR issues
-const LiveMap = dynamic(() => import('@/components/walk/LiveMap'), { ssr: false, loading: () => <div className="h-48 bg-[var(--card-bg)] animate-pulse rounded-3xl mb-4" /> });
+const MapboxLiveMap = dynamic(() => import('@/components/maps/MapboxLiveMap'), { 
+    ssr: false,
+    loading: () => <div className="w-full h-full bg-black/20 animate-pulse rounded-3xl" />
+});
 
 export default function VetPage() {
     const router = useRouter();
@@ -283,7 +286,7 @@ export default function VetPage() {
                 {/* MAP PREVIEW - SLEEK CRYSTAL VERSION */}
                 <section className="relative w-full h-56 rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl">
                     {userLocation ? (
-                        <LiveMap
+                        <MapboxLiveMap
                             userPos={userLocation}
                             visitedPlaceIds={allClinics.map(c => c.id)}
                             path={[]}
@@ -624,7 +627,7 @@ export default function VetPage() {
                     >
                         <div className="absolute inset-0">
                             {userLocation && (
-                                <LiveMap
+                                <MapboxLiveMap
                                     userPos={userLocation}
                                     visitedPlaceIds={[]}
                                     path={[]}

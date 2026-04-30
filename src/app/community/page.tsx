@@ -6,7 +6,7 @@ import {
     Heart, MessageCircle, Share2, MapPin,
     Flame, Bone, Plus, Camera, Compass,
     Users, Activity, Sparkles, X, Send, PawPrint, Search, Menu, MoreHorizontal, Image as ImageIcon, Video, Mic,
-    Settings, Grid3X3, List, Edit3, Bookmark, Edit2, Trash2,
+    Settings, Grid3X3, List, Edit3, Bookmark, Edit2, Trash2, ImagePlus,
     LogOut, ChevronRight, ChevronLeft, User, Bell, Lock, HelpCircle, Check, HeartHandshake, CheckCheck, ShieldAlert, ChevronDown,
     AlertTriangle, PhoneCall, BadgeCheck, Radar, Palette, ShoppingBag, Gamepad2, Stethoscope, Globe,
     Coins, Package, Calendar, Plane, ShieldCheck, Route, TrendingUp, Timer, Footprints, Play, Download, Clock, Syringe, Moon
@@ -62,7 +62,8 @@ export default function MoffiSocialMasterpiece() {
         activeChatUserId, setActiveChatUserId,
         replyMessage, setReplyMessage,
         onSendReply, isReplying,
-        sosAlerts, setSosAlerts, inboxMessages
+        sosAlerts, setSosAlerts, inboxMessages,
+        refreshInbox
     } = useChat();
     const { theme, setTheme } = useTheme(); // Restored
     const { storyGroups, uploadStory } = useStories(); // Restored
@@ -184,12 +185,12 @@ export default function MoffiSocialMasterpiece() {
 
     useEffect(() => {
         const loadInitialData = async () => {
-            await Promise.all([
-                fetchPosts(),
-                fetchLostPets(),
-                fetchAdoptionAds(),
-                fetchNotifications(),
-            ]);
+            // Fetch everything independently so one slow request doesn't block others
+            fetchPosts();
+            fetchLostPets();
+            fetchAdoptionAds();
+            fetchNotifications();
+            fetchInbox();
         };
         loadInitialData();
     }, []);
@@ -262,6 +263,7 @@ export default function MoffiSocialMasterpiece() {
             
             setPosts(sortedData);
         } catch (err) {
+            console.error("Posts fetch error:", err);
             setPosts(MOCK_POSTS);
         } finally {
             setIsLoadingPosts(false);
@@ -417,6 +419,7 @@ export default function MoffiSocialMasterpiece() {
     const headerBorderOpacity = useTransform(scrollY, [0, 60], [0, 0.15]);
     const logoY = useTransform(scrollY, [0, 80], [0, -4]); 
     const iconScale = useTransform(scrollY, [0, 80], [1, 0.9]);
+    const headerBlurTransform = useTransform(headerBlur, (b) => `blur(${b}px)`);
 
     // Reset scroll when switching tabs for a fresh start
     useEffect(() => {
@@ -851,21 +854,16 @@ export default function MoffiSocialMasterpiece() {
                 if (publicUrl) photoUrls.push(publicUrl);
             }
 
-            // 2. Insert Record via local simulation (Mock mode)
-            setSosAlerts(prev => [{
-                id: `lost-${Date.now()}`,
-                user_id: user.id,
-                author_name: user.username,
-                author_avatar: user.avatar,
-                pet_name: lostPetName,
-                pet_breed: lostPetBreed,
-                last_location: lostPetLocation,
-                description: lostPetDesc,
-                media_url: photoUrls[0] || null,
-                images: photoUrls,
-                status: 'lost',
-                time: 'Şimdi'
-            }, ...prev]);
+            // 2. Insert Record via API
+            const newAlert = await apiService.addLostPet({
+                name: lostPetName,
+                type: 'dog',
+                img: photoUrls[0] || null,
+                location: lostPetLocation,
+                description: lostPetDesc
+            });
+
+            setSosAlerts(prev => [newAlert, ...prev]);
 
             showToast("GÜÇLÜ SİNYAL GÖNDERİLDİ!", "Acil Durum İlanınız 5km çapındaki herkese ulaştı.", "success");
 
@@ -918,21 +916,14 @@ export default function MoffiSocialMasterpiece() {
                 if (publicUrl) photoUrls.push(publicUrl);
             }
 
-            // 2. Add to local state (Mock mode)
-            const newAd = {
-                id: `adopt-${Date.now()}`,
-                user_id: user.id,
+            // 2. Add via API
+            const newAd = await apiService.addAdoption({
                 name: adoptionPetName,
-                breed: adoptionPetBreed,
-                age: adoptionPetAge,
+                type: adoptionPetType,
                 description: adoptionPetDesc,
-                image_url: photoUrls[0] || null,
-                images: photoUrls,
-                author_name: user.username,
-                author_avatar: user.avatar || null,
-                pet_type: adoptionPetType,
-                status: 'active'
-            };
+                img: photoUrls[0] || null,
+                owner: user.username
+            });
 
             setAdoptionAds(prev => [newAd, ...prev]);
 
@@ -1108,15 +1099,10 @@ export default function MoffiSocialMasterpiece() {
     };
 
     const fetchInbox = async () => {
-        if (!user) return;
         try {
-            const data = await apiService.getInboxMessages();
-            setInboxMessages(data || []);
-            // Count unread
-            const unread = (data || []).filter((m: any) => m.receiver_id === user.id && m.read_status === false).length;
-            // setUnreadInboxCount removed
+            await refreshInbox();
         } catch (err) {
-            console.error("Inbox yükleme hatası:", err);
+            console.error("Inbox load error:", err);
         }
     };
 
@@ -1233,7 +1219,7 @@ export default function MoffiSocialMasterpiece() {
                 style={{ 
                     height: headerHeightTransform,
                     padding: headerPadding,
-                    backdropFilter: useTransform(headerBlur, (b) => `blur(${b}px)`),
+                    backdropFilter: headerBlurTransform,
                 }}
                 className="fixed top-0 left-0 right-0 z-40 flex flex-col shrink-0 bg-glass border-b border-glass-border transition-all duration-300"
             >
@@ -1366,21 +1352,21 @@ export default function MoffiSocialMasterpiece() {
                                         <input type="file" id="story-upload" className="hidden" accept="image/*" onChange={async (e) => {
                                             const file = e.target.files?.[0];
                                             if (file) {
+                                                showToast("Yükleniyor...", "Hikayeniz Moffi evrenine gönderiliyor.", "info");
                                                 const res = await uploadStory(file);
-                                                if (res.success) showToast("Hikaye başarıyla yüklendi! 🚀", "Sparkles", "text-cyan-400");
-                                                else showToast("Yükleme hatası: " + res.error, "X", "text-red-500");
+                                                if (res.success) showToast("Harika! 🚀", "Hikayen yayında.", "success");
+                                                else showToast("Hata", res.error || "Yükleme başarısız.", "error");
                                             }
                                         }} />
                                         
-                                        {/* Premium Apple-Style Glass Circle */}
-                                        <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-cyan-500/10 to-purple-600/10 border-2 border-dashed border-white/20 group-hover:border-cyan-400/50 group-hover:bg-[var(--card-bg)] transition-all duration-500" />
+                                        <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-cyan-500/20 via-purple-500/20 to-pink-500/20 border-2 border-dashed border-white/20 group-hover:border-cyan-400/50 group-hover:bg-white/5 transition-all duration-500" />
                                         
                                         <div className="relative z-10 w-12 h-12 rounded-full bg-[var(--card-bg)] backdrop-blur-md border border-white/10 flex items-center justify-center shadow-2xl group-hover:scale-110 group-active:scale-95 transition-all duration-300">
                                             <div className="absolute inset-0 bg-cyan-400/5 blur-md group-hover:bg-cyan-400/20 transition-all" />
-                                            <Plus className="w-6 h-6 text-[var(--foreground)] group-hover:text-cyan-400 transition-colors" strokeWidth={2.5} />
+                                            <Plus className="w-6 h-6 text-[var(--foreground)] group-hover:text-cyan-400" strokeWidth={2.5} />
                                         </div>
                                     </div>
-                                    <span className="text-[9px] text-[var(--foreground)]/30 font-black uppercase tracking-[0.2em] group-hover:text-cyan-400 transition-colors">Ekle</span>
+                                    <span className="text-[9px] text-[var(--secondary-text)] font-black uppercase tracking-[0.2em] group-hover:text-cyan-400 transition-colors">Hikaye</span>
                                 </div>
 
                                 {/* Real Database Stories */}
@@ -2240,23 +2226,110 @@ export default function MoffiSocialMasterpiece() {
                         {/* Content */}
                         <div className="flex-1 overflow-y-auto w-full max-w-lg mx-auto p-4 pb-32 flex flex-col gap-6">
 
-                            {/* PREVIEW */}
-                            {uploadImageURL && (
-                                <div className="w-full aspect-[4/5] rounded-3xl overflow-hidden bg-gray-900 border border-white/10 relative shadow-2xl">
+                            {/* MEDIA PICKER / PREVIEW (Apple Native Style) */}
+                            {uploadImageURL ? (
+                                <motion.div 
+                                    initial={{ scale: 0.9, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    className="w-full h-[60vh] min-h-[450px] max-h-[600px] rounded-[2.5rem] overflow-hidden bg-black border border-white/10 relative shadow-2xl group"
+                                >
                                     {selectedFile?.type.startsWith('video/') ? (
-                                        <video src={uploadImageURL} className="w-full h-full object-cover" autoPlay muted loop playsInline />
+                                        <div className="relative w-full h-full">
+                                            <video 
+                                                src={uploadImageURL} 
+                                                className="w-full h-full object-cover" 
+                                                autoPlay 
+                                                muted 
+                                                loop 
+                                                playsInline 
+                                            />
+                                            {/* Video Indicator Badge */}
+                                            <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-2 border border-white/10">
+                                                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                                                <span className="text-[10px] font-black text-white uppercase tracking-widest">Video Yayında</span>
+                                            </div>
+                                        </div>
                                     ) : (
                                         <img src={uploadImageURL} className="w-full h-full object-cover" />
                                     )}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-                                    <div className="absolute bottom-4 left-4 flex gap-2">
-                                        {uploadMood && (
-                                            <div className="bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-[var(--foreground)] border border-white/20">
-                                                {uploadMood}
-                                            </div>
-                                        )}
+                                    
+                                    {/* Glassmorphism Overlays */}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                    
+                                    {/* Action Buttons */}
+                                    <div className="absolute top-4 right-4 flex flex-col gap-2 translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300">
+                                        <button 
+                                            type="button"
+                                            onClick={() => cameraInputRef.current?.click()}
+                                            className="bg-white/10 backdrop-blur-xl border border-white/20 p-3 rounded-2xl text-white hover:bg-white/20 transition-all active:scale-90"
+                                            title="Medyayı Değiştir"
+                                        >
+                                            <Camera className="w-5 h-5" />
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            onClick={() => { setUploadImageURL(null); setSelectedFile(null); }}
+                                            className="bg-red-500/20 backdrop-blur-xl border border-red-500/30 p-3 rounded-2xl text-red-500 hover:bg-red-500/40 transition-all active:scale-90"
+                                            title="Sil"
+                                        >
+                                            <Trash2 className="w-5 h-5" />
+                                        </button>
                                     </div>
-                                </div>
+
+                                    {/* Bottom Info Pill */}
+                                    <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between translate-y-4 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-500">
+                                        <div className="flex gap-2">
+                                            {uploadMood ? (
+                                                <div className="bg-cyan-500 text-black px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-[0_0_20px_rgba(6,182,212,0.5)]">
+                                                    {uploadMood}
+                                                </div>
+                                            ) : (
+                                                <div className="bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black text-white/60 uppercase tracking-widest border border-white/10">
+                                                    Duygu Durumu Yok
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex -space-x-2">
+                                            {[1,2,3].map(i => (
+                                                <div key={i} className="w-6 h-6 rounded-full border-2 border-black bg-gray-800 flex items-center justify-center text-[8px] font-bold text-white">
+                                                    {i === 1 ? '🐾' : i === 2 ? '❤️' : '✨'}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            ) : (
+                                <motion.div 
+                                    initial={{ y: 20, opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    onClick={() => cameraInputRef.current?.click()}
+                                    className="w-full h-[60vh] min-h-[450px] max-h-[600px] rounded-[2.5rem] border-2 border-dashed border-white/10 bg-white/[0.02] flex flex-col items-center justify-center gap-6 cursor-pointer hover:bg-white/[0.05] hover:border-cyan-500/40 transition-all duration-700 group relative overflow-hidden"
+                                >
+                                    {/* Background Glow */}
+                                    <div className="absolute inset-0 bg-cyan-500/5 blur-[100px] group-hover:bg-cyan-500/10 transition-colors" />
+                                    
+                                    <div className="relative">
+                                        <div className="w-24 h-24 rounded-[2rem] bg-gradient-to-tr from-cyan-500/20 to-purple-500/20 flex items-center justify-center border border-white/10 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-2xl">
+                                            <ImagePlus className="w-10 h-10 text-cyan-400 drop-shadow-[0_0_15px_rgba(34,211,238,0.5)]" />
+                                        </div>
+                                        <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center text-black border-4 border-[#0a0a0b] shadow-xl group-hover:scale-110 transition-transform">
+                                            <Plus className="w-5 h-5" strokeWidth={3} />
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="text-center relative z-10">
+                                        <p className="text-white font-black text-xl tracking-tight">Anıyı Ölümsüzleştir</p>
+                                        <p className="text-[var(--secondary-text)] text-xs font-medium mt-2 max-w-[200px] mx-auto leading-relaxed">
+                                            En sevdiğin fotoğrafı veya videoyu seç, Moffi topluluğuyla paylaş!
+                                        </p>
+                                    </div>
+
+                                    {/* Animated Corner Borders */}
+                                    <div className="absolute top-8 left-8 w-8 h-8 border-t-2 border-l-2 border-white/5 rounded-tl-xl" />
+                                    <div className="absolute top-8 right-8 w-8 h-8 border-t-2 border-r-2 border-white/5 rounded-tr-xl" />
+                                    <div className="absolute bottom-8 left-8 w-8 h-8 border-b-2 border-l-2 border-white/5 rounded-bl-xl" />
+                                    <div className="absolute bottom-8 right-8 w-8 h-8 border-b-2 border-r-2 border-white/5 rounded-br-xl" />
+                                </motion.div>
                             )}
 
                             {/* CAPTION */}

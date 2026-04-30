@@ -75,6 +75,7 @@ export default function PetShopPage() {
     const [paymentClientSecret, setPaymentClientSecret] = useState<string | null>(null);
     const [showTracking, setShowTracking] = useState(false);
     const [lastOrderId, setLastOrderId] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false); // Local loading for payment
 
     // ECOSYSTEM PREFERENCES
     const [isSmartShopEnabled, setIsSmartShopEnabled] = useState(true);
@@ -137,7 +138,7 @@ export default function PetShopPage() {
     };
 
     const handleCheckoutInit = async () => {
-        setIsLoading(true);
+        setIsSubmitting(true);
         try {
             const response = await fetch('/api/create-payment-intent', {
                 method: 'POST',
@@ -153,13 +154,13 @@ export default function PetShopPage() {
         } catch (err) {
             console.error("Payment setup failed:", err);
         } finally {
-            setIsLoading(false);
+            setIsSubmitting(false);
         }
     };
 
     const handlePaymentSuccess = async (paymentIntentId: string) => {
         setShowCheckout(false);
-        setIsLoading(true);
+        setIsSubmitting(true);
         try {
             const order = await createOrder('Müşteri Adresi', discountCode);
             if (order) {
@@ -176,7 +177,7 @@ export default function PetShopPage() {
         } catch (err) {
             console.error("Order creation failed:", err);
         } finally {
-            setIsLoading(false);
+            setIsSubmitting(false);
         }
     };
 
@@ -649,10 +650,10 @@ export default function PetShopPage() {
                                     </div>
                                     <button
                                         onClick={handleCheckoutInit}
-                                        disabled={isLoading}
+                                        disabled={isLoading || isSubmitting}
                                         className="w-full h-16 bg-orange-500 text-white font-black text-base rounded-[1.8rem] shadow-xl uppercase italic disabled:opacity-50"
                                     >
-                                        {isLoading ? 'Hazırlanıyor...' : 'Siparişi Tamamla'}
+                                        {(isLoading || isSubmitting) ? 'Hazırlanıyor...' : 'Siparişi Tamamla'}
                                     </button>
                                 </div>
                             )}

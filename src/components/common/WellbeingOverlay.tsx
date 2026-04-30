@@ -6,8 +6,14 @@ import { Coffee, Moon, ArrowRight, Timer, Heart } from 'lucide-react';
 import { useWellbeing } from '@/context/WellbeingContext';
 import { cn } from '@/lib/utils';
 
+import { usePathname } from 'next/navigation';
+
 export function WellbeingOverlay() {
+    const pathname = usePathname();
     const { isLimitReached, ignoreLimitForNow, minutesUsed } = useWellbeing();
+
+    // Hide overlay on login/landing flows or if explicitly disabled
+    if (pathname === '/' || process.env.NODE_ENV === 'development') return null;
 
     return (
         <AnimatePresence>

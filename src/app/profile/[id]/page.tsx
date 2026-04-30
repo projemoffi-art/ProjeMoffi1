@@ -191,23 +191,9 @@ export default function ProfilePage() {
       setError(null);
       
       try {
-        // Source of truth: MOCK_PROFILES
-        let foundProfile = MOCK_PROFILES.find(p => p.id === id);
+        // Fetch from Supabase
+        const foundProfile = await apiService.getUserProfile(id);
         
-        // If it's the current user, ensure we have the most up-to-date info from context too
-        if (id === currentUser?.id && !foundProfile) {
-            foundProfile = {
-                id: currentUser.id,
-                username: currentUser.username,
-                avatar_url: currentUser.avatar,
-                cover_url: currentUser.cover_photo || "https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=1200",
-                bio: currentUser.bio,
-                posts_count: currentUser.stats?.posts || 0,
-                followers_count: currentUser.stats?.followers || 0,
-                following_count: currentUser.stats?.following || 0
-            };
-        }
-
         if (!foundProfile) {
             setError("Profil bulunamadı. Lütfen kullanıcı ID'sini kontrol edin.");
             setLoading(false);
@@ -215,7 +201,7 @@ export default function ProfilePage() {
         }
         
         setProfile(foundProfile);
-        setFollowerCount(foundProfile.followers_count || 0);
+        setFollowerCount(foundProfile.stats?.friends || 0);
 
       } catch (err) {
         setError("Profil verisi yüklenirken bir hata oluştu.");

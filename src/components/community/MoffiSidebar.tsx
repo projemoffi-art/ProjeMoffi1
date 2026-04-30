@@ -224,8 +224,8 @@ export function MoffiSidebar() {
                         setIsOpen(true);
                     }
                 }}
-                // Massive invisible hit area, perfectly fixed to the right edge
-                className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-auto cursor-pointer w-12 h-36 flex items-center justify-end pr-[2px] touch-none z-[9998]"
+                // Precise hit area, perfectly fixed to the right edge
+                className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-auto cursor-pointer w-4 h-32 flex items-center justify-end pr-[1px] touch-none z-[9998]"
             >
                 {/* The visible premium bar - High Contrast Dynamic Support */}
                 <div 
