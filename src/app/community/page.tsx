@@ -458,35 +458,7 @@ export default function MoffiSocialMasterpiece() {
     // INBOX & SOS DATA STATES (Consolidated at top level)
     const [activeTimePicker, setActiveTimePicker] = useState<'from' | 'to' | null>(null);
 
-    // TIME WHEEL HELPER COMPONENT
-    const TimeWheel = ({ value, onChange, max, label }: { value: number, onChange: (v: number) => void, max: number, label: string }) => {
-        const numbers = Array.from({ length: max + 1 }, (_, i) => i);
-        return (
-            <div className="flex flex-col items-center">
-                <span className="text-[9px] font-black text-white/20 mb-2 uppercase tracking-widest">{label}</span>
-                <div className="h-32 w-16 overflow-y-auto no-scrollbar snap-y snap-mandatory relative outline-none py-12">
-                    {/* Top Fade */}
-                    <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-[var(--card-bg)] to-transparent z-10 pointer-events-none" />
-                    
-                    {numbers.map(n => (
-                        <div 
-                            key={n} 
-                            onClick={() => onChange(n)}
-                            className={cn(
-                                "h-8 flex items-center justify-center snap-center transition-all duration-200 cursor-pointer shrink-0",
-                                value === n ? "text-cyan-400 font-black text-xl scale-110" : "text-white/20 text-sm font-bold opacity-40 hover:opacity-100"
-                            )}
-                        >
-                            {n.toString().padStart(2, '0')}
-                        </div>
-                    ))}
 
-                    {/* Bottom Fade */}
-                    <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[var(--card-bg)] to-transparent z-10 pointer-events-none" />
-                </div>
-            </div>
-        );
-    };
     
     
     
@@ -3544,311 +3516,48 @@ export default function MoffiSocialMasterpiece() {
                 }
             </AnimatePresence >
 
-            {/* QR CODE GENERATOR MODAL (PET-ID) */}
-            <AnimatePresence>
-                {
-                    qrModalPet && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-[600] bg-black/80 backdrop-blur-md flex items-center justify-center p-6"
-                            onClick={() => setQrModalPet(null)}
-                        >
-                            <motion.div
-                                initial={{ scale: 0.9, y: 20 }}
-                                animate={{ scale: 1, y: 0 }}
-                                exit={{ scale: 0.9, y: 20 }}
-                                transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                                className="bg-[#1C1C1E] border border-white/10 p-6 rounded-[2.5rem] w-full max-w-sm flex flex-col items-center shadow-2xl relative overflow-hidden"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <img src={qrModalPet.avatar} className="absolute inset-0 w-full h-full object-cover opacity-10 blur-xl pointer-events-none" />
-
-                                <div className="relative z-10 w-full flex flex-col items-center text-center">
-                                    <div className="w-16 h-16 rounded-full border-2 border-cyan-400 p-0.5 mb-4 shadow-lg shrink-0">
-                                        <img src={qrModalPet.avatar} className="w-full h-full rounded-full object-cover" />
-                                    </div>
-                                    <h3 className="text-2xl font-black text-[var(--foreground)] mb-1">{qrModalPet.name} - Akıllı Kimlik</h3>
-                                    <p className="text-sm text-[var(--secondary-text)] font-medium mb-6">Bu QR Kodu Moffi Künyesine yazdırın veya tasmaya yapıştırın. (Test için kamera ile okutabilir veya Linke Tıklayabilirsiniz!)</p>
-
-                                    {/* THE QR CODE SURROUNDED BY NEON BORDER */}
-                                    <div 
-                                        className="bg-white p-4 rounded-3xl shadow-[0_0_30px_rgba(34,211,238,0.4)] border-4 border-cyan-400/50 mb-6 active:scale-95 transition-transform cursor-pointer" 
-                                        onClick={() => setIsFullScreenQR(true)}
-                                    >
-                                        <QRCodeSVG
-                                            value={`${window.location.origin}/id/${qrModalPet.id}`}
-                                            size={180}
-                                            bgColor="#FFFFFF"
-                                            fgColor="#000000"
-                                            level="H"
-                                        />
-                                    </div>
-
-                                    <div className="flex gap-2 w-full">
-                                        <button className="flex-1 bg-white text-black font-bold py-3 rounded-2xl flex items-center justify-center gap-2" onClick={() => showToast("İndirme Başlatıldı", "QR Kimlik PDF formatında hazırlandı.", "Download")}>
-                                            <Download className="w-4 h-4" />
-                                            Yüksek Kalite İndir
-                                        </button>
-                                        <button className="flex-1 bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 font-bold py-3 rounded-2xl flex items-center justify-center gap-2" onClick={() => window.open(`${window.location.origin}/id/${qrModalPet.id}`, '_blank')}>
-                                            Test Et (Aç)
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <button onClick={() => setQrModalPet(null)} className="absolute top-4 right-4 w-8 h-8 bg-white/10 rounded-full flex items-center justify-center text-[var(--foreground)] z-20">
-                                    <X className="w-4 h-4" />
-                                </button>
-                            </motion.div>
-                        </motion.div>
-                    )
-                }
-            </AnimatePresence>
-
-            {/* FULL SCREEN QR EXPANSION (Scanning Mode) */}
-            <AnimatePresence>
-                {isFullScreenQR && qrModalPet && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[1000] bg-black/95 backdrop-blur-3xl flex items-center justify-center p-6"
-                        onClick={() => setIsFullScreenQR(false)}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.8, opacity: 0 }}
-                            className="bg-white p-10 rounded-[4rem] shadow-[0_0_100px_rgba(34,211,238,0.3)] flex flex-col items-center gap-8"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div className="text-center">
-                                <h3 className="text-3xl font-black text-black tracking-tighter uppercase italic">{qrModalPet.name}</h3>
-                                <p className="text-xs font-bold text-cyan-600 uppercase tracking-[0.4em] mt-1">Moffi Akıllı Kimlik</p>
-                            </div>
-
-                            <div className="p-4 bg-white rounded-[2rem]">
-                                <QRCodeSVG
-                                    value={`${window.location.origin}/id/${qrModalPet.id}`}
-                                    size={300}
-                                    bgColor="#FFFFFF"
-                                    fgColor="#000000"
-                                    level="H"
-                                    includeMargin={true}
-                                />
-                            </div>
-
-                            <div className="flex flex-col items-center gap-4 w-full">
-                                <button 
-                                    onClick={() => window.open(`${window.location.origin}/id/${qrModalPet.id}`, '_blank')}
-                                    className="w-full bg-cyan-500 text-white font-black py-4 rounded-3xl shadow-xl active:scale-95 transition-all text-sm uppercase tracking-widest"
-                                >
-                                    Web Sayfasını Aç
-                                </button>
-                                <button 
-                                    onClick={() => setIsFullScreenQR(false)}
-                                    className="text-black/40 font-bold uppercase text-[10px] tracking-widest hover:text-black transition-colors"
-                                >
-                                    Kapatmak için dokun
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            <AnimatePresence>
-                {/* MOFFI BENTO SELECTOR OVERLAY */}
-                {isProfileMenuOpen && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[700] backdrop-blur-3xl flex items-center justify-center p-6"
-                        style={{ background: 'var(--background-overlay)' }}
-                        onClick={() => setIsProfileMenuOpen(false)}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0, y: 100 }}
-                            animate={{ scale: 1, opacity: 1, y: 0 }}
-                            exit={{ scale: 0.9, opacity: 0, y: 100 }}
-                            drag="y"
-                            dragConstraints={{ top: 0, bottom: 0 }}
-                            dragElastic={0.4}
-                            onDragEnd={(_, info) => {
-                                if (info.offset.y > 100) setIsProfileMenuOpen(false);
-                            }}
-                            className="w-full max-w-sm bg-[#0A0A0E]/60 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-8 pb-12 shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            {/* CLOSE HANDLE - Enhanced Area */}
-                            <div 
-                                onClick={() => setIsProfileMenuOpen(false)}
-                                className="absolute top-0 left-0 right-0 h-10 flex justify-center items-center cursor-pointer active:opacity-50 transition-opacity z-50"
-                            >
-                                <div className="w-16 h-1.5 bg-white/20 rounded-full" />
-                            </div>
-
-                            <div className="text-center mb-8 mt-4">
-                                <h3 className="text-[11px] font-black text-[var(--foreground)]/40 uppercase tracking-[0.4em]">Profil Kategorileri</h3>
-                                <p className="text-2xl font-black text-[var(--foreground)] mt-1">Nereye gitmek istersin?</p>
-                            </div>
-
-                            <div className="grid grid-cols-4 grid-rows-3 gap-3 h-[450px]">
-                                {[
-                                    { id: 'grid', label: 'Galeri', icon: Grid3X3, color: 'text-cyan-400', bg: 'bg-cyan-500/10', span: 'col-span-2 row-span-2' },
-                                    { id: 'list', label: 'Akış', icon: List, color: 'text-purple-400', bg: 'bg-purple-500/10', span: 'col-span-2 row-span-1' },
-                                    { id: 'family', label: 'Ailem', icon: Users, color: 'text-blue-400', bg: 'bg-blue-500/10', span: 'col-span-2 row-span-1' },
-                                    { id: 'wallet', label: 'Cüzdan', icon: Coins, color: 'text-amber-400', bg: 'bg-amber-500/10', span: 'col-span-1 row-span-1' },
-                                    { id: 'passport', label: 'Kimlik', icon: Globe, color: 'text-emerald-400', bg: 'bg-emerald-500/10', span: 'col-span-1 row-span-1' },
-                                    { id: 'orders', label: 'Siparişler', icon: Package, color: 'text-orange-400', bg: 'bg-orange-500/10', span: 'col-span-2 row-span-1' },
-                                    { id: 'saved', label: 'Favoriler', icon: Heart, color: 'text-red-400', bg: 'bg-red-500/10', span: 'col-span-2 row-span-1' },
-                                ].map((tab) => (
-                                    <button 
-                                        key={tab.id}
-                                        onClick={() => { setProfileViewMode(tab.id); setIsProfileMenuOpen(false); }}
-                                        className={cn(
-                                            "flex flex-col items-center justify-center p-4 rounded-[2rem] border transition-all active:scale-95 group relative overflow-hidden",
-                                            tab.span,
-                                            profileViewMode === tab.id 
-                                                ? "bg-white border-white shadow-[0_15px_40px_rgba(255,255,255,0.2)]" 
-                                                : "bg-[var(--card-bg)] border-white/10 backdrop-blur-md hover:bg-white/10"
-                                        )}
-                                    >
-                                        <div className={cn(
-                                            "w-10 h-10 rounded-2xl flex items-center justify-center transition-all mb-2",
-                                            profileViewMode === tab.id ? "bg-black text-[var(--foreground)]" : cn("bg-[var(--card-bg)]", tab.color)
-                                        )}>
-                                            <tab.icon className={cn(tab.id === 'grid' ? "w-6 h-6" : "w-5 h-5")} />
-                                        </div>
-                                        <span className={cn(
-                                            "text-[10px] font-black uppercase tracking-widest",
-                                            profileViewMode === tab.id ? "text-black" : "text-[var(--foreground)]/60"
-                                        )}>{tab.label}</span>
-                                        
-                                        {profileViewMode === tab.id && (
-                                            <div className="absolute top-3 right-3 w-1.5 h-1.5 rounded-full bg-black" />
-                                        )}
-                                    </button>
-                                ))}
-                            </div>
-
-                            <button onClick={() => setIsProfileMenuOpen(false)} className="w-full mt-8 py-4 bg-[var(--card-bg)] rounded-2xl text-[var(--foreground)]/40 text-sm font-bold hover:bg-white/10 transition-colors uppercase tracking-widest">
-                                Vazgeç
-                            </button>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence >
-
-            {/* NEW ADDITIONS: SHARE SHEET & NOTIFICATIONS DRAWER */}
-            {selectedSharePost && (
-                <ShareSheet 
-                    isOpen={true}
-                    selectedPost={selectedSharePost} 
-                    onClose={() => setSelectedSharePost(null)}
-                    onSocialShare={(platform) => { alert(`${platform} ile paylaşıldı!`); setSelectedSharePost(null); }}
-                    onAddToStory={() => { alert('Hikayenize eklendi!'); setSelectedSharePost(null); }}
-                    onCopyLink={() => { navigator.clipboard.writeText(window.location.href); alert('Bağlantı kopyalandı!'); setSelectedSharePost(null); }}
-                />
-            )}
-
-
-            <NotificationsDrawer
-                isOpen={isNotificationsOpen}
-                onClose={() => setIsNotificationsOpen(false)}
-                notifications={notificationsList}
-                onMarkAllRead={() => setNotificationsList(notificationsList.map(n => ({...n, read: true})))}
-                unreadCount={notificationsList.filter(n => !n.read).length}
+            {/* MODULAR OVERLAY SYSTEM (LIFTED) */}
+            <OverlaySystem 
+                user={user}
+                userPets={userPets}
+                activePet={activePet}
+                switchPet={switchPet}
+                updatePet={updatePet}
+                isProfileMenuOpen={isProfileMenuOpen}
+                setIsProfileMenuOpen={setIsProfileMenuOpen}
+                profileViewMode={profileViewMode}
+                setProfileViewMode={setProfileViewMode}
+                qrModalPet={qrModalPet}
+                setQrModalPet={setQrModalPet}
+                isFullScreenQR={isFullScreenQR}
+                setIsFullScreenQR={setIsFullScreenQR}
+                selectedSharePost={selectedSharePost}
+                setSelectedSharePost={setSelectedSharePost}
+                isNotificationsOpen={isNotificationsOpen}
+                setIsNotificationsOpen={setIsNotificationsOpen}
+                notificationsList={notificationsList}
+                setNotificationsList={setNotificationsList}
+                isPetSettingsOpen={isPetSettingsOpen}
+                setIsPetSettingsOpen={setIsPetSettingsOpen}
+                settingsPet={settingsPet}
+                isVetQuickSheetOpen={isVetQuickSheetOpen}
+                setIsVetQuickSheetOpen={setIsVetQuickSheetOpen}
+                isWalkQuickSheetOpen={isWalkQuickSheetOpen}
+                setIsWalkQuickSheetOpen={setIsWalkQuickSheetOpen}
+                isMarketQuickSheetOpen={isMarketQuickSheetOpen}
+                setIsMarketQuickSheetOpen={setIsMarketQuickSheetOpen}
+                isStudioQuickSheetOpen={isStudioQuickSheetOpen}
+                setIsStudioQuickSheetOpen={setIsStudioQuickSheetOpen}
+                isGameQuickSheetOpen={isGameQuickSheetOpen}
+                setIsGameQuickSheetOpen={setIsGameQuickSheetOpen}
+                isEcosystemPortalOpen={isEcosystemPortalOpen}
+                setIsEcosystemPortalOpen={setIsEcosystemPortalOpen}
+                isSpotlightOpen={isSpotlightOpen}
+                setIsSpotlightOpen={setIsSpotlightOpen}
+                isDiaryOpen={isDiaryOpen}
+                setIsDiaryOpen={setIsDiaryOpen}
+                setActiveTab={setActiveTab}
             />
-
-            <PetSettingsModal 
-                isOpen={isPetSettingsOpen}
-                onClose={() => setIsPetSettingsOpen(false)}
-                pet={settingsPet}
-                onSave={(updatedFields) => {
-                    if (settingsPet) {
-                        const updatedPet = { ...settingsPet, ...updatedFields };
-                        updatePet(settingsPet.id, updatedFields);
-                    }
-                    alert(`${updatedFields.name} için resmi pasaport bilgileri Moffi Cloud'a kaydedildi ve mühürlendi!`);
-                }}
-            />
-
-
-            <VetQuickSheet 
-                isOpen={isVetQuickSheetOpen} 
-                onClose={() => setIsVetQuickSheetOpen(false)}
-                petId={userPets[0]?.id || 'pet-1'}
-            />
-
-            <WalkQuickSheet 
-                isOpen={isWalkQuickSheetOpen} 
-                onClose={() => setIsWalkQuickSheetOpen(false)}
-                petId={userPets[0]?.id || 'pet-1'}
-            />
-
-            <MarketQuickSheet
-                isOpen={isMarketQuickSheetOpen}
-                onClose={() => setIsMarketQuickSheetOpen(false)}
-                petName={userPets[0]?.name || 'Dostun'}
-            />
-
-            <StudioQuickSheet
-                isOpen={isStudioQuickSheetOpen}
-                onClose={() => setIsStudioQuickSheetOpen(false)}
-                petName={userPets[0]?.name || 'Moffi'}
-            />
-
-            <GameQuickSheet
-                isOpen={isGameQuickSheetOpen}
-                onClose={() => setIsGameQuickSheetOpen(false)}
-                petName={userPets[0]?.name || 'Moffi'}
-            />
-
-            <EcosystemPortal 
-                isOpen={isEcosystemPortalOpen}
-                onClose={() => setIsEcosystemPortalOpen(false)}
-            />
-
-            <SpotlightSearch 
-                isOpen={isSpotlightOpen}
-                onClose={() => setIsSpotlightOpen(false)}
-                onNavigate={(type, id) => {
-                    if (type === 'pet') { 
-                        const petId = id.startsWith('pet-') ? id : `pet-${id}`;
-                        switchPet(petId); 
-                        setActiveTab('profile'); 
-                        setProfileViewMode('grid');
-                    }
-                    if (type === 'user') {
-                        // For mock users, we can just switch to profile tab or deep link
-                        // In a real app, router.push(`/profile/${id}`)
-                        setActiveTab('profile');
-                        setProfileViewMode('grid');
-                    }
-                    if (id === 'vax') { 
-                        setActiveTab('profile');
-                        setProfileViewMode('appointments'); 
-                    }
-                    if (id === 'vet') {
-                        setIsVetQuickSheetOpen(true);
-                    }
-                    if (id === 'market' || type === 'link') {
-                        setIsMarketQuickSheetOpen(true);
-                    }
-                }}
-            />
-
-            <DiaryModal 
-                isOpen={isDiaryOpen}
-                onClose={() => setIsDiaryOpen(false)}
-            />
-
-            <MoffiAssistant />
-
-
         </div>
     );
 }
@@ -3880,3 +3589,27 @@ function NavBtn({ icon: Icon, active, onClick }: { icon: any, active: boolean, o
     );
 }
 
+
+// --- HELPER COMPONENTS ---
+const TimeWheel = ({ value, onChange, max, label }: { value: number, onChange: (v: number) => void, max: number, label: string }) => {
+    const numbers = Array.from({ length: max + 1 }, (_, i) => i);
+    return (
+        <div className="flex flex-col items-center gap-2">
+            <span className="text-[10px] font-black text-secondary uppercase tracking-widest">{label}</span>
+            <div className="h-40 overflow-y-auto no-scrollbar snap-y snap-mandatory bg-black/20 rounded-2xl border border-white/5 w-16">
+                {numbers.map(n => (
+                    <button 
+                        key={n} 
+                        onClick={() => onChange(n)} 
+                        className={cn(
+                            "h-10 w-full flex items-center justify-center snap-start transition-all", 
+                            value === n ? "text-cyan-400 font-black text-lg bg-cyan-400/10" : "text-white/20 text-sm"
+                        )}
+                    >
+                        {n.toString().padStart(2, '0')}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+};

@@ -273,12 +273,13 @@ body {
 }
 
 /* --- PREMIUM STUDIO EFFECTS --- */
-.glass-morphism {
+.glass-panel {
   background: var(--card-bg);
-  backdrop-filter: blur(10px) saturate(160%);
-  -webkit-backdrop-filter: blur(10px) saturate(160%);
+  backdrop-filter: blur(8px) saturate(140%);
+  -webkit-backdrop-filter: blur(8px) saturate(140%);
   border: 1px solid var(--card-border);
   transform: translate3d(0,0,0); /* Hardware acceleration */
+  will-change: transform, opacity, backdrop-filter;
 }
 
 .premium-card {

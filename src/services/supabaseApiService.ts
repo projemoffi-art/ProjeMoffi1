@@ -6,10 +6,50 @@ import { supabase } from '@/lib/supabase';
 import { MockApiService } from './mockApiService';
 
 export class SupabaseApiService implements IApiService {
-    // Helper to get current session user
+    // Cache the entire session to avoid repeated network calls (5 min TTL)
+    private cachedUser: any = null;
+    private lastUserFetch: number = 0;
+    private userFetchPromise: Promise<any> | null = null;
+    private static readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+    // Call this when user logs out to clear stale cache
+    invalidateCache() {
+        this.cachedUser = null;
+        this.lastUserFetch = 0;
+        this.userFetchPromise = null;
+    }
+
     private async getSessionUser() {
-        const { data: { user } } = await supabase.auth.getUser();
-        return user;
+        const now = Date.now();
+        // Return cached user if still fresh
+        if (this.cachedUser && (now - this.lastUserFetch < SupabaseApiService.CACHE_TTL)) {
+            return this.cachedUser;
+        }
+
+        // Prevent multiple simultaneous fetches (thundering herd protection)
+        if (this.userFetchPromise) return this.userFetchPromise;
+
+        this.userFetchPromise = (async () => {
+            try {
+                // Use getSession() - reads from local storage, no network call
+                const { data: { session }, error } = await supabase.auth.getSession();
+                if (error) throw error;
+                const user = session?.user || null;
+                this.cachedUser = user;
+                this.lastUserFetch = Date.now();
+                return user;
+            } catch (err) {
+                console.error("Supabase getSession error:", err);
+                // Don't cache errors - allow retry on next call
+                this.cachedUser = null;
+                this.lastUserFetch = 0;
+                return null;
+            } finally {
+                this.userFetchPromise = null;
+            }
+        })();
+
+        return this.userFetchPromise;
     }
 
     // --- AUTH & PROFILE ---
@@ -108,25 +148,34 @@ export class SupabaseApiService implements IApiService {
         const user = await this.getSessionUser();
         if (!user) throw new Error("Giriş yapmalısın kral!");
 
+        // Build minimal insert payload - only include guaranteed columns
+        const payload: any = {
+            user_id: user.id,
+            content: post.caption || post.desc || '',
+            media_url: post.media || post.image || null,
+        };
+
+        // Optionally include these if they might exist in schema
+        if (post.type) payload.post_type = post.type;
+        if (post.mood) payload.mood = post.mood;
+        if (post.is_video !== undefined) payload.is_video = post.is_video;
+
         const { data, error } = await supabase
-            .from('posts')
-            .insert({
-                user_id: user.id,
-                content: post.caption,
-                media_url: post.media,
-                post_type: post.type || 'post'
-            })
+            .from('feed_posts')
+            .insert(payload)
             .select()
             .single();
 
-        if (error) throw error;
+        if (error) {
+            console.error('addPost error:', error);
+            throw new Error(error.message);
+        }
 
-        const profile = await this.getCurrentUser();
         return {
             id: data.id,
             user_id: data.user_id,
-            author: profile?.name || 'Moffi Kullanıcısı',
-            avatar: profile?.avatar || '',
+            author: user.email?.split('@')[0] || 'Moffi Kullanıcısı',
+            avatar: '',
             image: data.media_url,
             desc: data.content,
             likes: 0,
@@ -136,6 +185,7 @@ export class SupabaseApiService implements IApiService {
             isSaved: false
         };
     }
+
 
     async reactToPost(postId: string | number, reaction: string): Promise<void> {
         const user = await this.getSessionUser();
@@ -1268,8 +1318,9 @@ export class SupabaseApiService implements IApiService {
             .from('stories')
             .insert({
                 user_id: user.id,
-                image_url: storyData.imageUrl || storyData.image_url,
-                caption: storyData.caption || ''
+                image_url: storyData.mediaUrl || storyData.imageUrl || storyData.image_url,
+                caption: storyData.caption || '',
+                expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24h default
             });
 
         if (error) throw error;

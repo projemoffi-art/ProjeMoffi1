@@ -1,8 +1,9 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { apiService, isSupabaseEnabled } from "@/services/apiService";
+import { SupabaseApiService } from "@/services/supabaseApiService";
 
 export type UserRole = 'user' | 'business' | 'admin';
 export type BusinessType = 'petshop' | 'vet' | 'grooming' | 'trainer' | 'shelter';
@@ -64,16 +65,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // --- INITIALIZATION ---
     useEffect(() => {
+        let isMounted = true;
+        // Track if profile was loaded during init so onAuthStateChange doesn't double-fetch
+        const sessionLoadedRef = { current: false };
+        
         const initAuth = async () => {
+            const timeout = setTimeout(() => {
+                if (isMounted) {
+                    setIsLoading(false);
+                    console.warn("Auth initialization timed out.");
+                }
+            }, 8000);
+
             try {
                 if (isSupabaseEnabled) {
                     const { data: { session } } = await supabase.auth.getSession();
-                    if (session) {
+                    if (session && isMounted) {
+                        sessionLoadedRef.current = true;
                         const profile = await apiService.getCurrentUser();
-                        if (profile) {
+                        if (profile && isMounted) {
                             setUser({
                                 id: profile.id,
-                                username: profile.name,
+                                username: profile.username || profile.name,
                                 email: profile.email,
                                 role: 'user',
                                 avatar: profile.avatar,
@@ -83,29 +96,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                             });
                         }
                     }
-                } else {
+                } else if (isMounted) {
                     const savedUser = localStorage.getItem('moffi_mock_user');
                     if (savedUser) setUser(JSON.parse(savedUser));
                     else setUser(MOCK_USER_BASE);
                 }
             } catch (err) {
                 console.error("Auth initialization error:", err);
-                if (!isSupabaseEnabled) {
-                    setUser(MOCK_USER_BASE);
-                }
+                if (!isSupabaseEnabled && isMounted) setUser(MOCK_USER_BASE);
             } finally {
-                setIsLoading(false);
+                clearTimeout(timeout);
+                if (isMounted) setIsLoading(false);
             }
         };
 
         initAuth();
 
-        // Listen for changes
         if (isSupabaseEnabled) {
             const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-                if (event === 'SIGNED_IN' && session) {
+                if (event === 'SIGNED_IN' && session && !sessionLoadedRef.current) {
+                    // Only fetch profile if NOT already loaded during initAuth
                     const profile = await apiService.getCurrentUser();
-                    if (profile) {
+                    if (profile && isMounted) {
                         setUser({
                             id: profile.id,
                             username: profile.name,
@@ -117,12 +129,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                             stats: profile.stats || { posts: 0, followers: 0, following: 0 }
                         });
                     }
+                } else if (event === 'SIGNED_IN') {
+                    // Session already loaded - just mark it
+                    sessionLoadedRef.current = false; // Reset for future sign-ins
                 } else if (event === 'SIGNED_OUT') {
-                    setUser(null);
+                    if (isMounted) setUser(null);
+                    // Clear the auth cache so next login gets fresh data
+                    if (apiService instanceof SupabaseApiService) {
+                        (apiService as SupabaseApiService).invalidateCache();
+                    }
                 }
             });
-            return () => subscription.unsubscribe();
+            return () => {
+                isMounted = false;
+                subscription.unsubscribe();
+            };
         }
+        return () => { isMounted = false; };
     }, []);
 
     const login = async (email: string, password: string) => {

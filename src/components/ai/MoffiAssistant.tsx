@@ -88,7 +88,7 @@ export function MoffiAssistant() {
         }
     }, [messages, isTyping]);
 
-    if (!isMounted) return null;
+    // if (!isMounted) return null; // Removed early return to prevent hook order issues
 
     const handleSend = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
@@ -195,6 +195,6 @@ export function MoffiAssistant() {
         </div>
     );
 
-    if (typeof document === 'undefined') return null;
+    if (typeof document === 'undefined' || !isMounted) return null;
     return createPortal(assistantContent, document.body);
 }

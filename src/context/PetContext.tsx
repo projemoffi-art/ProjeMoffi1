@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { apiService } from "../services/apiService";
 
 // --- TYPES ---
@@ -24,8 +24,8 @@ export interface Pet {
         phone: string;
         address: string;
     };
-    avatar?: string; // Support for both field names
-    is_lost?: boolean; // SOS Status
+    avatar?: string;
+    is_lost?: boolean;
     sos_settings?: {
         auto_post_sos: boolean;
         sos_radius: '2km' | '5km' | '10km' | 'city';
@@ -38,6 +38,7 @@ export interface Pet {
         finder_message: string;
         quiet_hours?: { enabled: boolean; from: string; to: string };
         emergency_bypass?: boolean;
+        header_sos_alert_enabled?: boolean;
     };
 }
 
@@ -63,7 +64,6 @@ interface PetContextType {
 
 const PetContext = createContext<PetContextType | undefined>(undefined);
 
-// --- MOCK INITIAL DATA ---
 const INITIAL_PETS: Pet[] = [
     {
         id: 'pet-1',
@@ -78,23 +78,14 @@ const INITIAL_PETS: Pet[] = [
         weight: "28.5 kg",
         neutered: true,
         themeColor: '#EAB308',
-        owner: {
-            name: "Uveys Moffi",
-            phone: "+90 532 000 00 00",
-            address: "Kadıköy, İstanbul"
-        },
+        owner: { name: "Uveys Moffi", phone: "+90 532 000 00 00", address: "Kadıköy, İstanbul" },
         sos_settings: {
-            auto_post_sos: true,
-            sos_radius: '5km',
-            secure_proxy_only: false,
-            location_precision: 'exact',
-            emergency_sms_number: "",
-            reward_amount: 0,
-            reward_currency: "TL",
-            critical_health_note: "",
+            auto_post_sos: true, sos_radius: '5km', secure_proxy_only: false,
+            location_precision: 'exact', emergency_sms_number: "", reward_amount: 0,
+            reward_currency: "TL", critical_health_note: "",
             finder_message: "Lütfen bahçeye kapatıp beni arayın.",
             quiet_hours: { enabled: false, from: "23:00", to: "08:00" },
-            emergency_bypass: true
+            emergency_bypass: true, header_sos_alert_enabled: true
         }
     },
     {
@@ -110,21 +101,13 @@ const INITIAL_PETS: Pet[] = [
         weight: "4.2 kg",
         neutered: true,
         themeColor: '#8B5CF6',
-        owner: {
-            name: "Uveys Moffi",
-            phone: "+90 532 000 00 00",
-            address: "Kadıköy, İstanbul"
-        },
+        owner: { name: "Uveys Moffi", phone: "+90 532 000 00 00", address: "Kadıköy, İstanbul" },
         sos_settings: {
-            auto_post_sos: true,
-            sos_radius: '5km',
-            secure_proxy_only: false,
-            location_precision: 'exact',
-            emergency_sms_number: "",
-            reward_amount: 0,
-            reward_currency: "TL",
-            critical_health_note: "",
-            finder_message: "Lütfen bahçeye kapatıp beni arayın."
+            auto_post_sos: true, sos_radius: '5km', secure_proxy_only: false,
+            location_precision: 'exact', emergency_sms_number: "", reward_amount: 0,
+            reward_currency: "TL", critical_health_note: "",
+            finder_message: "Lütfen bahçeye kapatıp beni arayın.",
+            header_sos_alert_enabled: true
         }
     }
 ];
@@ -133,35 +116,57 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
     const [pets, setPets] = useState<Pet[]>([]);
     const [activePetId, setActivePetId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    
+    // Track if initial load is done to prevent persistence effect from running prematurely
+    const isInitializedRef = useRef(false);
+    // Track previous values to prevent unnecessary saves
+    const prevPetsRef = useRef<string>('');
+    const prevActivePetIdRef = useRef<string | null>(null);
 
-    // LOAD FROM SERVICE LAYER
+    // LOAD FROM SERVICE LAYER - runs ONCE
     useEffect(() => {
         const loadInitialData = async () => {
             setIsLoading(true);
             try {
                 const fetchedPets = await apiService.getPets();
-                setPets(fetchedPets as any);
+                const petsToUse = fetchedPets.length > 0 ? fetchedPets : INITIAL_PETS;
+                setPets(petsToUse as any);
+                prevPetsRef.current = JSON.stringify(petsToUse);
                 
                 const active = await apiService.getActivePet();
-                if (active) {
-                    setActivePetId(active.id);
-                } else if (fetchedPets.length > 0) {
-                    setActivePetId(fetchedPets[0].id);
-                }
+                const activeId = active?.id || (petsToUse[0]?.id || null);
+                setActivePetId(activeId);
+                prevActivePetIdRef.current = activeId;
             } catch (err) {
                 console.error("Pet veri yükleme hatası:", err);
+                setPets(INITIAL_PETS);
+                setActivePetId(INITIAL_PETS[0].id);
             } finally {
                 setIsLoading(false);
+                isInitializedRef.current = true;
             }
         };
         loadInitialData();
-    }, []);
+    }, []); // RUNS ONCE ONLY
 
-    // PERSISTENCE EFFECT (Delegated to Service)
+    // PERSISTENCE EFFECT - only saves when data actually changes
+    // Uses JSON comparison to prevent unnecessary saves
     useEffect(() => {
-        if (!isLoading) {
+        if (!isInitializedRef.current || isLoading) return;
+        
+        const petsJson = JSON.stringify(pets);
+        const activePetChanged = activePetId !== prevActivePetIdRef.current;
+        const petsChanged = petsJson !== prevPetsRef.current;
+        
+        if (petsChanged) {
+            prevPetsRef.current = petsJson;
             apiService.saveData('pets', pets);
-            if (activePetId) apiService.setActivePet(activePetId);
+        }
+        if (activePetChanged) {
+            prevActivePetIdRef.current = activePetId;
+            // Don't call setActivePet (Supabase) here - it causes auth re-fetches
+            // Just save locally
+            apiService.saveData('active_pet_id', activePetId);
         }
     }, [pets, activePetId, isLoading]);
 
@@ -171,17 +176,12 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
             ...newPetData,
             id: `pet-${Date.now()}`,
             sos_settings: {
-                auto_post_sos: true,
-                sos_radius: '5km',
-                secure_proxy_only: false,
-                location_precision: 'exact',
-                emergency_sms_number: "",
-                reward_amount: 0,
-                reward_currency: "TL",
-                critical_health_note: "",
+                auto_post_sos: true, sos_radius: '5km', secure_proxy_only: false,
+                location_precision: 'exact', emergency_sms_number: "", reward_amount: 0,
+                reward_currency: "TL", critical_health_note: "",
                 finder_message: "Lütfen yardıma ihtiyacım var!",
                 quiet_hours: { enabled: false, from: "23:00", to: "08:00" },
-                emergency_bypass: true
+                emergency_bypass: true, header_sos_alert_enabled: true
             }
         };
         setPets(prev => [...prev, newPet]);
@@ -195,14 +195,13 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
     const deletePet = React.useCallback((id: string) => {
         setPets(prev => {
             const newPets = prev.filter(p => p.id !== id);
-            if (activePetId === id && newPets.length > 0) {
-                setActivePetId(newPets[0].id);
-            } else if (newPets.length === 0) {
-                setActivePetId(null);
-            }
+            setActivePetId(curr => {
+                if (curr === id) return newPets[0]?.id || null;
+                return curr;
+            });
             return newPets;
         });
-    }, [activePetId]);
+    }, []);
 
     const switchPet = React.useCallback((id: string) => {
         setActivePetId(String(id));
@@ -219,30 +218,20 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
     const setCustomRecords = React.useCallback((petId: string, records: any[]) => {
         setCustomRecordsInternal(prev => ({ ...prev, [petId]: records }));
     }, []);
-
     const setRecordDocuments = React.useCallback((petId: string, recordId: string, documents: string[]) => {
-        setRecordDocumentsInternal(prev => ({
-            ...prev,
-            [petId]: {
-                ...(prev[petId] || {}),
-                [recordId]: documents
-            }
-        }));
+        setRecordDocumentsInternal(prev => ({ ...prev, [petId]: { ...(prev[petId] || {}), [recordId]: documents } }));
     }, []);
-
     const setOrders = React.useCallback((petId: string, orderList: any[]) => {
         setOrdersInternal(prev => ({ ...prev, [petId]: orderList }));
     }, []);
-
     const setAppointments = React.useCallback((petId: string, apptList: any[]) => {
         setAppointmentsInternal(prev => ({ ...prev, [petId]: apptList }));
     }, []);
-
     const setWalkRoutes = React.useCallback((petId: string, routeList: any[]) => {
         setWalkRoutesInternal(prev => ({ ...prev, [petId]: routeList }));
     }, []);
 
-    // LOAD RECORDS & NEW FEATURES FROM SERVICE
+    // LOAD EXTRA DATA ONCE
     useEffect(() => {
         const loadExtraData = async () => {
             const storedRecords = await apiService.loadData<Record<string, any[]>>('custom_records');
@@ -250,7 +239,6 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
             const storedOrders = await apiService.loadData<Record<string, any[]>>('orders');
             const storedAppts = await apiService.loadData<Record<string, any[]>>('appointments');
             const storedRoutes = await apiService.loadData<Record<string, any[]>>('walk_routes');
-
             if (storedRecords) setCustomRecordsInternal(storedRecords);
             if (storedDocs) setRecordDocumentsInternal(storedDocs);
             if (storedOrders) setOrdersInternal(storedOrders);
@@ -258,20 +246,31 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
             if (storedRoutes) setWalkRoutesInternal(storedRoutes);
         };
         loadExtraData();
-    }, []);
+    }, []); // RUNS ONCE ONLY
 
-    // PERSIST EVERYTHING TO SERVICE
+    // PERSIST EXTRA DATA - debounced via useMemo-stable refs
     useEffect(() => {
-        if (!isLoading) {
-            apiService.saveData('custom_records', customRecords);
-            apiService.saveData('record_docs', recordDocuments);
-            apiService.saveData('orders', orders);
-            apiService.saveData('appointments', appointments);
-            apiService.saveData('walk_routes', walkRoutes);
-        }
-    }, [customRecords, recordDocuments, orders, appointments, walkRoutes, isLoading]);
+        if (!isInitializedRef.current) return;
+        apiService.saveData('custom_records', customRecords);
+    }, [customRecords]);
+    useEffect(() => {
+        if (!isInitializedRef.current) return;
+        apiService.saveData('record_docs', recordDocuments);
+    }, [recordDocuments]);
+    useEffect(() => {
+        if (!isInitializedRef.current) return;
+        apiService.saveData('orders', orders);
+    }, [orders]);
+    useEffect(() => {
+        if (!isInitializedRef.current) return;
+        apiService.saveData('appointments', appointments);
+    }, [appointments]);
+    useEffect(() => {
+        if (!isInitializedRef.current) return;
+        apiService.saveData('walk_routes', walkRoutes);
+    }, [walkRoutes]);
 
-    const petValue = React.useMemo(() => ({ 
+    const petValue = React.useMemo(() => ({
         pets, activePet, isLoading, addPet, updatePet, deletePet, switchPet,
         customRecords, setCustomRecords, recordDocuments, setRecordDocuments,
         orders, setOrders, appointments, setAppointments, walkRoutes, setWalkRoutes
