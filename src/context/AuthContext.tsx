@@ -70,31 +70,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const sessionLoadedRef = { current: false };
         
         const initAuth = async () => {
-            const timeout = setTimeout(() => {
-                if (isMounted) {
-                    setIsLoading(false);
-                    console.warn("Auth initialization timed out.");
-                }
-            }, 8000);
-
+            // Remove the aggressive timeout that was forcing isLoading = false
+            // which caused ClientAuthWrapper to redirect prematurely.
+            
             try {
                 if (isSupabaseEnabled) {
-                    const { data: { session } } = await supabase.auth.getSession();
-                    if (session && isMounted) {
+                    const profile = await apiService.getCurrentUser();
+                    
+                    if (profile && isMounted) {
                         sessionLoadedRef.current = true;
-                        const profile = await apiService.getCurrentUser();
-                        if (profile && isMounted) {
-                            setUser({
-                                id: profile.id,
-                                username: profile.username || profile.name,
-                                email: profile.email,
-                                role: 'user',
-                                avatar: profile.avatar,
-                                bio: profile.bio,
-                                joinedAt: new Date().toISOString(),
-                                stats: profile.stats || { posts: 0, followers: 0, following: 0 }
-                            });
-                        }
+                        setUser({
+                            id: profile.id,
+                            username: profile.username || profile.name,
+                            email: profile.email,
+                            role: 'user',
+                            avatar: profile.avatar,
+                            bio: profile.bio,
+                            joinedAt: new Date().toISOString(),
+                            stats: profile.stats || { posts: 0, followers: 0, following: 0 }
+                        });
                     }
                 } else if (isMounted) {
                     const savedUser = localStorage.getItem('moffi_mock_user');
@@ -105,41 +99,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 console.error("Auth initialization error:", err);
                 if (!isSupabaseEnabled && isMounted) setUser(MOCK_USER_BASE);
             } finally {
-                clearTimeout(timeout);
                 if (isMounted) setIsLoading(false);
             }
         };
+
 
         initAuth();
 
         if (isSupabaseEnabled) {
             const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
                 if (event === 'SIGNED_IN' && session && !sessionLoadedRef.current) {
-                    // Only fetch profile if NOT already loaded during initAuth
-                    const profile = await apiService.getCurrentUser();
-                    if (profile && isMounted) {
-                        setUser({
-                            id: profile.id,
-                            username: profile.name,
-                            email: profile.email,
-                            role: 'user',
-                            avatar: profile.avatar,
-                            bio: profile.bio,
-                            joinedAt: new Date().toISOString(),
-                            stats: profile.stats || { posts: 0, followers: 0, following: 0 }
-                        });
+                    // Mark it immediately to block rapid-fire duplicate events
+                    sessionLoadedRef.current = true;
+                    
+                    try {
+                        const profile = await apiService.getCurrentUser();
+                        if (profile && isMounted) {
+                            setUser({
+                                id: profile.id,
+                                username: profile.name,
+                                email: profile.email,
+                                role: 'user',
+                                avatar: profile.avatar,
+                                bio: profile.bio,
+                                joinedAt: new Date().toISOString(),
+                                stats: profile.stats || { posts: 0, followers: 0, following: 0 }
+                            });
+                        }
+                    } catch (err) {
+                        console.error("onAuthStateChange profile fetch error:", err);
+                        sessionLoadedRef.current = false; // Allow retry on next event if failed
                     }
-                } else if (event === 'SIGNED_IN') {
-                    // Session already loaded - just mark it
-                    sessionLoadedRef.current = false; // Reset for future sign-ins
                 } else if (event === 'SIGNED_OUT') {
+                    sessionLoadedRef.current = false;
                     if (isMounted) setUser(null);
-                    // Clear the auth cache so next login gets fresh data
                     if (apiService instanceof SupabaseApiService) {
                         (apiService as SupabaseApiService).invalidateCache();
                     }
                 }
             });
+
             return () => {
                 isMounted = false;
                 subscription.unsubscribe();

@@ -21,36 +21,41 @@ export class SupabaseApiService implements IApiService {
 
     private async getSessionUser() {
         const now = Date.now();
-        // Return cached user if still fresh
+        // Return cached user if still fresh (5 min TTL)
         if (this.cachedUser && (now - this.lastUserFetch < SupabaseApiService.CACHE_TTL)) {
             return this.cachedUser;
         }
 
-        // Prevent multiple simultaneous fetches (thundering herd protection)
+        // Return existing promise to avoid simultaneous lock requests
         if (this.userFetchPromise) return this.userFetchPromise;
 
         this.userFetchPromise = (async () => {
             try {
-                // Use getSession() - reads from local storage, no network call
+                // Use getSession() - much faster and less prone to locks than getUser()
                 const { data: { session }, error } = await supabase.auth.getSession();
-                if (error) throw error;
+                
+                if (error) {
+                    // Lock errors or network issues - don't cache, just return null
+                    console.error("Supabase auth error:", error);
+                    return null;
+                }
+
                 const user = session?.user || null;
                 this.cachedUser = user;
                 this.lastUserFetch = Date.now();
                 return user;
             } catch (err) {
-                console.error("Supabase getSession error:", err);
-                // Don't cache errors - allow retry on next call
-                this.cachedUser = null;
-                this.lastUserFetch = 0;
+                console.error("Critical Auth Error:", err);
                 return null;
             } finally {
-                this.userFetchPromise = null;
+                // Keep promise for a short duration to debounce rapid-fire calls
+                setTimeout(() => { this.userFetchPromise = null; }, 500);
             }
         })();
 
         return this.userFetchPromise;
     }
+
 
     // --- AUTH & PROFILE ---
     async getCurrentUser(): Promise<UserProfile | null> {
