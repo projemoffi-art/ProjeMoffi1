@@ -1107,32 +1107,27 @@ function CommentItem({
                             exit={{ opacity: 0, scale: 0.9, y: -10 }}
                             className="absolute right-2 top-8 z-[70] min-w-[160px] bg-[#121316]/95 backdrop-blur-3xl border border-white/10 rounded-2xl p-1.5 shadow-2xl"
                         >
-                            {/* Actions restricted mostly to owner, but enabled gracefully if mock or current user owns it */}
-                            {(isCommentOwner || !comment.user_id) && (
-                                <>
-                                    <button 
-                                        onClick={() => {
-                                            onEdit(comment);
-                                            setShowContextMenu(false);
-                                        }}
-                                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/10 text-white transition-colors"
-                                    >
-                                        <span className="text-[11px] font-bold">DÜZENLE</span>
-                                        <Edit2 className="w-3.5 h-3.5 text-white/40" />
-                                    </button>
-                                    <button 
-                                        onClick={() => {
-                                            onDelete(comment.id);
-                                            setShowContextMenu(false);
-                                        }}
-                                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-red-500/20 text-red-400 transition-colors"
-                                    >
-                                        <span className="text-[11px] font-bold">SİL</span>
-                                        <Trash2 className="w-3.5 h-3.5 opacity-60" />
-                                    </button>
-                                    <div className="h-px bg-white/5 my-1 mx-2" />
-                                </>
-                            )}
+                            <button 
+                                onClick={() => {
+                                    onEdit(comment);
+                                    setShowContextMenu(false);
+                                }}
+                                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/10 text-white transition-colors"
+                            >
+                                <span className="text-[11px] font-bold">DÜZENLE</span>
+                                <Edit2 className="w-3.5 h-3.5 text-white/40" />
+                            </button>
+                            <button 
+                                onClick={() => {
+                                    onDelete(comment.id);
+                                    setShowContextMenu(false);
+                                }}
+                                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-red-500/20 text-red-400 transition-colors"
+                            >
+                                <span className="text-[11px] font-bold">SİL</span>
+                                <Trash2 className="w-3.5 h-3.5 opacity-60" />
+                            </button>
+                            <div className="h-px bg-white/5 my-1 mx-2" />
                             <button 
                                 onClick={() => {
                                     onReport(comment.id);
