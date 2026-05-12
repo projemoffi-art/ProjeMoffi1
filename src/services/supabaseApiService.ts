@@ -66,6 +66,9 @@ export class SupabaseApiService implements IApiService {
             petName: data.pet_name,
             role: data.role || 'user',
             bio: data.bio,
+            default_allow_comments: data.default_allow_comments ?? true,
+            default_comment_privacy: data.default_comment_privacy || 'everyone',
+            comment_filter_words: data.comment_filter_words || [],
             stats: {
                 walks: 0,
                 pets: 1,
@@ -78,18 +81,24 @@ export class SupabaseApiService implements IApiService {
         const user = await this.getSessionUser();
         if (!user) throw new Error('Unauthorized');
 
+        const upsertPayload: any = {
+            id: user.id, // Required for upsert
+            full_name: updates.name || updates.username,
+            username: updates.username,
+            avatar_url: updates.avatar,
+            pet_name: updates.petName,
+            bio: updates.bio,
+            subscription_status: (updates as any).subscription_status,
+            updated_at: new Date().toISOString()
+        };
+
+        if (updates.default_allow_comments !== undefined) upsertPayload.default_allow_comments = updates.default_allow_comments;
+        if (updates.default_comment_privacy !== undefined) upsertPayload.default_comment_privacy = updates.default_comment_privacy;
+        if (updates.comment_filter_words !== undefined) upsertPayload.comment_filter_words = updates.comment_filter_words;
+
         const { data, error } = await supabase
             .from('profiles')
-            .upsert({
-                id: user.id, // Required for upsert
-                full_name: updates.name || updates.username,
-                username: updates.username,
-                avatar_url: updates.avatar,
-                pet_name: updates.petName,
-                bio: updates.bio,
-                subscription_status: (updates as any).subscription_status,
-                updated_at: new Date().toISOString()
-            })
+            .upsert(upsertPayload)
             .select()
             .single();
 
@@ -102,7 +111,10 @@ export class SupabaseApiService implements IApiService {
             name: data.full_name,
             avatar: data.avatar_url,
             petName: data.pet_name,
-            bio: data.bio
+            bio: data.bio,
+            default_allow_comments: data.default_allow_comments ?? true,
+            default_comment_privacy: data.default_comment_privacy || 'everyone',
+            comment_filter_words: data.comment_filter_words || []
         } as UserProfile;
     }
 
@@ -221,12 +233,21 @@ export class SupabaseApiService implements IApiService {
         const user = await this.getSessionUser();
         if (!user) throw new Error("Giriş yapmalısın kral!");
 
-        // Build minimal insert payload - only include guaranteed columns
+        // Fetch the user's profile for defaults and author info
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+        // Build minimal insert payload - include global comment rules
         const payload: any = {
             user_id: user.id,
             content: post.caption || post.desc || '',
             media_url: post.media || post.image || null,
-            audio_url: post.audio_url || post.audioUrl || null
+            audio_url: post.audio_url || post.audioUrl || null,
+            allow_comments: post.allow_comments !== undefined ? post.allow_comments : (profile?.default_allow_comments ?? true),
+            comment_privacy: post.comment_privacy || profile?.default_comment_privacy || 'everyone'
         };
 
         const { data, error } = await supabase
@@ -239,13 +260,6 @@ export class SupabaseApiService implements IApiService {
             console.error('addPost error:', error);
             throw new Error(error.message);
         }
-
-        // Fetch the user's profile for author info
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('full_name, avatar_url, username')
-            .eq('id', user.id)
-            .single();
 
         return {
             id: data.id,
@@ -261,7 +275,9 @@ export class SupabaseApiService implements IApiService {
             comments: 0,
             time: 'Şimdi',
             isLiked: false,
-            isSaved: false
+            isSaved: false,
+            allow_comments: data.allow_comments ?? true,
+            comment_privacy: data.comment_privacy || 'everyone'
         };
     }
 
@@ -296,6 +312,8 @@ export class SupabaseApiService implements IApiService {
     }
 
     async getPostComments(postId: string | number): Promise<any[]> {
+        const user = await this.getSessionUser();
+        
         const { data, error } = await supabase
             .from('comments')
             .select(`
@@ -307,6 +325,20 @@ export class SupabaseApiService implements IApiService {
 
         if (error) return [];
 
+        const likedCommentIds = new Set<string>();
+        if (user && data && data.length > 0) {
+            const commentIds = data.map(c => c.id);
+            const { data: likesData } = await supabase
+                .from('comment_likes')
+                .select('comment_id')
+                .in('comment_id', commentIds)
+                .eq('user_id', user.id);
+                
+            if (likesData) {
+                likesData.forEach(l => likedCommentIds.add(l.comment_id));
+            }
+        }
+
         return data.map(c => ({
             id: c.id,
             user: (c.profiles as any)?.full_name || (c.profiles as any)?.username || 'Moffi Kullanıcısı',
@@ -314,7 +346,9 @@ export class SupabaseApiService implements IApiService {
             text: c.content,
             time: this.formatTimeAgo(c.created_at),
             user_id: c.user_id,
-            likes: c.likes_count || 0
+            likes: c.likes_count || 0,
+            status: c.status || 'approved',
+            isLiked: likedCommentIds.has(c.id)
         }));
     }
 
@@ -330,9 +364,26 @@ export class SupabaseApiService implements IApiService {
         const user = await this.getSessionUser();
         if (!user) return;
         
-        const { data } = await supabase.from('comments').select('likes_count').eq('id', commentId).maybeSingle();
-        const currentCount = data?.likes_count || 0;
-        await supabase.from('comments').update({ likes_count: currentCount + 1 }).eq('id', commentId);
+        const { data: existing } = await supabase
+            .from('comment_likes')
+            .select('*')
+            .eq('comment_id', commentId)
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+        if (existing) {
+            await supabase.from('comment_likes').delete().eq('id', existing.id);
+            // Fallback optimistic decrement
+            const { data } = await supabase.from('comments').select('likes_count').eq('id', commentId).maybeSingle();
+            const currentCount = data?.likes_count || 0;
+            await supabase.from('comments').update({ likes_count: Math.max(0, currentCount - 1) }).eq('id', commentId);
+        } else {
+            await supabase.from('comment_likes').insert({ comment_id: commentId, user_id: user.id });
+            // Fallback optimistic increment
+            const { data } = await supabase.from('comments').select('likes_count').eq('id', commentId).maybeSingle();
+            const currentCount = data?.likes_count || 0;
+            await supabase.from('comments').update({ likes_count: currentCount + 1 }).eq('id', commentId);
+        }
     }
 
     // --- MAP & RADAR (Community) ---

@@ -52,6 +52,9 @@ export interface Post {
     time: string;
     type?: 'image' | 'video';
     mood?: string;
+    allow_comments?: boolean;
+    comment_privacy?: 'everyone' | 'followers' | 'none';
+    status?: string;
 }
 
 export interface UserProfile {
@@ -71,6 +74,9 @@ export interface UserProfile {
         accentColor: string;
         badges: string[];
     };
+    default_allow_comments?: boolean;
+    default_comment_privacy?: 'everyone' | 'followers' | 'none';
+    comment_filter_words?: string[];
 }
 
 export interface LostPet {

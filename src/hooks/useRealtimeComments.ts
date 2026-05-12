@@ -11,6 +11,7 @@ export interface RealtimeComment {
     text: string;
     time: string;
     user_id: string;
+    status?: string;
 }
 
 /**
@@ -83,8 +84,10 @@ export function useRealtimeComments(postId: string | number | null, enabled: boo
         try {
             await apiService.addComment(postId, text);
             refetchComments(); // Immediate local refetch on write
-        } catch (err) {
+        } catch (err: any) {
             console.error('[Realtime] addComment failed:', err);
+            alert(err?.message || 'Yorum eklenirken hata oluştu. Gönderi yorumlara kapatılmış olabilir.');
+            throw err;
         }
     };
 
