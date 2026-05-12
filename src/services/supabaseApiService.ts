@@ -134,8 +134,9 @@ export class SupabaseApiService implements IApiService {
 
     // --- COMMUNITY & FEED ---
     async getFeedContent(): Promise<any[]> {
+        // Doğrudan ana posts tablosundan çekiyoruz (view ve eksik sütun bağımlılıklarını kökünden çözer)
         const { data, error } = await supabase
-            .from('feed_view')
+            .from('posts')
             .select('*')
             .order('created_at', { ascending: false });
 
@@ -155,8 +156,9 @@ export class SupabaseApiService implements IApiService {
 
         const likedPostIds = new Set(userLikes.map(l => l.post_id));
 
-        // Eğer veritabanı henüz boşsa veya görünümlerden veri çekilemediyse arayüzü büyüleyici simülasyonla doldur
+        // Eğer veritabanında gerçekten hiç gönderi yoksa arayüzü zengin simülasyonla doldur
         if (error || validData.length === 0) {
+            if (error) console.error('Error fetching live posts:', error);
             return MOCK_POSTS.map(p => ({
                 id: p.id,
                 user_id: p.user_id,
@@ -174,23 +176,58 @@ export class SupabaseApiService implements IApiService {
             }));
         }
 
-        return validData.map(item => ({
-            id: item.id,
-            user_id: item.user_id,
-            author: item.user_name || 'Moffi Kullanıcısı',
-            avatar: item.user_avatar || 'https://i.pravatar.cc/150?u=' + item.user_id,
-            image: item.media_url,
-            desc: item.content,
-            likes: item.likes_count || 0,
-            comments: item.comments_count || 0,
-            time: this.formatTimeAgo(item.created_at),
-            isLiked: likedPostIds.has(item.id),
-            isSaved: false,
-            mood: item.mood,
-            audio_url: item.audio_url,
-            aura_settings: item.aura_settings,
-            allow_comments: item.allow_comments ?? true
-        }));
+        // Gönderi sahiplerinin profillerini toplu halde (bulk) çekelim
+        const userIds = Array.from(new Set(validData.map(p => p.user_id).filter(Boolean)));
+        let profileMap: Record<string, any> = {};
+        if (userIds.length > 0) {
+            const { data: profiles } = await supabase
+                .from('profiles')
+                .select('*')
+                .in('id', userIds);
+            
+            (profiles || []).forEach(pr => {
+                profileMap[pr.id] = pr;
+            });
+        }
+
+        // Yorum ve beğeni sayılarını sayalım
+        const postIds = validData.map(p => p.id);
+        const [likesRes, commentsRes] = await Promise.all([
+            supabase.from('likes').select('post_id').in('post_id', postIds),
+            supabase.from('comments').select('post_id').in('post_id', postIds)
+        ]);
+
+        const likeCountMap: Record<string, number> = {};
+        const commentCountMap: Record<string, number> = {};
+
+        (likesRes.data || []).forEach((l: any) => {
+            likeCountMap[l.post_id] = (likeCountMap[l.post_id] || 0) + 1;
+        });
+        (commentsRes.data || []).forEach((c: any) => {
+            commentCountMap[c.post_id] = (commentCountMap[c.post_id] || 0) + 1;
+        });
+
+        return validData.map(item => {
+            const authorProfile = profileMap[item.user_id];
+            return {
+                id: item.id,
+                user_id: item.user_id,
+                author: authorProfile?.full_name || authorProfile?.username || 'Moffi Kullanıcısı',
+                avatar: authorProfile?.avatar_url || 'https://i.pravatar.cc/150?u=' + item.user_id,
+                image: item.media_url,
+                desc: item.content,
+                likes: item.likes_count || likeCountMap[item.id] || 0,
+                comments: item.comments_count || commentCountMap[item.id] || 0,
+                time: this.formatTimeAgo(item.created_at),
+                isLiked: likedPostIds.has(item.id),
+                isSaved: false,
+                mood: item.mood,
+                audio_url: item.audio_url,
+                aura_settings: authorProfile?.aura_settings,
+                allow_comments: item.allow_comments ?? true,
+                comment_privacy: item.comment_privacy || 'everyone'
+            };
+        });
     }
 
     // --- KULLANICININ KENDİ GÖNDERİLERİ (Profil Grid) ---
