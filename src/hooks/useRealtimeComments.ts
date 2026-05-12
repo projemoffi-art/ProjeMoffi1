@@ -43,7 +43,7 @@ export function useRealtimeComments(postId: string | number | null, enabled: boo
 
         const channelName = `comments:post_id=eq.${postId}`;
         
-        // Subscribe to ALL events (INSERT, UPDATE, DELETE) on this post's comments
+        // Subscribe to ALL events (INSERT, UPDATE, DELETE) on this post's comments and likes
         channelRef.current = supabase
             .channel(channelName)
             .on(
@@ -59,6 +59,20 @@ export function useRealtimeComments(postId: string | number | null, enabled: boo
                     apiService.getPostComments(postId)
                         .then(data => setComments(data))
                         .catch(err => console.error('[Realtime] Refetch failed:', err));
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'comment_likes',
+                },
+                () => {
+                    // Beğeni/Beğeni kaldırma işlemlerinde tüm listeyi anında eşitle
+                    apiService.getPostComments(postId)
+                        .then(data => setComments(data))
+                        .catch(err => console.error('[Realtime] Like refetch failed:', err));
                 }
             )
             .subscribe();

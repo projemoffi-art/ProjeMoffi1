@@ -1103,7 +1103,11 @@ function CommentItem({
     const [isLikedLocal, setIsLikedLocal] = useState(comment.isLiked || false);
     const router = useRouter();
 
-    const isCommentOwner = currentUser?.id === comment.user_id || currentUser?.username === comment.author?.replace('@', '');
+    const currentUsername = currentUser?.username || currentUser?.name || currentUser?.full_name;
+    const commentUsername = comment.user || comment.author || comment.userName;
+    const isCommentOwner = 
+        (currentUser?.id && comment.user_id && String(currentUser.id) === String(comment.user_id)) ||
+        (currentUsername && commentUsername && String(currentUsername).toLowerCase() === String(commentUsername).toLowerCase());
 
     useEffect(() => {
         setLikesCount(comment.likes || 0);
