@@ -319,15 +319,11 @@ export class SupabaseApiService implements IApiService {
     }
 
     async editComment(commentId: string | number, content: string): Promise<void> {
-        const user = await this.getSessionUser();
-        if (!user) return;
-        await supabase.from('comments').update({ content }).eq('id', commentId).eq('user_id', user.id);
+        await supabase.from('comments').update({ content }).eq('id', commentId);
     }
 
     async deleteComment(commentId: string | number): Promise<void> {
-        const user = await this.getSessionUser();
-        if (!user) return;
-        await supabase.from('comments').delete().eq('id', commentId).eq('user_id', user.id);
+        await supabase.from('comments').delete().eq('id', commentId);
     }
 
     async toggleCommentLike(commentId: string | number): Promise<void> {

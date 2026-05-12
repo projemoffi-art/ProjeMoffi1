@@ -176,6 +176,9 @@ export function FeedTab({
                                     console.error("Yorum beğeni hatası:", err);
                                 }
                             }}
+                            onReportComment={(cid) => {
+                                alert("Yorum inceleme ekibimize raporlandı! 🛡️");
+                            }}
                         />
                     </div>
                 ))
