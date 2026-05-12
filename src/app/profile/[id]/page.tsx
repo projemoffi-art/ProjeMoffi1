@@ -77,6 +77,11 @@ export default function ProfilePage() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
+  // GLOBAL COMMENT DEFAULTS & FILTERS STATES
+  const [editAllowComments, setEditAllowComments] = useState(true);
+  const [editCommentPrivacy, setEditCommentPrivacy] = useState("everyone");
+  const [editFilterWords, setEditFilterWords] = useState("");
+
   // ADD PET STATES
   const [addPetStep, setAddPetStep] = useState(1);
   const [newPetName, setNewPetName] = useState("");
@@ -101,6 +106,9 @@ export default function ProfilePage() {
         setEditBio(currentUser.bio || "");
         setEditAvatarPreview(currentUser.avatar || null);
         setEditCoverPreview(currentUser.cover_photo || null);
+        setEditAllowComments(currentUser.default_allow_comments ?? true);
+        setEditCommentPrivacy(currentUser.default_comment_privacy || "everyone");
+        setEditFilterWords((currentUser.comment_filter_words || []).join(", "));
     }
   }, [currentUser, isOwnProfile]);
 
@@ -136,11 +144,19 @@ export default function ProfilePage() {
             coverUrl = await apiService.uploadMedia(editCoverFile, 'avatars');
         }
 
+        const filterWordsArray = editFilterWords
+            .split(",")
+            .map(w => w.trim())
+            .filter(w => w.length > 0);
+
         await apiService.updateProfile({
             username: editUsername,
             bio: editBio,
             avatar: avatarUrl || undefined,
-            cover_photo: coverUrl || undefined
+            cover_photo: coverUrl || undefined,
+            default_allow_comments: editAllowComments,
+            default_comment_privacy: editCommentPrivacy,
+            comment_filter_words: filterWordsArray
         });
 
         // Update local state to reflect changes immediately
@@ -149,7 +165,10 @@ export default function ProfilePage() {
             username: editUsername,
             avatar_url: avatarUrl,
             cover_url: coverUrl,
-            bio: editBio
+            bio: editBio,
+            default_allow_comments: editAllowComments,
+            default_comment_privacy: editCommentPrivacy,
+            comment_filter_words: filterWordsArray
         }));
 
         setIsEditProfileOpen(false);
@@ -324,6 +343,12 @@ export default function ProfilePage() {
           isSavingProfile={isSavingProfile}
           onSave={handleSaveProfile}
           coverInputRef={coverInputRef}
+          editAllowComments={editAllowComments}
+          setEditAllowComments={setEditAllowComments}
+          editCommentPrivacy={editCommentPrivacy}
+          setEditCommentPrivacy={setEditCommentPrivacy}
+          editFilterWords={editFilterWords}
+          setEditFilterWords={setEditFilterWords}
         />
 
         <AddPetModal 

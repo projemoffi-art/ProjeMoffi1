@@ -26,6 +26,12 @@ interface EditProfileModalProps {
     isSavingProfile: boolean;
     onSave: () => Promise<void>;
     coverInputRef: React.RefObject<HTMLInputElement>;
+    editAllowComments?: boolean;
+    setEditAllowComments?: (val: boolean) => void;
+    editCommentPrivacy?: string;
+    setEditCommentPrivacy?: (val: string) => void;
+    editFilterWords?: string;
+    setEditFilterWords?: (val: string) => void;
 }
 
 export function EditProfileModal({
@@ -48,7 +54,13 @@ export function EditProfileModal({
     setEditCoverFile,
     isSavingProfile,
     onSave,
-    coverInputRef
+    coverInputRef,
+    editAllowComments = true,
+    setEditAllowComments,
+    editCommentPrivacy = "everyone",
+    setEditCommentPrivacy,
+    editFilterWords = "",
+    setEditFilterWords
 }: EditProfileModalProps) {
     return (
         <AnimatePresence>
@@ -182,6 +194,57 @@ export function EditProfileModal({
                                     className="w-full h-32 bg-foreground/5 border border-card-border rounded-2xl px-5 py-4 text-foreground outline-none focus:border-accent/50 transition-all resize-none font-medium text-sm leading-relaxed" 
                                     placeholder="Kendinden bahset..."
                                 />
+                            </div>
+
+                            {/* GLOBAL COMMENT ECOSYSTEM SETTINGS */}
+                            <div className="pt-4 border-t border-card-border space-y-5">
+                                <h3 className="text-xs font-black text-accent uppercase tracking-widest pl-2">Global Yorum & Moderasyon</h3>
+                                
+                                <div className="flex items-center justify-between bg-foreground/5 p-4 rounded-2xl border border-card-border">
+                                    <div className="flex flex-col">
+                                        <span className="text-xs font-bold text-foreground">Yorumlara İzin Ver</span>
+                                        <span className="text-[10px] text-secondary">Gönderilerine yapılan yeni yorumları aç/kapat</span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setEditAllowComments?.(!editAllowComments)}
+                                        className={cn(
+                                            "w-12 h-6 rounded-full transition-colors relative p-1",
+                                            editAllowComments ? "bg-accent" : "bg-foreground/20"
+                                        )}
+                                    >
+                                        <motion.div
+                                            layout
+                                            className="w-4 h-4 rounded-full bg-white shadow-md"
+                                            style={{ float: editAllowComments ? "right" : "left" }}
+                                        />
+                                    </button>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] text-secondary font-black uppercase tracking-[0.2em] ml-2">Kimler Yorum Yapabilir?</label>
+                                    <select
+                                        value={editCommentPrivacy}
+                                        onChange={e => setEditCommentPrivacy?.(e.target.value)}
+                                        className="w-full bg-foreground/5 border border-card-border rounded-2xl px-5 py-4 text-foreground outline-none focus:border-accent/50 transition-all font-bold text-xs"
+                                    >
+                                        <option value="everyone" className="bg-background text-foreground">Herkes (Genel Açık)</option>
+                                        <option value="followers" className="bg-background text-foreground">Sadece Takipçilerim</option>
+                                        <option value="none" className="bg-background text-foreground">Hiç Kimse</option>
+                                    </select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] text-secondary font-black uppercase tracking-[0.2em] ml-2">Otomatik Filtre / Yasaklı Kelimeler</label>
+                                    <input 
+                                        type="text" 
+                                        value={editFilterWords} 
+                                        onChange={e => setEditFilterWords?.(e.target.value)} 
+                                        className="w-full bg-foreground/5 border border-card-border rounded-2xl px-5 py-4 text-foreground outline-none focus:border-accent/50 transition-all font-medium text-xs" 
+                                        placeholder="spam, hakaret, reklam (virgülle ayırın)" 
+                                    />
+                                    <p className="text-[9px] text-secondary pl-2">Bu kelimeleri içeren yorumlar otomatik olarak onay bekleyen duruma (pending) alınır.</p>
+                                </div>
                             </div>
 
                             <button
