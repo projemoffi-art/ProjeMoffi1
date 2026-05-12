@@ -30,7 +30,7 @@ SELECT
     p.media_url,
     p.audio_url,
     p.mood,
-    p.aura_settings,
+    pr.aura_settings AS aura_settings,
     p.likes_count,
     p.comments_count,
     p.allow_comments,
