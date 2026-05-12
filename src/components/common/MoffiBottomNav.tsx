@@ -8,6 +8,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useTranslation } from '@/context/LanguageContext';
 
 interface MoffiBottomNavProps {
     activeTab?: string;
@@ -16,6 +17,7 @@ interface MoffiBottomNavProps {
 }
 
 export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisible = true }: MoffiBottomNavProps) {
+    const { t } = useTranslation();
     const router = useRouter();
     const pathname = usePathname();
     const { user } = useAuth();
@@ -71,7 +73,7 @@ export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisibl
                         )}
                     >
                         <Compass className={cn("w-6 h-6", activeTab === 'feed' && "text-cyan-400")} />
-                        <span className="text-[8px] font-black uppercase tracking-widest">Keşfet</span>
+                        <span className="text-[8px] font-black uppercase tracking-widest">{t('navigation.discover')}</span>
                     </button>
 
                     {/* 2. ARAMA */}
@@ -80,7 +82,7 @@ export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisibl
                         className="flex-1 flex flex-col items-center gap-1 transition-all active:scale-90 text-white/40 hover:text-white/60"
                     >
                         <Search className="w-6 h-6" />
-                        <span className="text-[8px] font-black uppercase tracking-widest">Arama</span>
+                        <span className="text-[8px] font-black uppercase tracking-widest">{t('sidebar.search')}</span>
                     </button>
 
                     {/* 3. CENTER: HUB BUTTON */}
@@ -114,7 +116,7 @@ export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisibl
                         className="flex-1 flex flex-col items-center gap-1 transition-all active:scale-90 text-white/40 hover:text-white/60"
                     >
                         <MapPin className="w-6 h-6" />
-                        <span className="text-[8px] font-black uppercase tracking-widest">Harita</span>
+                        <span className="text-[8px] font-black uppercase tracking-widest">{t('sidebar.places')}</span>
                     </button>
 
                     {/* 5. PROFİL */}
@@ -132,7 +134,7 @@ export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisibl
                         ) : (
                             <User className="w-6 h-6" />
                         )}
-                        <span className="text-[8px] font-black uppercase tracking-widest">Profil</span>
+                        <span className="text-[8px] font-black uppercase tracking-widest">{t('navigation.profile')}</span>
                     </button>
                 </div>
         </motion.nav>

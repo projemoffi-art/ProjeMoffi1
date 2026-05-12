@@ -18,14 +18,14 @@ export class MockApiService implements IApiService {
         
         // Initial setup for mock
         const newUser: UserProfile = {
-            id: 'user-moffi-official',
-            name: 'Moffi Official',
-            username: 'MoffiOfficial',
+            id: `user-mock-${Date.now()}`,
+            name: 'Moffi Guest',
+            username: 'moffi_guest',
             avatar: "https://images.unsplash.com/photo-1628157588553-5eeea00af15c?q=80&w=400",
-            is_verified: true,
-            subscription_status: 'pro',
-            wallet_balance: 1450,
-            moffi_coins: 250
+            is_verified: false,
+            subscription_status: 'free',
+            wallet_balance: 0,
+            moffi_coins: 0
         };
         await this.saveData('current_user', newUser);
         return newUser;
@@ -54,6 +54,13 @@ export class MockApiService implements IApiService {
         const updated = { ...current!, ...updates };
         await this.saveData('current_user', updated);
         return updated;
+    }
+
+    async isUsernameAvailable(username: string): Promise<boolean> {
+        if (!username) return false;
+        const { MOCK_PROFILES } = await import('../lib/mockData');
+        const isTaken = MOCK_PROFILES.some(p => p.username.toLowerCase() === username.toLowerCase());
+        return !isTaken;
     }
 
     // Pets
@@ -536,6 +543,16 @@ export class MockApiService implements IApiService {
     }
 
     async getPostComments(postId: string): Promise<any[]> { return []; }
+    async editComment(commentId: string | number, content: string): Promise<void> {}
+    async deleteComment(commentId: string | number): Promise<void> {}
+    async toggleCommentLike(commentId: string | number): Promise<void> {}
+
+    async getUserPosts(userId: string): Promise<any[]> {
+        // In mock mode, filter local feed posts by userId
+        const posts = await this.getFeedContent();
+        return posts.filter(p => String(p.user_id) === String(userId));
+    }
+
 
     async updateAuraSettings(settings: any): Promise<void> {
         await this.updateProfile({ aura_settings: settings });

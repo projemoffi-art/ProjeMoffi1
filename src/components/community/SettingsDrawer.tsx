@@ -593,6 +593,34 @@ const PrivacyView = ({ user, setView, updateSettings }: ViewProps) => (
                     <ToggleRow user={user} onToggle={(c, i) => updateSettings(c, { [i]: !user?.settings?.privacy?.[i as keyof typeof user.settings.privacy] })} category="privacy" id="aiModeration" icon={BrainCircuit} label="AI İçerik Filtresi" desc="Spam ve kötü niyetli içerikleri otomatik engeller." />
                 </div>
             </div>
+
+            <div className="space-y-3">
+                <p className="text-[9px] font-black text-red-500 uppercase tracking-[0.2em] px-1">{t('settings.danger_zone')}</p>
+                <div className="bg-red-500/5 rounded-[2.5rem] p-2 border border-red-500/10">
+                    <button 
+                        onClick={() => {
+                            if (confirm(t('settings.delete_confirm'))) {
+                                if (confirm(t('settings.delete_final_confirm'))) {
+                                    alert(t('settings.delete_success'));
+                                    window.location.replace('/');
+                                }
+                            }
+                        }}
+                        className="w-full flex items-center justify-between py-4 px-4 hover:bg-red-500/10 transition-all rounded-3xl group text-left"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-2xl bg-red-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <Trash2 className="w-5 h-5 text-red-500" />
+                            </div>
+                            <div>
+                                <p className="text-[12px] font-black text-red-500 uppercase tracking-tight">{t('settings.delete_account')}</p>
+                                <p className="text-[9px] text-red-500/40 mt-1 font-bold uppercase tracking-tighter">{t('settings.delete_desc')}</p>
+                            </div>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-red-500/30 group-hover:translate-x-1 transition-transform" />
+                    </button>
+                </div>
+            </div>
         </div>
         <button onClick={() => setView('main')} className="mt-4 w-full py-5 rounded-[2.5rem] bg-foreground/[0.05] text-foreground font-black text-[12px] uppercase tracking-[0.2em] hover:bg-foreground/10 transition-all flex items-center justify-center gap-3"><ArrowLeft className="w-4 h-4" /> Geri Dön</button>
     </motion.div>

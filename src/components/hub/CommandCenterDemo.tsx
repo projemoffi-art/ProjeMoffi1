@@ -39,10 +39,10 @@ export function CommandCenterDemo({ isOpen, onClose }: CommandCenterDemoProps) {
         return () => clearInterval(timer);
     }, [isOpen]);
 
+    const { unreadMessageCount } = useHubData();
+
     if (!isOpen) return null;
 
-    const { unreadMessageCount } = useHubData();
-    
     return (
         <AnimatePresence>
             <motion.div

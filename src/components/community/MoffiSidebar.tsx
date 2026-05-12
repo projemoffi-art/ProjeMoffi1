@@ -14,8 +14,10 @@ import {
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useActivity } from '@/context/ActivityContext';
+import { useNotifications } from '@/context/NotificationContext';
 import { useRouter } from 'next/navigation';
 import { getWeather, WeatherData } from '@/services/weatherService';
+import { useTranslation } from '@/context/LanguageContext';
 
 interface SidebarWidget {
     id: string;
@@ -28,12 +30,14 @@ interface SidebarWidget {
 
 export function MoffiSidebar() {
     const { user, updateSettings } = useAuth();
+    const { t } = useTranslation();
     const router = useRouter();
     const { 
         activeMode, setActiveMode, 
         walkData, startWalk, stopWalk,
         recTime 
     } = useActivity();
+    const { unreadCount } = useNotifications();
     
     // Get edge settings from user object or use defaults
     const edgeSettings = user?.settings?.edge || {
@@ -135,29 +139,29 @@ export function MoffiSidebar() {
     };
 
     const ALL_WIDGETS: SidebarWidget[] = [
-        { id: 'ai', label: 'AI Asistan', icon: Sparkles, color: 'from-indigo-500 to-purple-600', action: () => window.dispatchEvent(new CustomEvent('open-ai-assistant')) },
-        { id: 'post', label: 'Paylaş', icon: Plus, color: 'from-emerald-400 to-teal-600', action: () => window.dispatchEvent(new CustomEvent('open-add-post')) },
-        { id: 'qr', label: 'Pasaport', icon: QrCode, color: 'from-amber-400 to-orange-600', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'passport' })) },
-        { id: 'mood', label: 'Ruh Hali', icon: Zap, color: 'from-pink-400 to-rose-600', action: () => window.dispatchEvent(new CustomEvent('open-moffi-navigate', { detail: 'mood-selector' })) },
-        { id: 'sos', label: 'SOS', icon: ShieldAlert, color: 'from-red-500 to-red-700', action: () => window.dispatchEvent(new CustomEvent('open-sos-center')) },
-        { id: 'studio', label: 'Aura', icon: Palette, color: 'from-cyan-400 to-blue-600', action: () => window.dispatchEvent(new CustomEvent('open-aura-studio')) },
-        { id: 'voice', label: 'Sesli Not', icon: Mic, color: 'from-orange-400 to-red-500', action: () => { triggerHaptic(30); setActiveMode('voice'); setIsOpen(true); } },
-        { id: 'steps', label: 'Yürüyüş', icon: Footprints, color: 'from-blue-400 to-indigo-500', value: '4.2k', action: () => { triggerHaptic(30); startWalk(); setIsOpen(true); } },
+        { id: 'ai', label: t('sidebar.ai_assistant'), icon: Sparkles, color: 'from-indigo-500 to-purple-600', action: () => window.dispatchEvent(new CustomEvent('open-ai-assistant')) },
+        { id: 'post', label: t('sidebar.post'), icon: Plus, color: 'from-emerald-400 to-teal-600', action: () => window.dispatchEvent(new CustomEvent('open-add-post')) },
+        { id: 'qr', label: t('sidebar.passport'), icon: QrCode, color: 'from-amber-400 to-orange-600', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'passport' })) },
+        { id: 'mood', label: t('sidebar.mood'), icon: Zap, color: 'from-pink-400 to-rose-600', action: () => window.dispatchEvent(new CustomEvent('open-moffi-navigate', { detail: 'mood-selector' })) },
+        { id: 'sos', label: t('sidebar.sos'), icon: ShieldAlert, color: 'from-red-500 to-red-700', action: () => window.dispatchEvent(new CustomEvent('open-sos-center')) },
+        { id: 'studio', label: t('sidebar.aura'), icon: Palette, color: 'from-cyan-400 to-blue-600', action: () => window.dispatchEvent(new CustomEvent('open-aura-studio')) },
+        { id: 'voice', label: t('sidebar.voice_note'), icon: Mic, color: 'from-orange-400 to-red-500', action: () => { triggerHaptic(30); setActiveMode('voice'); setIsOpen(true); } },
+        { id: 'steps', label: t('sidebar.walk'), icon: Footprints, color: 'from-blue-400 to-indigo-500', value: '4.2k', action: () => { triggerHaptic(30); startWalk(); setIsOpen(true); } },
         { 
             id: 'weather', 
-            label: 'Hava', 
+            label: t('sidebar.weather'), 
             icon: weatherData?.icon === 'CloudRain' ? CloudRain : 
                   weatherData?.icon === 'CloudSun' ? CloudSun :
                   weatherData?.icon === 'Snowflake' ? Snowflake :
                   weatherData?.icon === 'CloudLightning' ? CloudLightning :
                   weatherData?.icon === 'Cloud' ? Cloud : Sun, 
             color: 'from-yellow-400 to-orange-500', 
-            value: isWeatherLoading ? '...' : (weatherData ? `${weatherData.temp}°` : 'Konum?'), 
+            value: isWeatherLoading ? '...' : (weatherData ? `${weatherData.temp}°` : '?'), 
             action: () => {
                 if (!weatherData) {
                     window.dispatchEvent(new CustomEvent('moffi-toast', { 
                         detail: { 
-                            message: 'Konum izni kapalı! 📍 Adres çubuğundaki KİLİT 🔒 ikonuna basıp izni sıfırla kral.', 
+                            message: t('common.error'), 
                             icon: 'ShieldAlert', 
                             color: 'text-amber-400' 
                         } 
@@ -173,23 +177,23 @@ export function MoffiSidebar() {
                 }
             } 
         },
-        { id: 'water', label: 'Su', icon: Droplets, color: 'from-cyan-400 to-blue-500', value: '80%', action: () => window.dispatchEvent(new CustomEvent('moffi-toast', { detail: { message: 'Dostun bugün 800ml su içti. 💧', icon: 'Droplets', color: 'text-cyan-400' } })) },
-        { id: 'health', label: 'Sağlık', icon: Heart, color: 'from-rose-400 to-red-500', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'vet' })) },
-        { id: 'map', label: 'Konum', icon: MapPin, color: 'from-emerald-400 to-green-600', action: () => window.dispatchEvent(new CustomEvent('open-moffi-maps')) },
-        { id: 'notif', label: 'Bildirim', icon: Bell, color: 'from-purple-400 to-fuchsia-600', value: '3', action: () => window.dispatchEvent(new CustomEvent('moffi-toast', { detail: { message: '3 yeni topluluk bildirimi bekliyor.', icon: 'Bell', color: 'text-purple-400' } })) },
-        { id: 'market', label: 'Market', icon: ShoppingBag, color: 'from-amber-500 to-yellow-600', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'shop' })) },
-        { id: 'vet', label: 'Veteriner', icon: Stethoscope, color: 'from-blue-600 to-cyan-700', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'vet' })) },
-        { id: 'game', label: 'Oyunlar', icon: Gamepad2, color: 'from-purple-600 to-pink-700', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'game' })) },
-        { id: 'wallet', label: 'Cüzdan', icon: Wallet, color: 'from-emerald-500 to-green-700', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'wallet' })) },
-        { id: 'radar', label: 'Radar', icon: Radar, color: 'from-orange-500 to-red-600', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'radar' })) },
-        { id: 'vaccine', label: 'Aşılar', icon: Syringe, color: 'from-red-400 to-rose-600', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'appointments' })) },
-        { id: 'tv', label: 'Moffi TV', icon: Tv, color: 'from-rose-500 to-indigo-700', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'feed' })) },
-        { id: 'family', label: 'Aile', icon: Users, color: 'from-blue-400 to-blue-600', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'family' })) },
-        { id: 'diary', label: 'Günlük', icon: Edit3, color: 'from-yellow-500 to-amber-700', action: () => window.dispatchEvent(new CustomEvent('open-moffi-diary')) },
-        { id: 'places', label: 'Mekanlar', icon: Map, color: 'from-green-500 to-emerald-700', action: () => window.dispatchEvent(new CustomEvent('open-moffi-maps')) },
-        { id: 'search', label: 'Arama', icon: Search, color: 'from-gray-400 to-gray-600', action: () => window.dispatchEvent(new CustomEvent('open-moffi-spotlight')) },
-        { id: 'adoption', label: 'Sahiplendir', icon: HeartHandshake, color: 'from-rose-400 to-pink-600', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'adoption' })) },
-        { id: 'lost_report', label: 'Kayıp Bildir', icon: Megaphone, color: 'from-orange-400 to-red-500', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'lost_pet' })) }
+        { id: 'water', label: t('sidebar.water'), icon: Droplets, color: 'from-cyan-400 to-blue-500', value: '80%', action: () => {} },
+        { id: 'health', label: t('sidebar.health'), icon: Heart, color: 'from-rose-400 to-red-500', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'vet' })) },
+        { id: 'map', label: t('sidebar.location'), icon: MapPin, color: 'from-emerald-400 to-green-600', action: () => window.dispatchEvent(new CustomEvent('open-moffi-maps')) },
+        { id: 'notif', label: t('navigation.notifications'), icon: Bell, color: 'from-purple-400 to-fuchsia-600', value: unreadCount > 0 ? unreadCount.toString() : undefined, action: () => window.dispatchEvent(new CustomEvent('open-notification-drawer')) },
+        { id: 'market', label: t('sidebar.market'), icon: ShoppingBag, color: 'from-amber-500 to-yellow-600', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'shop' })) },
+        { id: 'vet', label: t('sidebar.vet'), icon: Stethoscope, color: 'from-blue-600 to-cyan-700', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'vet' })) },
+        { id: 'game', label: t('sidebar.game'), icon: Gamepad2, color: 'from-purple-600 to-pink-700', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'game' })) },
+        { id: 'wallet', label: t('sidebar.wallet'), icon: Wallet, color: 'from-emerald-500 to-green-700', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'wallet' })) },
+        { id: 'radar', label: t('sidebar.radar'), icon: Radar, color: 'from-orange-500 to-red-600', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'radar' })) },
+        { id: 'vaccine', label: t('sidebar.vaccine'), icon: Syringe, color: 'from-red-400 to-rose-600', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'appointments' })) },
+        { id: 'tv', label: t('sidebar.tv'), icon: Tv, color: 'from-rose-500 to-indigo-700', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'feed' })) },
+        { id: 'family', label: t('sidebar.family'), icon: Users, color: 'from-blue-400 to-blue-600', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'family' })) },
+        { id: 'diary', label: t('sidebar.diary'), icon: Edit3, color: 'from-yellow-500 to-amber-700', action: () => window.dispatchEvent(new CustomEvent('open-moffi-diary')) },
+        { id: 'places', label: t('sidebar.places'), icon: Map, color: 'from-green-500 to-emerald-700', action: () => window.dispatchEvent(new CustomEvent('open-moffi-maps')) },
+        { id: 'search', label: t('sidebar.search'), icon: Search, color: 'from-gray-400 to-gray-600', action: () => window.dispatchEvent(new CustomEvent('open-moffi-spotlight')) },
+        { id: 'adoption', label: t('sidebar.adoption'), icon: HeartHandshake, color: 'from-rose-400 to-pink-600', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'adoption' })) },
+        { id: 'lost_report', label: t('sidebar.lost_report'), icon: Megaphone, color: 'from-orange-400 to-red-500', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'lost_pet' })) }
     ];
 
     const currentWidgets = useMemo(() => {
@@ -265,7 +269,7 @@ export function MoffiSidebar() {
                             <div className="relative mb-6 group shrink-0">
                                 <input 
                                     type="text"
-                                    placeholder="Nereye gidelim?.."
+                                    placeholder={t('navigation.search_placeholder')}
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="w-full h-8 bg-transparent border-b border-white/5 rounded-none pl-1 pr-8 text-[11px] font-medium text-white placeholder:text-white/10 focus:outline-none focus:border-white/30 transition-all tracking-tight"
@@ -493,7 +497,7 @@ export function MoffiSidebar() {
                                 {searchTerm && dynamicWidgets.length === 0 && (
                                     <div className="flex flex-col items-center justify-center py-10 opacity-30">
                                         <Search className="w-8 h-8 mb-2" />
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-center px-4">Sonuç bulunamadı</p>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-center px-4">{t('common.no_results')}</p>
                                     </div>
                                 )}
                             </div>
@@ -511,7 +515,7 @@ export function MoffiSidebar() {
                                             onClick={() => { triggerHaptic(10); setShowPanelPrefs(!showPanelPrefs); }}
                                             className="flex flex-col items-center mb-4 mt-2 cursor-pointer group"
                                         >
-                                            <h3 className="text-[10px] font-black text-white/40 group-hover:text-white/60 transition-colors uppercase tracking-[0.3em]">PANEL AYARLARI</h3>
+                                            <h3 className="text-[10px] font-black text-white/40 group-hover:text-white/60 transition-colors uppercase tracking-[0.3em]">{t('sidebar.panel_settings')}</h3>
                                             <motion.div 
                                                 animate={{ 
                                                     width: showPanelPrefs ? "40px" : "24px",

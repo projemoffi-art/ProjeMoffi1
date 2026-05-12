@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
 // Routes that do NOT require authentication
-const PUBLIC_ROUTES = ["/", "/business-register", "/production-studio", "/sandbox-studio"];
+const PUBLIC_ROUTES = ["/", "/business-register", "/production-studio", "/sandbox-studio", "/terms", "/privacy", "/cookies"];
 
 // Routes that require business role
 const BUSINESS_ROUTES_PREFIX = "/business";

@@ -62,7 +62,7 @@ export interface UserProfile {
     cover_photo?: string;
     bio?: string;
     is_verified?: boolean;
-    subscription_status?: 'free' | 'plus' | 'pro';
+    subscription_status?: 'free' | 'pro' | 'elite';
     wallet_balance?: number;
     moffi_coins?: number;
     aura_settings?: {
@@ -178,6 +178,7 @@ export interface IApiService {
     getCurrentUser(): Promise<UserProfile | null>;
     getUserProfile(id: string): Promise<UserProfile | null>;
     updateProfile(updates: Partial<UserProfile>): Promise<UserProfile>;
+    isUsernameAvailable(username: string): Promise<boolean>;
     
     // Pets
     getPets(): Promise<Pet[]>;
@@ -197,6 +198,7 @@ export interface IApiService {
     addPost(post: Partial<Post>): Promise<Post>;
     deletePost(postId: string | number): Promise<void>;
     updatePost(postId: string | number, updates: Partial<Post>): Promise<void>;
+    getUserPosts(userId: string): Promise<any[]>;
     
     // Shop
     getProducts(category?: ShopCategory): Promise<ShopProduct[]>;
@@ -250,6 +252,9 @@ export interface IApiService {
     getPostReactions(postId: string): Promise<any[]>;
     addComment(postId: string, content: string): Promise<any>;
     getPostComments(postId: string): Promise<any[]>;
+    editComment(commentId: string | number, content: string): Promise<void>;
+    deleteComment(commentId: string | number): Promise<void>;
+    toggleCommentLike(commentId: string | number): Promise<void>;
     
     // User Discovery & Social Interactions
     followUser(targetId: string): Promise<void>;

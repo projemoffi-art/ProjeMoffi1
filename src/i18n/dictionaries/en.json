@@ -1,0 +1,160 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "back": "Back",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "done": "Done",
+    "search": "Search...",
+    "no_results": "No results found",
+    "success": "Success",
+    "oops": "Something went wrong"
+  },
+  "auth": {
+    "landing": {
+      "title": "Join the Moffi Universe",
+      "subtitle": "Step into an elite world with your pet companion.",
+      "email_start": "Start with Email",
+      "google": "Google",
+      "apple": "Apple",
+      "already_member": "Already a member?",
+      "login": "Login"
+    },
+    "login": {
+      "title": "Welcome Back",
+      "subtitle": "Verifying Entry to Universe",
+      "email": "Email",
+      "password": "Secret Password",
+      "forgot_password": "Forgot Password?",
+      "submit": "Connect to System",
+      "not_member": "Not a Member Yet?",
+      "join": "Join"
+    },
+    "signup": {
+      "title": "Join Moffi",
+      "subtitle": "Initialize Your Personal Account",
+      "full_name": "Full Name",
+      "email": "Email",
+      "password": "Strong Password",
+      "confirm_password": "Confirm Password",
+      "submit": "Confirm Registration",
+      "terms_prefix": "By signing up,",
+      "terms_link": "Terms of Use",
+      "privacy_link": "Privacy Policy",
+      "cookies_link": "Cookie Policy",
+      "terms_suffix": "and",
+      "terms_end": "I declare that I have read and accepted these documents.",
+      "marketing_consent": "I want to be informed about campaigns and announcements."
+    }
+  },
+  "legal": {
+    "title_privacy": "Privacy Policy",
+    "title_terms": "Terms of Use",
+    "title_cookies": "Cookie Policy",
+    "last_updated": "Last Updated",
+    "back_to_app": "Back to App"
+  },
+  "navigation": {
+    "home": "Home",
+    "discover": "Discover",
+    "community": "Community",
+    "shop": "Shop",
+    "profile": "Profile",
+    "notifications": "Notifications",
+    "settings": "Settings",
+    "search_placeholder": "Where to go?.."
+  },
+  "sidebar": {
+    "ai_assistant": "AI Assistant",
+    "post": "Post",
+    "passport": "Passport",
+    "mood": "Mood",
+    "sos": "SOS",
+    "aura": "Aura",
+    "voice_note": "Voice Note",
+    "walk": "Walk",
+    "weather": "Weather",
+    "water": "Water",
+    "health": "Health",
+    "location": "Location",
+    "market": "Market",
+    "vet": "Veterinary",
+    "game": "Games",
+    "wallet": "Wallet",
+    "radar": "Radar",
+    "vaccine": "Vaccines",
+    "tv": "Moffi TV",
+    "family": "Family",
+    "diary": "Diary",
+    "places": "Places",
+    "search": "Search",
+    "adoption": "Adoption",
+    "lost_report": "Lost Report",
+    "pinned_tools": "Priority Tools",
+    "widget_library": "Widget Library",
+    "panel_settings": "Panel Settings"
+  },
+  "profile": {
+    "pets": "Pets",
+    "family_members": "Family Members",
+    "see_all": "SEE ALL",
+    "edit_profile": "Edit Profile",
+    "add_pet": "Add Pet",
+    "not_found": "Profile Not Found",
+    "followers": "Followers",
+    "following": "Following",
+    "posts": "Posts",
+    "bio_empty": "No biography added yet."
+  },
+  "setup": {
+    "welcome": {
+      "title": "Welcome to Moffi",
+      "subtitle": "An elite digital life with your pet is about to begin. Let's initialize your aura profile.",
+      "button": "START YOUR JOURNEY"
+    },
+    "step1": {
+      "title": "Moffi Identity",
+      "subtitle": "Seal your personal aura profile",
+      "add_photo": "ADD PHOTO",
+      "full_name": "Full Name",
+      "username": "Username"
+    },
+    "step2": {
+      "title": "The First Friend",
+      "subtitle": "Initialize Your Companion",
+      "pet_type": "Pet Type",
+      "dog": "Dog",
+      "cat": "Cat",
+      "bird": "Bird",
+      "other": "Other",
+      "pet_name": "Pet Name"
+    },
+    "step3": {
+      "title": "Select Status",
+      "subtitle": "Unlock Elite Features for Your Companion",
+      "pro": "PRO",
+      "elite": "ELITE",
+      "free": "FREE",
+      "elite_desc": "The most premium experience for elite pets.",
+      "pro_desc": "Advanced tracking and health monitoring.",
+      "free_desc": "Basic social and identity features.",
+      "launch": "LAUNCH UNIVERSE",
+      "continue": "CONTINUE"
+    }
+  },
+  "settings": {
+    "danger_zone": "Danger Zone",
+    "delete_account": "Delete Account & Data",
+    "delete_confirm": "WARNING! Are you sure you want to permanently delete your account and all data (pets, posts, messages)? This action CANNOT BE UNDONE. 🐾",
+    "delete_final_confirm": "One last time: Do you want to leave the Moffi universe forever?",
+    "delete_success": "Your account has been added to the deletion queue. Your data will be completely destroyed within 30 days. Goodbye friend... 🕊️",
+    "delete_desc": "Removes all your digital footprints from Moffi (GDPR)."
+  },
+  "company": {
+    "name": "Moffi Digital Services Ltd.",
+    "email": "privacy@moffi.net",
+    "address": "Digital Universe, Istanbul/Turkey"
+  }
+}

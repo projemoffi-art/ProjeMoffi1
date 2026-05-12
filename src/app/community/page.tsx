@@ -4,14 +4,15 @@ import React, { useState, useRef, useEffect, memo, useMemo } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform, useMotionValueEvent, useMotionValue } from 'framer-motion';
 import {
     Heart, MessageCircle, Share2, MapPin,
-    Flame, Bone, Plus, Camera, Compass,
+    Plus, Camera, Compass,
     Users, Activity, Sparkles, X, Send, PawPrint, Search, Menu, MoreHorizontal, Image as ImageIcon, Video, Mic,
     Settings, Grid3X3, List, Edit3, Bookmark, Edit2, Trash2, ImagePlus,
     LogOut, ChevronRight, ChevronLeft, User, Bell, Lock, HelpCircle, Check, HeartHandshake, CheckCheck, ShieldAlert, ChevronDown,
-    AlertTriangle, PhoneCall, BadgeCheck, Radar, Palette, ShoppingBag, Gamepad2, Stethoscope, Globe,
+    AlertTriangle, PhoneCall, BadgeCheck, Radar, Palette, ShoppingBag, Gamepad2, Globe,
     Coins, Package, Calendar, Plane, ShieldCheck, Route, TrendingUp, Timer, Footprints, Play, Download, Clock, Syringe, Moon
 } from 'lucide-react';
-import { cn, showToast } from '@/lib/utils';
+import { compressImageToFile } from '@/lib/imageUtils';
+import { cn } from '@/lib/utils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AuthModal from '../../components/auth/AuthModal';
 import { useAuth } from '../../context/AuthContext';
@@ -40,9 +41,11 @@ import { useWellbeing } from '@/context/WellbeingContext';
 import { EcosystemPortal } from '@/components/community/EcosystemPortal';
 import { SpotlightSearch } from '@/components/community/SpotlightSearch';
 import { DiaryModal } from '@/components/community/DiaryModal';
-import { apiService } from '../../services/apiService';
+import { apiService, isSupabaseEnabled } from '../../services/apiService';
+import { supabase } from '@/lib/supabase';
 import { HubOverlay } from '../../components/community/HubOverlay';
 import { MoffiBottomNav } from '@/components/common/MoffiBottomNav';
+import { OverlaySystem } from '@/components/community/OverlaySystem';
 
 import { 
     MOCK_PETS, MOCK_ADOPTIONS, 
@@ -74,49 +77,238 @@ export default function MoffiSocialMasterpiece() {
     const [activeTab, setActiveTab] = useState('feed'); 
     const [radarTabMode, setRadarTabMode] = useState<'lost' | 'adopt'>('lost');
     const [posts, setPosts] = useState<any[]>([]);
-
-    const userPosts = useMemo(() => {
-        return posts.filter(p => p.author === `@${user?.username || 'moffi_user'}` || p.user_id === user?.id);
-    }, [posts, user]);
-    
-    // Check if any owned pet is in SOS mode AND header alert is enabled
-    const isAnyPetLost = useMemo(() => userPets.some((p: any) => p.is_lost && (p.sos_settings?.header_sos_alert_enabled !== false)), [userPets]);
-
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isPublishing, setIsPublishing] = useState(false);
-    const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isLoadingPosts, setIsLoadingPosts] = useState(false);
     const [isLoadingLost, setIsLoadingLost] = useState(false);
     const [isLoadingAdoptions, setIsLoadingAdoptions] = useState(false);
-    
-    // ACTION HUB STATE (LIFTED FROM PROFILETAB)
-
-
-
     const [profileSubView, setProfileSubView] = useState<'main' | 'family' | 'passport' | 'orders' | 'wallet' | 'appointments' | 'routes' | 'impact' | 'bookmarks'>('main');
+    const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+    const [notificationsList, setNotificationsList] = useState<any[]>([]);
+    const [selectedSharePost, setSelectedSharePost] = useState<any>(null);
+    const [profileViewMode, setProfileViewMode] = useState('grid');
+    const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+    const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+    const [editName, setEditName] = useState("");
+    const [editUsername, setEditUsername] = useState("");
+    const [editBio, setEditBio] = useState("");
+    const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
+    const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
+    const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
+    const [editCoverPreview, setEditCoverPreview] = useState<string | null>(null);
+    const [isSavingProfile, setIsSavingProfile] = useState(false);
+    const [isAddPetOpen, setIsAddPetOpen] = useState(false);
+    const [storyPreview, setStoryPreview] = useState<string | null>(null);
+    const [pendingStoryFile, setPendingStoryFile] = useState<File | null>(null);
+    const [isUploadingStory, setIsUploadingStory] = useState(false);
+    const [addPetStep, setAddPetStep] = useState(1);
+    const [newPetName, setNewPetName] = useState("");
+    const [newPetType, setNewPetType] = useState("🐶");
+    const [newPetBreed, setNewPetBreed] = useState("");
+    const [newPetAge, setNewPetAge] = useState("");
+    const [newPetGender, setNewPetGender] = useState("Erkek");
+    const [newPetNeutered, setNewPetNeutered] = useState("Evet");
+    const [newPetSize, setNewPetSize] = useState("Orta");
+    const [newPetFeatures, setNewPetFeatures] = useState("");
+    const [newPetHealth, setNewPetHealth] = useState("");
+    const [newPetCharacter, setNewPetCharacter] = useState("");
+    const [newPetMicrochip, setNewPetMicrochip] = useState("");
+    const [newPetShowPhone, setNewPetShowPhone] = useState(true);
+    const [newPetPhotos, setNewPetPhotos] = useState<{ file: File, preview: string }[]>([]);
+    const [isSavingPet, setIsSavingPet] = useState(false);
+    const [qrModalPet, setQrModalPet] = useState<{ name: string, id: string, avatar: string } | null>(null);
+    const [isFullScreenQR, setIsFullScreenQR] = useState(false);
+    const [isPetSettingsOpen, setIsPetSettingsOpen] = useState(false);
+    const [settingsPet, setSettingsPet] = useState<any>(null);
+    const [isSOSCommandCenterOpen, setIsSOSCommandCenterOpen] = useState(false);
+    const [sosActivePet, setSosActivePet] = useState<any>(null);
+    const [isSosFromHub, setIsSosFromHub] = useState(false);
+    const [isLostAdModalOpen, setIsLostAdModalOpen] = useState(false);
+    const [selectedLostPet, setSelectedLostPet] = useState<any | null>(null);
+    const [lostPetName, setLostPetName] = useState("");
+    const [lostPetBreed, setLostPetBreed] = useState("");
+    const [lostPetLocation, setLostPetLocation] = useState("");
+    const [lostPetDesc, setLostPetDesc] = useState("");
+    const [lostPetPhotos, setLostPetPhotos] = useState<{ file: File, preview: string }[]>([]);
+    const [isSubmittingSOS, setIsSubmittingSOS] = useState(false);
+    const [isReportingLocation, setIsReportingLocation] = useState(false);
+    const [lostPets, setLostPets] = useState<any[]>([]);
+    const [selectedAdoptionPet, setSelectedAdoptionPet] = useState<any | null>(null);
+    const [isAddAdoptionModalOpen, setIsAddAdoptionModalOpen] = useState(false);
+    const [adoptionAds, setAdoptionAds] = useState<any[]>([]);
+    const [selectedAdoptionCategory, setSelectedAdoptionCategory] = useState("Hepsi");
+    const [adoptionPetName, setAdoptionPetName] = useState("");
+    const [adoptionPetBreed, setAdoptionPetBreed] = useState("");
+    const [adoptionPetAge, setAdoptionPetAge] = useState("");
+    const [adoptionPetDesc, setAdoptionPetDesc] = useState("");
+    const [adoptionPetPhotos, setAdoptionPetPhotos] = useState<{ file: File, preview: string }[]>([]);
+    const [adoptionPetType, setAdoptionPetType] = useState("cat");
+    const [isSubmittingAdoption, setIsSubmittingAdoption] = useState(false);
+    const [isApplicationFormOpen, setIsApplicationFormOpen] = useState(false);
+    const [appExperience, setAppExperience] = useState('0-2 Yıl');
+    const [appHomeType, setAppHomeType] = useState('Apartman');
+    const [appNote, setAppNote] = useState('');
+    const [isSubmittingApp, setIsSubmittingApp] = useState(false);
+    const [isAdoptionChatOpen, setIsAdoptionChatOpen] = useState(false);
+    const [adoptionChatPet, setAdoptionChatPet] = useState<any | null>(null);
+    const [adoptionMessages, setAdoptionMessages] = useState<any[]>([]);
+    const [adoptionNewMsg, setAdoptionNewMsg] = useState("");
+    const [isSendingAdoptionMsg, setIsSendingAdoptionMsg] = useState(false);
+    const [anonModalType, setAnonModalType] = useState<'report' | 'message' | null>(null);
+    const [isHubOpen, setIsHubOpen] = useState(false);
+    const [anonMessage, setAnonMessage] = useState("");
+    const [anonError, setAnonError] = useState<string | null>(null);
+    const [isSubmittingAnon, setIsSubmittingAnon] = useState(false);
+    const [isHubLongPressing, setIsHubLongPressing] = useState(false);
+    const [activeTimePicker, setActiveTimePicker] = useState<'from' | 'to' | null>(null);
+    const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+    const [activeMessageMenuId, setActiveMessageMenuId] = useState<string | null>(null);
+    const [isVetQuickSheetOpen, setIsVetQuickSheetOpen] = useState(false);
+    const [isWalkQuickSheetOpen, setIsWalkQuickSheetOpen] = useState(false);
+    const [isMarketQuickSheetOpen, setIsMarketQuickSheetOpen] = useState(false);
+    const [isStudioQuickSheetOpen, setIsStudioQuickSheetOpen] = useState(false);
+    const [isGameQuickSheetOpen, setIsGameQuickSheetOpen] = useState(false);
+    const [isEcosystemPortalOpen, setIsEcosystemPortalOpen] = useState(false);
+    const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
+    const [isDiaryOpen, setIsDiaryOpen] = useState(false);
+    const [isSOSOpen, setIsSOSOpen] = useState(false);
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [uploadImageURL, setUploadImageURL] = useState<string | null>(null);
+    const [uploadCaption, setUploadCaption] = useState('');
+    const [uploadLocationEnabled, setUploadLocationEnabled] = useState(false);
+    const [uploadMood, setUploadMood] = useState<string | null>(null);
+    const [viewerStoryGroupIndex, setViewerStoryGroupIndex] = useState<number | null>(null);
+    const [viewerStoryIndex, setViewerStoryIndex] = useState(0);
+    const [storyProgress, setStoryProgress] = useState(0);
+    const [postToDelete, setPostToDelete] = useState<number | null>(null);
+    const [editingPost, setEditingPost] = useState<{ id: number, desc: string, mood: string | null, media: string } | null>(null);
+    const [isReportAdModalOpen, setIsReportAdModalOpen] = useState(false);
+    const [reportingAdId, setReportingAdId] = useState<string | null>(null);
+    const [reportReason, setReportReason] = useState<string>('');
+    const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+    
+    // AUDIO SHARING STATES
+    const [audioFile, setAudioFile] = useState<File | null>(null);
+    const [audioURL, setAudioURL] = useState<string | null>(null);
+    const audioInputRef = useRef<HTMLInputElement>(null);
+    
+    // DERIVED STATES
+    const isAnyPetLost = useMemo(() => userPets.some(p => p.is_lost), [userPets]);
+    
+    // TOAST NOTIFICATIONS
+    const [toastMessage, setToastMessage] = useState<{ title: string; desc?: string; type: 'success' | 'error' | 'info' } | null>(null);
+    const showToast = (title: string, desc?: string, type: 'success' | 'error' | 'info' = 'info') => {
+        setToastMessage({ title, desc, type });
+        setTimeout(() => setToastMessage(null), 4000);
+    };
+
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // --- PROFESSIONAL MEDIA ENGINE (Compression & Preview) ---
+    const compressImage = async (file: File): Promise<File> => {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target?.result as string;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 1200;
+                    const MAX_HEIGHT = 1600;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width *= MAX_HEIGHT / height;
+                            height = MAX_HEIGHT;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx?.drawImage(img, 0, 0, width, height);
+
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            const compressedFile = new File([blob], file.name, {
+                                type: 'image/jpeg',
+                                lastModified: Date.now(),
+                            });
+                            resolve(compressedFile);
+                        } else {
+                            resolve(file);
+                        }
+                    }, 'image/jpeg', 0.8);
+                };
+            };
+        });
+    };
+
+    const handleStoryClick = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = async (e: any) => {
+            const file = e.target.files[0];
+            if (file) {
+                setPendingStoryFile(file);
+                const reader = new FileReader();
+                reader.onloadend = () => setStoryPreview(reader.result as string);
+                reader.readAsDataURL(file);
+            }
+        };
+        input.click();
+    };
+
+    const confirmUploadStory = async () => {
+        if (!pendingStoryFile) return;
+        setIsUploadingStory(true);
+        try {
+            // --- PROFESSIONAL COMPRESSION ---
+            const compressed = await compressImageToFile(pendingStoryFile);
+            const res = await uploadStory(compressed);
+            if (res.success) {
+                showToast("Harika!", "Hikayen başarıyla paylaşıldı.", "success");
+            } else {
+                showToast("Hata", "Hikaye yüklenemedi.", "error");
+            }
+            setStoryPreview(null);
+            setPendingStoryFile(null);
+        } catch (err) {
+            console.error("Story upload failed:", err);
+            showToast("Hata", "Sistem hatası oluştu.", "error");
+        } finally {
+            setIsUploadingStory(false);
+        }
+    };
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const sosInputRef = useRef<HTMLInputElement>(null);
+    const adoptionPhotoRef = useRef<HTMLInputElement>(null);
+    const coverInputRef = useRef<HTMLInputElement>(null);
+    const globalScrollRef = useRef<HTMLDivElement>(null);
+    const scrollY = useMotionValue(0);
+    const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+    const longPressHubTimer = useRef<NodeJS.Timeout | null>(null);
+    const storyTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const feedRef = useRef<HTMLDivElement>(null);
+    const mapRef = useRef<HTMLDivElement>(null);
+    const radarRef = useRef<HTMLDivElement>(null);
+    const profileRef = useRef<HTMLDivElement>(null);
+    const footerRef = useRef<HTMLDivElement>(null);
+    const lastScrollY = useRef(0);
+    const lastInboxScroll = useRef(0);
     
     // Global Navigation & Hub Controller (Restored)
     useEffect(() => {
-        const handleNavigate = (e: any) => {
-            const id = e.detail;
-            const profileViews = ['wallet', 'passport', 'family', 'orders', 'appointments', 'routes', 'bookmarks'];
-            
-            if (!user?.id) {
-                console.warn("Navigation: User ID not found in session. Falling back to login or error state.");
-                return;
-            }
-
-            if (id === 'profile') {
-                router.push(`/profile/${user.id}`);
-            } else if (profileViews.includes(id)) {
-                router.push(`/profile/${user.id}?view=${id}`);
-            } else if (id === 'settings') {
-                window.dispatchEvent(new CustomEvent('open-moffi-settings'));
-            } else if (id === 'feed' || id === 'radar') {
-                setActiveTab(id);
-            }
-        };
-
         const handleOpenPost = () => {
             window.dispatchEvent(new CustomEvent('moffi-toast', { 
                 detail: { 
@@ -134,7 +326,6 @@ export default function MoffiSocialMasterpiece() {
         const handleOpenSpotlight = () => setIsSpotlightOpen(true);
         const handleOpenDiary = () => setIsDiaryOpen(true);
 
-        window.addEventListener('moffi-navigate', handleNavigate);
         window.addEventListener('open-add-post', handleOpenPost);
         window.addEventListener('open-sos-center', handleOpenSOS);
         window.addEventListener('open-moffi-spotlight', handleOpenSpotlight);
@@ -146,7 +337,6 @@ export default function MoffiSocialMasterpiece() {
         window.addEventListener('moffi-change-tab', handleChangeTab);
 
         return () => {
-            window.removeEventListener('moffi-navigate', handleNavigate);
             window.removeEventListener('open-add-post', handleOpenPost);
             window.removeEventListener('open-sos-center', handleOpenSOS);
             window.removeEventListener('open-moffi-spotlight', handleOpenSpotlight);
@@ -156,11 +346,7 @@ export default function MoffiSocialMasterpiece() {
     }, [router]);
 
     // Unified Header Scroll Logic (Works for all tabs)
-    const globalScrollRef = useRef<HTMLDivElement>(null);
-    const scrollY = useMotionValue(0); // Manual scroll tracking to fix hydration error
-    
-    const lastScrollY = useRef(0);
-    const lastInboxScroll = useRef(0);
+
     
     // Unified Scroll Handler (Main Container)
     const handleMainScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -176,12 +362,7 @@ export default function MoffiSocialMasterpiece() {
         lastScrollY.current = current;
     };
 
-    const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
-    // NOTIFICATIONS & SHARE SHEET
-    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-    const [notificationsList, setNotificationsList] = useState<any[]>([]);
-    const [selectedSharePost, setSelectedSharePost] = useState<any>(null);
 
     useEffect(() => {
         const loadInitialData = async () => {
@@ -205,14 +386,28 @@ export default function MoffiSocialMasterpiece() {
         }
     };
 
-    // REAL-TIME MESH CONTROL (MOCK MODE: Supabase subscriptions removed)
+    // REAL-TIME GLOBAL SYNC (Professional Event-Driven Architecture)
     useEffect(() => {
-        if (!user) return;
-        
-        // In mock mode, we use local state or periodic polling if needed.
-        // For now, initial load covers the needs.
-        
-    }, [user, activeChatUserId, userPets, activeTab]);
+        if (!isSupabaseEnabled) return;
+
+        // Subscribe to live feed updates (New posts, likes, comments)
+        const channel = supabase
+            .channel('global-feed-events')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => {
+                fetchPosts(true); // Silent background refresh
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'likes' }, () => {
+                fetchPosts(true); // Silent background refresh
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => {
+                fetchPosts(true); // Silent background refresh
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [user, activeTab]);
 
 
     // HANDLE DEEP LINKING (TABS & CHAT)
@@ -245,8 +440,10 @@ export default function MoffiSocialMasterpiece() {
     }, []);
 
 
-    const fetchPosts = async () => {
-        setIsLoadingPosts(true);
+    const fetchPosts = async (isBackground = false) => {
+        if (!isBackground) {
+            setIsLoadingPosts(true);
+        }
         try {
             const data = await apiService.getFeedContent();
             
@@ -264,11 +461,18 @@ export default function MoffiSocialMasterpiece() {
             setPosts(sortedData);
         } catch (err) {
             console.error("Posts fetch error:", err);
-            setPosts(MOCK_POSTS);
+            // DO NOT fall back to MOCK_POSTS — show empty feed if Supabase fails
+            // This prevents hardcoded dog photos from appearing
         } finally {
-            setIsLoadingPosts(false);
+            if (!isBackground) {
+                setIsLoadingPosts(false);
+            }
         }
     };
+
+    const filteredPosts = useMemo(() => {
+        return posts;
+    }, [posts]);
 
     const sortPostsLocally = (data: any[], sortType: string) => {
         const sorted = [...data];
@@ -318,99 +522,17 @@ export default function MoffiSocialMasterpiece() {
     };
 
 
-    const [profileViewMode, setProfileViewMode] = useState('grid'); // grid, list, saved
-    const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
-    // EDIT PROFILE STATES
-    const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
-    const [editName, setEditName] = useState("");
-    const [editUsername, setEditUsername] = useState("");
-    const [editBio, setEditBio] = useState("");
-    const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
-    const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
-    const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
-    const [editCoverPreview, setEditCoverPreview] = useState<string | null>(null);
-    const [isSavingProfile, setIsSavingProfile] = useState(false);
-
-    // ADD PET STATES
-    const [isAddPetOpen, setIsAddPetOpen] = useState(false);
-    const [addPetStep, setAddPetStep] = useState(1);
-    const [newPetName, setNewPetName] = useState("");
-    const [newPetType, setNewPetType] = useState("🐶");
-    const [newPetBreed, setNewPetBreed] = useState("");
-    const [newPetAge, setNewPetAge] = useState("");
-    const [newPetGender, setNewPetGender] = useState("Erkek");
-    const [newPetNeutered, setNewPetNeutered] = useState("Evet");
-    const [newPetSize, setNewPetSize] = useState("Orta");
-    const [newPetFeatures, setNewPetFeatures] = useState("");
-    const [newPetHealth, setNewPetHealth] = useState("");
-    const [newPetCharacter, setNewPetCharacter] = useState("");
-    const [newPetMicrochip, setNewPetMicrochip] = useState("");
-    const [newPetShowPhone, setNewPetShowPhone] = useState(true);
-
-    const [newPetPhotos, setNewPetPhotos] = useState<{ file: File, preview: string }[]>([]);
-    const [isSavingPet, setIsSavingPet] = useState(false);
-
-    // QR PET ID STATES
-    const [qrModalPet, setQrModalPet] = useState<{ name: string, id: string, avatar: string } | null>(null);
-    const [isFullScreenQR, setIsFullScreenQR] = useState(false);
-
-    // PET SETTINGS STATE
-    const [isPetSettingsOpen, setIsPetSettingsOpen] = useState(false);
-    const [settingsPet, setSettingsPet] = useState<any>(null);
-    const [isSOSCommandCenterOpen, setIsSOSCommandCenterOpen] = useState(false);
-    const [sosActivePet, setSosActivePet] = useState<any>(null);
-    const [isSosFromHub, setIsSosFromHub] = useState(false);
-
-    // LOST AD STATES
-    const [isLostAdModalOpen, setIsLostAdModalOpen] = useState(false);
-    const [selectedLostPet, setSelectedLostPet] = useState<any | null>(null);
-    const [lostPetName, setLostPetName] = useState("");
-    const [lostPetBreed, setLostPetBreed] = useState("");
-    const [lostPetLocation, setLostPetLocation] = useState("");
-    const [lostPetDesc, setLostPetDesc] = useState("");
-    const [lostPetPhotos, setLostPetPhotos] = useState<{ file: File, preview: string }[]>([]);
-    const [isSubmittingSOS, setIsSubmittingSOS] = useState(false);
-    const [isReportingLocation, setIsReportingLocation] = useState(false);
-    const [lostPets, setLostPets] = useState<any[]>([]);
-
-    // ADOPTION MODAL (APPLE BOTTOM SHEET) STATE
-    const [selectedAdoptionPet, setSelectedAdoptionPet] = useState<any | null>(null);
-    const [isAddAdoptionModalOpen, setIsAddAdoptionModalOpen] = useState(false);
-    const [adoptionAds, setAdoptionAds] = useState<any[]>([]);
-    const [selectedAdoptionCategory, setSelectedAdoptionCategory] = useState("Hepsi");
-
-    // Sync Adoption Radar Category with User Preference
-    useEffect(() => {
-        if (user?.settings?.adoption?.defaultCategory) {
-            setSelectedAdoptionCategory(user.settings.adoption.defaultCategory);
-        }
-    }, [user?.settings?.adoption?.defaultCategory]);
-
-    // NEW ADOPTION FORM STATES
-    const [adoptionPetName, setAdoptionPetName] = useState("");
-    const [adoptionPetBreed, setAdoptionPetBreed] = useState("");
-    const [adoptionPetAge, setAdoptionPetAge] = useState("");
-    const [adoptionPetDesc, setAdoptionPetDesc] = useState("");
-    const [adoptionPetPhotos, setAdoptionPetPhotos] = useState<{ file: File, preview: string }[]>([]);
-    const [adoptionPetType, setAdoptionPetType] = useState("cat");
-    const [isSubmittingAdoption, setIsSubmittingAdoption] = useState(false);
 
 
 
     // Premium Header Transformations (Apple-Style) - Defined after activeTab
-    // Reactive MotionValues for Search State
-    const headerHeight = useMemo(() => {
-        const baseStart = 120;
-        const baseEnd = 64;
-        const extra = isSearchOpen ? 100 : 0;
-        return [baseStart + extra, baseEnd + extra];
-    }, [isSearchOpen]);
+    const headerHeight = [120, 64];
 
     const headerHeightTransform = useTransform(scrollY, [0, 80], headerHeight);
     
     const headerPadding = useTransform(scrollY, [0, 80], [
-        isSearchOpen ? "32px 24px 16px" : "48px 24px 16px", 
+        "48px 24px 16px", 
         "8px 24px 8px"
     ]);
     const logoScale = useTransform(scrollY, [0, 80], [1, 0.8]);
@@ -429,51 +551,21 @@ export default function MoffiSocialMasterpiece() {
     }, [activeTab]);
 
     // ADOPTION APPLICATION STATES
-    const [isApplicationFormOpen, setIsApplicationFormOpen] = useState(false);
-    const [appExperience, setAppExperience] = useState('0-2 Yıl');
-    const [appHomeType, setAppHomeType] = useState('Apartman');
-    const [appNote, setAppNote] = useState('');
-    const [isSubmittingApp, setIsSubmittingApp] = useState(false);
 
-    // ADOPTION CHAT STATES
-    const [isAdoptionChatOpen, setIsAdoptionChatOpen] = useState(false);
-    const [adoptionChatPet, setAdoptionChatPet] = useState<any | null>(null);
-    const [adoptionMessages, setAdoptionMessages] = useState<any[]>([]);
-    const [adoptionNewMsg, setAdoptionNewMsg] = useState("");
-    const [isSendingAdoptionMsg, setIsSendingAdoptionMsg] = useState(false);
 
-    const sosInputRef = useRef<HTMLInputElement>(null);
-    const adoptionPhotoRef = useRef<HTMLInputElement>(null);
-    const coverInputRef = useRef<HTMLInputElement>(null);
 
-    // SECURE ANON COMMUNICATION STATES
-    const [anonModalType, setAnonModalType] = useState<'report' | 'message' | null>(null);
-    const [isHubOpen, setIsHubOpen] = useState(false);
-    const [anonMessage, setAnonMessage] = useState("");
-    const [anonError, setAnonError] = useState<string | null>(null);
-    const [isSubmittingAnon, setIsSubmittingAnon] = useState(false);
-    const [isHubLongPressing, setIsHubLongPressing] = useState(false);
-    const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
     // INBOX & SOS DATA STATES (Consolidated at top level)
-    const [activeTimePicker, setActiveTimePicker] = useState<'from' | 'to' | null>(null);
+
+
+
+    
+    
+    
 
 
     
-    
-    
 
-    const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
-    const [activeMessageMenuId, setActiveMessageMenuId] = useState<string | null>(null);
-    
-    const [isVetQuickSheetOpen, setIsVetQuickSheetOpen] = useState(false);
-    const [isWalkQuickSheetOpen, setIsWalkQuickSheetOpen] = useState(false);
-    const [isMarketQuickSheetOpen, setIsMarketQuickSheetOpen] = useState(false);
-    const [isStudioQuickSheetOpen, setIsStudioQuickSheetOpen] = useState(false);
-    const [isGameQuickSheetOpen, setIsGameQuickSheetOpen] = useState(false);
-    const [isEcosystemPortalOpen, setIsEcosystemPortalOpen] = useState(false);
-    const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
-    const [isDiaryOpen, setIsDiaryOpen] = useState(false);
 
 
     const scrollToBottom = () => {
@@ -487,30 +579,20 @@ export default function MoffiSocialMasterpiece() {
     }, [isInboxOpen, inboxMessages]);
 
     // TOAST NOTIFICATIONS
-    const [toastMessage, setToastMessage] = useState<{ title: string; desc?: string; type: 'success' | 'error' | 'info' } | null>(null);
-    const showToast = (title: string, desc?: string, type: 'success' | 'error' | 'info' = 'info') => {
-        setToastMessage({ title, desc, type });
-        setTimeout(() => setToastMessage(null), 4000);
-    };
+
 
     // SETTINGS / KVKK STATES
-    const [isSOSOpen, setIsSOSOpen] = useState(false);
 
 
 
 
-    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-    const [uploadImageURL, setUploadImageURL] = useState<string | null>(null);
-    const [uploadCaption, setUploadCaption] = useState('');
-    const [uploadLocationEnabled, setUploadLocationEnabled] = useState(false);
-    const [uploadMood, setUploadMood] = useState<string | null>(null);
+
+
 
     const MOOD_OPTIONS = ["Mutlu ✨", "Uykulu 💤", "Enerjik ⚡", "Sabırsız 🥶", "Oyunbaz 🎾", "Acıkmış 🦴", "Havalı 😎"];
 
     // STORY VIEWER STATES
-    const [viewerStoryGroupIndex, setViewerStoryGroupIndex] = useState<number | null>(null);
-    const [viewerStoryIndex, setViewerStoryIndex] = useState(0);
-    const [storyProgress, setStoryProgress] = useState(0);
+
 
     const closeStoryViewer = () => {
         setViewerStoryGroupIndex(null);
@@ -583,23 +665,41 @@ export default function MoffiSocialMasterpiece() {
     const cameraInputRef = useRef<HTMLInputElement>(null);
 
     const toggleLike = async (id: string) => {
+        // OPTIMISTIC UPDATE (Instant feedback for global users)
+        setPosts(prev => prev.map(post => {
+            if (post.id === id) {
+                const newIsLiked = !post.isLiked;
+                return {
+                    ...post,
+                    isLiked: newIsLiked,
+                    likes: newIsLiked ? (post.likes + 1) : Math.max(0, post.likes - 1)
+                };
+            }
+            return post;
+        }));
+
         try {
             await apiService.reactToPost(id, '❤️');
-            fetchPosts(); // Refresh to see updated counts/state
+            // Realtime will handle the broadcast, but optimistic UI keeps it snappy
         } catch (err) {
             console.error("Beğeni hatası:", err);
+            // Rollback on error
+            fetchPosts(); 
         }
     };
 
     const addComment = async (postId: string, text: string) => {
         if (!text.trim()) return;
-        try {
-            await apiService.addComment(postId, text);
-            fetchPosts();
-            showToast("Yorum Eklendi", "Yorumunuz paylaşıldı.", "success");
-        } catch (err) {
-            console.error("Yorum hatası:", err);
-        }
+        
+        // Optimistic UI Update - DB write is handled directly by useRealtimeComments hook
+        setPosts(prev => prev.map(p => {
+            if (p.id === postId) {
+                return { ...p, comments: (Number(p.comments) || 0) + 1 };
+            }
+            return p;
+        }));
+
+        showToast("Yorum Eklendi", "Yorumunuz paylaşıldı ✨", "success");
     };
 
     const toggleCommentLike = (postId: number, commentId: number) => {
@@ -708,8 +808,7 @@ export default function MoffiSocialMasterpiece() {
         showToast("Bildirim Alındı", "Yorum incelemeye alındı. Teşekkürler!", "info");
     };
 
-    const [postToDelete, setPostToDelete] = useState<number | null>(null);
-    const [editingPost, setEditingPost] = useState<{ id: number, desc: string, mood: string | null, media: string } | null>(null);
+
 
     const deletePost = async () => {
         if (!postToDelete) return;
@@ -764,28 +863,44 @@ export default function MoffiSocialMasterpiece() {
 
         setIsPublishing(true);
         try {
-            // 1. Upload to Storage
-            const publicUrl = await apiService.uploadMedia(selectedFile, 'posts');
+            // --- PROFESSIONAL COMPRESSION ---
+            const compressedFile = await compressImageToFile(selectedFile);
+            
+            // 1. Upload to Storage (Using compressed file)
+            const publicUrl = await apiService.uploadMedia(compressedFile, 'posts');
+            
+            // 1.5 Upload Audio if exists
+            let audioPublicUrl = null;
+            if (audioFile) {
+                audioPublicUrl = await apiService.uploadMedia(audioFile, 'sounds');
+            }
 
             // 2. Add Post to DB
-            await apiService.addPost({
+            const newPostResult = await apiService.addPost({
                 media: publicUrl,
                 caption: uploadCaption,
                 mood: uploadMood || null,
-                is_video: selectedFile.type.startsWith('video/')
+                is_video: selectedFile.type.startsWith('video/'),
+                audio_url: audioPublicUrl
             });
 
-            await fetchPosts();
-            
-            setIsPublishing(false);
+            // 3. OPTIMISTIC UPDATE: Add to local state immediately
+            setPosts(prev => [newPostResult, ...prev]);
+
+            // 4. Clean up
             setIsUploadModalOpen(false);
             setUploadImageURL(null);
             setSelectedFile(null);
+            setAudioFile(null);
+            setAudioURL(null);
             setUploadCaption('');
             setUploadMood(null);
             setUploadLocationEnabled(false);
             setActiveTab('feed');
             showToast("Paylaşıldı", "Yeni gönderiniz yayında!", "success");
+
+            // 5. Background sync
+            fetchPosts();
         } catch (error: any) {
             console.error("Post upload error:", error);
             showToast("Hata", "Paylaşım yapılamadı: " + error.message, "error");
@@ -930,10 +1045,7 @@ export default function MoffiSocialMasterpiece() {
         }
     };
 
-    const [isReportAdModalOpen, setIsReportAdModalOpen] = useState(false);
-    const [reportingAdId, setReportingAdId] = useState<string | null>(null);
-    const [reportReason, setReportReason] = useState<string>('');
-    const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+
 
     const handleReportAdoption = async () => {
         if (!reportingAdId || !reportReason) return;
@@ -1272,23 +1384,7 @@ export default function MoffiSocialMasterpiece() {
                     </div>
                 </div>
 
-                {/* Animated Search Bar Dropdown */}
-                <AnimatePresence>
-                    {isSearchOpen && (
-                        <motion.div
-                            initial={{ height: 0, opacity: 0, marginTop: 0 }}
-                            animate={{ height: "auto", opacity: 1, marginTop: 16 }}
-                            exit={{ height: 0, opacity: 0, marginTop: 0 }}
-                            className="overflow-hidden w-full flex items-center gap-2"
-                        >
-                            <input
-                                type="text"
-                                placeholder="Moffi'de keşfe çık..."
-                                className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 px-5 text-sm outline-none focus:border-cyan-400 focus:bg-white/10 transition-all text-white placeholder:text-white/30"
-                            />
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+
             </motion.header>
 
             {/* Header Spacing (Dynamic height to push content up as header collapses) */}
@@ -1318,19 +1414,9 @@ export default function MoffiSocialMasterpiece() {
                                 {/* Current User Add Story - Apple Style Upgrade */}
                                 <div className="flex flex-col items-center gap-1.5 shrink-0 group">
                                     <div 
-                                        className="w-16 h-16 rounded-full relative cursor-pointer flex items-center justify-center transition-all duration-300" 
-                                        onClick={() => document.getElementById('story-upload')?.click()}
+                                        onClick={handleStoryClick}
+                                        className="relative w-16 h-16 flex items-center justify-center cursor-pointer"
                                     >
-                                        <input type="file" id="story-upload" className="hidden" accept="image/*" onChange={async (e) => {
-                                            const file = e.target.files?.[0];
-                                            if (file) {
-                                                showToast("Yükleniyor...", "Hikayeniz Moffi evrenine gönderiliyor.", "info");
-                                                const res = await uploadStory(file);
-                                                if (res.success) showToast("Harika! 🚀", "Hikayen yayında.", "success");
-                                                else showToast("Hata", res.error || "Yükleme başarısız.", "error");
-                                            }
-                                        }} />
-                                        
                                         <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-cyan-500/20 via-purple-500/20 to-pink-500/20 border-2 border-dashed border-white/20 group-hover:border-cyan-400/50 group-hover:bg-white/5 transition-all duration-500" />
                                         
                                         <div className="relative z-10 w-12 h-12 rounded-full bg-[var(--card-bg)] backdrop-blur-md border border-white/10 flex items-center justify-center shadow-2xl group-hover:scale-110 group-active:scale-95 transition-all duration-300">
@@ -1426,7 +1512,7 @@ export default function MoffiSocialMasterpiece() {
                                     </div>
                                 ))
                             ) : (
-                                posts.map((post, feedIdx) => (
+                                filteredPosts.map((post, feedIdx) => (
                                     <div key={post.id} className="w-full relative flex flex-col items-center justify-center px-0 shrink-0 snap-start" style={{ height: "calc(100vh - 160px)" }}>
                                         <ImmersivePostCard
                                             post={post}
@@ -2334,6 +2420,62 @@ export default function MoffiSocialMasterpiece() {
                                 </div>
                             </div>
 
+                            {/* AUDIO SELECTOR (NEW) */}
+                            <div className="flex flex-col gap-3">
+                                <span className="text-[var(--foreground)]/60 text-[11px] font-bold uppercase tracking-widest px-1">Müzik / Ses (İsteğe Bağlı)</span>
+                                
+                                <input 
+                                    type="file" 
+                                    ref={audioInputRef} 
+                                    className="hidden" 
+                                    accept="audio/*" 
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            setAudioFile(file);
+                                            setAudioURL(URL.createObjectURL(file));
+                                        }
+                                    }}
+                                />
+
+                                {audioURL ? (
+                                    <div className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 rounded-3xl p-4 flex flex-col gap-3 relative overflow-hidden">
+                                        <div className="flex items-center justify-between relative z-10">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-2xl bg-cyan-500 flex items-center justify-center text-black shadow-lg shadow-cyan-500/20 animate-pulse">
+                                                    <Mic size={20} />
+                                                </div>
+                                                <div className="overflow-hidden">
+                                                    <p className="text-sm font-black text-white truncate max-w-[200px]">{audioFile?.name}</p>
+                                                    <p className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest">Ses Dosyası Seçildi</p>
+                                                </div>
+                                            </div>
+                                            <button 
+                                                onClick={() => { setAudioFile(null); setAudioURL(null); }}
+                                                className="w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60 transition-colors"
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                        </div>
+                                        
+                                        <audio src={audioURL} controls className="w-full h-8 opacity-60 hover:opacity-100 transition-opacity" />
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => audioInputRef.current?.click()}
+                                        className="w-full p-5 rounded-[2rem] border-2 border-dashed border-white/10 bg-white/[0.02] flex items-center justify-center gap-3 hover:bg-white/[0.05] hover:border-cyan-500/40 transition-all group"
+                                    >
+                                        <div className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center text-white/40 group-hover:text-cyan-400 group-hover:scale-110 transition-all">
+                                            <Mic size={20} />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-sm font-bold text-white/60 group-hover:text-white transition-colors">Müzik veya Ses Ekle</p>
+                                            <p className="text-[10px] text-white/30 font-medium uppercase tracking-widest">Fotoğraflarına can ver</p>
+                                        </div>
+                                    </button>
+                                )}
+                            </div>
+
                             {/* LOCATION TOGGLE */}
                             <div className="flex items-center justify-between bg-[var(--card-bg)] border border-white/10 rounded-3xl p-4">
                                 <div className="flex items-center gap-3">
@@ -2367,6 +2509,72 @@ export default function MoffiSocialMasterpiece() {
                             </button>
                         </div>
                     </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* STORY PREVIEW MODAL (The Professional Review Phase) */}
+            <AnimatePresence>
+                {storyPreview && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[9999] bg-black overflow-y-auto"
+                    >
+                        {/* Immersive Background Blur - FIXED & TOP PRIORITY */}
+                        <div className="fixed inset-0 z-0 pointer-events-none">
+                            <img src={storyPreview} className="w-full h-full object-cover blur-3xl opacity-50" />
+                        </div>
+
+                        <div className="relative z-10 flex flex-col min-h-screen">
+                            {/* Header */}
+                            <div className="flex justify-between items-center p-6 pt-8">
+                                <button
+                                    onClick={() => setStoryPreview(null)}
+                                    className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white border border-white/10 active:scale-90 transition-transform"
+                                >
+                                    <X className="w-6 h-6" />
+                                </button>
+                                <h2 className="text-white font-black text-lg uppercase tracking-tighter">Hikaye Önizleme</h2>
+                                <div className="w-10" />
+                            </div>
+
+                            {/* Preview Content - Responsive & Safe */}
+                            <div className="flex-1 flex items-center justify-center p-6 py-10">
+                                <div className="w-full max-w-[300px] sm:max-w-[340px] max-h-[65vh] aspect-[9/16] rounded-[48px] overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border-[6px] border-white/10 relative">
+                                    <img src={storyPreview} className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60 pointer-events-none" />
+                                    
+                                    {/* Glass Overlay for extra premium feel */}
+                                    <div className="absolute inset-0 border border-white/10 rounded-[42px] pointer-events-none" />
+                                </div>
+                            </div>
+
+                            {/* Footer Controls - Clears Nav Bar */}
+                            <div className="p-8 pb-32 flex flex-col gap-5">
+                            <button
+                                onClick={confirmUploadStory}
+                                disabled={isUploadingStory}
+                                className={cn(
+                                    "w-full py-4 rounded-full font-black text-white text-lg flex items-center justify-center gap-2 shadow-2xl transition-all",
+                                    isUploadingStory ? "bg-gray-600 opacity-50 cursor-not-allowed" : "bg-gradient-to-r from-cyan-400 to-purple-500 hover:scale-[1.02] active:scale-95"
+                                )}
+                            >
+                                {isUploadingStory ? (
+                                    <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Yükleniyor...</>
+                                ) : (
+                                    <><Sparkles className="w-5 h-5" /> Hikayeyi Paylaş</>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setStoryPreview(null)}
+                                className="w-full py-3 text-white/60 font-bold hover:text-white transition-colors"
+                            >
+                                Vazgeç
+                            </button>
+                        </div>
+                    </div>
+                </motion.div>
                 )}
             </AnimatePresence>
 
@@ -2463,7 +2671,7 @@ export default function MoffiSocialMasterpiece() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-[270] bg-black/60 backdrop-blur-sm"
+                            className="fixed inset-0 z-[290] bg-black/60 backdrop-blur-sm"
                             onClick={() => setPostToDelete(null)}
                         />
                         {/* Elegant iOS-like Center Alert Popup */}
@@ -2472,7 +2680,7 @@ export default function MoffiSocialMasterpiece() {
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
                             transition={{ duration: 0.2, ease: "easeOut" }}
-                            className="fixed inset-0 z-[140] flex items-center justify-center p-4 pointer-events-none"
+                            className="fixed inset-0 z-[300] flex items-center justify-center p-4 pointer-events-none"
                         >
                             <div className="w-full max-w-[280px] bg-[#252528]/95 backdrop-blur-xl rounded-3xl overflow-hidden pointer-events-auto shadow-2xl border border-white/10 flex flex-col">
                                 <div className="p-6 flex flex-col items-center text-center gap-2 border-b border-white/10">

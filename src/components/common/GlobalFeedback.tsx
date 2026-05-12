@@ -57,10 +57,10 @@ export default function GlobalFeedback() {
         };
     }, []);
 
+    const [customMessage, setCustomMessage] = useState<any>(null);
+
     // Hide feedback system on login/landing flows (Moved after hooks)
     if (pathname === '/') return null;
-
-    const [customMessage, setCustomMessage] = useState<any>(null);
 
     const showPing = () => {
         if (customMessage) return; // Don't interrupt manual toast

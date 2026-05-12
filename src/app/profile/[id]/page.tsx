@@ -19,8 +19,10 @@ import { MOCK_PROFILES, MOCK_PETS, MOCK_POSTS } from "@/lib/mockData";
 import { useAuth } from "@/context/AuthContext";
 import { apiService } from "@/services/apiService";
 import { showToast } from "@/lib/utils";
+import { useTranslation } from "@/context/LanguageContext";
 
 export default function ProfilePage() {
+  const { t } = useTranslation();
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
@@ -101,6 +103,25 @@ export default function ProfilePage() {
         setEditCoverPreview(currentUser.cover_photo || null);
     }
   }, [currentUser, isOwnProfile]);
+
+  const handleAddPetClick = () => {
+    const currentPetCount = MOCK_PETS.filter(p => p.owner_id === id).length;
+    const status = currentUser?.subscription_status || 'free';
+    
+    if (status === 'free' && currentPetCount >= 1) {
+        showToast("Ücretsiz planda sadece 1 pati ekleyebilirsiniz. Pro'ya geçmek ister misiniz? 🐾", "Crown", "text-purple-400");
+        window.dispatchEvent(new CustomEvent('open-moffi-premium')); // Open pricing
+        return;
+    }
+    
+    if (status === 'pro' && currentPetCount >= 3) {
+        showToast("Pro planında sınır 3 patidir. Elite'e geçerek sınırsız alan kazanın! ✨", "Crown", "text-orange-400");
+        window.dispatchEvent(new CustomEvent('open-moffi-premium'));
+        return;
+    }
+
+    setIsAddPetOpen(true);
+  };
 
   const handleSaveProfile = async () => {
     setIsSavingProfile(true);
@@ -220,26 +241,10 @@ export default function ProfilePage() {
         }
     };
 
-    const handleNavigate = (e: any) => {
-        const targetView = e.detail;
-        const profileViews = [
-            'wallet', 'passport', 'family', 'orders', 
-            'appointments', 'routes', 'bookmarks', 
-            'impact', 'activity', 'identity'
-        ];
-        
-        if (profileViews.includes(targetView)) {
-            const viewToSet = targetView === 'activity' ? 'routes' : targetView;
-            setActiveView(viewToSet);
-        }
-    };
-
     window.addEventListener('moffi-follow-change', handleFollowChange);
-    window.addEventListener('moffi-navigate', handleNavigate);
 
     return () => {
         window.removeEventListener('moffi-follow-change', handleFollowChange);
-        window.removeEventListener('moffi-navigate', handleNavigate);
     };
   }, [id]);
 
@@ -247,7 +252,7 @@ export default function ProfilePage() {
     return (
       <main className="min-h-screen bg-background flex flex-col items-center justify-center">
         <Loader2 className="w-12 h-12 text-accent animate-spin mb-4" />
-        <p className="text-[10px] text-secondary font-black uppercase tracking-widest">Yükleniyor...</p>
+        <p className="text-[10px] text-secondary font-black uppercase tracking-widest">{t('common.loading')}</p>
       </main>
     );
   }
@@ -256,12 +261,12 @@ export default function ProfilePage() {
     return (
       <main className="min-h-screen bg-background flex flex-col items-center justify-center p-12 text-center">
         <AlertCircle className="w-16 h-16 text-red-500 mb-6" />
-        <h2 className="text-2xl font-black text-foreground uppercase mb-4">Profil Bulunamadı</h2>
+        <h2 className="text-2xl font-black text-foreground uppercase mb-4">{t('profile.not_found')}</h2>
         <button 
           onClick={() => router.push('/community')}
           className="px-8 py-4 bg-foreground text-background rounded-full font-black text-xs uppercase"
         >
-          Geri Dön
+          {t('common.back')}
         </button>
       </main>
     );
@@ -274,7 +279,7 @@ export default function ProfilePage() {
     cover: profile.cover_url || "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1200",
     bio: profile.bio || "",
     location: profile.location || "Moffi Universe",
-    is_premium: profile.is_premium,
+    subscription_status: profile.subscription_status,
     stats: {
         pack: followerCount,
         following: profile.following_count || 0,
@@ -289,7 +294,7 @@ export default function ProfilePage() {
         <ProfileTab 
           user={currentUser}
           onEditProfile={() => setIsEditProfileOpen(true)}
-          onAddPet={() => setIsAddPetOpen(true)}
+          onAddPet={handleAddPetClick}
           onSettings={() => window.dispatchEvent(new CustomEvent('open-moffi-settings'))}
           onPetQR={(pet) => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: `pet-${pet.id}` }))}
           onSOSSettings={(pet) => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: `sos-${pet.id}` }))}
@@ -374,13 +379,13 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between mb-8 sm:mb-10 px-2">
                 <div className="flex flex-col">
                     <h3 className="text-2xl sm:text-3xl font-black text-foreground uppercase tracking-tighter italic flex items-center gap-2 sm:gap-3">
-                        Patiler
+                        {t('profile.pets')}
                         <div className="h-1 w-8 sm:w-12 bg-accent rounded-full mt-1 opacity-50" />
                     </h3>
-                    <p className="text-[9px] sm:text-[10px] text-secondary font-black uppercase tracking-[0.3em] mt-1 ml-1 opacity-60">Aile Üyelerimiz</p>
+                    <p className="text-[9px] sm:text-[10px] text-secondary font-black uppercase tracking-[0.3em] mt-1 ml-1 opacity-60">{t('profile.family_members')}</p>
                 </div>
                 {MOCK_PETS.filter(p => p.owner_id === id).length > 3 && (
-                    <button className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-accent hover:text-white transition-colors">TÜMÜNÜ GÖR</button>
+                    <button className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-accent hover:text-white transition-colors">{t('profile.see_all')}</button>
                 )}
             </div>
             

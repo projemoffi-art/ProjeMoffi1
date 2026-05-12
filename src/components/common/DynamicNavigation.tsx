@@ -24,6 +24,7 @@ const StudioQuickSheet = dynamic(() => import("@/components/studio/StudioQuickSh
 const GameQuickSheet = dynamic(() => import("@/components/game/GameQuickSheet").then(mod => mod.GameQuickSheet), { ssr: false });
 const SpotlightSearch = dynamic(() => import("@/components/community/SpotlightSearch").then(mod => mod.SpotlightSearch), { ssr: false });
 const AuthModal = dynamic(() => import("@/components/auth/AuthModal").then(mod => mod.default), { ssr: false });
+const NotificationDrawer = dynamic(() => import("@/components/notifications/NotificationDrawer").then(mod => mod.NotificationDrawer), { ssr: false });
 
 
 const HIDDEN_ROUTES = ['/', '/studio', '/lab', '/production-studio'];
@@ -47,6 +48,7 @@ export function DynamicNavigation() {
     const [isSOSOpen, setIsSOSOpen] = useState(false);
     const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
     const [isAuthOpen, setIsAuthOpen] = useState(false);
+    const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const [isNavVisible, setIsNavVisible] = useState(true);
     const { pets, updatePet } = usePet();
     const [sosActivePet, setSosActivePet] = useState<any>(null);
@@ -139,6 +141,11 @@ export function DynamicNavigation() {
             setIsAuthOpen(true);
         };
 
+        const handleOpenNotifications = () => {
+            window.history.pushState({ modal: 'notifications' }, "");
+            setIsNotificationOpen(true);
+        };
+
         // BACK BUTTON INTERCEPTOR - STACK NAVIGATION
         const handlePopState = (e: PopStateEvent) => {
             const modal = e.state?.modal;
@@ -155,12 +162,55 @@ export function DynamicNavigation() {
             setIsGameOpen(modal === 'game');
             setIsSpotlightOpen(modal === 'spotlight');
             setIsAuthOpen(modal === 'auth');
+            setIsNotificationOpen(modal === 'notifications');
 
             // Handle external modals like AI Assistant
             if (modal !== 'ai') {
                 window.dispatchEvent(new CustomEvent('close-ai-assistant'));
             } else {
                 window.dispatchEvent(new CustomEvent('open-ai-assistant'));
+            }
+        };
+
+        const handleGlobalNavigate = (e: any) => {
+            const id = e.detail;
+            if (!id) return;
+
+            console.log("Global Navigation Triggered:", id);
+
+            // 1. Internal View Switches (If on community page)
+            if (pathname === '/community') {
+                if (id === 'feed' || id === 'radar') {
+                    window.dispatchEvent(new CustomEvent('moffi-change-tab', { detail: id }));
+                    return;
+                }
+            }
+
+            // 2. Cross-Page Navigation
+            const profileViews = ['wallet', 'passport', 'family', 'orders', 'appointments', 'routes', 'bookmarks', 'identity'];
+            
+            if (id === 'feed' || id === 'radar') {
+                router.push(`/community?tab=${id}`);
+            } else if (id === 'profile') {
+                if (user?.id) router.push(`/profile/${user.id}`);
+            } else if (profileViews.includes(id)) {
+                if (user?.id) router.push(`/profile/${user.id}?view=${id}`);
+                else window.dispatchEvent(new CustomEvent('open-auth-modal'));
+            } else if (id === 'settings') {
+                handleOpenSettings();
+            } else if (id === 'maps') {
+                handleOpenMaps();
+            } else if (id === 'market') {
+                handleOpenMarket();
+            } else if (id === 'studio') {
+                handleOpenStudio();
+            } else if (id === 'vet') {
+                handleOpenVet();
+            } else if (id === 'game') {
+                handleOpenGame();
+            } else if (id === 'moffinet') {
+                // Future moffinet route
+                window.dispatchEvent(new CustomEvent('moffi-toast', { detail: { message: 'MoffiNet yakında sizlerle! 🌐', icon: 'Zap' } }));
             }
         };
 
@@ -178,6 +228,8 @@ export function DynamicNavigation() {
         window.addEventListener('open-game-portal', handleOpenGame);
         window.addEventListener('open-moffi-spotlight', handleOpenSpotlight);
         window.addEventListener('open-auth-modal', handleOpenAuth);
+        window.addEventListener('open-notification-drawer', handleOpenNotifications);
+        window.addEventListener('moffi-navigate', handleGlobalNavigate);
 
         // Global window scroll listener for pages that use window scroll (like Profile)
         let lastGlobalScrollY = window.scrollY;
@@ -231,6 +283,8 @@ export function DynamicNavigation() {
             window.removeEventListener('open-game-portal', handleOpenGame);
             window.removeEventListener('open-moffi-spotlight', handleOpenSpotlight);
             window.removeEventListener('open-auth-modal', handleOpenAuth);
+            window.removeEventListener('open-notification-drawer', handleOpenNotifications);
+            window.removeEventListener('moffi-navigate', handleGlobalNavigate);
             window.removeEventListener('moffi-toggle-nav', handleToggleNav);
             window.removeEventListener('popstate', handlePopState);
             window.removeEventListener('scroll', handleGlobalScroll);
@@ -355,6 +409,11 @@ export function DynamicNavigation() {
             <AuthModal 
                 isOpen={isAuthOpen}
                 onClose={() => setIsAuthOpen(false)}
+            />
+
+            <NotificationDrawer 
+                isOpen={isNotificationOpen}
+                onClose={() => setIsNotificationOpen(false)}
             />
 
             {/* GLOBAL BOTTOM NAVIGATION */}

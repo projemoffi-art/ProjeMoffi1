@@ -6,7 +6,7 @@ import {
     MoreHorizontal, Check, Loader2, MessageCircle, 
     ShieldCheck, PawPrint, X, QrCode, Wallet, Settings,
     Gift, EyeOff, Ban, ShieldAlert, Zap, Crown, Sparkles,
-    Users, HeartPulse, Grid
+    Users, HeartPulse, Grid, Star
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,7 +21,7 @@ interface ProfileHeaderProps {
         cover: string;
         bio: string;
         location: string;
-        is_premium?: boolean;
+        subscription_status?: 'free' | 'pro' | 'elite';
         stats: {
             pack: number;
             following: number;
@@ -132,9 +132,19 @@ export default function ProfileHeader({ user, isFollowingInitial, userId, onMess
                         <h1 className="text-3xl font-black text-foreground italic tracking-tighter uppercase leading-none">
                             {user.username}
                         </h1>
-                        {user.is_premium && (
-                            <div className="bg-gradient-to-r from-orange-400 to-yellow-500 p-0.5 rounded-lg shadow-lg shadow-orange-500/20">
-                                <ShieldCheck className="w-5 h-5 text-black" />
+                        {user.subscription_status === 'elite' && (
+                            <motion.div 
+                                initial={{ scale: 0, rotate: -20 }}
+                                animate={{ scale: 1, rotate: 0 }}
+                                className="bg-gradient-to-tr from-yellow-400 via-amber-500 to-orange-600 p-1 rounded-xl shadow-[0_0_20px_rgba(245,158,11,0.4)] border border-white/20" 
+                                title="Moffi Elite Prime"
+                            >
+                                <Crown className="w-5 h-5 text-white filter drop-shadow-sm" />
+                            </motion.div>
+                        )}
+                        {user.subscription_status === 'pro' && (
+                            <div className="bg-gradient-to-r from-purple-500 to-indigo-600 p-0.5 rounded-lg shadow-lg shadow-purple-500/20" title="Pro Üye">
+                                <Star className="w-5 h-5 text-white" />
                             </div>
                         )}
                     </div>

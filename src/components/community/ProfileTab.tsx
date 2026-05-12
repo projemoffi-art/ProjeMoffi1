@@ -73,156 +73,216 @@ function TabButton({ active, icon, label, onClick }: any) {
 }
 
 
-function VlogGallery() {
-    const [activeCategory, setActiveCategory] = useState<'photos' | 'videos'>('videos');
-    const [isLoading, setIsLoading] = useState(false);
-    const [visibleCount, setVisibleCount] = useState(9);
-    const observerRef = useRef<HTMLDivElement>(null);
-
-    const vlogVideos = [
-        { url: "https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=400", views: "8.4K", date: "Dün", petId: 'pet-1' },
-        { url: "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=400", views: "14.2K", date: "2 G", petId: 'pet-2' },
-        { url: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=400", views: "2.1K", date: "1 H", petId: 'pet-1' },
-        { url: "https://images.unsplash.com/photo-1573865526739-10659fec78a5?q=80&w=400", views: "5.7K", date: "2 H", petId: 'pet-2' },
-        { url: "https://images.unsplash.com/photo-1592194996308-7b43878e84a6?q=80&w=400", views: "12K", date: "1 A", petId: 'pet-1' },
-        { url: "https://images.unsplash.com/photo-1533738363-b7f9aef128ce?q=80&w=400", views: "904", date: "3 A", petId: 'pet-2' },
-        { url: "https://images.unsplash.com/photo-1553315214-411a7e63b782?q=80&w=400", views: "3.2K", date: "4 A", petId: 'pet-1' },
-        { url: "https://images.unsplash.com/photo-1517849845537-4d257902454a?q=80&w=400", views: "6.8K", date: "5 A", petId: 'pet-2' },
-        { url: "https://images.unsplash.com/photo-1591160690555-5debfba289f0?q=80&w=400", views: "1.1K", date: "6 A", petId: 'pet-1' },
-        { url: "https://images.unsplash.com/photo-1544568100-847a948585b9?q=80&w=400", views: "4.5K", date: "7 A", petId: 'pet-2' },
-        { url: "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?q=80&w=400", views: "8.1K", date: "8 A", petId: 'pet-1' },
-        { url: "https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?q=80&w=400", views: "2.9K", date: "9 A", petId: 'pet-2' }
-    ];
-
-    const vlogPhotos = [
-        { url: "https://images.unsplash.com/photo-1516733725897-1aa73b87c8e8?q=80&w=400", date: "Dün", petId: 'pet-1' },
-        { url: "https://images.unsplash.com/photo-1587300003388-59208cc962cb?q=80&w=400", date: "3 G", petId: 'pet-2' },
-        { url: "https://images.unsplash.com/photo-1598133894008-61f7fdb8cc3a?q=80&w=400", date: "1 H", petId: 'pet-1' },
-        { url: "https://images.unsplash.com/photo-1530281700549-e82e7bf110d6?q=80&w=400", date: "2 H", petId: 'pet-2' },
-        { url: "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?q=80&w=400", date: "1 A", petId: 'pet-1' },
-        { url: "https://images.unsplash.com/photo-1541364983171-a8ba01e95cfc?q=80&w=400", date: "2 A", petId: 'pet-2' },
-        { url: "https://images.unsplash.com/photo-1596492784531-6e6eb5ea9993?q=80&w=400", date: "3 A", petId: 'pet-1' },
-        { url: "https://images.unsplash.com/photo-1518717758536-85ae29035b6d?q=80&w=400", date: "4 A", petId: 'pet-2' },
-        { url: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=400", date: "5 A", petId: 'pet-1' },
-        { url: "https://images.unsplash.com/photo-1561037404-61cd46aa615b?q=80&w=400", date: "6 A", petId: 'pet-2' },
-        { url: "https://images.unsplash.com/photo-1444212477490-ca40a94517ef?q=80&w=400", date: "7 A", petId: 'pet-1' },
-        { url: "https://images.unsplash.com/photo-1534361960057-19889db9621e?q=80&w=400", date: "8 A", petId: 'pet-2' }
-    ];
-
-    const { activePet } = usePet();
-    const currentPool = (activeCategory === 'videos' ? vlogVideos : vlogPhotos).filter(item => {
-        if (!activePet) return true;
-        return !item.petId || String(item.petId) === String(activePet.id);
-    });
-    const itemsToShow = currentPool.slice(0, visibleCount);
-    const hasMore = visibleCount < currentPool.length;
-
-    const loadMore = useCallback(() => {
-        setIsLoading(true);
-        // Premium simulated delay
-        setTimeout(() => {
-            setVisibleCount(prev => prev + 6);
-            setIsLoading(false);
-        }, 1200);
-    }, [hasMore, isLoading]);
+// ============================================================
+// GERÇEK PROFİL GALERİSİ — Supabase Entegrasyonu
+// Instagram tarzı: kullanıcının paylaştığı gönderiler burada
+// ============================================================
+function RealPostsGallery({ userId, onPostClick }: { userId?: string; onPostClick?: (post: any) => void }) {
+    const [posts, setPosts] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [filterType, setFilterType] = useState<'all' | 'image' | 'video'>('all');
+    const [selectedPost, setSelectedPost] = useState<any>(null);
 
     useEffect(() => {
-        if (!hasMore || isLoading) return;
+        if (!userId) { setIsLoading(false); return; }
+        loadUserPosts();
+    }, [userId]);
 
-        const observer = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting) {
-                loadMore();
-            }
-        }, { threshold: 1.0 });
-
-        if (observerRef.current) observer.observe(observerRef.current);
-        return () => observer.disconnect();
-    }, [hasMore, isLoading, visibleCount, activeCategory, loadMore]);
-
-    const handleCategoryChange = (cat: 'photos' | 'videos') => {
-        setActiveCategory(cat);
-        setVisibleCount(9);
-        setIsLoading(false);
+    const loadUserPosts = async () => {
+        setIsLoading(true);
+        try {
+            // Dynamic import to avoid circular deps
+            const { apiService } = await import('@/services/apiService');
+            const data = await (apiService as any).getUserPosts(userId);
+            setPosts(data || []);
+        } catch (err) {
+            console.error('Profile posts fetch error:', err);
+            setPosts([]);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-            {/* SUB-TAB NAV */}
-            <div className="flex px-4 gap-8 border-b border-white/5 pb-2">
-                {[
-                    { id: 'videos', label: 'Videolar', icon: <Play className="w-3 h-3" /> },
-                    { id: 'photos', label: 'Görseller', icon: <Grid3X3 className="w-3 h-3" /> }
-                ].map((tab) => (
-                    <button
-                        key={tab.id}
-                        onClick={() => handleCategoryChange(tab.id as any)}
-                        className={cn(
-                            "flex items-center gap-2 pb-2 relative transition-all",
-                            activeCategory === tab.id ? "text-foreground" : "text-secondary hover:text-foreground/80"
-                        )}
-                    >
-                        {tab.icon}
-                        {activeCategory === tab.id && (
-                            <motion.div layoutId="galleryTabUnderline" className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent" />
-                        )}
-                    </button>
+    const filtered = posts.filter(p => {
+        if (filterType === 'all') return true;
+        if (filterType === 'video') return p.type === 'video';
+        return p.type !== 'video';
+    });
+
+    if (isLoading) {
+        return (
+            <div className="grid grid-cols-3 gap-0.5 px-0">
+                {Array(9).fill(0).map((_, i) => (
+                    <div key={i} className="aspect-square bg-white/5 animate-pulse relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_1.5s_infinite]" />
+                    </div>
                 ))}
             </div>
+        );
+    }
 
-            {/* GRID CONTENT */}
-            <div className="grid grid-cols-3 gap-2 px-1">
+    if (posts.length === 0) {
+        return (
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col items-center justify-center py-20 px-8 text-center"
+            >
+                <div className="w-20 h-20 rounded-[2rem] bg-white/5 border border-white/10 flex items-center justify-center mb-6">
+                    <ImageIcon className="w-9 h-9 text-white/20" />
+                </div>
+                <h3 className="text-foreground font-black text-lg uppercase italic tracking-tighter">Henüz Gönderi Yok</h3>
+                <p className="text-secondary text-sm mt-2 leading-relaxed">
+                    Topluluğa ilk gönderini paylaş ve profil galerin burada canlansın.
+                </p>
+            </motion.div>
+        );
+    }
+
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-0">
+            {/* FILTER BAR */}
+            <div className="flex gap-2 px-4 pb-3">
+                {[
+                    { id: 'all', label: 'Tümü' },
+                    { id: 'image', label: 'Fotoğraf' },
+                    { id: 'video', label: 'Video' },
+                ].map(f => (
+                    <button
+                        key={f.id}
+                        onClick={() => setFilterType(f.id as any)}
+                        className={cn(
+                            "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all border",
+                            filterType === f.id
+                                ? "bg-foreground text-background border-foreground"
+                                : "bg-white/5 text-secondary border-white/10 hover:bg-white/10"
+                        )}
+                    >
+                        {f.label}
+                    </button>
+                ))}
+                <span className="ml-auto text-[10px] font-bold text-secondary self-center">{filtered.length} gönderi</span>
+            </div>
+
+            {/* INSTAGRAM-STYLE GRID */}
+            <div className="grid grid-cols-3 gap-0.5">
                 <AnimatePresence mode="popLayout">
-                    {itemsToShow.map((v, i) => (
+                    {filtered.map((post, i) => (
                         <motion.div
-                            key={`${activeCategory}-${i}`}
-                            initial={{ opacity: 0, scale: 0.9 }}
+                            key={post.id}
+                            initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.8 }}
-                            transition={{ duration: 0.3, delay: (i % 9) * 0.05 }}
-                            className="aspect-square bg-gray-900 rounded-[1.8rem] overflow-hidden border border-white/5 relative group cursor-pointer"
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.2, delay: (i % 9) * 0.04 }}
+                            className="aspect-square relative overflow-hidden bg-card cursor-pointer group"
+                            onClick={() => { setSelectedPost(post); onPostClick?.(post); }}
                         >
-                            <img src={v.url} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-                            
-                            {activeCategory === 'videos' ? (
-                                <>
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-2">
-                                        <div className="flex justify-between items-center w-full">
-                                            <span className="text-[6px] font-black text-white/40 uppercase tracking-widest">{v.date}</span>
-                                            <div className="px-1.5 py-0.5 rounded-md bg-white/10 backdrop-blur-md border border-white/10">
-                                                <span className="text-[6px] font-black text-white/80">{(v as any).views}</span>
-                                            </div>
+                            {post.media_url || post.image ? (
+                                post.type === 'video' ? (
+                                    <>
+                                        <video
+                                            src={post.media_url || post.image}
+                                            className="w-full h-full object-cover"
+                                            muted
+                                            playsInline
+                                            preload="metadata"
+                                        />
+                                        <div className="absolute top-2 right-2">
+                                            <Play className="w-4 h-4 text-white fill-white drop-shadow-lg" />
                                         </div>
-                                    </div>
-                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
-                                        <Play className="w-6 h-6 text-white fill-white opacity-40" />
-                                    </div>
-                                </>
+                                    </>
+                                ) : (
+                                    <img
+                                        src={post.media_url || post.image}
+                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                        alt={post.desc || 'Gönderi'}
+                                        loading="lazy"
+                                    />
+                                )
                             ) : (
-                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-all transform translate-y-1 group-hover:translate-y-0">
-                                    <span className="text-[6px] font-black text-white/40 uppercase tracking-widest">{v.date}</span>
+                                <div className="w-full h-full bg-gradient-to-br from-cyan-500/20 to-purple-500/20 flex items-center justify-center">
+                                    <MessageCircle className="w-8 h-8 text-white/30" />
                                 </div>
                             )}
+
+                            {/* HOVER OVERLAY — Instagram style */}
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-300 flex items-center justify-center gap-4 opacity-0 group-hover:opacity-100">
+                                <div className="flex items-center gap-1.5 text-white">
+                                    <Heart className="w-5 h-5 fill-white" />
+                                    <span className="font-black text-sm">{post.likes || 0}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 text-white">
+                                    <MessageCircle className="w-5 h-5 fill-white" />
+                                    <span className="font-black text-sm">{post.comments || 0}</span>
+                                </div>
+                            </div>
                         </motion.div>
                     ))}
                 </AnimatePresence>
             </div>
-            
-            {/* SENSOR & LOADING STATE */}
-            <div ref={observerRef} className="py-8 flex flex-col items-center">
-                {isLoading ? (
-                    <div className="flex items-center gap-3 bg-white/5 px-6 py-3 rounded-full border border-white/5 backdrop-blur-xl">
-                        <div className="w-1.5 h-1.5 bg-pink-400 rounded-full animate-ping" />
-                        <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.3em]">Arşiv Yükleniyor</span>
-                    </div>
-                ) : hasMore ? (
-                    <div className="w-10 h-1 bg-white/5 rounded-full" />
-                ) : (
-                    <div className="bg-white/5 rounded-3xl p-8 border border-white/5 text-center w-full">
-                        <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em]">Arşivin Sonu</p>
-                        <p className="text-[8px] text-gray-600 mt-2 italic">Tüm paylaşımlarınız Moffi Cloud’da güvenle saklanıyor.</p>
-                    </div>
+
+            {/* POST DETAIL MODAL */}
+            <AnimatePresence>
+                {selectedPost && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[500] bg-black/80 backdrop-blur-md"
+                            onClick={() => setSelectedPost(null)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 40 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 40 }}
+                            transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+                            className="fixed inset-x-4 top-20 bottom-20 z-[510] bg-[#1C1C1E] rounded-[2.5rem] overflow-hidden flex flex-col border border-white/10 shadow-2xl"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* Media */}
+                            <div className="relative flex-1 bg-black">
+                                {selectedPost.type === 'video' ? (
+                                    <video
+                                        src={selectedPost.media_url || selectedPost.image}
+                                        className="w-full h-full object-contain"
+                                        controls
+                                        autoPlay
+                                        playsInline
+                                    />
+                                ) : (
+                                    <img
+                                        src={selectedPost.media_url || selectedPost.image}
+                                        className="w-full h-full object-contain"
+                                        alt={selectedPost.desc}
+                                    />
+                                )}
+                                <button
+                                    onClick={() => setSelectedPost(null)}
+                                    className="absolute top-4 right-4 w-9 h-9 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                            {/* Post Info */}
+                            <div className="p-5 shrink-0 space-y-3">
+                                {selectedPost.desc && (
+                                    <p className="text-foreground text-sm leading-relaxed">{selectedPost.desc}</p>
+                                )}
+                                <div className="flex items-center gap-4 text-secondary text-xs font-bold">
+                                    <span className="flex items-center gap-1.5">
+                                        <Heart className="w-4 h-4 text-red-400" /> {selectedPost.likes || 0} beğeni
+                                    </span>
+                                    <span className="flex items-center gap-1.5">
+                                        <MessageCircle className="w-4 h-4 text-cyan-400" /> {selectedPost.comments || 0} yorum
+                                    </span>
+                                    <span className="ml-auto text-secondary/60">{selectedPost.time}</span>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
                 )}
-            </div>
+            </AnimatePresence>
         </motion.div>
     );
 }
@@ -466,17 +526,17 @@ function PersonalAccountView({ user, onSubViewChange }: any) {
 
     return (
         <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="py-8 space-y-8">
-            
-
-            {/* PERSONAL VLOGS (INTEGRATED GALLERY) */}
-            <div className="space-y-6">
-                
-                <VlogGallery />
+            {/* GERÇEK PROFİL GALERİSİ — Supabase */}
+            <div className="space-y-3">
+                <div className="flex items-center justify-between px-1 mb-2">
+                    <h3 className="text-xl font-black text-foreground italic uppercase tracking-tighter">Paylaşımlarım</h3>
+                </div>
+                <RealPostsGallery userId={user?.id} />
             </div>
-
         </motion.div>
     );
 }
+
 
 function PetDashboardView({ pets, activePet, switchPet, onAddPet, posts, safeActivePetIndex, setIsReportOpen, user, onSubViewChange }: any) {
     return (

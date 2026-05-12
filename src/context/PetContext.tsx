@@ -129,12 +129,11 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
             setIsLoading(true);
             try {
                 const fetchedPets = await apiService.getPets();
-                const petsToUse = fetchedPets.length > 0 ? fetchedPets : INITIAL_PETS;
-                setPets(petsToUse as any);
-                prevPetsRef.current = JSON.stringify(petsToUse);
+                setPets(fetchedPets as any);
+                prevPetsRef.current = JSON.stringify(fetchedPets);
                 
                 const active = await apiService.getActivePet();
-                const activeId = active?.id || (petsToUse[0]?.id || null);
+                const activeId = active?.id || (fetchedPets[0]?.id || null);
                 setActivePetId(activeId);
                 prevActivePetIdRef.current = activeId;
             } catch (err) {

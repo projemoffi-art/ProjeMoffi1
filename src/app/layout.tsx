@@ -16,6 +16,7 @@ import { WellbeingProvider } from "@/context/WellbeingContext";
 import { GlobalAuraBackground } from "@/components/common/GlobalAuraBackground";
 import { WellbeingOverlay } from "@/components/common/WellbeingOverlay";
 import GlobalFeedback from "@/components/common/GlobalFeedback";
+import { CookieConsent } from "@/components/common/CookieConsent";
 
 const poppins = Poppins({
   weight: ['400', '600', '700', '900'],
@@ -62,6 +63,7 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "Moffi Demo",
   },
+  google: 'notranslate',
 };
 
 
@@ -70,50 +72,59 @@ import { RootOnboardingWrapper } from "@/components/onboarding/RootOnboardingWra
 import { ChatProvider } from "@/context/ChatContext";
 import { ActivityProvider } from "@/context/ActivityContext";
 
+import { LanguageProvider } from "@/context/LanguageContext";
+
+import { NotificationProvider } from "@/context/NotificationContext";
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" translate="no" className="notranslate">
       <body
         className={`${poppins.variable} ${inter.variable} ${pacificoFont.variable} ${satisfyFont.variable} ${playfairFont.variable} font-sans antialiased`}
       >
-        <AuthProvider>
-          <ActivityProvider>
-            <ChatProvider>
-              <WellbeingProvider>
-                <ThemeProvider>
-                  <PetProvider>
-                    <SocialProvider>
-                      <ShopProvider>
-                        <ClientAuthWrapper>
-                          <RootOnboardingWrapper>
-                            <GlobalIdentitySync />
-                            <GlobalAuraBackground />
-                            <WellbeingOverlay />
-                            <div className="min-h-screen relative overflow-hidden">
-                              <ErrorBoundary>
-                                {children}
-                              </ErrorBoundary>
-                            </div>
+        <LanguageProvider>
+          <AuthProvider>
+            <NotificationProvider>
+              <ActivityProvider>
+                <ChatProvider>
+                  <WellbeingProvider>
+                    <ThemeProvider>
+                      <PetProvider>
+                        <SocialProvider>
+                          <ShopProvider>
+                            <ClientAuthWrapper>
+                              <RootOnboardingWrapper>
+                                <GlobalIdentitySync />
+                                <GlobalAuraBackground />
+                                <WellbeingOverlay />
+                                <div className="min-h-screen relative overflow-hidden">
+                                  <ErrorBoundary>
+                                    {children}
+                                  </ErrorBoundary>
+                                </div>
 
-                            <Suspense fallback={null}>
-                              <DynamicNavigation />
-                            </Suspense>
-                            <AIWidgetLoader />
-                            <GlobalFeedback />
-                          </RootOnboardingWrapper>
-                        </ClientAuthWrapper>
-                      </ShopProvider>
-                    </SocialProvider>
-                  </PetProvider>
-                </ThemeProvider>
-              </WellbeingProvider>
-            </ChatProvider>
-          </ActivityProvider>
-        </AuthProvider>
+                                <Suspense fallback={null}>
+                                  <DynamicNavigation />
+                                </Suspense>
+                                <AIWidgetLoader />
+                                <GlobalFeedback />
+                                <CookieConsent />
+                              </RootOnboardingWrapper>
+                            </ClientAuthWrapper>
+                          </ShopProvider>
+                        </SocialProvider>
+                      </PetProvider>
+                    </ThemeProvider>
+                  </WellbeingProvider>
+                </ChatProvider>
+              </ActivityProvider>
+            </NotificationProvider>
+          </AuthProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

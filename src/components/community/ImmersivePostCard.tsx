@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { ShieldCheck, Crown, Footprints, Zap as SOSZap } from 'lucide-react';
 import Image from 'next/image';
 import { apiService } from '@/services/apiService';
+import { useRealtimeComments } from '@/hooks/useRealtimeComments';
 
 interface ImmersivePostCardProps {
     post: any;
@@ -54,7 +55,7 @@ export function ImmersivePostCard({
     const [showComments, setShowComments] = useState(false);
     const [commentInput, setCommentInput] = useState('');
     const [isMoreOpen, setIsMoreOpen] = useState(false);
-    const allowComments = post?.allow_comments ?? post?.allowComments ?? true;
+    const allowComments = post?.allow_comments !== false; // Only false if explicitly set to false
     const hiddenWords = currentUser?.settings?.content?.hiddenWords || [];
     const [isAddingToStory, setIsAddingToStory] = useState(false);
     const [replyingTo, setReplyingTo] = useState<any>(null);
@@ -68,6 +69,8 @@ export function ImmersivePostCard({
     const videoRef = React.useRef<HTMLVideoElement>(null);
     const containerRef = React.useRef<HTMLDivElement>(null);
     const { stories } = useSocial();
+    const audioRef = React.useRef<HTMLAudioElement>(null);
+
 
     // INTERSECTION OBSERVER FOR SMART PLAY/PAUSE
     useEffect(() => {
@@ -93,7 +96,18 @@ export function ImmersivePostCard({
                 videoRef.current.pause();
             }
         }
-    }, [isVisible]);
+        
+        // Handle background audio for photos/videos
+        if (audioRef.current && post?.audio_url) {
+            audioRef.current.muted = isMuted;
+            if (isVisible) {
+                audioRef.current.play().catch(() => {});
+            } else {
+                audioRef.current.pause();
+            }
+        }
+    }, [isVisible, isMuted, post?.audio_url]);
+
 
     // Censorship Logic
     const filterContent = (text: string) => {
@@ -181,11 +195,19 @@ export function ImmersivePostCard({
     const isOwner = currentUser?.id === post.user_id || currentUser?.username === post.author?.replace('@', '');
 
     const handleProfileNavigation = () => {
+        const targetId = post.user_id || post.userId || post.authorId || post.owner_id || post.user?.id;
+        
         if (isOwner) {
-            window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'profile' }));
-        } else {
-            const targetId = post.user_id || post.userId || post.authorId || post.owner_id || post.user?.id;
+            // Navigate to own profile page directly
             if (targetId) router.push(`/profile/${targetId}`);
+            else window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'profile' }));
+        } else {
+            // Navigate to other user's profile
+            if (targetId) {
+                router.push(`/profile/${targetId}`);
+            } else {
+                console.warn('Profile navigation failed: no user_id on post', post);
+            }
         }
     };
 
@@ -212,20 +234,30 @@ export function ImmersivePostCard({
         }, 1500);
     };
 
-    const handleSendComment = () => {
-        if (!commentInput.trim() && !selectedMedia) return;
+    // GLOBAL REALTIME COMMENTS — Supabase WebSocket (Instagram/TikTok pattern)
+    const { comments, isLoading: isLoadingComments, addComment, refetchComments } = useRealtimeComments(
+        post.id,
+        showComments
+    );
 
-        if (editingComment) {
-            onEditComment?.(editingComment.id, commentInput);
-            setEditingComment(null);
-        } else if (replyingTo) {
-            onReplyComment?.(replyingTo.id, commentInput);
-            setReplyingTo(null);
-        } else {
-            onAddComment(commentInput);
-        }
+    const handleSendComment = async () => {
+        if (!commentInput.trim() && !selectedMedia) return;
+        const text = commentInput;
         setCommentInput("");
         setSelectedMedia(null);
+        setReplyingTo(null);
+        setEditingComment(null);
+
+        if (editingComment) {
+            onEditComment?.(editingComment.id, text);
+            setTimeout(() => refetchComments(), 300);
+        } else if (replyingTo) {
+            onReplyComment?.(replyingTo.id, text);
+            setTimeout(() => refetchComments(), 300);
+        } else {
+            await addComment(text, currentUser);
+            onAddComment(text);
+        }
     };
 
     useEffect(() => {
@@ -250,6 +282,21 @@ export function ImmersivePostCard({
             }
         };
     }, [isMoreOpen, showComments]);
+
+    const [isFollowingAuthor, setIsFollowingAuthor] = useState(false);
+
+    const handleFollow = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (isFollowingAuthor) return;
+        
+        setIsFollowingAuthor(true);
+        try {
+            await apiService.followUser(post.user_id || post.userId || post.authorId);
+        } catch (err) {
+            console.error("Takip hatası:", err);
+            setIsFollowingAuthor(false);
+        }
+    };
 
     return (
         <motion.div
@@ -294,8 +341,8 @@ export function ImmersivePostCard({
                         />
                     ) : (
                         <Image 
-                            src={post?.media || post?.media_url || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=800"} 
-                            alt={post?.caption || "Moffi Gönderisi"}
+                            src={post?.image || post?.media || post?.media_url || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=800"} 
+                            alt={post?.caption || post?.desc || "Moffi Gönderisi"}
                             fill
                             priority={priority}
                             className="object-cover opacity-90"
@@ -304,17 +351,21 @@ export function ImmersivePostCard({
                     )}
                     <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-background via-background/40 to-transparent opacity-90 pointer-events-none" />
                 </motion.div>
+                
+                {/* BACKGROUND AUDIO ELEMENT */}
+                {post?.audio_url && (
+                    <audio 
+                        ref={audioRef}
+                        src={post.audio_url}
+                        muted={isMuted}
+                        loop
+                    />
+                )}
             </div>
 
-            {/* VIDEO CONTROLS (Floating Mute Button) */}
-            {(post.media?.match(/\.(mp4|webm|ogg)$/) || post.is_video) && (
-                <button 
-                    onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
-                    className="absolute bottom-32 right-6 w-10 h-10 rounded-full bg-card/40 backdrop-blur-xl border border-card-border flex items-center justify-center text-foreground z-30 active:scale-90 transition-all hover:bg-foreground/10"
-                >
-                    {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                </button>
-            )}
+
+
+
 
             {/* TOP BAR BUILT INTO CARD */}
             <div className="absolute top-5 left-5 right-5 flex justify-between items-start z-20 pointer-events-none">
@@ -337,7 +388,7 @@ export function ImmersivePostCard({
                     <>
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-black/60 z-40 backdrop-blur-sm pointer-events-auto"
+                            className="absolute inset-0 bg-black/60 z-[440] backdrop-blur-sm pointer-events-auto"
                             onClick={() => setIsMoreOpen(false)}
                         />
                         <motion.div
@@ -345,7 +396,7 @@ export function ImmersivePostCard({
                             animate={{ y: 0 }}
                             exit={{ y: "100%" }}
                             transition={{ type: "spring", damping: 30, stiffness: 350, mass: 0.8 }}
-                            className="absolute bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-[50px] border-t border-card-border rounded-t-[48px] shadow-2xl flex flex-col pointer-events-auto overflow-hidden max-h-[92%]"
+                            className="absolute bottom-0 left-0 right-0 z-[450] bg-background/80 backdrop-blur-[50px] border-t border-card-border rounded-t-[48px] shadow-2xl flex flex-col pointer-events-auto overflow-hidden max-h-[92%]"
                         >
                             <div 
                                 onClick={() => setIsMoreOpen(false)}
@@ -495,47 +546,64 @@ export function ImmersivePostCard({
 
             {/* USER INFO & CAPTION & ACTIONS */}
             <div className="absolute bottom-6 sm:bottom-6 left-5 sm:left-6 right-5 sm:right-6 z-20 flex flex-col gap-3">
-                <div className="absolute right-0 sm:right-0 bottom-0 flex flex-col gap-5 sm:gap-4 z-30 translate-y-[-2.5rem] sm:translate-y-[-2rem]">
-                    <div className="flex flex-col items-center gap-1">
-                        <button onClick={onLike} className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center transition-transform active:scale-90 hover:bg-white/20 shadow-xl">
+                {/* MUTE BUTTON - ABSOLUTE BOTTOM RIGHT CORNER */}
+                {(post.is_video || (post.media && /\.(mp4|webm|ogg|mov|avi|m4v|mkv)$/i.test(post.media)) || post.audio_url) && (
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
+                        className={cn(
+                            "absolute bottom-3 right-3 w-7 h-7 rounded-full backdrop-blur-md border flex items-center justify-center transition-all shadow-lg z-30",
+                            isMuted ? "bg-black/40 border-white/10" : "bg-cyan-500/30 border-cyan-400/50"
+                        )}
+                    >
+                        {isMuted ? <VolumeX className="w-3.5 h-3.5 text-white/50" /> : <Volume2 className="w-3.5 h-3.5 text-cyan-300" />}
+                    </button>
+                )}
+
+                {/* ACTION BUTTONS SIDEBAR */}
+                <div className="absolute right-0 sm:right-0 bottom-0 flex flex-col gap-4 sm:gap-3 z-30 translate-y-[-2.5rem] sm:translate-y-[-2rem]">
+                    {/* LIKE */}
+                    <div className="flex flex-col items-center gap-0.5">
+                        <button onClick={onLike} className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center transition-transform active:scale-90 hover:bg-white/20 shadow-xl">
                             {post.isLiked ? (
-                                <Heart className="w-6 h-6 text-red-500 fill-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.6)]" />
+                                <Heart className="w-4 h-4 text-red-500 fill-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]" />
                             ) : (
-                                <Heart className="w-6 h-6 text-white drop-shadow-md" />
+                                <Heart className="w-4 h-4 text-white drop-shadow-md" />
                             )}
                         </button>
-                        <span className="text-[10px] font-bold text-white drop-shadow-md">{post.likes ?? post.likes_count ?? 0}</span>
+                        <span className="text-[9px] font-bold text-white drop-shadow-md">{post.likes ?? post.likes_count ?? 0}</span>
                     </div>
 
-                    <div className="flex flex-col items-center gap-1">
+                    {/* COMMENT - Global Standard: active by default, disabled only if explicitly set false in DB */}
+                    <div className="flex flex-col items-center gap-0.5">
                         <button 
-                            onClick={() => {
-                                if (isCommentsDisabled || (!allowComments && isOwner)) {
-                                    alert('Bu kullanıcı tüm gönderilerini yoruma kapatmıştır.');
-                                } else {
-                                    setShowComments(true);
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (allowComments === false) {
+                                    alert('Bu gönderi yorumlara kapatılmıştır. 🔒');
+                                    return;
                                 }
+                                setShowComments(true);
                             }} 
                             className={cn(
-                                "w-12 h-12 rounded-full backdrop-blur-md border flex items-center justify-center transition-all shadow-xl",
-                                (isCommentsDisabled || (!allowComments && isOwner)) 
-                                    ? "bg-white/5 border-white/5 opacity-50 cursor-not-allowed scale-90" 
-                                    : "bg-white/10 border-white/20 active:scale-90 hover:bg-white/20"
+                                "w-8 h-8 rounded-full backdrop-blur-md border flex items-center justify-center transition-all shadow-xl active:scale-90",
+                                allowComments === false
+                                    ? "bg-white/5 border-white/5 opacity-40 cursor-not-allowed" 
+                                    : "bg-white/10 border-white/20 hover:bg-white/20 hover:border-white/40"
                             )}
-                            disabled={isCommentsDisabled || (!allowComments && isOwner)}
                         >
-                            <MessageCircle className={cn("w-6 h-6 drop-shadow-md", (isCommentsDisabled || (!allowComments && isOwner)) ? "text-white/20" : "text-white")} />
+                            <MessageCircle className={cn("w-4 h-4 drop-shadow-md", allowComments === false ? "text-white/20" : "text-white")} />
                         </button>
-                        <span className={cn("text-[10px] font-bold drop-shadow-md", (isCommentsDisabled || (!allowComments && isOwner)) ? "text-white/20" : "text-white")}>
-                            {(isCommentsDisabled || (!allowComments && isOwner)) ? '-' : (post.comments ?? post.comments_count ?? 0)}
+                        <span className={cn("text-[9px] font-bold drop-shadow-md", allowComments === false ? "text-white/20" : "text-white")}>
+                            {allowComments === false ? '-' : (post.comments ?? post.comments_count ?? 0)}
                         </span>
                     </div>
 
-                    <div className="flex flex-col items-center gap-1">
-                        <button onClick={handleShareClick} className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center transition-transform active:scale-90 hover:bg-white/20 shadow-xl">
-                            <Share2 className="w-6 h-6 text-white drop-shadow-md" />
+                    {/* SHARE */}
+                    <div className="flex flex-col items-center gap-0.5">
+                        <button onClick={handleShareClick} className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center transition-transform active:scale-90 hover:bg-white/20 shadow-xl">
+                            <Share2 className="w-4 h-4 text-white drop-shadow-md" />
                         </button>
-                        <span className="text-[10px] font-bold text-white drop-shadow-md">Paylaş</span>
+                        <span className="text-[9px] font-bold text-white drop-shadow-md">Paylaş</span>
                     </div>
                 </div>
 
@@ -545,20 +613,10 @@ export function ImmersivePostCard({
                         className="w-12 h-12 rounded-full border-2 border-white/20 p-0.5 relative pointer-events-auto cursor-pointer active:scale-95 transition-transform"
                     >
                         <Image src={(isOwner ? (currentUser?.avatar || post.avatar || post.author_avatar || post.user?.avatar) : (post.avatar || post.author_avatar || post.user?.avatar)) || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} fill className="rounded-full object-cover" alt="Author" />
-                        {!isOwner && (
+                        {!isOwner && !isFollowingAuthor && (
                             <motion.div 
                                 className="absolute -bottom-1 -right-1 w-5 h-5 bg-cyan-500 rounded-full flex items-center justify-center border-2 border-black cursor-pointer shadow-lg shadow-cyan-500/40" 
-                                onClick={async (e) => { 
-                                    e.stopPropagation(); 
-                                    try {
-                                        await apiService.followUser(post.user_id || post.userId);
-                                        // Visual feedback: brief scale pop and background pulse
-                                        // showToast("Takip Edildi", `${post.author} takip listenize eklendi.`, "success");
-                                        alert(`${post.author} takip listenize eklendi! ✨`);
-                                    } catch (err) {
-                                        console.error(err);
-                                    }
-                                }}
+                                onClick={handleFollow}
                                 whileHover={{ scale: 1.2, rotate: 90 }}
                                 whileTap={{ scale: 0.8 }}
                                 initial={{ scale: 0 }}
@@ -572,6 +630,15 @@ export function ImmersivePostCard({
                                     whileTap={{ scale: 3, opacity: 0.5 }}
                                     transition={{ duration: 0.5 }}
                                 />
+                            </motion.div>
+                        )}
+                        {isFollowingAuthor && (
+                            <motion.div 
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center border-2 border-black shadow-lg"
+                            >
+                                <Check className="w-3 h-3 text-white" />
                             </motion.div>
                         )}
                     </div>
@@ -635,6 +702,25 @@ export function ImmersivePostCard({
                 <p className="text-[13px] sm:text-xs text-white/90 leading-relaxed font-medium drop-shadow-md line-clamp-2 w-5/6 pl-1.5 pointer-events-none">
                     {filterContent(post.desc || post.caption || post.description || '')}
                 </p>
+
+                {/* MUSIC INDICATOR (TikTok Style) */}
+                {post?.audio_url && (
+                    <div className="flex items-center gap-2 mt-1 pl-1.5 pointer-events-auto cursor-pointer group/music w-max">
+                        <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center animate-spin-slow">
+                            <SOSZap className="w-3 h-3 text-cyan-400" />
+                        </div>
+                        <div className="overflow-hidden flex items-center gap-1.5">
+                            <span className="text-[10px] font-black text-white/60 uppercase tracking-widest group-hover/music:text-cyan-400 transition-colors whitespace-nowrap">
+                                Orijinal Ses - {post.author || 'Moffi Kullanıcısı'}
+                            </span>
+                            <div className="flex gap-0.5">
+                                {[1, 2, 3].map(i => (
+                                    <div key={i} className="w-0.5 h-2 bg-cyan-400/40 rounded-full animate-music-bar" style={{ animationDelay: `${i * 0.2}s` }} />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-background via-background/40 to-transparent pointer-events-none" />
@@ -670,12 +756,21 @@ export function ImmersivePostCard({
                         {/* COMMENT LIST CONTAINER */}
                         <div className="flex-1 overflow-y-auto no-scrollbar pt-2 overscroll-contain pb-4">
                             <div className="space-y-6 px-1">
-                                {post.commentsList && post.commentsList.length > 0 ? (
-                                    post.commentsList.map((c: any) => (
+                                {isLoadingComments ? (
+                                    <div className="flex flex-col items-center justify-center mt-20">
+                                        <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mb-4" />
+                                        <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Yorumlar Yükleniyor...</p>
+                                    </div>
+                                ) : comments && comments.length > 0 ? (
+                                    comments.map((c: any) => (
                                         <CommentItem 
                                             key={c.id} 
                                             comment={c} 
-                                            onLike={(cid) => onToggleCommentLike?.(cid)}
+                                            currentUser={currentUser}
+                                            onLike={(cid) => {
+                                                onToggleCommentLike?.(cid);
+                                                setTimeout(() => refetchComments(), 300);
+                                            }}
                                             onReply={(target) => {
                                                 setReplyingTo(target);
                                                 setEditingComment(null);
@@ -686,7 +781,10 @@ export function ImmersivePostCard({
                                                 setReplyingTo(null);
                                                 setCommentInput(target.text);
                                             }}
-                                            onDelete={(cid) => onDeleteComment?.(cid)}
+                                            onDelete={(cid) => {
+                                                onDeleteComment?.(cid);
+                                                setTimeout(() => refetchComments(), 300);
+                                            }}
                                             onReport={(cid) => onReportComment?.(cid)}
                                             filterContent={filterContent}
                                         />
@@ -853,6 +951,7 @@ export function ImmersivePostCard({
 }
 
 // RENDER HELPER FOR COMMENTS
+// RENDER HELPER FOR COMMENTS
 function CommentItem({ 
     comment, 
     onLike, 
@@ -861,6 +960,7 @@ function CommentItem({
     onDelete, 
     onReport, 
     filterContent,
+    currentUser,
     isReply = false 
 }: { 
     comment: any, 
@@ -870,27 +970,16 @@ function CommentItem({
     onDelete: (commentId: string) => void, 
     onReport: (commentId: string) => void, 
     filterContent: (text: string) => string,
+    currentUser?: any,
     isReply?: boolean 
 }) {
     const [showReplies, setShowReplies] = useState(false);
     const [showContextMenu, setShowContextMenu] = useState(false);
-    const [longPressTimer, setLongPressTimer] = useState<any>(null);
+    const [likesCount, setLikesCount] = useState(comment.likes || 0);
+    const [isLikedLocal, setIsLikedLocal] = useState(comment.isLiked || false);
     const router = useRouter();
 
-    const startPress = () => {
-        const timer = setTimeout(() => {
-            setShowContextMenu(true);
-            if (window.navigator.vibrate) window.navigator.vibrate(10);
-        }, 600);
-        setLongPressTimer(timer);
-    };
-
-    const endPress = () => {
-        if (longPressTimer) {
-            clearTimeout(longPressTimer);
-            setLongPressTimer(null);
-        }
-    };
+    const isCommentOwner = currentUser?.id === comment.user_id || currentUser?.username === comment.author?.replace('@', '');
 
     return (
         <motion.div
@@ -898,13 +987,8 @@ function CommentItem({
             animate={{ opacity: 1, x: 0 }}
             className={cn("flex flex-col relative", isReply ? "pl-1" : "")}
         >
-            <div 
-                className="flex gap-3 group/comment"
-                onPointerDown={startPress}
-                onPointerUp={endPress}
-                onPointerLeave={endPress}
-            >
-                <div className="flex flex-col items-center shrink-0">
+            <div className="flex gap-3 group/comment items-start">
+                <div className="flex flex-col items-center shrink-0 mt-0.5">
                     {comment.isSystem ? (
                         <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-600 flex items-center justify-center shrink-0 shadow-lg shadow-cyan-500/20 ring-2 ring-cyan-400/20">
                             <Sparkles className="w-4 h-4 text-white" />
@@ -918,10 +1002,10 @@ function CommentItem({
                             }}
                             className="relative cursor-pointer"
                         >
-                            <div className="w-8 h-8 rounded-full border border-white/10 relative overflow-hidden">
-                                <Image src={comment.avatar || comment.userImg} fill className="object-cover" alt="Commenter" />
+                            <div className="w-8 h-8 rounded-full border border-white/10 relative overflow-hidden shrink-0">
+                                <Image src={comment.avatar || comment.userImg || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} fill className="object-cover" alt="Commenter" />
                             </div>
-                            {comment.isLiked && (
+                            {isLikedLocal && (
                                 <motion.div
                                     initial={{ scale: 0 }}
                                     animate={{ scale: 1 }}
@@ -937,39 +1021,39 @@ function CommentItem({
 
                 <div className="flex-1 min-w-0">
                     <div className="relative overflow-hidden group/reply-target">
-                        {/* HAPTIC TOUCH FEEDBACK EFFECT (Subtle background highlight) */}
-                        <AnimatePresence>
-                            {showContextMenu && (
-                                <motion.div 
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    className="absolute -inset-x-2 -inset-y-1 bg-white/[0.03] z-0 rounded-xl"
-                                />
-                            )}
-                        </AnimatePresence>
                         <div className="relative z-10">
                             <div className="flex items-center gap-2 mb-0.5">
-                                <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                                    <span
-                                        onClick={() => {
-                                            const targetId = comment.userId || comment.user_id || comment.authorId;
-                                            router.push(targetId ? `/profile/${targetId}` : '/profile');
-                                        }}
-                                        className={cn("text-[13px] font-black truncate cursor-pointer hover:underline", comment.isSystem ? "text-cyan-400" : "text-white/90")}
-                                    >
-                                        {comment.author || comment.userName}
-                                    </span>
-                                    <span className="text-[9px] text-white/20 font-black uppercase tracking-tighter shrink-0 ml-auto">{comment.time || "YENİ"}</span>
-                                </div>
+                                <span
+                                    onClick={() => {
+                                        const targetId = comment.userId || comment.user_id || comment.authorId;
+                                        router.push(targetId ? `/profile/${targetId}` : '/profile');
+                                    }}
+                                    className={cn("text-[13px] font-black truncate cursor-pointer hover:underline max-w-[140px] sm:max-w-[180px]", comment.isSystem ? "text-cyan-400" : "text-white/90")}
+                                >
+                                    {comment.user || comment.author || comment.userName || 'Moffi Kullanıcısı'}
+                                </span>
+                                
                                 {comment.isReplyTo && (
                                     <span className="text-[10px] text-cyan-400/50 font-black flex items-center shrink-0">
                                         <ChevronRight className="w-2.5 h-2.5" />
                                         @{comment.isReplyTo}
                                     </span>
                                 )}
+
+                                <div className="flex items-center gap-2 ml-auto shrink-0">
+                                    <span className="text-[9px] text-white/20 font-black uppercase tracking-tighter">{comment.time || "YENİ"}</span>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowContextMenu(!showContextMenu);
+                                        }}
+                                        className="p-1 hover:bg-white/10 rounded-full transition-colors opacity-40 hover:opacity-100 group-hover/comment:opacity-100"
+                                    >
+                                        <MoreHorizontal className="w-3.5 h-3.5 text-white" />
+                                    </button>
+                                </div>
                             </div>
-                            <p className="text-[13px] text-white/80 leading-relaxed font-medium font-sans break-words">{filterContent(comment.text)}</p>
+                            <p className="text-[13px] text-white/80 leading-relaxed font-medium font-sans break-words pl-0.5">{filterContent(comment.text)}</p>
 
                             {comment.media && (
                                 <div className="mt-2 rounded-2xl overflow-hidden border border-white/5 shadow-2xl max-w-[200px]">
@@ -979,16 +1063,21 @@ function CommentItem({
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-5 mt-1 ml-1">
+                    <div className="flex items-center gap-5 mt-1.5 ml-0.5">
                         <button
-                            onClick={() => onLike(comment.id)}
+                            onClick={() => {
+                                const newLiked = !isLikedLocal;
+                                setIsLikedLocal(newLiked);
+                                setLikesCount((prev: number) => newLiked ? prev + 1 : Math.max(0, prev - 1));
+                                onLike(comment.id);
+                            }}
                             className={cn(
                                 "flex items-center gap-1 text-[10px] font-black uppercase tracking-widest transition-all active:scale-95",
-                                comment.isLiked ? "text-red-500" : "text-white/40 hover:text-white/60"
+                                isLikedLocal ? "text-red-500" : "text-white/40 hover:text-white/60"
                             )}
                         >
-                            {comment.isLiked ? <Heart className="w-3 h-3 fill-red-500" /> : <Heart className="w-3 h-3" />}
-                            {comment.likes > 0 ? comment.likes : "BEĞEN"}
+                            {isLikedLocal ? <Heart className="w-3 h-3 fill-red-500" /> : <Heart className="w-3 h-3" />}
+                            {likesCount > 0 ? likesCount : "BEĞEN"}
                         </button>
                         <button
                             onClick={() => onReply(comment)}
@@ -1016,29 +1105,34 @@ function CommentItem({
                             initial={{ opacity: 0, scale: 0.9, y: -10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                            className="absolute left-1/2 -translate-x-1/2 top-4 z-[70] min-w-[160px] bg-black/60 backdrop-blur-2xl border border-white/10 rounded-2xl p-1.5 shadow-2xl"
+                            className="absolute right-2 top-8 z-[70] min-w-[160px] bg-[#121316]/95 backdrop-blur-3xl border border-white/10 rounded-2xl p-1.5 shadow-2xl"
                         >
-                            <button 
-                                onClick={() => {
-                                    onEdit(comment);
-                                    setShowContextMenu(false);
-                                }}
-                                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/10 text-white transition-colors"
-                            >
-                                <span className="text-[11px] font-bold">DÜZENLE</span>
-                                <Edit2 className="w-3.5 h-3.5 text-white/40" />
-                            </button>
-                            <button 
-                                onClick={() => {
-                                    onDelete(comment.id);
-                                    setShowContextMenu(false);
-                                }}
-                                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-red-500/20 text-red-400 transition-colors"
-                            >
-                                <span className="text-[11px] font-bold">SİL</span>
-                                <Trash2 className="w-3.5 h-3.5 opacity-60" />
-                            </button>
-                            <div className="h-px bg-white/5 my-1 mx-2" />
+                            {/* Actions restricted mostly to owner, but enabled gracefully if mock or current user owns it */}
+                            {(isCommentOwner || !comment.user_id) && (
+                                <>
+                                    <button 
+                                        onClick={() => {
+                                            onEdit(comment);
+                                            setShowContextMenu(false);
+                                        }}
+                                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/10 text-white transition-colors"
+                                    >
+                                        <span className="text-[11px] font-bold">DÜZENLE</span>
+                                        <Edit2 className="w-3.5 h-3.5 text-white/40" />
+                                    </button>
+                                    <button 
+                                        onClick={() => {
+                                            onDelete(comment.id);
+                                            setShowContextMenu(false);
+                                        }}
+                                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-red-500/20 text-red-400 transition-colors"
+                                    >
+                                        <span className="text-[11px] font-bold">SİL</span>
+                                        <Trash2 className="w-3.5 h-3.5 opacity-60" />
+                                    </button>
+                                    <div className="h-px bg-white/5 my-1 mx-2" />
+                                </>
+                            )}
                             <button 
                                 onClick={() => {
                                     onReport(comment.id);
@@ -1071,6 +1165,7 @@ function CommentItem({
                                 <CommentItem
                                     key={reply.id}
                                     comment={reply}
+                                    currentUser={currentUser}
                                     onLike={onLike}
                                     onReply={onReply}
                                     onEdit={onEdit}

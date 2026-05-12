@@ -89,56 +89,69 @@ export const MOCK_PETS: Pet[] = [
 
 export const MOCK_POSTS: Post[] = [
     {
+        id: 'post-vet-1',
+        user_id: 'user-moffi-official',
+        author_name: 'Dr. Pati (Vet)',
+        author_avatar: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=400',
+        media_url: 'https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?q=80&w=800',
+        caption: 'Köpeklerde pati bakımı neden önemlidir? Yaz aylarında sıcak asfalt patilere zarar verebilir. 🩺🐾 #VetTips #MoffiSağlık',
+        category: 'vet',
+        likes_count: 1240,
+        comments_count: 45,
+        is_liked: false,
+        created_at: new Date().toISOString()
+    },
+    {
+        id: 'post-training-1',
+        user_id: 'user-max',
+        author_name: 'Pati Okulu',
+        author_avatar: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?q=80&w=400',
+        media_url: 'https://images.unsplash.com/photo-1541591419107-bb24c5bb3807?q=80&w=800',
+        caption: 'Temel itaat eğitiminde "Bekle" komutu nasıl öğretilir? Adım adım rehberimiz yayında! 🎓🐕 #Training #PatiOkulu',
+        category: 'training',
+        likes_count: 890,
+        comments_count: 22,
+        is_liked: false,
+        created_at: new Date().toISOString()
+    },
+    {
+        id: 'post-funny-1',
+        user_id: 'user-milo',
+        author_name: 'Milo & Luna',
+        author_avatar: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=400',
+        media_url: 'https://images.unsplash.com/photo-1513245533132-31f507417b26?q=80&w=800',
+        caption: 'Sabah kahvaltısını beklerken biz... 😂🐱 #FunnyCats #MoffiComedy',
+        category: 'funny',
+        likes_count: 3420,
+        comments_count: 156,
+        is_liked: true,
+        created_at: new Date().toISOString()
+    },
+    {
+        id: 'post-food-1',
+        user_id: 'user-moffi-official',
+        author_name: 'Gurme Pati',
+        author_avatar: 'https://images.unsplash.com/photo-1589924691195-41432c84c161?q=80&w=400',
+        media_url: 'https://images.unsplash.com/photo-1589924559676-fa6372da6211?q=80&w=800',
+        caption: 'Evde yapabileceğiniz sağlıklı ödül maması tarifleri! 🦴🍎 #PetFood #MoffiGourmet',
+        category: 'food',
+        likes_count: 2100,
+        comments_count: 88,
+        is_liked: false,
+        created_at: new Date().toISOString()
+    },
+    {
         id: 'post-official-1',
         user_id: 'user-moffi-official',
         author_name: 'MoffiOfficial',
         author_avatar: 'https://images.unsplash.com/photo-1628157588553-5eeea00af15c?q=80&w=400',
         media_url: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=800',
         caption: 'Moffi Prime Ekosistemine Hoş Geldiniz! 🚀 Evcil hayvanlarınız için geleceğin dijital dünyasını inşa ediyoruz. #MoffiOfficial #Prime',
-        theme: 'premium',
+        category: 'all',
         likes_count: 5420,
         comments_count: 124,
         is_liked: false,
         created_at: new Date().toISOString()
-    },
-    {
-        id: 'post-official-2',
-        user_id: 'user-moffi-official',
-        author_name: 'MoffiOfficial',
-        author_avatar: 'https://images.unsplash.com/photo-1628157588553-5eeea00af15c?q=80&w=400',
-        media_url: 'https://images.unsplash.com/photo-1576091160550-2173bdd99625?q=80&w=800',
-        caption: 'Yapay Zeka Destekli "Neural Link" özelliği çok yakında tüm pet pasaportlarında aktif olacak. 🧠🐾 #MoffiTech',
-        theme: 'ai',
-        likes_count: 3210,
-        comments_count: 85,
-        is_liked: false,
-        created_at: new Date().toISOString()
-    },
-    {
-        id: 'post-test-owner',
-        user_id: 'user-milo',
-        author_name: 'MiloAndLuna',
-        author_avatar: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=400',
-        media_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=800',
-        caption: 'Moffi Ekosistemine hoş geldin! Bu kendi postum. Tıklayınca Yönetim Merkezi açılmalı. 🐾⚡',
-        theme: 'social',
-        likes_count: 500,
-        comments_count: 10,
-        is_liked: true,
-        created_at: '2025-04-05T15:00:00Z'
-    },
-    {
-        id: 'post-test-stranger',
-        user_id: 'user-stranger',
-        author_name: 'StrangerPaws',
-        author_avatar: 'https://images.unsplash.com/photo-1605568427561-40dd23c2acea?q=80&w=400',
-        media_url: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=800',
-        caption: 'Harika bir keşif turu! Bu başkasının postu. Tıklayınca Ziyaretçi Ekranı açılmalı. 🌲📍',
-        theme: 'social',
-        likes_count: 320,
-        comments_count: 8,
-        is_liked: false,
-        created_at: '2025-04-06T11:00:00Z'
     }
 ];
 

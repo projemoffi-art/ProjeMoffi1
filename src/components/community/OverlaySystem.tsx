@@ -5,6 +5,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import { X, Download, Grid3X3, List, Users, Coins, Globe, Package, Heart } from 'lucide-react';
 import { cn, showToast } from '@/lib/utils';
+import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
+
 
 // Components
 import { ShareSheet } from './ShareSheet';
@@ -87,6 +89,9 @@ export const OverlaySystem: React.FC<OverlaySystemProps> = ({
     isDiaryOpen, setIsDiaryOpen,
     setActiveTab
 }) => {
+    // GLOBAL REALTIME NOTIFICATIONS — DB Trigger → WebSocket → UI badge
+    const { notifications, unreadCount, markAllRead } = useRealtimeNotifications(user?.id);
+
     return (
         <>
             {/* QR CODE GENERATOR MODAL (PET-ID) */}
@@ -281,9 +286,9 @@ export const OverlaySystem: React.FC<OverlaySystemProps> = ({
             <NotificationsDrawer
                 isOpen={isNotificationsOpen}
                 onClose={() => setIsNotificationsOpen(false)}
-                notifications={notificationsList}
-                onMarkAllRead={() => setNotificationsList(notificationsList.map(n => ({...n, read: true})))}
-                unreadCount={notificationsList.filter(n => !n.read).length}
+                notifications={notifications}
+                onMarkAllRead={markAllRead}
+                unreadCount={unreadCount}
             />
 
             <PetSettingsModal 

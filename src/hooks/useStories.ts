@@ -33,16 +33,17 @@ export function useStories() {
             const groupsMap = new Map<string, UserStoryGroup>();
 
             data?.forEach((story: any) => {
-                if (!groupsMap.has(story.user_id)) {
-                    groupsMap.set(story.user_id, {
-                        user_id: story.user_id,
-                        author_name: story.author_name || 'Moffi User',
-                        author_avatar: story.author_avatar,
+                const uid = story.userId || story.user_id;
+                if (!groupsMap.has(uid)) {
+                    groupsMap.set(uid, {
+                        user_id: uid,
+                        author_name: story.userName || story.author_name || 'Moffi Kullanıcı',
+                        author_avatar: story.userAvatar || story.author_avatar,
                         stories: [],
                         hasUnseen: true,
                     });
                 }
-                groupsMap.get(story.user_id)!.stories.push(story);
+                groupsMap.get(uid)!.stories.push(story);
             });
 
             const allGroups = Array.from(groupsMap.values());

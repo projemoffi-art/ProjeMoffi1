@@ -6,54 +6,25 @@ import { supabase } from '@/lib/supabase';
 import { MockApiService } from './mockApiService';
 
 export class SupabaseApiService implements IApiService {
-    // Cache the entire session to avoid repeated network calls (5 min TTL)
-    private cachedUser: any = null;
-    private lastUserFetch: number = 0;
-    private userFetchPromise: Promise<any> | null = null;
-    private static readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-    // Call this when user logs out to clear stale cache
+    // Session is managed internally by Supabase client very efficiently.
+    // Custom aggressive caching causes cross-account validation bugs.
+    
     invalidateCache() {
-        this.cachedUser = null;
-        this.lastUserFetch = 0;
-        this.userFetchPromise = null;
+        // No-op for backwards compatibility
     }
 
     private async getSessionUser() {
-        const now = Date.now();
-        // Return cached user if still fresh (5 min TTL)
-        if (this.cachedUser && (now - this.lastUserFetch < SupabaseApiService.CACHE_TTL)) {
-            return this.cachedUser;
-        }
-
-        // Return existing promise to avoid simultaneous lock requests
-        if (this.userFetchPromise) return this.userFetchPromise;
-
-        this.userFetchPromise = (async () => {
-            try {
-                // Use getSession() - much faster and less prone to locks than getUser()
-                const { data: { session }, error } = await supabase.auth.getSession();
-                
-                if (error) {
-                    // Lock errors or network issues - don't cache, just return null
-                    console.error("Supabase auth error:", error);
-                    return null;
-                }
-
-                const user = session?.user || null;
-                this.cachedUser = user;
-                this.lastUserFetch = Date.now();
-                return user;
-            } catch (err) {
-                console.error("Critical Auth Error:", err);
+        try {
+            const { data: { session }, error } = await supabase.auth.getSession();
+            if (error) {
+                console.error("Supabase auth getSession error:", error);
                 return null;
-            } finally {
-                // Keep promise for a short duration to debounce rapid-fire calls
-                setTimeout(() => { this.userFetchPromise = null; }, 500);
             }
-        })();
-
-        return this.userFetchPromise;
+            return session?.user || null;
+        } catch (err) {
+            console.error("Critical Auth Error in getSessionUser:", err);
+            return null;
+        }
     }
 
 
@@ -61,7 +32,17 @@ export class SupabaseApiService implements IApiService {
     async getCurrentUser(): Promise<UserProfile | null> {
         const user = await this.getSessionUser();
         if (!user) return null;
-        return this.getUserProfile(user.id);
+        
+        // Add a safety timeout for the profile fetch to prevent infinite loading
+        return Promise.race([
+            this.getUserProfile(user.id),
+            new Promise<null>((_, reject) => 
+                setTimeout(() => reject(new Error("Profile fetch timeout")), 10000)
+            )
+        ]).catch(err => {
+            console.error("getCurrentUser error or timeout:", err);
+            return null;
+        });
     }
 
     async getUserProfile(id: string): Promise<UserProfile | null> {
@@ -83,6 +64,7 @@ export class SupabaseApiService implements IApiService {
             avatar: data.avatar_url || 'https://i.pravatar.cc/150?u=' + data.id,
             cover_photo: data.cover_url || "https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=1200",
             petName: data.pet_name,
+            role: data.role || 'user',
             bio: data.bio,
             stats: {
                 walks: 0,
@@ -98,18 +80,21 @@ export class SupabaseApiService implements IApiService {
 
         const { data, error } = await supabase
             .from('profiles')
-            .update({
-                full_name: updates.name,
+            .upsert({
+                id: user.id, // Required for upsert
+                full_name: updates.name || updates.username,
+                username: updates.username,
                 avatar_url: updates.avatar,
                 pet_name: updates.petName,
                 bio: updates.bio,
+                subscription_status: (updates as any).subscription_status,
                 updated_at: new Date().toISOString()
             })
-            .eq('id', user.id)
             .select()
             .single();
 
         if (error) throw error;
+
 
         return {
             ...updates,
@@ -121,6 +106,19 @@ export class SupabaseApiService implements IApiService {
         } as UserProfile;
     }
 
+    async isUsernameAvailable(username: string): Promise<boolean> {
+        if (!username) return false;
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('username', username.toLowerCase())
+            .single();
+
+        // PGRST116 means no row found, which is what we want
+        if (error && error.code === 'PGRST116') return true;
+        return !data;
+    }
+
     // --- COMMUNITY & FEED ---
     async getFeedContent(): Promise<any[]> {
         const { data, error } = await supabase
@@ -130,8 +128,22 @@ export class SupabaseApiService implements IApiService {
 
         if (error) {
             console.error('Error fetching feed:', error);
-            return []; // Never fall back to mock data in production
+            return []; // No fallback to mock
         }
+
+        const user = await this.getSessionUser();
+        
+        // Fetch user's likes to determine isLiked status
+        let userLikes: any[] = [];
+        if (user) {
+            const { data: likes } = await supabase
+                .from('likes')
+                .select('post_id')
+                .eq('user_id', user.id);
+            userLikes = likes || [];
+        }
+
+        const likedPostIds = new Set(userLikes.map(l => l.post_id));
 
         return data.map(item => ({
             id: item.id,
@@ -143,9 +155,65 @@ export class SupabaseApiService implements IApiService {
             likes: item.likes_count || 0,
             comments: item.comments_count || 0,
             time: this.formatTimeAgo(item.created_at),
+            isLiked: likedPostIds.has(item.id),
+            isSaved: false,
+            mood: item.mood,
+            audio_url: item.audio_url,
+            aura_settings: item.aura_settings,
+            allow_comments: item.allow_comments ?? true
+        }));
+    }
+
+    // --- KULLANICININ KENDİ GÖNDERİLERİ (Profil Grid) ---
+    async getUserPosts(userId: string): Promise<any[]> {
+        // Simple query - no join, avoids FK naming issues
+        const { data, error } = await supabase
+            .from('posts')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+
+        if (error || !data || data.length === 0) {
+            if (error) console.error('getUserPosts error:', error);
+            return [];
+        }
+
+        // Get like & comment counts in bulk
+        const postIds = data.map(p => p.id);
+
+        const [likesRes, commentsRes] = await Promise.all([
+            supabase.from('likes').select('post_id').in('post_id', postIds),
+            supabase.from('comments').select('post_id').in('post_id', postIds)
+        ]);
+
+        const likeMap: Record<string, number> = {};
+        const commentMap: Record<string, number> = {};
+
+        (likesRes.data || []).forEach((l: any) => {
+            likeMap[l.post_id] = (likeMap[l.post_id] || 0) + 1;
+        });
+        (commentsRes.data || []).forEach((c: any) => {
+            commentMap[c.post_id] = (commentMap[c.post_id] || 0) + 1;
+        });
+
+        return data.map(p => ({
+            id: p.id,
+            user_id: p.user_id,
+            media: p.media_url,
+            media_url: p.media_url,
+            image: p.media_url,
+            desc: p.content,
+            caption: p.content,
+            likes: likeMap[p.id] || 0,
+            comments: commentMap[p.id] || 0,
+            time: this.formatTimeAgo(p.created_at),
+            created_at: p.created_at,
             isLiked: false,
             isSaved: false,
-            mood: null
+            mood: p.mood,
+            audio_url: p.audio_url,
+            type: (p.media_url?.includes('.mp4') || p.media_url?.includes('.mov') || p.media_url?.includes('.webm'))
+                ? 'video' : 'image'
         }));
     }
 
@@ -158,15 +226,11 @@ export class SupabaseApiService implements IApiService {
             user_id: user.id,
             content: post.caption || post.desc || '',
             media_url: post.media || post.image || null,
+            audio_url: post.audio_url || post.audioUrl || null
         };
 
-        // Optionally include these if they might exist in schema
-        if (post.type) payload.post_type = post.type;
-        if (post.mood) payload.mood = post.mood;
-        if (post.is_video !== undefined) payload.is_video = post.is_video;
-
         const { data, error } = await supabase
-            .from('feed_posts')
+            .from('posts')
             .insert(payload)
             .select()
             .single();
@@ -176,13 +240,23 @@ export class SupabaseApiService implements IApiService {
             throw new Error(error.message);
         }
 
+        // Fetch the user's profile for author info
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name, avatar_url, username')
+            .eq('id', user.id)
+            .single();
+
         return {
             id: data.id,
             user_id: data.user_id,
-            author: user.email?.split('@')[0] || 'Moffi Kullanıcısı',
-            avatar: '',
-            image: data.media_url,
+            author: profile?.full_name || profile?.username || user.email?.split('@')[0] || 'Moffi Kullanıcısı',
+            avatar: profile?.avatar_url || '',
+            image: data.media_url,        // For ImmersivePostCard
+            media: data.media_url,        // Fallback field
+            media_url: data.media_url,    // Another fallback
             desc: data.content,
+            caption: data.content,
             likes: 0,
             comments: 0,
             time: 'Şimdi',
@@ -201,7 +275,7 @@ export class SupabaseApiService implements IApiService {
             .select('*')
             .eq('post_id', postId)
             .eq('user_id', user.id)
-            .single();
+            .maybeSingle();
 
         if (existing) {
             await supabase.from('likes').delete().eq('id', existing.id);
@@ -226,7 +300,7 @@ export class SupabaseApiService implements IApiService {
             .from('comments')
             .select(`
                 *,
-                profiles:user_id (full_name, avatar_url)
+                profiles:user_id (full_name, avatar_url, username)
             `)
             .eq('post_id', postId)
             .order('created_at', { ascending: true });
@@ -235,11 +309,34 @@ export class SupabaseApiService implements IApiService {
 
         return data.map(c => ({
             id: c.id,
-            user: (c.profiles as any)?.full_name || 'Moffi Kullanıcısı',
+            user: (c.profiles as any)?.full_name || (c.profiles as any)?.username || 'Moffi Kullanıcısı',
             avatar: (c.profiles as any)?.avatar_url || '',
             text: c.content,
-            time: this.formatTimeAgo(c.created_at)
+            time: this.formatTimeAgo(c.created_at),
+            user_id: c.user_id,
+            likes: c.likes_count || 0
         }));
+    }
+
+    async editComment(commentId: string | number, content: string): Promise<void> {
+        const user = await this.getSessionUser();
+        if (!user) return;
+        await supabase.from('comments').update({ content }).eq('id', commentId).eq('user_id', user.id);
+    }
+
+    async deleteComment(commentId: string | number): Promise<void> {
+        const user = await this.getSessionUser();
+        if (!user) return;
+        await supabase.from('comments').delete().eq('id', commentId).eq('user_id', user.id);
+    }
+
+    async toggleCommentLike(commentId: string | number): Promise<void> {
+        const user = await this.getSessionUser();
+        if (!user) return;
+        
+        const { data } = await supabase.from('comments').select('likes_count').eq('id', commentId).maybeSingle();
+        const currentCount = data?.likes_count || 0;
+        await supabase.from('comments').update({ likes_count: currentCount + 1 }).eq('id', commentId);
     }
 
     // --- MAP & RADAR (Community) ---
@@ -251,7 +348,7 @@ export class SupabaseApiService implements IApiService {
 
         if (error) {
             console.error('Error fetching lost pets:', error);
-            return this.mockApi.getLostPets();
+            return [];
         }
 
         return data.map(item => ({
@@ -309,7 +406,7 @@ export class SupabaseApiService implements IApiService {
 
         if (error) {
             console.error('Error fetching adoptions:', error);
-            return this.mockApi.getAdoptions();
+            return [];
         }
 
         return data.map(item => ({
@@ -499,20 +596,30 @@ export class SupabaseApiService implements IApiService {
     }
 
     // --- TEMPORARY MOCK FALLBACKS (Until next phases) ---
-    private mockApi = new MockApiService();
+    getInboxMessages = async () => {
+        const user = await this.getSessionUser();
+        if (!user) return [];
+        const { data } = await supabase
+            .from('messages')
+            .select('*')
+            .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
+            .order('created_at', { ascending: false });
+        return data || [];
+    };
 
-    getInboxMessages = () => this.mockApi.getInboxMessages();
-    addInboxMessage = (m: any) => this.mockApi.addInboxMessage(m);
+    addInboxMessage = async (m: any) => {
+        await supabase.from('messages').insert(m);
+    };
     async deletePost(postId: string): Promise<void> {
         const user = await this.getSessionUser();
         if (!user) throw new Error('Giriş gerekli');
-        await supabase.from('feed_posts').delete().eq('id', postId).eq('user_id', user.id);
+        await supabase.from('posts').delete().eq('id', postId).eq('user_id', user.id);
     }
 
     async updatePost(postId: string, updates: any): Promise<void> {
         const user = await this.getSessionUser();
         if (!user) throw new Error('Giriş gerekli');
-        await supabase.from('feed_posts').update(updates).eq('id', postId).eq('user_id', user.id);
+        await supabase.from('posts').update(updates).eq('id', postId).eq('user_id', user.id);
     }
     // --- MARKETPLACE & COMMERCE ---
     async getProducts(category?: ShopCategory): Promise<ShopProduct[]> {

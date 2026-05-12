@@ -8,6 +8,7 @@ import {
     PawPrint, Check, ArrowRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { CheckoutModal } from '@/components/shop/CheckoutModal';
 
 interface OnboardingFlowProps {
     onComplete: (data: any) => void;
@@ -39,6 +40,31 @@ const STEPS = [
         id: 'safety',
         title: "Her Zaman Güvende",
         subtitle: "Akıllı SOS ve Künye sistemiyle o asla yalnız değil.",
+    },
+    {
+        id: 'subscription',
+        title: "Moffi Planınızı Seçin",
+        subtitle: "Premium ayrıcalıklarla ekosistemin tüm gücünü hissedin.",
+    }
+];
+
+const PLANS = [
+    {
+        id: 'free',
+        name: 'Moffi Standart',
+        price: 'Ücretsiz',
+        features: ['Dijital Pasaport', 'Sosyal Medya Akışı', 'Temel SOS Hizmeti'],
+        color: 'bg-white/5',
+        button: 'DEVAM ET'
+    },
+    {
+        id: 'elite',
+        name: 'Moffi Elite',
+        price: '₺199',
+        features: ['Yapay Zeka Analizi', 'Sınırsız SOS Radarı', 'Özel Tasarım Aura', 'Market İndirimleri'],
+        color: 'bg-gradient-to-tr from-cyan-400 to-blue-600',
+        button: 'EVRENİ BAŞLAT',
+        popular: true
     }
 ];
 
@@ -55,15 +81,21 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         name: '',
         type: 'dog',
         aura: 'calm',
-        image: null as string | null
+        image: null as string | null,
+        plan: 'elite'
     });
+    const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     const isLastStep = currentStep === STEPS.length - 1;
 
     const handleNext = () => {
         if (isLastStep) {
-            onComplete(petData);
+            if (petData.plan === 'elite') {
+                setIsCheckoutOpen(true);
+            } else {
+                onComplete(petData);
+            }
         } else {
             setCurrentStep(prev => prev + 1);
         }
@@ -258,8 +290,70 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                             </div>
                         </div>
                     )}
+
+                    {/* STEP 6: SUBSCRIPTION */}
+                    {currentStep === 5 && (
+                        <div className="space-y-10 w-full max-w-4xl px-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {PLANS.map(plan => (
+                                    <button
+                                        key={plan.id}
+                                        onClick={() => setPetData({...petData, plan: plan.id})}
+                                        className={cn(
+                                            "relative p-8 rounded-[3rem] border transition-all text-left flex flex-col justify-between group",
+                                            petData.plan === plan.id ? "border-white/40 ring-4 ring-white/5" : "border-white/10 opacity-60",
+                                            plan.color
+                                        )}
+                                    >
+                                        {plan.popular && (
+                                            <div className="absolute -top-4 right-8 px-4 py-1.5 bg-white text-black text-[9px] font-black rounded-full uppercase tracking-widest shadow-xl">
+                                                En Çok Tercih Edilen
+                                            </div>
+                                        )}
+                                        
+                                        <div>
+                                            <div className="flex justify-between items-start mb-6">
+                                                <div>
+                                                    <h3 className="text-2xl font-black uppercase italic tracking-tighter">{plan.name}</h3>
+                                                    <div className="flex items-baseline gap-1 mt-1">
+                                                        <span className="text-3xl font-black tracking-tighter">{plan.price}</span>
+                                                        {plan.price !== 'Ücretsiz' && <span className="text-[10px] font-bold text-white/40 uppercase">/ AY</span>}
+                                                    </div>
+                                                </div>
+                                                {petData.plan === plan.id && (
+                                                    <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                                                        <Check className="w-5 h-5 text-black stroke-[4px]" />
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                {plan.features.map((feature, idx) => (
+                                                    <div key={idx} className="flex items-center gap-3">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-white/40" />
+                                                        <span className="text-xs font-medium text-white/80">{feature}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-12 w-full py-4 rounded-2xl bg-white/10 border border-white/10 text-center text-[10px] font-black uppercase tracking-widest group-hover:bg-white/20 transition-all">
+                                            {plan.button}
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </motion.div>
             </AnimatePresence>
+
+            <CheckoutModal 
+                isOpen={isCheckoutOpen}
+                onClose={() => setIsCheckoutOpen(false)}
+                onSuccess={() => onComplete(petData)}
+                plan={PLANS.find(p => p.id === 'elite') as any}
+            />
 
             {/* FOOTER ACTIONS */}
             <div className="p-12 flex flex-col items-center">
