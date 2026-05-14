@@ -2870,8 +2870,11 @@ export default function MoffiSocialMasterpiece() {
                                     </div>
                                 </motion.div>
                             )}
-                            
-                            {/* Filter guide hint (only shows once or briefly) */}
+                        </div>
+
+                        {/* SCROLLABLE CONTENT AREA */}
+                        <div className="flex-1 overflow-y-auto px-4 pb-40 flex flex-col gap-6 custom-scrollbar">
+                            {/* Filter guide hint */}
                             {selectedFile?.type.startsWith('image/') && (
                                 <p className="text-center text-[10px] text-white/30 font-medium tracking-widest uppercase mt-2 mb-1 animate-pulse">
                                     Filtreleri değiştirmek için fotoğrafı sağa sola kaydır
@@ -3038,11 +3041,12 @@ export default function MoffiSocialMasterpiece() {
                                     </motion.div>
                                 )}
                             </AnimatePresence>
+                        </div>
 
-
-
+                        {/* FIXED FOOTER AREA */}
+                        <div className="fixed bottom-0 left-0 right-0 p-6 pt-10 bg-gradient-to-t from-[#0a0a0b] via-[#0a0a0b]/95 to-transparent z-[100] flex flex-col gap-4">
                             {/* LOCATION TOGGLE */}
-                            <div className="flex items-center justify-between bg-[var(--card-bg)] border border-white/10 rounded-[1.5rem] p-3">
+                            <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-[1.5rem] p-3 backdrop-blur-md">
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center">
                                         <MapPin className="w-4 h-4" />
@@ -3053,6 +3057,7 @@ export default function MoffiSocialMasterpiece() {
                                     </div>
                                 </div>
                                 <button
+                                    type="button"
                                     onClick={() => setUploadLocationEnabled(!uploadLocationEnabled)}
                                     className={cn("w-10 h-6 rounded-full transition-colors flex items-center px-1 duration-300", uploadLocationEnabled ? "bg-cyan-500" : "bg-white/20")}
                                 >
@@ -3064,7 +3069,7 @@ export default function MoffiSocialMasterpiece() {
                             <button
                                 onClick={publishPost}
                                 disabled={isPublishing}
-                                className={cn("w-full py-4 mt-auto rounded-full font-black text-[var(--foreground)] flex items-center justify-center gap-2 shadow-[0_10px_40px_rgba(34,211,238,0.3)] transition-all", isPublishing ? "bg-gray-800/50 cursor-not-allowed" : "bg-gradient-to-r from-cyan-400 to-purple-500 hover:scale-[1.02] active:scale-95")}
+                                className={cn("w-full py-4 rounded-full font-black text-white flex items-center justify-center gap-2 shadow-[0_10px_40px_rgba(34,211,238,0.3)] transition-all", isPublishing ? "bg-gray-800/50 cursor-not-allowed" : "bg-gradient-to-r from-cyan-400 to-purple-500 hover:scale-[1.02] active:scale-95")}
                             >
                                 {isPublishing ? (
                                     <div className="flex items-center gap-3">
