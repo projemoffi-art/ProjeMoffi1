@@ -201,20 +201,29 @@ export default function MoffiSocialMasterpiece() {
     const [imageFilter, setImageFilter] = useState('');
     const [activeFilterIndex, setActiveFilterIndex] = useState(0);
     const [showFilterName, setShowFilterName] = useState(false);
+    const touchStartX = useRef<number | null>(null);
 
     const IMAGE_FILTERS = useMemo(() => [
         { name: 'Orijinal', filter: '' },
+        { name: 'Aydınlık', filter: 'brightness(1.1) contrast(1.1)' },
         { name: 'Canlı', filter: 'contrast(1.2) saturate(1.3)' },
         { name: 'Sıcak', filter: 'sepia(0.3) saturate(1.2) contrast(1.1)' },
         { name: 'Soğuk', filter: 'saturate(1.2) contrast(1.1) hue-rotate(-10deg)' },
+        { name: 'Soluk', filter: 'contrast(0.9) brightness(1.1) saturate(0.8)' },
+        { name: 'Krem', filter: 'sepia(0.2) brightness(1.05) saturate(0.9)' },
+        { name: 'Pastel', filter: 'contrast(0.85) brightness(1.1) saturate(1.1) sepia(0.1)' },
+        { name: 'Tozlu', filter: 'sepia(0.4) contrast(0.9) brightness(1.05)' },
+        { name: 'Minimal', filter: 'contrast(1.05) saturate(0.7)' },
         { name: 'Siyah Beyaz', filter: 'grayscale(1) contrast(1.2)' },
+        { name: 'Sert Siyah', filter: 'grayscale(1) contrast(1.4) brightness(0.9)' },
         { name: 'Vintage', filter: 'sepia(0.6) contrast(1.1) brightness(0.9) saturate(1.2)' },
+        { name: 'Nostalji', filter: 'sepia(0.8) contrast(1.2) brightness(0.8)' },
         { name: 'Sinematik', filter: 'contrast(1.3) saturate(0.8) sepia(0.2)' }
     ], []);
 
     useEffect(() => {
         if (showFilterName) {
-            const timer = setTimeout(() => setShowFilterName(false), 1500);
+            const timer = setTimeout(() => setShowFilterName(false), 2500);
             return () => clearTimeout(timer);
         }
     }, [showFilterName, activeFilterIndex]);
@@ -229,6 +238,19 @@ export default function MoffiSocialMasterpiece() {
         setActiveFilterIndex(newIndex);
         setImageFilter(IMAGE_FILTERS[newIndex].filter);
         setShowFilterName(true);
+    };
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX;
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (touchStartX.current === null) return;
+        const touchEndX = e.changedTouches[0].clientX;
+        const diff = touchEndX - touchStartX.current;
+        if (diff > 50) handleSwipeFilter('right');
+        else if (diff < -50) handleSwipeFilter('left');
+        touchStartX.current = null;
     };
     const [viewerStoryGroupIndex, setViewerStoryGroupIndex] = useState<number | null>(null);
     const [viewerStoryIndex, setViewerStoryIndex] = useState(0);
@@ -2631,30 +2653,36 @@ export default function MoffiSocialMasterpiece() {
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="relative w-full h-full overflow-hidden">
-                                            <motion.img 
+                                        <div 
+                                            className="relative w-full h-full overflow-hidden"
+                                            onTouchStart={handleTouchStart}
+                                            onTouchEnd={handleTouchEnd}
+                                            onMouseDown={(e) => { touchStartX.current = e.clientX; }}
+                                            onMouseUp={(e) => {
+                                                if (touchStartX.current === null) return;
+                                                const diff = e.clientX - touchStartX.current;
+                                                if (diff > 50) handleSwipeFilter('right');
+                                                else if (diff < -50) handleSwipeFilter('left');
+                                                touchStartX.current = null;
+                                            }}
+                                        >
+                                            <img 
                                                 src={uploadImageURL} 
-                                                className="w-full h-full object-cover cursor-grab active:cursor-grabbing touch-pan-y" 
+                                                className="w-full h-full object-cover touch-pan-y" 
                                                 style={{ filter: imageFilter }}
                                                 draggable={false}
-                                                drag="x"
-                                                dragConstraints={{ left: 0, right: 0 }}
-                                                dragElastic={0.2}
-                                                onDragEnd={(e, info) => {
-                                                    if (info.offset.x < -50) handleSwipeFilter('left');
-                                                    else if (info.offset.x > 50) handleSwipeFilter('right');
-                                                }}
                                             />
-                                            {/* Centered Filter Name Overlay */}
+                                            {/* Elegant Filter Name Overlay */}
                                             <AnimatePresence>
                                                 {showFilterName && (
                                                     <motion.div 
-                                                        initial={{ opacity: 0, scale: 0.8, y: '-50%', x: '-50%' }}
-                                                        animate={{ opacity: 1, scale: 1, y: '-50%', x: '-50%' }}
-                                                        exit={{ opacity: 0, scale: 1.1, y: '-50%', x: '-50%' }}
-                                                        className="absolute top-1/2 left-1/2 pointer-events-none bg-black/40 backdrop-blur-md px-6 py-2 rounded-full border border-white/20"
+                                                        initial={{ opacity: 0 }}
+                                                        animate={{ opacity: 1 }}
+                                                        exit={{ opacity: 0 }}
+                                                        transition={{ duration: 1, ease: 'easeInOut' }}
+                                                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none w-full px-4"
                                                     >
-                                                        <p className="text-white font-black tracking-widest uppercase text-sm drop-shadow-lg">
+                                                        <p className="text-white font-light tracking-[0.4em] uppercase text-2xl drop-shadow-[0_2px_15px_rgba(0,0,0,0.8)] text-center">
                                                             {IMAGE_FILTERS[activeFilterIndex].name}
                                                         </p>
                                                     </motion.div>
