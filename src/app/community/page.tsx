@@ -2659,6 +2659,24 @@ export default function MoffiSocialMasterpiece() {
                                                     </motion.div>
                                                 )}
                                             </AnimatePresence>
+
+                                            {/* Magic Wand Auto-Enhance Button */}
+                                            {selectedFile?.type.startsWith('image/') && (
+                                                <motion.button
+                                                    initial={{ opacity: 0, scale: 0.8 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setImageFilter('contrast(1.15) saturate(1.3) brightness(1.05)');
+                                                        showToast("Moffi AI İyileştirmesi ✨", "Renk, ışık ve kontrast dengesi profesyonelce optimize edildi.", "success");
+                                                    }}
+                                                    className="absolute bottom-4 right-4 z-20 w-12 h-12 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full flex items-center justify-center text-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.3)] hover:scale-110 hover:bg-white/20 transition-all active:scale-95 group"
+                                                    title="Moffi AI ile İyileştir"
+                                                >
+                                                    <Sparkles className="w-6 h-6 group-hover:rotate-12 transition-transform duration-300" />
+                                                </motion.button>
+                                            )}
                                         </div>
                                     )}
                                     
@@ -2873,7 +2891,19 @@ export default function MoffiSocialMasterpiece() {
                                             </button>
                                         </div>
                                         
-                                        <audio src={audioURL} controls className="w-full h-8 opacity-60 hover:opacity-100 transition-opacity" />
+                                        {/* Audio Spectrum Animation */}
+                                        <div className="absolute right-12 top-0 bottom-0 flex items-center justify-center gap-1 opacity-20 pointer-events-none">
+                                            {[1,2,3,4,5,6,7].map((i) => (
+                                                <motion.div
+                                                    key={i}
+                                                    className="w-1 bg-cyan-400 rounded-full"
+                                                    animate={{ height: ['20%', '80%', '30%', '100%', '40%'] }}
+                                                    transition={{ repeat: Infinity, duration: 0.8 + Math.random(), ease: 'easeInOut' }}
+                                                />
+                                            ))}
+                                        </div>
+                                        
+                                        <audio src={audioURL} controls className="w-full h-8 opacity-60 hover:opacity-100 transition-opacity relative z-10" />
                                     </div>
                                 ) : (
                                     <button
