@@ -223,7 +223,7 @@ export default function MoffiSocialMasterpiece() {
 
     useEffect(() => {
         if (showFilterName) {
-            const timer = setTimeout(() => setShowFilterName(false), 2500);
+            const timer = setTimeout(() => setShowFilterName(false), 1250);
             return () => clearTimeout(timer);
         }
     }, [showFilterName, activeFilterIndex]);
