@@ -208,6 +208,7 @@ export default function MoffiSocialMasterpiece() {
     const [brightness, setBrightness] = useState(100);
     const [contrast, setContrast] = useState(100);
     const [saturation, setSaturation] = useState(100);
+    const [aspectRatio, setAspectRatio] = useState<'original' | '1/1' | '4/5'>('original');
     
     const touchStartX = useRef<number | null>(null);
 
@@ -1228,6 +1229,7 @@ export default function MoffiSocialMasterpiece() {
                 is_video: isVideo,
                 audio_url: audioPublicUrl,
                 tagged_pets: taggedPetIds,
+                aspect_ratio: aspectRatio,
                 trim_start: isVideo ? (wasProcessed ? 0 : videoTrimRange[0]) : undefined,
                 trim_end: isVideo ? (wasProcessed ? (videoTrimRange[1] - videoTrimRange[0]) : videoTrimRange[1]) : undefined
             });
@@ -1247,6 +1249,7 @@ export default function MoffiSocialMasterpiece() {
             setBrightness(100);
             setContrast(100);
             setSaturation(100);
+            setAspectRatio('original');
             setUploadLocationEnabled(false);
             setActiveTab('feed');
             showToast("Paylaşıldı", "Yeni gönderiniz yayında!", "success");
@@ -2699,7 +2702,10 @@ export default function MoffiSocialMasterpiece() {
                                 <motion.div 
                                     initial={{ scale: 0.9, opacity: 0 }}
                                     animate={{ scale: 1, opacity: 1 }}
-                                    className="w-full h-[60vh] min-h-[450px] max-h-[600px] rounded-[2.5rem] overflow-hidden bg-black border border-white/10 relative shadow-2xl group"
+                                    className={cn(
+                                        "w-full rounded-[2.5rem] overflow-hidden bg-black border border-white/10 relative shadow-2xl group transition-all duration-500 ease-in-out",
+                                        aspectRatio === '1/1' ? 'aspect-square' : aspectRatio === '4/5' ? 'aspect-[4/5]' : 'h-[60vh] min-h-[450px] max-h-[600px]'
+                                    )}
                                 >
                                     {selectedFile?.type.startsWith('video/') ? (
                                         <div className="relative w-full h-full">
@@ -2890,6 +2896,34 @@ export default function MoffiSocialMasterpiece() {
                                     </div>
                                 </div>
                             </div>
+
+                             {/* ASPECT RATIO (NEW) */}
+                            {selectedFile?.type.startsWith('image/') && (
+                                <div className="flex flex-col gap-3">
+                                    <span className="text-[var(--foreground)]/60 text-[11px] font-bold uppercase tracking-widest px-1">En-Boy Oranı</span>
+                                    <div className="flex gap-2">
+                                        {[
+                                            { id: 'original', label: 'Orijinal', icon: <ImageIcon className="w-3 h-3" /> },
+                                            { id: '1/1', label: '1:1 Kare', icon: <div className="w-3 h-3 border border-current rounded-sm" /> },
+                                            { id: '4/5', label: '4:5 Portre', icon: <div className="w-3 h-4 border border-current rounded-sm" /> },
+                                        ].map(opt => (
+                                            <button
+                                                key={opt.id}
+                                                onClick={() => setAspectRatio(opt.id as any)}
+                                                className={cn(
+                                                    "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border transition-all text-[10px] font-bold uppercase tracking-tighter",
+                                                    aspectRatio === opt.id 
+                                                        ? "bg-white text-black border-white shadow-lg scale-[1.02]" 
+                                                        : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10"
+                                                )}
+                                            >
+                                                {opt.icon}
+                                                {opt.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                              {/* PET TAGGING (NEW) */}
                             {userPets && userPets.length > 0 && (

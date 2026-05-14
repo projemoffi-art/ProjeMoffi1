@@ -61,6 +61,7 @@ export interface Post {
     audio_url?: string;
     media_url?: string;
     tagged_pets?: string[];
+    aspect_ratio?: string;
 }
 
 export interface UserProfile {
