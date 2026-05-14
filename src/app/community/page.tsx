@@ -2634,8 +2634,9 @@ export default function MoffiSocialMasterpiece() {
                                         <div className="relative w-full h-full overflow-hidden">
                                             <motion.img 
                                                 src={uploadImageURL} 
-                                                className="w-full h-full object-cover cursor-grab active:cursor-grabbing" 
+                                                className="w-full h-full object-cover cursor-grab active:cursor-grabbing touch-pan-y" 
                                                 style={{ filter: imageFilter }}
+                                                draggable={false}
                                                 drag="x"
                                                 dragConstraints={{ left: 0, right: 0 }}
                                                 dragElastic={0.2}
@@ -2681,7 +2682,7 @@ export default function MoffiSocialMasterpiece() {
                                     )}
                                     
                                     {/* Glassmorphism Overlays */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                                     
                                     {/* Action Buttons */}
                                     <div className="absolute top-4 right-4 flex flex-col gap-2 translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300">
