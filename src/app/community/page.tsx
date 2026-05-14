@@ -201,6 +201,7 @@ export default function MoffiSocialMasterpiece() {
     const [imageFilter, setImageFilter] = useState('');
     const [activeFilterIndex, setActiveFilterIndex] = useState(0);
     const [showFilterName, setShowFilterName] = useState(false);
+    const [isGeneratingAI, setIsGeneratingAI] = useState(false);
     const touchStartX = useRef<number | null>(null);
 
     const IMAGE_FILTERS = useMemo(() => [
@@ -261,6 +262,60 @@ export default function MoffiSocialMasterpiece() {
     const [reportingAdId, setReportingAdId] = useState<string | null>(null);
     const [reportReason, setReportReason] = useState<string>('');
     const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+
+    const generateAICaption = () => {
+        setIsGeneratingAI(true);
+        setTimeout(() => {
+            const templates: Record<string, string[]> = {
+                'Mutlu ✨': [
+                    "Bugün enerjimiz yerinde! 🐾",
+                    "Gülümsememizle dünyayı aydınlatıyoruz. ✨",
+                    "En mutlu anlar patilerle geçer. ❤️",
+                    "Mutluluk bir kuyruk sallaması kadar yakın! 🐕"
+                ],
+                'Uykulu 💤': [
+                    "Biraz kestirmenin kimseye zararı olmaz... 😴",
+                    "Rüyalar alemine yolculuk başlıyor. 🌙",
+                    "En sevdiğim aktivite: Uyumak! 💤",
+                    "Pazartesi modumuz tam olarak bu... 😴"
+                ],
+                'Enerjik ⚡': [
+                    "Beni kimse durduramaz! 🔥",
+                    "Koşmak, zıplamak, keşfetmek... 🐾",
+                    "Enerji tavan! ⚡",
+                    "Hadi oyna artık! Bekliyorum... 🎾"
+                ],
+                'Sabırsız 🦉': [
+                    "Mama saati ne zaman? 🍖",
+                    "Dışarı çıkmak için sabırsızlanıyoruz! 🐾",
+                    "Hala bekliyor muyuz? Cidden mi? 🦉"
+                ],
+                'Oyunbaz 🎾': [
+                    "Topu at, getiriyim! 🎾",
+                    "Oyun vakti geldi de geçiyor bile. 🐾",
+                    "Hadi biraz eğlenelim! ✨"
+                ],
+                'Yorgun 🔋': [
+                    "Pillerimiz bitti... 🔋",
+                    "Bugün çok koşturduk, dinlenme vakti. 💤",
+                    "Beni buraya bırakın, uyanınca gelirim. 😴"
+                ]
+            };
+
+            const pool = uploadMood && templates[uploadMood] ? templates[uploadMood] : [
+                "Moffi ile anı biriktiriyoruz. 🐾",
+                "Günün en güzel anı. ✨",
+                "Patili dostumla hayat daha güzel. ❤️",
+                "Harika bir gün! 🐕",
+                "Moffi dünyasında sıradan bir an. 🌍"
+            ];
+
+            const randomCaption = pool[Math.floor(Math.random() * pool.length)];
+            setUploadCaption(randomCaption);
+            setIsGeneratingAI(false);
+            showToast("AI Başarılı! ✨", "Senin için harika bir açıklama buldum.", "success");
+        }, 800);
+    };
     
     // VIDEO TRIMMER STATES
     const [videoDuration, setVideoDuration] = useState(0);
@@ -2790,19 +2845,35 @@ export default function MoffiSocialMasterpiece() {
                             )}
 
                             {/* CAPTION */}
-                            <div className="bg-[var(--card-bg)] border border-white/10 rounded-[1.5rem] p-3 flex gap-3 items-start transition-all">
+                            <div className="bg-[var(--card-bg)] border border-white/10 rounded-[1.5rem] p-3 flex gap-3 items-start transition-all relative group/caption">
                                 <img src={user?.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} className="w-8 h-8 rounded-full shrink-0 mt-0.5" />
-                                <textarea
-                                    value={uploadCaption}
-                                    onChange={(e) => setUploadCaption(e.target.value)}
-                                    onInput={(e) => {
-                                        e.currentTarget.style.height = 'auto';
-                                        e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
-                                    }}
-                                    placeholder="Bu harika anı anlat..."
-                                    className="w-full bg-transparent outline-none text-[var(--foreground)] resize-none min-h-[24px] max-h-[120px] text-sm py-1 overflow-hidden"
-                                    rows={1}
-                                />
+                                <div className="flex-1 flex flex-col gap-2">
+                                    <textarea
+                                        value={uploadCaption}
+                                        onChange={(e) => setUploadCaption(e.target.value)}
+                                        onInput={(e) => {
+                                            e.currentTarget.style.height = 'auto';
+                                            e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
+                                        }}
+                                        placeholder="Bu harika anı anlat..."
+                                        className="w-full bg-transparent outline-none text-[var(--foreground)] resize-none min-h-[24px] max-h-[120px] text-sm py-1 overflow-hidden"
+                                        rows={1}
+                                    />
+                                    <div className="flex justify-end">
+                                        <button
+                                            onClick={generateAICaption}
+                                            disabled={isGeneratingAI}
+                                            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/20 transition-all active:scale-95 disabled:opacity-50"
+                                        >
+                                            {isGeneratingAI ? (
+                                                <div className="w-3 h-3 border-2 border-cyan-400/20 border-t-cyan-400 rounded-full animate-spin" />
+                                            ) : (
+                                                <Sparkles className="w-3 h-3" />
+                                            )}
+                                            <span className="text-[10px] font-bold uppercase tracking-widest">Moffi AI Öner</span>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
                             {/* VIDEO TRIMMER UI (Apple Style) */}
