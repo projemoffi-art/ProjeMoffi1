@@ -60,6 +60,7 @@ export interface Post {
     trim_end?: number;
     audio_url?: string;
     media_url?: string;
+    tagged_pets?: string[];
 }
 
 export interface UserProfile {

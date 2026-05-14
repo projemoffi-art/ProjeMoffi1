@@ -202,6 +202,7 @@ export default function MoffiSocialMasterpiece() {
     const [activeFilterIndex, setActiveFilterIndex] = useState(0);
     const [showFilterName, setShowFilterName] = useState(false);
     const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+    const [taggedPetIds, setTaggedPetIds] = useState<string[]>([]);
     const touchStartX = useRef<number | null>(null);
 
     const IMAGE_FILTERS = useMemo(() => [
@@ -1220,8 +1221,7 @@ export default function MoffiSocialMasterpiece() {
                 mood: uploadMood || null,
                 is_video: isVideo,
                 audio_url: audioPublicUrl,
-                // If processed, the new file starts at 0 and ends at duration.
-                // If not processed (fallback), we use the range selected by the user.
+                tagged_pets: taggedPetIds,
                 trim_start: isVideo ? (wasProcessed ? 0 : videoTrimRange[0]) : undefined,
                 trim_end: isVideo ? (wasProcessed ? (videoTrimRange[1] - videoTrimRange[0]) : videoTrimRange[1]) : undefined
             });
@@ -1237,6 +1237,7 @@ export default function MoffiSocialMasterpiece() {
             setAudioURL(null);
             setUploadCaption('');
             setUploadMood(null);
+            setTaggedPetIds([]);
             setUploadLocationEnabled(false);
             setActiveTab('feed');
             showToast("Paylaşıldı", "Yeni gönderiniz yayında!", "success");
@@ -3179,6 +3180,51 @@ export default function MoffiSocialMasterpiece() {
                                     className="w-full bg-transparent outline-none text-[var(--foreground)] resize-none h-24 text-sm mt-1"
                                 />
                             </div>
+
+                             {/* PET TAGGING (NEW) */}
+                            {userPets && userPets.length > 0 && (
+                                <div className="flex flex-col gap-3">
+                                    <span className="text-[var(--foreground)]/60 text-[11px] font-bold uppercase tracking-widest px-1">Dostunu Etiketle (İsteğe Bağlı)</span>
+                                    <div className="flex gap-4 overflow-x-auto no-scrollbar py-2 px-1">
+                                        {userPets.map(pet => (
+                                            <button
+                                                key={pet.id}
+                                                onClick={() => {
+                                                    setTaggedPetIds(prev => 
+                                                        prev.includes(pet.id) 
+                                                        ? prev.filter(id => id !== pet.id) 
+                                                        : [...prev, pet.id]
+                                                    );
+                                                }}
+                                                className="flex flex-col items-center gap-2 shrink-0 group relative"
+                                            >
+                                                <div className={cn(
+                                                    "w-14 h-14 rounded-full border-2 transition-all duration-300 relative",
+                                                    taggedPetIds.includes(pet.id) 
+                                                        ? "border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.5)] scale-110" 
+                                                        : "border-white/10 group-hover:border-white/30"
+                                                )}>
+                                                    <img 
+                                                        src={pet.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} 
+                                                        className="w-full h-full rounded-full object-cover p-0.5" 
+                                                    />
+                                                    {taggedPetIds.includes(pet.id) && (
+                                                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-cyan-500 rounded-full flex items-center justify-center border-2 border-black animate-in zoom-in duration-300">
+                                                            <Check className="w-3 h-3 text-black" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <span className={cn(
+                                                    "text-[10px] font-bold uppercase tracking-tight transition-colors",
+                                                    taggedPetIds.includes(pet.id) ? "text-cyan-400" : "text-white/40"
+                                                )}>
+                                                    {pet.name}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* MOOD SELECTOR */}
                             <div className="flex flex-col gap-2">
