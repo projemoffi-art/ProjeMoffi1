@@ -208,7 +208,6 @@ export default function MoffiSocialMasterpiece() {
     const [brightness, setBrightness] = useState(100);
     const [contrast, setContrast] = useState(100);
     const [saturation, setSaturation] = useState(100);
-    const [aspectRatio, setAspectRatio] = useState<'original' | '1/1' | '4/5'>('original');
     
     // Scheduling States
     const [scheduledDate, setScheduledDate] = useState<string | null>(null);
@@ -1233,7 +1232,6 @@ export default function MoffiSocialMasterpiece() {
                 is_video: isVideo,
                 audio_url: audioPublicUrl,
                 tagged_pets: taggedPetIds,
-                aspect_ratio: aspectRatio,
                 scheduled_at: isSchedulingMode ? scheduledDate : null,
                 status: isSchedulingMode ? 'scheduled' : 'published',
                 trim_start: isVideo ? (wasProcessed ? 0 : videoTrimRange[0]) : undefined,
@@ -1255,7 +1253,6 @@ export default function MoffiSocialMasterpiece() {
             setBrightness(100);
             setContrast(100);
             setSaturation(100);
-            setAspectRatio('original');
             setScheduledDate(null);
             setIsSchedulingMode(false);
             setUploadLocationEnabled(false);
@@ -2710,10 +2707,7 @@ export default function MoffiSocialMasterpiece() {
                                 <motion.div 
                                     initial={{ scale: 0.9, opacity: 0 }}
                                     animate={{ scale: 1, opacity: 1 }}
-                                    className={cn(
-                                        "w-full rounded-[2.5rem] overflow-hidden bg-black border border-white/10 relative shadow-2xl group transition-all duration-500 ease-in-out",
-                                        aspectRatio === '1/1' ? 'aspect-square' : aspectRatio === '4/5' ? 'aspect-[4/5]' : 'h-[60vh] min-h-[450px] max-h-[600px]'
-                                    )}
+                                    className="w-full h-[60vh] min-h-[450px] max-h-[600px] rounded-[2.5rem] overflow-hidden bg-black border border-white/10 relative shadow-2xl group transition-all duration-500 ease-in-out"
                                 >
                                     {selectedFile?.type.startsWith('video/') ? (
                                         <div className="relative w-full h-full">
@@ -2770,24 +2764,24 @@ export default function MoffiSocialMasterpiece() {
                                                 )}
                                             </AnimatePresence>
 
-                                            {/* Magic Wand Auto-Enhance Button */}
+                                            {/* Magic Wand Auto-Enhance Button (Streamlined) */}
                                             {selectedFile?.type.startsWith('image/') && (
                                                 <motion.button
-                                                    initial={{ opacity: 0, scale: 0.8 }}
-                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        setActiveFilterIndex(0); // Reset preset
+                                                        setActiveFilterIndex(0);
                                                         setBrightness(115);
                                                         setContrast(115);
                                                         setSaturation(130);
-                                                        showToast("Moffi AI İyileştirmesi ✨", "Renk, ışık ve kontrast dengesi profesyonelce optimize edildi.", "success");
+                                                        showToast("AI İyileştirme ✨", "Profesyonel ayarlar uygulandı.", "success");
                                                     }}
-                                                    className="absolute bottom-4 right-4 z-20 w-12 h-12 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full flex items-center justify-center text-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.3)] hover:scale-110 hover:bg-white/20 transition-all active:scale-95 group"
-                                                    title="Moffi AI ile İyileştir"
+                                                    className="absolute bottom-6 right-6 z-20 w-8 h-8 flex items-center justify-center text-yellow-400 hover:scale-110 transition-all active:scale-95 group"
+                                                    title="AI İyileştir"
                                                 >
-                                                    <Sparkles className="w-6 h-6 group-hover:rotate-12 transition-transform duration-300" />
+                                                    <Sparkles className="w-5 h-5 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]" />
                                                 </motion.button>
                                             )}
                                         </div>
@@ -2796,20 +2790,33 @@ export default function MoffiSocialMasterpiece() {
                                     {/* Glassmorphism Overlays */}
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                                     
-                                    {/* Action Buttons */}
-                                    <div className="absolute top-4 right-4 flex flex-col gap-2 translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300">
+                                    {/* Streamlined Action Sidebar */}
+                                    <div className="absolute top-6 right-6 flex flex-col gap-5 opacity-0 group-hover:opacity-100 transition-all duration-300 z-30">
                                         <button 
                                             type="button"
                                             onClick={() => cameraInputRef.current?.click()}
-                                            className="bg-white/10 backdrop-blur-xl border border-white/20 p-3 rounded-2xl text-white hover:bg-white/20 transition-all active:scale-90"
+                                            className="text-white/60 hover:text-white transition-all active:scale-90"
                                             title="Medyayı Değiştir"
                                         >
                                             <Camera className="w-5 h-5" />
                                         </button>
+                                        
                                         <button 
                                             type="button"
-                                            onClick={() => { setUploadImageURL(null); setSelectedFile(null); }}
-                                            className="bg-red-500/20 backdrop-blur-xl border border-red-500/30 p-3 rounded-2xl text-red-500 hover:bg-red-500/40 transition-all active:scale-90"
+                                            onClick={() => audioInputRef.current?.click()}
+                                            className={cn(
+                                                "transition-all active:scale-90",
+                                                audioURL ? "text-cyan-400" : "text-white/60 hover:text-white"
+                                            )}
+                                            title="Müzik/Ses Ekle"
+                                        >
+                                            <Mic className="w-5 h-5" />
+                                        </button>
+
+                                        <button 
+                                            type="button"
+                                            onClick={() => { setUploadImageURL(null); setSelectedFile(null); setAudioFile(null); setAudioURL(null); }}
+                                            className="text-red-500/60 hover:text-red-500 transition-all active:scale-90"
                                             title="Sil"
                                         >
                                             <Trash2 className="w-5 h-5" />
@@ -2830,11 +2837,7 @@ export default function MoffiSocialMasterpiece() {
                                             )}
                                         </div>
                                         <div className="flex -space-x-2">
-                                            {[1,2,3].map(i => (
-                                                <div key={i} className="w-6 h-6 rounded-full border-2 border-black bg-gray-800 flex items-center justify-center text-[8px] font-bold text-white">
-                                                    {i === 1 ? '🐾' : i === 2 ? '❤️' : '✨'}
-                                                </div>
-                                            ))}
+                                            {/* Removed decorative icons */}
                                         </div>
                                     </div>
                                 </motion.div>
@@ -2905,33 +2908,7 @@ export default function MoffiSocialMasterpiece() {
                                 </div>
                             </div>
 
-                             {/* ASPECT RATIO (NEW) */}
-                            {selectedFile?.type.startsWith('image/') && (
-                                <div className="flex flex-col gap-3">
-                                    <span className="text-[var(--foreground)]/60 text-[11px] font-bold uppercase tracking-widest px-1">En-Boy Oranı</span>
-                                    <div className="flex gap-2">
-                                        {[
-                                            { id: 'original', label: 'Orijinal', icon: <ImageIcon className="w-3 h-3" /> },
-                                            { id: '1/1', label: '1:1 Kare', icon: <div className="w-3 h-3 border border-current rounded-sm" /> },
-                                            { id: '4/5', label: '4:5 Portre', icon: <div className="w-3 h-4 border border-current rounded-sm" /> },
-                                        ].map(opt => (
-                                            <button
-                                                key={opt.id}
-                                                onClick={() => setAspectRatio(opt.id as any)}
-                                                className={cn(
-                                                    "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border transition-all text-[10px] font-bold uppercase tracking-tighter",
-                                                    aspectRatio === opt.id 
-                                                        ? "bg-white text-black border-white shadow-lg scale-[1.02]" 
-                                                        : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10"
-                                                )}
-                                            >
-                                                {opt.icon}
-                                                {opt.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+
 
                              {/* PET TAGGING (NEW) */}
                             {userPets && userPets.length > 0 && (
@@ -3000,36 +2977,33 @@ export default function MoffiSocialMasterpiece() {
                                     
                                     <div className="flex flex-col gap-3">
                                         <div className="flex flex-col gap-1.5">
-                                            <div className="flex justify-between text-[10px] font-bold text-white/60">
+                                            <div className="flex justify-between text-[10px] font-bold text-white/40">
                                                 <span>Parlaklık</span>
-                                                <span>{brightness}%</span>
                                             </div>
                                             <input 
-                                                type="range" min="50" max="150" value={brightness}
-                                                onChange={(e) => setBrightness(parseInt(e.target.value))}
-                                                className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-500"
+                                                type="range" min="50" max="150" step="0.5" value={brightness}
+                                                onChange={(e) => setBrightness(parseFloat(e.target.value))}
+                                                className="w-full h-0.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-500"
                                             />
                                         </div>
                                         <div className="flex flex-col gap-1.5">
-                                            <div className="flex justify-between text-[10px] font-bold text-white/60">
+                                            <div className="flex justify-between text-[10px] font-bold text-white/40">
                                                 <span>Kontrast</span>
-                                                <span>{contrast}%</span>
                                             </div>
                                             <input 
-                                                type="range" min="50" max="150" value={contrast}
-                                                onChange={(e) => setContrast(parseInt(e.target.value))}
-                                                className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-500"
+                                                type="range" min="50" max="150" step="0.5" value={contrast}
+                                                onChange={(e) => setContrast(parseFloat(e.target.value))}
+                                                className="w-full h-0.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-500"
                                             />
                                         </div>
                                         <div className="flex flex-col gap-1.5">
-                                            <div className="flex justify-between text-[10px] font-bold text-white/60">
+                                            <div className="flex justify-between text-[10px] font-bold text-white/40">
                                                 <span>Doygunluk</span>
-                                                <span>{saturation}%</span>
                                             </div>
                                             <input 
-                                                type="range" min="0" max="200" value={saturation}
-                                                onChange={(e) => setSaturation(parseInt(e.target.value))}
-                                                className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-500"
+                                                type="range" min="0" max="200" step="1" value={saturation}
+                                                onChange={(e) => setSaturation(parseFloat(e.target.value))}
+                                                className="w-full h-0.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-500"
                                             />
                                         </div>
                                     </div>
@@ -3113,73 +3087,7 @@ export default function MoffiSocialMasterpiece() {
                                 </div>
                             </div>
 
-                            {/* AUDIO SELECTOR (NEW) */}
-                            <div className="flex flex-col gap-3">
-                                <span className="text-[var(--foreground)]/60 text-[11px] font-bold uppercase tracking-widest px-1">Müzik / Ses (İsteğe Bağlı)</span>
-                                
-                                <input 
-                                    type="file" 
-                                    ref={audioInputRef} 
-                                    className="hidden" 
-                                    accept="audio/*" 
-                                    onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                            setAudioFile(file);
-                                            setAudioURL(URL.createObjectURL(file));
-                                        }
-                                    }}
-                                />
 
-                                {audioURL ? (
-                                    <div className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 rounded-[1.5rem] p-3 flex flex-col gap-2 relative overflow-hidden">
-                                        <div className="flex items-center justify-between relative z-10">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-xl bg-cyan-500 flex items-center justify-center text-black shadow-lg shadow-cyan-500/20 animate-pulse">
-                                                    <Mic size={16} />
-                                                </div>
-                                                <div className="overflow-hidden">
-                                                    <p className="text-[13px] font-black text-white truncate max-w-[200px]">{audioFile?.name}</p>
-                                                    <p className="text-[9px] font-bold text-cyan-400 uppercase tracking-widest">Ses Dosyası Seçildi</p>
-                                                </div>
-                                            </div>
-                                            <button 
-                                                onClick={() => { setAudioFile(null); setAudioURL(null); }}
-                                                className="w-7 h-7 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60 transition-colors"
-                                            >
-                                                <X size={14} />
-                                            </button>
-                                        </div>
-                                        
-                                        {/* Audio Spectrum Animation */}
-                                        <div className="absolute right-12 top-0 bottom-0 flex items-center justify-center gap-1 opacity-20 pointer-events-none">
-                                            {[1,2,3,4,5,6,7].map((i) => (
-                                                <motion.div
-                                                    key={i}
-                                                    className="w-1 bg-cyan-400 rounded-full"
-                                                    animate={{ height: ['20%', '80%', '30%', '100%', '40%'] }}
-                                                    transition={{ repeat: Infinity, duration: 0.8 + Math.random(), ease: 'easeInOut' }}
-                                                />
-                                            ))}
-                                        </div>
-                                        
-                                        <audio src={audioURL} controls className="w-full h-8 opacity-60 hover:opacity-100 transition-opacity relative z-10" />
-                                    </div>
-                                ) : (
-                                    <button
-                                        onClick={() => audioInputRef.current?.click()}
-                                        className="w-full p-3 rounded-[1.5rem] border border-dashed border-white/10 bg-white/[0.02] flex items-center justify-center gap-3 hover:bg-white/[0.05] hover:border-cyan-500/40 transition-all group"
-                                    >
-                                        <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-white/40 group-hover:text-cyan-400 group-hover:scale-110 transition-all">
-                                            <Mic size={16} />
-                                        </div>
-                                        <div className="text-left flex-1">
-                                            <p className="text-[13px] font-bold text-white/60 group-hover:text-white transition-colors">Müzik veya Ses Ekle</p>
-                                            <p className="text-[9px] text-white/30 font-medium uppercase tracking-widest mt-0.5">Fotoğraflarına can ver</p>
-                                        </div>
-                                    </button>
-                                )}
-                            </div>
 
                             {/* LOCATION TOGGLE */}
                             <div className="flex items-center justify-between bg-[var(--card-bg)] border border-white/10 rounded-[1.5rem] p-3">
