@@ -210,6 +210,10 @@ export default function MoffiSocialMasterpiece() {
     const [saturation, setSaturation] = useState(100);
     const [aspectRatio, setAspectRatio] = useState<'original' | '1/1' | '4/5'>('original');
     
+    // Scheduling States
+    const [scheduledDate, setScheduledDate] = useState<string | null>(null);
+    const [isSchedulingMode, setIsSchedulingMode] = useState(false);
+    
     const touchStartX = useRef<number | null>(null);
 
     const IMAGE_FILTERS = useMemo(() => [
@@ -1230,6 +1234,8 @@ export default function MoffiSocialMasterpiece() {
                 audio_url: audioPublicUrl,
                 tagged_pets: taggedPetIds,
                 aspect_ratio: aspectRatio,
+                scheduled_at: isSchedulingMode ? scheduledDate : null,
+                status: isSchedulingMode ? 'scheduled' : 'published',
                 trim_start: isVideo ? (wasProcessed ? 0 : videoTrimRange[0]) : undefined,
                 trim_end: isVideo ? (wasProcessed ? (videoTrimRange[1] - videoTrimRange[0]) : videoTrimRange[1]) : undefined
             });
@@ -1250,6 +1256,8 @@ export default function MoffiSocialMasterpiece() {
             setContrast(100);
             setSaturation(100);
             setAspectRatio('original');
+            setScheduledDate(null);
+            setIsSchedulingMode(false);
             setUploadLocationEnabled(false);
             setActiveTab('feed');
             showToast("Paylaşıldı", "Yeni gönderiniz yayında!", "success");
@@ -3332,7 +3340,45 @@ export default function MoffiSocialMasterpiece() {
                                 />
                             </div>
 
+                             {/* SCHEDULING (NEW) */}
+                            <div className="flex flex-col gap-4 bg-white/5 border border-white/10 rounded-[1.5rem] p-4">
+                                <div className="flex justify-between items-center">
+                                    <div className="flex items-center gap-2">
+                                        <Clock className="w-4 h-4 text-cyan-400" />
+                                        <span className="text-[11px] font-black text-white uppercase tracking-widest">Paylaşım Zamanı</span>
+                                    </div>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setIsSchedulingMode(!isSchedulingMode)}
+                                        className={cn(
+                                            "px-4 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all border",
+                                            isSchedulingMode 
+                                                ? "bg-cyan-500 text-black border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.4)]" 
+                                                : "bg-white/5 text-white/40 border-white/5 hover:border-white/10"
+                                        )}
+                                    >
+                                        {isSchedulingMode ? 'Zamanlandı' : 'Şimdi Paylaş'}
+                                    </button>
+                                </div>
 
+                                {isSchedulingMode && (
+                                    <motion.div 
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        className="flex flex-col gap-3 pt-2 border-t border-white/5"
+                                    >
+                                        <p className="text-[10px] text-white/40 italic leading-relaxed">
+                                            Bu gönderi, seçtiğin tarih ve saat geldiğinde otomatik olarak akışta yayına girecektir.
+                                        </p>
+                                        <input 
+                                            type="datetime-local" 
+                                            value={scheduledDate || ''}
+                                            onChange={(e) => setScheduledDate(e.target.value)}
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-cyan-500/50 transition-all [color-scheme:dark]"
+                                        />
+                                    </motion.div>
+                                )}
+                            </div>
 
                             {/* MOOD SELECTOR */}
                             <div className="flex flex-col gap-2">
