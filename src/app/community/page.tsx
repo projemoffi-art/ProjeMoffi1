@@ -203,6 +203,12 @@ export default function MoffiSocialMasterpiece() {
     const [showFilterName, setShowFilterName] = useState(false);
     const [isGeneratingAI, setIsGeneratingAI] = useState(false);
     const [taggedPetIds, setTaggedPetIds] = useState<string[]>([]);
+    
+    // Pro Adjustments States
+    const [brightness, setBrightness] = useState(100);
+    const [contrast, setContrast] = useState(100);
+    const [saturation, setSaturation] = useState(100);
+    
     const touchStartX = useRef<number | null>(null);
 
     const IMAGE_FILTERS = useMemo(() => [
@@ -1238,6 +1244,9 @@ export default function MoffiSocialMasterpiece() {
             setUploadCaption('');
             setUploadMood(null);
             setTaggedPetIds([]);
+            setBrightness(100);
+            setContrast(100);
+            setSaturation(100);
             setUploadLocationEnabled(false);
             setActiveTab('feed');
             showToast("Paylaşıldı", "Yeni gönderiniz yayında!", "success");
@@ -2725,7 +2734,9 @@ export default function MoffiSocialMasterpiece() {
                                             <img 
                                                 src={uploadImageURL} 
                                                 className="w-full h-full object-cover touch-pan-y" 
-                                                style={{ filter: imageFilter }}
+                                                style={{ 
+                                                    filter: `${IMAGE_FILTERS[activeFilterIndex].filter} brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)` 
+                                                }}
                                                 draggable={false}
                                             />
                                             {/* Elegant Filter Name Overlay */}
@@ -2753,7 +2764,10 @@ export default function MoffiSocialMasterpiece() {
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        setImageFilter('contrast(1.15) saturate(1.3) brightness(1.05)');
+                                                        setActiveFilterIndex(0); // Reset preset
+                                                        setBrightness(115);
+                                                        setContrast(115);
+                                                        setSaturation(130);
                                                         showToast("Moffi AI İyileştirmesi ✨", "Renk, ışık ve kontrast dengesi profesyonelce optimize edildi.", "success");
                                                     }}
                                                     className="absolute bottom-4 right-4 z-20 w-12 h-12 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full flex items-center justify-center text-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.3)] hover:scale-110 hover:bg-white/20 transition-all active:scale-95 group"
@@ -2918,6 +2932,64 @@ export default function MoffiSocialMasterpiece() {
                                                 </span>
                                             </button>
                                         ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* PRO ADJUSTMENTS (NEW) */}
+                            {selectedFile?.type.startsWith('image/') && (
+                                <div className="flex flex-col gap-4 bg-white/5 border border-white/10 rounded-[1.5rem] p-4">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <div className="flex items-center gap-2">
+                                            <Palette className="w-4 h-4 text-cyan-400" />
+                                            <span className="text-[11px] font-black text-white uppercase tracking-widest">Manuel İnce Ayar</span>
+                                        </div>
+                                        <button 
+                                            onClick={() => {
+                                                setBrightness(100);
+                                                setContrast(100);
+                                                setSaturation(100);
+                                            }}
+                                            className="text-[9px] font-bold text-white/40 hover:text-white uppercase tracking-tighter"
+                                        >
+                                            Sıfırla
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex flex-col gap-1.5">
+                                            <div className="flex justify-between text-[10px] font-bold text-white/60">
+                                                <span>Parlaklık</span>
+                                                <span>{brightness}%</span>
+                                            </div>
+                                            <input 
+                                                type="range" min="50" max="150" value={brightness}
+                                                onChange={(e) => setBrightness(parseInt(e.target.value))}
+                                                className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-500"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col gap-1.5">
+                                            <div className="flex justify-between text-[10px] font-bold text-white/60">
+                                                <span>Kontrast</span>
+                                                <span>{contrast}%</span>
+                                            </div>
+                                            <input 
+                                                type="range" min="50" max="150" value={contrast}
+                                                onChange={(e) => setContrast(parseInt(e.target.value))}
+                                                className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-500"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col gap-1.5">
+                                            <div className="flex justify-between text-[10px] font-bold text-white/60">
+                                                <span>Doygunluk</span>
+                                                <span>{saturation}%</span>
+                                            </div>
+                                            <input 
+                                                type="range" min="0" max="200" value={saturation}
+                                                onChange={(e) => setSaturation(parseInt(e.target.value))}
+                                                className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-500"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             )}
