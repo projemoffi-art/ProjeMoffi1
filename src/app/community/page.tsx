@@ -212,6 +212,7 @@ export default function MoffiSocialMasterpiece() {
     // Scheduling States
     const [scheduledDate, setScheduledDate] = useState<string | null>(null);
     const [isSchedulingMode, setIsSchedulingMode] = useState(false);
+    const [activeTool, setActiveTool] = useState<'adjust' | 'tag' | 'schedule' | 'mood' | 'ai' | null>(null);
     
     const touchStartX = useRef<number | null>(null);
 
@@ -1255,6 +1256,7 @@ export default function MoffiSocialMasterpiece() {
             setSaturation(100);
             setScheduledDate(null);
             setIsSchedulingMode(false);
+            setActiveTool(null);
             setUploadLocationEnabled(false);
             setActiveTab('feed');
             showToast("Paylaşıldı", "Yeni gönderiniz yayında!", "success");
@@ -2876,216 +2878,166 @@ export default function MoffiSocialMasterpiece() {
                                 </p>
                             )}
 
-                            {/* CAPTION */}
-                            <div className="bg-[var(--card-bg)] border border-white/10 rounded-[1.5rem] p-3 flex gap-3 items-start transition-all relative group/caption">
-                                <img src={user?.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} className="w-8 h-8 rounded-full shrink-0 mt-0.5" />
-                                <div className="flex-1 flex flex-col gap-2">
-                                    <textarea
-                                        value={uploadCaption}
-                                        onChange={(e) => setUploadCaption(e.target.value)}
-                                        onInput={(e) => {
-                                            e.currentTarget.style.height = 'auto';
-                                            e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
-                                        }}
-                                        placeholder="Bu harika anı anlat..."
-                                        className="w-full bg-transparent outline-none text-[var(--foreground)] resize-none min-h-[24px] max-h-[120px] text-sm py-1 overflow-hidden"
-                                        rows={1}
-                                    />
-                                    <div className="flex justify-end">
-                                        <button
-                                            onClick={generateAICaption}
-                                            disabled={isGeneratingAI}
-                                            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/20 transition-all active:scale-95 disabled:opacity-50"
-                                        >
-                                            {isGeneratingAI ? (
-                                                <div className="w-3 h-3 border-2 border-cyan-400/20 border-t-cyan-400 rounded-full animate-spin" />
-                                            ) : (
-                                                <Sparkles className="w-3 h-3" />
-                                            )}
-                                            <span className="text-[10px] font-bold uppercase tracking-widest">Moffi AI Öner</span>
-                                        </button>
-                                    </div>
-                                </div>
+                            {/* MINIMAL CAPTION BOX */}
+                            <div className="px-2 pt-2">
+                                <textarea
+                                    value={uploadCaption}
+                                    onChange={(e) => setUploadCaption(e.target.value)}
+                                    onInput={(e) => {
+                                        e.currentTarget.style.height = 'auto';
+                                        e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
+                                    }}
+                                    placeholder="Neler oluyor?.."
+                                    className="w-full bg-transparent outline-none text-[var(--foreground)] resize-none min-h-[40px] max-h-[100px] text-lg font-medium py-1 overflow-hidden placeholder:text-white/20"
+                                    rows={1}
+                                />
                             </div>
 
 
 
-                             {/* PET TAGGING (NEW) */}
-                            {userPets && userPets.length > 0 && (
-                                <div className="flex flex-col gap-3">
-                                    <span className="text-[var(--foreground)]/60 text-[11px] font-bold uppercase tracking-widest px-1">Dostunu Etiketle (İsteğe Bağlı)</span>
-                                    <div className="flex gap-4 overflow-x-auto no-scrollbar py-2 px-1">
-                                        {userPets.map(pet => (
-                                            <button
-                                                key={pet.id}
-                                                onClick={() => {
-                                                    setTaggedPetIds(prev => 
-                                                        prev.includes(pet.id) 
-                                                        ? prev.filter(id => id !== pet.id) 
-                                                        : [...prev, pet.id]
-                                                    );
-                                                }}
-                                                className="flex flex-col items-center gap-2 shrink-0 group relative"
-                                            >
-                                                <div className={cn(
-                                                    "w-14 h-14 rounded-full border-2 transition-all duration-300 relative",
-                                                    taggedPetIds.includes(pet.id) 
-                                                        ? "border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.5)] scale-110" 
-                                                        : "border-white/10 group-hover:border-white/30"
-                                                )}>
-                                                    <img 
-                                                        src={pet.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} 
-                                                        className="w-full h-full rounded-full object-cover p-0.5" 
-                                                    />
-                                                    {taggedPetIds.includes(pet.id) && (
-                                                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-cyan-500 rounded-full flex items-center justify-center border-2 border-black animate-in zoom-in duration-300">
-                                                            <Check className="w-3 h-3 text-black" />
+
+
+
+
+
+
+                            {/* SMART TOOLBAR */}
+                            <div className="flex items-center justify-between px-2 py-4 border-y border-white/5 mt-2">
+                                <div className="flex items-center gap-6">
+                                    <button 
+                                        type="button"
+                                        onClick={() => setActiveTool(activeTool === 'adjust' ? null : 'adjust')}
+                                        className={cn("transition-all active:scale-90", activeTool === 'adjust' ? "text-cyan-400" : "text-white/40 hover:text-white")}
+                                        title="İnce Ayar"
+                                    >
+                                        <Palette className="w-5 h-5" />
+                                    </button>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setActiveTool(activeTool === 'tag' ? null : 'tag')}
+                                        className={cn("transition-all active:scale-90", activeTool === 'tag' ? "text-cyan-400" : "text-white/40 hover:text-white")}
+                                        title="Etiketle"
+                                    >
+                                        <PawPrint className="w-5 h-5" />
+                                    </button>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setActiveTool(activeTool === 'schedule' ? null : 'schedule')}
+                                        className={cn("transition-all active:scale-90", activeTool === 'schedule' ? "text-cyan-400" : "text-white/40 hover:text-white")}
+                                        title="Zamanla"
+                                    >
+                                        <Clock className="w-5 h-5" />
+                                    </button>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setActiveTool(activeTool === 'mood' ? null : 'mood')}
+                                        className={cn("transition-all active:scale-90", activeTool === 'mood' ? "text-cyan-400" : "text-white/40 hover:text-white")}
+                                        title="Ruh Hali"
+                                    >
+                                        <Heart className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                
+                                <button 
+                                    type="button"
+                                    onClick={generateAICaption}
+                                    disabled={isGeneratingAI}
+                                    className={cn(
+                                        "flex items-center gap-2 px-4 py-2 rounded-full transition-all active:scale-95",
+                                        isGeneratingAI ? "bg-white/5 opacity-50" : "bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20"
+                                    )}
+                                >
+                                    {isGeneratingAI ? <div className="w-3 h-3 border-2 border-cyan-400/20 border-t-cyan-400 rounded-full animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                                    <span className="text-[10px] font-black uppercase tracking-widest">AI Öner</span>
+                                </button>
+                            </div>
+
+                            {/* DYNAMIC TOOL DRAWER */}
+                            <AnimatePresence mode="wait">
+                                {activeTool && (
+                                    <motion.div
+                                        key={activeTool}
+                                        initial={{ height: 0, opacity: 0, y: 10 }}
+                                        animate={{ height: 'auto', opacity: 1, y: 0 }}
+                                        exit={{ height: 0, opacity: 0, y: 10 }}
+                                        className="overflow-hidden bg-white/[0.03] rounded-3xl border border-white/5"
+                                    >
+                                        <div className="p-5">
+                                            {activeTool === 'adjust' && (
+                                                <div className="flex flex-col gap-5">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Manuel İnce Ayar</span>
+                                                        <button type="button" onClick={() => { setBrightness(100); setContrast(100); setSaturation(100); }} className="text-[9px] font-bold text-cyan-400 uppercase">Sıfırla</button>
+                                                    </div>
+                                                    <div className="space-y-4">
+                                                        <div className="space-y-2">
+                                                            <div className="flex justify-between text-[10px] font-bold text-white/20 uppercase"><span>Parlaklık</span></div>
+                                                            <input type="range" min="50" max="150" step="0.5" value={brightness} onChange={(e) => setBrightness(parseFloat(e.target.value))} className="w-full h-0.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-500" />
                                                         </div>
+                                                        <div className="space-y-2">
+                                                            <div className="flex justify-between text-[10px] font-bold text-white/20 uppercase"><span>Kontrast</span></div>
+                                                            <input type="range" min="50" max="150" step="0.5" value={contrast} onChange={(e) => setContrast(parseFloat(e.target.value))} className="w-full h-0.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-500" />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <div className="flex justify-between text-[10px] font-bold text-white/20 uppercase"><span>Doygunluk</span></div>
+                                                            <input type="range" min="0" max="200" step="1" value={saturation} onChange={(e) => setSaturation(parseFloat(e.target.value))} className="w-full h-0.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-500" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {activeTool === 'tag' && (
+                                                <div className="flex flex-col gap-4">
+                                                    <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Dostunu Etiketle</span>
+                                                    <div className="flex gap-4 overflow-x-auto no-scrollbar py-2">
+                                                        {userPets?.map(pet => (
+                                                            <button 
+                                                                key={pet.id} 
+                                                                type="button"
+                                                                onClick={() => setTaggedPetIds(prev => prev.includes(pet.id) ? prev.filter(id => id !== pet.id) : [...prev, pet.id])}
+                                                                className="flex flex-col items-center gap-2 shrink-0"
+                                                            >
+                                                                <div className={cn("w-12 h-12 rounded-full border-2 transition-all relative", taggedPetIds.includes(pet.id) ? "border-cyan-500 scale-110 shadow-[0_0_15px_rgba(6,182,212,0.3)]" : "border-white/10")}>
+                                                                    <img src={pet.avatar} className="w-full h-full rounded-full object-cover p-0.5" />
+                                                                    {taggedPetIds.includes(pet.id) && <div className="absolute -top-1 -right-1 w-4 h-4 bg-cyan-500 rounded-full flex items-center justify-center border-2 border-black"><Check size={8} /></div>}
+                                                                </div>
+                                                                <span className={cn("text-[9px] font-bold uppercase", taggedPetIds.includes(pet.id) ? "text-cyan-400" : "text-white/40")}>{pet.name}</span>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {activeTool === 'schedule' && (
+                                                <div className="flex flex-col gap-4">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Paylaşım Zamanı</span>
+                                                        <button type="button" onClick={() => setIsSchedulingMode(!isSchedulingMode)} className={cn("px-3 py-1 rounded-full text-[9px] font-black uppercase transition-all", isSchedulingMode ? "bg-cyan-500 text-black" : "bg-white/10 text-white/40")}>
+                                                            {isSchedulingMode ? 'Zamanlandı' : 'Şimdi'}
+                                                        </button>
+                                                    </div>
+                                                    {isSchedulingMode && (
+                                                        <input type="datetime-local" value={scheduledDate || ''} onChange={(e) => setScheduledDate(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white [color-scheme:dark]" />
                                                     )}
                                                 </div>
-                                                <span className={cn(
-                                                    "text-[10px] font-bold uppercase tracking-tight transition-colors",
-                                                    taggedPetIds.includes(pet.id) ? "text-cyan-400" : "text-white/40"
-                                                )}>
-                                                    {pet.name}
-                                                </span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* PRO ADJUSTMENTS (NEW) */}
-                            {selectedFile?.type.startsWith('image/') && (
-                                <div className="flex flex-col gap-4 bg-white/5 border border-white/10 rounded-[1.5rem] p-4">
-                                    <div className="flex justify-between items-center mb-1">
-                                        <div className="flex items-center gap-2">
-                                            <Palette className="w-4 h-4 text-cyan-400" />
-                                            <span className="text-[11px] font-black text-white uppercase tracking-widest">Manuel İnce Ayar</span>
-                                        </div>
-                                        <button 
-                                            onClick={() => {
-                                                setBrightness(100);
-                                                setContrast(100);
-                                                setSaturation(100);
-                                            }}
-                                            className="text-[9px] font-bold text-white/40 hover:text-white uppercase tracking-tighter"
-                                        >
-                                            Sıfırla
-                                        </button>
-                                    </div>
-                                    
-                                    <div className="flex flex-col gap-3">
-                                        <div className="flex flex-col gap-1.5">
-                                            <div className="flex justify-between text-[10px] font-bold text-white/40">
-                                                <span>Parlaklık</span>
-                                            </div>
-                                            <input 
-                                                type="range" min="50" max="150" step="0.5" value={brightness}
-                                                onChange={(e) => setBrightness(parseFloat(e.target.value))}
-                                                className="w-full h-0.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-500"
-                                            />
-                                        </div>
-                                        <div className="flex flex-col gap-1.5">
-                                            <div className="flex justify-between text-[10px] font-bold text-white/40">
-                                                <span>Kontrast</span>
-                                            </div>
-                                            <input 
-                                                type="range" min="50" max="150" step="0.5" value={contrast}
-                                                onChange={(e) => setContrast(parseFloat(e.target.value))}
-                                                className="w-full h-0.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-500"
-                                            />
-                                        </div>
-                                        <div className="flex flex-col gap-1.5">
-                                            <div className="flex justify-between text-[10px] font-bold text-white/40">
-                                                <span>Doygunluk</span>
-                                            </div>
-                                            <input 
-                                                type="range" min="0" max="200" step="1" value={saturation}
-                                                onChange={(e) => setSaturation(parseFloat(e.target.value))}
-                                                className="w-full h-0.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-500"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* VIDEO TRIMMER UI (Apple Style) */}
-                            {selectedFile?.type.startsWith('video/') && (
-                                <div className="flex flex-col gap-4 bg-white/5 border border-white/10 rounded-[2rem] p-6">
-                                    <div className="flex justify-between items-center mb-1">
-                                        <div className="flex items-center gap-2">
-                                            <Timer className="w-4 h-4 text-cyan-400" />
-                                            <span className="text-[11px] font-black text-white uppercase tracking-widest">Video Kırpma (Max 20s)</span>
-                                        </div>
-                                        <span className="text-[10px] font-bold text-cyan-400 bg-cyan-400/10 px-2 py-0.5 rounded-full">
-                                            {Math.round((videoTrimRange[1] - videoTrimRange[0]))}s seçildi
-                                        </span>
-                                    </div>
-                                    
-                                    <div className="relative h-12 bg-white/5 rounded-xl border border-white/5 flex items-center px-2 group">
-                                        {/* Simple Visual Waveform Placeholder */}
-                                        <div className="absolute inset-2 flex items-end gap-0.5 opacity-20 group-hover:opacity-40 transition-opacity">
-                                            {Array(30).fill(0).map((_, i) => (
-                                                <div key={i} className="flex-1 bg-white" style={{ height: `${Math.random() * 100}%` }} />
-                                            ))}
-                                        </div>
-
-                                        <input 
-                                            type="range"
-                                            min={0}
-                                            max={Math.max(20, videoDuration)}
-                                            step={0.1}
-                                            value={videoTrimRange[0]}
-                                            onChange={(e) => {
-                                                const start = parseFloat(e.target.value);
-                                                const end = Math.min(start + 20, videoDuration);
-                                                setVideoTrimRange([start, end]);
-                                                // Preview seeking
-                                                const vid = document.querySelector('video');
-                                                if (vid) vid.currentTime = start;
-                                            }}
-                                            className="absolute inset-0 w-full opacity-0 cursor-pointer z-10"
-                                        />
-                                        
-                                        {/* Custom Visual Slider */}
-                                        <div className="w-full h-8 relative pointer-events-none">
-                                            <div 
-                                                className="absolute h-full bg-cyan-500/30 border-x-2 border-cyan-400 rounded-md"
-                                                style={{ 
-                                                    left: `${(videoTrimRange[0] / videoDuration) * 100}%`,
-                                                    width: `${((videoTrimRange[1] - videoTrimRange[0]) / videoDuration) * 100}%`
-                                                }}
-                                            >
-                                                <div className="absolute -top-1 -left-1 w-2 h-10 bg-white rounded-full shadow-lg" />
-                                                <div className="absolute -top-1 -right-1 w-2 h-10 bg-white rounded-full shadow-lg" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <p className="text-[9px] text-white/30 font-medium text-center italic">
-                                        Videonun en iyi 20 saniyelik kısmını seçmek için kaydırın.
-                                    </p>
-                                </div>
-                            )}
-
-                            {/* MOOD SELECTOR (Apple Style Pills) */}
-                            <div className="flex flex-col gap-2">
-                                <span className="text-[var(--foreground)]/60 text-[11px] font-bold uppercase tracking-widest px-1">Ruh Hali (İsteğe Bağlı)</span>
-                                <div className="w-full overflow-x-auto no-scrollbar flex gap-2 pb-2">
-                                    {MOOD_OPTIONS.map(mood => (
-                                        <button
-                                            key={mood}
-                                            onClick={() => setUploadMood(uploadMood === mood ? null : mood)}
-                                            className={cn(
-                                                "shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors border",
-                                                uploadMood === mood ? "bg-cyan-500 text-black border-cyan-400 font-bold" : "bg-[var(--card-bg)] border-white/10 text-[var(--foreground)] hover:bg-white/10"
                                             )}
-                                        >
-                                            {mood}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+
+                                            {activeTool === 'mood' && (
+                                                <div className="flex flex-col gap-4">
+                                                    <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Ruh Hali</span>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {MOOD_OPTIONS.map(mood => (
+                                                            <button type="button" key={mood} onClick={() => setUploadMood(uploadMood === mood ? null : mood)} className={cn("px-4 py-2 rounded-full text-xs font-bold transition-all", uploadMood === mood ? "bg-white text-black scale-105" : "bg-white/5 text-white/40 hover:bg-white/10")}>
+                                                                {mood}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
 
 
 
@@ -3248,45 +3200,7 @@ export default function MoffiSocialMasterpiece() {
                                 />
                             </div>
 
-                             {/* SCHEDULING (NEW) */}
-                            <div className="flex flex-col gap-4 bg-white/5 border border-white/10 rounded-[1.5rem] p-4">
-                                <div className="flex justify-between items-center">
-                                    <div className="flex items-center gap-2">
-                                        <Clock className="w-4 h-4 text-cyan-400" />
-                                        <span className="text-[11px] font-black text-white uppercase tracking-widest">Paylaşım Zamanı</span>
-                                    </div>
-                                    <button 
-                                        type="button"
-                                        onClick={() => setIsSchedulingMode(!isSchedulingMode)}
-                                        className={cn(
-                                            "px-4 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all border",
-                                            isSchedulingMode 
-                                                ? "bg-cyan-500 text-black border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.4)]" 
-                                                : "bg-white/5 text-white/40 border-white/5 hover:border-white/10"
-                                        )}
-                                    >
-                                        {isSchedulingMode ? 'Zamanlandı' : 'Şimdi Paylaş'}
-                                    </button>
-                                </div>
 
-                                {isSchedulingMode && (
-                                    <motion.div 
-                                        initial={{ height: 0, opacity: 0 }}
-                                        animate={{ height: 'auto', opacity: 1 }}
-                                        className="flex flex-col gap-3 pt-2 border-t border-white/5"
-                                    >
-                                        <p className="text-[10px] text-white/40 italic leading-relaxed">
-                                            Bu gönderi, seçtiğin tarih ve saat geldiğinde otomatik olarak akışta yayına girecektir.
-                                        </p>
-                                        <input 
-                                            type="datetime-local" 
-                                            value={scheduledDate || ''}
-                                            onChange={(e) => setScheduledDate(e.target.value)}
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-cyan-500/50 transition-all [color-scheme:dark]"
-                                        />
-                                    </motion.div>
-                                )}
-                            </div>
 
                             {/* MOOD SELECTOR */}
                             <div className="flex flex-col gap-2">
