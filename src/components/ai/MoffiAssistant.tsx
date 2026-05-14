@@ -187,7 +187,6 @@ export function MoffiAssistant() {
                                 <input value={input} onChange={e => setInput(e.target.value)} placeholder="Bir şeyler sor..." className="w-full bg-white/5 border border-white/10 hover:border-white/20 focus:border-accent/40 rounded-[2rem] pl-6 pr-14 py-4 text-[13px] text-foreground outline-none transition-all font-medium placeholder:text-secondary/30" />
                                 <button type="submit" disabled={!input.trim() || isTyping} className="absolute right-2 w-11 h-11 rounded-full bg-foreground text-background flex items-center justify-center hover:scale-105 active:scale-95 transition-all"><Send className="w-5 h-5" /></button>
                             </form>
-                            <p className="text-[9px] text-secondary/40 font-black uppercase tracking-widest mt-4 text-center">Moffi Ecosystem Intelligence • M+ Engine v2.4</p>
                         </div>
                     </motion.div>
                 )}

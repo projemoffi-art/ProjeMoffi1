@@ -135,9 +135,6 @@ export default function HeroCard() {
                                     </div>
                                 ))}
                             </div>
-                            <div className="mt-3 text-[10px] font-medium text-center text-[#5B4D9D] bg-purple-50 py-2 rounded-xl">
-                                💡 İpucu: Yağmur ihtimali %10, şemsiyeye gerek yok!
-                            </div>
                         </motion.div>
                     )}
                 </AnimatePresence>

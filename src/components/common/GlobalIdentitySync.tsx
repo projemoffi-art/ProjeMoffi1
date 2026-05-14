@@ -3,7 +3,6 @@
 import { useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
-import { PremiumUpgradeModal } from '@/components/community/modals/PremiumUpgradeModal';
 
 export function GlobalIdentitySync() {
     const { user } = useAuth();
@@ -54,5 +53,5 @@ export function GlobalIdentitySync() {
 
     }, [user?.settings?.appearance?.accentColor, user?.settings?.appearance?.font]);
 
-    return <PremiumUpgradeModal />;
+    return null;
 }

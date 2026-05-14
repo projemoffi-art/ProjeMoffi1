@@ -58,8 +58,8 @@ export function StudioQuickSheet({ isOpen, onClose, petName = "Dostun" }: Studio
 
                         <div className="px-8 pt-10 pb-6 flex items-center justify-between">
                             <div>
-                                <h3 className="text-2xl font-black text-white tracking-tighter uppercase italic leading-none">Moffi Studio</h3>
-                                <p className="text-[10px] text-purple-400 font-black uppercase tracking-[0.3em] mt-2">Kreatif Kontrol Merkezi</p>
+                                <h3 className="text-2xl font-black text-white tracking-tighter uppercase italic leading-none">Aura Stüdyosu</h3>
+                                <p className="text-[10px] text-purple-400 font-black uppercase tracking-[0.3em] mt-2">Aura & Stil Atölyesi</p>
                             </div>
                             <button 
                                 onClick={onClose}
@@ -165,7 +165,7 @@ export function StudioQuickSheet({ isOpen, onClose, petName = "Dostun" }: Studio
                                 onClick={() => { router.push('/studio'); onClose(); }}
                                 className="w-full bg-purple-600 py-6 rounded-[2.2rem] flex items-center justify-center gap-4 group active:scale-[0.98] transition-all shadow-2xl shadow-purple-600/20"
                             >
-                                <span className="text-white text-sm font-black uppercase tracking-[0.3em]">Büyük Stüdyoyu Aç</span>
+                                <span className="text-white text-sm font-black uppercase tracking-[0.3em]">Aura Stüdyosu'nu Aç</span>
                                 <ChevronRight className="w-5 h-5 text-white group-hover:translate-x-1 transition-transform" />
                             </button>
                         </div>

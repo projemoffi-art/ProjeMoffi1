@@ -245,8 +245,8 @@ export default function ProductionStudio() {
                         <ChevronLeft className="w-6 h-6" />
                     </button>
                     <div>
-                        <h1 className="text-xl font-black tracking-tighter uppercase italic">Moffi Stüdyo</h1>
-                        <p className="text-[10px] text-cyan-400 font-bold uppercase tracking-[0.3em]">Yapay Zeka Tasarım Merkezi</p>
+                        <h1 className="text-xl font-black tracking-tighter uppercase italic">Aura Stüdyosu</h1>
+                        <p className="text-[10px] text-cyan-400 font-bold uppercase tracking-[0.3em]">Profilini Tamamen Kendine Has Tarzla Özelleştir ✨</p>
                     </div>
                 </div>
 

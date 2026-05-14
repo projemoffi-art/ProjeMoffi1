@@ -219,11 +219,6 @@ export function MoffiCommandCenter({ isOpen, onClose, onNavigate }: MoffiCommand
                         </button>
                     )}
                     
-                    {!nextHealthAlert && (
-                       <div className="mt-auto pt-4 text-center">
-                            <p className="text-[10px] text-white/20 font-black uppercase tracking-[0.4em]">Moffi Ecosystem • 2026</p>
-                       </div>
-                    )}
                 </motion.div>
             </motion.div>
         </AnimatePresence>

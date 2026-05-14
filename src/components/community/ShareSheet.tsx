@@ -1,24 +1,26 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     X, Instagram, MessageCircle, Send, Twitter, 
     Facebook, Mail, Copy, PlusCircle, Bookmark,
     QrCode, Download, Sparkles, ChevronRight, Zap,
-    Plus, MessageSquare
+    Plus, MessageSquare, Share2, Smartphone, Link2, CheckCircle2,
+    MoreHorizontal
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useSocial } from '@/context/SocialContext';
+import { cn, showToast } from '@/lib/utils';
+import { useStories } from '@/hooks/useStories';
 import { QRCodeSVG } from 'qrcode.react';
+import { PLATFORMS, getShareUrl, generatePostDeepLink, copyToClipboard } from '@/lib/shareUtils';
 
 interface ShareSheetProps {
     isOpen: boolean;
     onClose: () => void;
     selectedPost: any;
-    onSocialShare: (platform: string) => void;
-    onAddToStory: () => void;
-    onCopyLink: () => void;
+    onSocialShare?: (platform: string) => void;
+    onAddToStory?: () => void;
+    onCopyLink?: () => void;
 }
 
 export function ShareSheet({
@@ -29,34 +31,87 @@ export function ShareSheet({
     onAddToStory,
     onCopyLink
 }: ShareSheetProps) {
-    const [sendingTo, setSendingTo] = React.useState<string | null>(null);
-    const [showQR, setShowQR] = React.useState(false);
-    const { stories } = useSocial();
+    const { storyGroups: stories } = useStories();
+    const [sendingTo, setSendingTo] = useState<string | null>(null);
+    const [showQR, setShowQR] = useState(false);
+    const [isCopying, setIsCopying] = useState(false);
+
+    if (!selectedPost) return null;
+
+    const postUrl = generatePostDeepLink(selectedPost.id);
+    const postText = `Moffi'de harika bir paylaşım gördüm! 🐾 ${selectedPost.author}: "${selectedPost.desc || ''}"`;
+
+    const handlePlatformShare = (platform: string) => {
+        // Haptic
+        if (typeof window !== 'undefined' && window.navigator.vibrate) window.navigator.vibrate(10);
+
+        const url = getShareUrl(platform, postUrl, postText);
+        if (url) {
+            window.open(url, '_blank');
+            onSocialShare?.(platform);
+            onClose();
+        } else if (platform === PLATFORMS.INSTAGRAM) {
+            // Instagram web doesn't support direct share well, copy link instead
+            copyToClipboard(postUrl);
+            showToast("Bağlantı Kopyalandı", "Bell", "cyan");
+            showToast("Instagram'da paylaşmak için yapıştırın!", "Instagram", "purple");
+            onSocialShare?.(platform);
+            onClose();
+        } else if (platform === PLATFORMS.STORY) {
+            onAddToStory?.();
+            onClose();
+        } else if (platform === PLATFORMS.MESSAGES) {
+             const smsUrl = getShareUrl(PLATFORMS.MESSAGES, postUrl, postText);
+             if (smsUrl) window.location.href = smsUrl;
+             onSocialShare?.(platform);
+             onClose();
+        }
+    };
 
     const handleQuickShare = (userName: string) => {
         if (sendingTo) return;
         
         // Haptic Feedback
-        if (window.navigator.vibrate) window.navigator.vibrate(15);
+        if (typeof window !== 'undefined' && window.navigator.vibrate) window.navigator.vibrate(15);
         
         setSendingTo(userName);
         
-        // Mock API call delay
+        // Simulation of sending
         setTimeout(() => {
             setSendingTo(null);
+            showToast(`${userName} kullanıcısına gönderildi! 🚀`, "Zap", "cyan");
             onClose();
-            // We could trigger a toast here if a global one was available
+        }, 1200);
+    };
+
+    const handleCopy = async () => {
+        setIsCopying(true);
+        const success = await copyToClipboard(postUrl);
+        if (success) {
+            showToast("Bağlantı panoya mühürlendi! 🔗", "Zap", "cyan");
+            onCopyLink?.();
+        }
+        setTimeout(() => {
+            setIsCopying(false);
+            onClose();
         }, 1500);
     };
 
-    const handleAddToStoryLocal = () => {
-        onAddToStory();
-        onClose();
-    };
-
-    const handleCopyLinkLocal = () => {
-        onCopyLink();
-        onClose();
+    const handleNativeShare = async () => {
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'Moffi Paylaşım',
+                    text: postText,
+                    url: postUrl
+                });
+                onClose();
+            } catch (err) {
+                console.log('Native share canceled or failed', err);
+            }
+        } else {
+            handleCopy();
+        }
     };
 
     return (
@@ -99,10 +154,12 @@ export function ShareSheet({
                             {selectedPost && (
                                 <div className="px-6 py-4">
                                     <div className="flex items-center gap-4 bg-white/5 p-4 rounded-[32px] border border-white/10">
-                                        <img src={selectedPost.media} className="w-16 h-16 rounded-2xl object-cover shrink-0" />
+                                        <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white/5 shrink-0 border border-white/10 relative">
+                                            <img src={selectedPost.media || selectedPost.image} className="w-full h-full object-cover" />
+                                        </div>
                                         <div className="min-w-0">
                                             <p className="text-[17px] font-bold text-white truncate">{selectedPost.author}</p>
-                                            <p className="text-[13px] text-white/40 line-clamp-1">{selectedPost.desc || 'Harika bir Moffi anısı!'}</p>
+                                            <p className="text-[13px] text-white/40 line-clamp-1 italic">"{selectedPost.desc || 'Harika bir Moffi anısı!'}"</p>
                                         </div>
                                     </div>
                                 </div>
@@ -112,22 +169,22 @@ export function ShareSheet({
                             <div className="px-6 py-4">
                                 <span className="text-[12px] font-bold text-white/30 uppercase tracking-widest mb-4 block">Hızlı Paylaş</span>
                                 <div className="flex gap-4 overflow-x-auto no-scrollbar py-2 overscroll-x-contain">
-                                    {(stories || []).map((story: any) => (
+                                    {(stories || []).slice(0, 8).map((group: any, idx: number) => (
                                         <button 
-                                            key={story.id}
-                                            onClick={() => handleQuickShare(story.userName)}
+                                            key={idx}
+                                            onClick={() => handleQuickShare(group.author_name)}
                                             className="flex flex-col items-center gap-2 shrink-0 group active:scale-95 transition-transform relative"
                                         >
-                                            <div className="w-16 h-16 rounded-3xl p-0.5 bg-gradient-to-tr from-cyan-500 to-purple-500 relative">
+                                            <div className="w-16 h-16 rounded-3xl p-0.5 bg-gradient-to-tr from-cyan-500/20 to-purple-500/20 relative">
                                                 <div className="w-full h-full rounded-[20px] bg-black p-0.5">
-                                                    <img src={story.userImg} className={cn(
+                                                    <img src={group.author_avatar} className={cn(
                                                         "w-full h-full rounded-[18px] object-cover border border-white/10 transition-all duration-500",
-                                                        sendingTo === story.userName ? "blur-md scale-90 opacity-50" : ""
+                                                        sendingTo === group.author_name ? "blur-md scale-90 opacity-50" : ""
                                                     )} />
                                                 </div>
 
                                                 <AnimatePresence>
-                                                    {sendingTo === story.userName && (
+                                                    {sendingTo === group.author_name && (
                                                         <motion.div 
                                                             initial={{ scale: 0, opacity: 0 }}
                                                             animate={{ scale: 1, opacity: 1 }}
@@ -140,40 +197,40 @@ export function ShareSheet({
                                                 </AnimatePresence>
                                             </div>
                                             <span className="text-[11px] font-medium text-white/60 truncate w-16 text-center">
-                                                {sendingTo === story.userName ? "Gönderildi!" : story.userName}
+                                                {sendingTo === group.author_name ? "Gönderildi!" : group.author_name.split(' ')[0]}
                                             </span>
                                         </button>
                                     ))}
                                     <button className="flex flex-col items-center gap-2 shrink-0 group active:scale-95 transition-transform">
                                         <div className="w-16 h-16 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 group-hover:bg-white/10 transition-colors">
-                                            <Plus className="w-6 h-6" />
+                                            <MoreHorizontal className="w-6 h-6" />
                                         </div>
-                                        <span className="text-[11px] font-medium text-white/30">Daha Fazla</span>
+                                        <span className="text-[11px] font-medium text-white/30 uppercase">Tümü</span>
                                     </button>
                                 </div>
                             </div>
 
                             {/* SOCIAL GRID */}
                             <div className="px-6 py-4 grid grid-cols-4 gap-4">
-                                <button onClick={() => { onSocialShare('WhatsApp'); onClose(); }} className="flex flex-col items-center gap-2 group">
+                                <button onClick={() => handlePlatformShare(PLATFORMS.WHATSAPP)} className="flex flex-col items-center gap-2 group">
                                     <div className="w-14 h-14 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-500 active:scale-90 transition-transform shadow-lg shadow-green-500/5">
                                         <Zap className="w-6 h-6 fill-current" />
                                     </div>
                                     <span className="text-[11px] font-medium text-white/60">WhatsApp</span>
                                 </button>
-                                <button onClick={() => { onSocialShare('Instagram'); onClose(); }} className="flex flex-col items-center gap-2 group">
+                                <button onClick={() => handlePlatformShare(PLATFORMS.INSTAGRAM)} className="flex flex-col items-center gap-2 group">
                                     <div className="w-14 h-14 rounded-2xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-500 active:scale-90 transition-transform shadow-lg shadow-pink-500/5">
                                         <Instagram className="w-6 h-6" />
                                     </div>
                                     <span className="text-[11px] font-medium text-white/60">Instagram</span>
                                 </button>
-                                <button onClick={() => { handleAddToStoryLocal(); }} className="flex flex-col items-center gap-2 group">
+                                <button onClick={() => handlePlatformShare(PLATFORMS.STORY)} className="flex flex-col items-center gap-2 group">
                                     <div className="w-14 h-14 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-500 active:scale-90 transition-transform shadow-lg shadow-purple-500/5">
                                         <Sparkles className="w-6 h-6" />
                                     </div>
                                     <span className="text-[11px] font-medium text-white/60">Hikayem</span>
                                 </button>
-                                <button onClick={() => { onSocialShare('Mesajlar'); onClose(); }} className="flex flex-col items-center gap-2 group">
+                                <button onClick={() => handlePlatformShare(PLATFORMS.MESSAGES)} className="flex flex-col items-center gap-2 group">
                                     <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500 active:scale-90 transition-transform shadow-lg shadow-blue-500/5">
                                         <MessageSquare className="w-6 h-6" />
                                     </div>
@@ -185,14 +242,14 @@ export function ShareSheet({
                             <div className="px-6 py-4 space-y-3">
                                 <div className="flex flex-col bg-white/[0.03] rounded-[32px] border border-white/[0.08] divide-y divide-white/[0.05] overflow-hidden">
                                     <button 
-                                        onClick={handleCopyLinkLocal}
+                                        onClick={handleCopy}
                                         className="w-full px-6 py-5 flex items-center justify-between active:bg-white/[0.07] transition-all group"
                                     >
                                         <div className="flex items-center gap-5">
                                             <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-white/60">
-                                                <Copy className="w-6 h-6" />
+                                                {isCopying ? <CheckCircle2 className="w-6 h-6 text-emerald-400" /> : <Copy className="w-6 h-6" />}
                                             </div>
-                                            <span className="text-white font-bold text-[17px]">Bağlantıyı Kopyala</span>
+                                            <span className="text-white font-bold text-[17px]">{isCopying ? 'Kopyalandı!' : 'Bağlantıyı Kopyala'}</span>
                                         </div>
                                         <ChevronRight className="w-5 h-5 text-white/10 group-active:translate-x-1 transition-transform" />
                                     </button>
@@ -206,13 +263,35 @@ export function ShareSheet({
                                         </div>
                                         <div className="flex flex-col items-start text-left">
                                             <span className="text-white font-bold text-[17px]">QR-ID Görüntüle</span>
-                                            <span className="text-white/30 text-[11px]">Yüz yüze hızı paylaşım yap</span>
+                                            <span className="text-white/30 text-[11px]">Yüz yüze hızlı paylaşım yap</span>
                                         </div>
                                         <ChevronRight className="w-5 h-5 text-white/10 ml-auto group-active:translate-x-1 transition-transform" />
                                     </button>
 
                                     <button 
-                                        onClick={() => { alert('Medya galeriye kaydedildi 💾'); onClose(); }}
+                                        onClick={handleNativeShare}
+                                        className="w-full px-6 py-5 flex items-center gap-5 active:bg-white/[0.07] transition-all"
+                                    >
+                                        <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-white/60">
+                                            <Share2 className="w-6 h-6" />
+                                        </div>
+                                        <span className="text-white/90 font-semibold text-[17px]">Diğer Paylaşım Seçenekleri</span>
+                                    </button>
+
+                                    <button 
+                                        onClick={() => { 
+                                            const mediaUrl = selectedPost.media || selectedPost.image;
+                                            if (mediaUrl) {
+                                                const link = document.createElement('a');
+                                                link.href = mediaUrl;
+                                                link.download = `moffi-post-${selectedPost.id}.jpg`;
+                                                document.body.appendChild(link);
+                                                link.click();
+                                                document.body.removeChild(link);
+                                                showToast("Medya Galeriye Kaydedildi 💾", "Zap", "cyan");
+                                            }
+                                            onClose(); 
+                                        }}
                                         className="w-full px-6 py-5 flex items-center gap-5 active:bg-white/[0.07] transition-all"
                                     >
                                         <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-white/60">
@@ -235,7 +314,7 @@ export function ShareSheet({
                         </div>
                     </motion.div>
 
-                    {/* QR MODAL (Placeholder) */}
+                    {/* QR MODAL */}
                     <AnimatePresence>
                         {showQR && (
                             <motion.div 
@@ -246,12 +325,12 @@ export function ShareSheet({
                                 onClick={() => setShowQR(false)}
                             >
                                 <motion.div 
-                                    className="bg-[#1C1C1E] p-8 rounded-[40px] border border-white/10 flex flex-col items-center gap-6 max-w-sm w-full shadow-2xl"
+                                    className="bg-[#1C1C1E] p-8 rounded-[40px] border border-white/10 flex flex-col items-center gap-6 max-w-sm w-full shadow-2xl relative"
                                     onClick={(e) => e.stopPropagation()}
                                 >
                                     <div className="bg-white p-4 rounded-[2rem] shadow-inner flex items-center justify-center">
                                         <QRCodeSVG 
-                                            value={`${window.location.origin}/post/${selectedPost?.id}`}
+                                            value={postUrl}
                                             size={200}
                                             level="H"
                                             includeMargin={false}
@@ -265,7 +344,7 @@ export function ShareSheet({
                                         onClick={() => setShowQR(false)}
                                         className="w-full py-4 bg-white/5 hover:bg-white/10 rounded-[24px] text-white font-bold transition-colors"
                                     >
-                                        Vazgeç
+                                        Kapat
                                     </button>
                                 </motion.div>
                             </motion.div>

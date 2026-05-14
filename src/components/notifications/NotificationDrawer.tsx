@@ -202,15 +202,6 @@ export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps)
               )}
             </div>
 
-            {/* Footer */}
-            <div className="p-8 border-t border-white/5 bg-white/[0.01]">
-              <div className="flex items-center gap-4 px-6 py-4 bg-white/5 border border-white/10 rounded-2xl">
-                <ShieldAlert className="w-5 h-5 text-orange-500" />
-                <p className="text-[9px] text-gray-500 font-black uppercase tracking-[0.2em] leading-relaxed">
-                  Güvenliğiniz için bildirim ayarlarını profilinizden yönetebilirsiniz.
-                </p>
-              </div>
-            </div>
           </motion.div>
         </>
       )}

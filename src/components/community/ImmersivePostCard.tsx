@@ -70,6 +70,8 @@ export function ImmersivePostCard({
     const [editingComment, setEditingComment] = useState<any>(null);
     const [isMuted, setIsMuted] = useState(true);
     const [isVisible, setIsVisible] = useState(false);
+    const [isVideoLoading, setIsVideoLoading] = useState(true);
+    const [videoProgress, setVideoProgress] = useState(0);
     const videoRef = React.useRef<HTMLVideoElement>(null);
     const containerRef = React.useRef<HTMLDivElement>(null);
     const { stories } = useSocial();
@@ -216,6 +218,11 @@ export function ImmersivePostCard({
     };
 
     const handleDoubleTap = () => {
+        if (!currentUser || String(currentUser.id) === 'local-user') {
+            alert('❤️ Beğenmek ve etkileşime geçmek için lütfen giriş yapın veya kayıt olun.');
+            window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'login' }));
+            return;
+        }
         if (!post.isLiked) onLike();
         setTapHeart(true);
         setTimeout(() => setTapHeart(false), 800);
@@ -261,22 +268,34 @@ export function ImmersivePostCard({
     );
 
     const handleSendComment = async () => {
+        if (!currentUser || String(currentUser.id) === 'local-user') {
+            alert('💬 Yorum yazmak için lütfen giriş yapın veya kayıt olun.');
+            window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'login' }));
+            return;
+        }
         if (!commentInput.trim() && !selectedMedia) return;
         const text = commentInput;
         setCommentInput("");
         setSelectedMedia(null);
+
+        const currentEdit = editingComment;
+        const currentReply = replyingTo;
+
         setReplyingTo(null);
         setEditingComment(null);
 
-        if (editingComment) {
-            await onEditComment?.(editingComment.id, text);
+        if (currentEdit) {
+            await onEditComment?.(currentEdit.id, text);
+            await apiService.editComment(currentEdit.id, text);
             refetchComments();
-        } else if (replyingTo) {
-            await onReplyComment?.(replyingTo.id, text);
+        } else if (currentReply) {
+            await onReplyComment?.(currentReply.id, text);
+            await addComment(text, currentUser, currentReply.id);
             refetchComments();
         } else {
             await addComment(text, currentUser);
-            onAddComment(text);
+            onAddComment?.(text);
+            refetchComments();
         }
     };
 
@@ -349,16 +368,57 @@ export function ImmersivePostCard({
                     }}
                     className="w-full h-full relative"
                 >
-                    { (post?.is_video || (post?.media && (/\.(mp4|webm|ogg|mov|avi|m4v|mkv|flv|wmv)$/i.test(post.media) || post.media.toLowerCase().includes('video') || post.media.toLowerCase().includes('storage')) )) ? (
-                        <video
-                            ref={videoRef}
-                            src={post?.media || post?.media_url || ""}
-                            muted={isMuted}
-                            loop
-                            playsInline
-                            preload="metadata"
-                            className="w-full h-full object-cover opacity-90"
-                        />
+                    { (post?.is_video || (post?.media && (/\.(mp4|webm|ogg|mov|avi|m4v|mkv|flv|wmv)$/i.test(post.media)) )) ? (
+                        <div className="w-full h-full relative bg-black flex items-center justify-center">
+                            <video
+                                ref={videoRef}
+                                src={post?.media || post?.media_url || ""}
+                                muted={isMuted}
+                                loop
+                                playsInline
+                                preload="auto"
+                                onTimeUpdate={(e) => {
+                                    const vid = e.currentTarget;
+                                    if (vid.duration) {
+                                        setVideoProgress((vid.currentTime / vid.duration) * 100);
+                                    }
+                                    if (post?.trim_start !== undefined && post?.trim_end !== undefined) {
+                                        if (vid.currentTime >= post.trim_end || vid.currentTime < post.trim_start) {
+                                            vid.currentTime = post.trim_start;
+                                        }
+                                    }
+                                }}
+                                onLoadedData={(e) => {
+                                    setIsVideoLoading(false);
+                                    if (post?.trim_start !== undefined) {
+                                        e.currentTarget.currentTime = post.trim_start;
+                                    }
+                                    if (e.currentTarget.paused) {
+                                        e.currentTarget.play().catch(() => {});
+                                    }
+                                }}
+                                onCanPlay={() => setIsVideoLoading(false)}
+                                onWaiting={() => setIsVideoLoading(true)}
+                                onPlaying={() => setIsVideoLoading(false)}
+                                className={cn("w-full h-full object-cover opacity-90 transition-opacity duration-700", isVideoLoading ? "opacity-0" : "opacity-90")}
+                            />
+                            {isVideoLoading && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+                                    <div className="w-8 h-8 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
+                                </div>
+                            )}
+                            
+                            {/* ELEGANT APPLE-STYLE PROGRESS BAR */}
+                            {!isVideoLoading && (
+                                <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10 overflow-hidden z-10 rounded-b-[3rem]">
+                                    <motion.div 
+                                        className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 shadow-[0_0_10px_rgba(34,211,238,0.5)]"
+                                        style={{ width: `${videoProgress}%` }}
+                                        transition={{ ease: "linear", duration: 0.1 }}
+                                    />
+                                </div>
+                            )}
+                        </div>
                     ) : (
                         <Image 
                             src={post?.image || post?.media || post?.media_url || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=800"} 
@@ -687,7 +747,17 @@ export function ImmersivePostCard({
                 <div className="absolute right-0 sm:right-0 bottom-0 flex flex-col gap-4 sm:gap-3 z-30 translate-y-[-2.5rem] sm:translate-y-[-2rem]">
                     {/* LIKE */}
                     <div className="flex flex-col items-center gap-0.5">
-                        <button onClick={onLike} className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center transition-transform active:scale-90 hover:bg-white/20 shadow-xl">
+                        <button 
+                            onClick={() => {
+                                if (!currentUser || String(currentUser.id) === 'local-user') {
+                                    alert('❤️ Beğenmek ve etkileşime geçmek için lütfen giriş yapın veya kayıt olun.');
+                                    window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'login' }));
+                                    return;
+                                }
+                                onLike();
+                            }} 
+                            className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center transition-transform active:scale-90 hover:bg-white/20 shadow-xl"
+                        >
                             {post.isLiked ? (
                                 <Heart className="w-4 h-4 text-red-500 fill-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]" />
                             ) : (
@@ -893,6 +963,7 @@ export function ImmersivePostCard({
                                             currentUser={currentUser}
                                             onLike={async (cid) => {
                                                 await onToggleCommentLike?.(cid);
+                                                await apiService.toggleCommentLike(cid);
                                                 refetchComments();
                                             }}
                                             onReply={(target) => {
@@ -907,9 +978,43 @@ export function ImmersivePostCard({
                                             }}
                                             onDelete={async (cid) => {
                                                 await onDeleteComment?.(cid);
+                                                await apiService.deleteComment(cid);
                                                 refetchComments();
                                             }}
-                                            onReport={(cid) => onReportComment?.(cid)}
+                                            onReport={async (cid) => {
+                                                onReportComment?.(cid);
+                                                alert("🛡️ Yorum İhbarı Başarıyla Kaydedildi!\n\nŞikayetiniz Moffi İçerik Güvenliği ve Moderasyon Ekibinin 'Gelen Kutusu / İnceleme Paneline' anında iletilmiştir. Zararlı içerikler 7/24 denetlenmektedir. Geri bildiriminiz için teşekkür ederiz.");
+                                                if (typeof window !== 'undefined') {
+                                                    try {
+                                                        const overrides = JSON.parse(localStorage.getItem('moffi_global_comment_state') || '{}');
+                                                        overrides[String(cid)] = { ...(overrides[String(cid)] || {}), status: 'pending' };
+                                                        localStorage.setItem('moffi_global_comment_state', JSON.stringify(overrides));
+                                                        window.dispatchEvent(new Event('moffi_comments_changed'));
+                                                    } catch {}
+
+                                                    for (let i = 0; i < localStorage.length; i++) {
+                                                        const key = localStorage.key(i);
+                                                        if (key?.startsWith('moffi_local_comments_')) {
+                                                            try {
+                                                                const items = JSON.parse(localStorage.getItem(key) || '[]');
+                                                                let updated = false;
+                                                                const nextItems = items.map((cm: any) => {
+                                                                    if (String(cm.id) === String(cid)) {
+                                                                        updated = true;
+                                                                        return { ...cm, status: 'pending' };
+                                                                    }
+                                                                    return cm;
+                                                                });
+                                                                if (updated) {
+                                                                    localStorage.setItem(key, JSON.stringify(nextItems));
+                                                                    break;
+                                                                }
+                                                            } catch {}
+                                                        }
+                                                    }
+                                                }
+                                                refetchComments();
+                                            }}
                                             filterContent={filterContent}
                                         />
                                     ))
@@ -1192,7 +1297,9 @@ function CommentItem({
                                     </button>
                                 </div>
                             </div>
-                            <p className="text-[13px] text-white/80 leading-relaxed font-medium font-sans break-words pl-0.5">{filterContent(comment.text)}</p>
+                            <p className={cn("text-[13px] leading-relaxed font-medium font-sans break-words pl-0.5", comment.status === 'pending' ? "text-amber-400/80 italic" : "text-white/80")}>
+                                {comment.status === 'pending' ? "[İnceleniyor] " + filterContent(comment.text) : filterContent(comment.text)}
+                            </p>
 
                             {comment.media && (
                                 <div className="mt-2 rounded-2xl overflow-hidden border border-white/5 shadow-2xl max-w-[200px]">
@@ -1205,6 +1312,11 @@ function CommentItem({
                     <div className="flex items-center gap-5 mt-1.5 ml-0.5">
                         <button
                             onClick={async () => {
+                                if (!currentUser || String(currentUser.id) === 'local-user') {
+                                    alert('❤️ Yorumları beğenmek için lütfen giriş yapın veya kayıt olun.');
+                                    window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'login' }));
+                                    return;
+                                }
                                 const newLiked = !isLikedLocal;
                                 setIsLikedLocal(newLiked);
                                 setLikesCount((prev: number) => newLiked ? prev + 1 : Math.max(0, prev - 1));

@@ -109,12 +109,34 @@ export class MockApiService implements IApiService {
         
         const mandatoryIds = MOCK_POSTS.map(p => String(p.id));
         const existingPosts = saved || [];
-        
-        // Sadece kullanıcının sonradan eklediği postları al (Mock'ları temizle)
         const userPosts = existingPosts.filter(p => !mandatoryIds.includes(String(p.id)));
-        
-        // Kullanıcı postlarını en başa (zirveye) koy, sonra mockları ekle
-        const finalPosts = [...userPosts, ...MOCK_POSTS];
+        const combinedPosts = [...userPosts, ...MOCK_POSTS];
+
+        let globalPostLikesCache: Record<string, any> = {};
+        if (typeof window !== 'undefined') {
+            try {
+                globalPostLikesCache = JSON.parse(localStorage.getItem('moffi_global_post_likes') || '{}');
+            } catch {}
+        }
+        const currentUser = await this.getCurrentUser();
+        const currentUserIdOrName = currentUser?.id || currentUser?.username || 'local-user';
+
+        const finalPosts = combinedPosts.map(p => {
+            const pIdStr = String(p.id);
+            const cacheInfo = globalPostLikesCache[pIdStr];
+            if (cacheInfo) {
+                return {
+                    ...p,
+                    likes: cacheInfo.likes,
+                    is_liked: (cacheInfo.usersLiked || []).includes(currentUserIdOrName),
+                    isLiked: (cacheInfo.usersLiked || []).includes(currentUserIdOrName)
+                };
+            }
+            return {
+                ...p,
+                isLiked: p.is_liked || p.isLiked || false
+            };
+        });
         
         await this.saveData('feed_posts', finalPosts);
         return finalPosts as any;
@@ -184,6 +206,17 @@ export class MockApiService implements IApiService {
         const posts = await this.getFeedContent();
         const filtered = posts.filter(p => String(p.id) !== String(postId));
         await this.saveData('feed_posts', filtered);
+
+        if (typeof window !== 'undefined') {
+            try {
+                const cache = JSON.parse(localStorage.getItem('moffi_global_post_likes') || '{}');
+                const pIdStr = String(postId);
+                const current = cache[pIdStr] || {};
+                cache[pIdStr] = { ...current, isDeleted: true };
+                localStorage.setItem('moffi_global_post_likes', JSON.stringify(cache));
+                window.dispatchEvent(new Event('moffi_posts_changed'));
+            } catch {}
+        }
     }
 
     async updatePost(postId: string | number, updates: Partial<Post>): Promise<void> {
@@ -192,6 +225,22 @@ export class MockApiService implements IApiService {
         if (index !== -1) {
             posts[index] = { ...posts[index], ...updates };
             await this.saveData('feed_posts', posts);
+        }
+
+        if (typeof window !== 'undefined') {
+            try {
+                const cache = JSON.parse(localStorage.getItem('moffi_global_post_likes') || '{}');
+                const pIdStr = String(postId);
+                const current = cache[pIdStr] || {};
+                cache[pIdStr] = {
+                    ...current,
+                    ...(updates.desc !== undefined && { desc: updates.desc }),
+                    ...(updates.caption !== undefined && { desc: updates.caption }),
+                    ...(updates.mood !== undefined && { mood: updates.mood })
+                };
+                localStorage.setItem('moffi_global_post_likes', JSON.stringify(cache));
+                window.dispatchEvent(new Event('moffi_posts_changed'));
+            } catch {}
         }
     }
 
@@ -523,29 +572,266 @@ export class MockApiService implements IApiService {
     async markChatAsRead(conversationId: string): Promise<void> {}
 
     async reactToPost(postId: string | number, reaction: string): Promise<void> {
-        const posts = await this.getFeedContent();
-        const post = posts.find(p => String(p.id) === String(postId));
-        if (post) {
-            post.likes = (post.likes || 0) + 1;
-            post.is_liked = true;
-            await this.saveData('feed_posts', posts);
+        const currentUser = await this.getCurrentUser();
+        const currentUserIdOrName = currentUser?.id || currentUser?.username || 'local-user';
+
+        if (typeof window !== 'undefined') {
+            let cache: Record<string, any> = {};
+            try {
+                cache = JSON.parse(localStorage.getItem('moffi_global_post_likes') || '{}');
+            } catch {}
+
+            const pIdStr = String(postId);
+            if (!cache[pIdStr]) {
+                try {
+                    const allPosts = await this.getFeedContent();
+                    const matched = allPosts.find(p => String(p.id) === String(postId));
+                    cache[pIdStr] = { 
+                        likes: matched?.likes || 0, 
+                        usersLiked: matched?.is_liked || (matched as any)?.isLiked ? [currentUserIdOrName] : [] 
+                    };
+                } catch {
+                    cache[pIdStr] = { likes: 0, usersLiked: [] };
+                }
+            }
+
+            const usersLiked: string[] = cache[pIdStr].usersLiked || [];
+            const hasLiked = usersLiked.includes(currentUserIdOrName);
+
+            let nextLikes = cache[pIdStr].likes || 0;
+            let nextUsersLiked = [...usersLiked];
+
+            if (hasLiked) {
+                nextUsersLiked = nextUsersLiked.filter(u => u !== currentUserIdOrName);
+                nextLikes = Math.max(0, nextLikes - 1);
+            } else {
+                nextUsersLiked.push(currentUserIdOrName);
+                nextLikes = nextLikes + 1;
+            }
+
+            cache[pIdStr] = {
+                likes: nextLikes,
+                usersLiked: nextUsersLiked
+            };
+
+            localStorage.setItem('moffi_global_post_likes', JSON.stringify(cache));
+            window.dispatchEvent(new Event('moffi_posts_changed'));
         }
+
+        const posts = await this.getFeedContent();
+        await this.saveData('feed_posts', posts);
     }
 
-    async addComment(postId: string | number, text: string): Promise<void> {
+    async addComment(postId: string | number, text: string, parentCommentId?: string | number): Promise<void> {
         const posts = await this.getFeedContent();
         const post = posts.find(p => String(p.id) === String(postId));
         if (post) {
             post.comments = (post.comments || 0) + 1;
-            // In a real mock, we'd store the comments array too
             await this.saveData('feed_posts', posts);
+        }
+        
+        const cached = await this.loadData<any[]>(`comments_${postId}`) || [];
+        const currentUser = await this.getCurrentUser();
+        const newComment = {
+            id: Date.now(),
+            post_id: postId,
+            user: currentUser?.name || currentUser?.username || 'Moffi Kullanıcısı',
+            avatar: currentUser?.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300",
+            text: text,
+            time: 'Şimdi',
+            user_id: currentUser?.id || 'unknown',
+            likes: 0,
+            status: 'approved',
+            isLiked: false,
+            parent_id: parentCommentId
+        };
+        await this.saveData(`comments_${postId}`, [...cached, newComment]);
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event('moffi_comments_changed'));
         }
     }
 
-    async getPostComments(postId: string): Promise<any[]> { return []; }
-    async editComment(commentId: string | number, content: string): Promise<void> {}
-    async deleteComment(commentId: string | number): Promise<void> {}
-    async toggleCommentLike(commentId: string | number): Promise<void> {}
+    async getPostComments(postId: string | number): Promise<any[]> { 
+        const cached = await this.loadData<any[]>(`comments_${postId}`) || [];
+        
+        let list = [...cached];
+        if (list.length === 0) {
+            list = [
+                {
+                    id: 1,
+                    post_id: postId,
+                    user: 'Milo & Luna',
+                    avatar: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=400',
+                    text: 'Harika bir paylaşım! 🐾 Bize de bekleriz.',
+                    time: '2 saat önce',
+                    user_id: 'user-milo',
+                    likes: 12,
+                    status: 'approved',
+                    isLiked: false
+                }
+            ];
+            await this.saveData(`comments_${postId}`, list);
+        }
+
+        let overrides: Record<string, any> = {};
+        if (typeof window !== 'undefined') {
+            try { overrides = JSON.parse(localStorage.getItem('moffi_global_comment_state') || '{}'); } catch {}
+        }
+        const currentUser = await this.getCurrentUser();
+        const currentUserOrName = currentUser?.id || currentUser?.username || 'local-user';
+
+        const finalComments: any[] = [];
+        list.forEach(c => {
+            const cidStr = String(c.id);
+            const ov = overrides[cidStr];
+            if (ov?.isDeleted) return;
+
+            const isLiked = ov?.usersLiked ? ov.usersLiked.includes(currentUserOrName) : (c.isLiked || false);
+            const likes = ov?.likes !== undefined ? ov.likes : (c.likes || 0);
+            const text = ov?.text !== undefined ? ov.text : c.text;
+            const status = ov?.status !== undefined ? ov.status : (c.status || 'approved');
+
+            finalComments.push({
+                ...c,
+                isLiked,
+                likes,
+                text,
+                status,
+                replies: []
+            });
+        });
+
+        const commentMap = new Map<string, any>();
+        const topLevelComments: any[] = [];
+
+        finalComments.forEach(c => {
+            commentMap.set(String(c.id), c);
+        });
+
+        finalComments.forEach(c => {
+            const mapped = commentMap.get(String(c.id));
+            if (c.parent_id && commentMap.has(String(c.parent_id))) {
+                commentMap.get(String(c.parent_id)).replies.push(mapped);
+            } else {
+                topLevelComments.push(mapped);
+            }
+        });
+
+        return topLevelComments;
+    }
+
+    async editComment(commentId: string | number, content: string): Promise<void> {
+        if (typeof window === 'undefined') return;
+        try {
+            const overrides = JSON.parse(localStorage.getItem('moffi_global_comment_state') || '{}');
+            const cidStr = String(commentId);
+            overrides[cidStr] = { ...(overrides[cidStr] || {}), text: content };
+            localStorage.setItem('moffi_global_comment_state', JSON.stringify(overrides));
+            window.dispatchEvent(new Event('moffi_comments_changed'));
+        } catch {}
+
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key?.startsWith('moffi_local_comments_')) {
+                try {
+                    const items = JSON.parse(localStorage.getItem(key) || '[]');
+                    let updated = false;
+                    const nextItems = items.map((c: any) => {
+                        if (String(c.id) === String(commentId)) {
+                            updated = true;
+                            return { ...c, text: content };
+                        }
+                        return c;
+                    });
+                    if (updated) {
+                        localStorage.setItem(key, JSON.stringify(nextItems));
+                        break;
+                    }
+                } catch {}
+            }
+        }
+    }
+
+    async deleteComment(commentId: string | number): Promise<void> {
+        if (typeof window === 'undefined') return;
+        try {
+            const overrides = JSON.parse(localStorage.getItem('moffi_global_comment_state') || '{}');
+            const cidStr = String(commentId);
+            overrides[cidStr] = { ...(overrides[cidStr] || {}), isDeleted: true };
+            localStorage.setItem('moffi_global_comment_state', JSON.stringify(overrides));
+            window.dispatchEvent(new Event('moffi_comments_changed'));
+        } catch {}
+
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key?.startsWith('moffi_local_comments_')) {
+                try {
+                    const items = JSON.parse(localStorage.getItem(key) || '[]');
+                    const filtered = items.filter((c: any) => String(c.id) !== String(commentId) && String(c.parent_id) !== String(commentId));
+                    if (filtered.length !== items.length) {
+                        localStorage.setItem(key, JSON.stringify(filtered));
+                        break;
+                    }
+                } catch {}
+            }
+        }
+    }
+
+    async toggleCommentLike(commentId: string | number): Promise<void> {
+        if (typeof window === 'undefined') return;
+        try {
+            const overrides = JSON.parse(localStorage.getItem('moffi_global_comment_state') || '{}');
+            const cidStr = String(commentId);
+            const currentOverride = overrides[cidStr] || {};
+            
+            let currentUserOrName = 'local-user';
+            try {
+                const saved = JSON.parse(localStorage.getItem('moffi_local_current_user') || 'null');
+                if (saved) currentUserOrName = saved.id || saved.username || 'local-user';
+            } catch {}
+
+            const usersLiked: string[] = currentOverride.usersLiked || [];
+            const hasLiked = usersLiked.includes(currentUserOrName);
+
+            let nextLikes = currentOverride.likes;
+            if (nextLikes === undefined) {
+                let baseLikes = 0;
+                if (cidStr === '1' || cidStr.includes('init-')) baseLikes = 12;
+                for (let i = 0; i < localStorage.length; i++) {
+                    const k = localStorage.key(i);
+                    if (k?.startsWith('moffi_local_comments_')) {
+                        try {
+                            const items = JSON.parse(localStorage.getItem(k) || '[]');
+                            const matched = items.find((c: any) => String(c.id) === cidStr);
+                            if (matched && matched.likes !== undefined) {
+                                baseLikes = Number(matched.likes);
+                                break;
+                            }
+                        } catch {}
+                    }
+                }
+                nextLikes = baseLikes;
+            }
+
+            let nextUsersLiked = [...usersLiked];
+            if (hasLiked) {
+                nextUsersLiked = nextUsersLiked.filter(u => u !== currentUserOrName);
+                nextLikes = Math.max(0, nextLikes - 1);
+            } else {
+                nextUsersLiked.push(currentUserOrName);
+                nextLikes = nextLikes + 1;
+            }
+
+            overrides[cidStr] = {
+                ...currentOverride,
+                usersLiked: nextUsersLiked,
+                likes: nextLikes
+            };
+            localStorage.setItem('moffi_global_comment_state', JSON.stringify(overrides));
+            window.dispatchEvent(new Event('moffi_comments_changed'));
+        } catch {}
+    }
+
 
     async getUserPosts(userId: string): Promise<any[]> {
         // In mock mode, filter local feed posts by userId
@@ -591,6 +877,11 @@ export class MockApiService implements IApiService {
     }
 
     // Persistence Utility (LocalStorage)
+    async globalSearch(query: string): Promise<any> {
+        // Mock search implementation if needed, for now returning empty arrays
+        return { profiles: [], posts: [], pets: [] };
+    }
+
     async saveData<T>(key: string, data: T): Promise<void> {
         if (typeof window === 'undefined') return;
         localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(data));

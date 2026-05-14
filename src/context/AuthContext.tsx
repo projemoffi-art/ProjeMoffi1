@@ -30,6 +30,7 @@ export interface User {
     businessName?: string;
     businessApproved?: boolean;
     settings?: any; // Simplified for dynamic migration
+    subscription_status?: string;
 }
 
 interface AuthContextType {
@@ -99,8 +100,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                             role: profile.role || 'user',
                             avatar: profile.avatar,
                             bio: profile.bio,
+                            is_prime: profile.subscription_status === 'plus' || profile.subscription_status === 'pro' || profile.is_prime === true,
                             joinedAt: profile.created_at || new Date().toISOString(),
-                            stats: profile.stats || { posts: 0, followers: 0, following: 0 }
+                            stats: profile.stats || { posts: 0, followers: 0, following: 0 },
+                            subscription_status: profile.subscription_status
                         });
                     } else {
                         // Create missing profile for new users globally
@@ -121,8 +124,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                                 role: 'user',
                                 avatar: newProfile.avatar,
                                 bio: newProfile.bio,
+                                is_prime: newProfile.subscription_status === 'plus' || newProfile.subscription_status === 'pro',
                                 joinedAt: new Date().toISOString(),
-                                stats: { posts: 0, followers: 0, following: 0 }
+                                stats: { posts: 0, followers: 0, following: 0 },
+                                subscription_status: newProfile.subscription_status
                             });
                         }
                     }

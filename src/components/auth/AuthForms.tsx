@@ -18,7 +18,7 @@ const formVariants = {
 };
 
 // --- Legal Modal Component ---
-function LegalModal({ isOpen, onClose, type }: { isOpen: boolean, onClose: () => void, type: 'terms' | 'privacy' | 'cookies' }) {
+function LegalModal({ isOpen, onClose, type }: { isOpen: boolean, onClose: () => void, type: 'terms' | 'privacy' }) {
     const { t } = useTranslation();
     
     const content = {
@@ -29,10 +29,6 @@ function LegalModal({ isOpen, onClose, type }: { isOpen: boolean, onClose: () =>
         privacy: {
             title: "Gizlilik Politikası",
             body: "Kişisel verileriniz Moffi güvencesi altındadır. Verileriniz sadece size daha iyi bir deneyim sunmak ve evcil hayvanınızla ilgili hatırlatıcılar oluşturmak için kullanılır. Üçüncü taraflarla asla paylaşılmaz."
-        },
-        cookies: {
-            title: "Çerez Politikası",
-            body: "Deneyiminizi iyileştirmek için minimum düzeyde çerez kullanıyoruz. Bu çerezler oturumunuzu açık tutmak ve tercihlerinizi hatırlamak için gereklidir."
         }
     };
 
@@ -90,7 +86,7 @@ function LegalModal({ isOpen, onClose, type }: { isOpen: boolean, onClose: () =>
 export function AuthLanding({ setView }: { setView: (v: AuthView) => void }) {
     const { signInWithGoogle, signInWithApple } = useAuth();
     const { t } = useTranslation();
-    const [legalType, setLegalType] = useState<'terms' | 'privacy' | 'cookies' | null>(null);
+    const [legalType, setLegalType] = useState<'terms' | 'privacy' | null>(null);
 
     return (
         <div className="flex flex-col h-full p-10 pt-16 items-center bg-transparent relative overflow-y-auto">
@@ -167,7 +163,6 @@ export function AuthLanding({ setView }: { setView: (v: AuthView) => void }) {
                 <div className="flex gap-6">
                     <button onClick={() => setLegalType('terms')} className="text-[9px] text-gray-700 font-black uppercase tracking-widest hover:text-white transition-colors">{t('legal.title_terms')}</button>
                     <button onClick={() => setLegalType('privacy')} className="text-[9px] text-gray-700 font-black uppercase tracking-widest hover:text-white transition-colors">{t('legal.title_privacy')}</button>
-                    <button onClick={() => setLegalType('cookies')} className="text-[9px] text-gray-700 font-black uppercase tracking-widest hover:text-white transition-colors">{t('legal.title_cookies')}</button>
                 </div>
                 
                 <div className="text-center border-t border-white/5 pt-6 w-full">
@@ -312,7 +307,7 @@ export function SignupForm({ setView, onComplete, setEmail }: { setView: (v: Aut
     const [loading, setLoading] = useState(false);
     const [agreeTerms, setAgreeTerms] = useState(false);
     const [marketingConsent, setMarketingConsent] = useState(false);
-    const [legalType, setLegalType] = useState<'terms' | 'privacy' | 'cookies' | null>(null);
+    const [legalType, setLegalType] = useState<'terms' | 'privacy' | null>(null);
 
     const validateEmail = (email: string) => {
         const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -485,8 +480,7 @@ export function SignupForm({ setView, onComplete, setEmail }: { setView: (v: Aut
                             <button type="button" onClick={() => setLegalType('terms')} className="text-white hover:text-cyan-400 underline">{t('auth.signup.terms_link')}</button>,{" "}
                             <button type="button" onClick={() => setLegalType('privacy')} className="text-white hover:text-cyan-400 underline">{t('auth.signup.privacy_link')}</button>{" "}
                             {t('auth.signup.terms_suffix')}{" "}
-                            <button type="button" onClick={() => setLegalType('cookies')} className="text-white hover:text-cyan-400 underline">{t('auth.signup.cookies_link')}</button>{" "}
-                            {t('auth.signup.terms_end')}
+                             {t('auth.signup.terms_end')}
                         </p>
                     </label>
 

@@ -8,7 +8,7 @@ import {
     Users, Activity, Sparkles, X, Send, PawPrint, Search, Menu, MoreHorizontal, Image as ImageIcon, Video, Mic,
     Settings, Grid3X3, List, Edit3, Bookmark, Edit2, Trash2, ImagePlus,
     LogOut, ChevronRight, ChevronLeft, User, Bell, Lock, HelpCircle, Check, HeartHandshake, CheckCheck, ShieldAlert, ChevronDown,
-    AlertTriangle, PhoneCall, BadgeCheck, Radar, Palette, ShoppingBag, Gamepad2, Globe,
+    AlertTriangle, PhoneCall, BadgeCheck, Radar, Palette, ShoppingBag, Gamepad2, Globe, Filter,
     Coins, Package, Calendar, Plane, ShieldCheck, Route, TrendingUp, Timer, Footprints, Play, Download, Clock, Syringe, Moon
 } from 'lucide-react';
 import { compressImageToFile } from '@/lib/imageUtils';
@@ -46,6 +46,8 @@ import { supabase } from '@/lib/supabase';
 import { HubOverlay } from '../../components/community/HubOverlay';
 import { MoffiBottomNav } from '@/components/common/MoffiBottomNav';
 import { OverlaySystem } from '@/components/community/OverlaySystem';
+import { ExploreGrid } from '@/components/community/ExploreGrid';
+
 
 import { 
     MOCK_PETS, MOCK_ADOPTIONS, 
@@ -54,6 +56,7 @@ import {
 import Image from 'next/image';
 
 import { useChat } from '@/context/ChatContext';
+import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 
 export default function MoffiSocialMasterpiece() {
     const { user, logout, updateProfile, updateSettings } = useAuth();
@@ -85,7 +88,7 @@ export default function MoffiSocialMasterpiece() {
     const [profileSubView, setProfileSubView] = useState<'main' | 'family' | 'passport' | 'orders' | 'wallet' | 'appointments' | 'routes' | 'impact' | 'bookmarks'>('main');
     const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-    const [notificationsList, setNotificationsList] = useState<any[]>([]);
+    const { notifications, unreadCount: notifUnreadCount, markAllRead } = useRealtimeNotifications(user?.id);
     const [selectedSharePost, setSelectedSharePost] = useState<any>(null);
     const [profileViewMode, setProfileViewMode] = useState('grid');
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -147,6 +150,23 @@ export default function MoffiSocialMasterpiece() {
     const [isSubmittingAdoption, setIsSubmittingAdoption] = useState(false);
     const [isApplicationFormOpen, setIsApplicationFormOpen] = useState(false);
     const [appExperience, setAppExperience] = useState('0-2 Yıl');
+    const [viewMode, setViewMode] = useState<'immersive' | 'grid'>('immersive');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+    const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
+
+    const handlePostClickFromGrid = (post: any) => {
+        setViewMode('immersive');
+        setTimeout(() => {
+            const element = document.getElementById(`post-${post.id}`);
+            if (element) {
+                element.scrollIntoView({ behavior: 'auto', block: 'center' });
+            }
+        }, 100);
+    };
+
+
     const [appHomeType, setAppHomeType] = useState('Apartman');
     const [appNote, setAppNote] = useState('');
     const [isSubmittingApp, setIsSubmittingApp] = useState(false);
@@ -188,6 +208,11 @@ export default function MoffiSocialMasterpiece() {
     const [reportReason, setReportReason] = useState<string>('');
     const [isSubmittingReport, setIsSubmittingReport] = useState(false);
     
+    // VIDEO TRIMMER STATES
+    const [videoDuration, setVideoDuration] = useState(0);
+    const [videoTrimRange, setVideoTrimRange] = useState<[number, number]>([0, 20]);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    
     // AUDIO SHARING STATES
     const [audioFile, setAudioFile] = useState<File | null>(null);
     const [audioURL, setAudioURL] = useState<string | null>(null);
@@ -206,6 +231,103 @@ export default function MoffiSocialMasterpiece() {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // --- PROFESSIONAL MEDIA ENGINE (Compression & Preview) ---
+    const processVideo = async (file: File, startTime: number, duration: number): Promise<Blob> => {
+        return new Promise((resolve, reject) => {
+            const video = document.createElement('video');
+            video.src = URL.createObjectURL(file);
+            video.muted = true;
+            video.playsInline = true;
+            video.crossOrigin = "anonymous";
+            
+            let isResolvedOrRejected = false;
+            
+            const cleanup = () => {
+                if (!video.paused) video.pause();
+                video.removeAttribute('src');
+                video.load();
+            };
+
+            const safeReject = (err: any) => {
+                if (isResolvedOrRejected) return;
+                isResolvedOrRejected = true;
+                cleanup();
+                reject(err);
+            };
+
+            // Timeout to prevent hanging forever if video metadata/playback fails
+            const timeoutId = setTimeout(() => {
+                safeReject(new Error("Video işleme zaman aşımına uğradı. Orijinal dosya kullanılacak."));
+            }, 10000); 
+
+            video.onloadedmetadata = () => {
+                video.currentTime = startTime;
+            };
+            
+            video.onseeked = () => {
+                video.play().catch(err => {
+                    clearTimeout(timeoutId);
+                    safeReject(err);
+                });
+            };
+
+            video.onplaying = () => {
+                clearTimeout(timeoutId);
+                try {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    const scaleFactor = Math.min(1, 480 / video.videoWidth);
+                    canvas.width = video.videoWidth * scaleFactor;
+                    canvas.height = video.videoHeight * scaleFactor;
+                    
+                    const stream = canvas.captureStream(30); 
+                    const recorder = new MediaRecorder(stream, { 
+                        mimeType: 'video/webm;codecs=vp8',
+                        videoBitsPerSecond: 1200000 
+                    });
+                    
+                    const chunks: Blob[] = [];
+                    recorder.ondataavailable = (e) => chunks.push(e.data);
+                    
+                    recorder.onstop = () => {
+                        if (isResolvedOrRejected) return;
+                        isResolvedOrRejected = true;
+                        cleanup();
+                        resolve(new Blob(chunks, { type: 'video/webm' }));
+                    };
+                    
+                    recorder.start();
+                    
+                    const drawFrame = () => {
+                        if (isResolvedOrRejected) return;
+                        if (video.paused || video.ended || (video.currentTime >= startTime + duration)) {
+                            if (recorder.state === 'recording') recorder.stop();
+                            return;
+                        }
+                        ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        requestAnimationFrame(drawFrame);
+                    };
+                    drawFrame();
+
+                    // Hard limit safety (21s)
+                    setTimeout(() => {
+                        if (recorder.state === 'recording') recorder.stop();
+                    }, (duration + 1) * 1000);
+                } catch (err) {
+                    safeReject(err);
+                }
+            };
+
+            video.onerror = (e) => {
+                clearTimeout(timeoutId);
+                console.error("Video processing error:", e);
+                safeReject(new Error("Video işlenirken bir hata oluştu."));
+            };
+            
+            video.load();
+        });
+    };
+
     const compressImage = async (file: File): Promise<File> => {
         return new Promise((resolve) => {
             const reader = new FileReader();
@@ -325,11 +447,21 @@ export default function MoffiSocialMasterpiece() {
 
         const handleOpenSpotlight = () => setIsSpotlightOpen(true);
         const handleOpenDiary = () => setIsDiaryOpen(true);
+        const handleOpenAuraStudio = () => setIsStudioQuickSheetOpen(true);
+        const handleOpenMarket = () => setIsMarketQuickSheetOpen(true);
+        const handleOpenVet = () => setIsVetQuickSheetOpen(true);
+        const handleOpenWalk = () => setIsWalkQuickSheetOpen(true);
+        const handleOpenNotif = () => setIsNotificationsOpen(true);
 
         window.addEventListener('open-add-post', handleOpenPost);
         window.addEventListener('open-sos-center', handleOpenSOS);
         window.addEventListener('open-moffi-spotlight', handleOpenSpotlight);
         window.addEventListener('open-moffi-diary', handleOpenDiary);
+        window.addEventListener('open-aura-studio', handleOpenAuraStudio);
+        window.addEventListener('open-market-sheet', handleOpenMarket);
+        window.addEventListener('open-vet-sheet', handleOpenVet);
+        window.addEventListener('open-walk-sheet', handleOpenWalk);
+        window.addEventListener('open-notification-drawer', handleOpenNotif);
         
         const handleChangeTab = (e: any) => {
             setActiveTab(e.detail);
@@ -341,6 +473,11 @@ export default function MoffiSocialMasterpiece() {
             window.removeEventListener('open-sos-center', handleOpenSOS);
             window.removeEventListener('open-moffi-spotlight', handleOpenSpotlight);
             window.removeEventListener('open-moffi-diary', handleOpenDiary);
+            window.removeEventListener('open-aura-studio', handleOpenAuraStudio);
+            window.removeEventListener('open-market-sheet', handleOpenMarket);
+            window.removeEventListener('open-vet-sheet', handleOpenVet);
+            window.removeEventListener('open-walk-sheet', handleOpenWalk);
+            window.removeEventListener('open-notification-drawer', handleOpenNotif);
             window.removeEventListener('moffi-change-tab', handleChangeTab);
         };
     }, [router]);
@@ -377,38 +514,42 @@ export default function MoffiSocialMasterpiece() {
     }, []);
 
     const fetchNotifications = async () => {
-        try {
-            const data = await apiService.getInboxMessages();
-            setNotificationsList(data);
-            // setUnreadInboxCount removed - managed by ChatContext
-        } catch (err) {
-            console.error("Bildirimler çekilirken hata:", err);
-        }
+        // Obsolete, handled by useRealtimeNotifications hook
     };
 
     // REAL-TIME GLOBAL SYNC (Professional Event-Driven Architecture)
     useEffect(() => {
-        if (!isSupabaseEnabled) return;
+        const handleCustomPostsSync = () => {
+            fetchPosts(true);
+        };
+        window.addEventListener('moffi_posts_changed', handleCustomPostsSync);
 
-        // Subscribe to live feed updates (New posts, likes, comments)
-        const channel = supabase
-            .channel('global-feed-events')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => {
-                fetchPosts(true); // Silent background refresh
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'likes' }, () => {
-                fetchPosts(true); // Silent background refresh
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => {
-                fetchPosts(true); // Silent background refresh
-            })
-            .subscribe();
+        let channel: any = null;
+        if (isSupabaseEnabled) {
+            channel = supabase
+                .channel('global-feed-events')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => {
+                    fetchPosts(true);
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'likes' }, () => {
+                    fetchPosts(true);
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => {
+                    fetchPosts(true);
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
+                    fetchNotifications();
+                })
+                .subscribe();
+        }
 
         return () => {
-            supabase.removeChannel(channel);
+            window.removeEventListener('moffi_posts_changed', handleCustomPostsSync);
+            if (channel) {
+                supabase.removeChannel(channel);
+            }
         };
     }, [user, activeTab]);
-
 
     // HANDLE DEEP LINKING (TABS & CHAT)
     useEffect(() => {
@@ -471,8 +612,14 @@ export default function MoffiSocialMasterpiece() {
     };
 
     const filteredPosts = useMemo(() => {
-        return posts;
-    }, [posts]);
+        if (!searchQuery) return posts;
+        return posts.filter(post => 
+            post.desc?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            post.author_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            post.category?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [posts, searchQuery]);
+
 
     const sortPostsLocally = (data: any[], sortType: string) => {
         const sorted = [...data];
@@ -539,6 +686,7 @@ export default function MoffiSocialMasterpiece() {
     const headerBgOpacity = useTransform(scrollY, [0, 60], [0, 0.95]);
     const headerBlur = useTransform(scrollY, [0, 60], [0, 50]);
     const headerBorderOpacity = useTransform(scrollY, [0, 60], [0, 0.15]);
+    const headerOpacity = useTransform(scrollY, [0, 80], [1, 1]); // Keeping it 1 for now as per user request to move grid to top
     const logoY = useTransform(scrollY, [0, 80], [0, -4]); 
     const iconScale = useTransform(scrollY, [0, 80], [1, 0.9]);
     const headerBlurTransform = useTransform(headerBlur, (b) => `blur(${b}px)`);
@@ -665,7 +813,6 @@ export default function MoffiSocialMasterpiece() {
     const cameraInputRef = useRef<HTMLInputElement>(null);
 
     const toggleLike = async (id: string) => {
-        // OPTIMISTIC UPDATE (Instant feedback for global users)
         setPosts(prev => prev.map(post => {
             if (post.id === id) {
                 const newIsLiked = !post.isLiked;
@@ -680,10 +827,9 @@ export default function MoffiSocialMasterpiece() {
 
         try {
             await apiService.reactToPost(id, '❤️');
-            // Realtime will handle the broadcast, but optimistic UI keeps it snappy
+            window.dispatchEvent(new Event('moffi_posts_changed'));
         } catch (err) {
             console.error("Beğeni hatası:", err);
-            // Rollback on error
             fetchPosts(); 
         }
     };
@@ -698,8 +844,6 @@ export default function MoffiSocialMasterpiece() {
             }
             return p;
         }));
-
-        showToast("Yorum Eklendi", "Yorumunuz paylaşıldı ✨", "success");
     };
 
     const toggleCommentLike = (postId: number, commentId: number) => {
@@ -844,13 +988,45 @@ export default function MoffiSocialMasterpiece() {
 
     const handleCameraUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) {
-            setSelectedFile(file);
-            const fileURL = URL.createObjectURL(file);
-            setUploadImageURL(fileURL);
-            setIsUploadModalOpen(true);
+        if (!file) return;
+
+        // --- GLOBAL STANDARDS CHECK ---
+        const MAX_FILE_SIZE = 40 * 1024 * 1024; // 40MB
+        const MAX_VIDEO_DURATION = 20; // 20 Seconds Standard
+
+        if (file.size > MAX_FILE_SIZE) {
+            showToast("Dosya Çok Büyük", "Lütfen 40MB'dan daha küçük bir video/resim seçin. 📏", "error");
             if (cameraInputRef.current) cameraInputRef.current.value = '';
+            return;
         }
+
+        if (file.type.startsWith('video/')) {
+            const video = document.createElement('video');
+            video.preload = 'metadata';
+            video.onloadedmetadata = () => {
+                window.URL.revokeObjectURL(video.src);
+                setVideoDuration(video.duration);
+                
+                if (video.duration > MAX_VIDEO_DURATION) {
+                    // Long video: Don't block, just set initial trim
+                    setVideoTrimRange([0, 20]);
+                    showToast("Video Ayarlama", "Videonuz 20 saniyeden uzun. En iyi kısmını seçebilirsiniz. ✨", "info");
+                } else {
+                    setVideoTrimRange([0, video.duration]);
+                }
+                
+                setSelectedFile(file);
+                setUploadImageURL(URL.createObjectURL(file));
+                setIsUploadModalOpen(true);
+            };
+            video.src = URL.createObjectURL(file);
+        } else {
+            setSelectedFile(file);
+            setUploadImageURL(URL.createObjectURL(file));
+            setIsUploadModalOpen(true);
+        }
+        
+        if (cameraInputRef.current) cameraInputRef.current.value = '';
     };
 
     const publishPost = async () => {
@@ -862,12 +1038,39 @@ export default function MoffiSocialMasterpiece() {
         }
 
         setIsPublishing(true);
+        setUploadProgress(0);
         try {
-            // --- PROFESSIONAL COMPRESSION ---
-            const compressedFile = await compressImageToFile(selectedFile);
+            let fileToUpload: any = selectedFile;
             
-            // 1. Upload to Storage (Using compressed file)
-            const publicUrl = await apiService.uploadMedia(compressedFile, 'posts');
+            if (selectedFile.type.startsWith('image/')) {
+                fileToUpload = await compressImageToFile(selectedFile);
+            } else if (selectedFile.type.startsWith('video/')) {
+                // Show "Processing" state
+                showToast("Video Hazırlanıyor...", "Seçtiğiniz 20 saniyelik kısım işleniyor ve optimize ediliyor. ✨", "info");
+                
+                try {
+                    const trimmedVideoBlob = await processVideo(
+                        selectedFile, 
+                        videoTrimRange[0], 
+                        Math.min(20, videoTrimRange[1] - videoTrimRange[0])
+                    );
+                    
+                    fileToUpload = new File([trimmedVideoBlob], "trimmed_video.webm", { type: 'video/webm' });
+                    
+                    // Since we already trimmed it physically, let's reset metadata to the full length of the new file
+                    // But we keep the original intent for the DB check
+                } catch (err) {
+                    console.error("Video processing failed, falling back to original:", err);
+                    showToast("Hata", "Video işlenemedi, orijinal dosya yükleniyor.", "error");
+                    // Fallback to original file
+                }
+            }
+            
+            // 1. Upload to Storage
+            const publicUrl = await apiService.uploadMedia(fileToUpload, 'posts', (p) => {
+                setUploadProgress(p);
+            });
+            if (!publicUrl) throw new Error("Dosya sunucuya yüklenemedi.");
             
             // 1.5 Upload Audio if exists
             let audioPublicUrl = null;
@@ -876,12 +1079,19 @@ export default function MoffiSocialMasterpiece() {
             }
 
             // 2. Add Post to DB
+            const isVideo = selectedFile.type.startsWith('video/');
+            const wasProcessed = fileToUpload.name === "trimmed_video.webm";
+
             const newPostResult = await apiService.addPost({
                 media: publicUrl,
                 caption: uploadCaption,
                 mood: uploadMood || null,
-                is_video: selectedFile.type.startsWith('video/'),
-                audio_url: audioPublicUrl
+                is_video: isVideo,
+                audio_url: audioPublicUrl,
+                // If processed, the new file starts at 0 and ends at duration.
+                // If not processed (fallback), we use the range selected by the user.
+                trim_start: isVideo ? (wasProcessed ? 0 : videoTrimRange[0]) : undefined,
+                trim_end: isVideo ? (wasProcessed ? (videoTrimRange[1] - videoTrimRange[0]) : videoTrimRange[1]) : undefined
             });
 
             // 3. OPTIMISTIC UPDATE: Add to local state immediately
@@ -903,7 +1113,8 @@ export default function MoffiSocialMasterpiece() {
             fetchPosts();
         } catch (error: any) {
             console.error("Post upload error:", error);
-            showToast("Hata", "Paylaşım yapılamadı: " + error.message, "error");
+            const errorMsg = error?.message || "Sunucuyla bağlantı kurulamadı veya bir hata oluştu.";
+            showToast("Hata", `Paylaşım yapılamadı: ${errorMsg}`, "error");
         } finally {
             setIsPublishing(false);
         }
@@ -1294,80 +1505,86 @@ export default function MoffiSocialMasterpiece() {
 
             {/* AMBIENT BACKGROUND GLOW */}
             <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+
                 <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-600/20 blur-[120px] rounded-full mix-blend-screen" />
                 <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-cyan-600/20 blur-[120px] rounded-full mix-blend-screen" />
             </div>
 
-            {/* HEADER - GLASSMORPHISM (COLLAPSING) */}
+            {/* HEADER - INTEGRATED MINIMALIST DESIGN */}
             <motion.header 
+                id="community-main-header"
                 style={{ 
-                    height: headerHeightTransform,
-                    padding: headerPadding,
-                    backdropFilter: headerBlurTransform,
+                    height: isCategoriesOpen ? 'auto' : headerHeightTransform, 
+                    opacity: headerOpacity 
                 }}
-                className="fixed top-0 left-0 right-0 z-40 flex flex-col shrink-0 bg-glass border-b border-glass-border transition-all duration-300"
+                className={cn(
+                    "fixed top-0 left-0 right-0 z-[150] px-6 flex flex-col justify-end bg-[var(--background)]/80 backdrop-blur-xl border-b border-white/5 transition-all duration-300",
+                    isCategoriesOpen ? "pb-0 pt-16" : "pb-4"
+                )}
             >
-                <div className="flex justify-between items-center w-full max-w-4xl mx-auto">
-                    <div className="flex items-center gap-4">
+                <div className="flex justify-between items-center w-full">
+                    <div className="flex items-center gap-2">
                         <motion.button
                             style={{ scale: iconScale }}
-                            onClick={() => {
-                                if (!user) {
-                                    showToast("Giriş Gerekli", "Lütfen önce giriş yapın.", "Zap");
-                                    window.dispatchEvent(new CustomEvent('open-auth-modal'));
-                                    return;
-                                }
-                                setIsUploadModalOpen(true);
-                            }}
-                            className="w-11 h-11 rounded-full bg-foreground/5 backdrop-blur-xl border border-glass-border flex items-center justify-center hover:bg-foreground/10 transition-all active:scale-90 shadow-xl group/cam"
+                            onClick={() => setIsUploadModalOpen(true)}
+                            className="w-10 h-10 flex items-center justify-center hover:bg-white/5 rounded-full transition-all active:scale-90"
                         >
-                            <Camera className="w-5 h-5 text-foreground/60 group-hover/cam:text-foreground transition-colors" strokeWidth={1.5} />
+                            <Camera className="w-5 h-5 text-white/80" />
                         </motion.button>
-                        <div className="flex flex-col">
-                            <motion.h1
-                                style={{ scale: logoScale, y: logoY }}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                className="text-3xl font-bold tracking-tight bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent select-none origin-left"
-                            >
-                                Moffi
-                                <span className="text-accent drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]">.</span>
-                            </motion.h1>
-                            
-                            {/* SOS ACTIVE INDICATOR (HEADER) */}
-                            {isAnyPetLost && (
-                                <motion.div 
-                                    initial={{ opacity: 0, x: -10 }} 
-                                    animate={{ opacity: 1, x: 0 }}
-                                    className="flex items-center gap-1.5 ml-2 mt-0.5"
-                                >
-                                    <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
-                                    <span className="text-[9px] font-black text-red-500 uppercase tracking-widest italic drop-shadow-sm">SOS Aktif</span>
-                                </motion.div>
-                            )}
 
-                            {/* QUIET MODE INDICATOR */}
-                            {isQuietModeActive && (
-                                <motion.div 
-                                    initial={{ opacity: 0, x: -10 }} 
-                                    animate={{ opacity: 1, x: 0 }}
-                                    className="flex items-center gap-1.5 ml-2 mt-0.5"
-                                >
-                                    <Moon className="w-3 h-3 text-indigo-400 fill-indigo-400" />
-                                    <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest italic drop-shadow-sm">Sessiz Mod</span>
-                                </motion.div>
-                            )}
+                        {/* VIEW MODE TOGGLE - PURE MINIMALIST */}
+                        <div className="flex items-center gap-1 ml-1">
+                            <button 
+                                onClick={() => setViewMode('immersive')}
+                                className={cn(
+                                    "p-2 transition-all active:scale-90",
+                                    viewMode === 'immersive' ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] scale-110" : "text-gray-600 hover:text-gray-400"
+                                )}
+                            >
+                                <List className="w-5 h-5" />
+                            </button>
+                            <button 
+                                onClick={() => setViewMode('grid')}
+                                className={cn(
+                                    "p-2 transition-all active:scale-90",
+                                    viewMode === 'grid' ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] scale-110" : "text-gray-600 hover:text-gray-400"
+                                )}
+                            >
+                                <Grid3X3 className="w-5 h-5" />
+                            </button>
                         </div>
+
+                        {/* COLLAPSIBLE CATEGORIES BUTTON */}
+                        <button 
+                            onClick={() => setIsCategoriesOpen(!isCategoriesOpen)}
+                            className={cn(
+                                "flex items-center gap-2 px-4 py-2 rounded-full transition-all active:scale-95 ml-1",
+                                isCategoriesOpen ? "bg-white text-black" : "text-white/50 hover:text-white"
+                            )}
+                        >
+                            <Filter className="w-4 h-4" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Kategoriler</span>
+                            <ChevronDown className={cn("w-3 h-3 transition-transform duration-300", isCategoriesOpen && "rotate-180")} />
+                        </button>
                     </div>
-                    <div className="flex gap-3 items-center">
+
+                    <div className="flex gap-1 items-center">
+                        <motion.button 
+                            style={{ scale: iconScale }}
+                            onClick={() => setIsSpotlightOpen(true)}
+                            className="p-2.5 hover:bg-white/5 rounded-full transition-colors"
+                        >
+                            <Search className="w-5 h-5 text-white/80" />
+                        </motion.button>
+
                         <motion.button 
                             style={{ scale: iconScale }}
                             onClick={() => setIsInboxOpen(true)} 
-                            className="relative p-2.5 bg-foreground/5 border border-glass-border rounded-full hover:bg-foreground/10 transition-colors backdrop-blur-md"
+                            className="relative p-2.5 hover:bg-white/5 rounded-full transition-colors"
                         >
-                            <MessageCircle className="w-5 h-5 text-foreground/70" />
+                            <MessageCircle className="w-5 h-5 text-white/80" />
                             {unreadCount > 0 && (
-                                <div className="absolute top-0 right-0 w-4 h-4 bg-cyan-400 rounded-full border-2 border-background flex items-center justify-center">
+                                <div className="absolute top-1 right-1 w-4 h-4 bg-cyan-400 rounded-full border-2 border-background flex items-center justify-center">
                                     <span className="text-[8px] font-black text-black">{unreadCount}</span>
                                 </div>
                             )}
@@ -1376,19 +1593,60 @@ export default function MoffiSocialMasterpiece() {
                         <motion.button 
                             style={{ scale: iconScale }}
                             onClick={() => setIsNotificationsOpen(true)} 
-                            className="relative p-2.5 bg-foreground/5 border border-glass-border rounded-full hover:bg-foreground/10 transition-colors backdrop-blur-md"
+                            className="relative p-2.5 hover:bg-white/5 rounded-full transition-colors"
                         >
-                            <Bell className="w-5 h-5 text-foreground/70" />
-                            <div className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-background"></div>
+                            <Bell className="w-5 h-5 text-white/80" />
+                            {notifUnreadCount > 0 && (
+                                <div className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-background flex items-center justify-center">
+                                    <span className="text-[8px] font-black text-white">{notifUnreadCount}</span>
+                                </div>
+                            )}
                         </motion.button>
                     </div>
+
                 </div>
 
+                {/* COLLAPSIBLE CATEGORIES PANEL - INTEGRATED IN HEADER */}
+                <AnimatePresence>
+                    {isCategoriesOpen && (
+                        <motion.div 
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden bg-white/[0.02] mt-4 -mx-6 px-6 border-t border-white/5"
+                        >
+                            <div className="flex gap-2 overflow-x-auto no-scrollbar py-4">
+                                {['Hepsi', 'Eğlence', 'Eğitim', 'Beslenme', 'Sağlık', 'Veteriner', 'Sahiplenme'].map((cat) => (
+                                    <button
+                                        key={cat}
+                                        onClick={() => {
+                                            setSearchQuery(cat === 'Hepsi' ? '' : cat);
+                                            setIsCategoriesOpen(false);
+                                        }}
+                                        className={cn(
+                                            "px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+                                            searchQuery === (cat === 'Hepsi' ? '' : cat) 
+                                                ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]" 
+                                                : "text-white/20 hover:text-white/50"
+                                        )}
+                                    >
+                                        {cat}
+                                    </button>
+                                ))}
 
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </motion.header>
 
-            {/* Header Spacing (Dynamic height to push content up as header collapses) */}
-            <motion.div style={{ height: headerHeightTransform }} className="shrink-0" />
+
+            {/* Header Spacing */}
+            <motion.div 
+                style={{ height: isCategoriesOpen ? '200px' : headerHeightTransform }} 
+                className="shrink-0 transition-all duration-300" 
+            />
+
 
             {/* MAIN IMMERSIVE CONTENT - Unified Scroll per tab */}
             <main 
@@ -1407,9 +1665,12 @@ export default function MoffiSocialMasterpiece() {
                             animate={{ opacity: 1, filter: "blur(0px)" }}
                             exit={{ opacity: 0, filter: "blur(10px)" }}
                             transition={{ duration: 0.3 }}
-                            className="w-full pb-32 flex flex-col gap-8"
+                            className="w-full pb-32 flex flex-col gap-4"
                         >
                             {/* INSTAGRAM-STYLE STORIES BAR */}
+
+
+
                             <div className="w-full flex gap-4 px-4 py-4 overflow-x-auto no-scrollbar snap-start shrink-0">
                                 {/* Current User Add Story - Apple Style Upgrade */}
                                 <div className="flex flex-col items-center gap-1.5 shrink-0 group">
@@ -1511,9 +1772,15 @@ export default function MoffiSocialMasterpiece() {
                                         </div>
                                     </div>
                                 ))
+                            ) : viewMode === 'grid' ? (
+                                <ExploreGrid 
+                                    posts={filteredPosts} 
+                                    onPostClick={handlePostClickFromGrid} 
+                                    isLoading={isLoadingPosts} 
+                                />
                             ) : (
                                 filteredPosts.map((post, feedIdx) => (
-                                    <div key={post.id} className="w-full relative flex flex-col items-center justify-center px-0 shrink-0 snap-start" style={{ height: "calc(100vh - 160px)" }}>
+                                    <div key={post.id} id={`post-${post.id}`} className="w-full relative flex flex-col items-center justify-center px-0 shrink-0 snap-start" style={{ height: "calc(100vh - 160px)" }}>
                                         <ImmersivePostCard
                                             post={post}
                                             currentUser={user}
@@ -1533,6 +1800,7 @@ export default function MoffiSocialMasterpiece() {
                                     </div>
                                 ))
                             )}
+
                             {/* Space for bottom nav */}
                             <div className="h-12 w-full shrink-0" />
                         </motion.div>
@@ -2392,7 +2660,7 @@ export default function MoffiSocialMasterpiece() {
 
                             {/* CAPTION */}
                             <div className="bg-[var(--card-bg)] border border-white/10 rounded-3xl p-4 flex gap-4">
-                                <img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300" className="w-10 h-10 rounded-full shrink-0" />
+                                <img src={user?.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} className="w-10 h-10 rounded-full shrink-0" />
                                 <textarea
                                     value={uploadCaption}
                                     onChange={(e) => setUploadCaption(e.target.value)}
@@ -2400,6 +2668,64 @@ export default function MoffiSocialMasterpiece() {
                                     className="w-full bg-transparent outline-none text-[var(--foreground)] resize-none h-24 text-sm mt-1"
                                 />
                             </div>
+
+                            {/* VIDEO TRIMMER UI (Apple Style) */}
+                            {selectedFile?.type.startsWith('video/') && (
+                                <div className="flex flex-col gap-4 bg-white/5 border border-white/10 rounded-[2rem] p-6">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <div className="flex items-center gap-2">
+                                            <Timer className="w-4 h-4 text-cyan-400" />
+                                            <span className="text-[11px] font-black text-white uppercase tracking-widest">Video Kırpma (Max 20s)</span>
+                                        </div>
+                                        <span className="text-[10px] font-bold text-cyan-400 bg-cyan-400/10 px-2 py-0.5 rounded-full">
+                                            {Math.round((videoTrimRange[1] - videoTrimRange[0]))}s seçildi
+                                        </span>
+                                    </div>
+                                    
+                                    <div className="relative h-12 bg-white/5 rounded-xl border border-white/5 flex items-center px-2 group">
+                                        {/* Simple Visual Waveform Placeholder */}
+                                        <div className="absolute inset-2 flex items-end gap-0.5 opacity-20 group-hover:opacity-40 transition-opacity">
+                                            {Array(30).fill(0).map((_, i) => (
+                                                <div key={i} className="flex-1 bg-white" style={{ height: `${Math.random() * 100}%` }} />
+                                            ))}
+                                        </div>
+
+                                        <input 
+                                            type="range"
+                                            min={0}
+                                            max={Math.max(20, videoDuration)}
+                                            step={0.1}
+                                            value={videoTrimRange[0]}
+                                            onChange={(e) => {
+                                                const start = parseFloat(e.target.value);
+                                                const end = Math.min(start + 20, videoDuration);
+                                                setVideoTrimRange([start, end]);
+                                                // Preview seeking
+                                                const vid = document.querySelector('video');
+                                                if (vid) vid.currentTime = start;
+                                            }}
+                                            className="absolute inset-0 w-full opacity-0 cursor-pointer z-10"
+                                        />
+                                        
+                                        {/* Custom Visual Slider */}
+                                        <div className="w-full h-8 relative pointer-events-none">
+                                            <div 
+                                                className="absolute h-full bg-cyan-500/30 border-x-2 border-cyan-400 rounded-md"
+                                                style={{ 
+                                                    left: `${(videoTrimRange[0] / videoDuration) * 100}%`,
+                                                    width: `${((videoTrimRange[1] - videoTrimRange[0]) / videoDuration) * 100}%`
+                                                }}
+                                            >
+                                                <div className="absolute -top-1 -left-1 w-2 h-10 bg-white rounded-full shadow-lg" />
+                                                <div className="absolute -top-1 -right-1 w-2 h-10 bg-white rounded-full shadow-lg" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p className="text-[9px] text-white/30 font-medium text-center italic">
+                                        Videonun en iyi 20 saniyelik kısmını seçmek için kaydırın.
+                                    </p>
+                                </div>
+                            )}
 
                             {/* MOOD SELECTOR (Apple Style Pills) */}
                             <div className="flex flex-col gap-2">
@@ -2499,10 +2825,19 @@ export default function MoffiSocialMasterpiece() {
                             <button
                                 onClick={publishPost}
                                 disabled={isPublishing}
-                                className={cn("w-full py-4 mt-auto rounded-full font-black text-[var(--foreground)] flex items-center justify-center gap-2 shadow-[0_10px_40px_rgba(34,211,238,0.3)] transition-all", isPublishing ? "bg-gray-600 cursor-not-allowed" : "bg-gradient-to-r from-cyan-400 to-purple-500 hover:scale-[1.02] active:scale-95")}
+                                className={cn("w-full py-4 mt-auto rounded-full font-black text-[var(--foreground)] flex items-center justify-center gap-2 shadow-[0_10px_40px_rgba(34,211,238,0.3)] transition-all", isPublishing ? "bg-gray-800/50 cursor-not-allowed" : "bg-gradient-to-r from-cyan-400 to-purple-500 hover:scale-[1.02] active:scale-95")}
                             >
                                 {isPublishing ? (
-                                    <span className="animate-pulse">Yükleniyor...</span>
+                                    <div className="flex items-center gap-3">
+                                        <div className="relative w-6 h-6">
+                                            <svg className="w-full h-full -rotate-90">
+                                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="transparent" className="text-white/10" />
+                                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="transparent" strokeDasharray={62.8} strokeDashoffset={62.8 - (62.8 * uploadProgress) / 100} className="text-cyan-400 transition-all duration-300" />
+                                            </svg>
+                                            <span className="absolute inset-0 flex items-center justify-center text-[8px] font-black">{uploadProgress}%</span>
+                                        </div>
+                                        <span className="animate-pulse tracking-widest text-xs">YÜKLENİYOR...</span>
+                                    </div>
                                 ) : (
                                     <><Send className="w-5 h-5" /> Paylaş</>
                                 )}
@@ -3709,10 +4044,10 @@ export default function MoffiSocialMasterpiece() {
                                         </div>
                                     ) : (
                                         <div className="flex gap-8 pointer-events-auto">
-                                            <button className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-[var(--foreground)] active:scale-90 transition-transform pointer-events-auto" onClick={(e) => { e.stopPropagation(); showToast("Beğenildi", "Desteğin iletildi! ❤️", "Heart"); }}>
+                                            <button className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-[var(--foreground)] active:scale-90 transition-transform pointer-events-auto" onClick={(e) => { e.stopPropagation(); }}>
                                                 <Heart className="w-7 h-7 text-white" />
                                             </button>
-                                            <button className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-[var(--foreground)] active:scale-90 transition-transform pointer-events-auto" onClick={(e) => { e.stopPropagation(); showToast("Paylaşım", "Paylaşım seçenekleri açılıyor...", "Share2"); }}>
+                                            <button className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-[var(--foreground)] active:scale-90 transition-transform pointer-events-auto" onClick={(e) => { e.stopPropagation(); }}>
                                                 <Share2 className="w-7 h-7 text-white" />
                                             </button>
                                         </div>
@@ -3743,8 +4078,8 @@ export default function MoffiSocialMasterpiece() {
                 setSelectedSharePost={setSelectedSharePost}
                 isNotificationsOpen={isNotificationsOpen}
                 setIsNotificationsOpen={setIsNotificationsOpen}
-                notificationsList={notificationsList}
-                setNotificationsList={setNotificationsList}
+                notificationsList={notifications}
+                setNotificationsList={() => {}}
                 isPetSettingsOpen={isPetSettingsOpen}
                 setIsPetSettingsOpen={setIsPetSettingsOpen}
                 settingsPet={settingsPet}

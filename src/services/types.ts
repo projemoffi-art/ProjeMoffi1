@@ -55,6 +55,11 @@ export interface Post {
     allow_comments?: boolean;
     comment_privacy?: 'everyone' | 'followers' | 'none';
     status?: string;
+    is_video?: boolean;
+    trim_start?: number;
+    trim_end?: number;
+    audio_url?: string;
+    media_url?: string;
 }
 
 export interface UserProfile {
@@ -77,6 +82,10 @@ export interface UserProfile {
     default_allow_comments?: boolean;
     default_comment_privacy?: 'everyone' | 'followers' | 'none';
     comment_filter_words?: string[];
+    phone?: string;
+    birth_date?: string;
+    gender?: string;
+    account_status?: string;
 }
 
 export interface LostPet {
@@ -256,7 +265,7 @@ export interface IApiService {
     addStory(story: any): Promise<any>;
     reactToPost(postId: string, reactionType: string): Promise<void>;
     getPostReactions(postId: string): Promise<any[]>;
-    addComment(postId: string, content: string): Promise<any>;
+    addComment(postId: string | number, content: string, parentCommentId?: string | number): Promise<any>;
     getPostComments(postId: string): Promise<any[]>;
     editComment(commentId: string | number, content: string): Promise<void>;
     deleteComment(commentId: string | number): Promise<void>;
@@ -276,7 +285,14 @@ export interface IApiService {
     markChatAsRead(conversationId: string): Promise<void>;
     
     // Media & Storage
-    uploadMedia(file: File, bucket: 'posts' | 'stories' | 'avatars'): Promise<string>;
+    uploadMedia(file: File, bucket: 'posts' | 'stories' | 'avatars', onProgress?: (percent: number) => void): Promise<string>;
+
+    // Search
+    globalSearch(query: string): Promise<{
+        profiles: UserProfile[];
+        posts: any[];
+        pets: Pet[];
+    }>;
 
     // Persistence
     saveData<T>(key: string, data: T): Promise<void>;

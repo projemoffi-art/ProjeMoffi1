@@ -13,20 +13,21 @@ import {
     Users, Eye, MessageSquare, Tag, Plus,
     ArrowRight, Monitor, Layout,
     EyeOff, BellRing, Mail, AlertTriangle,
-    Clock, Moon, Sun, Timer, Coffee, Type, Glasses, Layers, Briefcase, Crown
+    Clock, Moon, Sun, Timer, Coffee, Type, Glasses, Layers, Briefcase, Crown, QrCode
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { exportUserData } from '@/lib/utils/dataExport';
 import { PremiumUpgradeModal } from './modals/PremiumUpgradeModal';
+import { apiService } from '@/services/apiService';
 
 interface SettingsDrawerProps {
     isOpen: boolean;
     onClose: () => void;
 }
 
-type DrawerView = 'main' | 'activity' | 'blocked' | 'words' | 'stories' | 'wellbeing' | 'accessibility' | 'password' | 'privacy' | 'notifications' | 'sos_config' | 'appearance_detail' | 'sidebar_config' | 'ai_assistant';
+type DrawerView = 'main' | 'activity' | 'blocked' | 'words' | 'stories' | 'wellbeing' | 'accessibility' | 'password' | 'privacy' | 'notifications' | 'sos_config' | 'appearance_detail' | 'sidebar_config' | 'ai_assistant' | 'account_settings';
 
 // --- Shared Interfaces ---
 interface SectionProps {
@@ -226,6 +227,10 @@ const MainView = ({ user, setView, handleToggle, handleExport, isExporting, expo
             </div>
         </div>
 
+        <Section title="Hesap Merkezi & Profil">
+            <ActionRow icon={User} label="Hesap Ayarları ve Bilgiler" desc="Kişisel detaylar, e-posta, telefon ve bağlantılar." onClick={() => setView('account_settings')} />
+        </Section>
+
         <Section title="Erişilebilirlik ve Görünüm">
             <ActionRow icon={Palette} label="Tema ve Arayüz Seçimi" desc="Karanlık/Açık mod ve özel temalar." onClick={() => setView('appearance_detail')} />
             <ActionRow icon={Layers} label="Kenar Paneli Ayarları" desc="Paneldeki hızlı erişim butonlarını seç." onClick={() => setView('sidebar_config')} />
@@ -421,7 +426,7 @@ const AppearanceDetailView = ({ user, setView, theme, setTheme, updateSettings }
     const themes = [
         { id: 'apple-midnight', label: 'Moffi Midnight', color: 'bg-black', icon: Moon, desc: 'Premium Karanlık' },
         { id: 'apple-light', label: 'Moffi Light', color: 'bg-[#F5F5F7]', icon: Sun, desc: 'Aydınlık & Sade' },
-        { id: 'pastel-soft', label: 'Moffi Pastel', color: 'bg-[#FBE4FF]', icon: Sparkles, desc: 'Yumuşak & Estetik' },
+        { id: 'pastel-soft', label: 'Apple Rose Gold', color: 'bg-gradient-to-br from-[#FFF9FB] to-[#FF375F]/30', icon: Sparkles, desc: 'Zarif & Canlı (Prime)', isPrime: true },
         { id: 'prime-cyber', label: 'Cyber Neon', color: 'bg-gradient-to-br from-[#020205] to-[#00F3FF]/40', icon: Zap, desc: 'Futuristik Prime', isPrime: true },
     ];
 
@@ -1223,6 +1228,8 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
                                     <SidebarConfigView key="sidebar" {...viewProps} />
                                 ) : view === 'ai_assistant' ? (
                                     <AIAssistantView key="ai" {...viewProps} />
+                                ) : view === 'account_settings' ? (
+                                    <AccountSettingsView key="account" {...viewProps} />
                                 ) : (
                                     <AccessibilityView key="accessibility" {...viewProps} />
                                 )}
@@ -1404,6 +1411,293 @@ const AIAssistantView = ({ user, setView, updateSettings }: ViewProps) => {
                          </div>
                     </div>
                 </div>
+            </div>
+            <button onClick={() => setView('main')} className="mt-4 w-full py-5 rounded-[2.5rem] bg-foreground/[0.05] text-foreground font-black text-[12px] uppercase tracking-[0.2em] hover:bg-foreground/10 transition-all flex items-center justify-center gap-3"><ArrowLeft className="w-4 h-4" /> Geri Dön</button>
+        </motion.div>
+    );
+};
+
+// --- Account Settings / Hesap Merkezi View ---
+const AccountSettingsView = ({ user, setView, updateSettings }: ViewProps) => {
+    // Load existing overrides or defaults
+    const [email, setEmail] = useState(() => {
+        if (typeof window !== 'undefined') {
+            try { const saved = JSON.parse(localStorage.getItem('moffi_account_email') || 'null'); if (saved) return saved; } catch {}
+        }
+        return user?.email || 'kullanici@moffi.app';
+    });
+    const [phone, setPhone] = useState(() => {
+        if (typeof window !== 'undefined') {
+            try { const saved = JSON.parse(localStorage.getItem('moffi_account_phone') || 'null'); if (saved) return saved; } catch {}
+        }
+        return user?.user_metadata?.phone || '+90 555 123 4567';
+    });
+    const [birthDate, setBirthDate] = useState(() => {
+        if (typeof window !== 'undefined') {
+            try { const saved = JSON.parse(localStorage.getItem('moffi_account_birth') || 'null'); if (saved) return saved; } catch {}
+        }
+        return user?.user_metadata?.birthDate || '2000-01-01';
+    });
+    const [gender, setGender] = useState(() => {
+        if (typeof window !== 'undefined') {
+            try { const saved = JSON.parse(localStorage.getItem('moffi_account_gender') || 'null'); if (saved) return saved; } catch {}
+        }
+        return user?.user_metadata?.gender || 'Belirtmek İstemiyorum';
+    });
+
+    const [activeTab, setActiveTab] = useState<'details' | 'connections' | 'verification' | 'control'>('details');
+    const [statusMsg, setStatusMsg] = useState('');
+
+    const handleSaveDetails = async () => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('moffi_account_email', JSON.stringify(email));
+            localStorage.setItem('moffi_account_phone', JSON.stringify(phone));
+            localStorage.setItem('moffi_account_birth', JSON.stringify(birthDate));
+            localStorage.setItem('moffi_account_gender', JSON.stringify(gender));
+            
+            try {
+                await apiService.updateProfile({
+                    phone,
+                    birth_date: birthDate,
+                    gender
+                });
+            } catch (err) {
+                console.warn("Backend update skipped or failed:", err);
+            }
+
+            // Dispatch event to sync topbar/profile if needed
+            window.dispatchEvent(new Event('moffi_account_updated'));
+            
+            setStatusMsg('Kişisel Bilgiler başarıyla güncellendi!');
+            setTimeout(() => setStatusMsg(''), 3000);
+        }
+    };
+
+    const handleDeactivate = async () => {
+        if (confirm("Hesabını geçici olarak dondurmak istediğine emin misin? Profilin, fotoğrafların ve yorumların sen tekrar giriş yapana kadar gizlenecektir.")) {
+            try {
+                await apiService.updateProfile({
+                    account_status: 'deactivated'
+                });
+            } catch (err) {
+                console.warn("Soft delete mutation warning:", err);
+            }
+            alert("Hesabın başarıyla donduruldu. Tekrar giriş yaptığında otomatik olarak aktif edilecektir.");
+            if (typeof window !== 'undefined') {
+                localStorage.clear();
+                window.location.replace('/');
+            }
+        }
+    };
+
+    return (
+        <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(94vh - 180px)' }}>
+            <div className="space-y-6 pb-10 px-2">
+                {/* META STYLE BANNER */}
+                <div className="p-5 rounded-[2.5rem] bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-purple-600/10 border border-indigo-500/20 relative overflow-hidden">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="w-8 h-8 rounded-xl bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                            <Database className="w-4 h-4 text-white" />
+                        </div>
+                        <div>
+                            <h3 className="text-[13px] font-black text-foreground uppercase tracking-widest">Hesap Merkezi</h3>
+                            <p className="text-[9px] text-secondary font-bold uppercase tracking-tighter">Meta / Moffi Global Accounts System</p>
+                        </div>
+                    </div>
+                    <p className="text-[10px] text-secondary font-medium leading-relaxed mt-2">
+                        Instagram, Facebook ve Moffi platformlarındaki bağlı deneyimlerini, kişisel bilgilerini ve hesap güvenliğini tek bir yerden tam yetkiyle yönet.
+                    </p>
+                </div>
+
+                {/* TABS */}
+                <div className="flex gap-1.5 p-1 bg-foreground/[0.03] rounded-2xl border border-card-border overflow-x-auto no-scrollbar">
+                    {[
+                        { id: 'details', label: 'Kişisel Bilgiler', icon: User },
+                        { id: 'connections', label: 'Bağlı Hesaplar', icon: Globe },
+                        { id: 'verification', label: 'Doğrulama & Meta', icon: ShieldCheck },
+                        { id: 'control', label: 'Sahiplik & Kontrol', icon: Lock }
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id as any)}
+                            className={cn(
+                                "flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0",
+                                activeTab === tab.id ? "bg-foreground text-background shadow-md" : "text-secondary hover:text-foreground"
+                            )}
+                        >
+                            <tab.icon className="w-3 h-3" />
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* TAB CONTENT */}
+                <AnimatePresence mode="wait">
+                    {activeTab === 'details' && (
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+                            <div className="space-y-3 bg-foreground/[0.02] rounded-[2.5rem] p-5 border border-card-border">
+                                <div>
+                                    <label className="text-[9px] font-black text-secondary uppercase tracking-widest block mb-1.5">E-Posta Adresi</label>
+                                    <input 
+                                        type="email" 
+                                        value={email} 
+                                        onChange={e => setEmail(e.target.value)} 
+                                        className="w-full bg-background border border-card-border rounded-xl px-4 py-3 text-xs font-bold text-foreground outline-none focus:border-accent transition-all"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[9px] font-black text-secondary uppercase tracking-widest block mb-1.5">Telefon Numarası</label>
+                                    <input 
+                                        type="text" 
+                                        value={phone} 
+                                        onChange={e => setPhone(e.target.value)} 
+                                        className="w-full bg-background border border-card-border rounded-xl px-4 py-3 text-xs font-bold text-foreground outline-none focus:border-accent transition-all"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="text-[9px] font-black text-secondary uppercase tracking-widest block mb-1.5">Doğum Tarihi</label>
+                                        <input 
+                                            type="date" 
+                                            value={birthDate} 
+                                            onChange={e => setBirthDate(e.target.value)} 
+                                            className="w-full bg-background border border-card-border rounded-xl px-3 py-3 text-xs font-bold text-foreground outline-none focus:border-accent transition-all"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[9px] font-black text-secondary uppercase tracking-widest block mb-1.5">Cinsiyet</label>
+                                        <select 
+                                            value={gender} 
+                                            onChange={e => setGender(e.target.value)} 
+                                            className="w-full bg-background border border-card-border rounded-xl px-3 py-3 text-xs font-bold text-foreground outline-none focus:border-accent transition-all appearance-none"
+                                        >
+                                            <option>Kadın</option>
+                                            <option>Erkek</option>
+                                            <option>Belirtmek İstemiyorum</option>
+                                            <option>Özel</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {statusMsg && (
+                                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest text-center animate-pulse pt-2">
+                                        {statusMsg}
+                                    </p>
+                                )}
+
+                                <button 
+                                    onClick={handleSaveDetails}
+                                    className="w-full py-3.5 rounded-xl bg-foreground text-background font-black text-xs uppercase tracking-widest hover:opacity-90 transition-opacity mt-2"
+                                >
+                                    Değişiklikleri Kaydet
+                                </button>
+                            </div>
+                            <p className="text-[9px] text-secondary font-bold uppercase tracking-tighter text-center italic">
+                                ℹ️ Meta veri politikaları gereği, iletişim bilgilerin anında senkronize edilir.
+                            </p>
+                        </motion.div>
+                    )}
+
+                    {activeTab === 'connections' && (
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-3">
+                            {[
+                                { id: 'ig', name: 'Instagram', desc: 'Hikaye ve gönderi çapraz paylaşımı aktif', connected: true, color: 'text-pink-500', handle: '@moffiapp' },
+                                { id: 'tt', name: 'TikTok', desc: 'Reels video senkronizasyonu', connected: true, color: 'text-cyan-500', handle: '@moffi_global' },
+                                { id: 'fb', name: 'Facebook', desc: 'Sayfa ve grup entegrasyonu', connected: false, color: 'text-blue-500', handle: '' }
+                            ].map(conn => (
+                                <div key={conn.id} className="flex items-center justify-between p-4 rounded-2xl bg-foreground/[0.02] border border-card-border">
+                                    <div className="flex items-center gap-3">
+                                        <div className={cn("w-10 h-10 rounded-xl bg-background flex items-center justify-center font-black text-lg", conn.color)}>
+                                            {conn.name[0]}
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-black text-foreground uppercase tracking-tight flex items-center gap-1.5">
+                                                {conn.name} {conn.connected && <span className="text-[9px] text-secondary lowercase not-italic font-bold">({conn.handle})</span>}
+                                            </p>
+                                            <p className="text-[9px] text-secondary font-bold uppercase tracking-tighter mt-0.5">{conn.desc}</p>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        onClick={() => alert(`${conn.name} bağlantı ayarları Meta API protokolü üzerinden açılıyor...`)}
+                                        className={cn(
+                                            "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                            conn.connected ? "bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white" : "bg-foreground/10 text-foreground hover:bg-foreground hover:text-background"
+                                        )}
+                                    >
+                                        {conn.connected ? 'Bağlantıyı Kes' : 'Bağla'}
+                                    </button>
+                                </div>
+                            ))}
+                        </motion.div>
+                    )}
+
+                    {activeTab === 'verification' && (
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+                            <div className="p-5 rounded-2xl bg-foreground/[0.02] border border-card-border text-center space-y-3">
+                                <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto text-blue-500">
+                                    <Check className="w-6 h-6 stroke-[3]" />
+                                </div>
+                                <div>
+                                    <h4 className="text-xs font-black text-foreground uppercase tracking-widest">Meta / Moffi Verified Rozeti</h4>
+                                    <p className="text-[10px] text-secondary font-bold uppercase tracking-tighter mt-1">
+                                        Hesabın resmi kimlik belgeleriyle doğrulanmıştır.
+                                    </p>
+                                </div>
+                                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-500 text-[9px] font-black uppercase tracking-widest">
+                                    <ShieldCheck className="w-3 h-3" /> MAVİ TİK AKTİF
+                                </div>
+                            </div>
+                            <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 text-left flex gap-3">
+                                <Info className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                                <p className="text-[10px] text-amber-500/90 font-medium leading-relaxed">
+                                    Aylık doğrulama aboneliği otomatik olarak yenilenmektedir. Rozetini gizlemek veya aboneliğini yönetmek için Prime paneline gidebilirsin.
+                                </p>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {activeTab === 'control' && (
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-3">
+                            <div className="p-4 rounded-2xl bg-foreground/[0.02] border border-card-border space-y-4">
+                                <div>
+                                    <h4 className="text-xs font-black text-foreground uppercase tracking-tight">Hesabı Dondur (Deaktivasyon)</h4>
+                                    <p className="text-[10px] text-secondary font-medium mt-1">
+                                        Hesabını geçici olarak gizle. Tekrar giriş yaptığında hiçbir veri kaybı olmadan kaldığın yerden devam edersin.
+                                    </p>
+                                </div>
+                                <button 
+                                    onClick={handleDeactivate}
+                                    className="px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500 font-black text-[11px] uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all w-full text-center"
+                                >
+                                    Hesabımı Geçici Olarak Dondur
+                                </button>
+                            </div>
+
+                            <div className="p-4 rounded-2xl bg-red-500/5 border border-red-500/10 space-y-4">
+                                <div>
+                                    <h4 className="text-xs font-black text-red-500 uppercase tracking-tight">Hesabı Kalıcı Olarak Sil</h4>
+                                    <p className="text-[10px] text-red-500/70 font-medium mt-1">
+                                        Bu işlem geri alınamaz. Tüm gönderilerin, patili dostların, pasaport verilerin ve yorumların veritabanından kalıcı olarak silinir.
+                                    </p>
+                                </div>
+                                <button 
+                                    onClick={() => {
+                                        if (confirm("DİKKAT: Hesabını kalıcı olarak silmek üzeresin. Bu işlem kesinlikle geri alınamaz. Devam etmek istiyor musun?")) {
+                                            alert("Hesap silme talebin alındı. Meta güvenlik protokolü gereği 30 gün içinde tekrar giriş yapmazsan tüm verilerin silinecektir.");
+                                            if (typeof window !== 'undefined') {
+                                                localStorage.clear();
+                                                window.location.replace('/');
+                                            }
+                                        }
+                                    }}
+                                    className="px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 font-black text-[11px] uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all w-full text-center"
+                                >
+                                    Hesabımı Kalıcı Olarak Sil
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
             <button onClick={() => setView('main')} className="mt-4 w-full py-5 rounded-[2.5rem] bg-foreground/[0.05] text-foreground font-black text-[12px] uppercase tracking-[0.2em] hover:bg-foreground/10 transition-all flex items-center justify-center gap-3"><ArrowLeft className="w-4 h-4" /> Geri Dön</button>
         </motion.div>

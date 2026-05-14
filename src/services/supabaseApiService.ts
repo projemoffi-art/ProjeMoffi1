@@ -10,6 +10,8 @@ export class SupabaseApiService implements IApiService {
     // Session is managed internally by Supabase client very efficiently.
     // Custom aggressive caching causes cross-account validation bugs.
     
+    private pendingActionLocks = new Set<string>();
+
     invalidateCache() {
         // No-op for backwards compatibility
     }
@@ -70,6 +72,10 @@ export class SupabaseApiService implements IApiService {
             default_allow_comments: data.default_allow_comments ?? true,
             default_comment_privacy: data.default_comment_privacy || 'everyone',
             comment_filter_words: data.comment_filter_words || [],
+            phone: data.phone,
+            birth_date: data.birth_date,
+            gender: data.gender,
+            account_status: data.account_status || 'active',
             stats: {
                 walks: 0,
                 pets: 1,
@@ -84,18 +90,25 @@ export class SupabaseApiService implements IApiService {
 
         const upsertPayload: any = {
             id: user.id, // Required for upsert
-            full_name: updates.name || updates.username,
-            username: updates.username,
-            avatar_url: updates.avatar,
-            pet_name: updates.petName,
-            bio: updates.bio,
-            subscription_status: (updates as any).subscription_status,
             updated_at: new Date().toISOString()
         };
+
+        if (updates.name !== undefined || updates.username !== undefined) {
+            upsertPayload.full_name = updates.name || updates.username;
+        }
+        if (updates.username !== undefined) upsertPayload.username = updates.username;
+        if (updates.avatar !== undefined) upsertPayload.avatar_url = updates.avatar;
+        if (updates.petName !== undefined) upsertPayload.pet_name = updates.petName;
+        if (updates.bio !== undefined) upsertPayload.bio = updates.bio;
+        if ((updates as any).subscription_status !== undefined) upsertPayload.subscription_status = (updates as any).subscription_status;
 
         if (updates.default_allow_comments !== undefined) upsertPayload.default_allow_comments = updates.default_allow_comments;
         if (updates.default_comment_privacy !== undefined) upsertPayload.default_comment_privacy = updates.default_comment_privacy;
         if (updates.comment_filter_words !== undefined) upsertPayload.comment_filter_words = updates.comment_filter_words;
+        if (updates.phone !== undefined) upsertPayload.phone = updates.phone;
+        if (updates.birth_date !== undefined) upsertPayload.birth_date = updates.birth_date;
+        if (updates.gender !== undefined) upsertPayload.gender = updates.gender;
+        if (updates.account_status !== undefined) upsertPayload.account_status = updates.account_status;
 
         const { data, error } = await supabase
             .from('profiles')
@@ -115,7 +128,11 @@ export class SupabaseApiService implements IApiService {
             bio: data.bio,
             default_allow_comments: data.default_allow_comments ?? true,
             default_comment_privacy: data.default_comment_privacy || 'everyone',
-            comment_filter_words: data.comment_filter_words || []
+            comment_filter_words: data.comment_filter_words || [],
+            phone: data.phone,
+            birth_date: data.birth_date,
+            gender: data.gender,
+            account_status: data.account_status || 'active'
         } as UserProfile;
     }
 
@@ -143,8 +160,15 @@ export class SupabaseApiService implements IApiService {
         const validData = data || [];
 
         const user = await this.getSessionUser();
+        const currentUserIdOrName = user?.id || user?.user_metadata?.full_name || user?.user_metadata?.username || 'local-user';
+
+        let globalPostLikesCache: Record<string, any> = {};
+        if (typeof window !== 'undefined') {
+            try {
+                globalPostLikesCache = JSON.parse(localStorage.getItem('moffi_global_post_likes') || '{}');
+            } catch {}
+        }
         
-        // Fetch user's likes to determine isLiked status
         let userLikes: any[] = [];
         if (user) {
             const { data: likes } = await supabase
@@ -154,29 +178,32 @@ export class SupabaseApiService implements IApiService {
             userLikes = likes || [];
         }
 
-        const likedPostIds = new Set(userLikes.map(l => l.post_id));
+        const likedPostIds = new Set(userLikes.map(l => String(l.post_id)));
 
-        // Eğer veritabanında gerçekten hiç gönderi yoksa arayüzü zengin simülasyonla doldur
         if (error || validData.length === 0) {
             if (error) console.error('Error fetching live posts:', error);
-            return MOCK_POSTS.map(p => ({
-                id: p.id,
-                user_id: p.user_id,
-                author: p.author_name || 'Moffi Kullanıcısı',
-                avatar: p.author_avatar || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300',
-                image: p.media_url,
-                desc: p.caption,
-                likes: p.likes_count || 0,
-                comments: p.comments_count || 0,
-                time: '2 saat önce',
-                isLiked: p.is_liked || false,
-                isSaved: false,
-                category: p.category || 'all',
-                allow_comments: true
-            }));
+            return MOCK_POSTS.map(p => {
+                const isLiked = likedPostIds.has(String(p.id));
+                const likesCount = p.likes_count || 0;
+
+                return {
+                    id: p.id,
+                    user_id: p.user_id,
+                    author: p.author_name || 'Moffi Kullanıcısı',
+                    avatar: p.author_avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300",
+                    image: p.media_url,
+                    desc: p.caption,
+                    likes: likesCount,
+                    comments: p.comments_count || 0,
+                    time: '2 saat önce',
+                    isLiked: isLiked,
+                    isSaved: false,
+                    category: p.category || 'all',
+                    allow_comments: true
+                };
+            });
         }
 
-        // Gönderi sahiplerinin profillerini toplu halde (bulk) çekelim
         const userIds = Array.from(new Set(validData.map(p => p.user_id).filter(Boolean)));
         let profileMap: Record<string, any> = {};
         if (userIds.length > 0) {
@@ -190,7 +217,6 @@ export class SupabaseApiService implements IApiService {
             });
         }
 
-        // Yorum ve beğeni sayılarını sayalım
         const postIds = validData.map(p => p.id);
         const [likesRes, commentsRes] = await Promise.all([
             supabase.from('likes').select('post_id').in('post_id', postIds),
@@ -201,33 +227,43 @@ export class SupabaseApiService implements IApiService {
         const commentCountMap: Record<string, number> = {};
 
         (likesRes.data || []).forEach((l: any) => {
-            likeCountMap[l.post_id] = (likeCountMap[l.post_id] || 0) + 1;
+            likeCountMap[String(l.post_id)] = (likeCountMap[String(l.post_id)] || 0) + 1;
         });
         (commentsRes.data || []).forEach((c: any) => {
-            commentCountMap[c.post_id] = (commentCountMap[c.post_id] || 0) + 1;
+            commentCountMap[String(c.post_id)] = (commentCountMap[String(c.post_id)] || 0) + 1;
         });
 
         return validData.map(item => {
             const authorProfile = profileMap[item.user_id];
+
+            const isLiked = likedPostIds.has(String(item.id));
+            const likesCount = Math.max(item.likes_count || 0, likeCountMap[String(item.id)] || 0);
+
             return {
                 id: item.id,
                 user_id: item.user_id,
                 author: authorProfile?.full_name || authorProfile?.username || 'Moffi Kullanıcısı',
                 avatar: authorProfile?.avatar_url || 'https://i.pravatar.cc/150?u=' + item.user_id,
                 image: item.media_url,
+                media: item.media_url,
+                media_url: item.media_url,
                 desc: item.content,
-                likes: item.likes_count || likeCountMap[item.id] || 0,
-                comments: item.comments_count || commentCountMap[item.id] || 0,
+                likes: likesCount,
+                comments: item.comments_count || commentCountMap[String(item.id)] || 0,
                 time: this.formatTimeAgo(item.created_at),
-                isLiked: likedPostIds.has(item.id),
+                isLiked: isLiked,
                 isSaved: false,
                 mood: item.mood,
                 audio_url: item.audio_url,
                 aura_settings: authorProfile?.aura_settings,
                 allow_comments: item.allow_comments ?? true,
-                comment_privacy: item.comment_privacy || 'everyone'
+                comment_privacy: item.comment_privacy || 'everyone',
+                trim_start: item.trim_start,
+                trim_end: item.trim_end,
+                is_video: item.is_video,
+                account_status: authorProfile?.account_status || 'active'
             };
-        });
+        }).filter(item => item.account_status !== 'deactivated');
     }
 
     // --- KULLANICININ KENDİ GÖNDERİLERİ (Profil Grid) ---
@@ -278,6 +314,9 @@ export class SupabaseApiService implements IApiService {
             isSaved: false,
             mood: p.mood,
             audio_url: p.audio_url,
+            trim_start: p.trim_start,
+            trim_end: p.trim_end,
+            is_video: p.is_video,
             type: (p.media_url?.includes('.mp4') || p.media_url?.includes('.mov') || p.media_url?.includes('.webm'))
                 ? 'video' : 'image'
         }));
@@ -301,7 +340,10 @@ export class SupabaseApiService implements IApiService {
             media_url: post.media || post.image || null,
             audio_url: post.audio_url || post.audioUrl || null,
             allow_comments: post.allow_comments !== undefined ? post.allow_comments : (profile?.default_allow_comments ?? true),
-            comment_privacy: post.comment_privacy || profile?.default_comment_privacy || 'everyone'
+            comment_privacy: post.comment_privacy || profile?.default_comment_privacy || 'everyone',
+            trim_start: post.trim_start,
+            trim_end: post.trim_end,
+            is_video: post.is_video
         };
 
         const { data, error } = await supabase
@@ -331,112 +373,327 @@ export class SupabaseApiService implements IApiService {
             isLiked: false,
             isSaved: false,
             allow_comments: data.allow_comments ?? true,
-            comment_privacy: data.comment_privacy || 'everyone'
+            comment_privacy: data.comment_privacy || 'everyone',
+            trim_start: data.trim_start,
+            trim_end: data.trim_end,
+            is_video: data.is_video
         };
     }
 
 
     async reactToPost(postId: string | number, reaction: string): Promise<void> {
-        const user = await this.getSessionUser();
-        if (!user) return;
+        const lockKey = `like-post-${postId}`;
+        if (this.pendingActionLocks.has(lockKey)) return;
+        this.pendingActionLocks.add(lockKey);
 
-        const { data: existing } = await supabase
-            .from('likes')
-            .select('*')
-            .eq('post_id', postId)
-            .eq('user_id', user.id)
-            .maybeSingle();
+        try {
+            const user = await this.getSessionUser();
+            const currentUserIdOrName = user?.id || user?.user_metadata?.full_name || user?.user_metadata?.username || 'local-user';
 
-        if (existing) {
-            await supabase.from('likes').delete().eq('id', existing.id);
-        } else {
-            await supabase.from('likes').insert({ post_id: postId, user_id: user.id });
+            if (user) {
+                try {
+                    const { data: existings, error: selectError } = await supabase
+                        .from('likes')
+                        .select('id')
+                        .eq('post_id', postId)
+                        .eq('user_id', user.id);
+
+                    if (selectError) {
+                        console.error("Supabase likes select error:", selectError);
+                        // RLS or schema issue prevents reading. We cannot safely toggle.
+                        return;
+                    }
+
+                    if (existings && existings.length > 0) {
+                        const { error: deleteError } = await supabase.from('likes').delete().eq('post_id', postId).eq('user_id', user.id);
+                        if (!deleteError) {
+                            const { data: pData } = await supabase.from('posts').select('likes_count').eq('id', postId).maybeSingle();
+                            if (pData) {
+                                await supabase.from('posts').update({ likes_count: Math.max(0, (pData.likes_count || 0) - existings.length) }).eq('id', postId);
+                            }
+                        }
+                    } else {
+                        const { error: insertError } = await supabase.from('likes').insert({ post_id: postId, user_id: user.id });
+                        if (!insertError) {
+                            const { data: pData } = await supabase.from('posts').select('likes_count').eq('id', postId).maybeSingle();
+                            if (pData) {
+                                await supabase.from('posts').update({ likes_count: (pData.likes_count || 0) + 1 }).eq('id', postId);
+                            }
+                        } else {
+                            console.error("Supabase likes insert error:", insertError);
+                        }
+                    }
+                } catch (err) {
+                    console.warn("Supabase live like interaction skipped for offline/mock ID:", err);
+                }
+            }
+
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new Event('moffi_posts_changed'));
+            }
+        } finally {
+            setTimeout(() => this.pendingActionLocks.delete(lockKey), 1000);
         }
     }
 
-    async addComment(postId: string | number, text: string): Promise<void> {
-        const user = await this.getSessionUser();
-        if (!user) return;
+    async addComment(postId: string | number, text: string, parentCommentId?: string | number): Promise<void> {
+        const lockKey = `comment-post-${postId}-${text}`;
+        if (this.pendingActionLocks.has(lockKey)) return;
+        this.pendingActionLocks.add(lockKey);
 
-        await supabase.from('comments').insert({
-            post_id: postId,
-            user_id: user.id,
-            content: text
-        });
+        try {
+            const user = await this.getSessionUser();
+            
+            if (user) {
+                try {
+                    await supabase.from('comments').insert({
+                        post_id: postId,
+                        user_id: user.id,
+                        content: text
+                    });
+                } catch (err) {
+                    console.warn("Supabase comment insert failed, using fallback persistent cache:", err);
+                }
+            }
+
+            if (typeof window !== 'undefined') {
+                const cacheKey = `moffi_local_comments_${postId}`;
+                const cached = JSON.parse(localStorage.getItem(cacheKey) || '[]');
+                const newComment = {
+                    id: `loc-${Date.now()}`,
+                    post_id: postId,
+                    user: user?.user_metadata?.full_name || user?.user_metadata?.username || 'Sen (Canlı)',
+                    avatar: user?.user_metadata?.avatar_url || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300",
+                    text: text,
+                    time: 'Şimdi',
+                    user_id: user?.id || 'local-user',
+                    likes: 0,
+                    status: 'approved',
+                    isLiked: false,
+                    parent_id: parentCommentId
+                };
+                localStorage.setItem(cacheKey, JSON.stringify([...cached, newComment]));
+                window.dispatchEvent(new Event('moffi_comments_changed'));
+            }
+        } finally {
+            setTimeout(() => this.pendingActionLocks.delete(lockKey), 2000);
+        }
     }
 
     async getPostComments(postId: string | number): Promise<any[]> {
         const user = await this.getSessionUser();
         
-        const { data, error } = await supabase
-            .from('comments')
-            .select(`
-                *,
-                profiles:user_id (full_name, avatar_url, username)
-            `)
-            .eq('post_id', postId)
-            .order('created_at', { ascending: true });
+        let dbComments: any[] = [];
+        try {
+            const { data, error } = await supabase
+                .from('comments')
+                .select(`
+                    *,
+                    profiles:user_id (full_name, avatar_url, username)
+                `)
+                .eq('post_id', postId)
+                .order('created_at', { ascending: true });
 
-        if (error) return [];
+            if (!error && data) {
+                const likedCommentIds = new Set<string>();
+                if (user && data.length > 0) {
+                    const commentIds = data.map(c => c.id);
+                    const { data: likesData } = await supabase
+                        .from('comment_likes')
+                        .select('comment_id')
+                        .in('comment_id', commentIds)
+                        .eq('user_id', user.id);
+                        
+                    if (likesData) {
+                        likesData.forEach(l => likedCommentIds.add(l.comment_id));
+                    }
+                }
 
-        const likedCommentIds = new Set<string>();
-        if (user && data && data.length > 0) {
-            const commentIds = data.map(c => c.id);
-            const { data: likesData } = await supabase
-                .from('comment_likes')
-                .select('comment_id')
-                .in('comment_id', commentIds)
-                .eq('user_id', user.id);
-                
-            if (likesData) {
-                likesData.forEach(l => likedCommentIds.add(l.comment_id));
+                dbComments = data.map(c => ({
+                    id: c.id,
+                    user: (c.profiles as any)?.full_name || (c.profiles as any)?.username || 'Moffi Kullanıcısı',
+                    avatar: (c.profiles as any)?.avatar_url || '',
+                    text: c.content,
+                    time: this.formatTimeAgo(c.created_at),
+                    user_id: c.user_id,
+                    likes: c.likes_count || 0,
+                    status: c.status || 'approved',
+                    isLiked: likedCommentIds.has(c.id),
+                    parent_id: null
+                }));
+            }
+        } catch (err) {
+            console.warn("Supabase fetch comments error:", err);
+        }
+
+        let localComments: any[] = [];
+        if (typeof window !== 'undefined') {
+            const cacheKey = `moffi_local_comments_${postId}`;
+            localComments = JSON.parse(localStorage.getItem(cacheKey) || '[]');
+        }
+
+        const combinedMap = new Map<string | number, any>();
+        
+        dbComments.forEach(c => combinedMap.set(String(c.id), { ...c, replies: [] }));
+        
+        localComments.forEach(c => {
+            if (!combinedMap.has(String(c.id))) {
+                combinedMap.set(String(c.id), { ...c, replies: [] });
+            }
+        });
+
+        const allComments = Array.from(combinedMap.values());
+
+        if (allComments.length === 0) {
+            const initialMock = {
+                id: `init-${postId}`,
+                user: 'Milo & Luna',
+                avatar: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=400',
+                text: 'Harika bir paylaşım! 🐾 İlk yorumu biz bırakalım.',
+                time: '2 saat önce',
+                user_id: 'user-milo',
+                likes: 5,
+                status: 'approved',
+                isLiked: false,
+                replies: []
+            };
+            allComments.push(initialMock);
+            if (typeof window !== 'undefined') {
+                localStorage.setItem(`moffi_local_comments_${postId}`, JSON.stringify([initialMock]));
             }
         }
 
-        return data.map(c => ({
-            id: c.id,
-            user: (c.profiles as any)?.full_name || (c.profiles as any)?.username || 'Moffi Kullanıcısı',
-            avatar: (c.profiles as any)?.avatar_url || '',
-            text: c.content,
-            time: this.formatTimeAgo(c.created_at),
-            user_id: c.user_id,
-            likes: c.likes_count || 0,
-            status: c.status || 'approved',
-            isLiked: likedCommentIds.has(c.id)
+        const finalComments = allComments.map(c => ({
+            ...c,
+            replies: []
         }));
+
+        const treeMap = new Map<string, any>();
+        finalComments.forEach(c => treeMap.set(String(c.id), c));
+
+        const topLevel: any[] = [];
+        finalComments.forEach(c => {
+            const node = treeMap.get(String(c.id));
+            if (c.parent_id && treeMap.has(String(c.parent_id))) {
+                treeMap.get(String(c.parent_id)).replies.push(node);
+            } else {
+                topLevel.push(node);
+            }
+        });
+
+        return topLevel;
     }
 
     async editComment(commentId: string | number, content: string): Promise<void> {
-        await supabase.from('comments').update({ content }).eq('id', commentId);
+        try {
+            await supabase.from('comments').update({ content }).eq('id', commentId);
+        } catch {}
+
+        if (typeof window !== 'undefined') {
+            try {
+                const overrides = JSON.parse(localStorage.getItem('moffi_global_comment_state') || '{}');
+                const cidStr = String(commentId);
+                overrides[cidStr] = { ...(overrides[cidStr] || {}), text: content };
+                localStorage.setItem('moffi_global_comment_state', JSON.stringify(overrides));
+                window.dispatchEvent(new Event('moffi_comments_changed'));
+            } catch {}
+
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key?.startsWith('moffi_local_comments_')) {
+                    try {
+                        const items = JSON.parse(localStorage.getItem(key) || '[]');
+                        let modified = false;
+                        const nextItems = items.map((c: any) => {
+                            if (String(c.id) === String(commentId)) {
+                                modified = true;
+                                return { ...c, text: content };
+                            }
+                            return c;
+                        });
+                        if (modified) {
+                            localStorage.setItem(key, JSON.stringify(nextItems));
+                            break;
+                        }
+                    } catch {}
+                }
+            }
+        }
     }
 
     async deleteComment(commentId: string | number): Promise<void> {
-        await supabase.from('comments').delete().eq('id', commentId);
+        try {
+            await supabase.from('comments').delete().eq('id', commentId);
+        } catch {}
+
+        if (typeof window !== 'undefined') {
+            try {
+                const overrides = JSON.parse(localStorage.getItem('moffi_global_comment_state') || '{}');
+                const cidStr = String(commentId);
+                overrides[cidStr] = { ...(overrides[cidStr] || {}), isDeleted: true };
+                localStorage.setItem('moffi_global_comment_state', JSON.stringify(overrides));
+                window.dispatchEvent(new Event('moffi_comments_changed'));
+            } catch {}
+
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key?.startsWith('moffi_local_comments_')) {
+                    try {
+                        const items = JSON.parse(localStorage.getItem(key) || '[]');
+                        const filtered = items.filter((c: any) => String(c.id) !== String(commentId) && String(c.parent_id) !== String(commentId));
+                        if (filtered.length !== items.length) {
+                            localStorage.setItem(key, JSON.stringify(filtered));
+                            break;
+                        }
+                    } catch {}
+                }
+            }
+        }
     }
 
     async toggleCommentLike(commentId: string | number): Promise<void> {
-        const user = await this.getSessionUser();
-        if (!user) return;
-        
-        const { data: existing } = await supabase
-            .from('comment_likes')
-            .select('*')
-            .eq('comment_id', commentId)
-            .eq('user_id', user.id)
-            .maybeSingle();
+        const lockKey = `like-comment-${commentId}`;
+        if (this.pendingActionLocks.has(lockKey)) return;
+        this.pendingActionLocks.add(lockKey);
 
-        if (existing) {
-            await supabase.from('comment_likes').delete().eq('id', existing.id);
-            // Fallback optimistic decrement
-            const { data } = await supabase.from('comments').select('likes_count').eq('id', commentId).maybeSingle();
-            const currentCount = data?.likes_count || 0;
-            await supabase.from('comments').update({ likes_count: Math.max(0, currentCount - 1) }).eq('id', commentId);
-        } else {
-            await supabase.from('comment_likes').insert({ comment_id: commentId, user_id: user.id });
-            // Fallback optimistic increment
-            const { data } = await supabase.from('comments').select('likes_count').eq('id', commentId).maybeSingle();
-            const currentCount = data?.likes_count || 0;
-            await supabase.from('comments').update({ likes_count: currentCount + 1 }).eq('id', commentId);
+        try {
+            const user = await this.getSessionUser();
+            if (user) {
+                try {
+                    const { data: existings, error: selectError } = await supabase
+                        .from('comment_likes')
+                        .select('id')
+                        .eq('comment_id', commentId)
+                        .eq('user_id', user.id);
+
+                    if (selectError) {
+                        console.error("Supabase comment_likes select error:", selectError);
+                        return;
+                    }
+
+                    if (existings && existings.length > 0) {
+                        const { error: deleteError } = await supabase.from('comment_likes').delete().eq('comment_id', commentId).eq('user_id', user.id);
+                        if (!deleteError) {
+                            const { data } = await supabase.from('comments').select('likes_count').eq('id', commentId).maybeSingle();
+                            await supabase.from('comments').update({ likes_count: Math.max(0, (data?.likes_count || 0) - existings.length) }).eq('id', commentId);
+                        }
+                    } else {
+                        const { error: insertError } = await supabase.from('comment_likes').insert({ comment_id: commentId, user_id: user.id });
+                        if (!insertError) {
+                            const { data } = await supabase.from('comments').select('likes_count').eq('id', commentId).maybeSingle();
+                            await supabase.from('comments').update({ likes_count: (data?.likes_count || 0) + 1 }).eq('id', commentId);
+                        } else {
+                            console.error("Supabase comment_likes insert error:", insertError);
+                        }
+                    }
+                } catch {}
+            }
+
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new Event('moffi_comments_changed'));
+            }
+        } finally {
+            setTimeout(() => this.pendingActionLocks.delete(lockKey), 1000);
         }
     }
 
@@ -708,19 +965,108 @@ export class SupabaseApiService implements IApiService {
         return data || [];
     };
 
+    getNotifications = async () => {
+        const user = await this.getSessionUser();
+        if (!user) return [];
+        
+        // Fetch notifications
+        const { data: notifs } = await supabase
+            .from('notifications')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(50);
+            
+        if (!notifs || notifs.length === 0) return [];
+
+        // Extract unique actor IDs
+        const actorIds = [...new Set(notifs.map(n => n.actor_id).filter(Boolean))];
+        
+        // Fetch profiles for those actors
+        let profilesMap: Record<string, any> = {};
+        if (actorIds.length > 0) {
+            const { data: profiles } = await supabase
+                .from('profiles')
+                .select('id, full_name, username, avatar_url')
+                .in('id', actorIds);
+                
+            if (profiles) {
+                profiles.forEach(p => {
+                    profilesMap[p.id] = p;
+                });
+            }
+        }
+            
+        return notifs.map((n: any) => {
+            const actor = profilesMap[n.actor_id] || null;
+            const fallbackUser = n.title ? n.title.split(' ')[0] : 'Biri';
+            const userName = actor?.full_name || actor?.username || fallbackUser;
+            
+            let displayUser = userName;
+            let displayText = n.content || n.title || 'Sizinle etkileşime geçti.';
+            
+            // If n.title was used for fallbackUser, it likely already contains the name.
+            // NotificationsDrawer handles cleaning the name from the text.
+            
+            return {
+                id: n.id,
+                user: displayUser,
+                avatar: actor?.avatar_url || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300",
+                text: displayText,
+                time: this.formatTimeAgo(n.created_at),
+                read: n.is_read || n.read,
+                type: n.type
+            };
+        });
+    };
+
     addInboxMessage = async (m: any) => {
         await supabase.from('messages').insert(m);
     };
+
     async deletePost(postId: string): Promise<void> {
         const user = await this.getSessionUser();
-        if (!user) throw new Error('Giriş gerekli');
-        await supabase.from('posts').delete().eq('id', postId).eq('user_id', user.id);
+        if (user) {
+            try {
+                await supabase.from('posts').delete().eq('id', postId).eq('user_id', user.id);
+            } catch {}
+        }
+
+        if (typeof window !== 'undefined') {
+            try {
+                const cache = JSON.parse(localStorage.getItem('moffi_global_post_likes') || '{}');
+                const pIdStr = String(postId);
+                const current = cache[pIdStr] || {};
+                cache[pIdStr] = { ...current, isDeleted: true };
+                localStorage.setItem('moffi_global_post_likes', JSON.stringify(cache));
+                window.dispatchEvent(new Event('moffi_posts_changed'));
+            } catch {}
+        }
     }
 
     async updatePost(postId: string, updates: any): Promise<void> {
         const user = await this.getSessionUser();
-        if (!user) throw new Error('Giriş gerekli');
-        await supabase.from('posts').update(updates).eq('id', postId).eq('user_id', user.id);
+        if (user) {
+            try {
+                await supabase.from('posts').update(updates).eq('id', postId).eq('user_id', user.id);
+            } catch {}
+        }
+
+        if (typeof window !== 'undefined') {
+            try {
+                const cache = JSON.parse(localStorage.getItem('moffi_global_post_likes') || '{}');
+                const pIdStr = String(postId);
+                const current = cache[pIdStr] || {};
+                cache[pIdStr] = {
+                    ...current,
+                    ...(updates.desc !== undefined && { desc: updates.desc }),
+                    ...(updates.caption !== undefined && { desc: updates.caption }),
+                    ...(updates.mood !== undefined && { mood: updates.mood })
+                };
+                localStorage.setItem('moffi_global_post_likes', JSON.stringify(cache));
+                window.dispatchEvent(new Event('moffi_posts_changed'));
+            } catch {}
+        }
     }
     // --- MARKETPLACE & COMMERCE ---
     async getProducts(category?: ShopCategory): Promise<ShopProduct[]> {
@@ -1762,24 +2108,76 @@ export class SupabaseApiService implements IApiService {
             .neq('sender_id', user.id);
     }
 
-    async uploadMedia(file: File, bucket: string = 'moffi-media'): Promise<string> {
+    async uploadMedia(file: File, bucket: 'posts' | 'stories' | 'avatars' = 'posts', onProgress?: (percent: number) => void): Promise<string> {
         const user = await this.getSessionUser();
         if (!user) throw new Error('Giriş gerekli');
 
         const ext = file.name.split('.').pop();
         const path = `${user.id}/${Date.now()}.${ext}`;
 
-        const { data, error } = await supabase.storage
-            .from(bucket)
-            .upload(path, file, { cacheControl: '3600', upsert: false });
+        // Simulated Progress since standard Supabase upload is a single fetch
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            progress += Math.random() * 15;
+            if (progress > 92) {
+                clearInterval(progressInterval);
+            } else if (onProgress) {
+                onProgress(Math.floor(progress));
+            }
+        }, 200);
 
-        if (error) throw error;
+        try {
+            const { data, error } = await supabase.storage
+                .from(bucket)
+                .upload(path, file, { cacheControl: '3600', upsert: false });
 
-        const { data: urlData } = supabase.storage
-            .from(bucket)
-            .getPublicUrl(data.path);
+            clearInterval(progressInterval);
+            if (onProgress) onProgress(100);
 
-        return urlData.publicUrl;
+            if (error) throw error;
+
+            const { data: urlData } = supabase.storage
+                .from(bucket)
+                .getPublicUrl(data.path);
+
+            return urlData.publicUrl;
+        } catch (err) {
+            clearInterval(progressInterval);
+            throw err;
+        }
+    }
+
+    async globalSearch(query: string): Promise<any> {
+        if (!query || query.length < 2) return { profiles: [], posts: [], pets: [] };
+
+        const [profilesRes, postsRes, petsRes] = await Promise.all([
+            supabase.from('profiles').select('*').or(`username.ilike.%${query}%,full_name.ilike.%${query}%`).limit(10),
+            supabase.from('posts').select('*').ilike('content', `%${query}%`).limit(10),
+            supabase.from('pets').select('*').or(`name.ilike.%${query}%,pet_id.ilike.%${query}%`).limit(10)
+        ]);
+
+        return {
+            profiles: (profilesRes.data || []).map(p => ({
+                id: p.id,
+                name: p.full_name || p.username,
+                username: p.username,
+                avatar: p.avatar_url,
+                type: 'user'
+            })),
+            posts: (postsRes.data || []).map(p => ({
+                id: p.id,
+                desc: p.content,
+                media: p.media_url,
+                type: 'post'
+            })),
+            pets: (petsRes.data || []).map(p => ({
+                id: p.id,
+                name: p.name,
+                pet_id: p.pet_id,
+                image: p.image_url,
+                type: 'pet'
+            }))
+        };
     }
 
     saveData = (k: any, d: any) => this.mockApi.saveData(k, d);

@@ -90,7 +90,7 @@ export const OverlaySystem: React.FC<OverlaySystemProps> = ({
     setActiveTab
 }) => {
     // GLOBAL REALTIME NOTIFICATIONS — DB Trigger → WebSocket → UI badge
-    const { notifications, unreadCount, markAllRead } = useRealtimeNotifications(user?.id);
+    const { notifications, unreadCount, markAllRead, markRead } = useRealtimeNotifications(user?.id);
 
     return (
         <>
@@ -277,9 +277,17 @@ export const OverlaySystem: React.FC<OverlaySystemProps> = ({
                     isOpen={true}
                     selectedPost={selectedSharePost} 
                     onClose={() => setSelectedSharePost(null)}
-                    onSocialShare={(platform) => { showToast("Paylaşıldı", `${platform} ile paylaşıldı!`, "info"); setSelectedSharePost(null); }}
-                    onAddToStory={() => { showToast("Hikaye", "Hikayenize eklendi! 📸", "info"); setSelectedSharePost(null); }}
-                    onCopyLink={() => { navigator.clipboard.writeText(window.location.href); showToast("Kopyalandı", "Bağlantı kopyalandı!", "info"); setSelectedSharePost(null); }}
+                    onSocialShare={(platform) => { 
+                        showToast(`${platform} Paylaşımı Başlatıldı`, "Sparkles", "cyan"); 
+                        setSelectedSharePost(null); 
+                    }}
+                    onAddToStory={() => { 
+                        showToast("Hikayenize Eklendi", "Heart", "purple"); 
+                        setSelectedSharePost(null); 
+                    }}
+                    onCopyLink={() => { 
+                        setSelectedSharePost(null); 
+                    }}
                 />
             )}
 
@@ -288,6 +296,7 @@ export const OverlaySystem: React.FC<OverlaySystemProps> = ({
                 onClose={() => setIsNotificationsOpen(false)}
                 notifications={notifications}
                 onMarkAllRead={markAllRead}
+                onMarkRead={markRead}
                 unreadCount={unreadCount}
             />
 

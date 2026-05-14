@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+import { apiService } from '@/services/apiService';
 
 interface SpotlightSearchProps {
     isOpen: boolean;
@@ -23,6 +24,8 @@ export function SpotlightSearch({ isOpen, onClose, onNavigate }: SpotlightSearch
     const [isAIMode, setIsAIMode] = useState(false);
     const [aiResponse, setAiResponse] = useState<string | null>(null);
     const [isAiThinking, setIsAiThinking] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [results, setResults] = useState<{ profiles: any[], posts: any[], pets: any[] }>({ profiles: [], posts: [], pets: [] });
     const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -32,8 +35,30 @@ export function SpotlightSearch({ isOpen, onClose, onNavigate }: SpotlightSearch
             setQuery('');
             setIsAIMode(false);
             setAiResponse(null);
+            setResults({ profiles: [], posts: [], pets: [] });
         }
     }, [isOpen]);
+
+    // REAL-TIME GLOBAL SEARCH EFFECT
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(async () => {
+            if (query.length >= 2 && !isAIMode) {
+                setIsLoading(true);
+                try {
+                    const searchData = await apiService.globalSearch(query);
+                    setResults(searchData);
+                } catch (error) {
+                    console.error("Global search error:", error);
+                } finally {
+                    setIsLoading(false);
+                }
+            } else if (query.length < 2) {
+                setResults({ profiles: [], posts: [], pets: [] });
+            }
+        }, 300);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [query, isAIMode]);
 
     const aiSuggestions = [
         { label: 'Milo için bugün ne yapmalıyım?', icon: <Zap className="w-3 h-3" /> },
@@ -61,25 +86,23 @@ export function SpotlightSearch({ isOpen, onClose, onNavigate }: SpotlightSearch
         }, 1500);
     };
 
-    const suggestions = [
+    const staticSuggestions = [
         { category: 'Hızlı Erişim', items: [
             { id: 'vax', label: 'Karma Aşı Tarihi', icon: <Calendar className="w-4 h-4" />, type: 'action' },
             { id: 'vet', label: 'En Yakın Veterinerler', icon: <Stethoscope className="w-4 h-4" />, type: 'action' }
         ]},
-        { category: 'Patiler', items: [
-            { id: '1', label: 'Milo (Golden)', icon: <PawPrint className="w-4 h-4" />, type: 'pet' },
-            { id: '2', label: 'Luna (Tekir)', icon: <PawPrint className="w-4 h-4" />, type: 'pet' }
-        ]},
-        { category: 'Topluluk', items: [
-            { id: 'sarah', label: 'Sarah Logs', icon: <User className="w-4 h-4" />, type: 'user' },
+        { category: 'Popüler', items: [
             { id: 'market', label: 'Moffi Market İndirimleri', icon: <ShoppingBag className="w-4 h-4" />, type: 'link' }
         ]}
     ];
 
-    const filteredSuggestions = query.length === 0 ? suggestions : suggestions.map(cat => ({
-        ...cat,
-        items: cat.items.filter(item => item.label.toLowerCase().includes(query.toLowerCase()))
-    })).filter(cat => cat.items.length > 0);
+    const dynamicCategories = [
+        { category: 'Hesaplar', items: results.profiles.map(p => ({ id: p.id, label: `@${p.username}`, icon: <User className="w-4 h-4" />, type: 'user' })) },
+        { category: 'Patiler (Pet-ID)', items: results.pets.map(p => ({ id: p.id, label: `${p.name} (${p.pet_id || 'ID yok'})`, icon: <PawPrint className="w-4 h-4" />, type: 'pet' })) },
+        { category: 'Gönderiler', items: results.posts.map(p => ({ id: p.id, label: p.desc?.substring(0, 30) + '...', icon: <ArrowRight className="w-4 h-4" />, type: 'post' })) }
+    ].filter(cat => cat.items.length > 0);
+
+    const displayResults = query.length < 2 ? staticSuggestions : dynamicCategories;
 
     return (
         <AnimatePresence>
@@ -250,8 +273,17 @@ export function SpotlightSearch({ isOpen, onClose, onNavigate }: SpotlightSearch
                                         exit={{ opacity: 0 }}
                                         className="p-4"
                                     >
-                                        {filteredSuggestions.length > 0 ? (
-                                            filteredSuggestions.map((cat, i) => (
+                                        {isLoading ? (
+                                            <div className="py-20 flex flex-col items-center justify-center gap-4">
+                                                <motion.div 
+                                                    animate={{ rotate: 360 }}
+                                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                                    className="w-8 h-8 border-2 border-white/10 border-t-white rounded-full"
+                                                />
+                                                <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Supabase taranıyor...</p>
+                                            </div>
+                                        ) : displayResults.length > 0 ? (
+                                            displayResults.map((cat, i) => (
                                                 <div key={i} className="mb-8">
                                                     <h4 className="px-6 text-[10px] font-black text-white/20 uppercase tracking-[0.4em] mb-4">{cat.category}</h4>
                                                     <div className="space-y-1">

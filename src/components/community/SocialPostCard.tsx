@@ -30,13 +30,10 @@ export function SocialPostCard({ user, content, isSponsored, context }: PostProp
     const [likeCount, setLikeCount] = useState(content.likes);
 
     const handleLike = () => {
-        if (liked) {
-            setLikeCount(prev => prev - 1);
-        } else {
-            setLikeCount(prev => prev + 1);
-            // Trigger gamification +5 coins visual here ideally
-        }
-        setLiked(!liked);
+        // Simple check to prompt login for unauthenticated static view
+        alert('❤️ Beğenmek ve etkileşime geçmek için lütfen giriş yapın veya kayıt olun.');
+        window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'login' }));
+        return;
     };
 
     return (

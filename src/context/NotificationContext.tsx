@@ -68,9 +68,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         (payload) => {
           const newNotif = payload.new as Notification;
           setNotifications(prev => [newNotif, ...prev]);
-          
-          // Show In-App Toast
-          showToast(newNotif);
         }
       )
       .subscribe();

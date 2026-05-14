@@ -14,9 +14,6 @@ import { DynamicNavigation } from "@/components/common/DynamicNavigation";
 import { GlobalIdentitySync } from "@/components/common/GlobalIdentitySync";
 import { WellbeingProvider } from "@/context/WellbeingContext";
 import { GlobalAuraBackground } from "@/components/common/GlobalAuraBackground";
-import { WellbeingOverlay } from "@/components/common/WellbeingOverlay";
-import GlobalFeedback from "@/components/common/GlobalFeedback";
-import { CookieConsent } from "@/components/common/CookieConsent";
 
 const poppins = Poppins({
   weight: ['400', '600', '700', '900'],
@@ -100,7 +97,6 @@ export default function RootLayout({
                               <RootOnboardingWrapper>
                                 <GlobalIdentitySync />
                                 <GlobalAuraBackground />
-                                <WellbeingOverlay />
                                 <div className="min-h-screen relative overflow-hidden">
                                   <ErrorBoundary>
                                     {children}
@@ -111,8 +107,6 @@ export default function RootLayout({
                                   <DynamicNavigation />
                                 </Suspense>
                                 <AIWidgetLoader />
-                                <GlobalFeedback />
-                                <CookieConsent />
                               </RootOnboardingWrapper>
                             </ClientAuthWrapper>
                           </ShopProvider>

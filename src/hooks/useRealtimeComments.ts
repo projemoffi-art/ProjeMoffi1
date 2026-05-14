@@ -77,7 +77,16 @@ export function useRealtimeComments(postId: string | number | null, enabled: boo
             )
             .subscribe();
 
+        const handleCustomSync = () => {
+            apiService.getPostComments(postId)
+                .then(data => setComments(data))
+                .catch(err => console.error('[Realtime] Custom sync failed:', err));
+        };
+
+        window.addEventListener('moffi_comments_changed', handleCustomSync);
+
         return () => {
+            window.removeEventListener('moffi_comments_changed', handleCustomSync);
             if (channelRef.current) {
                 supabase.removeChannel(channelRef.current);
                 channelRef.current = null;
@@ -92,12 +101,12 @@ export function useRealtimeComments(postId: string | number | null, enabled: boo
             .catch(err => console.error('[Realtime] Manual refetch failed:', err));
     };
 
-    const addComment = async (text: string, currentUser: any) => {
+    const addComment = async (text: string, currentUser: any, parentCommentId?: string | number) => {
         if (!postId || !text.trim()) return;
 
         try {
-            await apiService.addComment(postId, text);
-            refetchComments(); // Immediate local refetch on write
+            await apiService.addComment(postId, text, parentCommentId);
+            refetchComments(); 
         } catch (err: any) {
             console.error('[Realtime] addComment failed:', err);
             alert(err?.message || 'Yorum eklenirken hata oluştu. Gönderi yorumlara kapatılmış olabilir.');
