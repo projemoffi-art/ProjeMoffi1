@@ -6,7 +6,7 @@
  * @param maxWidth Max width/height dimension (default. 600px)
  * @param quality Quality from 0 to 1 (default 0.7)
  */
-export const compressImage = (file: File, maxWidth = 600, quality = 0.7): Promise<string> => {
+export const compressImage = (file: File, maxWidth = 600, quality = 0.7, filter = ''): Promise<string> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -33,6 +33,7 @@ export const compressImage = (file: File, maxWidth = 600, quality = 0.7): Promis
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
+                if (ctx && filter) ctx.filter = filter;
                 ctx?.drawImage(img, 0, 0, width, height);
 
                 // Convert to compressed Base64
@@ -49,7 +50,7 @@ export const compressImage = (file: File, maxWidth = 600, quality = 0.7): Promis
  * Compresses an image file and returns a File object.
  * Perfect for Supabase Storage uploads.
  */
-export const compressImageToFile = (file: File, maxWidth = 1200, quality = 0.8): Promise<File> => {
+export const compressImageToFile = (file: File, maxWidth = 1200, quality = 0.8, filter = ''): Promise<File> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -76,6 +77,7 @@ export const compressImageToFile = (file: File, maxWidth = 1200, quality = 0.8):
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
+                if (ctx && filter) ctx.filter = filter;
                 ctx?.drawImage(img, 0, 0, width, height);
 
                 canvas.toBlob((blob) => {

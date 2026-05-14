@@ -408,11 +408,11 @@ export function ImmersivePostCard({
                                 </div>
                             )}
                             
-                            {/* ELEGANT APPLE-STYLE PROGRESS BAR */}
+                            {/* INSTAGRAM-STYLE PROGRESS BAR */}
                             {!isVideoLoading && (
-                                <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10 overflow-hidden z-10 rounded-b-[3rem]">
+                                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/20 overflow-hidden z-[100]">
                                     <motion.div 
-                                        className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 shadow-[0_0_10px_rgba(34,211,238,0.5)]"
+                                        className="h-full bg-white shadow-[0_0_5px_rgba(255,255,255,0.8)]"
                                         style={{ width: `${videoProgress}%` }}
                                         transition={{ ease: "linear", duration: 0.1 }}
                                     />

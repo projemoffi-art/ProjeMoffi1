@@ -198,6 +198,38 @@ export default function MoffiSocialMasterpiece() {
     const [uploadCaption, setUploadCaption] = useState('');
     const [uploadLocationEnabled, setUploadLocationEnabled] = useState(false);
     const [uploadMood, setUploadMood] = useState<string | null>(null);
+    const [imageFilter, setImageFilter] = useState('');
+    const [activeFilterIndex, setActiveFilterIndex] = useState(0);
+    const [showFilterName, setShowFilterName] = useState(false);
+
+    const IMAGE_FILTERS = useMemo(() => [
+        { name: 'Orijinal', filter: '' },
+        { name: 'Canlı', filter: 'contrast(1.2) saturate(1.3)' },
+        { name: 'Sıcak', filter: 'sepia(0.3) saturate(1.2) contrast(1.1)' },
+        { name: 'Soğuk', filter: 'saturate(1.2) contrast(1.1) hue-rotate(-10deg)' },
+        { name: 'Siyah Beyaz', filter: 'grayscale(1) contrast(1.2)' },
+        { name: 'Vintage', filter: 'sepia(0.6) contrast(1.1) brightness(0.9) saturate(1.2)' },
+        { name: 'Sinematik', filter: 'contrast(1.3) saturate(0.8) sepia(0.2)' }
+    ], []);
+
+    useEffect(() => {
+        if (showFilterName) {
+            const timer = setTimeout(() => setShowFilterName(false), 1500);
+            return () => clearTimeout(timer);
+        }
+    }, [showFilterName, activeFilterIndex]);
+
+    const handleSwipeFilter = (direction: 'left' | 'right') => {
+        let newIndex = activeFilterIndex;
+        if (direction === 'left') {
+            newIndex = (activeFilterIndex + 1) % IMAGE_FILTERS.length;
+        } else {
+            newIndex = (activeFilterIndex - 1 + IMAGE_FILTERS.length) % IMAGE_FILTERS.length;
+        }
+        setActiveFilterIndex(newIndex);
+        setImageFilter(IMAGE_FILTERS[newIndex].filter);
+        setShowFilterName(true);
+    };
     const [viewerStoryGroupIndex, setViewerStoryGroupIndex] = useState<number | null>(null);
     const [viewerStoryIndex, setViewerStoryIndex] = useState(0);
     const [storyProgress, setStoryProgress] = useState(0);
@@ -235,7 +267,7 @@ export default function MoffiSocialMasterpiece() {
         return new Promise((resolve, reject) => {
             const video = document.createElement('video');
             video.src = URL.createObjectURL(file);
-            video.muted = true;
+            video.muted = false; // Must be false to extract audio track via Web Audio API
             video.playsInline = true;
             video.crossOrigin = "anonymous";
             
@@ -281,6 +313,29 @@ export default function MoffiSocialMasterpiece() {
                     canvas.height = video.videoHeight * scaleFactor;
                     
                     const stream = canvas.captureStream(30); 
+                    
+                    // --- AUDIO EXTRACTION ENGINE ---
+                    // Canvas captureStream only captures video frames. We must extract the audio manually.
+                    try {
+                        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+                        if (AudioContextClass) {
+                            const audioCtx = new AudioContextClass();
+                            const source = audioCtx.createMediaElementSource(video);
+                            const dest = audioCtx.createMediaStreamDestination();
+                            
+                            // Connect source to destination stream (but NOT to speakers/audioCtx.destination)
+                            // This keeps the processing silent while preserving the audio track.
+                            source.connect(dest);
+                            
+                            const audioTrack = dest.stream.getAudioTracks()[0];
+                            if (audioTrack) {
+                                stream.addTrack(audioTrack);
+                            }
+                        }
+                    } catch (audioErr) {
+                        console.warn("Moffi Audio Engine: Ses izi alınamadı veya video sessiz.", audioErr);
+                    }
+
                     const recorder = new MediaRecorder(stream, { 
                         mimeType: 'video/webm;codecs=vp8',
                         videoBitsPerSecond: 1200000 
@@ -1043,7 +1098,7 @@ export default function MoffiSocialMasterpiece() {
             let fileToUpload: any = selectedFile;
             
             if (selectedFile.type.startsWith('image/')) {
-                fileToUpload = await compressImageToFile(selectedFile);
+                fileToUpload = await compressImageToFile(selectedFile, 1200, 0.8, imageFilter);
             } else if (selectedFile.type.startsWith('video/')) {
                 // Show "Processing" state
                 showToast("Video Hazırlanıyor...", "Seçtiğiniz 20 saniyelik kısım işleniyor ve optimize ediliyor. ✨", "info");
@@ -2535,10 +2590,10 @@ export default function MoffiSocialMasterpiece() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[600] bg-black/95 backdrop-blur-xl flex flex-col"
+                        className="fixed inset-0 z-[9999] bg-[#0a0a0b]/95 backdrop-blur-3xl flex flex-col"
                     >
                         {/* Header */}
-                        <div className="flex justify-between items-center p-6 shrink-0 border-b border-[var(--card-border)]">
+                        <div className="flex justify-between items-center px-6 pt-12 pb-4 shrink-0 border-b border-[var(--card-border)]">
                             <button
                                 onClick={() => { setIsUploadModalOpen(false); setUploadImageURL(null); setUploadCaption(''); setUploadMood(null); }}
                                 className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center -ml-2"
@@ -2576,7 +2631,35 @@ export default function MoffiSocialMasterpiece() {
                                             </div>
                                         </div>
                                     ) : (
-                                        <img src={uploadImageURL} className="w-full h-full object-cover" />
+                                        <div className="relative w-full h-full overflow-hidden">
+                                            <motion.img 
+                                                src={uploadImageURL} 
+                                                className="w-full h-full object-cover cursor-grab active:cursor-grabbing" 
+                                                style={{ filter: imageFilter }}
+                                                drag="x"
+                                                dragConstraints={{ left: 0, right: 0 }}
+                                                dragElastic={0.2}
+                                                onDragEnd={(e, info) => {
+                                                    if (info.offset.x < -50) handleSwipeFilter('left');
+                                                    else if (info.offset.x > 50) handleSwipeFilter('right');
+                                                }}
+                                            />
+                                            {/* Centered Filter Name Overlay */}
+                                            <AnimatePresence>
+                                                {showFilterName && (
+                                                    <motion.div 
+                                                        initial={{ opacity: 0, scale: 0.8, y: '-50%', x: '-50%' }}
+                                                        animate={{ opacity: 1, scale: 1, y: '-50%', x: '-50%' }}
+                                                        exit={{ opacity: 0, scale: 1.1, y: '-50%', x: '-50%' }}
+                                                        className="absolute top-1/2 left-1/2 pointer-events-none bg-black/40 backdrop-blur-md px-6 py-2 rounded-full border border-white/20"
+                                                    >
+                                                        <p className="text-white font-black tracking-widest uppercase text-sm drop-shadow-lg">
+                                                            {IMAGE_FILTERS[activeFilterIndex].name}
+                                                        </p>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
                                     )}
                                     
                                     {/* Glassmorphism Overlays */}
@@ -2629,43 +2712,49 @@ export default function MoffiSocialMasterpiece() {
                                     initial={{ y: 20, opacity: 0 }}
                                     animate={{ y: 0, opacity: 1 }}
                                     onClick={() => cameraInputRef.current?.click()}
-                                    className="w-full h-[60vh] min-h-[450px] max-h-[600px] rounded-[2.5rem] border-2 border-dashed border-white/10 bg-white/[0.02] flex flex-col items-center justify-center gap-6 cursor-pointer hover:bg-white/[0.05] hover:border-cyan-500/40 transition-all duration-700 group relative overflow-hidden"
+                                    className="w-full h-[60vh] min-h-[350px] max-h-[500px] rounded-[2rem] border-2 border-dashed border-white/10 bg-white/[0.02] flex flex-col items-center justify-center gap-6 cursor-pointer hover:bg-white/[0.05] hover:border-cyan-500/40 transition-all duration-700 group relative overflow-hidden"
                                 >
                                     {/* Background Glow */}
                                     <div className="absolute inset-0 bg-cyan-500/5 blur-[100px] group-hover:bg-cyan-500/10 transition-colors" />
                                     
                                     <div className="relative">
-                                        <div className="w-24 h-24 rounded-[2rem] bg-gradient-to-tr from-cyan-500/20 to-purple-500/20 flex items-center justify-center border border-white/10 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-2xl">
-                                            <ImagePlus className="w-10 h-10 text-cyan-400 drop-shadow-[0_0_15px_rgba(34,211,238,0.5)]" />
+                                        <div className="w-20 h-20 rounded-[1.5rem] bg-gradient-to-tr from-cyan-500/20 to-purple-500/20 flex items-center justify-center border border-white/10 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-xl">
+                                            <ImagePlus className="w-8 h-8 text-cyan-400 drop-shadow-[0_0_15px_rgba(34,211,238,0.5)]" />
                                         </div>
-                                        <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center text-black border-4 border-[#0a0a0b] shadow-xl group-hover:scale-110 transition-transform">
-                                            <Plus className="w-5 h-5" strokeWidth={3} />
+                                        <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-cyan-500 flex items-center justify-center text-black border-4 border-[#0a0a0b] shadow-xl group-hover:scale-110 transition-transform">
+                                            <Plus className="w-4 h-4" strokeWidth={3} />
                                         </div>
                                     </div>
                                     
                                     <div className="text-center relative z-10">
-                                        <p className="text-white font-black text-xl tracking-tight">Anıyı Ölümsüzleştir</p>
-                                        <p className="text-[var(--secondary-text)] text-xs font-medium mt-2 max-w-[200px] mx-auto leading-relaxed">
+                                        <p className="text-white font-black text-lg tracking-tight">Anıyı Ölümsüzleştir</p>
+                                        <p className="text-[var(--secondary-text)] text-xs font-medium mt-1.5 max-w-[200px] mx-auto leading-relaxed">
                                             En sevdiğin fotoğrafı veya videoyu seç, Moffi topluluğuyla paylaş!
                                         </p>
                                     </div>
-
-                                    {/* Animated Corner Borders */}
-                                    <div className="absolute top-8 left-8 w-8 h-8 border-t-2 border-l-2 border-white/5 rounded-tl-xl" />
-                                    <div className="absolute top-8 right-8 w-8 h-8 border-t-2 border-r-2 border-white/5 rounded-tr-xl" />
-                                    <div className="absolute bottom-8 left-8 w-8 h-8 border-b-2 border-l-2 border-white/5 rounded-bl-xl" />
-                                    <div className="absolute bottom-8 right-8 w-8 h-8 border-b-2 border-r-2 border-white/5 rounded-br-xl" />
                                 </motion.div>
+                            )}
+                            
+                            {/* Filter guide hint (only shows once or briefly) */}
+                            {selectedFile?.type.startsWith('image/') && (
+                                <p className="text-center text-[10px] text-white/30 font-medium tracking-widest uppercase mt-2 mb-1 animate-pulse">
+                                    Filtreleri değiştirmek için fotoğrafı sağa sola kaydır
+                                </p>
                             )}
 
                             {/* CAPTION */}
-                            <div className="bg-[var(--card-bg)] border border-white/10 rounded-3xl p-4 flex gap-4">
-                                <img src={user?.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} className="w-10 h-10 rounded-full shrink-0" />
+                            <div className="bg-[var(--card-bg)] border border-white/10 rounded-[1.5rem] p-3 flex gap-3 items-start transition-all">
+                                <img src={user?.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} className="w-8 h-8 rounded-full shrink-0 mt-0.5" />
                                 <textarea
                                     value={uploadCaption}
                                     onChange={(e) => setUploadCaption(e.target.value)}
+                                    onInput={(e) => {
+                                        e.currentTarget.style.height = 'auto';
+                                        e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
+                                    }}
                                     placeholder="Bu harika anı anlat..."
-                                    className="w-full bg-transparent outline-none text-[var(--foreground)] resize-none h-24 text-sm mt-1"
+                                    className="w-full bg-transparent outline-none text-[var(--foreground)] resize-none min-h-[24px] max-h-[120px] text-sm py-1 overflow-hidden"
+                                    rows={1}
                                 />
                             </div>
 
@@ -2765,22 +2854,22 @@ export default function MoffiSocialMasterpiece() {
                                 />
 
                                 {audioURL ? (
-                                    <div className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 rounded-3xl p-4 flex flex-col gap-3 relative overflow-hidden">
+                                    <div className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 rounded-[1.5rem] p-3 flex flex-col gap-2 relative overflow-hidden">
                                         <div className="flex items-center justify-between relative z-10">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-2xl bg-cyan-500 flex items-center justify-center text-black shadow-lg shadow-cyan-500/20 animate-pulse">
-                                                    <Mic size={20} />
+                                                <div className="w-8 h-8 rounded-xl bg-cyan-500 flex items-center justify-center text-black shadow-lg shadow-cyan-500/20 animate-pulse">
+                                                    <Mic size={16} />
                                                 </div>
                                                 <div className="overflow-hidden">
-                                                    <p className="text-sm font-black text-white truncate max-w-[200px]">{audioFile?.name}</p>
-                                                    <p className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest">Ses Dosyası Seçildi</p>
+                                                    <p className="text-[13px] font-black text-white truncate max-w-[200px]">{audioFile?.name}</p>
+                                                    <p className="text-[9px] font-bold text-cyan-400 uppercase tracking-widest">Ses Dosyası Seçildi</p>
                                                 </div>
                                             </div>
                                             <button 
                                                 onClick={() => { setAudioFile(null); setAudioURL(null); }}
-                                                className="w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60 transition-colors"
+                                                className="w-7 h-7 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60 transition-colors"
                                             >
-                                                <X size={16} />
+                                                <X size={14} />
                                             </button>
                                         </div>
                                         
@@ -2789,35 +2878,35 @@ export default function MoffiSocialMasterpiece() {
                                 ) : (
                                     <button
                                         onClick={() => audioInputRef.current?.click()}
-                                        className="w-full p-5 rounded-[2rem] border-2 border-dashed border-white/10 bg-white/[0.02] flex items-center justify-center gap-3 hover:bg-white/[0.05] hover:border-cyan-500/40 transition-all group"
+                                        className="w-full p-3 rounded-[1.5rem] border border-dashed border-white/10 bg-white/[0.02] flex items-center justify-center gap-3 hover:bg-white/[0.05] hover:border-cyan-500/40 transition-all group"
                                     >
-                                        <div className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center text-white/40 group-hover:text-cyan-400 group-hover:scale-110 transition-all">
-                                            <Mic size={20} />
+                                        <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-white/40 group-hover:text-cyan-400 group-hover:scale-110 transition-all">
+                                            <Mic size={16} />
                                         </div>
-                                        <div className="text-left">
-                                            <p className="text-sm font-bold text-white/60 group-hover:text-white transition-colors">Müzik veya Ses Ekle</p>
-                                            <p className="text-[10px] text-white/30 font-medium uppercase tracking-widest">Fotoğraflarına can ver</p>
+                                        <div className="text-left flex-1">
+                                            <p className="text-[13px] font-bold text-white/60 group-hover:text-white transition-colors">Müzik veya Ses Ekle</p>
+                                            <p className="text-[9px] text-white/30 font-medium uppercase tracking-widest mt-0.5">Fotoğraflarına can ver</p>
                                         </div>
                                     </button>
                                 )}
                             </div>
 
                             {/* LOCATION TOGGLE */}
-                            <div className="flex items-center justify-between bg-[var(--card-bg)] border border-white/10 rounded-3xl p-4">
+                            <div className="flex items-center justify-between bg-[var(--card-bg)] border border-white/10 rounded-[1.5rem] p-3">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center">
-                                        <MapPin className="w-5 h-5" />
+                                    <div className="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center">
+                                        <MapPin className="w-4 h-4" />
                                     </div>
                                     <div>
-                                        <p className="text-[var(--foreground)] font-bold text-sm">Konum Bilgisini Ekle</p>
-                                        <p className="text-[var(--secondary-text)] text-xs">Açmadığınız sürece gizli kalır.</p>
+                                        <p className="text-[var(--foreground)] font-bold text-[13px]">Konum Bilgisini Ekle</p>
+                                        <p className="text-[var(--secondary-text)] text-[10px]">Açmadığınız sürece gizli kalır.</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => setUploadLocationEnabled(!uploadLocationEnabled)}
-                                    className={cn("w-12 h-7 rounded-full transition-colors flex items-center px-1 duration-300", uploadLocationEnabled ? "bg-cyan-500" : "bg-white/20")}
+                                    className={cn("w-10 h-6 rounded-full transition-colors flex items-center px-1 duration-300", uploadLocationEnabled ? "bg-cyan-500" : "bg-white/20")}
                                 >
-                                    <div className={cn("w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300", uploadLocationEnabled ? "translate-x-5" : "translate-x-0")} />
+                                    <div className={cn("w-4 h-4 bg-white rounded-full shadow-md transition-transform duration-300", uploadLocationEnabled ? "translate-x-4" : "translate-x-0")} />
                                 </button>
                             </div>
 
