@@ -12,11 +12,6 @@ import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 import { ShareSheet } from './ShareSheet';
 import { NotificationsDrawer } from './NotificationsDrawer';
 import { PetSettingsModal } from '../profile/PetSettingsModal';
-import { VetQuickSheet } from '../vet/VetQuickSheet';
-import { WalkQuickSheet } from '../walk/WalkQuickSheet';
-import { MarketQuickSheet } from '../shop/MarketQuickSheet';
-import { StudioQuickSheet } from '../studio/StudioQuickSheet';
-import { GameQuickSheet } from '../game/GameQuickSheet';
 import { EcosystemPortal } from './EcosystemPortal';
 import { SpotlightSearch } from './SpotlightSearch';
 import { DiaryModal } from './DiaryModal';
@@ -52,16 +47,6 @@ interface OverlaySystemProps {
     setIsPetSettingsOpen: (open: boolean) => void;
     settingsPet: any;
     
-    isVetQuickSheetOpen: boolean;
-    setIsVetQuickSheetOpen: (open: boolean) => void;
-    isWalkQuickSheetOpen: boolean;
-    setIsWalkQuickSheetOpen: (open: boolean) => void;
-    isMarketQuickSheetOpen: boolean;
-    setIsMarketQuickSheetOpen: (open: boolean) => void;
-    isStudioQuickSheetOpen: boolean;
-    setIsStudioQuickSheetOpen: (open: boolean) => void;
-    isGameQuickSheetOpen: boolean;
-    setIsGameQuickSheetOpen: (open: boolean) => void;
     isEcosystemPortalOpen: boolean;
     setIsEcosystemPortalOpen: (open: boolean) => void;
     isSpotlightOpen: boolean;
@@ -79,11 +64,6 @@ export const OverlaySystem: React.FC<OverlaySystemProps> = ({
     selectedSharePost, setSelectedSharePost,
     isNotificationsOpen, setIsNotificationsOpen, notificationsList, setNotificationsList,
     isPetSettingsOpen, setIsPetSettingsOpen, settingsPet,
-    isVetQuickSheetOpen, setIsVetQuickSheetOpen,
-    isWalkQuickSheetOpen, setIsWalkQuickSheetOpen,
-    isMarketQuickSheetOpen, setIsMarketQuickSheetOpen,
-    isStudioQuickSheetOpen, setIsStudioQuickSheetOpen,
-    isGameQuickSheetOpen, setIsGameQuickSheetOpen,
     isEcosystemPortalOpen, setIsEcosystemPortalOpen,
     isSpotlightOpen, setIsSpotlightOpen,
     isDiaryOpen, setIsDiaryOpen,
@@ -312,45 +292,7 @@ export const OverlaySystem: React.FC<OverlaySystemProps> = ({
                 }}
             />
 
-            {isVetQuickSheetOpen && (
-                <VetQuickSheet 
-                    isOpen={isVetQuickSheetOpen} 
-                    onClose={() => setIsVetQuickSheetOpen(false)}
-                    petId={activePet?.id || 'pet-1'}
-                />
-            )}
-            
-            {isWalkQuickSheetOpen && (
-                <WalkQuickSheet 
-                    isOpen={isWalkQuickSheetOpen} 
-                    onClose={() => setIsWalkQuickSheetOpen(false)}
-                    petId={activePet?.id || 'pet-1'}
-                />
-            )}
-            
-            {isMarketQuickSheetOpen && (
-                <MarketQuickSheet
-                    isOpen={isMarketQuickSheetOpen}
-                    onClose={() => setIsMarketQuickSheetOpen(false)}
-                    petName={activePet?.name || 'Dostun'}
-                />
-            )}
-            
-            {isStudioQuickSheetOpen && (
-                <StudioQuickSheet
-                    isOpen={isStudioQuickSheetOpen}
-                    onClose={() => setIsStudioQuickSheetOpen(false)}
-                    petName={activePet?.name || 'Moffi'}
-                />
-            )}
-            
-            {isGameQuickSheetOpen && (
-                <GameQuickSheet
-                    isOpen={isGameQuickSheetOpen}
-                    onClose={() => setIsGameQuickSheetOpen(false)}
-                    petName={activePet?.name || 'Moffi'}
-                />
-            )}
+
 
             {isEcosystemPortalOpen && (
                 <EcosystemPortal 

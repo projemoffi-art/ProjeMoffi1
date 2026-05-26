@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, useMap, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { PLACES, Place } from "@/data/mockPlaces";
@@ -35,6 +35,10 @@ interface LiveMapProps {
         desc?: string;
         img?: string;
     }>;
+    // Custom Waypoint Support
+    onMapLongPress?: (pos: [number, number]) => void;
+    customTargetPos?: [number, number] | null;
+    customTargetClaimed?: boolean;
 }
 
 // --- CUSTOM ICON ---
@@ -137,11 +141,24 @@ function MapEngine({ center, searchQuery, filterType, setRouteTo, userPos }: { c
     return null;
 }
 
+function MapEventsHandler({ onMapLongPress }: { onMapLongPress?: (latlng: L.LatLng) => void }) {
+    useMapEvents({
+        dblclick(e) {
+            if (onMapLongPress) onMapLongPress(e.latlng);
+        },
+        contextmenu(e) {
+            if (onMapLongPress) onMapLongPress(e.latlng);
+        }
+    });
+    return null;
+}
+
 export default function LiveMap({ 
     userPos, path, isTracking, visitedPlaceIds, 
     onPlaceClick, guardianMode, deliveryPos, deliveryPath,
     externalSearchQuery, externalFilterType, forceGuardianMode, 
-    hideInternalUI, markers: externalMarkers
+    hideInternalUI, markers: externalMarkers,
+    onMapLongPress, customTargetPos, customTargetClaimed
 }: LiveMapProps) {
     // UI State
     const [searchQuery, setSearchQuery] = useState(externalSearchQuery || "");
@@ -385,6 +402,7 @@ export default function LiveMap({
                 zoom={15}
                 style={{ width: "100%", height: "100%" }}
                 zoomControl={false}
+                doubleClickZoom={false}
                 className={cn("bg-gray-100 dark:bg-[#111] transition-all duration-1000", guardianMode && "grayscale brightness-50 contrast-125 sepia-[.3]")}
             >
                 {guardianMode && <GuardianStatusOverlay />}
@@ -394,21 +412,73 @@ export default function LiveMap({
                 />
 
                 <MapEngine center={userPos} searchQuery={searchQuery} filterType={filterType} setRouteTo={setRouteTo} userPos={userPos} />
+                <MapEventsHandler onMapLongPress={(latlng) => { if (onMapLongPress) onMapLongPress([latlng.lat, latlng.lng]); }} />
+
+                {/* CUSTOM TARGET PIN */}
+                {customTargetPos && (
+                    <Marker
+                        position={customTargetPos}
+                        icon={L.divIcon({
+                            className: "custom-target-icon",
+                            html: `
+                                <div style="
+                                    width: 40px; height: 40px; border-radius: 50% 50% 50% 5px; transform: rotate(-45deg); display: flex; 
+                                    align-items: center; justify-content: center; border: 2px solid #f59e0b; background-color: #fef3c7; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+                                ">
+                                    <div style="transform: rotate(45deg); font-size: 20px;">
+                                        ${customTargetClaimed ? '✅' : '🚩'}
+                                    </div>
+                                </div>
+                            `,
+                            iconSize: [40, 40],
+                            iconAnchor: [20, 20]
+                        })}
+                    >
+                        <Popup className="custom-popup">
+                            <div className="p-1 min-w-[120px]">
+                                <h3 className="font-bold text-xs text-gray-900">Hedef Konum</h3>
+                                <p className="text-[9px] text-gray-500 font-semibold mt-0.5">
+                                    {customTargetClaimed ? 'Ödül Kazanıldı! 🎉' : 'Ödülü almak için buraya ulaş! 🐾'}
+                                </p>
+                            </div>
+                        </Popup>
+                    </Marker>
+                )}
+
+                {/* Guideline to custom target */}
+                {customTargetPos && !customTargetClaimed && (
+                    <Polyline
+                        positions={[userPos, customTargetPos]}
+                        pathOptions={{ color: '#f59e0b', weight: 3, opacity: 0.5, dashArray: '5, 10' }}
+                    />
+                )}
 
                 {/* ROUTES (Navigation Line) */}
                 {routePath.length > 0 && (
-                    <Polyline
-                        positions={routePath}
-                        pathOptions={{ color: '#3B82F6', weight: 6, opacity: 0.8, lineCap: 'round' }}
-                    />
+                    <>
+                        <Polyline
+                            positions={routePath}
+                            pathOptions={{ color: '#60a5fa', weight: 12, opacity: 0.25, lineCap: 'round' }}
+                        />
+                        <Polyline
+                            positions={routePath}
+                            pathOptions={{ color: '#3B82F6', weight: 6, opacity: 0.9, lineCap: 'round' }}
+                        />
+                    </>
                 )}
 
                 {/* Tracking Path */}
                 {isTracking && path.length > 1 && (
-                    <Polyline
-                        positions={path}
-                        pathOptions={{ color: '#5B4D9D', weight: 6, opacity: 0.8, lineCap: 'round' }}
-                    />
+                    <>
+                        <Polyline
+                            positions={path}
+                            pathOptions={{ color: '#c084fc', weight: 12, opacity: 0.3, lineCap: 'round' }}
+                        />
+                        <Polyline
+                            positions={path}
+                            pathOptions={{ color: '#5B4D9D', weight: 6, opacity: 0.9, lineCap: 'round' }}
+                        />
+                    </>
                 )}
 
                 {/* VISIBLE PLACES */}

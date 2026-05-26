@@ -550,7 +550,19 @@ export class MockApiService implements IApiService {
     async updateWalkLocation(sessionId: string, lat: number, lng: number): Promise<void> { }
     async endWalk(sessionId: string, data: any): Promise<any> { return {}; }
     async getWalkHistory(userId: string, limit?: number): Promise<any[]> { return []; }
-    async getWalkStats(userId: string): Promise<any> { return {}; }
+    async getWalkStats(userId: string): Promise<any> {
+        return {
+            totalWalks: 18,
+            totalDistanceKm: 32.4,
+            totalDurationMinutes: 412,
+            totalCalories: 1944,
+            totalSteps: 45360,
+            averageDistanceKm: 1.8,
+            longestWalkKm: 4.2,
+            currentStreak: 4,
+            bestStreak: 7
+        };
+    }
     async getWalkById(id: string): Promise<any> { return {}; }
 
     // Social Media

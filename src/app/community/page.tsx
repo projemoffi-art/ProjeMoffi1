@@ -1,110 +1,438 @@
-"use client";
+'use client';
 
-import React, { useState, useRef, useEffect, memo, useMemo } from 'react';
-import { motion, AnimatePresence, useScroll, useTransform, useMotionValueEvent, useMotionValue } from 'framer-motion';
-import {
-    Heart, MessageCircle, Share2, MapPin,
-    Plus, Camera, Compass,
-    Users, Activity, Sparkles, X, Send, PawPrint, Search, Menu, MoreHorizontal, Image as ImageIcon, Video, Mic,
-    Settings, Grid3X3, List, Edit3, Bookmark, Edit2, Trash2, ImagePlus,
-    LogOut, ChevronRight, ChevronLeft, User, Bell, Lock, HelpCircle, Check, HeartHandshake, CheckCheck, ShieldAlert, ChevronDown,
-    AlertTriangle, PhoneCall, BadgeCheck, Radar, Palette, ShoppingBag, Gamepad2, Globe, Filter,
-    Coins, Package, Calendar, Plane, ShieldCheck, Route, TrendingUp, Timer, Footprints, Play, Download, Clock, Syringe, Moon
-} from 'lucide-react';
-import { compressImageToFile } from '@/lib/imageUtils';
-import { cn } from '@/lib/utils';
-import { useRouter, useSearchParams } from 'next/navigation';
-import AuthModal from '../../components/auth/AuthModal';
-import { useAuth } from '../../context/AuthContext';
-import { useStories } from '../../hooks/useStories';
-import { useTheme } from '../../context/ThemeContext';
-import { PetSettingsModal } from '../../components/profile/PetSettingsModal';
-import { SOSCommandCenter } from '../../components/profile/SOSCommandCenter';
-import { QRCodeSVG } from 'qrcode.react';
-import { InboxModal } from '../../components/community/InboxModal';
-import { FeedbackModal } from '../../components/community/modals/FeedbackModal';
-import { MessageSquareHeart } from 'lucide-react';
-
-import { ShareSheet } from '../../components/community/ShareSheet';
-import { NotificationsDrawer } from '../../components/community/NotificationsDrawer';
-import { MoffiAssistant } from '../../components/ai/MoffiAssistant';
-import { ImmersivePostCard } from '../../components/community/ImmersivePostCard';
-import { ProfileTab } from '@/components/community/ProfileTab';
-import { VetQuickSheet } from '@/components/vet/VetQuickSheet';
-import { WalkQuickSheet } from '@/components/walk/WalkQuickSheet';
-import { MarketQuickSheet } from '@/components/shop/MarketQuickSheet';
-import { StudioQuickSheet } from '@/components/studio/StudioQuickSheet';
-import { GameQuickSheet } from '@/components/game/GameQuickSheet';
-import { PetSwitcher } from '@/components/common/PetSwitcher';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { usePet } from '@/context/PetContext';
-import { useWellbeing } from '@/context/WellbeingContext';
-import { EcosystemPortal } from '@/components/community/EcosystemPortal';
-import { SpotlightSearch } from '@/components/community/SpotlightSearch';
-import { DiaryModal } from '@/components/community/DiaryModal';
-import { apiService, isSupabaseEnabled } from '../../services/apiService';
-import { supabase } from '@/lib/supabase';
-import { HubOverlay } from '../../components/community/HubOverlay';
-import { MoffiBottomNav } from '@/components/common/MoffiBottomNav';
-import { OverlaySystem } from '@/components/community/OverlaySystem';
-import { ExploreGrid } from '@/components/community/ExploreGrid';
-
-
+import { PetSettingsModal } from '@/components/profile/PetSettingsModal';
+import { AddPetModal } from '@/components/community/modals/AddPetModal';
+import { apiService } from '@/services/apiService';
 import { 
-    MOCK_PETS, MOCK_ADOPTIONS, 
-    MOCK_NOTIFICATIONS, ORDERS, APPOINTMENTS, MOCK_POSTS 
-} from '@/lib/mockData';
-import Image from 'next/image';
+    Bell, 
+    Search, 
+    MessageCircle, 
+    User, 
+    Home, 
+    Plus, 
+    MapPin, 
+    Calendar, 
+    Syringe, 
+    AlertTriangle,
+    Heart,
+    HeartHandshake,
+    Stethoscope,
+    ShoppingBag,
+    Scissors,
+    CalendarDays,
+    Sparkles,
+    ChevronRight,
+    Bone,
+    Users,
+    Play,
+    Navigation,
+    Flame,
+    Droplets,
+    Activity,
+    Compass,
+    Radio,
+    Battery,
+    Volume2,
+    Wifi,
+    Coins,
+    QrCode,
+    Shirt,
+    ArrowUpRight,
+    TrendingUp,
+    CheckCircle2,
+    ShoppingBag as CartIcon,
+    X,
+    Shield,
+    TrendingDown,
+    Sliders,
+    VolumeX,
+    Maximize2,
+    RefreshCw,
+    ChevronLeft,
+    CreditCard,
+    Zap,
+    Fingerprint,
+    Lock,
+    Award,
+    Coffee,
+    Info
+} from 'lucide-react';
 
-import { useChat } from '@/context/ChatContext';
-import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
+import { useStories } from '../../hooks/useStories';
+import { useWalk } from '../../hooks/useWalk';
+import { QuestBentoCard } from '@/components/quests/QuestBentoCard';
 
-export default function MoffiSocialMasterpiece() {
-    const { user, logout, updateProfile, updateSettings } = useAuth();
-    const { 
-        isInboxOpen, setIsInboxOpen, 
-        inboxTab, setInboxTab, 
-        unreadCount, 
-        openChat,
-        activeChatUserId, setActiveChatUserId,
-        replyMessage, setReplyMessage,
-        onSendReply, isReplying,
-        sosAlerts, setSosAlerts, inboxMessages,
-        refreshInbox
-    } = useChat();
-    const { theme, setTheme } = useTheme(); // Restored
-    const { storyGroups, uploadStory } = useStories(); // Restored
-    const { pets: userPets, activePet, switchPet, updatePet } = usePet();
-    const { isQuietModeActive } = useWellbeing();
+const MATCH_CANDIDATES = [
+    {
+        name: "Max",
+        breed: "Golden Retriever",
+        age: "2 Yaşında",
+        gender: "Erkek",
+        aura: "Uysal & Sosyal 🌟",
+        auraMatch: 95,
+        image: "https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=350",
+        bio: "Top oynamayı çok sever, diğer köpeklerle arası harikadır!"
+    },
+    {
+        name: "Bella",
+        breed: "French Bulldog",
+        age: "1.5 Yaşında",
+        gender: "Dişi",
+        aura: "Enerjik & Oyuncu ⚡",
+        auraMatch: 88,
+        image: "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?q=80&w=350",
+        bio: "Moda sahilinde koşmayı ve çimlerde yuvarlanmayı çok sever."
+    },
+    {
+        name: "Coco",
+        breed: "Pomeranian Boo",
+        age: "3 Yaşında",
+        gender: "Dişi",
+        aura: "Sakin & Kucaksever 🌸",
+        auraMatch: 92,
+        image: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=350",
+        bio: "Tüyleri yumuşacık, kafe buluşmalarına bayılır."
+    }
+];
+
+const PETS_DATA = {
+    luna: {
+        name: 'Luna',
+        image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300',
+        breed: 'Golden Retriever • 2 yaşında • Dişi',
+        health: 'İyi',
+        activity: '68%',
+        weight: '24.5 kg',
+        ringProgress: { activity: 68, water: 80, food: 55 },
+        status: 'GÜVENDE',
+        statusColor: 'text-green-600 bg-green-100 border-green-200',
+        streak: 4,
+        weeklyData: [60, 45, 55, 75, 90, 80, 85],
+        collar: {
+            connected: true,
+            battery: 84,
+            signal: 'Mükemmel',
+            lastSync: '1 dk önce',
+            rssi: '-45 dBm (Çok Yakın)',
+            firmware: 'v3.1.2-MoffiLink'
+        },
+        wallet: {
+            patipuan: '2,450',
+            currency: 'PATI',
+            cardNumber: '•••• •••• •••• 4892',
+            transactions: [
+                { id: 1, type: 'gider', title: 'Yaş Mama Alımı', amount: '-180 PATI', date: 'Bugün, 10:20' },
+                { id: 2, type: 'gelir', title: 'Sabah Yürüyüşü Ödülü 🔥', amount: '+50 PATI', date: 'Bugün, 08:15' },
+                { id: 3, type: 'gelir', title: 'AI Tarz Paylaşım Bonusu', amount: '+20 PATI', date: 'Dün, 19:40' }
+            ]
+        },
+        passport: {
+            idCode: 'MF-892-LNA',
+            nfcStatus: 'Aktif Sinyal',
+            qrcode: 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=moffi-passport-luna',
+            vaccines: [
+                { name: 'Kuduz Aşısı', date: '04.02.2026', status: 'Aşılı', color: 'text-green-600' },
+                { name: 'Karma Aşı', date: '18.03.2026', status: 'Aşılı', color: 'text-green-600' },
+                { name: 'Parazit Tedavisi', date: 'Ömrü bitiyor', status: '3 gün kaldı', color: 'text-red-500 font-bold' }
+            ]
+        },
+        dressing: {
+            activeOutfit: 'Havalı Gözlük 😎 & Kırmızı Boyunluk 🧣',
+            stylePoints: 120,
+            avatarMock: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300'
+        },
+        quests: [
+            { id: 1, text: 'Luna ile Yürüyüşü Tamamla (3.5 KM)', done: true },
+            { id: 2, text: 'Akşam Yemeği Mama Kabını Doldur', done: false },
+            { id: 3, text: 'Gardıropta yeni bir tarz dene', done: true }
+        ],
+        specialOffer: {
+            title: 'Maması Azalıyor! 📉',
+            desc: 'Luna için en çok satılan Somonlu Premium Yetişkin Maması (12kg)',
+            oldPrice: '1.200 TL',
+            newPrice: '960 TL',
+            discount: '%20 İNDİRİM'
+        }
+    },
+    max: {
+        name: 'Max',
+        image: 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?q=80&w=300',
+        breed: 'Beagle • 1 yaşında • Erkek',
+        health: 'Mükemmel',
+        activity: '92%',
+        weight: '12.2 kg',
+        ringProgress: { activity: 92, water: 95, food: 90 },
+        status: 'YÜRÜYÜŞTE',
+        statusColor: 'text-blue-600 bg-blue-100 border-blue-200',
+        streak: 6,
+        weeklyData: [80, 85, 90, 95, 100, 92, 95],
+        collar: {
+            connected: true,
+            battery: 48,
+            signal: 'Güçlü',
+            lastSync: 'Şimdi',
+            rssi: '-62 dBm (Orta Mesafe)',
+            firmware: 'v3.1.2-MoffiLink'
+        },
+        wallet: {
+            patipuan: '4,120',
+            currency: 'PATI',
+            cardNumber: '•••• •••• •••• 9921',
+            transactions: [
+                { id: 1, type: 'gelir', title: '5 KM Koşu Görevi Ödülü ⚡', amount: '+100 PATI', date: 'Bugün, 09:12' },
+                { id: 2, type: 'gelir', title: 'Haftalık Seri Bonusu 🔥', amount: '+150 PATI', date: 'Dün, 18:00' },
+                { id: 3, type: 'gider', title: 'Tasma Aksesuar Satın Alımı', amount: '-200 PATI', date: '15 Mayıs' }
+            ]
+        },
+        passport: {
+            idCode: 'MF-121-MAX',
+            nfcStatus: 'Aktif Sinyal',
+            qrcode: 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=moffi-passport-max',
+            vaccines: [
+                { name: 'Kuduz Aşısı', date: '12.01.2026', status: 'Aşılı', color: 'text-green-600' },
+                { name: 'Karma Aşı', date: '05.02.2026', status: 'Aşılı', color: 'text-green-600' },
+                { name: 'Corona Aşısı', date: '10.03.2026', status: 'Aşılı', color: 'text-green-600' }
+            ]
+        },
+        dressing: {
+            activeOutfit: 'Yeşil Yağmurluk 🧥 & Deri Tasma 🐕‍Gl',
+            stylePoints: 240,
+            avatarMock: 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?q=80&w=300'
+        },
+        quests: [
+            { id: 1, text: 'Yürüyüşte 5.0 KM sınırını aş', done: true },
+            { id: 2, text: 'Max için günlük su takibini gir', done: true },
+            { id: 3, text: 'Yeni Gezi Arkadaşı Bul', done: false }
+        ],
+        specialOffer: {
+            title: 'Enerjisi Çok Yüksek! ⚡',
+            desc: 'Max için Ekstra Mukavemetli Deri Yürüyüş Tasması (Beagle Özel)',
+            oldPrice: '450 TL',
+            newPrice: '380 TL',
+            discount: '%15 İNDİRİM'
+        }
+    },
+    mila: {
+        name: 'Mila',
+        image: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=300',
+        breed: 'Scottish Fold • 3 yaşında • Dişi',
+        health: 'Hassas',
+        activity: '40%',
+        weight: '4.8 kg',
+        ringProgress: { activity: 40, water: 50, food: 75 },
+        status: 'EVDE',
+        statusColor: 'text-amber-600 bg-amber-100 border-amber-200',
+        streak: 2,
+        weeklyData: [30, 40, 35, 45, 50, 40, 42],
+        collar: {
+            connected: false,
+            battery: 0,
+            signal: 'Bağlantı Yok',
+            lastSync: '2 saat önce',
+            rssi: 'Sinyal Yok',
+            firmware: 'Bilinmiyor'
+        },
+        wallet: {
+            patipuan: '850',
+            currency: 'PATI',
+            cardNumber: '•••• •••• •••• 1056',
+            transactions: [
+                { id: 1, type: 'gelir', title: 'Tüy Macunu Alım Bonusu', amount: '+50 PATI', date: '16 Mayıs' },
+                { id: 2, type: 'gider', title: 'Oyuncak Lazer Fare Alımı', amount: '-120 PATI', date: '12 Mayıs' }
+            ]
+        },
+        passport: {
+            idCode: 'MF-056-MLA',
+            nfcStatus: 'Pasif',
+            qrcode: 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=moffi-passport-mila',
+            vaccines: [
+                { name: 'Kuduz Aşısı', date: '01.03.2026', status: 'Aşılı', color: 'text-green-600' },
+                { name: 'Lösemi Aşısı', date: 'Aşılama bekliyor', status: 'Randevu Al', color: 'text-amber-500 font-bold' }
+            ]
+        },
+        dressing: {
+            activeOutfit: 'Pembe Papyon 🎀 & Simli Kolye 💎',
+            stylePoints: 310,
+            avatarMock: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=300'
+        },
+        quests: [
+            { id: 1, text: 'Mila için tüy bakım seansı kaydet', done: false },
+            { id: 2, text: '150 ml yaş mama servisini onayla', done: true },
+            { id: 3, text: 'Mila ile interaktif lazer oyunu oyna', done: false }
+        ],
+        specialOffer: {
+            title: 'Hassas Sindirim Desteği 🐱',
+            desc: 'Mila için Premium Tüy Yumağı Önleyici Malt Macun (100g)',
+            oldPrice: '280 TL',
+            newPrice: '210 TL',
+            discount: '%25 İNDİRİM'
+        }
+    }
+};
+
+type PetKey = 'luna' | 'max' | 'mila';
+
+// Story Circle
+const StoryCircle = ({ image, title, type = 'normal', delay = 0 }: { image: string, title: string, type?: 'normal' | 'add' | 'sos' | 'ai' | 'featured', delay?: number }) => (
+    <motion.div 
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay, duration: 0.5, type: 'spring' }}
+        className="flex flex-col items-center gap-1.5 shrink-0"
+    >
+        <div className="relative cursor-pointer group">
+            <div className={`w-16 h-16 rounded-full p-[2px] ${
+                type === 'add' ? 'bg-gray-200' :
+                type === 'sos' ? 'bg-red-500' :
+                type === 'ai' ? 'bg-purple-400' :
+                type === 'featured' ? 'bg-gradient-to-tr from-yellow-400 to-amber-500 shadow-sm' :
+                'bg-green-600'
+            }`}>
+                <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-white">
+                    <img src={image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt={title} />
+                </div>
+            </div>
+            {type === 'add' && (
+                <div className="absolute -bottom-1 right-0 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow-sm border border-gray-100">
+                    <Plus className="w-3.5 h-3.5 text-gray-800" />
+                </div>
+            )}
+            {type === 'sos' && (
+                <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center shadow-sm border border-white text-white animate-pulse">
+                    <span className="text-[10px] font-black">!</span>
+                </div>
+            )}
+            {type === 'ai' && (
+                <div className="absolute -top-1 -right-1 w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center shadow-sm border border-white text-white">
+                    <Sparkles className="w-3 h-3" />
+                </div>
+            )}
+        </div>
+        <span className="text-[9.5px] font-bold text-gray-700 tracking-tight truncate max-w-[72px] text-center mt-0.5">{title}</span>
+    </motion.div>
+);
+
+const BentoCard = ({ children, className = "", delay = 0, onClick, layoutId }: { children: React.ReactNode, className?: string, delay?: number, onClick?: () => void, layoutId?: string }) => (
+    <motion.div 
+        layoutId={layoutId}
+        onClick={onClick}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay, duration: 0.6 }}
+        className={`rounded-3xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-gray-100 ${className}`}
+    >
+        {children}
+    </motion.div>
+);
+
+const QuickAccessBtn = ({ 
+    icon: Icon, 
+    title, 
+    subtitle,
+    color, 
+    delay = 0, 
+    onClick 
+}: { 
+    icon: any, 
+    title: string, 
+    subtitle: string,
+    color: string, 
+    delay?: number, 
+    onClick?: () => void 
+}) => (
+    <motion.button 
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay, duration: 0.4 }}
+        whileHover={{ scale: 1.03, y: -1.5 }}
+        whileTap={{ scale: 0.97 }}
+        onClick={onClick}
+        className="flex items-center gap-3.5 p-3.5 rounded-[22px] bg-white shadow-[0_4px_12px_rgba(0,0,0,0.015),0_1px_2px_rgba(0,0,0,0.01)] border border-gray-100/80 transition-all duration-300 cursor-pointer group w-full text-left"
+    >
+        <div className="w-10 h-10 rounded-2xl bg-gray-50/50 flex items-center justify-center transform group-hover:scale-105 transition-transform duration-300 shrink-0">
+            <Icon className={`w-5.5 h-5.5 ${color} drop-shadow-[0_1px_2px_rgba(0,0,0,0.04)]`} strokeWidth={2.2} />
+        </div>
+        <div className="flex flex-col">
+            <span className="text-[12px] font-black text-gray-800 tracking-tight leading-tight">{title}</span>
+            <span className="text-[9px] text-gray-400 font-semibold mt-0.5 leading-none">{subtitle}</span>
+        </div>
+    </motion.button>
+);
+
+export default function LegendaryLightDashboard() {
     const router = useRouter();
-    const searchParams = useSearchParams();
-    const [activeTab, setActiveTab] = useState('feed'); 
-    const [radarTabMode, setRadarTabMode] = useState<'lost' | 'adopt'>('lost');
-    const [posts, setPosts] = useState<any[]>([]);
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [isPublishing, setIsPublishing] = useState(false);
-    const [isLoadingPosts, setIsLoadingPosts] = useState(false);
-    const [isLoadingLost, setIsLoadingLost] = useState(false);
-    const [isLoadingAdoptions, setIsLoadingAdoptions] = useState(false);
-    const [profileSubView, setProfileSubView] = useState<'main' | 'family' | 'passport' | 'orders' | 'wallet' | 'appointments' | 'routes' | 'impact' | 'bookmarks'>('main');
-    const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
-    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-    const { notifications, unreadCount: notifUnreadCount, markAllRead } = useRealtimeNotifications(user?.id);
-    const [selectedSharePost, setSelectedSharePost] = useState<any>(null);
-    const [profileViewMode, setProfileViewMode] = useState('grid');
-    const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-    const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
-    const [editName, setEditName] = useState("");
-    const [editUsername, setEditUsername] = useState("");
-    const [editBio, setEditBio] = useState("");
-    const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
-    const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
-    const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
-    const [editCoverPreview, setEditCoverPreview] = useState<string | null>(null);
-    const [isSavingProfile, setIsSavingProfile] = useState(false);
+    const { pets: userPets, activePet: globalActivePet, switchPet, updatePet, addPet } = usePet();
+    const { activeSession, history: walkHistory, stats: walkStats, isLoading: isWalkLoading, startWalk, endWalk } = useWalk();
+
+    // Map global activePet to our local state/mock templates
+    const activePetObj = globalActivePet || userPets[0] || {
+        id: 'mock-luna',
+        name: 'Luna',
+        image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300',
+        breed: 'Golden Retriever • 2 yaşında • Dişi',
+        gender: 'Dişi',
+        weight: '24.5',
+        microchip: 'MF-892-LNA'
+    };
+
+    const baseMockTemplate = PETS_DATA[activePetObj.name.toLowerCase() as PetKey] || PETS_DATA.luna;
+
+    const resolvedStreak = typeof activePetObj.streak === 'number' 
+        ? activePetObj.streak 
+        : (activePetObj.sos_settings?.streak ?? baseMockTemplate.streak);
+    
+    const resolvedActivityTarget = typeof activePetObj.activity_target === 'number' 
+        ? activePetObj.activity_target 
+        : (activePetObj.sos_settings?.activity_target ?? baseMockTemplate.ringProgress.activity);
+
+    // Streak değerine göre haftalık aktivite grafiği üret
+    // Tamamlanmış günler yüksek aktivite, diğerleri düşük aktivite gösterir
+    const generateWeeklyData = (streak: number, activityTarget: number) => {
+        return Array.from({ length: 7 }, (_, i) => {
+            if (i < streak) {
+                // Tamamlanmış günler: hedef etrafında varyasyon
+                return Math.min(100, activityTarget + Math.round((Math.random() * 20) - 5));
+            }
+            // Tamamlanmamış günler: düşük aktivite
+            return Math.round(activityTarget * 0.3 + Math.random() * 20);
+        });
+    };
+
+    // Eğer mock şablonda eşleşen bir template varsa onu kullan, yoksa streak'ten türet
+    const hasMockTemplate = !!(PETS_DATA[activePetObj.name.toLowerCase() as PetKey]);
+    const weeklyData = hasMockTemplate 
+        ? baseMockTemplate.weeklyData 
+        : generateWeeklyData(resolvedStreak, resolvedActivityTarget);
+
+    const pet = {
+        ...baseMockTemplate,
+        id: activePetObj.id,
+        name: activePetObj.name,
+        image: activePetObj.image || activePetObj.avatar || baseMockTemplate.image,
+        breed: activePetObj.breed || baseMockTemplate.breed,
+        weight: activePetObj.weight || activePetObj.sos_settings?.weight || baseMockTemplate.weight,
+        gender: activePetObj.gender || '',
+        health: activePetObj.health || activePetObj.sos_settings?.health || baseMockTemplate.health,
+        streak: resolvedStreak,
+        weeklyData,
+        ringProgress: {
+            activity: resolvedActivityTarget,
+            water: typeof activePetObj.water_target === 'number' ? activePetObj.water_target : (activePetObj.sos_settings?.water_target ?? baseMockTemplate.ringProgress.water),
+            food: typeof activePetObj.food_target === 'number' ? activePetObj.food_target : (activePetObj.sos_settings?.food_target ?? baseMockTemplate.ringProgress.food),
+        },
+        passport: {
+            ...baseMockTemplate.passport,
+            idCode: activePetObj.microchip || activePetObj.microchip_id || baseMockTemplate.passport.idCode,
+            qrcode: activePetObj.id ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=moffi-passport-${activePetObj.id}` : baseMockTemplate.passport.qrcode,
+        }
+    };
+
+    const [isPetSettingsOpen, setIsPetSettingsOpen] = useState(false);
     const [isAddPetOpen, setIsAddPetOpen] = useState(false);
-    const [storyPreview, setStoryPreview] = useState<string | null>(null);
-    const [pendingStoryFile, setPendingStoryFile] = useState<File | null>(null);
-    const [isUploadingStory, setIsUploadingStory] = useState(false);
     const [addPetStep, setAddPetStep] = useState(1);
     const [newPetName, setNewPetName] = useState("");
     const [newPetType, setNewPetType] = useState("🐶");
@@ -118,773 +446,222 @@ export default function MoffiSocialMasterpiece() {
     const [newPetCharacter, setNewPetCharacter] = useState("");
     const [newPetMicrochip, setNewPetMicrochip] = useState("");
     const [newPetShowPhone, setNewPetShowPhone] = useState(true);
-    const [newPetPhotos, setNewPetPhotos] = useState<{ file: File, preview: string }[]>([]);
+    const [newPetPhotos, setNewPetPhotos] = useState<any[]>([]);
     const [isSavingPet, setIsSavingPet] = useState(false);
-    const [qrModalPet, setQrModalPet] = useState<{ name: string, id: string, avatar: string } | null>(null);
-    const [isFullScreenQR, setIsFullScreenQR] = useState(false);
-    const [isPetSettingsOpen, setIsPetSettingsOpen] = useState(false);
-    const [settingsPet, setSettingsPet] = useState<any>(null);
-    const [isSOSCommandCenterOpen, setIsSOSCommandCenterOpen] = useState(false);
-    const [sosActivePet, setSosActivePet] = useState<any>(null);
-    const [isSosFromHub, setIsSosFromHub] = useState(false);
-    const [isLostAdModalOpen, setIsLostAdModalOpen] = useState(false);
-    const [selectedLostPet, setSelectedLostPet] = useState<any | null>(null);
-    const [lostPetName, setLostPetName] = useState("");
-    const [lostPetBreed, setLostPetBreed] = useState("");
-    const [lostPetLocation, setLostPetLocation] = useState("");
-    const [lostPetDesc, setLostPetDesc] = useState("");
-    const [lostPetPhotos, setLostPetPhotos] = useState<{ file: File, preview: string }[]>([]);
-    const [isSubmittingSOS, setIsSubmittingSOS] = useState(false);
-    const [isReportingLocation, setIsReportingLocation] = useState(false);
-    const [lostPets, setLostPets] = useState<any[]>([]);
-    const [selectedAdoptionPet, setSelectedAdoptionPet] = useState<any | null>(null);
-    const [isAddAdoptionModalOpen, setIsAddAdoptionModalOpen] = useState(false);
-    const [adoptionAds, setAdoptionAds] = useState<any[]>([]);
-    const [selectedAdoptionCategory, setSelectedAdoptionCategory] = useState("Hepsi");
-    const [adoptionPetName, setAdoptionPetName] = useState("");
-    const [adoptionPetBreed, setAdoptionPetBreed] = useState("");
-    const [adoptionPetAge, setAdoptionPetAge] = useState("");
-    const [adoptionPetDesc, setAdoptionPetDesc] = useState("");
-    const [adoptionPetPhotos, setAdoptionPetPhotos] = useState<{ file: File, preview: string }[]>([]);
-    const [adoptionPetType, setAdoptionPetType] = useState("cat");
-    const [isSubmittingAdoption, setIsSubmittingAdoption] = useState(false);
-    const [isApplicationFormOpen, setIsApplicationFormOpen] = useState(false);
-    const [appExperience, setAppExperience] = useState('0-2 Yıl');
-    const [viewMode, setViewMode] = useState<'immersive' | 'grid'>('immersive');
-    const [searchQuery, setSearchQuery] = useState('');
-    const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-    const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
+    const [newPetWeight, setNewPetWeight] = useState("");
+    const [newPetHealthStatus, setNewPetHealthStatus] = useState("İyi");
+    const [newPetActivityTarget, setNewPetActivityTarget] = useState("70");
+    const [newPetWaterTarget, setNewPetWaterTarget] = useState("80");
+    const [newPetFoodTarget, setNewPetFoodTarget] = useState("60");
+    const [newPetStreak, setNewPetStreak] = useState("0");
 
-    const handlePostClickFromGrid = (post: any) => {
-        setViewMode('immersive');
-        setTimeout(() => {
-            const element = document.getElementById(`post-${post.id}`);
-            if (element) {
-                element.scrollIntoView({ behavior: 'auto', block: 'center' });
+    const handleSavePetSettings = async (updatedFields: any) => {
+        try {
+            if (activePetObj && activePetObj.id) {
+                // Mevcut sos_settings ile birleştir, weight ve sağlık verilerini ekle
+                const mergedSosSettings = {
+                    ...(activePetObj.sos_settings || {}),
+                    weight: updatedFields.weight ? `${updatedFields.weight} kg` : (activePetObj.sos_settings?.weight || ''),
+                    health: updatedFields.health || (activePetObj.sos_settings?.health || 'İyi'),
+                    streak: activePetObj.sos_settings?.streak ?? 0,
+                    activity_target: activePetObj.sos_settings?.activity_target ?? 70,
+                    water_target: activePetObj.sos_settings?.water_target ?? 80,
+                    food_target: activePetObj.sos_settings?.food_target ?? 60,
+                };
+
+                const petUpdates = {
+                    ...updatedFields,
+                    microchip_id: updatedFields.microchip,
+                    sos_settings: mergedSosSettings,
+                };
+
+                await apiService.updatePet(activePetObj.id, petUpdates);
+                updatePet(activePetObj.id, {
+                    ...petUpdates,
+                    weight: mergedSosSettings.weight,
+                    health: mergedSosSettings.health,
+                });
+                setToastMsg("Pasaport bilgileri Moffi Cloud'a mühürlendi! 🛡️");
             }
-        }, 100);
+            setIsPetSettingsOpen(false);
+        } catch (err) {
+            console.error(err);
+            setToastMsg("Pati bilgileri güncellenirken bir hata oluştu.");
+        }
     };
 
+    const handleAddPetSave = async () => {
+        setIsSavingPet(true);
+        try {
+            let imageUrl = "";
+            if (newPetPhotos.length > 0) {
+                imageUrl = await apiService.uploadMedia(newPetPhotos[0].file, 'posts');
+            }
 
-    const [appHomeType, setAppHomeType] = useState('Apartman');
-    const [appNote, setAppNote] = useState('');
-    const [isSubmittingApp, setIsSubmittingApp] = useState(false);
-    const [isAdoptionChatOpen, setIsAdoptionChatOpen] = useState(false);
-    const [adoptionChatPet, setAdoptionChatPet] = useState<any | null>(null);
-    const [adoptionMessages, setAdoptionMessages] = useState<any[]>([]);
-    const [adoptionNewMsg, setAdoptionNewMsg] = useState("");
-    const [isSendingAdoptionMsg, setIsSendingAdoptionMsg] = useState(false);
-    const [anonModalType, setAnonModalType] = useState<'report' | 'message' | null>(null);
-    const [isHubOpen, setIsHubOpen] = useState(false);
-    const [anonMessage, setAnonMessage] = useState("");
-    const [anonError, setAnonError] = useState<string | null>(null);
-    const [isSubmittingAnon, setIsSubmittingAnon] = useState(false);
-    const [isHubLongPressing, setIsHubLongPressing] = useState(false);
-    const [activeTimePicker, setActiveTimePicker] = useState<'from' | 'to' | null>(null);
-    const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
-    const [activeMessageMenuId, setActiveMessageMenuId] = useState<string | null>(null);
-    const [isVetQuickSheetOpen, setIsVetQuickSheetOpen] = useState(false);
-    const [isWalkQuickSheetOpen, setIsWalkQuickSheetOpen] = useState(false);
-    const [isMarketQuickSheetOpen, setIsMarketQuickSheetOpen] = useState(false);
-    const [isStudioQuickSheetOpen, setIsStudioQuickSheetOpen] = useState(false);
-    const [isGameQuickSheetOpen, setIsGameQuickSheetOpen] = useState(false);
-    const [isEcosystemPortalOpen, setIsEcosystemPortalOpen] = useState(false);
-    const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
-    const [isDiaryOpen, setIsDiaryOpen] = useState(false);
-    const [isSOSOpen, setIsSOSOpen] = useState(false);
-    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-    const [uploadImageURL, setUploadImageURL] = useState<string | null>(null);
-    const [uploadCaption, setUploadCaption] = useState('');
-    const [uploadLocationEnabled, setUploadLocationEnabled] = useState(false);
-    const [uploadMood, setUploadMood] = useState<string | null>(null);
-    const [imageFilter, setImageFilter] = useState('');
-    const [activeFilterIndex, setActiveFilterIndex] = useState(0);
-    const [showFilterName, setShowFilterName] = useState(false);
-    const [isGeneratingAI, setIsGeneratingAI] = useState(false);
-    const [taggedPetIds, setTaggedPetIds] = useState<string[]>([]);
-    
-    // Pro Adjustments States
-    const [brightness, setBrightness] = useState(100);
-    const [contrast, setContrast] = useState(100);
-    const [saturation, setSaturation] = useState(100);
-    
-    // Scheduling States
-    const [scheduledDate, setScheduledDate] = useState<string | null>(null);
-    const [isSchedulingMode, setIsSchedulingMode] = useState(false);
-    const [activeTool, setActiveTool] = useState<'adjust' | 'tag' | 'schedule' | 'mood' | 'ai' | null>(null);
-    
-    const touchStartX = useRef<number | null>(null);
+            const newPetData = {
+                name: newPetName,
+                type: newPetType,
+                breed: newPetBreed,
+                age: newPetAge,
+                gender: newPetGender,
+                is_neutered: newPetNeutered === 'Evet',
+                size: newPetSize,
+                health_notes: newPetHealth,
+                character: newPetCharacter,
+                microchip_id: newPetMicrochip,
+                show_phone: newPetShowPhone,
+                image: imageUrl || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=400",
+                themeColor: '#EAB308',
+                
+                weight: newPetWeight ? `${newPetWeight} kg` : "10 kg",
+                health: newPetHealthStatus,
+                streak: Number(newPetStreak) || 0,
+                activity_target: Number(newPetActivityTarget) || 70,
+                water_target: Number(newPetWaterTarget) || 80,
+                food_target: Number(newPetFoodTarget) || 60,
+                
+                sos_settings: {
+                    auto_post_sos: true,
+                    sos_radius: '5km' as const,
+                    secure_proxy_only: false,
+                    location_precision: 'exact' as const,
+                    emergency_sms_number: "",
+                    reward_amount: 0,
+                    reward_currency: "TL",
+                    critical_health_note: newPetHealth,
+                    finder_message: "Lütfen bahçeye kapatıp beni arayın.",
+                    reward_enabled: false,
+                    header_sos_alert_enabled: true,
+                    
+                    weight: newPetWeight ? `${newPetWeight} kg` : "10 kg",
+                    health: newPetHealthStatus,
+                    streak: Number(newPetStreak) || 0,
+                    activity_target: Number(newPetActivityTarget) || 70,
+                    water_target: Number(newPetWaterTarget) || 80,
+                    food_target: Number(newPetFoodTarget) || 60,
+                }
+            };
 
-    const IMAGE_FILTERS = useMemo(() => [
-        { name: 'Orijinal', filter: '' },
-        { name: 'Aydınlık', filter: 'brightness(1.1) contrast(1.1)' },
-        { name: 'Canlı', filter: 'contrast(1.2) saturate(1.3)' },
-        { name: 'Sıcak', filter: 'sepia(0.3) saturate(1.2) contrast(1.1)' },
-        { name: 'Soğuk', filter: 'saturate(1.2) contrast(1.1) hue-rotate(-10deg)' },
-        { name: 'Soluk', filter: 'contrast(0.9) brightness(1.1) saturate(0.8)' },
-        { name: 'Krem', filter: 'sepia(0.2) brightness(1.05) saturate(0.9)' },
-        { name: 'Pastel', filter: 'contrast(0.85) brightness(1.1) saturate(1.1) sepia(0.1)' },
-        { name: 'Tozlu', filter: 'sepia(0.4) contrast(0.9) brightness(1.05)' },
-        { name: 'Minimal', filter: 'contrast(1.05) saturate(0.7)' },
-        { name: 'Siyah Beyaz', filter: 'grayscale(1) contrast(1.2)' },
-        { name: 'Sert Siyah', filter: 'grayscale(1) contrast(1.4) brightness(0.9)' },
-        { name: 'Vintage', filter: 'sepia(0.6) contrast(1.1) brightness(0.9) saturate(1.2)' },
-        { name: 'Nostalji', filter: 'sepia(0.8) contrast(1.2) brightness(0.8)' },
-        { name: 'Sinematik', filter: 'contrast(1.3) saturate(0.8) sepia(0.2)' }
-    ], []);
+            const savedPet = await apiService.addPet(newPetData as any);
+            
+            addPet({
+                ...newPetData,
+                id: savedPet.id,
+                image: savedPet.image || newPetData.image
+            } as any);
+
+            setIsAddPetOpen(false);
+            setToastMsg(`🎉 ${newPetName} aileye hoş geldin! 🐾`);
+            
+            setAddPetStep(1);
+            setNewPetName("");
+            setNewPetPhotos([]);
+            setNewPetWeight("");
+            setNewPetHealthStatus("İyi");
+            setNewPetActivityTarget("70");
+            setNewPetWaterTarget("80");
+            setNewPetFoodTarget("60");
+            setNewPetStreak("0");
+        } catch (err: any) {
+            console.error('Pet kayıt hatası:', err);
+            const msg = err?.message || err?.details || 'Bilinmeyen hata';
+            setToastMsg(`❌ Pati kaydedilemedi: ${msg.slice(0, 80)}`);
+        } finally {
+            setIsSavingPet(false);
+        }
+    };
+
+    const [expandedPanel, setExpandedPanel] = useState<'wallet' | 'passport' | 'collar' | 'dressing' | 'quests' | 'shop' | 'profile' | 'match' | 'events' | null>(null);
+    const [profileOrdersTab, setProfileOrdersTab] = useState<'active' | 'past' | 'cart' | 'settings'>('active');
+    const [cartQty1, setCartQty1] = useState(1);
+    const [cartQty2, setCartQty2] = useState(1);
+    const [walletBalance, setWalletBalance] = useState(2450);
+    const [showLiveMap, setShowLiveMap] = useState(false);
+    const [geofenceAlerts, setGeofenceAlerts] = useState(true);
+    const [collarLowBattery, setCollarLowBattery] = useState(true);
+    const [anomaliesSms, setAnomaliesSms] = useState(false);
+    const [toastMsg, setToastMsg] = useState<string | null>(null);
+    const [activeOrders, setActiveOrders] = useState<Array<{id: string, name: string, desc: string, timeRemaining: string, status: string, progress: number}>>([
+        { id: 'order-1', name: 'Somonlu Premium Mama (15 kg)', desc: 'Moda Dağıtım Noktası • Kurye: Walky Emre', timeRemaining: '8 dk kaldı', status: 'Kurye Yaklaşıyor', progress: 65 }
+    ]);
+
+    // Roadmap States
+    const [nfcPaymentLocked, setNfcPaymentLocked] = useState(false);
+    const [dailySpendLimit, setDailySpendLimit] = useState(250);
+    const [lostPetMode, setLostPetMode] = useState(false);
+    const [matchIndex, setMatchIndex] = useState(0);
+
+    // Yürüyüş canlı zamanlayıcı
+    const [walkElapsedSeconds, setWalkElapsedSeconds] = useState(0);
+    const walkTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
-        if (showFilterName) {
-            const timer = setTimeout(() => setShowFilterName(false), 1250);
-            return () => clearTimeout(timer);
-        }
-    }, [showFilterName, activeFilterIndex]);
-
-    const handleSwipeFilter = (direction: 'left' | 'right') => {
-        let newIndex = activeFilterIndex;
-        if (direction === 'left') {
-            newIndex = (activeFilterIndex + 1) % IMAGE_FILTERS.length;
+        if (activeSession) {
+            // Başlangıç zamanından geçen süreyi hesapla
+            const startMs = new Date(activeSession.startTime || Date.now()).getTime();
+            setWalkElapsedSeconds(Math.floor((Date.now() - startMs) / 1000));
+            
+            walkTimerRef.current = setInterval(() => {
+                setWalkElapsedSeconds(Math.floor((Date.now() - startMs) / 1000));
+            }, 1000);
         } else {
-            newIndex = (activeFilterIndex - 1 + IMAGE_FILTERS.length) % IMAGE_FILTERS.length;
+            if (walkTimerRef.current) clearInterval(walkTimerRef.current);
+            setWalkElapsedSeconds(0);
         }
-        setActiveFilterIndex(newIndex);
-        setImageFilter(IMAGE_FILTERS[newIndex].filter);
-        setShowFilterName(true);
+        return () => { if (walkTimerRef.current) clearInterval(walkTimerRef.current); };
+    }, [activeSession?.id]);
+
+    const formatWalkTime = (totalSeconds: number) => {
+        const h = Math.floor(totalSeconds / 3600);
+        const m = Math.floor((totalSeconds % 3600) / 60);
+        const s = totalSeconds % 60;
+        if (h > 0) return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
     };
 
-    const handleTouchStart = (e: React.TouchEvent) => {
-        touchStartX.current = e.touches[0].clientX;
-    };
+    const handleStartWalk = useCallback(async () => {
+        const session = await startWalk();
+        if (session) setToastMsg(`🐾 ${pet.name} ile yürüyüş başladı! GPS aktif.`);
+        else setToastMsg('⚠️ Yürüyüş başlatılamadı. Konuma izin verdiğinizden emin olun.');
+    }, [startWalk, pet.name]);
 
-    const handleTouchEnd = (e: React.TouchEvent) => {
-        if (touchStartX.current === null) return;
-        const touchEndX = e.changedTouches[0].clientX;
-        const diff = touchEndX - touchStartX.current;
-        if (diff > 50) handleSwipeFilter('right');
-        else if (diff < -50) handleSwipeFilter('left');
-        touchStartX.current = null;
-    };
+    const handleEndWalk = useCallback(async () => {
+        const result = await endWalk('happy');
+        if (result) {
+            const distM = result.distance_meters || 0;
+            const distKm = (distM / 1000).toFixed(2);
+            const patiEarned = Math.round(distM * 0.05); // ~50 PATI/km
+            setToastMsg(`🎉 Yürüyüş tamamlandı! ${distKm} KM • +${patiEarned} PATI kazanıldı 🔥`);
+        }
+    }, [endWalk]);
+    const [isMatched, setIsMatched] = useState(false);
+
+    // Dynamic Stories Hook & States
+    const { storyGroups } = useStories();
     const [viewerStoryGroupIndex, setViewerStoryGroupIndex] = useState<number | null>(null);
     const [viewerStoryIndex, setViewerStoryIndex] = useState(0);
     const [storyProgress, setStoryProgress] = useState(0);
-    const [postToDelete, setPostToDelete] = useState<number | null>(null);
-    const [editingPost, setEditingPost] = useState<{ id: number, desc: string, mood: string | null, media: string } | null>(null);
-    const [isReportAdModalOpen, setIsReportAdModalOpen] = useState(false);
-    const [reportingAdId, setReportingAdId] = useState<string | null>(null);
-    const [reportReason, setReportReason] = useState<string>('');
-    const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
-    const generateAICaption = () => {
-        setIsGeneratingAI(true);
-        setTimeout(() => {
-            const templates: Record<string, string[]> = {
-                'Mutlu ✨': [
-                    "Bugün enerjimiz yerinde! 🐾",
-                    "Gülümsememizle dünyayı aydınlatıyoruz. ✨",
-                    "En mutlu anlar patilerle geçer. ❤️",
-                    "Mutluluk bir kuyruk sallaması kadar yakın! 🐕"
-                ],
-                'Uykulu 💤': [
-                    "Biraz kestirmenin kimseye zararı olmaz... 😴",
-                    "Rüyalar alemine yolculuk başlıyor. 🌙",
-                    "En sevdiğim aktivite: Uyumak! 💤",
-                    "Pazartesi modumuz tam olarak bu... 😴"
-                ],
-                'Enerjik ⚡': [
-                    "Beni kimse durduramaz! 🔥",
-                    "Koşmak, zıplamak, keşfetmek... 🐾",
-                    "Enerji tavan! ⚡",
-                    "Hadi oyna artık! Bekliyorum... 🎾"
-                ],
-                'Sabırsız 🦉': [
-                    "Mama saati ne zaman? 🍖",
-                    "Dışarı çıkmak için sabırsızlanıyoruz! 🐾",
-                    "Hala bekliyor muyuz? Cidden mi? 🦉"
-                ],
-                'Oyunbaz 🎾': [
-                    "Topu at, getiriyim! 🎾",
-                    "Oyun vakti geldi de geçiyor bile. 🐾",
-                    "Hadi biraz eğlenelim! ✨"
-                ],
-                'Yorgun 🔋': [
-                    "Pillerimiz bitti... 🔋",
-                    "Bugün çok koşturduk, dinlenme vakti. 💤",
-                    "Beni buraya bırakın, uyanınca gelirim. 😴"
-                ]
-            };
+    const activeGroup = viewerStoryGroupIndex !== null ? storyGroups[viewerStoryGroupIndex] : null;
+    const activeStory = activeGroup ? activeGroup.stories[viewerStoryIndex] : null;
 
-            const pool = uploadMood && templates[uploadMood] ? templates[uploadMood] : [
-                "Moffi ile anı biriktiriyoruz. 🐾",
-                "Günün en güzel anı. ✨",
-                "Patili dostumla hayat daha güzel. ❤️",
-                "Harika bir gün! 🐕",
-                "Moffi dünyasında sıradan bir an. 🌍"
-            ];
-
-            const randomCaption = pool[Math.floor(Math.random() * pool.length)];
-            setUploadCaption(randomCaption);
-            setIsGeneratingAI(false);
-            showToast("AI Başarılı! ✨", "Senin için harika bir açıklama buldum.", "success");
-        }, 800);
-    };
-    
-    // VIDEO TRIMMER STATES
-    const [videoDuration, setVideoDuration] = useState(0);
-    const [videoTrimRange, setVideoTrimRange] = useState<[number, number]>([0, 20]);
-    const [uploadProgress, setUploadProgress] = useState(0);
-    
-    // AUDIO SHARING STATES
-    const [audioFile, setAudioFile] = useState<File | null>(null);
-    const [audioURL, setAudioURL] = useState<string | null>(null);
-    const audioInputRef = useRef<HTMLInputElement>(null);
-    
-    // DERIVED STATES
-    const isAnyPetLost = useMemo(() => userPets.some(p => p.is_lost), [userPets]);
-    
-    // TOAST NOTIFICATIONS
-    const [toastMessage, setToastMessage] = useState<{ title: string; desc?: string; type: 'success' | 'error' | 'info' } | null>(null);
-    const showToast = (title: string, desc?: string, type: 'success' | 'error' | 'info' = 'info') => {
-        setToastMessage({ title, desc, type });
-        setTimeout(() => setToastMessage(null), 4000);
-    };
-
-    const fileInputRef = useRef<HTMLInputElement>(null);
-
-    // --- PROFESSIONAL MEDIA ENGINE (Compression & Preview) ---
-    const processVideo = async (file: File, startTime: number, duration: number): Promise<Blob> => {
-        return new Promise((resolve, reject) => {
-            const video = document.createElement('video');
-            video.src = URL.createObjectURL(file);
-            video.muted = false; // Must be false to extract audio track via Web Audio API
-            video.playsInline = true;
-            video.crossOrigin = "anonymous";
-            
-            let isResolvedOrRejected = false;
-            
-            const cleanup = () => {
-                if (!video.paused) video.pause();
-                video.removeAttribute('src');
-                video.load();
-            };
-
-            const safeReject = (err: any) => {
-                if (isResolvedOrRejected) return;
-                isResolvedOrRejected = true;
-                cleanup();
-                reject(err);
-            };
-
-            // Timeout to prevent hanging forever if video metadata/playback fails
-            const timeoutId = setTimeout(() => {
-                safeReject(new Error("Video işleme zaman aşımına uğradı. Orijinal dosya kullanılacak."));
-            }, 10000); 
-
-            video.onloadedmetadata = () => {
-                video.currentTime = startTime;
-            };
-            
-            video.onseeked = () => {
-                video.play().catch(err => {
-                    clearTimeout(timeoutId);
-                    safeReject(err);
-                });
-            };
-
-            video.onplaying = () => {
-                clearTimeout(timeoutId);
-                try {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    
-                    const scaleFactor = Math.min(1, 480 / video.videoWidth);
-                    canvas.width = video.videoWidth * scaleFactor;
-                    canvas.height = video.videoHeight * scaleFactor;
-                    
-                    const stream = canvas.captureStream(30); 
-                    
-                    // --- AUDIO EXTRACTION ENGINE ---
-                    // Canvas captureStream only captures video frames. We must extract the audio manually.
-                    try {
-                        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-                        if (AudioContextClass) {
-                            const audioCtx = new AudioContextClass();
-                            const source = audioCtx.createMediaElementSource(video);
-                            const dest = audioCtx.createMediaStreamDestination();
-                            
-                            // Connect source to destination stream (but NOT to speakers/audioCtx.destination)
-                            // This keeps the processing silent while preserving the audio track.
-                            source.connect(dest);
-                            
-                            const audioTrack = dest.stream.getAudioTracks()[0];
-                            if (audioTrack) {
-                                stream.addTrack(audioTrack);
-                            }
-                        }
-                    } catch (audioErr) {
-                        console.warn("Moffi Audio Engine: Ses izi alınamadı veya video sessiz.", audioErr);
-                    }
-
-                    const recorder = new MediaRecorder(stream, { 
-                        mimeType: 'video/webm;codecs=vp8',
-                        videoBitsPerSecond: 1200000 
-                    });
-                    
-                    const chunks: Blob[] = [];
-                    recorder.ondataavailable = (e) => chunks.push(e.data);
-                    
-                    recorder.onstop = () => {
-                        if (isResolvedOrRejected) return;
-                        isResolvedOrRejected = true;
-                        cleanup();
-                        resolve(new Blob(chunks, { type: 'video/webm' }));
-                    };
-                    
-                    recorder.start();
-                    
-                    const drawFrame = () => {
-                        if (isResolvedOrRejected) return;
-                        if (video.paused || video.ended || (video.currentTime >= startTime + duration)) {
-                            if (recorder.state === 'recording') recorder.stop();
-                            return;
-                        }
-                        ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        requestAnimationFrame(drawFrame);
-                    };
-                    drawFrame();
-
-                    // Hard limit safety (21s)
-                    setTimeout(() => {
-                        if (recorder.state === 'recording') recorder.stop();
-                    }, (duration + 1) * 1000);
-                } catch (err) {
-                    safeReject(err);
-                }
-            };
-
-            video.onerror = (e) => {
-                clearTimeout(timeoutId);
-                console.error("Video processing error:", e);
-                safeReject(new Error("Video işlenirken bir hata oluştu."));
-            };
-            
-            video.load();
-        });
-    };
-
-    const compressImage = async (file: File): Promise<File> => {
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = (event) => {
-                const img = new Image();
-                img.src = event.target?.result as string;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 1200;
-                    const MAX_HEIGHT = 1600;
-                    let width = img.width;
-                    let height = img.height;
-
-                    if (width > height) {
-                        if (width > MAX_WIDTH) {
-                            height *= MAX_WIDTH / width;
-                            width = MAX_WIDTH;
-                        }
-                    } else {
-                        if (height > MAX_HEIGHT) {
-                            width *= MAX_HEIGHT / height;
-                            height = MAX_HEIGHT;
-                        }
-                    }
-
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx?.drawImage(img, 0, 0, width, height);
-
-                    canvas.toBlob((blob) => {
-                        if (blob) {
-                            const compressedFile = new File([blob], file.name, {
-                                type: 'image/jpeg',
-                                lastModified: Date.now(),
-                            });
-                            resolve(compressedFile);
-                        } else {
-                            resolve(file);
-                        }
-                    }, 'image/jpeg', 0.8);
-                };
-            };
-        });
-    };
-
-    const handleStoryClick = () => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        input.onchange = async (e: any) => {
-            const file = e.target.files[0];
-            if (file) {
-                setPendingStoryFile(file);
-                const reader = new FileReader();
-                reader.onloadend = () => setStoryPreview(reader.result as string);
-                reader.readAsDataURL(file);
-            }
-        };
-        input.click();
-    };
-
-    const confirmUploadStory = async () => {
-        if (!pendingStoryFile) return;
-        setIsUploadingStory(true);
-        try {
-            // --- PROFESSIONAL COMPRESSION ---
-            const compressed = await compressImageToFile(pendingStoryFile);
-            const res = await uploadStory(compressed);
-            if (res.success) {
-                showToast("Harika!", "Hikayen başarıyla paylaşıldı.", "success");
-            } else {
-                showToast("Hata", "Hikaye yüklenemedi.", "error");
-            }
-            setStoryPreview(null);
-            setPendingStoryFile(null);
-        } catch (err) {
-            console.error("Story upload failed:", err);
-            showToast("Hata", "Sistem hatası oluştu.", "error");
-        } finally {
-            setIsUploadingStory(false);
-        }
-    };
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-    const sosInputRef = useRef<HTMLInputElement>(null);
-    const adoptionPhotoRef = useRef<HTMLInputElement>(null);
-    const coverInputRef = useRef<HTMLInputElement>(null);
-    const globalScrollRef = useRef<HTMLDivElement>(null);
-    const scrollY = useMotionValue(0);
-    const longPressTimer = useRef<NodeJS.Timeout | null>(null);
-    const longPressHubTimer = useRef<NodeJS.Timeout | null>(null);
-    const storyTimerRef = useRef<NodeJS.Timeout | null>(null);
-    const feedRef = useRef<HTMLDivElement>(null);
-    const mapRef = useRef<HTMLDivElement>(null);
-    const radarRef = useRef<HTMLDivElement>(null);
-    const profileRef = useRef<HTMLDivElement>(null);
-    const footerRef = useRef<HTMLDivElement>(null);
-    const lastScrollY = useRef(0);
-    const lastInboxScroll = useRef(0);
-    
-    // Global Navigation & Hub Controller (Restored)
-    useEffect(() => {
-        const handleOpenPost = () => {
-            window.dispatchEvent(new CustomEvent('moffi-toast', { 
-                detail: { 
-                    message: 'Yeni gönderi oluşturma merkezi hazırlanıyor... 📸', 
-                    icon: 'Sparkles', 
-                    color: 'text-cyan-400' 
-                } 
-            }));
-        };
-        const handleOpenSOS = () => {
-            // Toggle SOS view or state
-            window.dispatchEvent(new CustomEvent('open-sos-command'));
-        };
-
-        const handleOpenSpotlight = () => setIsSpotlightOpen(true);
-        const handleOpenDiary = () => setIsDiaryOpen(true);
-        const handleOpenAuraStudio = () => setIsStudioQuickSheetOpen(true);
-        const handleOpenMarket = () => setIsMarketQuickSheetOpen(true);
-        const handleOpenVet = () => setIsVetQuickSheetOpen(true);
-        const handleOpenWalk = () => setIsWalkQuickSheetOpen(true);
-        const handleOpenNotif = () => setIsNotificationsOpen(true);
-
-        window.addEventListener('open-add-post', handleOpenPost);
-        window.addEventListener('open-sos-center', handleOpenSOS);
-        window.addEventListener('open-moffi-spotlight', handleOpenSpotlight);
-        window.addEventListener('open-moffi-diary', handleOpenDiary);
-        window.addEventListener('open-aura-studio', handleOpenAuraStudio);
-        window.addEventListener('open-market-sheet', handleOpenMarket);
-        window.addEventListener('open-vet-sheet', handleOpenVet);
-        window.addEventListener('open-walk-sheet', handleOpenWalk);
-        window.addEventListener('open-notification-drawer', handleOpenNotif);
-        
-        const handleChangeTab = (e: any) => {
-            setActiveTab(e.detail);
-        };
-        window.addEventListener('moffi-change-tab', handleChangeTab);
-
-        return () => {
-            window.removeEventListener('open-add-post', handleOpenPost);
-            window.removeEventListener('open-sos-center', handleOpenSOS);
-            window.removeEventListener('open-moffi-spotlight', handleOpenSpotlight);
-            window.removeEventListener('open-moffi-diary', handleOpenDiary);
-            window.removeEventListener('open-aura-studio', handleOpenAuraStudio);
-            window.removeEventListener('open-market-sheet', handleOpenMarket);
-            window.removeEventListener('open-vet-sheet', handleOpenVet);
-            window.removeEventListener('open-walk-sheet', handleOpenWalk);
-            window.removeEventListener('open-notification-drawer', handleOpenNotif);
-            window.removeEventListener('moffi-change-tab', handleChangeTab);
-        };
-    }, [router]);
-
-    // Unified Header Scroll Logic (Works for all tabs)
-
-    
-    // Unified Scroll Handler (Main Container)
-    const handleMainScroll = (e: React.UIEvent<HTMLDivElement>) => {
-        const current = e.currentTarget.scrollTop;
-        scrollY.set(current); // Synchronize motion value for header animations
-        
-        // Navigation Hide/Show Logic (Global)
-        if (current > lastScrollY.current && current > 150) {
-            window.dispatchEvent(new CustomEvent('moffi-toggle-nav', { detail: false }));
-        } else if (current < lastScrollY.current - 10 || current < 80) {
-            window.dispatchEvent(new CustomEvent('moffi-toggle-nav', { detail: true }));
-        }
-        lastScrollY.current = current;
-    };
-
-
-
-    useEffect(() => {
-        const loadInitialData = async () => {
-            // Fetch everything independently so one slow request doesn't block others
-            fetchPosts();
-            fetchLostPets();
-            fetchAdoptionAds();
-            fetchNotifications();
-            fetchInbox();
-        };
-        loadInitialData();
-    }, []);
-
-    const fetchNotifications = async () => {
-        // Obsolete, handled by useRealtimeNotifications hook
-    };
-
-    // REAL-TIME GLOBAL SYNC (Professional Event-Driven Architecture)
-    useEffect(() => {
-        const handleCustomPostsSync = () => {
-            fetchPosts(true);
-        };
-        window.addEventListener('moffi_posts_changed', handleCustomPostsSync);
-
-        let channel: any = null;
-        if (isSupabaseEnabled) {
-            channel = supabase
-                .channel('global-feed-events')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => {
-                    fetchPosts(true);
-                })
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'likes' }, () => {
-                    fetchPosts(true);
-                })
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => {
-                    fetchPosts(true);
-                })
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
-                    fetchNotifications();
-                })
-                .subscribe();
-        }
-
-        return () => {
-            window.removeEventListener('moffi_posts_changed', handleCustomPostsSync);
-            if (channel) {
-                supabase.removeChannel(channel);
-            }
-        };
-    }, [user, activeTab]);
-
-    // HANDLE DEEP LINKING (TABS & CHAT)
-    useEffect(() => {
-        const chatWithId = searchParams.get('chat');
-        if (chatWithId) {
-            setActiveChatUserId(chatWithId);
-            setInboxTab('chats');
-            setIsInboxOpen(true);
-        }
-
-        const tab = searchParams.get('tab');
-        if (tab === 'profile') {
-            setActiveTab('profile');
-        } else if (tab === 'feed' || tab === 'radar') {
-            setActiveTab(tab as any);
-        }
-    }, [searchParams]);
-    
-    // Keyboard Shortcut for AI Spotlight (Cmd+K / Ctrl+K)
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-                e.preventDefault();
-                setIsSpotlightOpen(prev => !prev);
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
-
-
-    const fetchPosts = async (isBackground = false) => {
-        if (!isBackground) {
-            setIsLoadingPosts(true);
-        }
-        try {
-            const data = await apiService.getFeedContent();
-            
-            // 1. Filter out Blocked Users
-            const blockedIds = (user?.settings?.moderation?.blockedUsers || []).map((u: any) => u.id);
-            const filteredData = data.filter((post: any) => {
-                const authorId = post.user_id || post.userId || post.authorId || post.owner_id || post.user?.id;
-                return !blockedIds.includes(authorId);
-            });
-
-            // 2. Apply initial sorting
-            const sortType = user?.settings?.feed?.defaultSort || 'new';
-            const sortedData = sortPostsLocally(filteredData, sortType);
-            
-            setPosts(sortedData);
-        } catch (err) {
-            console.error("Posts fetch error:", err);
-            // DO NOT fall back to MOCK_POSTS — show empty feed if Supabase fails
-            // This prevents hardcoded dog photos from appearing
-        } finally {
-            if (!isBackground) {
-                setIsLoadingPosts(false);
-            }
-        }
-    };
-
-    const filteredPosts = useMemo(() => {
-        if (!searchQuery) return posts;
-        return posts.filter(post => 
-            post.desc?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            post.author_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            post.category?.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-    }, [posts, searchQuery]);
-
-
-    const sortPostsLocally = (data: any[], sortType: string) => {
-        const sorted = [...data];
-        if (sortType === 'popular') {
-            return sorted.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+    const handleCtaClick = () => {
+        if (!activeStory) return;
+        if (activeStory.ctaType === 'toast') {
+            setToastMsg(`🎉 ${activeStory.ctaValue}`);
+        } else if (activeStory.ctaType === 'coupon') {
+            setToastMsg(`🎟️ Kupon Kodu Kopyalandı: ${activeStory.ctaValue}`);
+        } else if (activeStory.ctaType === 'map') {
+            setToastMsg(`📍 Konum Haritada Gösteriliyor: ${activeStory.ctaValue}`);
+            setShowLiveMap(true);
+        } else if (activeStory.ctaType === 'chat') {
+            setToastMsg(`💬 Sohbet Başlatılıyor...`);
         } else {
-            // Newest first: Sort by ID descending (Date.now proxy) or index
-            return sorted.sort((a, b) => {
-                const idA = typeof a.id === 'string' ? (parseInt(a.id.split('-').pop() || '0') || 0) : a.id;
-                const idB = typeof b.id === 'string' ? (parseInt(b.id.split('-').pop() || '0') || 0) : b.id;
-                return idB - idA;
-            });
+            setToastMsg(activeStory.ctaValue || "İşlem yapıldı.");
         }
+        closeStoryViewer();
     };
-
-    // Reactive Re-sorting when preference changes
-    useEffect(() => {
-        if (posts.length > 0) {
-            const sortType = user?.settings?.feed?.defaultSort || 'new';
-            const sorted = sortPostsLocally(posts, sortType);
-            
-            // Only update if order actually changed to avoid infinite loop
-            const orderChanged = sorted.some((p, i) => p.id !== posts[i].id);
-            if (orderChanged) {
-                setPosts(sorted);
-                
-                // Pure Apple UX: Scroll to top when sorting changes
-                if (globalScrollRef.current) {
-                    globalScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-            }
-        }
-    }, [user?.settings?.feed?.defaultSort]);
-
-
-    const fetchAdoptionAds = async () => {
-        setIsLoadingAdoptions(true);
-        try {
-            const data = await apiService.getAdoptions();
-            setAdoptionAds(data);
-        } catch (err) {
-            console.error("Sahiplendirme ilanları çekilirken hata:", err);
-            setAdoptionAds(MOCK_ADOPTIONS);
-        } finally {
-            setIsLoadingAdoptions(false);
-        }
-    };
-
-
-
-
-
-
-    // Premium Header Transformations (Apple-Style) - Defined after activeTab
-    const headerHeight = [120, 64];
-
-    const headerHeightTransform = useTransform(scrollY, [0, 80], headerHeight);
-    
-    const headerPadding = useTransform(scrollY, [0, 80], [
-        "48px 24px 16px", 
-        "8px 24px 8px"
-    ]);
-    const logoScale = useTransform(scrollY, [0, 80], [1, 0.8]);
-    const headerBgOpacity = useTransform(scrollY, [0, 60], [0, 0.95]);
-    const headerBlur = useTransform(scrollY, [0, 60], [0, 50]);
-    const headerBorderOpacity = useTransform(scrollY, [0, 60], [0, 0.15]);
-    const headerOpacity = useTransform(scrollY, [0, 80], [1, 1]); // Keeping it 1 for now as per user request to move grid to top
-    const logoY = useTransform(scrollY, [0, 80], [0, -4]); 
-    const iconScale = useTransform(scrollY, [0, 80], [1, 0.9]);
-    const headerBlurTransform = useTransform(headerBlur, (b) => `blur(${b}px)`);
-
-    // Reset scroll when switching tabs for a fresh start
-    useEffect(() => {
-        if (globalScrollRef.current) {
-            globalScrollRef.current.scrollTop = 0;
-        }
-    }, [activeTab]);
-
-    // ADOPTION APPLICATION STATES
-
-
-
-
-    // INBOX & SOS DATA STATES (Consolidated at top level)
-
-
-
-    
-    
-    
-
-
-    
-
-
-
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
-
-    useEffect(() => {
-        if (isInboxOpen) {
-            scrollToBottom();
-        }
-    }, [isInboxOpen, inboxMessages]);
-
-    // TOAST NOTIFICATIONS
-
-
-    // SETTINGS / KVKK STATES
-
-
-
-
-
-
-
-    const MOOD_OPTIONS = ["Mutlu ✨", "Uykulu 💤", "Enerjik ⚡", "Sabırsız 🥶", "Oyunbaz 🎾", "Acıkmış 🦴", "Havalı 😎"];
-
-    // STORY VIEWER STATES
-
 
     const closeStoryViewer = () => {
         setViewerStoryGroupIndex(null);
@@ -898,9 +675,6 @@ export default function MoffiSocialMasterpiece() {
         const group = storyGroups[viewerStoryGroupIndex];
         if (viewerStoryIndex < group.stories.length - 1) {
             setViewerStoryIndex(prev => prev + 1);
-        } else if (viewerStoryGroupIndex < storyGroups.length - 1) {
-            setViewerStoryGroupIndex(prev => prev! + 1);
-            setViewerStoryIndex(0);
         } else {
             closeStoryViewer();
         }
@@ -911,9 +685,6 @@ export default function MoffiSocialMasterpiece() {
         if (viewerStoryGroupIndex === null) return;
         if (viewerStoryIndex > 0) {
             setViewerStoryIndex(prev => prev - 1);
-        } else if (viewerStoryGroupIndex > 0) {
-            setViewerStoryGroupIndex(prev => prev! - 1);
-            setViewerStoryIndex(storyGroups[viewerStoryGroupIndex - 1].stories.length - 1);
         } else {
             closeStoryViewer();
         }
@@ -921,3484 +692,2530 @@ export default function MoffiSocialMasterpiece() {
 
     useEffect(() => {
         if (viewerStoryGroupIndex === null) return;
-
-        // Reset progress directly to 0 (no transition)
         setStoryProgress(0);
-
-        // Wait a tiny bit (next frame) then trigger the CSS transition to 100%
         const animationTimer = setTimeout(() => {
             setStoryProgress(100);
         }, 50);
 
-        // When the 5-second transition finishes, flip to the next story
         const autoAdvanceTimer = setTimeout(() => {
             nextStory();
-        }, 5050); // 50ms delay + 5000ms transition
+        }, 5050);
 
         return () => {
             clearTimeout(animationTimer);
             clearTimeout(autoAdvanceTimer);
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [viewerStoryGroupIndex, viewerStoryIndex]);
+    }, [viewerStoryGroupIndex, viewerStoryIndex, storyGroups]);
 
     const formatTimeAgo = (dateStr?: string) => {
-        if (!dateStr) return "Şimdi";
+        if (!dateStr) return "şimdi";
         const diffInSeconds = Math.floor((new Date().getTime() - new Date(dateStr).getTime()) / 1000);
         if (diffInSeconds < 60) return `${Math.max(0, diffInSeconds)}s`;
         const diffInMinutes = Math.floor(diffInSeconds / 60);
         if (diffInMinutes < 60) return `${diffInMinutes}d`;
         const diffInHours = Math.floor(diffInMinutes / 60);
-        if (diffInHours < 24) return `${diffInHours}s`;
-        const diffInDays = Math.floor(diffInHours / 24);
-        return `${diffInDays}g`;
+        if (diffInHours < 24) return `${diffInHours}sa`;
+        return `${Math.floor(diffInHours / 24)}g`;
     };
 
-    const cameraInputRef = useRef<HTMLInputElement>(null);
+    useEffect(() => {
+        const val = parseInt(pet.wallet.patipuan.replace(/[^0-9]/g, ''));
+        setWalletBalance(val);
+    }, [activePetObj.id]);
 
-    const toggleLike = async (id: string) => {
-        setPosts(prev => prev.map(post => {
-            if (post.id === id) {
-                const newIsLiked = !post.isLiked;
-                return {
-                    ...post,
-                    isLiked: newIsLiked,
-                    likes: newIsLiked ? (post.likes + 1) : Math.max(0, post.likes - 1)
-                };
-            }
-            return post;
-        }));
-
-        try {
-            await apiService.reactToPost(id, '❤️');
-            window.dispatchEvent(new Event('moffi_posts_changed'));
-        } catch (err) {
-            console.error("Beğeni hatası:", err);
-            fetchPosts(); 
+    useEffect(() => {
+        if (toastMsg) {
+            const timer = setTimeout(() => {
+                setToastMsg(null);
+            }, 4000);
+            return () => clearTimeout(timer);
         }
-    };
-
-    const addComment = async (postId: string, text: string) => {
-        if (!text.trim()) return;
-        
-        // Optimistic UI Update - DB write is handled directly by useRealtimeComments hook
-        setPosts(prev => prev.map(p => {
-            if (p.id === postId) {
-                return { ...p, comments: (Number(p.comments) || 0) + 1 };
-            }
-            return p;
-        }));
-    };
-
-    const toggleCommentLike = (postId: number, commentId: number) => {
-        setPosts(prev => prev.map(p => {
-            if (p.id !== postId) return p;
-
-            const updateCommentLikes = (comments: any[]): any[] => {
-                return comments.map(c => {
-                    if (c.id === commentId) {
-                        return {
-                            ...c,
-                            isLiked: !c.isLiked,
-                            likes: c.isLiked ? c.likes - 1 : c.likes + 1
-                        };
-                    }
-                    if (c.replies && c.replies.length > 0) {
-                        return { ...c, replies: updateCommentLikes(c.replies) };
-                    }
-                    return c;
-                });
-            };
-
-            return { ...p, commentsList: updateCommentLikes(p.commentsList || []) };
-        }));
-    };
-
-    const addCommentReply = (postId: number, parentCommentId: number, text: string) => {
-        if (!text.trim()) return;
-        setPosts(prev => prev.map(p => {
-            if (p.id !== postId) return p;
-
-            const newReply = {
-                id: Date.now(),
-                author: `@${user?.username || 'moffi_user'}`,
-                avatar: user?.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300",
-                text: text,
-                time: "Şimdi",
-                likes: 0,
-                isLiked: false,
-                replies: []
-            };
-
-            const updateCommentReplies = (comments: any[]): any[] => {
-                return comments.map(c => {
-                    if (c.id === parentCommentId) {
-                        return { 
-                            ...c, 
-                            replies: [...(c.replies || []), { ...newReply, isReplyTo: c.author }] 
-                        };
-                    }
-                    if (c.replies && c.replies.length > 0) {
-                        return { ...c, replies: updateCommentReplies(c.replies) };
-                    }
-                    return c;
-                });
-            };
-
-            return { ...p, commentsList: updateCommentReplies(p.commentsList || []) };
-        }));
-    };
-
-    const deleteComment = (postId: number, commentId: number) => {
-        setPosts(prev => prev.map(p => {
-            if (p.id !== postId) return p;
-
-            const removeComment = (comments: any[]): any[] => {
-                return comments
-                    .filter(c => c.id !== commentId)
-                    .map(c => ({
-                        ...c,
-                        replies: c.replies ? removeComment(c.replies) : []
-                    }));
-            };
-
-            return { 
-                ...p, 
-                comments: p.comments - 1,
-                commentsList: removeComment(p.commentsList || []) 
-            };
-        }));
-        showToast("Yorum Silindi", "Yorum ve yanıtları kaldırıldı.", "info");
-    };
-
-    const editComment = (postId: number, commentId: number, text: string) => {
-        setPosts(prev => prev.map(p => {
-            if (p.id !== postId) return p;
-
-            const updateCommentText = (comments: any[]): any[] => {
-                return comments.map(c => {
-                    if (c.id === commentId) {
-                        return { ...c, text };
-                    }
-                    if (c.replies && c.replies.length > 0) {
-                        return { ...c, replies: updateCommentText(c.replies) };
-                    }
-                    return c;
-                });
-            };
-
-            return { ...p, commentsList: updateCommentText(p.commentsList || []) };
-        }));
-        showToast("Yorum Güncellendi", "Değişiklikler kaydedildi.", "success");
-    };
-
-    const reportComment = (postId: number, commentId: number) => {
-        showToast("Bildirim Alındı", "Yorum incelemeye alındı. Teşekkürler!", "info");
-    };
-
-
-
-    const deletePost = async () => {
-        if (!postToDelete) return;
-        try {
-            await apiService.deletePost(postToDelete);
-            setPosts(prev => prev.filter(p => p.id !== postToDelete));
-            setPostToDelete(null);
-            showToast("Gönderi Silindi", "Gönderiniz başarıyla kaldırıldı.", "success");
-        } catch (err: any) {
-            console.error(err);
-            showToast("Hata", "Gönderi silinemedi.", "error");
-        }
-    };
-
-    const saveEditPost = async () => {
-        if (!editingPost) return;
-        setIsPublishing(true);
-        try {
-            await apiService.updatePost(editingPost.id, {
-                desc: editingPost.desc,
-                mood: editingPost.mood
-            });
-            setPosts(prev => prev.map(p => p.id === editingPost.id ? { ...p, desc: editingPost.desc, mood: editingPost.mood } : p));
-            setEditingPost(null);
-            showToast("Güncellendi", "Değişiklikler kaydedildi.", "success");
-        } catch (err: any) {
-            console.error(err);
-            showToast("Hata", "Gönderi güncellenemedi.", "error");
-        } finally {
-            setIsPublishing(false);
-        }
-    };
-
-    const handleCameraUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        // --- GLOBAL STANDARDS CHECK ---
-        const MAX_FILE_SIZE = 40 * 1024 * 1024; // 40MB
-        const MAX_VIDEO_DURATION = 20; // 20 Seconds Standard
-
-        if (file.size > MAX_FILE_SIZE) {
-            showToast("Dosya Çok Büyük", "Lütfen 40MB'dan daha küçük bir video/resim seçin. 📏", "error");
-            if (cameraInputRef.current) cameraInputRef.current.value = '';
-            return;
-        }
-
-        if (file.type.startsWith('video/')) {
-            const video = document.createElement('video');
-            video.preload = 'metadata';
-            video.onloadedmetadata = () => {
-                window.URL.revokeObjectURL(video.src);
-                setVideoDuration(video.duration);
-                
-                if (video.duration > MAX_VIDEO_DURATION) {
-                    // Long video: Don't block, just set initial trim
-                    setVideoTrimRange([0, 20]);
-                    showToast("Video Ayarlama", "Videonuz 20 saniyeden uzun. En iyi kısmını seçebilirsiniz. ✨", "info");
-                } else {
-                    setVideoTrimRange([0, video.duration]);
-                }
-                
-                setSelectedFile(file);
-                setUploadImageURL(URL.createObjectURL(file));
-                setIsUploadModalOpen(true);
-            };
-            video.src = URL.createObjectURL(file);
-        } else {
-            setSelectedFile(file);
-            setUploadImageURL(URL.createObjectURL(file));
-            setIsUploadModalOpen(true);
-        }
-        
-        if (cameraInputRef.current) cameraInputRef.current.value = '';
-    };
-
-    const publishPost = async () => {
-        if (!uploadImageURL || !selectedFile) return;
-        if (!user) {
-            showToast("Giriş Gerekli", "Paylaşım yapmak için giriş yapmalısınız.", "Zap");
-            window.dispatchEvent(new CustomEvent('open-auth-modal'));
-            return;
-        }
-
-        setIsPublishing(true);
-        setUploadProgress(0);
-        try {
-            let fileToUpload: any = selectedFile;
-            
-            if (selectedFile.type.startsWith('image/')) {
-                fileToUpload = await compressImageToFile(selectedFile, 1200, 0.8, imageFilter);
-            } else if (selectedFile.type.startsWith('video/')) {
-                // Show "Processing" state
-                showToast("Video Hazırlanıyor...", "Seçtiğiniz 20 saniyelik kısım işleniyor ve optimize ediliyor. ✨", "info");
-                
-                try {
-                    const trimmedVideoBlob = await processVideo(
-                        selectedFile, 
-                        videoTrimRange[0], 
-                        Math.min(20, videoTrimRange[1] - videoTrimRange[0])
-                    );
-                    
-                    fileToUpload = new File([trimmedVideoBlob], "trimmed_video.webm", { type: 'video/webm' });
-                    
-                    // Since we already trimmed it physically, let's reset metadata to the full length of the new file
-                    // But we keep the original intent for the DB check
-                } catch (err) {
-                    console.error("Video processing failed, falling back to original:", err);
-                    showToast("Hata", "Video işlenemedi, orijinal dosya yükleniyor.", "error");
-                    // Fallback to original file
-                }
-            }
-            
-            // 1. Upload to Storage
-            const publicUrl = await apiService.uploadMedia(fileToUpload, 'posts', (p) => {
-                setUploadProgress(p);
-            });
-            if (!publicUrl) throw new Error("Dosya sunucuya yüklenemedi.");
-            
-            // 1.5 Upload Audio if exists
-            let audioPublicUrl = null;
-            if (audioFile) {
-                audioPublicUrl = await apiService.uploadMedia(audioFile, 'sounds');
-            }
-
-            // 2. Add Post to DB
-            const isVideo = selectedFile.type.startsWith('video/');
-            const wasProcessed = fileToUpload.name === "trimmed_video.webm";
-
-            const newPostResult = await apiService.addPost({
-                media: publicUrl,
-                caption: uploadCaption,
-                mood: uploadMood || null,
-                is_video: isVideo,
-                audio_url: audioPublicUrl,
-                tagged_pets: taggedPetIds,
-                scheduled_at: isSchedulingMode ? scheduledDate : null,
-                status: isSchedulingMode ? 'scheduled' : 'published',
-                trim_start: isVideo ? (wasProcessed ? 0 : videoTrimRange[0]) : undefined,
-                trim_end: isVideo ? (wasProcessed ? (videoTrimRange[1] - videoTrimRange[0]) : videoTrimRange[1]) : undefined
-            });
-
-            // 3. OPTIMISTIC UPDATE: Add to local state immediately
-            setPosts(prev => [newPostResult, ...prev]);
-
-            // 4. Clean up
-            setIsUploadModalOpen(false);
-            setUploadImageURL(null);
-            setSelectedFile(null);
-            setAudioFile(null);
-            setAudioURL(null);
-            setUploadCaption('');
-            setUploadMood(null);
-            setTaggedPetIds([]);
-            setBrightness(100);
-            setContrast(100);
-            setSaturation(100);
-            setScheduledDate(null);
-            setIsSchedulingMode(false);
-            setActiveTool(null);
-            setUploadLocationEnabled(false);
-            setActiveTab('feed');
-            showToast("Paylaşıldı", "Yeni gönderiniz yayında!", "success");
-
-            // 5. Background sync
-            fetchPosts();
-        } catch (error: any) {
-            console.error("Post upload error:", error);
-            const errorMsg = error?.message || "Sunucuyla bağlantı kurulamadı veya bir hata oluştu.";
-            showToast("Hata", `Paylaşım yapılamadı: ${errorMsg}`, "error");
-        } finally {
-            setIsPublishing(false);
-        }
-    };
-
-    const handleSosImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (files) {
-            const newPhotos = Array.from(files).map(file => ({
-                file,
-                preview: URL.createObjectURL(file)
-            }));
-            setLostPetPhotos(prev => [...prev, ...newPhotos]);
-            if (sosInputRef.current) sosInputRef.current.value = '';
-        }
-    };
-
-    const submitSos = async () => {
-        if (!lostPetName || !lostPetLocation) {
-            showToast("Eksik Bilgi", "Lütfen isim ve son görüldüğü yer alanlarını doldurun!", "error");
-            return;
-        }
-        if (!user) {
-            showToast("Giriş Gerekli", "Kayıp ilanı verebilmek için üye girişi yapmalısınız!", "Zap");
-            window.dispatchEvent(new CustomEvent('open-auth-modal'));
-            return;
-        }
-
-        setIsSubmittingSOS(true);
-        try {
-            const photoUrls: string[] = [];
-            // 1. Upload Images using apiService (Mockable)
-            for (const photo of lostPetPhotos) {
-                const publicUrl = await apiService.uploadMedia(photo.file, 'posts');
-                if (publicUrl) photoUrls.push(publicUrl);
-            }
-
-            // 2. Insert Record via API
-            const newAlert = await apiService.addLostPet({
-                name: lostPetName,
-                type: 'dog',
-                img: photoUrls[0] || null,
-                location: lostPetLocation,
-                description: lostPetDesc
-            });
-
-            setSosAlerts(prev => [newAlert, ...prev]);
-
-            showToast("GÜÇLÜ SİNYAL GÖNDERİLDİ!", "Acil Durum İlanınız 5km çapındaki herkese ulaştı.", "success");
-
-            setIsLostAdModalOpen(false);
-            setLostPetName("");
-            setLostPetBreed("");
-            setLostPetLocation("");
-            setLostPetDesc("");
-            setLostPetPhotos([]);
-
-        } catch (error: any) {
-            console.error("SOS submission error:", error);
-            showToast("Hata", "İlan gönderilirken hata oluştu.", "error");
-        } finally {
-            setIsSubmittingSOS(false);
-        }
-    };
-
-    const handleDeleteLostPet = async (petId: string) => {
-        if (!window.confirm("Kayıp ilanını sistemden kaldırmak/silmek istediğinize emin misiniz?")) return;
-        try {
-            // Mock delete logic
-            setSosAlerts(prev => prev.filter(p => p.id !== petId));
-            showToast("İlan Kaldırıldı", "İlanınız başarıyla sistemden kaldırıldı.", "success");
-        } catch (err: any) {
-            showToast("Hata", "İlan silinemedi.", "error");
-        }
-    };
-
-    // Logic for adoption posts
-
-    const handleAdoptionPost = async () => {
-        if (!user) {
-            setIsAuthModalOpen(true);
-            return;
-        }
-
-        if (!adoptionPetName || !adoptionPetBreed || adoptionPetPhotos.length === 0) {
-            showToast('Eksik Bilgi', 'Lütfen isim, tür ve en az bir fotoğraf ekleyin.', 'error');
-            return;
-        }
-
-        setIsSubmittingAdoption(true);
-        showToast('Yükleniyor...', 'Fotoğraflar işleniyor ve Moffi AI denetimi başlatılıyor...', 'info');
-        try {
-            const photoUrls: string[] = [];
-            // 1. Upload Photos using apiService (Mockable)
-            for (const photo of adoptionPetPhotos) {
-                const publicUrl = await apiService.uploadMedia(photo.file, 'posts');
-                if (publicUrl) photoUrls.push(publicUrl);
-            }
-
-            // 2. Add via API
-            const newAd = await apiService.addAdoption({
-                name: adoptionPetName,
-                type: adoptionPetType,
-                description: adoptionPetDesc,
-                img: photoUrls[0] || null,
-                owner: user.username
-            });
-
-            setAdoptionAds(prev => [newAd, ...prev]);
-
-            // Simulation: Artificial delay for "AI Moderation"
-            setTimeout(() => {
-                showToast('✅ İlan Yayınlandı!', 'Moffi AI denetiminden geçti. İlanınız görünmeye başladı.', 'success');
-            }, 1000);
-
-            // Reset form
-            setIsAddAdoptionModalOpen(false);
-            setAdoptionPetName("");
-            setAdoptionPetBreed("");
-            setAdoptionPetAge("");
-            setAdoptionPetDesc("");
-            setAdoptionPetPhotos([]);
-            setAdoptionPetType("cat");
-
-        } catch (err: any) {
-            showToast('Hata', "İlan oluşturulamadı.", 'error');
-        } finally {
-            setIsSubmittingAdoption(false);
-        }
-    };
-
-    const handleDeleteAdoptionAd = async (adId: string) => {
-        if (!confirm('Bu ilanı kaldırmak istediğinizden emin misiniz?')) return;
-        try {
-            setAdoptionAds(prev => prev.filter(ad => ad.id !== adId));
-            showToast('İlan Kaldırıldı', 'Sahiplendirme ilanınız silindi.', 'success');
-        } catch (err: any) {
-            showToast('Hata', "İlan silinemedi.", 'error');
-        }
-    };
-
-
-
-    const handleReportAdoption = async () => {
-        if (!reportingAdId || !reportReason) return;
-        setIsSubmittingReport(true);
-        try {
-            await fetch('/api/adoption/report', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    adId: reportingAdId,
-                    reportedBy: user?.id || null,
-                    reason: reportReason,
-                    details: ''
-                })
-            });
-            showToast('🚨 Bildirim Alındı', 'Moffi ekibi en kısa sürede inceleyecek.', 'success');
-            setIsReportAdModalOpen(false);
-            setReportReason('');
-            setReportingAdId(null);
-        } catch (err: any) {
-            showToast('Hata', err.message, 'error');
-        } finally {
-            setIsSubmittingReport(false);
-        }
-    };
-
-    const handleStartAdoptionChat = (pet: any) => {
-        setAdoptionChatPet(pet);
-        setIsAdoptionChatOpen(true);
-        // Mock initial system message
-        setAdoptionMessages([
-            { id: 'sys-1', text: `Merhaba! ${pet.name} için sahiplenme süreci başlatıldı. 👋`, sender: 'system', time: 'Şimdi' },
-            { id: 'sys-2', text: 'Moffi Güvenli Mesajlaşma üzerinden ilan sahibiyle iletişime geçiyorsunuz. Lütfen kişisel bilgilerinizi paylaşırken dikkatli olun.', sender: 'system', time: 'Şimdi' }
-        ]);
-    };
-
-    const submitAdoptionApplication = async () => {
-        if (!user || !selectedAdoptionPet) return;
-        setIsSubmittingApp(true);
-        try {
-            // Mock submission
-            showToast("Başvuru İletildi! ❤️", "İlan sahibi başvurunuzu inceledikten sonra size dönecek.", "success");
-            setIsApplicationFormOpen(false);
-            setAppNote("");
-            setSelectedAdoptionPet(null);
-        } catch (err: any) {
-            showToast("Hata", "Başvuru yapılamadı.", "error");
-        } finally {
-            setIsSubmittingApp(false);
-        }
-    };
-
-    const handleSendAdoptionMsg = () => {
-        if (!adoptionNewMsg.trim()) return;
-        const newMsg = {
-            id: Date.now().toString(),
-            text: adoptionNewMsg,
-            sender: 'me',
-            time: 'Şimdi'
-        };
-        setAdoptionMessages(prev => [...prev, newMsg]);
-        setAdoptionNewMsg("");
-
-        // Mock a response after 1s
-        setIsSendingAdoptionMsg(true);
-        setTimeout(() => {
-            setIsSendingAdoptionMsg(false);
-            setAdoptionMessages(prev => [...prev, {
-                id: (Date.now() + 1).toString(),
-                text: "İlginiz için teşekkürler! Birazdan size detaylı bilgi vereceğim. 😊",
-                sender: 'them',
-                time: 'Şimdi'
-            }]);
-        }, 1500);
-    };
-
-    const handleReportLocation = () => {
-        if (!user) {
-            showToast("Giriş Gerekli", "Anonim olarak ihbar verebilmek için üye girişi yapmalısınız.", "Zap");
-            window.dispatchEvent(new CustomEvent('open-auth-modal'));
-            return;
-        }
-        setAnonModalType('report');
-        setAnonMessage("");
-        setAnonError(null);
-    };
-
-    const handleMessageOwner = () => {
-        if (!user) {
-            showToast("Giriş Gerekli", "Mesaj atabilmek için giriş yapmalısınız.", "Zap");
-            window.dispatchEvent(new CustomEvent('open-auth-modal'));
-            return;
-        }
-        setAnonModalType('message');
-        setAnonMessage("");
-        setAnonError(null);
-    };
-
-    const submitAnonAction = async () => {
-        if (!anonMessage.trim()) return;
-        setAnonError(null);
-
-        // --- AI MODERATION / PII CHECK ---
-        // Telefon Numarası Regex: (Örn: 0555 555 55 55, +905555555555, 532 123 4567)
-        const phoneRegex = /(?:\+90|0)?\s?[5]\d{2}\s?\d{3}\s?\d{2}\s?\d{2}/i;
-        // IBAN Regex: TR ile başlayıp 24 hane sayılan temel mantık
-        const ibanRegex = /TR[a-zA-Z0-9]{24}/i;
-
-        // Kelime bazlı basit spam/adres yakalama algoritması (örn. 'mah', 'sokak', 'no:')
-        const rawText = anonMessage.toLowerCase();
-
-        if (phoneRegex.test(rawText)) {
-            setAnonError("Hata: Sistemimiz iletişim bilginizi veya telefon numarası formatı tespit etti. Güvenliğiniz için direkt iletişim bilgisi paylaşmak yasaktır.");
-            return;
-        }
-        if (ibanRegex.test(rawText)) {
-            setAnonError("Hata: İbana ve para transferine yönelik teşebbüsleri reddediyoruz.");
-            return;
-        }
-
-        setIsSubmittingAnon(true);
-        try {
-            if (anonModalType === 'report' || anonModalType === 'message') {
-                const isMsg = anonModalType === 'message';
-                // Mock sighting submission
-                showToast("Sinyal İletildi", isMsg ? "Moffi Acil İhbar Hattına şifreli mesajınız ulaştı." : "Bölge bilgisini güvenle ulaştırdık.", "success");
-            }
-            setAnonModalType(null);
-            setAnonMessage("");
-        } catch (err: any) {
-            showToast("Bağlantı Hatası", "İşlem sırasında beklenmedik bir hata oluştu.", "error");
-        } finally {
-            setIsSubmittingAnon(false);
-        }
-    };
-
-    const fetchInbox = async () => {
-        try {
-            await refreshInbox();
-        } catch (err) {
-            console.error("Inbox load error:", err);
-        }
-    };
-
-
-    // Unified SOS/Lost Pet fetcher used across the component
-    const fetchLostPets = async () => {
-        setIsLoadingLost(true);
-        try {
-            const data = await apiService.getLostPets();
-            setLostPets(data || []);
-            setSosAlerts(data || []);
-        } catch (err) {
-            console.error("Kayıp ilanlar çekilirken hata:", err);
-            setLostPets([]);
-            setSosAlerts([]);
-        } finally {
-            setIsLoadingLost(false);
-        }
-    };
-
-    const filteredSOSAlerts = useMemo(() => {
-        const sosSettings = {
-            radius: 5,
-            quietHours: { enabled: false, from: '23:00', to: '07:00' },
-            petTypes: ['dog', 'cat', 'bird', 'other'],
-            emergencyBypass: true
-        };
-
-        return sosAlerts.filter(alert => {
-            // 1. Radius Filter
-            if (alert.distance > (sosSettings.radius || 5)) return false;
-
-            // 2. Pet Type Filter
-            if (!(sosSettings.petTypes || []).includes(alert.type)) return false;
-
-            // 3. Quiet Hours & Emergency Bypass Logic
-            if (sosSettings.quietHours?.enabled) {
-                const now = new Date();
-                const currentMins = now.getHours() * 60 + now.getMinutes();
-                const [fromH, fromM] = (sosSettings.quietHours.from || '23:00').split(':').map(Number);
-                const [toH, toM] = (sosSettings.quietHours.to || '07:00').split(':').map(Number);
-                const fromMins = fromH * 60 + fromM;
-                const toMins = toH * 60 + toM;
-
-                let isQuietTime = false;
-                if (fromMins < toMins) {
-                    isQuietTime = currentMins >= fromMins && currentMins <= toMins;
-                } else {
-                    isQuietTime = currentMins >= fromMins || currentMins <= toMins;
-                }
-
-                if (isQuietTime) {
-                    // EMERGENCY BYPASS: If enabled, show very close alerts (< 1km) regardless of quiet hours
-                    if (sosSettings.emergencyBypass && alert.distance < 1.0) {
-                        return true;
-                    }
-                    return false;
-                }
-            }
-
-            return true;
-        });
-    }, [sosAlerts, user?.settings?.sos]);
-
-
-
+    }, [toastMsg]);
 
     return (
-        <div className="fixed inset-0 bg-[var(--background)] text-[var(--foreground)] overflow-hidden flex flex-col font-sans">
-
-            {/* iOS STYLE TOAST NOTIFICATION */}
+        <div className="min-h-screen bg-[#FBFBFB] text-gray-900 font-sans selection:bg-green-500/30 overflow-x-hidden pb-32">
+            
+            {/* Top Floating Toast Notification */}
             <AnimatePresence>
-                {toastMessage && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -50, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -50, scale: 0.95 }}
-                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                        className="fixed top-20 left-1/2 -translate-x-1/2 z-[9999] w-[90%] max-w-sm pointer-events-none"
+                {toastMsg && (
+                    <motion.div 
+                        initial={{ y: -60, opacity: 0, scale: 0.95 }}
+                        animate={{ y: 16, opacity: 1, scale: 1 }}
+                        exit={{ y: -60, opacity: 0, scale: 0.95 }}
+                        transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                        className="fixed top-4 inset-x-0 mx-auto w-[90%] max-w-xs bg-gray-900 text-white text-[11px] font-bold py-3 px-4.5 rounded-2xl shadow-xl flex items-center justify-between gap-3 z-[99999] pointer-events-auto"
                     >
-                        <div className={cn(
-                            "backdrop-blur-xl border rounded-[1.5rem] p-4 shadow-2xl flex items-start gap-4 pointer-events-auto",
-                            toastMessage.type === 'success' ? "bg-cyan-500/20 border-cyan-500/30 text-cyan-100" :
-                                toastMessage.type === 'error' ? "bg-red-500/20 border-red-500/30 text-red-100" :
-                                    "bg-white/10 border-white/20 text-[var(--foreground)]"
-                        )}>
-                            <div className={cn(
-                                "flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center shadow-lg",
-                                toastMessage.type === 'success' ? "bg-cyan-500" :
-                                    toastMessage.type === 'error' ? "bg-red-500" :
-                                        "bg-blue-500"
-                            )}>
-                                {toastMessage.type === 'success' ? <Check className="w-5 h-5 text-black" strokeWidth={3} /> :
-                                    toastMessage.type === 'error' ? <X className="w-5 h-5 text-[var(--foreground)]" strokeWidth={3} /> :
-                                        <Activity className="w-5 h-5 text-[var(--foreground)]" strokeWidth={3} />}
-                            </div>
-                            <div className="flex flex-col gap-0.5 justify-center mt-0.5">
-                                <h4 className="font-black text-[15px] leading-tight text-[var(--foreground)]">{toastMessage.title}</h4>
-                                {toastMessage.desc && <p className="text-xs font-medium text-[var(--foreground)]/80 leading-snug">{toastMessage.desc}</p>}
-                            </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm shrink-0">🐾</span>
+                            <span className="leading-snug text-left">{toastMsg}</span>
                         </div>
+                        <button 
+                            onClick={() => setToastMsg(null)} 
+                            className="text-gray-400 hover:text-white font-bold text-sm shrink-0 px-1 cursor-pointer"
+                        >
+                            ×
+                        </button>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* AMBIENT BACKGROUND GLOW */}
-            <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-
-                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-600/20 blur-[120px] rounded-full mix-blend-screen" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-cyan-600/20 blur-[120px] rounded-full mix-blend-screen" />
-            </div>
-
-            {/* HEADER - INTEGRATED MINIMALIST DESIGN */}
-            <motion.header 
-                id="community-main-header"
-                style={{ 
-                    height: isCategoriesOpen ? 'auto' : headerHeightTransform, 
-                    opacity: headerOpacity 
-                }}
-                className={cn(
-                    "fixed top-0 left-0 right-0 z-[150] px-6 flex flex-col justify-end bg-[var(--background)]/80 backdrop-blur-xl border-b border-white/5 transition-all duration-300",
-                    isCategoriesOpen ? "pb-0 pt-16" : "pb-4"
-                )}
-            >
-                <div className="flex justify-between items-center w-full">
-                    <div className="flex items-center gap-2">
-                        <motion.button
-                            style={{ scale: iconScale }}
-                            onClick={() => setIsUploadModalOpen(true)}
-                            className="w-10 h-10 flex items-center justify-center hover:bg-white/5 rounded-full transition-all active:scale-90"
-                        >
-                            <Camera className="w-5 h-5 text-white/80" />
-                        </motion.button>
-
-                        {/* VIEW MODE TOGGLE - PURE MINIMALIST */}
-                        <div className="flex items-center gap-1 ml-1">
-                            <button 
-                                onClick={() => setViewMode('immersive')}
-                                className={cn(
-                                    "p-2 transition-all active:scale-90",
-                                    viewMode === 'immersive' ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] scale-110" : "text-gray-600 hover:text-gray-400"
-                                )}
-                            >
-                                <List className="w-5 h-5" />
-                            </button>
-                            <button 
-                                onClick={() => setViewMode('grid')}
-                                className={cn(
-                                    "p-2 transition-all active:scale-90",
-                                    viewMode === 'grid' ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] scale-110" : "text-gray-600 hover:text-gray-400"
-                                )}
-                            >
-                                <Grid3X3 className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        {/* COLLAPSIBLE CATEGORIES BUTTON */}
-                        <button 
-                            onClick={() => setIsCategoriesOpen(!isCategoriesOpen)}
-                            className={cn(
-                                "flex items-center gap-2 px-4 py-2 rounded-full transition-all active:scale-95 ml-1",
-                                isCategoriesOpen ? "bg-white text-black" : "text-white/50 hover:text-white"
-                            )}
-                        >
-                            <Filter className="w-4 h-4" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Kategoriler</span>
-                            <ChevronDown className={cn("w-3 h-3 transition-transform duration-300", isCategoriesOpen && "rotate-180")} />
-                        </button>
-                    </div>
-
-                    <div className="flex gap-1 items-center">
-                        <motion.button 
-                            style={{ scale: iconScale }}
-                            onClick={() => setIsSpotlightOpen(true)}
-                            className="p-2.5 hover:bg-white/5 rounded-full transition-colors"
-                        >
-                            <Search className="w-5 h-5 text-white/80" />
-                        </motion.button>
-
-                        <motion.button 
-                            style={{ scale: iconScale }}
-                            onClick={() => setIsInboxOpen(true)} 
-                            className="relative p-2.5 hover:bg-white/5 rounded-full transition-colors"
-                        >
-                            <MessageCircle className="w-5 h-5 text-white/80" />
-                            {unreadCount > 0 && (
-                                <div className="absolute top-1 right-1 w-4 h-4 bg-cyan-400 rounded-full border-2 border-background flex items-center justify-center">
-                                    <span className="text-[8px] font-black text-black">{unreadCount}</span>
-                                </div>
-                            )}
-                        </motion.button>
-
-                        <motion.button 
-                            style={{ scale: iconScale }}
-                            onClick={() => setIsNotificationsOpen(true)} 
-                            className="relative p-2.5 hover:bg-white/5 rounded-full transition-colors"
-                        >
-                            <Bell className="w-5 h-5 text-white/80" />
-                            {notifUnreadCount > 0 && (
-                                <div className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-background flex items-center justify-center">
-                                    <span className="text-[8px] font-black text-white">{notifUnreadCount}</span>
-                                </div>
-                            )}
-                        </motion.button>
-                    </div>
-
-                </div>
-
-                {/* COLLAPSIBLE CATEGORIES PANEL - INTEGRATED IN HEADER */}
-                <AnimatePresence>
-                    {isCategoriesOpen && (
-                        <motion.div 
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="overflow-hidden bg-white/[0.02] mt-4 -mx-6 px-6 border-t border-white/5"
-                        >
-                            <div className="flex gap-2 overflow-x-auto no-scrollbar py-4">
-                                {['Hepsi', 'Eğlence', 'Eğitim', 'Beslenme', 'Sağlık', 'Veteriner', 'Sahiplenme'].map((cat) => (
-                                    <button
-                                        key={cat}
-                                        onClick={() => {
-                                            setSearchQuery(cat === 'Hepsi' ? '' : cat);
-                                            setIsCategoriesOpen(false);
-                                        }}
-                                        className={cn(
-                                            "px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
-                                            searchQuery === (cat === 'Hepsi' ? '' : cat) 
-                                                ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]" 
-                                                : "text-white/20 hover:text-white/50"
-                                        )}
-                                    >
-                                        {cat}
-                                    </button>
-                                ))}
-
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </motion.header>
-
-
-            {/* Header Spacing */}
+            {/* Main Dashboard Wrapper */}
             <motion.div 
-                style={{ height: isCategoriesOpen ? '200px' : headerHeightTransform }} 
-                className="shrink-0 transition-all duration-300" 
-            />
-
-
-            {/* MAIN IMMERSIVE CONTENT - Unified Scroll per tab */}
-            <main 
-                id="community-scroll-container"
-                ref={globalScrollRef}
-                onScroll={handleMainScroll}
-                className="flex-1 relative z-10 w-full overflow-y-auto no-scrollbar overscroll-contain snap-y snap-mandatory"
+                animate={{ 
+                    scale: expandedPanel ? 0.95 : 1,
+                    filter: expandedPanel ? 'blur(6px)' : 'blur(0px)',
+                    opacity: expandedPanel ? 0.6 : 1
+                }}
+                transition={{ duration: 0.5, type: 'spring', damping: 25 }}
+                className="max-w-md mx-auto pt-6 px-5"
             >
-                <AnimatePresence>
-
-                    {/* FEED TAB */}
-                    {activeTab === 'feed' && (
-                        <motion.div
-                            key="feed"
-                            initial={{ opacity: 0, filter: "blur(10px)" }}
-                            animate={{ opacity: 1, filter: "blur(0px)" }}
-                            exit={{ opacity: 0, filter: "blur(10px)" }}
-                            transition={{ duration: 0.3 }}
-                            className="w-full pb-32 flex flex-col gap-4"
+                
+                {/* 1. Header */}
+                <header className="flex justify-between items-center mb-6">
+                    <div className="flex items-center gap-2">
+                        <div className="w-9 h-9 rounded-2xl bg-gray-900 flex items-center justify-center shadow-lg shadow-gray-900/10">
+                            <Bone className="w-5 h-5 text-white" />
+                        </div>
+                        <span className="text-2xl font-black tracking-tighter">moffi</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-3">
+                        <motion.button 
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => {
+                                const nextMode = !lostPetMode;
+                                setLostPetMode(nextMode);
+                                setToastMsg(nextMode 
+                                    ? `🚨 Kayıp Modu Aktif! ${pet.name} için acil durum sinyali başlatıldı.` 
+                                    : `🔕 Kayıp Modu Kapatıldı. ${pet.name} güvende.`
+                                );
+                            }}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full shadow-sm relative overflow-hidden group cursor-pointer border ${
+                                lostPetMode 
+                                    ? 'bg-red-650 border-red-500 text-white animate-pulse' 
+                                    : 'bg-red-50 border-red-200/60 text-red-600'
+                             }`}
                         >
-                            {/* INSTAGRAM-STYLE STORIES BAR */}
+                            <span className="absolute inset-0 bg-red-500/10 animate-pulse rounded-full" />
+                            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping absolute left-3" />
+                            <span className="w-2 h-2 rounded-full bg-red-500" />
+                            <span className={`text-[10px] font-black tracking-wider uppercase ml-1 ${lostPetMode ? 'text-white' : 'text-red-600'}`}>SOS</span>
+                        </motion.button>
 
+                        <button className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+                            <Bell className="w-5 h-5" />
+                            <div className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-white" />
+                        </button>
 
+                        <motion.button 
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => setExpandedPanel('profile')}
+                            className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 shadow-sm cursor-pointer hover:border-gray-400 transition-colors"
+                        >
+                            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100" className="w-full h-full object-cover" alt="User" />
+                        </motion.button>
+                    </div>
+                </header>
 
-                            <div className="w-full flex gap-4 px-4 py-4 overflow-x-auto no-scrollbar snap-start shrink-0">
-                                {/* Current User Add Story - Apple Style Upgrade */}
-                                <div className="flex flex-col items-center gap-1.5 shrink-0 group">
-                                    <div 
-                                        onClick={handleStoryClick}
-                                        className="relative w-16 h-16 flex items-center justify-center cursor-pointer"
-                                    >
-                                        <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-cyan-500/20 via-purple-500/20 to-pink-500/20 border-2 border-dashed border-white/20 group-hover:border-cyan-400/50 group-hover:bg-white/5 transition-all duration-500" />
-                                        
-                                        <div className="relative z-10 w-12 h-12 rounded-full bg-[var(--card-bg)] backdrop-blur-md border border-white/10 flex items-center justify-center shadow-2xl group-hover:scale-110 group-active:scale-95 transition-all duration-300">
-                                            <div className="absolute inset-0 bg-cyan-400/5 blur-md group-hover:bg-cyan-400/20 transition-all" />
-                                            <Plus className="w-6 h-6 text-[var(--foreground)] group-hover:text-cyan-400" strokeWidth={2.5} />
-                                        </div>
-                                    </div>
-                                    <span className="text-[9px] text-[var(--secondary-text)] font-black uppercase tracking-[0.2em] group-hover:text-cyan-400 transition-colors">Hikaye</span>
-                                </div>
+                {/* 2. Hikayeler (Stories) - Dynamic from useStories */}
+                <section className="mb-6">
+                    <div className="flex justify-between items-end mb-3 px-1">
+                        <h3 className="text-[15px] font-bold text-gray-800 tracking-tight">Hikayeler</h3>
+                    </div>
+                    <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 pt-1 -mx-5 px-5 items-center">
+                        {storyGroups.map((group, index) => {
+                            let customType: 'normal' | 'sos' | 'ai' | 'featured' = 'normal';
+                            if (group.user_id === 'system_sos') customType = 'sos';
+                            if (group.user_id === 'system_announcements') customType = 'ai';
+                            if (group.user_id === 'system_featured_pets') customType = 'featured';
+                            
+                            // Get last word or a clean subtitle
+                            const cleanTitle = group.author_name.split(' ').slice(1).join(' ') || group.author_name;
 
-                                {/* Real Database Stories */}
-                                {storyGroups.map((group, index) => (
-                                    <div key={group.user_id} className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group" onClick={() => {
+                            return (
+                                <div 
+                                    key={group.user_id} 
+                                    className="cursor-pointer"
+                                    onClick={() => {
                                         setViewerStoryGroupIndex(index);
                                         setViewerStoryIndex(0);
-                                    }}>
-                                        <div className={cn(
-                                            "w-16 h-16 rounded-full p-[2.5px] transition-transform group-hover:scale-105",
-                                            group.hasUnseen ? "bg-gradient-to-tr from-cyan-400 via-blue-500 to-purple-600" : "bg-white/10"
-                                        )}>
-                                            <div className="w-full h-full bg-[var(--background)] rounded-full border-2 border-[var(--background)] overflow-hidden relative">
-                                                <img 
-                                                    src={(group.user_id === user?.id ? (user?.avatar || group.author_avatar) : group.author_avatar) || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200"} 
-                                                    className="w-full h-full object-cover transition-opacity duration-500"
-                                                    onLoad={(e) => (e.target as HTMLImageElement).style.opacity = '1'}
-                                                    style={{ opacity: 0 }}
-                                                />
-                                            </div>
-                                        </div>
-                                        <span className={cn("text-[10px] tracking-wide", group.hasUnseen ? "font-bold text-[var(--foreground)]" : "font-medium text-[var(--secondary-text)] truncate w-16 text-center")}>
-                                            {user?.id === group.user_id ? "Sen" : group.author_name}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* Feed SOS Alerts (Respecting Privacy Settings) */}
-
-                            {/* Feed SOS Alerts (Respecting Privacy Settings) */}
-                            {activePet?.is_lost && activePet.sos_settings?.auto_post_sos !== false && (
-                                <motion.div 
-                                    initial={{ scale: 0.9, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    className="px-4 -mt-2 mb-4 snap-start"
+                                        setStoryProgress(0);
+                                    }}
                                 >
-                                    <div className="bg-red-500/10 border border-red-500/30 rounded-[2.5rem] p-6 backdrop-blur-xl relative overflow-hidden group">
-                                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-orange-500 to-red-500 animate-pulse" />
-                                        <div className="flex items-center justify-between relative z-10">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-14 h-14 rounded-2xl bg-red-500 flex items-center justify-center shadow-[0_0_20px_rgba(239,68,68,0.4)] animate-bounce">
-                                                    <ShieldAlert className="w-8 h-8 text-white" />
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <h3 className="text-lg font-black text-white uppercase italic tracking-tighter leading-none">{activePet.name} <span className="text-red-400">Kayıp Alarmı</span></h3>
-                                                    <p className="text-[10px] font-bold text-red-200/60 uppercase tracking-widest mt-1">Arama Kurtarma Sinyali Gönderiliyor</p>
-                                                </div>
-                                            </div>
-                                            <button 
-                                                onClick={() => {
-                                                    setSosActivePet(activePet);
-                                                    setIsSOSCommandCenterOpen(true);
-                                                }}
-                                                className="px-6 py-2.5 bg-red-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-red-500/20"
-                                            >
-                                                YÖNET
-                                            </button>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )}
-                            {isLoadingPosts ? (
-                                Array(3).fill(0).map((_, i) => (
-                                    <div key={i} className="w-full relative flex flex-col items-center justify-center px-4 shrink-0" style={{ height: "calc(100vh - 180px)" }}>
-                                        <div className="relative w-full h-full max-w-lg mx-auto rounded-[3rem] overflow-hidden bg-[var(--card-bg)] border border-white/10 shadow-2xl animate-pulse">
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                                            <div className="absolute inset-0 bg-[var(--card-bg)] overflow-hidden">
-                                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-shimmer" />
-                                            </div>
-                                            <div className="absolute bottom-8 left-8 right-8 space-y-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-12 h-12 rounded-full bg-white/10" />
-                                                    <div className="space-y-2">
-                                                        <div className="h-4 w-24 bg-white/10 rounded-full" />
-                                                        <div className="h-3 w-16 bg-white/10 rounded-full" />
-                                                    </div>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <div className="h-3 w-full bg-white/10 rounded-full" />
-                                                    <div className="h-3 w-4/5 bg-white/10 rounded-full" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : viewMode === 'grid' ? (
-                                <ExploreGrid 
-                                    posts={filteredPosts} 
-                                    onPostClick={handlePostClickFromGrid} 
-                                    isLoading={isLoadingPosts} 
-                                />
-                            ) : (
-                                filteredPosts.map((post, feedIdx) => (
-                                    <div key={post.id} id={`post-${post.id}`} className="w-full relative flex flex-col items-center justify-center px-0 shrink-0 snap-start" style={{ height: "calc(100vh - 160px)" }}>
-                                        <ImmersivePostCard
-                                            post={post}
-                                            currentUser={user}
-                                            onLike={() => toggleLike(post.id)}
-                                            onShare={() => setSelectedSharePost(post)}
-                                            onAddComment={(text) => addComment(post.id, text)}
-                                            onToggleCommentLike={(commentId) => toggleCommentLike(post.id, Number(commentId))}
-                                            onReplyComment={(commentId, text) => addCommentReply(post.id, Number(commentId), text)}
-                                            onDeleteComment={(commentId) => deleteComment(post.id, Number(commentId))}
-                                            onEditComment={(commentId, text) => editComment(post.id, Number(commentId), text)}
-                                            onReportComment={(commentId) => reportComment(post.id, Number(commentId))}
-                                            onDeletePost={() => setPostToDelete(post.id)}
-                                            onEditPost={() => setEditingPost({ id: post.id, desc: post.desc, mood: post.mood, media: post.media })}
-                                            priority={feedIdx === 0}
-                                            isCommentsDisabled={!user?.settings?.privacy?.allowComments}
-                                        />
-                                    </div>
-                                ))
-                            )}
+                                    <StoryCircle 
+                                        image={group.author_avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200"} 
+                                        title={cleanTitle} 
+                                        type={customType} 
+                                        delay={0.1 + index * 0.05} 
+                                    />
+                                </div>
+                            );
+                        })}
+                    </div>
+                </section>
 
-                            {/* Space for bottom nav */}
-                            <div className="h-12 w-full shrink-0" />
-                        </motion.div>
-                    )}
+                {/* 9. Hero Pet Identity Card */}
+                <motion.div 
+                    layout
+                    className="bg-white rounded-[36px] p-5 shadow-[0_16px_40px_rgba(0,0,0,0.04)] border border-gray-100/60 mb-6 relative overflow-hidden"
+                >
+                    {/* Switcher & Badges */}
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-full border border-gray-100 shadow-inner max-w-[240px] overflow-x-auto no-scrollbar shrink-0">
+                            {userPets.map((p) => (
+                                <motion.button
+                                    key={p.id}
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => switchPet(p.id)}
+                                    className={`relative w-8 h-8 rounded-full overflow-hidden border-2 transition-all shrink-0 ${
+                                        activePetObj.id === p.id 
+                                            ? 'border-green-600 scale-105 shadow-sm' 
+                                            : 'border-transparent opacity-60'
+                                    }`}
+                                >
+                                    <img src={p.image || p.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200"} className="w-full h-full object-cover" alt={p.name} />
+                                </motion.button>
+                            ))}
+                            <motion.button
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => setIsAddPetOpen(true)}
+                                className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-500 hover:text-green-600 hover:border-green-600 transition-colors shrink-0 shadow-sm"
+                            >
+                                <Plus className="w-4.5 h-4.5" />
+                            </motion.button>
+                        </div>
 
-                    {/* UNIFIED COMMUNITY RADAR TAB */}
-                    {activeTab === 'radar' && (
-                        <motion.div
-                            key="radar"
-                            initial={{ opacity: 0, scale: 0.98 }}
+                        <motion.div 
+                            key={lostPetMode ? "KAYIP" : pet.status}
+                            initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.98 }}
-                            className="w-full pb-32 bg-[var(--background)] flex flex-col items-center"
+                            className={`px-3 py-1 rounded-full border text-[9px] font-black tracking-widest uppercase ${
+                                lostPetMode 
+                                    ? "text-white bg-red-650 border-red-500 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.4)]" 
+                                    : pet.statusColor
+                            }`}
                         >
-                            <div className="w-full max-w-md mx-auto relative">
-                                
-                                {/* 0. RADAR SUB-TAB SELECTOR (Apple Style Navigation) */}
-                                <div className="w-full px-6 pt-6 pb-2 flex items-center justify-between sticky top-0 z-40 bg-[var(--background)]/80 backdrop-blur-xl">
-                                    <button 
-                                        onClick={() => setActiveTab('feed')}
-                                        className="w-10 h-10 rounded-full bg-[var(--card-bg)] border border-white/5 flex items-center justify-center text-[var(--secondary-text)] hover:text-white transition-all active:scale-90 shadow-lg"
-                                        title="Geri Dön"
-                                    >
-                                        <ChevronLeft className="w-6 h-6" />
-                                    </button>
-                                    
-                                    <div className="flex bg-[var(--card-bg)] p-1 rounded-2xl border border-white/10 w-full max-w-[200px] shadow-sm ml-2">
-                                        <button 
-                                            onClick={() => setRadarTabMode('lost')}
-                                            className={cn(
-                                                "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                                radarTabMode === 'lost' ? "bg-white text-black shadow-lg" : "text-[var(--secondary-text)] hover:text-[var(--foreground)]"
-                                            )}
-                                        >
-                                            Kayıp
-                                        </button>
-                                        <button 
-                                            onClick={() => setRadarTabMode('adopt')}
-                                            className={cn(
-                                                "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                                radarTabMode === 'adopt' ? "bg-white text-black shadow-lg" : "text-[var(--secondary-text)] hover:text-[var(--foreground)]"
-                                            )}
-                                        >
-                                            Sahiplen
-                                        </button>
-                                    </div>
-                                    
-                                    <div className="w-10 h-10" />
-                                </div>
-
-                                {/* Pet Switcher for Radar Context */}
-                                <div className="flex justify-center mt-6 mb-2">
-                                    <PetSwitcher onAddPet={() => setIsLostAdModalOpen(true)} />
-                                </div>
-
-                                {radarTabMode === 'lost' ? (
-                                    <motion.div 
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        className="w-full"
-                                    >
-                                        {/* 1. SOS / KAYIP İLANLARI (Vertical List) */}
-                                        <div className="w-full pt-6 pb-2 relative">
-                                            <div className="px-6 mb-6 flex items-center justify-between">
-                                                <h3 className="text-red-500 font-bold text-sm tracking-wide uppercase flex items-center gap-2"><ShieldAlert className="w-4 h-4" /> Aktif İhbarlar</h3>
-                                                <button onClick={() => setIsLostAdModalOpen(true)} className="px-3 py-1.5 rounded-full bg-red-500/10 text-red-500 text-[10px] font-black uppercase tracking-wider hover:bg-red-500/20 active:scale-95 transition-all border border-red-500/20">
-                                                    + İlan Ekle
-                                                </button>
-                                            </div>
-
-                                            {lostPets.length > 0 ? (
-                                                <div className="space-y-4 px-6 pb-10">
-                                                    {lostPets.map((pet) => (
-                                                        <div key={pet.id} className="w-full bg-red-500/5 border border-red-500/20 rounded-3xl p-4 flex flex-col gap-3 cursor-pointer hover:bg-red-500/10 transition-all active:scale-[0.98] relative group overflow-hidden" onClick={() => setSelectedLostPet(pet)}>
-                                                            {/* Apple style blur background for red accent */}
-                                                            <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 blur-[40px] -mr-10 -mt-10 rounded-full pointer-events-none" />
-                                                            
-                                                            {user?.id === pet.user_id && (
-                                                                <button onClick={(e) => { e.stopPropagation(); handleDeleteLostPet(pet.id); }} className="absolute right-3 top-3 px-3 py-1.5 rounded-full bg-[var(--card-bg)] border border-red-500/30 text-red-400 text-[10px] font-bold uppercase transition-transform hover:scale-105 active:scale-95 flex items-center gap-1 z-10 shadow-lg">
-                                                                    <Trash2 className="w-3 h-3" /> Sil
-                                                                </button>
-                                                            )}
-
-                                                            <div className="flex gap-4 items-center">
-                                                                <div className="w-16 h-16 rounded-2xl bg-red-500/20 flex items-center justify-center shrink-0 border border-red-500/30 shadow-inner overflow-hidden">
-                                                                    {pet.img ? (
-                                                                        <img src={pet.img} className="w-full h-full object-cover" />
-                                                                    ) : (
-                                                                        <div className="flex flex-col items-center">
-                                                                            <ShieldAlert className="w-6 h-6 text-red-500" />
-                                                                            <span className="text-[8px] font-black text-red-500 mt-1">SOS</span>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                                <div className="flex-1 overflow-hidden">
-                                                                    <div className="flex items-center justify-between">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <p className="text-red-500 font-black text-lg tracking-tight truncate">{pet.name}</p>
-                                                                            <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-500 text-[10px] font-bold border border-red-500/30">Kayıp</span>
-                                                                        </div>
-                                                                        {pet.reward_enabled && pet.reward && (
-                                                                            <span className="px-2 py-0.5 rounded-lg bg-orange-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg -mt-1">ÖDÜL</span>
-                                                                        )}
-                                                                    </div>
-                                                                    <p className="text-[var(--secondary-text)] text-xs font-medium truncate">{pet.type || "Bilinmiyor"}</p>
-                                                                    <p className="text-[10px] text-red-400/80 mt-1.5 flex items-center gap-1 font-black"><MapPin className="w-3 h-3 text-cyan-400" /> {pet.last_seen_location || pet.location}</p>
-                                                                </div>
-                                                                <ChevronRight className="w-5 h-5 text-red-500/50" />
-                                                            </div>
-                                                            <p className="text-[var(--foreground)]/70 text-[11px] mt-1 leading-snug line-clamp-2 px-1 font-medium italic">"{pet.description || "Lütfen görünce acil dönüş yapın."}"</p>
-                                                            
-                                                            <div className="mt-2 flex gap-2">
-                                                                <button 
-                                                                    onClick={(e) => { e.stopPropagation(); /* Logic to open chat */ }}
-                                                                    className="flex-1 py-3 rounded-2xl bg-white text-black text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg"
-                                                                >
-                                                                    İletişime Geç
-                                                                </button>
-                                                                <button 
-                                                                    className="px-4 py-3 rounded-2xl bg-white/10 text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all border border-white/5"
-                                                                >
-                                                                    Konum Paylaş
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <div className="text-center py-12 mx-6 mb-4 bg-red-500/5 rounded-3xl border border-red-500/10">
-                                                    <ShieldAlert className="w-10 h-10 text-red-500/20 mx-auto mb-3" />
-                                                    <p className="text-xs text-red-500/40 font-bold tracking-wide">Aktif İhbar Bulunmuyor</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </motion.div>
-                                ) : (
-                                    <motion.div 
-                                        initial={{ opacity: 0, x: 20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        className="w-full mt-2"
-                                    >
-                                        {/* ADOPTION PANEL CONTENT */}
-                                        <div className="px-6 mb-8 mt-2 flex items-center justify-between">
-                                            <div>
-                                                <p className="text-[var(--secondary-text)] text-[11px] font-bold uppercase tracking-widest mb-1">
-                                                    Bugün Sahiplen
-                                                </p>
-                                                <h2 className="text-3xl font-black text-[var(--foreground)] tracking-tight mt-1">Sıcak Bir Yuva</h2>
-                                            </div>
-                                            <button onClick={() => setIsAddAdoptionModalOpen(true)} className="px-4 py-2 rounded-full bg-cyan-500/10 text-cyan-400 text-xs font-black uppercase tracking-wider hover:bg-cyan-500/20 active:scale-95 transition-all outline outline-1 outline-cyan-500/30 flex items-center gap-1.5 shadow-[0_0_15px_rgba(6,182,212,0.15)]">
-                                                <Plus className="w-4 h-4" /> İlan Ver
-                                            </button>
-                                        </div>
-
-                                        {/* APPLE-STYLE HORIZONTAL FILTER PILLS */}
-                                        <div className="w-full overflow-x-auto no-scrollbar px-6 mb-8 -mt-2 pb-2 flex gap-3 snap-x">
-                                            {["Hepsi", "🐱 Kediler", "🐶 Köpekler", "🦜 Kuşlar", "🚨 Acil", "🏢 Apartmana"].map((pill) => (
-                                                <button
-                                                    key={pill}
-                                                    onClick={() => setSelectedAdoptionCategory(pill)}
-                                                    className={cn(
-                                                        "snap-start whitespace-nowrap px-4 py-2 rounded-full text-[13px] font-bold transition-all active:scale-95",
-                                                        selectedAdoptionCategory === pill
-                                                            ? "bg-white text-black shadow-lg shadow-white/20"
-                                                            : "bg-[#1C1C1E] text-[#8E8E93] border border-[var(--card-border)] hover:bg-white/10 hover:text-[var(--foreground)]"
-                                                    )}
-                                                >
-                                                    {pill}
-                                                </button>
-                                            ))}
-                                        </div>
-
-                                        {/* REAL ADOPTION ADS LIST */}
-                                        <div className="px-6 mb-8 w-full">
-                                            <div className="flex justify-between items-end mb-4 pb-3">
-                                                <h2 className="text-2xl font-bold text-[var(--foreground)] tracking-tight">İlanlar</h2>
-                                                <span className="text-xs text-[var(--secondary-text)] font-bold bg-[var(--card-bg)] px-2 py-1 rounded-full">{adoptionAds.length} ilan</span>
-                                            </div>
-                                            {(() => {
-                                                const filtered = adoptionAds.filter(ad => {
-                                                    if (selectedAdoptionCategory === "Hepsi") return true;
-                                                    if (selectedAdoptionCategory === "🐱 Kediler") return ad.pet_type === "cat" || ad.breed?.toLowerCase().includes("kedi");
-                                                    if (selectedAdoptionCategory === "🐶 Köpekler") return ad.pet_type === "dog" || ad.breed?.toLowerCase().includes("köpek");
-                                                    if (selectedAdoptionCategory === "🦜 Kuşlar") return ad.pet_type === "bird" || ad.breed?.toLowerCase().includes("kuş");
-                                                    if (selectedAdoptionCategory === "🚨 Acil") return ad.is_emergency === true;
-                                                    if (selectedAdoptionCategory === "🏢 Apartmana") return ad.is_apartment_friendly === true;
-                                                    return true;
-                                                });
-
-                                                if (isLoadingAdoptions) {
-                                                    return (
-                                                        <div className="space-y-4">
-                                                            {Array(3).fill(0).map((_, i) => (
-                                                                <div key={i} className="flex gap-4 p-4 rounded-[2rem] bg-[var(--card-bg)] border border-[var(--card-border)] animate-pulse overflow-hidden relative">
-                                                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-shimmer" />
-                                                                    <div className="w-16 h-16 rounded-2xl bg-white/10 shrink-0" />
-                                                                    <div className="flex-1 space-y-3 pt-2">
-                                                                        <div className="h-4 w-32 bg-white/10 rounded-full" />
-                                                                        <div className="h-3 w-20 bg-white/10 rounded-full opacity-50" />
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    );
-                                                }
-
-                                                if (filtered.length === 0) {
-                                                    return (
-                                                        <div className="text-center py-12 bg-[var(--card-bg)] rounded-3xl border border-white/10">
-                                                            <HeartHandshake className="w-10 h-10 text-[var(--secondary-text)] mx-auto mb-3" />
-                                                            <p className="text-[var(--secondary-text)] font-bold">Henüz ilan yok</p>
-                                                        </div>
-                                                    );
-                                                }
-
-                                                return (
-                                                    <div className="space-y-4">
-                                                        {filtered.map((ad) => (
-                                                            <div
-                                                                key={ad.id}
-                                                                className="flex flex-row items-center gap-4 bg-[var(--card-bg)] p-3 rounded-2xl border border-[var(--card-border)] active:bg-[var(--card-bg)] transition-colors cursor-pointer relative"
-                                                                onClick={() => setSelectedAdoptionPet({
-                                                                    id: ad.id,
-                                                                    name: ad.name,
-                                                                    breed: ad.breed,
-                                                                    desc: ad.description || `${ad.name} sıcak bir yuva arıyor.`,
-                                                                    img: ad.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=600',
-                                                                    images: ad.images || [ad.image_url],
-                                                                    tags: [ad.age, ad.breed].filter(Boolean),
-                                                                    user_id: ad.user_id,
-                                                                    author_name: ad.author_name,
-                                                                    author_avatar: ad.author_avatar,
-                                                                    created_at: ad.created_at
-                                                                })}
-                                                            >
-                                                                <img src={ad.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=200'} className="w-16 h-16 rounded-[1rem] object-cover shrink-0" />
-                                                                <div className="flex-1 overflow-hidden">
-                                                                    <h4 className="text-[var(--foreground)] font-bold text-base">{ad.name} <span className="text-[var(--secondary-text)] font-medium text-xs ml-1">• {ad.age}</span></h4>
-                                                                    <p className="text-cyan-400 text-xs mt-0.5">{ad.breed}</p>
-                                                                </div>
-                                                                <ChevronRight className="w-5 h-5 text-[var(--secondary-text)] mr-1 shrink-0" />
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                );
-                                            })()}
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </div>
+                            {lostPetMode ? "KAYIP 🚨" : pet.status}
                         </motion.div>
-                    )}
+                    </div>
 
-
-
-                </AnimatePresence>
-            </main >
-
-            <input type="file" ref={cameraInputRef} className="hidden" accept="image/*,video/*" onChange={handleCameraUpload} />
-
-            {/* MODALS AND DRAWERS */}
-
-            {/* EDIT PROFILE MODAL (Apple Modern Style) */}
-            <AnimatePresence>
-                {isEditProfileOpen && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[320] bg-black/60 backdrop-blur-xl flex items-center justify-center p-4"
-                        onClick={() => setIsEditProfileOpen(false)}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.95, y: 20, opacity: 0 }}
-                            animate={{ scale: 1, y: 0, opacity: 1 }}
-                            exit={{ scale: 0.95, y: 20, opacity: 0 }}
-                            className="w-full max-w-sm bg-[#1C1C1E]/80 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            {/* Navigation Header */}
-                            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-white/5 backdrop-blur-md">
-                                <button onClick={() => setIsEditProfileOpen(false)} className="flex items-center gap-1 text-sm font-medium text-white/60 hover:text-white transition-all active:scale-95 group">
-                                    <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-                                    Vazgeç
-                                </button>
-                                <h2 className="text-sm font-black text-white uppercase tracking-[0.2em]">Profili Düzenle</h2>
-                                <button 
-                                    disabled={isSavingProfile}
-                                    onClick={async () => {
-                                        if (!user) return;
-                                        setIsSavingProfile(true);
-                                        try {
-                                            let finalAvatarUrl = null;
-                                            if (editAvatarFile) {
-                                                finalAvatarUrl = await apiService.uploadMedia(editAvatarFile, 'avatars');
-                                            }
-
-                                            let finalCoverUrl = null;
-                                            if (editCoverFile) {
-                                                finalCoverUrl = await apiService.uploadMedia(editCoverFile, 'avatars');
-                                            }
-
-                                            await updateProfile({
-                                                username: editUsername, // Use username correctly
-                                                name: editName,
-                                                bio: editBio,
-                                                ...(finalAvatarUrl && { avatar: finalAvatarUrl }),
-                                                ...(finalCoverUrl && { cover_photo: finalCoverUrl })
-                                            });
-
-                                            setIsEditProfileOpen(false);
-                                        } catch (err) {
-                                            console.error("Profile update error:", err);
-                                            showToast("Hata", "Profil güncellenemedi.", "error");
-                                        } finally {
-                                            setIsSavingProfile(false);
-                                        }
-                                    }}
-                                    className="text-sm font-black text-cyan-400 hover:text-cyan-300 transition-colors disabled:opacity-50"
-                                >
-                                    {isSavingProfile ? (
-                                        <div className="w-4 h-4 border-2 border-cyan-400/20 border-t-cyan-400 rounded-full animate-spin" />
-                                    ) : 'Kaydet'}
-                                </button>
-                            </div>
-
-                            <div className="flex-1 overflow-y-auto no-scrollbar pb-8">
-                                {/* Photo Management Area */}
-                                <div className="relative h-44 mb-16">
-                                    {/* Cover Photo */}
-                                    <div className="w-full h-full bg-white/5 relative overflow-hidden group cursor-pointer" onClick={() => coverInputRef.current?.click()}>
-                                        {editCoverPreview ? (
-                                            <img src={editCoverPreview} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full bg-gradient-to-tr from-cyan-900/40 to-purple-900/40" />
-                                        )}
-                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center">
-                                                <Camera className="w-5 h-5 text-white" />
-                                            </div>
-                                        </div>
-                                        <input type="file" ref={coverInputRef} className="hidden" accept="image/*" onChange={(e) => {
-                                            const file = e.target.files?.[0];
-                                            if (file) {
-                                                setEditCoverFile(file);
-                                                setEditCoverPreview(URL.createObjectURL(file));
-                                            }
-                                        }} />
-                                    </div>
-
-                                    {/* Avatar Overlap */}
-                                    <div className="absolute -bottom-12 left-6">
-                                        <label htmlFor="edit-avatar-upload" className="block relative w-24 h-24 rounded-full border-4 border-[#1C1C1E] shadow-2xl cursor-pointer group bg-[#1C1C1E] overflow-hidden">
-                                            {editAvatarPreview ? (
-                                                <img src={editAvatarPreview} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <div className="w-full h-full bg-white/5 flex items-center justify-center">
-                                                    <Camera className="w-6 h-6 text-white/40" />
-                                                </div>
-                                            )}
-                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Camera className="w-5 h-5 text-white" />
-                                            </div>
-                                            <input id="edit-avatar-upload" type="file" className="hidden" accept="image/*" onChange={(e) => {
-                                                const file = e.target.files?.[0];
-                                                if (file) {
-                                                    setEditAvatarFile(file);
-                                                    setEditAvatarPreview(URL.createObjectURL(file));
-                                                }
-                                            }} />
-                                        </label>
-                                    </div>
-                                </div>
-
-                                {/* Form Section: iOS Style Rows */}
-                                <div className="px-4 space-y-6">
-                                    <div className="bg-white/5 rounded-2xl border border-white/5 overflow-hidden">
-                                        <div className="px-4 py-4 border-b border-white/5">
-                                            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest block mb-1">Görünen Ad</label>
-                                            <input 
-                                                type="text" 
-                                                value={editName} 
-                                                onChange={e => setEditName(e.target.value)} 
-                                                className="w-full bg-transparent text-sm font-bold text-white outline-none placeholder:text-white/20"
-                                                placeholder="İsminiz"
-                                            />
-                                        </div>
-                                        <div className="px-4 py-4">
-                                            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest block mb-1">Kullanıcı Adı</label>
-                                            <div className="flex items-center gap-1">
-                                                <span className="text-sm font-bold text-white/40">@</span>
-                                                <input 
-                                                    type="text" 
-                                                    value={editUsername} 
-                                                    onChange={e => setEditUsername(e.target.value)} 
-                                                    className="w-full bg-transparent text-sm font-bold text-white outline-none placeholder:text-white/20"
-                                                    placeholder="kullanici_adi"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-white/5 rounded-2xl border border-white/5 px-4 py-4">
-                                        <label className="text-[10px] font-black text-white/40 uppercase tracking-widest block mb-1">Biyografi</label>
-                                        <textarea 
-                                            value={editBio} 
-                                            onChange={e => setEditBio(e.target.value)} 
-                                            className="w-full bg-transparent text-sm font-medium text-white/80 outline-none placeholder:text-white/20 resize-none h-24"
-                                            placeholder="Kendinizden bahsedin..."
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* ADD PET (Apple Bottom Sheet Style) MODAL */}
-            <AnimatePresence>
-                {isAddPetOpen && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[600] flex flex-col justify-end bg-black/60 backdrop-blur-sm px-2 pb-8"
-                        onClick={() => setIsAddPetOpen(false)}
-                    >
-                        <motion.div
-                            initial={{ y: "100%", opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            exit={{ y: "100%", opacity: 0 }}
-                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                            drag="y"
-                            dragConstraints={{ top: 0 }}
-                            dragElastic={0.2}
-                            onDragEnd={(e, { offset, velocity }) => {
-                                if (offset.y > 100 || velocity.y > 500) {
-                                    setIsAddPetOpen(false);
-                                    setTimeout(() => setAddPetStep(1), 300);
-                                }
-                            }}
-                            className="w-full bg-[var(--card-bg)] border border-white/10 rounded-[2.5rem] p-6 pb-12 shadow-[0_-20px_50px_rgba(0,0,0,0.8)] relative flex flex-col items-center"
-                            onClick={(e) => e.stopPropagation()} // Prevent close on clicking inside modal
-                        >
-                            {/* Drag Indicator */}
-                            <button 
-                                onClick={() => {
-                                    setIsAddPetOpen(false);
-                                    setTimeout(() => setAddPetStep(1), 300);
-                                }}
-                                className="w-12 h-1.5 bg-gray-600 rounded-full mb-6 hover:bg-gray-500 transition-colors cursor-pointer" 
-                            />
-
-                            <div className="w-full flex justify-between items-center mb-6 px-1">
-                                <div className="w-9">
-                                    {addPetStep === 1 && (
-                                        <button onClick={() => setIsAddPetOpen(false)} className="p-2 bg-[var(--card-bg)] rounded-full text-[var(--foreground)]/50 hover:text-[var(--foreground)] transition-colors">
-                                            <ChevronLeft className="w-5 h-5" />
-                                        </button>
-                                    )}
-                                    {addPetStep > 1 && (
-                                        <button onClick={() => setAddPetStep(prev => prev - 1)} className="p-2 bg-[var(--card-bg)] rounded-full text-[var(--foreground)]/50 hover:text-[var(--foreground)] transition-colors">
-                                            <ChevronLeft className="w-5 h-5" />
-                                        </button>
-                                    )}
-                                </div>
-                                <div className="text-center">
-                                    <h2 className="text-2xl font-black text-[var(--foreground)] tracking-tight">
-                                        {addPetStep === 1 ? 'Temel Kimlik' : addPetStep === 2 ? 'Karakter & Tıbbi' : 'Güvenlik & Kayıt'}
-                                    </h2>
-                                    <p className="text-cyan-400 text-xs font-bold tracking-widest uppercase mt-1">Adım {addPetStep} / 3</p>
-                                </div>
-                                <div className="w-9" />
-                            </div>
-
-                            {/* SCROLLABLE FORM AREA */}
-                            <div className="w-full max-h-[60vh] overflow-y-auto no-scrollbar pb-6 px-1 flex flex-col items-center">
-
-                                {addPetStep === 1 && (
-                                    <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="w-full space-y-4 max-w-sm flex flex-col items-center">
-                                        {/* Multi-Photo Picker */}
-                                        <div className="w-full mb-2">
-                                            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 pt-1 items-center px-1">
-                                                {newPetPhotos.map((photo, index) => (
-                                                    <div key={index} className="relative shrink-0 w-24 h-24 rounded-2xl overflow-hidden border border-white/10 shadow-lg group">
-                                                        <img src={photo.preview} className="w-full h-full object-cover" />
-                                                        <button
-                                                            onClick={() => setNewPetPhotos(prev => prev.filter((_, i) => i !== index))}
-                                                            className="absolute top-1 right-1 w-6 h-6 bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                                        >
-                                                            <X className="w-3 h-3 text-[var(--foreground)]" />
-                                                        </button>
-                                                        {index === 0 && (
-                                                            <div className="absolute bottom-1 left-1 right-1 bg-cyan-500/80 backdrop-blur-md flex items-center justify-center py-0.5 rounded-lg">
-                                                                <span className="text-[9px] font-bold text-[var(--foreground)] uppercase tracking-wider">Kapak</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ))}
-
-                                                {newPetPhotos.length < 5 && (
-                                                    <label htmlFor="add-pet-photos" className="shrink-0 w-24 h-24 rounded-2xl bg-gradient-to-tr from-cyan-900/20 to-purple-900/20 border-2 border-dashed border-cyan-500/30 flex flex-col items-center justify-center cursor-pointer hover:border-cyan-400/60 transition-colors">
-                                                        <div className="w-8 h-8 bg-cyan-500/20 rounded-full flex items-center justify-center mb-1">
-                                                            <Plus className="w-4 h-4 text-cyan-400" />
-                                                        </div>
-                                                        <span className="text-[9px] text-cyan-200 font-bold uppercase tracking-wide px-2 text-center">Foto Ekle<br />(Max 5)</span>
-                                                        <input
-                                                            type="file"
-                                                            id="add-pet-photos"
-                                                            className="hidden"
-                                                            accept="image/*"
-                                                            multiple
-                                                            onChange={(e) => {
-                                                                const files = Array.from(e.target.files || []);
-                                                                if (files.length > 0) {
-                                                                    const validFiles = files.slice(0, 5 - newPetPhotos.length);
-                                                                    const newPhotos = validFiles.map(file => ({
-                                                                        file,
-                                                                        preview: URL.createObjectURL(file)
-                                                                    }));
-                                                                    setNewPetPhotos(prev => [...prev, ...newPhotos]);
-                                                                }
-                                                            }}
-                                                        />
-                                                    </label>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* İsim ve Tür */}
-                                        <div className="flex gap-3 w-full">
-                                            <div className="flex-1">
-                                                <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">İsim</label>
-                                                <input type="text" value={newPetName} onChange={e => setNewPetName(e.target.value)} placeholder="Örn: Pamuk" className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-5 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors font-bold" />
-                                            </div>
-                                            <div className="w-24">
-                                                <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Tür</label>
-                                                <select value={newPetType} onChange={e => setNewPetType(e.target.value)} className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-2 py-3.5 text-center text-xl mt-1 outline-none focus:border-cyan-400 transition-colors appearance-none" style={{ textAlignLast: "center" }}>
-                                                    <option value="🐶">🐶</option>
-                                                    <option value="🐱">🐱</option>
-                                                    <option value="🦜">🦜</option>
-                                                    <option value="🐰">🐰</option>
-                                                </select>
-                                            </div>
-                                        </div>
-
-                                        {/* Irk ve Yaş */}
-                                        <div className="flex gap-3 w-full">
-                                            <div className="flex-[2]">
-                                                <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Irkı</label>
-                                                <input type="text" value={newPetBreed} onChange={e => setNewPetBreed(e.target.value)} placeholder="Örn: Golden Retriever" className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-5 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors font-medium text-sm" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Yaş</label>
-                                                <input type="text" value={newPetAge} onChange={e => setNewPetAge(e.target.value)} placeholder="Örn: 2 Yaş" className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-4 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors font-medium text-sm text-center" />
-                                            </div>
-                                        </div>
-
-                                        <div className="flex gap-3 w-full">
-                                            <div className="flex-1">
-                                                <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Cinsiyet</label>
-                                                <select value={newPetGender} onChange={e => setNewPetGender(e.target.value)} className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-4 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors text-sm">
-                                                    <option value="Erkek">Erkek</option>
-                                                    <option value="Dişi">Dişi</option>
-                                                </select>
-                                            </div>
-                                            <div className="flex-1">
-                                                <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Kısır Mı?</label>
-                                                <select value={newPetNeutered} onChange={e => setNewPetNeutered(e.target.value)} className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-4 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors text-sm">
-                                                    <option value="Evet">Evet</option>
-                                                    <option value="Hayır">Hayır</option>
-                                                </select>
-                                            </div>
-                                            <div className="flex-1">
-                                                <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Boyut</label>
-                                                <select value={newPetSize} onChange={e => setNewPetSize(e.target.value)} className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-4 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors text-sm">
-                                                    <option value="Küçük">Küçük</option>
-                                                    <option value="Orta">Orta</option>
-                                                    <option value="Büyük">Büyük</option>
-                                                </select>
-                                            </div>
-                                        </div>
-
-                                        <button onClick={() => setAddPetStep(2)} disabled={!newPetName || !newPetBreed} className="w-full py-4 mt-4 bg-white rounded-2xl font-black text-black hover:bg-gray-200 transition-colors disabled:opacity-50">
-                                            Sonraki Adım
-                                        </button>
-                                    </motion.div>
-                                )}
-
-                                {addPetStep === 2 && (
-                                    <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="w-full space-y-4 max-w-sm">
-                                        <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-2xl flex items-start gap-3">
-                                            <AlertTriangle className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
-                                            <div>
-                                                <h4 className="text-orange-400 text-sm font-bold mb-1">Tıbbi & Fiziksel İşaretler</h4>
-                                                <p className="text-[11px] text-orange-200/80 leading-relaxed font-medium">Bu bilgiler, kayıp durumunda sizi temsil edecek Acil QR Sayfasında (SOS) hayati önem taşır. Doğru girmeye özen gösterin.</p>
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Sağlık & Alerji (Kritik!)</label>
-                                            <textarea value={newPetHealth} onChange={e => setNewPetHealth(e.target.value)} placeholder="Örn: Tavuk alerjisi var, lütfen tavuklu mama vermeyin!" className="w-full bg-red-950/20 border border-red-500/30 rounded-2xl px-5 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-red-500 transition-colors font-medium text-sm h-20 resize-none shadow-[0_0_15px_rgba(239,68,68,0.1) inset]" />
-                                        </div>
-
-                                        <div>
-                                            <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Ayırt Edici Özellikleri</label>
-                                            <textarea value={newPetFeatures} onChange={e => setNewPetFeatures(e.target.value)} placeholder="Örn: Sol kulağındaki hafif kesik, kuyruk ucu beyaz..." className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-5 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors font-medium text-sm h-16 resize-none" />
-                                        </div>
-
-                                        <div>
-                                            <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Karakteri (Bulan Kişiye Tavsiye)</label>
-                                            <textarea value={newPetCharacter} onChange={e => setNewPetCharacter(e.target.value)} placeholder="Örn: Çok uysaldır ancak ani seslerden korkup kaçabilir." className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-5 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors font-medium text-sm h-16 resize-none" />
-                                        </div>
-
-                                        <button onClick={() => setAddPetStep(3)} className="w-full py-4 mt-4 bg-white rounded-2xl font-black text-black hover:bg-gray-200 transition-colors disabled:opacity-50">
-                                            Sonraki Adım
-                                        </button>
-                                    </motion.div>
-                                )}
-
-                                {addPetStep === 3 && (
-                                    <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="w-full space-y-5 max-w-sm">
-
-                                        <div>
-                                            <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Mikroçip Numarası</label>
-                                            <div className="relative mt-1">
-                                                <input type="text" value={newPetMicrochip} onChange={e => setNewPetMicrochip(e.target.value)} placeholder="TR-000000000" className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl pl-12 pr-5 py-4 text-[var(--foreground)] outline-none focus:border-cyan-400 transition-colors font-mono tracking-widest text-sm" />
-                                                <ShieldAlert className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--secondary-text)]" />
-                                            </div>
-                                            <p className="text-[10px] text-[var(--secondary-text)] ml-3 mt-1.5 font-medium">Veteriner sorgulamaları için resmi numarasını girebilirsiniz. Uygulamada güvenle saklanır.</p>
-                                        </div>
-
-                                        <div className="bg-[var(--card-bg)] border border-white/10 rounded-3xl p-5 mt-4">
-                                            <div className="flex justify-between items-center mb-1">
-                                                <div className="flex items-center gap-2">
-                                                    <PhoneCall className={cn("w-5 h-5 transition-colors", newPetShowPhone ? "text-cyan-400" : "text-[var(--secondary-text)]")} />
-                                                    <span className="font-bold text-[var(--foreground)] text-sm">Telefonu Göster</span>
-                                                </div>
-                                                <div
-                                                    className={cn("w-12 h-6 rounded-full p-1 cursor-pointer transition-colors relative", newPetShowPhone ? "bg-cyan-500" : "bg-gray-700")}
-                                                    onClick={() => setNewPetShowPhone(!newPetShowPhone)}
-                                                >
-                                                    <motion.div
-                                                        animate={{ x: newPetShowPhone ? 24 : 0 }}
-                                                        className="w-4 h-4 rounded-full bg-white shadow-md"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <p className="text-[11px] text-[var(--secondary-text)] leading-relaxed font-medium mt-2">
-                                                Eğer "Kayıp Alarmı" verirseniz, Moffi QR kodunuzu okutan kişiler doğrudan sizinle telefon numaranız üzerinden görüşebilir. Kapatırsanız; sadece anonim uygulama-içi mesaj atabilirler.
-                                            </p>
-                                        </div>
-
-                                        <button
-                                            disabled={isSavingPet || !user}
-                                            onClick={async () => {
-                                                if (!user) {
-                                                    showToast("Giriş Gerekli", "Lütfen önce giriş yapın.", "Zap");
-                                                    window.dispatchEvent(new CustomEvent('open-auth-modal'));
-                                                    return;
-                                                }
-                                                setIsSavingPet(true);
-
-                                                try {
-                                                    // 1. Upload Photos using apiService
-                                                    const photoUrls: string[] = [];
-                                                    for (const photo of newPetPhotos) {
-                                                        const publicUrl = await apiService.uploadMedia(photo.file, 'posts');
-                                                        if (publicUrl) photoUrls.push(publicUrl);
-                                                    }
-
-                                                    // 2. Add Pet via apiService
-                                                    await apiService.addPet({
-                                                        name: newPetName,
-                                                        type: newPetType,
-                                                        breed: newPetBreed,
-                                                        age: newPetAge,
-                                                        gender: newPetGender,
-                                                        is_neutered: newPetNeutered === "Evet",
-                                                        size: newPetSize,
-                                                        features: newPetFeatures,
-                                                        health_notes: newPetHealth,
-                                                        character_notes: newPetCharacter,
-                                                        microchip_number: newPetMicrochip,
-                                                        communication_preference: newPetShowPhone ? 'public_phone' : 'anonymous_only',
-                                                        avatar: photoUrls[0] || null,
-                                                        image: photoUrls[0] || null,
-                                                        images: photoUrls,
-                                                    });
-
-                                                    showToast("Hoş Geldin! 🐾", `${newPetName} Moffi ailesine katıldı.`, "success");
-                                                    setIsAddPetOpen(false);
-                                                    setAddPetStep(1);
-                                                    
-                                                    // Reset form
-                                                    setNewPetName("");
-                                                    setNewPetBreed("");
-                                                    setNewPetAge("");
-                                                    setNewPetPhotos([]);
-                                                } catch (err: any) {
-                                                    console.error("Pet saving error:", err);
-                                                    showToast("Hata", "Dostunuz kaydedilemedi.", "error");
-                                                } finally {
-                                                    setIsSavingPet(false);
-                                                }
-                                            }}
-                                            className="w-full py-4 mt-6 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl font-black text-[var(--foreground)] shadow-[0_10px_30px_rgba(34,211,238,0.3)] hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2"
-                                        >
-                                            {isSavingPet ? (
-                                                <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                                            ) : (
-                                                <>Aileye Ekle & QR Kimlik Oluştur <BadgeCheck className="w-5 h-5" /></>
-                                            )}
-                                        </button>
-                                    </motion.div>
-                                )}
-                            </div>
-
-                            <button onClick={() => setIsAddPetOpen(false)} className="w-full text-center py-2 text-sm text-[var(--secondary-text)] font-bold hover:text-[var(--foreground)] transition-colors mt-2">
-                                Vazgeç
-                            </button>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* UPLOAD NEW POST MODAL */}
-            <AnimatePresence>
-                {isUploadModalOpen && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[9999] bg-[#0a0a0b]/95 backdrop-blur-3xl flex flex-col"
-                    >
-                        {/* Header */}
-                        <div className="flex justify-between items-center px-6 pt-12 pb-4 shrink-0 border-b border-[var(--card-border)]">
-                            <button
-                                onClick={() => { setIsUploadModalOpen(false); setUploadImageURL(null); setUploadCaption(''); setUploadMood(null); }}
-                                className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center -ml-2"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                            <h2 className="text-xl font-black text-[var(--foreground)]">Yeni Gönderi</h2>
-                            <div className="w-10" />
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1 overflow-y-auto w-full max-w-lg mx-auto p-4 pb-32 flex flex-col gap-6">
-
-                            {/* MEDIA PICKER / PREVIEW (Apple Native Style) */}
-                            {uploadImageURL ? (
-                                <motion.div 
-                                    initial={{ scale: 0.9, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    className="w-full h-[60vh] min-h-[450px] max-h-[600px] rounded-[2.5rem] overflow-hidden bg-black border border-white/10 relative shadow-2xl group transition-all duration-500 ease-in-out"
-                                >
-                                    {selectedFile?.type.startsWith('video/') ? (
-                                        <div className="relative w-full h-full">
-                                            <video 
-                                                src={uploadImageURL} 
-                                                className="w-full h-full object-cover" 
-                                                autoPlay 
-                                                muted 
-                                                loop 
-                                                playsInline 
-                                            />
-                                            {/* Video Indicator Badge */}
-                                            <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-2 border border-white/10">
-                                                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                                                <span className="text-[10px] font-black text-white uppercase tracking-widest">Video Yayında</span>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div 
-                                            className="relative w-full h-full overflow-hidden"
-                                            onTouchStart={handleTouchStart}
-                                            onTouchEnd={handleTouchEnd}
-                                            onMouseDown={(e) => { touchStartX.current = e.clientX; }}
-                                            onMouseUp={(e) => {
-                                                if (touchStartX.current === null) return;
-                                                const diff = e.clientX - touchStartX.current;
-                                                if (diff > 50) handleSwipeFilter('right');
-                                                else if (diff < -50) handleSwipeFilter('left');
-                                                touchStartX.current = null;
-                                            }}
-                                        >
-                                            <img 
-                                                src={uploadImageURL} 
-                                                className="w-full h-full object-cover touch-pan-y" 
-                                                style={{ 
-                                                    filter: `${IMAGE_FILTERS[activeFilterIndex].filter} brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)` 
-                                                }}
-                                                draggable={false}
-                                            />
-                                            {/* Elegant Filter Name Overlay */}
-                                            <AnimatePresence>
-                                                {showFilterName && (
-                                                    <motion.div 
-                                                        initial={{ opacity: 0 }}
-                                                        animate={{ opacity: 1 }}
-                                                        exit={{ opacity: 0 }}
-                                                        transition={{ duration: 1, ease: 'easeInOut' }}
-                                                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none w-full px-4"
-                                                    >
-                                                        <p className="text-white font-light tracking-[0.4em] uppercase text-2xl drop-shadow-[0_2px_15px_rgba(0,0,0,0.8)] text-center">
-                                                            {IMAGE_FILTERS[activeFilterIndex].name}
-                                                        </p>
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-
-                                            {/* Magic Wand Auto-Enhance Button (Streamlined) */}
-                                            {selectedFile?.type.startsWith('image/') && (
-                                                <motion.button
-                                                    initial={{ opacity: 0 }}
-                                                    animate={{ opacity: 1 }}
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setActiveFilterIndex(0);
-                                                        setBrightness(115);
-                                                        setContrast(115);
-                                                        setSaturation(130);
-                                                        showToast("AI İyileştirme ✨", "Profesyonel ayarlar uygulandı.", "success");
-                                                    }}
-                                                    className="absolute bottom-6 right-6 z-20 w-8 h-8 flex items-center justify-center text-yellow-400 hover:scale-110 transition-all active:scale-95 group"
-                                                    title="AI İyileştir"
-                                                >
-                                                    <Sparkles className="w-5 h-5 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]" />
-                                                </motion.button>
-                                            )}
-                                        </div>
-                                    )}
-                                    
-                                    {/* Glassmorphism Overlays */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-                                    
-                                    {/* Streamlined Action Sidebar */}
-                                    <div className="absolute top-6 right-6 flex flex-col gap-5 opacity-0 group-hover:opacity-100 transition-all duration-300 z-30">
-                                        <button 
-                                            type="button"
-                                            onClick={() => cameraInputRef.current?.click()}
-                                            className="text-white/60 hover:text-white transition-all active:scale-90"
-                                            title="Medyayı Değiştir"
-                                        >
-                                            <Camera className="w-5 h-5" />
-                                        </button>
-                                        
-                                        <button 
-                                            type="button"
-                                            onClick={() => audioInputRef.current?.click()}
-                                            className={cn(
-                                                "transition-all active:scale-90",
-                                                audioURL ? "text-cyan-400" : "text-white/60 hover:text-white"
-                                            )}
-                                            title="Müzik/Ses Ekle"
-                                        >
-                                            <Mic className="w-5 h-5" />
-                                        </button>
-
-                                        <button 
-                                            type="button"
-                                            onClick={() => { setUploadImageURL(null); setSelectedFile(null); setAudioFile(null); setAudioURL(null); }}
-                                            className="text-red-500/60 hover:text-red-500 transition-all active:scale-90"
-                                            title="Sil"
-                                        >
-                                            <Trash2 className="w-5 h-5" />
-                                        </button>
-                                    </div>
-
-                                    {/* Bottom Info Pill */}
-                                    <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between translate-y-4 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-500">
-                                        <div className="flex gap-2">
-                                            {uploadMood ? (
-                                                <div className="bg-cyan-500 text-black px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-[0_0_20px_rgba(6,182,212,0.5)]">
-                                                    {uploadMood}
-                                                </div>
-                                            ) : (
-                                                <div className="bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black text-white/60 uppercase tracking-widest border border-white/10">
-                                                    Duygu Durumu Yok
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="flex -space-x-2">
-                                            {/* Removed decorative icons */}
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            ) : (
-                                <motion.div 
-                                    initial={{ y: 20, opacity: 0 }}
-                                    animate={{ y: 0, opacity: 1 }}
-                                    onClick={() => cameraInputRef.current?.click()}
-                                    className="w-full h-[60vh] min-h-[350px] max-h-[500px] rounded-[2rem] border-2 border-dashed border-white/10 bg-white/[0.02] flex flex-col items-center justify-center gap-6 cursor-pointer hover:bg-white/[0.05] hover:border-cyan-500/40 transition-all duration-700 group relative overflow-hidden"
-                                >
-                                    {/* Background Glow */}
-                                    <div className="absolute inset-0 bg-cyan-500/5 blur-[100px] group-hover:bg-cyan-500/10 transition-colors" />
-                                    
-                                    <div className="relative">
-                                        <div className="w-20 h-20 rounded-[1.5rem] bg-gradient-to-tr from-cyan-500/20 to-purple-500/20 flex items-center justify-center border border-white/10 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-xl">
-                                            <ImagePlus className="w-8 h-8 text-cyan-400 drop-shadow-[0_0_15px_rgba(34,211,238,0.5)]" />
-                                        </div>
-                                        <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-cyan-500 flex items-center justify-center text-black border-4 border-[#0a0a0b] shadow-xl group-hover:scale-110 transition-transform">
-                                            <Plus className="w-4 h-4" strokeWidth={3} />
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="text-center relative z-10">
-                                        <p className="text-white font-black text-lg tracking-tight">Anıyı Ölümsüzleştir</p>
-                                        <p className="text-[var(--secondary-text)] text-xs font-medium mt-1.5 max-w-[200px] mx-auto leading-relaxed">
-                                            En sevdiğin fotoğrafı veya videoyu seç, Moffi topluluğuyla paylaş!
-                                        </p>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </div>
-
-                        {/* SCROLLABLE CONTENT AREA */}
-                        <div className="flex-1 overflow-y-auto px-4 pb-40 flex flex-col gap-6 custom-scrollbar">
-                            {/* Filter guide hint */}
-                            {selectedFile?.type.startsWith('image/') && (
-                                <p className="text-center text-[10px] text-white/30 font-medium tracking-widest uppercase mt-2 mb-1 animate-pulse">
-                                    Filtreleri değiştirmek için fotoğrafı sağa sola kaydır
-                                </p>
-                            )}
-
-                            {/* MINIMAL CAPTION BOX */}
-                            <div className="px-2 pt-2">
-                                <textarea
-                                    value={uploadCaption}
-                                    onChange={(e) => setUploadCaption(e.target.value)}
-                                    onInput={(e) => {
-                                        e.currentTarget.style.height = 'auto';
-                                        e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
-                                    }}
-                                    placeholder="Neler oluyor?.."
-                                    className="w-full bg-transparent outline-none text-[var(--foreground)] resize-none min-h-[40px] max-h-[100px] text-lg font-medium py-1 overflow-hidden placeholder:text-white/20"
-                                    rows={1}
+                    <div className="flex items-center gap-5">
+                        <div className="relative">
+                            <div className="w-20 h-20 rounded-[28px] overflow-hidden shadow-md border-2 border-white relative group">
+                                <motion.img 
+                                    key={pet.image}
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ duration: 0.3 }}
+                                    src={pet.image} 
+                                    className="w-full h-full object-cover" 
+                                    alt={pet.name} 
                                 />
-                            </div>
-
-
-
-
-
-
-
-
-
-                            {/* SMART TOOLBAR */}
-                            <div className="flex items-center justify-between px-2 py-4 border-y border-white/5 mt-2">
-                                <div className="flex items-center gap-6">
-                                    <button 
-                                        type="button"
-                                        onClick={() => setActiveTool(activeTool === 'adjust' ? null : 'adjust')}
-                                        className={cn("transition-all active:scale-90", activeTool === 'adjust' ? "text-cyan-400" : "text-white/40 hover:text-white")}
-                                        title="İnce Ayar"
-                                    >
-                                        <Palette className="w-5 h-5" />
-                                    </button>
-                                    <button 
-                                        type="button"
-                                        onClick={() => setActiveTool(activeTool === 'tag' ? null : 'tag')}
-                                        className={cn("transition-all active:scale-90", activeTool === 'tag' ? "text-cyan-400" : "text-white/40 hover:text-white")}
-                                        title="Etiketle"
-                                    >
-                                        <PawPrint className="w-5 h-5" />
-                                    </button>
-                                    <button 
-                                        type="button"
-                                        onClick={() => setActiveTool(activeTool === 'schedule' ? null : 'schedule')}
-                                        className={cn("transition-all active:scale-90", activeTool === 'schedule' ? "text-cyan-400" : "text-white/40 hover:text-white")}
-                                        title="Zamanla"
-                                    >
-                                        <Clock className="w-5 h-5" />
-                                    </button>
-                                    <button 
-                                        type="button"
-                                        onClick={() => setActiveTool(activeTool === 'mood' ? null : 'mood')}
-                                        className={cn("transition-all active:scale-90", activeTool === 'mood' ? "text-cyan-400" : "text-white/40 hover:text-white")}
-                                        title="Ruh Hali"
-                                    >
-                                        <Heart className="w-5 h-5" />
-                                    </button>
+                                <div className="absolute inset-0 bg-black/15 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-[28px] cursor-pointer">
+                                    <Shirt className="w-5 h-5 text-white" />
                                 </div>
-                                
+                            </div>
+                        </div>
+
+                        <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                                <motion.h2 
+                                    key={pet.name}
+                                    initial={{ opacity: 0, y: -5 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="text-2xl font-black text-gray-850 tracking-tight"
+                                >
+                                    {pet.name} <span className="text-sm opacity-50">🦴</span>
+                                </motion.h2>
                                 <button 
-                                    type="button"
-                                    onClick={generateAICaption}
-                                    disabled={isGeneratingAI}
-                                    className={cn(
-                                        "flex items-center gap-2 px-4 py-2 rounded-full transition-all active:scale-95",
-                                        isGeneratingAI ? "bg-white/5 opacity-50" : "bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20"
-                                    )}
+                                    onClick={() => setIsPetSettingsOpen(true)}
+                                    className="p-1.5 text-gray-400 hover:text-green-600 rounded-full hover:bg-gray-50 transition-all cursor-pointer"
                                 >
-                                    {isGeneratingAI ? <div className="w-3 h-3 border-2 border-cyan-400/20 border-t-cyan-400 rounded-full animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                                    <span className="text-[10px] font-black uppercase tracking-widest">AI Öner</span>
+                                    <Sliders className="w-4.5 h-4.5" />
                                 </button>
                             </div>
-
-                            {/* DYNAMIC TOOL DRAWER */}
-                            <AnimatePresence mode="wait">
-                                {activeTool && (
-                                    <motion.div
-                                        key={activeTool}
-                                        initial={{ height: 0, opacity: 0, y: 10 }}
-                                        animate={{ height: 'auto', opacity: 1, y: 0 }}
-                                        exit={{ height: 0, opacity: 0, y: 10 }}
-                                        className="overflow-hidden bg-white/[0.03] rounded-3xl border border-white/5"
-                                    >
-                                        <div className="p-5">
-                                            {activeTool === 'adjust' && (
-                                                <div className="flex flex-col gap-5">
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Manuel İnce Ayar</span>
-                                                        <button type="button" onClick={() => { setBrightness(100); setContrast(100); setSaturation(100); }} className="text-[9px] font-bold text-cyan-400 uppercase">Sıfırla</button>
-                                                    </div>
-                                                    <div className="space-y-4">
-                                                        <div className="space-y-2">
-                                                            <div className="flex justify-between text-[10px] font-bold text-white/20 uppercase"><span>Parlaklık</span></div>
-                                                            <input type="range" min="50" max="150" step="0.5" value={brightness} onChange={(e) => setBrightness(parseFloat(e.target.value))} className="w-full h-0.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-500" />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <div className="flex justify-between text-[10px] font-bold text-white/20 uppercase"><span>Kontrast</span></div>
-                                                            <input type="range" min="50" max="150" step="0.5" value={contrast} onChange={(e) => setContrast(parseFloat(e.target.value))} className="w-full h-0.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-500" />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <div className="flex justify-between text-[10px] font-bold text-white/20 uppercase"><span>Doygunluk</span></div>
-                                                            <input type="range" min="0" max="200" step="1" value={saturation} onChange={(e) => setSaturation(parseFloat(e.target.value))} className="w-full h-0.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-500" />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {activeTool === 'tag' && (
-                                                <div className="flex flex-col gap-4">
-                                                    <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Dostunu Etiketle</span>
-                                                    <div className="flex gap-4 overflow-x-auto no-scrollbar py-2">
-                                                        {userPets?.map(pet => (
-                                                            <button 
-                                                                key={pet.id} 
-                                                                type="button"
-                                                                onClick={() => setTaggedPetIds(prev => prev.includes(pet.id) ? prev.filter(id => id !== pet.id) : [...prev, pet.id])}
-                                                                className="flex flex-col items-center gap-2 shrink-0"
-                                                            >
-                                                                <div className={cn("w-12 h-12 rounded-full border-2 transition-all relative", taggedPetIds.includes(pet.id) ? "border-cyan-500 scale-110 shadow-[0_0_15px_rgba(6,182,212,0.3)]" : "border-white/10")}>
-                                                                    <img src={pet.avatar} className="w-full h-full rounded-full object-cover p-0.5" />
-                                                                    {taggedPetIds.includes(pet.id) && <div className="absolute -top-1 -right-1 w-4 h-4 bg-cyan-500 rounded-full flex items-center justify-center border-2 border-black"><Check size={8} /></div>}
-                                                                </div>
-                                                                <span className={cn("text-[9px] font-bold uppercase", taggedPetIds.includes(pet.id) ? "text-cyan-400" : "text-white/40")}>{pet.name}</span>
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {activeTool === 'schedule' && (
-                                                <div className="flex flex-col gap-4">
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Paylaşım Zamanı</span>
-                                                        <button type="button" onClick={() => setIsSchedulingMode(!isSchedulingMode)} className={cn("px-3 py-1 rounded-full text-[9px] font-black uppercase transition-all", isSchedulingMode ? "bg-cyan-500 text-black" : "bg-white/10 text-white/40")}>
-                                                            {isSchedulingMode ? 'Zamanlandı' : 'Şimdi'}
-                                                        </button>
-                                                    </div>
-                                                    {isSchedulingMode && (
-                                                        <input type="datetime-local" value={scheduledDate || ''} onChange={(e) => setScheduledDate(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white [color-scheme:dark]" />
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            {activeTool === 'mood' && (
-                                                <div className="flex flex-col gap-4">
-                                                    <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Ruh Hali</span>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {MOOD_OPTIONS.map(mood => (
-                                                            <button type="button" key={mood} onClick={() => setUploadMood(uploadMood === mood ? null : mood)} className={cn("px-4 py-2 rounded-full text-xs font-bold transition-all", uploadMood === mood ? "bg-white text-black scale-105" : "bg-white/5 text-white/40 hover:bg-white/10")}>
-                                                                {mood}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-
-                        {/* FIXED FOOTER AREA */}
-                        <div className="fixed bottom-0 left-0 right-0 p-6 pt-10 bg-gradient-to-t from-[#0a0a0b] via-[#0a0a0b]/95 to-transparent z-[100] flex flex-col gap-4">
-                            {/* LOCATION TOGGLE */}
-                            <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-[1.5rem] p-3 backdrop-blur-md">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center">
-                                        <MapPin className="w-4 h-4" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[var(--foreground)] font-bold text-[13px]">Konum Bilgisini Ekle</p>
-                                        <p className="text-[var(--secondary-text)] text-[10px]">Açmadığınız sürece gizli kalır.</p>
-                                    </div>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setUploadLocationEnabled(!uploadLocationEnabled)}
-                                    className={cn("w-10 h-6 rounded-full transition-colors flex items-center px-1 duration-300", uploadLocationEnabled ? "bg-cyan-500" : "bg-white/20")}
-                                >
-                                    <div className={cn("w-4 h-4 bg-white rounded-full shadow-md transition-transform duration-300", uploadLocationEnabled ? "translate-x-4" : "translate-x-0")} />
-                                </button>
-                            </div>
-
-                            {/* PUBLISH BUTTON */}
-                            <button
-                                onClick={publishPost}
-                                disabled={isPublishing}
-                                className={cn("w-full py-4 rounded-full font-black text-white flex items-center justify-center gap-2 shadow-[0_10px_40px_rgba(34,211,238,0.3)] transition-all", isPublishing ? "bg-gray-800/50 cursor-not-allowed" : "bg-gradient-to-r from-cyan-400 to-purple-500 hover:scale-[1.02] active:scale-95")}
+                            <motion.p 
+                                key={pet.breed}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="text-[11px] font-semibold text-gray-400 mt-0.5"
                             >
-                                {isPublishing ? (
-                                    <div className="flex items-center gap-3">
-                                        <div className="relative w-6 h-6">
-                                            <svg className="w-full h-full -rotate-90">
-                                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="transparent" className="text-white/10" />
-                                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="transparent" strokeDasharray={62.8} strokeDashoffset={62.8 - (62.8 * uploadProgress) / 100} className="text-cyan-400 transition-all duration-300" />
-                                            </svg>
-                                            <span className="absolute inset-0 flex items-center justify-center text-[8px] font-black">{uploadProgress}%</span>
-                                        </div>
-                                        <span className="animate-pulse tracking-widest text-xs">YÜKLENİYOR...</span>
-                                    </div>
-                                ) : (
-                                    <><Send className="w-5 h-5" /> Paylaş</>
-                                )}
-                            </button>
+                                {pet.breed}
+                            </motion.p>
                         </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                    </div>
 
-            {/* STORY PREVIEW MODAL (The Professional Review Phase) */}
-            <AnimatePresence>
-                {storyPreview && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[9999] bg-black overflow-y-auto"
+                    {/* AI Dressing Closet Portal */}
+                    <motion.div 
+                        layoutId="dressing-card-container"
+                        onClick={() => setExpandedPanel('dressing')}
+                        className="mt-4 p-3 bg-purple-50/50 rounded-2xl border border-purple-100/30 flex justify-between items-center cursor-pointer group hover:bg-purple-50 transition-colors duration-300"
                     >
-                        {/* Immersive Background Blur - FIXED & TOP PRIORITY */}
-                        <div className="fixed inset-0 z-0 pointer-events-none">
-                            <img src={storyPreview} className="w-full h-full object-cover blur-3xl opacity-50" />
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
+                                <Shirt className="w-4 h-4" />
+                            </div>
+                            <div>
+                                <span className="text-[8.5px] font-black text-purple-700 uppercase tracking-widest block">AI TARZI & GARDIROP</span>
+                                <span className="text-[10px] font-bold text-gray-700 mt-0.5 block group-hover:text-purple-800 transition-colors">{pet.dressing.activeOutfit}</span>
+                            </div>
+                        </div>
+                        <button className="flex items-center gap-1 bg-white text-purple-700 border border-purple-200/50 text-[9.5px] font-black px-2.5 py-1.5 rounded-xl cursor-pointer transition-all shadow-sm shrink-0">
+                            <span>Kombinle</span>
+                            <Plus className="w-3 h-3" />
+                        </button>
+                    </motion.div>
+
+                    {/* Integrated Rings & Quick Stats */}
+                    <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-100">
+                        <div className="flex items-center gap-3">
+                            <div className="relative w-12 h-12 flex items-center justify-center">
+                                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#F0FDF4" strokeWidth="3" />
+                                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#22C55E" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${pet.ringProgress.activity}, 100`} />
+                                    
+                                    <path d="M18 6.0845 a 11.9155 11.9155 0 0 1 0 23.831 a 11.9155 11.9155 0 0 1 0 -23.831" fill="none" stroke="#EFF6FF" strokeWidth="3" />
+                                    <path d="M18 6.0845 a 11.9155 11.9155 0 0 1 0 23.831 a 11.9155 11.9155 0 0 1 0 -23.831" fill="none" stroke="#3B82F6" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${pet.ringProgress.water}, 100`} />
+                                    
+                                    <path d="M18 10.0845 a 7.9155 7.9155 0 0 1 0 15.831 a 7.9155 7.9155 0 0 1 0 -15.831" fill="none" stroke="#FFF7ED" strokeWidth="3" />
+                                    <path d="M18 10.0845 a 7.9155 7.9155 0 0 1 0 15.831 a 7.9155 7.9155 0 0 1 0 -15.831" fill="none" stroke="#F97316" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${pet.ringProgress.food}, 100`} />
+                                </svg>
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-bold text-gray-700 tracking-tight">Günlük Hedefler</span>
+                                <span className="text-[9px] font-semibold text-gray-400 flex items-center gap-1.5 mt-0.5">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Gezi
+                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Su
+                                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500" /> Beslenme
+                                </span>
+                            </div>
                         </div>
 
-                        <div className="relative z-10 flex flex-col min-h-screen">
-                            {/* Header */}
-                            <div className="flex justify-between items-center p-6 pt-8">
-                                <button
-                                    onClick={() => setStoryPreview(null)}
-                                    className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white border border-white/10 active:scale-90 transition-transform"
-                                >
-                                    <X className="w-6 h-6" />
-                                </button>
-                                <h2 className="text-white font-black text-lg uppercase tracking-tighter">Hikaye Önizleme</h2>
-                                <div className="w-10" />
-                            </div>
-
-                            {/* Preview Content - Responsive & Safe */}
-                            <div className="flex-1 flex items-center justify-center p-6 py-10">
-                                <div className="w-full max-w-[300px] sm:max-w-[340px] max-h-[65vh] aspect-[9/16] rounded-[48px] overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border-[6px] border-white/10 relative">
-                                    <img src={storyPreview} className="w-full h-full object-cover" />
-                                    <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60 pointer-events-none" />
-                                    
-                                    {/* Glass Overlay for extra premium feel */}
-                                    <div className="absolute inset-0 border border-white/10 rounded-[42px] pointer-events-none" />
+                        <div className="flex gap-4">
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-7 h-7 rounded-full bg-green-50 flex items-center justify-center">
+                                    <Heart className="w-3.5 h-3.5 text-green-600" fill="currentColor" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Sağlık</span>
+                                    <span className="text-[10px] font-black text-gray-750">{pet.health}</span>
                                 </div>
                             </div>
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center">
+                                    <span className="text-gray-500 font-black text-[9px]">KG</span>
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Ağırlık</span>
+                                    <span className="text-[10px] font-black text-gray-750">{pet.weight}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                            {/* Footer Controls - Clears Nav Bar */}
-                            <div className="p-8 pb-32 flex flex-col gap-5">
-                            <button
-                                onClick={confirmUploadStory}
-                                disabled={isUploadingStory}
-                                className={cn(
-                                    "w-full py-4 rounded-full font-black text-white text-lg flex items-center justify-center gap-2 shadow-2xl transition-all",
-                                    isUploadingStory ? "bg-gray-600 opacity-50 cursor-not-allowed" : "bg-gradient-to-r from-cyan-400 to-purple-500 hover:scale-[1.02] active:scale-95"
-                                )}
-                            >
-                                {isUploadingStory ? (
-                                    <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Yükleniyor...</>
-                                ) : (
-                                    <><Sparkles className="w-5 h-5" /> Hikayeyi Paylaş</>
-                                )}
-                            </button>
-                            <button
-                                onClick={() => setStoryPreview(null)}
-                                className="w-full py-3 text-white/60 font-bold hover:text-white transition-colors"
-                            >
-                                Vazgeç
-                            </button>
+                    {/* Integrated Weekly Streak Grid */}
+                    <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
+                        <div className="flex flex-col">
+                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">İstikrar Serisi</span>
+                            <span className="text-[10px] font-bold text-gray-600 mt-0.5">Haftalık Gezi</span>
+                        </div>
+                        <div className="flex gap-1.5">
+                            {['P', 'S', 'Ç', 'P', 'C', 'C', 'P'].map((day, idx) => {
+                                const isCompleted = idx < pet.streak;
+                                return (
+                                    <div key={idx} className="flex flex-col items-center">
+                                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black border transition-all ${
+                                            isCompleted 
+                                                ? 'bg-[#EAF5EC] border-green-200 text-green-700 shadow-sm shadow-green-100' 
+                                                : 'bg-gray-50 border-gray-100 text-gray-300'
+                                        }`}>
+                                            {isCompleted ? '✓' : day}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <div className="flex items-center gap-1 bg-orange-50 px-2.5 py-1 rounded-full border border-orange-100 shrink-0">
+                            <span className="text-[9px] font-black text-orange-600 uppercase tracking-wider">{pet.streak} GÜN 🔥</span>
                         </div>
                     </div>
                 </motion.div>
-                )}
-            </AnimatePresence>
 
-            {/* EDIT POST MODAL */}
-            <AnimatePresence>
-                {editingPost && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[505] bg-black/95 backdrop-blur-xl flex flex-col"
-                    >
-                        {/* Header */}
-                        <div className="flex justify-between items-center p-6 shrink-0 border-b border-[var(--card-border)]">
-                            <button
-                                onClick={() => setEditingPost(null)}
-                                className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center -ml-2 text-[var(--foreground)] hover:bg-white/20"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                            <h2 className="text-xl font-black text-[var(--foreground)]">Gönderiyi Düzenle</h2>
-                            <div className="w-10" />
+                {/* ⚡ QUEST ENGINE - Günlük Görevler Bento */}
+                <section className="mb-6 px-0">
+                    <QuestBentoCard />
+                </section>
+
+                {/* 3. Live Walk Tracking Widget - useWalk hook ile canlı */}
+                <section className="mb-6">
+                    <BentoCard onClick={() => window.dispatchEvent(new CustomEvent('open-walk-panel'))} className="bg-white !p-4 flex flex-col gap-4 relative overflow-hidden cursor-pointer hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all">
+                        <div className="absolute right-[-20px] top-[-20px] w-48 h-48 bg-green-500/[0.03] rounded-full pointer-events-none" />
+                        
+                        <div className="flex justify-between items-start relative z-10">
+                            <div>
+                                <div className="flex items-center gap-1.5">
+                                    <div className={`w-2 h-2 rounded-full ${activeSession ? 'bg-green-500 animate-ping' : 'bg-gray-300'}`} />
+                                    <span className={`text-[10px] font-black tracking-wider uppercase ${activeSession ? 'text-green-700' : 'text-gray-500'}`}>
+                                        {activeSession ? 'CANLI • YÜRÜYÜŞTESİN' : 'YÜRÜYÜŞ RADARI'}
+                                    </span>
+                                </div>
+                                <h4 className="text-base font-black text-gray-800 mt-1">
+                                    {activeSession ? `${pet.name} Yürüyor! 🐾` : 'Yürüyüşü Başlat'}
+                                </h4>
+                                <p className="text-[10px] font-semibold text-gray-400 mt-0.5">
+                                    {activeSession
+                                        ? `GPS aktif • ${walkStats?.totalWalks || 0} toplam yürüyüş`
+                                        : `${pet.name}'in günlük gezi hedefini tamamlayın`}
+                                </p>
+                            </div>
+                            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm border transition-colors ${
+                                activeSession ? 'bg-green-500 text-white border-green-400' : 'bg-green-50 text-green-600 border-green-100/30'
+                            }`}>
+                                <Navigation className="w-5 h-5" />
+                            </div>
                         </div>
 
-                        {/* Content */}
-                        <div className="flex-1 overflow-y-auto w-full max-w-lg mx-auto p-4 pb-32 flex flex-col gap-6">
-
-                            {/* PREVIEW */}
-                            <div className="w-full aspect-[4/5] rounded-3xl overflow-hidden bg-gray-900 border border-white/10 relative shadow-2xl">
-                                <img src={editingPost.media} className="w-full h-full object-cover" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-                                <div className="absolute bottom-4 left-4 flex gap-2">
-                                    {editingPost.mood && (
-                                        <div className="bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-[var(--foreground)] border border-white/20">
-                                            {editingPost.mood}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* CAPTION */}
-                            <div className="bg-[var(--card-bg)] border border-white/10 rounded-3xl p-4 flex gap-4">
-                                <img src={user?.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} className="w-10 h-10 rounded-full shrink-0" />
-                                <textarea
-                                    value={editingPost.desc}
-                                    onChange={(e) => setEditingPost({ ...editingPost, desc: e.target.value })}
-                                    placeholder="Bu harika anı anlat..."
-                                    className="w-full bg-transparent outline-none text-[var(--foreground)] resize-none h-24 text-sm mt-1"
+                        {/* Rota Haritası */}
+                        <div className="h-20 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-center p-3 relative overflow-hidden shadow-inner">
+                            <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:16px_16px]" />
+                            <svg className="w-full h-full relative z-10" viewBox="0 0 300 60">
+                                {/* Zemin yolu */}
+                                <path d="M 10 30 Q 80 10 150 40 T 290 20" fill="none" stroke="#E5E7EB" strokeWidth="4" strokeLinecap="round" />
+                                {/* Tamamlanan yol — mesafeye göre dolduruluyor */}
+                                <path 
+                                    d="M 10 30 Q 80 10 150 40 T 290 20" 
+                                    fill="none" 
+                                    stroke="#22C55E" 
+                                    strokeWidth="4" 
+                                    strokeLinecap="round" 
+                                    strokeDasharray={`${Math.min(280, (activeSession?.distanceKm || 0) * 80)}, 300`}
+                                    style={{ transition: 'stroke-dasharray 1s ease' }}
                                 />
-                            </div>
-
-
-
-                            {/* MOOD SELECTOR */}
-                            <div className="flex flex-col gap-2">
-                                <span className="text-[var(--foreground)]/60 text-[11px] font-bold uppercase tracking-widest px-1">Ruh Hali (İsteğe Bağlı)</span>
-                                <div className="w-full overflow-x-auto no-scrollbar flex gap-2 pb-2">
-                                    {MOOD_OPTIONS.map(mood => (
-                                        <button
-                                            key={mood}
-                                            onClick={() => setEditingPost({ ...editingPost, mood: editingPost.mood === mood ? null : mood })}
-                                            className={cn(
-                                                "shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors border",
-                                                editingPost.mood === mood ? "bg-cyan-500 text-black border-cyan-400 font-bold" : "bg-[var(--card-bg)] border-white/10 text-[var(--foreground)] hover:bg-white/10"
-                                            )}
-                                        >
-                                            {mood}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* SAVE BUTTON */}
-                            <button
-                                onClick={saveEditPost}
-                                disabled={isPublishing}
-                                className={cn("w-full py-4 mt-auto rounded-full font-black text-[var(--foreground)] flex items-center justify-center gap-2 shadow-[0_10px_40px_rgba(34,211,238,0.3)] transition-all", isPublishing ? "bg-gray-600 cursor-not-allowed" : "bg-gradient-to-r from-cyan-400 to-purple-500 hover:scale-[1.02] active:scale-95")}
-                            >
-                                {isPublishing ? (
-                                    <span className="animate-pulse">Kaydediliyor...</span>
+                                {/* Başlangıç noktası */}
+                                <circle cx="10" cy="30" r="4" fill="#22C55E" stroke="white" strokeWidth="2" />
+                                {/* Canlı konum noktası */}
+                                {activeSession ? (
+                                    <>
+                                        <circle 
+                                            cx={Math.min(280, 10 + (activeSession.distanceKm || 0) * 80)} 
+                                            cy={30 - Math.sin((activeSession.distanceKm || 0) * 1.5) * 10}
+                                            r="6" fill="#22C55E" stroke="white" strokeWidth="3" 
+                                        />
+                                        <circle 
+                                            cx={Math.min(280, 10 + (activeSession.distanceKm || 0) * 80)} 
+                                            cy={30 - Math.sin((activeSession.distanceKm || 0) * 1.5) * 10}
+                                            r="12" fill="none" stroke="#22C55E" strokeWidth="1.5" 
+                                            className="animate-ping" 
+                                        />
+                                    </>
                                 ) : (
-                                    <><Edit2 className="w-5 h-5" /> Kaydet</>
+                                    <circle cx="10" cy="30" r="5" fill="#D1D5DB" stroke="white" strokeWidth="2" />
                                 )}
-                            </button>
+                            </svg>
+                            <span className="absolute right-4 bottom-2.5 text-[9px] font-bold text-gray-400">
+                                {activeSession
+                                    ? `${(activeSession.distanceKm || 0).toFixed(2)} / ${pet.ringProgress.activity > 0 ? (pet.ringProgress.activity / 28).toFixed(1) : '3.5'} KM`
+                                    : 'GPS ile canlı takip'}
+                            </span>
                         </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
 
-            {/* APPLE STYLE DELETE CONFIRMATION ALERT (CENTERED DIALOG) */}
+                        {/* İstatistikler & Buton */}
+                        <div className="flex justify-between items-center gap-3">
+                            <div className="flex gap-4">
+                                <div>
+                                    <span className="text-[8px] font-bold text-gray-400 uppercase">Süre</span>
+                                    <h5 className={`text-[13px] font-black mt-0.5 ${activeSession ? 'text-green-700' : 'text-gray-400'}`}>
+                                        {activeSession ? formatWalkTime(walkElapsedSeconds) : '--:--'}
+                                    </h5>
+                                </div>
+                                <div>
+                                    <span className="text-[8px] font-bold text-gray-400 uppercase">Mesafe</span>
+                                    <h5 className={`text-[13px] font-black mt-0.5 ${activeSession ? 'text-green-700' : 'text-gray-400'}`}>
+                                        {activeSession ? `${(activeSession.distanceKm || 0).toFixed(2)} KM` : '— KM'}
+                                    </h5>
+                                </div>
+                                {walkStats && walkStats.totalWalks > 0 && (
+                                    <div>
+                                        <span className="text-[8px] font-bold text-gray-400 uppercase">Toplam</span>
+                                        <h5 className="text-[13px] font-black text-gray-700 mt-0.5">{walkStats.totalDistanceKm?.toFixed(1) || '0'} KM</h5>
+                                    </div>
+                                )}
+                            </div>
+                            {activeSession ? (
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-walk-panel')); }}
+                                    className="flex items-center gap-1.5 bg-red-500 hover:bg-red-600 text-white text-[11px] font-bold px-4 py-2.5 rounded-2xl shadow-md shadow-red-900/10 transition-colors cursor-pointer"
+                                >
+                                    <span className="w-3.5 h-3.5 bg-white rounded-sm block shrink-0" />
+                                    <span>Bitir</span>
+                                </button>
+                            ) : (
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-walk-panel')); }}
+                                    className="flex items-center gap-1.5 bg-[#527958] hover:bg-[#436448] text-white text-[11px] font-bold px-4 py-2.5 rounded-2xl shadow-md shadow-green-900/10 transition-colors cursor-pointer"
+                                >
+                                    <Play className="w-3.5 h-3.5 fill-current" />
+                                    <span>Şimdi Çık</span>
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Geçmiş yürüyüşler özeti */}
+                        {walkHistory.length > 0 && !activeSession && (
+                            <div className="pt-3 border-t border-gray-100 flex gap-3 overflow-x-auto no-scrollbar">
+                                {walkHistory.slice(0, 3).map((w: any, i: number) => (
+                                    <div key={w.id || i} className="shrink-0 bg-gray-50 rounded-2xl px-3 py-2 flex items-center gap-2 border border-gray-100">
+                                        <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
+                                            <Navigation className="w-3 h-3 text-green-600" />
+                                        </div>
+                                        <div>
+                                            <span className="text-[10px] font-black text-gray-700 block">
+                                                {((w.distance_meters || 0) / 1000).toFixed(2)} KM
+                                            </span>
+                                            <span className="text-[8px] font-semibold text-gray-400">
+                                                {w.ended_at ? new Date(w.ended_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }) : 'Tamamlandı'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </BentoCard>
+                </section>
+
+                {/* 4. Mini Trends & Comparison Chart (Sağlık Gelişim) - MOVED TO THE TOP */}
+                <section className="mb-6">
+                    <div className="flex justify-between items-end mb-3 px-1">
+                        <h3 className="text-[15px] font-bold text-gray-800 tracking-tight">Haftalık Sağlık & Gelişim</h3>
+                        <span className="text-[10px] font-black text-green-600 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <Flame className="w-3.5 h-3.5" /> +12% Gelişim
+                        </span>
+                    </div>
+                    
+                    <BentoCard className="bg-white !p-4 relative overflow-hidden">
+                        <div className="flex justify-between items-start mb-4">
+                            <div>
+                                <h4 className="text-sm font-bold text-gray-800">Aktivite Seviyesi</h4>
+                                <p className="text-[10px] text-gray-400 font-semibold mt-0.5">Son 7 günlük gezi ve hareket karşılaştırması</p>
+                            </div>
+                            <span className="text-[10px] font-black text-green-700 uppercase tracking-widest">DENGELİ</span>
+                        </div>
+                        
+                        <div className="h-28 w-full flex items-end relative pt-2">
+                            <div className="absolute inset-x-0 top-1/4 border-b border-gray-100/60" />
+                            <div className="absolute inset-x-0 top-2/4 border-b border-gray-100/60" />
+                            <div className="absolute inset-x-0 top-3/4 border-b border-gray-100/60" />
+                            
+                            <svg className="w-full h-full overflow-visible z-10" viewBox="0 0 340 100">
+                                <defs>
+                                    <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor="#22C55E" stopOpacity="0.15" />
+                                        <stop offset="100%" stopColor="#22C55E" stopOpacity="0.0" />
+                                    </linearGradient>
+                                </defs>
+                                <path d={`M 10 90 L 10 ${100 - pet.weeklyData[0]} Q 60 ${100 - pet.weeklyData[1]} 110 ${100 - pet.weeklyData[2]} T 210 ${100 - pet.weeklyData[4]} T 330 ${100 - pet.weeklyData[6]} L 330 90 Z`} fill="url(#chartGradient)" />
+                                <path d={`M 10 ${100 - pet.weeklyData[0]} Q 60 ${100 - pet.weeklyData[1]} 110 ${100 - pet.weeklyData[2]} T 210 ${100 - pet.weeklyData[4]} T 330 ${100 - pet.weeklyData[6]}`} fill="none" stroke="#22C55E" strokeWidth="3" strokeLinecap="round" />
+                                
+                                {pet.weeklyData.map((val, i) => (
+                                    <circle key={i} cx={10 + i * 53} cy={100 - val} r={4} fill="#22C55E" stroke="white" strokeWidth="1.5" />
+                                ))}
+                            </svg>
+                        </div>
+                        <div className="flex justify-between mt-3 text-[9px] font-bold text-gray-400 uppercase tracking-widest px-1">
+                            <span>Pzt</span>
+                            <span>Sal</span>
+                            <span>Çar</span>
+                            <span>Per</span>
+                            <span>Cum</span>
+                            <span>Cmt</span>
+                            <span>Paz</span>
+                        </div>
+                    </BentoCard>
+                </section>
+
+                <section className="mb-6">
+                    <h3 className="text-[15px] font-bold text-gray-800 tracking-tight mb-3 px-1">Bugün senin için</h3>
+                    <div className="flex gap-3.5 overflow-x-auto pb-4 pt-1 snap-x scrollbar-none px-1">
+                        
+                        {/* Aşı Kartı */}
+                        <motion.div 
+                            initial={{ opacity: 0, x: 25 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.2, duration: 0.5 }}
+                            className="w-[160px] h-[140px] shrink-0 snap-start bg-white shadow-[0_4px_12px_rgba(0,0,0,0.015),0_1px_2px_rgba(0,0,0,0.01)] border border-gray-100/80 rounded-[22px] p-4 flex flex-col justify-between cursor-pointer transition-all duration-300 hover:shadow-[0_8px_20px_rgba(0,0,0,0.03)] hover:scale-[1.02]"
+                        >
+                            <div className="flex justify-between items-start">
+                                <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center">
+                                    <Syringe className="w-5 h-5 text-emerald-600" />
+                                </div>
+                                <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full uppercase tracking-wider">Aşı</span>
+                            </div>
+                            <div>
+                                <h4 className="text-[12px] font-black text-gray-800 leading-tight">Karma Aşı Vakti</h4>
+                                <p className="text-[10px] text-gray-400 font-semibold mt-1">3 Gün Kaldı</p>
+                            </div>
+                        </motion.div>
+
+                        {/* Veteriner Kartı */}
+                        <motion.div 
+                            initial={{ opacity: 0, x: 25 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.3, duration: 0.5 }}
+                            onClick={() => router.push('/vet')}
+                            className="w-[160px] h-[140px] shrink-0 snap-start bg-white shadow-[0_4px_12px_rgba(0,0,0,0.015),0_1px_2px_rgba(0,0,0,0.01)] border border-gray-100/80 rounded-[22px] p-4 flex flex-col justify-between cursor-pointer transition-all duration-300 hover:shadow-[0_8px_20px_rgba(0,0,0,0.03)] hover:scale-[1.02]"
+                        >
+                            <div className="flex justify-between items-start">
+                                <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center">
+                                    <Calendar className="w-5 h-5 text-orange-500" />
+                                </div>
+                                <span className="text-[9px] font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full uppercase tracking-wider">Randevu</span>
+                            </div>
+                            <div>
+                                <h4 className="text-[12px] font-black text-gray-800 leading-tight">Vet Muayenesi</h4>
+                                <p className="text-[10px] text-gray-400 font-semibold mt-1">Yarın • 11:30</p>
+                            </div>
+                        </motion.div>
+
+                        {/* Kayıp İlanı Kartı */}
+                        <motion.div 
+                            initial={{ opacity: 0, x: 25 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.4, duration: 0.5 }}
+                            onClick={() => router.push('/topluluk?tab=radar&mode=lost')}
+                            className="w-[160px] h-[140px] shrink-0 snap-start bg-white shadow-[0_4px_12px_rgba(0,0,0,0.015),0_1px_2px_rgba(0,0,0,0.01)] border border-gray-100/80 rounded-[22px] p-4 flex flex-col justify-between cursor-pointer transition-all duration-300 hover:shadow-[0_8px_20px_rgba(0,0,0,0.03)] hover:scale-[1.02]"
+                        >
+                            <div className="flex justify-between items-start">
+                                <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center">
+                                    <MapPin className="w-5 h-5 text-red-500" />
+                                </div>
+                                <span className="text-[9px] font-black text-red-650 bg-red-50 px-2 py-0.5 rounded-full uppercase tracking-wider">Kayıp</span>
+                            </div>
+                            <div>
+                                <h4 className="text-[12px] font-black text-gray-800 leading-tight">Çevrede Kayıp</h4>
+                                <p className="text-[10px] text-gray-400 font-semibold mt-1">1.2 KM Yakınında</p>
+                            </div>
+                        </motion.div>
+
+                        {/* Aktivite / Yürüyüş Kartı */}
+                        <motion.div 
+                            initial={{ opacity: 0, x: 25 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.5, duration: 0.5 }}
+                            className="w-[160px] h-[140px] shrink-0 snap-start bg-white shadow-[0_4px_12px_rgba(0,0,0,0.015),0_1px_2px_rgba(0,0,0,0.01)] border border-gray-100/80 rounded-[22px] p-4 flex flex-col justify-between cursor-pointer transition-all duration-300 hover:shadow-[0_8px_20px_rgba(0,0,0,0.03)] hover:scale-[1.02]"
+                        >
+                            <div className="flex justify-between items-start">
+                                <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
+                                    <Activity className="w-5 h-5 text-blue-500" />
+                                </div>
+                                <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase tracking-wider">Hedef</span>
+                            </div>
+                            <div>
+                                <h4 className="text-[12px] font-black text-gray-800 leading-tight">Yürüyüş Hedefi</h4>
+                                <p className="text-[10px] text-gray-400 font-semibold mt-1">240 Adım Kaldı</p>
+                            </div>
+                        </motion.div>
+
+                    </div>
+                </section>
+
+                <section className="mb-6">
+                    <h3 className="text-[15px] font-bold text-gray-800 tracking-tight mb-3 px-1">Hızlı erişim</h3>
+                    <div className="grid grid-cols-2 gap-3.5">
+                        <QuickAccessBtn icon={Radio} title="Kayıp İlanı" subtitle="Acil Bildirim Gönder" color="text-red-500" delay={0.1} onClick={() => router.push('/topluluk?tab=radar&mode=lost')} />
+                        <QuickAccessBtn icon={Compass} title="Topluluk" subtitle="Moffi Kaşif Dünyası" color="text-blue-500" delay={0.2} onClick={() => router.push('/topluluk')} />
+                        <QuickAccessBtn icon={Flame} title="Eşleştir" subtitle={`${pet.name} için Flört Bul`} color="text-rose-500" delay={0.3} onClick={() => setExpandedPanel('match')} />
+                        <QuickAccessBtn icon={Activity} title="Veteriner" subtitle="Sağlık ve Aşılama" color="text-emerald-600" delay={0.4} onClick={() => router.push('/vet')} />
+                        <QuickAccessBtn icon={ShoppingBag} title="Market" subtitle="Mama ve Ekipman" color="text-amber-500" delay={0.5} onClick={() => router.push('/petshop')} />
+                        <QuickAccessBtn icon={Scissors} title="Bakım" subtitle="Tıraş ve Pet Kuaför" color="text-teal-600" delay={0.6} />
+                        <QuickAccessBtn icon={HeartHandshake} title="Sahiplendirme" subtitle="Ömürlük Yuva Bul" color="text-pink-500" delay={0.7} onClick={() => router.push('/topluluk?tab=radar&mode=adopt')} />
+                        <QuickAccessBtn icon={Sparkles} title="AI Asistan" subtitle="Veteriner Destek" color="text-purple-500" delay={0.8} />
+                    </div>
+                </section>
+
+                {/* 7. Promotional Banner - MOVED TO THE TOP */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="relative bg-[#F4EFE7] rounded-[28px] p-6 overflow-hidden flex justify-between items-center shadow-sm border border-orange-100/20 mb-8"
+                >
+                    <div className="relative z-10">
+                        <h4 className="text-lg font-black text-gray-800 tracking-tight mb-1">Onlar bize emanet.</h4>
+                        <p className="text-xs text-gray-600 font-medium mb-4">Biz de onlara.</p>
+                        <button className="bg-gray-700 hover:bg-gray-800 text-white text-[11px] font-bold px-4 py-2 rounded-full cursor-pointer transition-colors">Keşfet</button>
+                    </div>
+                    <div className="absolute right-0 bottom-0 h-[120%] w-[60%] pointer-events-none">
+                        <img src="https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=400" className="w-full h-full object-cover object-left-bottom mix-blend-multiply opacity-90" alt="Dog and Owner" />
+                    </div>
+                    <button className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-white/30 backdrop-blur-md rounded-full">
+                        <Heart className="w-4 h-4 text-gray-700" />
+                    </button>
+                </motion.div>
+
+
+
+                {/* 10. Moffi Link™ Smart Collar Card */}
+                <motion.div 
+                    layoutId="collar-card-container"
+                    onClick={() => setExpandedPanel('collar')}
+                    className="bg-white border border-gray-100 rounded-[30px] p-4 shadow-[0_10px_35px_rgba(0,0,0,0.03)] mb-6 flex flex-col gap-3.5 relative overflow-hidden cursor-pointer group hover:scale-[1.01] transition-transform duration-300"
+                >
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2.5">
+                            <div className="relative">
+                                <div className="w-10 h-10 rounded-2xl bg-green-50 flex items-center justify-center text-green-600 border border-green-100/30">
+                                    <Radio className="w-5 h-5" />
+                                </div>
+                                {pet.collar.connected && (
+                                    <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-pulse" />
+                                )}
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-[9px] font-black tracking-widest text-gray-400 uppercase">DONANIM DESTEĞİ</span>
+                                    <span className="text-[9px] font-black text-green-600 uppercase tracking-wider">moffi link™ v2</span>
+                                </div>
+                                <h4 className="text-xs font-bold text-gray-700 mt-0.5 flex items-center gap-1.5">
+                                    Akıllı Tasma Durumu 
+                                    <span className={`w-1.5 h-1.5 rounded-full ${pet.collar.connected ? 'bg-green-500' : 'bg-red-400'}`} />
+                                </h4>
+                            </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-3 shrink-0">
+                            {pet.collar.connected ? (
+                                <>
+                                    <div className="flex items-center gap-1 text-[10px] font-bold text-gray-500 bg-gray-50 border border-gray-100 px-2 py-1 rounded-lg">
+                                        <Battery className="w-3.5 h-3.5 text-green-600" />
+                                        <span>%{pet.collar.battery}</span>
+                                    </div>
+                                    <span className="text-[9.5px] font-bold text-gray-400 group-hover:text-green-700 transition-colors flex items-center gap-1">
+                                        Yönet <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                                    </span>
+                                </>
+                            ) : (
+                                <div className="text-[10px] font-bold text-red-500 bg-red-50 border border-red-100 px-2 py-1 rounded-lg">
+                                    Bağlantı Kesildi
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </motion.div>
+
+
+                {/* 12. Dynamic Shop Live Offer */}
+                <section className="mb-6">
+                    <div className="flex justify-between items-end mb-3 px-1">
+                        <h3 className="text-[15px] font-bold text-gray-800 tracking-tight">Kişiselleştirilmiş Alışveriş Fırsatı</h3>
+                        <span className="text-[9px] font-black text-orange-600 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            Akıllı Takip
+                        </span>
+                    </div>
+
+                    <BentoCard 
+                        layoutId="shop-card-container"
+                        onClick={() => setExpandedPanel('shop')}
+                        className="bg-gradient-to-br from-amber-50/70 to-orange-50/50 !p-4 border border-orange-100/30 flex gap-4 items-center relative overflow-hidden cursor-pointer group hover:scale-[1.01] transition-transform duration-300"
+                    >
+                        <div className="absolute right-[-10px] top-[-10px] w-20 h-20 bg-orange-400/5 rounded-full blur-xl pointer-events-none" />
+                        <div className="w-16 h-16 rounded-2xl bg-white border border-orange-100/60 p-2 flex items-center justify-center shadow-sm shrink-0">
+                            <ShoppingBag className="w-8 h-8 text-orange-600" />
+                        </div>
+                        <div className="flex-1">
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-[9px] font-black text-orange-600 uppercase tracking-widest">{pet.specialOffer.discount}</span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                            </div>
+                            <h4 className="text-xs font-black text-gray-800 mt-0.5">{pet.name}'in {pet.specialOffer.title}</h4>
+                            <p className="text-[10px] font-semibold text-gray-500 mt-0.5 leading-snug">{pet.specialOffer.desc}</p>
+                            
+                            <div className="mt-2.5 flex items-center gap-2">
+                                <span className="text-[10px] font-bold text-gray-400 line-through">{pet.specialOffer.oldPrice}</span>
+                                <span className="text-xs font-black text-orange-600">{pet.specialOffer.newPrice}</span>
+                            </div>
+                        </div>
+                    </BentoCard>
+                </section>
+
+                {/* 13. AI Assistant Advice Banner */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100/60 rounded-3xl p-4 flex items-start gap-3 shadow-sm relative overflow-hidden"
+                >
+                    <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-white/40 blur-xl rounded-full pointer-events-none" />
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-md shadow-purple-500/20 text-white shrink-0">
+                        <Sparkles className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-black tracking-widest text-purple-700 uppercase">MOFFI AI ÖNERİSİ</span>
+                            <span className="px-1.5 py-0.5 rounded bg-purple-100 text-[8px] font-black text-purple-700 uppercase tracking-widest">Canlı</span>
+                        </div>
+                        <p className="text-[11px] font-bold text-gray-700 mt-1 leading-relaxed">
+                            Hava bugün Kadıköy'de çok sıcak. {pet.name}'in patilerini korumak için yürüyüşünüzü akşam 19:30 sonrasına planlayabilirsiniz.
+                        </p>
+                    </div>
+                </motion.div>
+
+            </motion.div>
+
+            {/* Dynamic Live Activity Card */}
+            <div className="fixed bottom-24 inset-x-0 flex justify-center z-40 px-5 pointer-events-none">
+                <motion.div 
+                    initial={{ y: 80, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.5, type: 'spring', stiffness: 100 }}
+                    className="w-full max-w-md bg-white/80 backdrop-blur-2xl border border-white/20 p-4 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.06)] flex items-center justify-between pointer-events-auto"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600 border border-orange-100/30">
+                            <ShoppingBag className="w-5 h-5 animate-bounce" />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-[9px] font-black tracking-widest text-orange-600 uppercase">SİPARİŞ YOLDA</span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                            </div>
+                            <h5 className="text-[11px] font-black text-gray-800 mt-0.5">Somonlu Premium Mama</h5>
+                            <p className="text-[10px] text-gray-400 font-semibold">Kurye yaklaşıyor • 8 dk içinde kapıda</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 pr-1 shrink-0">
+                        <span className="text-[11px] font-black text-gray-800 bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-md">8 dk</span>
+                        <ChevronRight className="w-4 h-4 text-gray-400" />
+                    </div>
+                </motion.div>
+            </div>
+
+
+            {/* 3D FLUID CARD MORPHING OVERLAYS */}
             <AnimatePresence>
-                {postToDelete !== null && (
+                {expandedPanel && (
                     <>
-                        {/* Overlay */}
-                        <motion.div
+                        {/* Dim Backdrop with Blur */}
+                        <motion.div 
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-[290] bg-black/60 backdrop-blur-sm"
-                            onClick={() => setPostToDelete(null)}
+                            onClick={() => setExpandedPanel(null)}
+                            className="fixed inset-0 bg-black/35 backdrop-blur-md z-[100] cursor-pointer"
                         />
-                        {/* Elegant iOS-like Center Alert Popup */}
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            transition={{ duration: 0.2, ease: "easeOut" }}
-                            className="fixed inset-0 z-[300] flex items-center justify-center p-4 pointer-events-none"
-                        >
-                            <div className="w-full max-w-[280px] bg-[#252528]/95 backdrop-blur-xl rounded-3xl overflow-hidden pointer-events-auto shadow-2xl border border-white/10 flex flex-col">
-                                <div className="p-6 flex flex-col items-center text-center gap-2 border-b border-white/10">
-                                    <h3 className="text-[var(--foreground)] text-base font-bold">Gönderiyi Sil</h3>
-                                    <p className="text-[var(--foreground)]/70 text-sm leading-snug">Bu gönderiyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.</p>
-                                </div>
-                                <div className="flex flex-col">
-                                    <button
-                                        onClick={deletePost}
-                                        className="w-full py-3.5 text-red-500 font-bold text-[15px] border-b border-white/10 hover:bg-[var(--card-bg)] transition-colors active:bg-white/10"
-                                    >
-                                        Sil
-                                    </button>
-                                    <button
-                                        onClick={() => setPostToDelete(null)}
-                                        className="w-full py-3.5 text-cyan-500 font-normal text-[15px] hover:bg-[var(--card-bg)] transition-colors active:bg-white/10"
-                                    >
-                                        Vazgeç
-                                    </button>
-                                </div>
-                            </div>
-                        </motion.div>
+
+                        {/* MORPHED FULL CONTAINER SHEET */}
+                        <div className={`fixed inset-0 z-[101] flex items-center justify-center pointer-events-none ${expandedPanel === 'profile' ? 'p-0' : 'p-4'}`}>
+                            <motion.div
+                                layoutId={`${expandedPanel}-card-container`}
+                                transition={{ type: 'spring', damping: 22, stiffness: 180 }}
+                                className={expandedPanel === 'profile' 
+                                    ? "w-full md:max-w-md h-full md:h-[95vh] md:max-h-[850px] bg-[#FBFBFB] rounded-none md:rounded-[40px] shadow-[0_25px_60px_rgba(0,0,0,0.18)] border-0 md:border border-gray-100 overflow-hidden pointer-events-auto flex flex-col overflow-y-auto no-scrollbar"
+                                    : "w-full max-w-sm bg-white rounded-[38px] shadow-[0_25px_60px_rgba(0,0,0,0.18)] border border-gray-100 overflow-hidden pointer-events-auto flex flex-col max-h-[80vh] overflow-y-auto"
+                                }
+                            >
+                                {/* Drag Indicator & Close Pill */}
+                                {expandedPanel === 'profile' ? (
+                                    <div className="flex justify-between items-center px-6 py-4.5 bg-white/95 backdrop-blur-md border-b border-gray-100 sticky top-0 z-20 shadow-[0_2px_15px_rgba(0,0,0,0.01)] shrink-0">
+                                        <motion.button 
+                                            whileTap={{ scale: 0.95 }}
+                                            onClick={() => setExpandedPanel(null)}
+                                            className="flex items-center gap-1 text-[11px] font-black text-gray-800 cursor-pointer"
+                                        >
+                                            <ChevronLeft className="w-5 h-5 text-gray-850" strokeWidth={2.5} />
+                                            <span>Geri</span>
+                                        </motion.button>
+                                        <span className="text-sm font-black text-gray-900 tracking-tight">Moffi Hesabım</span>
+                                        <motion.button 
+                                            whileTap={{ scale: 0.95 }}
+                                            className="p-2 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-xl cursor-pointer transition-colors"
+                                        >
+                                            <Sliders className="w-4.5 h-4.5" />
+                                        </motion.button>
+                                    </div>
+                                ) : (
+                                    <div className="flex justify-between items-center px-6 pt-5 pb-3 bg-gray-50/50 border-b border-gray-100/50 shrink-0">
+                                        <div className="flex items-center gap-1">
+                                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                                            <span className="text-[9px] font-black tracking-widest text-gray-400 uppercase">Moffi Smartwatch OS</span>
+                                        </div>
+                                        <motion.button 
+                                            whileTap={{ scale: 0.9 }}
+                                            onClick={() => setExpandedPanel(null)}
+                                            className="p-1.5 bg-gray-200/60 hover:bg-gray-200 text-gray-600 rounded-full cursor-pointer transition-colors"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </motion.button>
+                                    </div>
+                                )}
+
+                                {/* Deep Modular Expanded Views */}
+                                <motion.div 
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.15, duration: 0.3 }}
+                                    className="p-6 flex-1 flex flex-col gap-5"
+                                >
+                                    
+                                    {/* 1. Wallet Morph Screen */}
+                                    {expandedPanel === 'wallet' && (
+                                        <>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Coins className="w-6 h-6 text-yellow-500" />
+                                                    <h3 className="text-lg font-black text-gray-800">Cüzdan Analizi</h3>
+                                                </div>
+                                                <span className="text-[10px] font-black text-yellow-600 bg-yellow-50 px-2.5 py-0.5 rounded-full border border-yellow-200">
+                                                    {pet.wallet.currency}
+                                                </span>
+                                            </div>
+
+                                            {/* Bank Card Graphic */}
+                                            <div className="bg-gradient-to-tr from-gray-950 to-gray-850 text-white p-5 rounded-[26px] border border-gray-800/80 shadow-md relative overflow-hidden">
+                                                <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-green-500/10 rounded-full blur-2xl" />
+                                                <span className="text-[8px] font-black tracking-widest text-gray-400 block">CARDMEMBERSHIP</span>
+                                                <h4 className="text-2xl font-black mt-4 tracking-tight flex items-baseline gap-1">
+                                                    {pet.wallet.patipuan} <span className="text-xs text-yellow-400 font-bold">{pet.wallet.currency}</span>
+                                                </h4>
+                                                <div className="flex justify-between items-end mt-6">
+                                                    <span className="text-[10px] text-gray-400 font-mono tracking-wider">{pet.wallet.cardNumber}</span>
+                                                    <span className="text-[9px] font-black bg-white/10 px-2 py-0.5 rounded uppercase tracking-wider">{pet.name} Pass</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Advanced Action Panel */}
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <button className="flex items-center justify-center gap-1 bg-[#EAF5EC] hover:bg-green-100 border border-green-200 p-3 rounded-2xl text-[11px] font-black text-green-700 transition-all cursor-pointer">
+                                                    <Plus className="w-3.5 h-3.5" />
+                                                    <span>Bakiye Yükle</span>
+                                                </button>
+                                                <button className="flex items-center justify-center gap-1 bg-[#EFF6FF] hover:bg-blue-100 border border-blue-200 p-3 rounded-2xl text-[11px] font-black text-blue-700 transition-all cursor-pointer">
+                                                    <ArrowUpRight className="w-3.5 h-3.5" />
+                                                    <span>Patipuan Yolla</span>
+                                                </button>
+                                            </div>
+
+                                            {/* Transaction Feed */}
+                                            <div>
+                                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2.5">Son Hesap Hareketleri</h4>
+                                                <div className="flex flex-col gap-2">
+                                                    {pet.wallet.transactions.map((tx) => (
+                                                        <div key={tx.id} className="flex justify-between items-center p-3 rounded-xl bg-gray-50 border border-gray-100/50">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                                                                    tx.type === 'gider' ? 'bg-orange-50 text-orange-600' : 'bg-green-50 text-green-600'
+                                                                }`}>
+                                                                    {tx.type === 'gider' ? <CartIcon className="w-3.5 h-3.5" /> : <TrendingUp className="w-3.5 h-3.5" />}
+                                                                </div>
+                                                                <div>
+                                                                    <h5 className="text-[10.5px] font-bold text-gray-800">{tx.title}</h5>
+                                                                    <span className="text-[8.5px] text-gray-400 font-semibold">{tx.date}</span>
+                                                                </div>
+                                                            </div>
+                                                            <span className={`text-[11px] font-black ${
+                                                                tx.type === 'gider' ? 'text-orange-600' : 'text-green-600'
+                                                            }`}>{tx.amount}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {/* 2. Passport Morph Screen */}
+                                    {expandedPanel === 'passport' && (
+                                        <>
+                                            <div className="flex items-center gap-2">
+                                                <QrCode className="w-6 h-6 text-orange-600" />
+                                                <h3 className="text-lg font-black text-gray-800">Mila'nın Sağlık Pasaportu</h3>
+                                            </div>
+
+                                            {/* NFC Interactive Tag Card */}
+                                            <div className="bg-[#FAF5EF] border border-orange-200/55 p-5 rounded-[26px] flex flex-col items-center gap-4 text-center">
+                                                <motion.div 
+                                                    animate={{ rotateY: 360 }}
+                                                    transition={{ repeat: Infinity, duration: 8, ease: 'linear' }}
+                                                    className="w-24 h-24 bg-white rounded-2xl p-2.5 shadow-sm border border-orange-100 flex items-center justify-center"
+                                                >
+                                                    <img src={pet.passport.qrcode} className="w-full h-full object-contain" alt="QR" />
+                                                </motion.div>
+                                                <div>
+                                                    <span className="text-[8px] font-black text-orange-800 tracking-widest uppercase">NFC AKILLI ÇİP AKTİF</span>
+                                                    <h4 className="text-lg font-black text-gray-800 mt-1">{pet.passport.idCode}</h4>
+                                                </div>
+                                            </div>
+
+                                            {/* Vaccine Checkboxes */}
+                                            <div>
+                                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2.5">Aşılama Kayıtları</h4>
+                                                <div className="flex flex-col gap-2">
+                                                    {pet.passport.vaccines.map((v, i) => (
+                                                        <div key={i} className="flex justify-between items-center p-3 rounded-xl bg-gray-50 border border-gray-100/50">
+                                                            <div>
+                                                                <h5 className="text-[11px] font-bold text-gray-850">{v.name}</h5>
+                                                                <span className="text-[8.5px] text-gray-400 font-semibold">Tarih: {v.date}</span>
+                                                            </div>
+                                                            <span className={`text-[10px] font-black uppercase tracking-wider ${v.color}`}>{v.status}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            <button className="w-full bg-gray-900 hover:bg-gray-800 text-white text-[11px] font-black py-3.5 rounded-2xl cursor-pointer transition-colors shadow-md shadow-gray-900/10">
+                                                Çip Bilgilerini Paylaş
+                                            </button>
+                                        </>
+                                    )}
+
+                                    {/* 3. Smart Collar Morph Screen */}
+                                    {expandedPanel === 'collar' && (
+                                        <>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Radio className="w-6 h-6 text-green-600" />
+                                                    <h3 className="text-lg font-black text-gray-800">Tasma Kontrolü</h3>
+                                                </div>
+                                                <span className="text-[9px] font-black text-green-700 bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
+                                                    {pet.collar.signal}
+                                                </span>
+                                            </div>
+
+                                            {/* Real-time battery status */}
+                                            <div className="p-4 bg-gray-50 border border-gray-100 rounded-2xl flex justify-between items-center">
+                                                <div className="flex items-center gap-3">
+                                                    <Battery className="w-8 h-8 text-green-600" />
+                                                    <div>
+                                                        <span className="text-[9px] font-bold text-gray-400 block">KALAN BATARYA</span>
+                                                        <h4 className="text-base font-black text-gray-800 mt-0.5">%{pet.collar.battery}</h4>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="text-[9px] font-bold text-gray-400 block">SON SENKRONİZASYON</span>
+                                                    <span className="text-[10.5px] font-bold text-gray-700 mt-0.5 block">{pet.collar.lastSync}</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Hardware Signal Waves Simulation */}
+                                            <div className="h-24 bg-gray-950 rounded-2xl flex flex-col items-center justify-center p-4 text-center font-mono text-[9px] text-green-400 relative overflow-hidden">
+                                                <div className="absolute inset-0 bg-green-500/[0.02] flex items-center justify-center">
+                                                    <span className="w-16 h-16 rounded-full border border-green-50/20 animate-ping absolute" />
+                                                    <span className="w-8 h-8 rounded-full border border-green-50/35 animate-ping absolute" />
+                                                </div>
+                                                <span className="text-[8px] text-gray-500 uppercase tracking-widest mb-1.5 block">Live Bluetooth RSSI</span>
+                                                <span className="text-xs font-black">{pet.collar.rssi}</span>
+                                                <span className="text-[8px] text-gray-500 mt-2 block">Firmware: {pet.collar.firmware}</span>
+                                            </div>
+
+                                            {/* Alarm buzzer buttons */}
+                                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2.5">Uzaktan Akustik Komutlar</h4>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <button className="flex items-center justify-center gap-1.5 p-3.5 bg-gray-50 hover:bg-gray-100 border border-gray-150 rounded-xl transition-all cursor-pointer text-xs font-bold text-gray-700">
+                                                    <Volume2 className="w-4 h-4 text-gray-600" />
+                                                    <span>Ses Sinyali Gönder</span>
+                                                </button>
+                                                <button className="flex items-center justify-center gap-1.5 p-3.5 bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl transition-all cursor-pointer text-xs font-bold text-red-700">
+                                                    <AlertTriangle className="w-4 h-4" />
+                                                    <span>Tasmayı Çaldır</span>
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {/* 4. AI Dressing Morph Screen */}
+                                    {expandedPanel === 'dressing' && (
+                                        <>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Shirt className="w-6 h-6 text-purple-600" />
+                                                    <h3 className="text-lg font-black text-gray-800">Dijital Gardırop</h3>
+                                                </div>
+                                                <span className="text-[9.5px] font-black text-purple-700 bg-purple-55 px-2.5 py-0.5 rounded-full border border-purple-200">
+                                                    Tarz Puanı: {pet.dressing.stylePoints} P
+                                                </span>
+                                            </div>
+
+                                            {/* Avatar mock */}
+                                            <div className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100/60 rounded-2xl flex items-center gap-3.5 shadow-sm">
+                                                <div className="w-14 h-14 rounded-xl overflow-hidden border-2 border-white shadow-sm shrink-0">
+                                                    <img src={pet.image} className="w-full h-full object-cover" alt="outfit" />
+                                                </div>
+                                                <div>
+                                                    <span className="text-[8px] font-black text-purple-700 tracking-widest block uppercase">AKTİF STİL Kombini</span>
+                                                    <h4 className="text-[11px] font-bold text-gray-800 mt-0.5">{pet.dressing.activeOutfit}</h4>
+                                                </div>
+                                            </div>
+
+                                            {/* Interactive Accessory Selection */}
+                                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2.5">Gardırop Çekmecesi</h4>
+                                            <div className="grid grid-cols-3 gap-3">
+                                                <div className="p-3 bg-purple-50 border-2 border-purple-500 rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer text-center relative shadow-sm">
+                                                    <span className="text-2xl">😎</span>
+                                                    <span className="text-[9.5px] font-black text-purple-900">Gözlük</span>
+                                                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-purple-500" />
+                                                </div>
+                                                <div className="p-3 bg-purple-50 border-2 border-purple-500 rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer text-center relative shadow-sm">
+                                                    <span className="text-2xl">🧣</span>
+                                                    <span className="text-[9.5px] font-black text-purple-900">Boyunluk</span>
+                                                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-purple-500" />
+                                                </div>
+                                                <div className="p-3 bg-gray-50 border border-gray-150 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-purple-50 hover:border-purple-200 transition-colors cursor-pointer text-center relative">
+                                                    <span className="text-2xl opacity-40">🎩</span>
+                                                    <span className="text-[9.5px] font-bold text-gray-400">Şapka</span>
+                                                    <span className="text-[7.5px] font-black text-purple-700 bg-purple-100/50 px-1 rounded border border-purple-200 mt-0.5">KİLİTLİ</span>
+                                                </div>
+                                            </div>
+
+                                            <button className="w-full bg-purple-600 hover:bg-purple-700 text-white text-[11px] font-black py-3.5 rounded-2xl cursor-pointer transition-colors shadow-md shadow-purple-900/10 mt-2">
+                                                Yeni Kombini Kaydet
+                                            </button>
+                                        </>
+                                    )}
+
+                                    {/* 5. Quests Morph Screen */}
+                                    {expandedPanel === 'quests' && (
+                                        <>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Coins className="w-6 h-6 text-yellow-500" />
+                                                    <h3 className="text-lg font-black text-gray-800">Ödül Avı</h3>
+                                                </div>
+                                                <span className="text-[9px] font-black text-yellow-700 bg-yellow-50 px-2 py-0.5 rounded-full border border-yellow-200">
+                                                    2 / 3 Bitti
+                                                </span>
+                                            </div>
+
+                                            {/* Detailed quest progress card */}
+                                            <div className="p-4 bg-gradient-to-tr from-yellow-500/10 to-yellow-600/5 border border-yellow-200/40 rounded-2xl mb-1 text-center">
+                                                <span className="text-[9px] font-black text-yellow-700 tracking-wider uppercase block">BU HAFTAKİ HEDEF</span>
+                                                <h4 className="text-base font-black text-gray-800 mt-0.5">+150 PATIPUAN Sandığı</h4>
+                                                <div className="w-full h-2.5 bg-gray-150 rounded-full overflow-hidden mt-3 relative">
+                                                    <div className="h-full bg-gradient-to-r from-yellow-500 to-amber-500 rounded-full" style={{ width: '66%' }} />
+                                                </div>
+                                                <span className="text-[9.5px] font-semibold text-gray-500 mt-2 block">1000 Patipuana son 150 P kaldı!</span>
+                                            </div>
+
+                                            {/* Quests status lists */}
+                                            
+                                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2.5">Günlük Görev Çizelgesi</h4>
+                                            <div className="flex flex-col gap-2.5">
+                                                {pet.quests.map((q) => (
+                                                    <div key={q.id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100/50">
+                                                        <div className="flex items-center gap-2">
+                                                            <CheckCircle2 className={`w-4 h-4 ${q.done ? 'text-green-600' : 'text-gray-300'}`} fill={q.done ? 'currentColor' : 'none'} />
+                                                            <span className={`text-[10.5px] font-bold ${q.done ? 'text-gray-550 line-through' : 'text-gray-700'}`}>{q.text}</span>
+                                                        </div>
+                                                        <span className="text-[9px] font-black text-yellow-600 bg-yellow-50/50 px-1.5 py-0.5 rounded border border-yellow-100">+50 P</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {/* 6. Shop Morph Screen */}
+                                    {expandedPanel === 'shop' && (
+                                        <>
+                                            <div className="flex items-center gap-2">
+                                                <ShoppingBag className="w-6 h-6 text-orange-600" />
+                                                <h3 className="text-lg font-black text-gray-800">Kişiselleştirilmiş Fırsat</h3>
+                                            </div>
+ 
+                                            {/* Special card */}
+                                            <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-5 rounded-[26px] border border-orange-100/60 shadow-sm flex flex-col gap-4 text-center">
+                                                <div className="w-16 h-16 rounded-2xl bg-white border border-orange-100 p-2 flex items-center justify-center shadow-sm mx-auto">
+                                                    <ShoppingBag className="w-8 h-8 text-orange-600" />
+                                                </div>
+                                                <div>
+                                                    <span className="text-[9px] font-black text-orange-700 tracking-wider block uppercase">{pet.specialOffer.discount}</span>
+                                                    <h4 className="text-base font-black text-gray-800 mt-1">{pet.name}'in {pet.specialOffer.title}</h4>
+                                                    <p className="text-xs text-gray-550 font-semibold mt-1 leading-snug">{pet.specialOffer.desc}</p>
+                                                </div>
+                                            </div>
+ 
+                                            {/* Buy buttons */}
+                                            <div className="flex justify-between items-center p-4 bg-gray-50 border border-gray-150 rounded-2xl">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[9px] font-bold text-gray-400 uppercase">Toplam Fiyat</span>
+                                                    <span className="text-lg font-black text-orange-600">{pet.specialOffer.newPrice} <span className="text-[10px] text-gray-400 line-through font-bold">{pet.specialOffer.oldPrice}</span></span>
+                                                </div>
+                                                
+                                                <button 
+                                                    onClick={() => setExpandedPanel(null)}
+                                                    className="px-5 py-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-black tracking-wider uppercase cursor-pointer transition-colors"
+                                                >
+                                                    Hemen Sipariş Ver
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {/* 7. Eşleştir (Match) Panel */}
+                                    {expandedPanel === 'match' && (
+                                        <>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Flame className="w-6 h-6 text-rose-500 animate-pulse" />
+                                                    <h3 className="text-lg font-black text-gray-800">Pati Flört & Eşleştirme</h3>
+                                                </div>
+                                                <span className="text-[9px] font-black text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">
+                                                    Canlı Arama
+                                                </span>
+                                            </div>
+
+                                            {isMatched ? (
+                                                <motion.div 
+                                                    initial={{ scale: 0.9, opacity: 0 }}
+                                                    animate={{ scale: 1, opacity: 1 }}
+                                                    className="flex-1 flex flex-col items-center justify-center text-center p-4 bg-gradient-to-b from-rose-50 to-white rounded-[28px] border border-rose-100"
+                                                >
+                                                    <div className="flex items-center justify-center gap-4 mb-4">
+                                                        <div className="w-16 h-16 rounded-full overflow-hidden border-4 border-white shadow-md relative">
+                                                            <img src={pet.image} className="w-full h-full object-cover" alt={pet.name} />
+                                                        </div>
+                                                        <span className="text-3xl animate-bounce">💖</span>
+                                                        <div className="w-16 h-16 rounded-full overflow-hidden border-4 border-white shadow-md">
+                                                            <img src={MATCH_CANDIDATES[matchIndex].image} className="w-full h-full object-cover" alt="Match" />
+                                                        </div>
+                                                    </div>
+                                                    <h4 className="text-lg font-black text-rose-800">Eşleşme Başarılı! 🎉</h4>
+                                                    <p className="text-xs text-gray-500 font-semibold mt-2 leading-relaxed px-4">
+                                                        **{pet.name}** ve **{MATCH_CANDIDATES[matchIndex].name}** için harika bir aura uyumu (%{MATCH_CANDIDATES[matchIndex].auraMatch}) bulundu.
+                                                    </p>
+                                                    <div className="mt-5 p-3.5 bg-white border border-rose-100 rounded-2xl w-full flex items-center gap-2 text-left">
+                                                        <Sparkles className="w-4 h-4 text-rose-500 shrink-0" />
+                                                        <p className="text-[10px] text-rose-800 font-bold">
+                                                            **Sohbeti Başlat:** Canlı sohbet odası aktif. İlk mesajı gönderin!
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex gap-2.5 w-full mt-6">
+                                                        <button 
+                                                            onClick={() => {
+                                                                setIsMatched(false);
+                                                                setMatchIndex((prev) => (prev + 1) % MATCH_CANDIDATES.length);
+                                                            }}
+                                                            className="flex-1 py-3 border border-rose-200 hover:bg-rose-50/50 text-rose-600 rounded-xl text-[11px] font-black cursor-pointer transition-all"
+                                                        >
+                                                            Yeni Adaylar
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => {
+                                                                setExpandedPanel(null);
+                                                                setToastMsg(`💬 ${MATCH_CANDIDATES[matchIndex].name} için sohbet başlatıldı!`);
+                                                            }}
+                                                            className="flex-1 py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-[11px] font-black shadow-md shadow-rose-500/10 cursor-pointer transition-all"
+                                                        >
+                                                            Mesaj Gönder
+                                                        </button>
+                                                    </div>
+                                                </motion.div>
+                                            ) : (
+                                                <div className="flex-1 flex flex-col gap-4">
+                                                    {/* The Swipe Card */}
+                                                    <div className="bg-white border border-gray-150 rounded-[28px] overflow-hidden shadow-sm flex flex-col relative group">
+                                                        {/* Aura Match Indicator Tag */}
+                                                        <div className="absolute top-3 left-3 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-[9px] font-black px-2.5 py-1 rounded-full shadow-sm z-10 flex items-center gap-1">
+                                                            <Sparkles className="w-3 h-3 text-white" />
+                                                            <span>AURA UYUMU %{MATCH_CANDIDATES[matchIndex].auraMatch}</span>
+                                                        </div>
+
+                                                        {/* Image */}
+                                                        <div className="h-44 w-full relative">
+                                                            <img 
+                                                                src={MATCH_CANDIDATES[matchIndex].image} 
+                                                                className="w-full h-full object-cover" 
+                                                                alt={MATCH_CANDIDATES[matchIndex].name} 
+                                                            />
+                                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+                                                            <div className="absolute bottom-3 left-4 text-white">
+                                                                <h4 className="text-base font-black flex items-baseline gap-1.5 leading-none">
+                                                                    {MATCH_CANDIDATES[matchIndex].name}
+                                                                    <span className="text-[10px] font-bold opacity-90">({MATCH_CANDIDATES[matchIndex].age})</span>
+                                                                </h4>
+                                                                <span className="text-[9px] font-bold opacity-80 mt-1 block">{MATCH_CANDIDATES[matchIndex].breed} • {MATCH_CANDIDATES[matchIndex].gender}</span>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Card Body */}
+                                                        <div className="p-4 flex flex-col gap-2.5">
+                                                            <div className="flex justify-between items-center bg-gray-55 border border-gray-100 p-2 rounded-xl">
+                                                                <span className="text-[9px] font-black text-gray-450 uppercase">Mizac & Aura</span>
+                                                                <span className="text-[10px] font-black text-gray-800">{MATCH_CANDIDATES[matchIndex].aura}</span>
+                                                            </div>
+                                                            <p className="text-[10px] text-gray-500 font-semibold leading-relaxed">
+                                                                {MATCH_CANDIDATES[matchIndex].bio}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Action Buttons */}
+                                                    <div className="flex justify-center items-center gap-4 py-2">
+                                                        <button 
+                                                            onClick={() => {
+                                                                setMatchIndex((prev) => (prev + 1) % MATCH_CANDIDATES.length);
+                                                                setToastMsg("👎 Aday geçildi.");
+                                                            }}
+                                                            className="w-12 h-12 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors shadow-sm cursor-pointer"
+                                                        >
+                                                            <X className="w-5 h-5" strokeWidth={2.5} />
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => {
+                                                                setIsMatched(true);
+                                                                setToastMsg(`💖 Eşleşme İsteği Gönderildi!`);
+                                                            }}
+                                                            className="w-14 h-14 bg-gradient-to-tr from-rose-500 to-pink-500 text-white rounded-full flex items-center justify-center transition-transform hover:scale-105 shadow-md shadow-rose-500/10 cursor-pointer"
+                                                        >
+                                                            <Heart className="w-6 h-6 fill-white" strokeWidth={2} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+
+                                    {/* 8. Etkinlikler (Events) Panel */}
+                                    {expandedPanel === 'events' && (
+                                        <>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <CalendarDays className="w-6 h-6 text-indigo-500" />
+                                                    <h3 className="text-lg font-black text-gray-800">Etkinlik Biletlerim</h3>
+                                                </div>
+                                                <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">
+                                                    1 Bilet Aktif
+                                                </span>
+                                            </div>
+
+                                            {/* Barcode Ticket */}
+                                            <div className="bg-gradient-to-tr from-indigo-950 via-indigo-900 to-indigo-850 text-white p-5 rounded-[28px] border border-indigo-800/80 shadow-[0_12px_25px_rgba(0,0,0,0.1)] relative overflow-hidden flex flex-col gap-4">
+                                                <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+                                                
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <span className="text-[8px] font-black tracking-widest text-indigo-300 block">MOFFI KULÜP BİLETİ</span>
+                                                        <h4 className="text-sm font-black mt-1 leading-snug">Kadıköy Patimaratonu</h4>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="text-[9px] font-black bg-indigo-500/30 text-indigo-350 border border-indigo-500/30 px-2 py-0.5 rounded">
+                                                            STANDART
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-4 border-t border-b border-white/10 py-3 text-[10px] font-mono">
+                                                    <div>
+                                                        <span className="text-indigo-300 block text-[8px] font-sans font-bold">TARİH & SAAT</span>
+                                                        <span className="font-bold text-white block mt-0.5">24 Mayıs 2026, 14:00</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-indigo-300 block text-[8px] font-sans font-bold">KONUM</span>
+                                                        <span className="font-bold text-white block mt-0.5">Caddebostan Sahil Parkı</span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Barcode */}
+                                                <div className="bg-white p-3 rounded-2xl flex flex-col items-center justify-center gap-1.5 shadow-inner">
+                                                    {/* Barcode lines */}
+                                                    <div className="flex w-full justify-between h-9 items-stretch px-2">
+                                                        {[2, 4, 1, 3, 2, 4, 1, 2, 3, 1, 4, 2, 1, 3, 2, 4, 1, 3, 2, 1].map((w, i) => (
+                                                            <div 
+                                                                key={i} 
+                                                                className="bg-gray-905 rounded-sm"
+                                                                style={{ width: `${w}px` }}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                    <span className="text-[9px] font-mono text-gray-500 tracking-[0.3em] font-semibold leading-none">MF-2026-9901A</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Nearby Events List */}
+                                            <div className="flex flex-col gap-2.5">
+                                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Yakındaki Diğer Etkinlikler</h4>
+                                                
+                                                <div className="flex flex-col gap-2">
+                                                    <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100/50">
+                                                        <div>
+                                                            <h5 className="text-[11px] font-black text-gray-800">☕ Patili Yoga & Kahve</h5>
+                                                            <p className="text-[9px] text-gray-400 font-semibold mt-0.5">Moda Parkı • 28 Mayıs Cumartesi</p>
+                                                        </div>
+                                                        <button 
+                                                            onClick={() => setToastMsg("🎟️ Patili Yoga bilet talebi alındı!")}
+                                                            className="text-[9.5px] font-black text-indigo-650 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 px-2.5 py-1.5 rounded-xl cursor-pointer"
+                                                        >
+                                                            Kayıt Ol
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100/50">
+                                                        <div>
+                                                            <h5 className="text-[11px] font-black text-gray-800">🌭 Sosis Arama Yarışması</h5>
+                                                            <p className="text-[9px] text-gray-400 font-semibold mt-0.5">Göztepe Parkı • 30 Mayıs Pazar</p>
+                                                        </div>
+                                                        <button 
+                                                            onClick={() => setToastMsg("🎟️ Sosis Arama Yarışması bilet talebi alındı!")}
+                                                            className="text-[9.5px] font-black text-indigo-650 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 px-2.5 py-1.5 rounded-xl cursor-pointer"
+                                                        >
+                                                            Kayıt Ol
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {expandedPanel === 'profile' && (
+                                        <div className="flex flex-col gap-6 pb-24">
+                                            {/* 1. Header: User Greeting & VIP Status */}
+                                            <div className="flex items-center gap-4 p-4.5 bg-gradient-to-tr from-gray-900 to-gray-800 rounded-3xl border border-gray-700/30 text-white shadow-lg relative overflow-hidden shrink-0">
+                                                <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-green-500/10 rounded-full blur-2xl" />
+                                                <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-green-400 shadow-md shrink-0 relative">
+                                                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150" className="w-full h-full object-cover" alt="User Avatar" />
+                                                    <div className="absolute bottom-0 right-0 bg-green-500 w-3.5 h-3.5 rounded-full border-2 border-white flex items-center justify-center">
+                                                        <div className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
+                                                    </div>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <h3 className="text-base font-black tracking-tight leading-tight">Merhaba, Üveys! 👋</h3>
+                                                        <span className="text-[8px] font-black text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded border border-yellow-400/20 uppercase tracking-widest flex items-center gap-0.5">
+                                                            <Award className="w-2.5 h-2.5" /> GOLD
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-[10px] text-gray-300 font-semibold mt-1">uv***@gmail.com • Premium Üye</p>
+                                                    <div className="mt-2 text-[9px] text-green-300 font-bold bg-green-500/15 border border-green-500/25 px-2 py-0.5 rounded-md inline-block">
+                                                        🧬 {pet.name}: F1 Pedigree • Safkan {pet.breed.split(' • ')[0]}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+
+
+                                            {/* 2. Moffi Pay & Contactless Collar Card (Pati-Kart) */}
+                                            <div className="flex flex-col gap-3">
+                                                <span className="text-[10px] font-black tracking-widest text-gray-400 uppercase px-1">FINANSAL PORTFÖY & TEMASSIZ PATİ-KART</span>
+                                                
+                                                {/* The Interactive Black/Gold Card */}
+                                                <div className="bg-gradient-to-tr from-gray-950 via-gray-900 to-gray-850 text-white p-5 rounded-[28px] border border-gray-800/80 shadow-[0_12px_30px_rgba(0,0,0,0.12)] relative overflow-hidden group">
+                                                    <div className="absolute right-[-20px] top-[-20px] w-36 h-36 bg-green-500/5 rounded-full blur-3xl pointer-events-none" />
+                                                    <div className="flex justify-between items-start">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <CreditCard className="w-5 h-5 text-yellow-450" />
+                                                            <span className="text-[9px] font-black text-gray-300 tracking-widest">MOFFI PATİ-KART (NFC)</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1 bg-white/5 border border-white/10 px-2 py-0.5 rounded-lg">
+                                                            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                                                            <span className="text-[8px] font-black text-green-400 uppercase tracking-widest">Aktif</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="mt-8 flex justify-between items-end">
+                                                        <div>
+                                                            <span className="text-[9px] font-bold text-gray-455 uppercase block">Cüzdan Bakiyesi</span>
+                                                            <h3 className="text-2xl font-black tracking-tight mt-0.5 flex items-baseline gap-1">
+                                                                {walletBalance.toLocaleString('tr-TR')} <span className="text-xs font-black text-yellow-400">{pet.wallet.currency}</span>
+                                                            </h3>
+                                                        </div>
+                                                        <div className="text-right font-mono">
+                                                            <span className="text-[9px] font-bold text-gray-455 block">{pet.name} Smartcollar Pay</span>
+                                                            <span className="text-[9px] font-semibold text-gray-500 tracking-wider mt-0.5 block">{pet.wallet.cardNumber}</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-2">
+                                                        <span className="text-[12px] shrink-0">📶</span>
+                                                        <p className="text-[9px] text-gray-400 font-semibold leading-normal">
+                                                            **Temassız Ödeme (NFC)** aktif! {pet.name} anlaşmalı pet-friendly kafe ve marketlerde ödemeyi tasmasındaki akıllı çiple patisini dokundurarak saniyeler içinde tamamlasın!
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <button 
+                                                        onClick={() => {
+                                                            setWalletBalance(prev => prev + 500);
+                                                            setToastMsg("💳 Hesabınıza 500 Patipuan başarıyla yüklendi!");
+                                                        }}
+                                                        className="flex items-center justify-center gap-1.5 bg-[#EAF5EC] hover:bg-green-100 border border-green-200/60 p-3.5 rounded-2xl text-[11px] font-black text-green-700 transition-all cursor-pointer shadow-sm"
+                                                    >
+                                                        <Plus className="w-3.5 h-3.5" />
+                                                        <span>Bakiye Yükle</span>
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => {
+                                                            setToastMsg("💸 Puan transfer arayüzü başlatılıyor...");
+                                                        }}
+                                                        className="flex items-center justify-center gap-1.5 bg-[#EFF6FF] hover:bg-blue-100 border border-blue-200/60 p-3.5 rounded-2xl text-[11px] font-black text-blue-700 transition-all cursor-pointer shadow-sm"
+                                                    >
+                                                        <ArrowUpRight className="w-3.5 h-3.5" />
+                                                        <span>Puan Transferi</span>
+                                                    </button>
+                                                </div>
+
+                                                {/* Pati-Kart Security Settings */}
+                                                <div className="bg-white border border-gray-100 rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-4">
+                                                    <div className="flex justify-between items-center">
+                                                        <div className="flex items-center gap-2.5">
+                                                            <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center text-red-650 shrink-0">
+                                                                <Lock className="w-4.5 h-4.5" />
+                                                            </div>
+                                                            <div>
+                                                                <h4 className="text-[11.5px] font-black text-gray-800">Pati-Kart Güvenlik Kilidi</h4>
+                                                                <p className="text-[9.5px] text-gray-400 font-semibold mt-0.5">Tasmanın NFC ödemelerini geçici olarak kilitle</p>
+                                                            </div>
+                                                        </div>
+                                                        <button 
+                                                            onClick={() => {
+                                                                setNfcPaymentLocked(!nfcPaymentLocked);
+                                                                setToastMsg(nfcPaymentLocked ? "🔓 Pati-Kart ödeme kilidi kaldırıldı!" : "🔒 Pati-Kart geçici olarak kilitlendi!");
+                                                            }}
+                                                            className={`w-11 h-6 rounded-full transition-colors flex items-center px-0.5 duration-300 ${nfcPaymentLocked ? 'bg-red-500' : 'bg-gray-200'}`}
+                                                        >
+                                                            <motion.div 
+                                                                layout 
+                                                                className="w-5 h-5 bg-white rounded-full shadow-sm" 
+                                                                animate={{ x: nfcPaymentLocked ? 20 : 0 }}
+                                                            />
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="border-t border-gray-100 pt-3">
+                                                        <div className="flex justify-between items-center mb-2.5">
+                                                            <span className="text-[10.5px] font-black text-gray-700">Günlük Limit</span>
+                                                            <span className="text-xs font-black text-green-700 bg-green-50 px-2 py-0.5 rounded-lg border border-green-100">{dailySpendLimit} PATI</span>
+                                                        </div>
+                                                        <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200/40 gap-1">
+                                                            {[100, 250, 500, 1000].map((limit) => (
+                                                                <button 
+                                                                    key={limit}
+                                                                    onClick={() => {
+                                                                        setDailySpendLimit(limit);
+                                                                        setToastMsg(`💸 Günlük limit ${limit} PATI olarak güncellendi.`);
+                                                                    }}
+                                                                    className={`flex-1 text-[9.5px] font-black py-2 rounded-xl transition-all cursor-pointer text-center relative ${
+                                                                        dailySpendLimit === limit 
+                                                                            ? 'bg-white text-gray-900 shadow-sm' 
+                                                                            : 'text-gray-400 hover:text-gray-650'
+                                                                    }`}
+                                                                >
+                                                                    {limit} P
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* 3. Moffi Link™ Akıllı Tasma OS & AI Çevirmen */}
+                                            <div className="flex flex-col gap-3">
+                                                <span className="text-[10px] font-black tracking-widest text-gray-400 uppercase px-1">AKILLI TASMA (IoT) OS & AI SES ANALİZİ</span>
+                                                
+                                                <div className="bg-white border border-gray-100 rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-4">
+                                                    {/* Tasma Konfigürasyonu */}
+                                                    <div className="flex justify-between items-center">
+                                                        <div className="flex items-center gap-2.5">
+                                                            <div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center text-green-600 shrink-0">
+                                                                <Radio className="w-5 h-5" />
+                                                            </div>
+                                                            <div>
+                                                                <h4 className="text-[11.5px] font-black text-gray-800">Moffi Link™ Akıllı Tasma</h4>
+                                                                <p className="text-[9.5px] text-gray-400 font-semibold mt-0.5">Sinyal Gücü: {pet.collar.signal} • GSM %88</p>
+                                                            </div>
+                                                        </div>
+                                                        <span className="text-[9px] font-black text-green-700 bg-green-50 border border-green-200/60 px-2 py-0.5 rounded-full uppercase">
+                                                            BAĞLI
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-2 gap-3.5 bg-gray-55 border border-gray-100/50 p-3 rounded-2xl text-center">
+                                                        <div>
+                                                            <span className="text-[8px] font-bold text-gray-400 block uppercase">TASMA İÇİ SICAKLIK</span>
+                                                            <span className="text-[12px] font-black text-gray-750 mt-1 block">🌡️ 24.2°C • İdeal</span>
+                                                        </div>
+                                                        <div className="border-l border-gray-200/70">
+                                                            <span className="text-[8px] font-bold text-gray-400 block uppercase">GÜVENLİK ÇİTİ (GPS)</span>
+                                                            <span className="text-[12px] font-black text-green-600 mt-1 block">📍 Güvenli Çember</span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* AI Translator & Bark Logger */}
+                                                    <div className="p-3.5 bg-purple-50/50 border border-purple-100/80 rounded-2xl flex flex-col gap-2">
+                                                        <div className="flex justify-between items-center">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Sparkles className="w-4 h-4 text-purple-600" />
+                                                                <span className="text-[9px] font-black text-purple-700 uppercase tracking-widest">AI SES TERCÜMANI (HAV-GÜNLÜĞÜ)</span>
+                                                            </div>
+                                                            <span className="text-[8px] font-black text-purple-600 bg-purple-100/40 px-1.5 py-0.5 rounded">4 Kayıt</span>
+                                                        </div>
+                                                        <p className="text-[10px] font-bold text-gray-700 mt-1 leading-normal">
+                                                            📢 **{pet.name} en son 11:20'de havladı.** AI Ses Teşhisi: **"Açlık veya İlgi Arayışı" (%85 güvenilirlik)**. Son 24 saat stres skoru stabil.
+                                                        </p>
+                                                    </div>
+
+                                                    {/* SOS / Lost Mode warning and activator */}
+                                                    <div className={`p-3.5 border rounded-2xl flex flex-col gap-2 transition-all ${
+                                                        lostPetMode 
+                                                            ? 'bg-red-50 border-red-200 text-red-700 shadow-sm animate-pulse' 
+                                                            : 'bg-gray-50 border-gray-100 text-gray-550'
+                                                    }`}>
+                                                        <div className="flex justify-between items-center">
+                                                            <div className="flex items-center gap-1.5 font-black text-[9.5px]">
+                                                                <span>🚨</span>
+                                                                <span className={lostPetMode ? 'text-red-750' : 'text-gray-600'}>ACİL SOS / KAYIP MODU</span>
+                                                            </div>
+                                                            <button 
+                                                                onClick={() => {
+                                                                    const nextMode = !lostPetMode;
+                                                                    setLostPetMode(nextMode);
+                                                                    setToastMsg(nextMode 
+                                                                        ? `🚨 Kayıp Modu Aktif! ${pet.name} için acil durum sinyali başlatıldı.` 
+                                                                        : `🔕 Kayıp Modu Kapatıldı. ${pet.name} güvende.`
+                                                                    );
+                                                                }}
+                                                                className={`text-[9px] font-black px-2.5 py-1.5 rounded-xl cursor-pointer transition-all border ${
+                                                                    lostPetMode 
+                                                                        ? 'bg-red-600 text-white border-red-700 shadow-sm' 
+                                                                        : 'bg-white text-red-650 border-red-200 hover:bg-red-50'
+                                                                }`}
+                                                            >
+                                                                {lostPetMode ? "Kayıp Modunu Kapat" : "Kayıp Modunu Aç"}
+                                                            </button>
+                                                        </div>
+                                                        <p className="text-[9.5px] font-semibold leading-normal text-gray-500">
+                                                            {lostPetMode 
+                                                                ? `⚠️ KAYIP MODU AKTİF! ${pet.name} için GPS konum güncellemeleri saniyelik sıklığa çıkartıldı, tasmadaki kırmızı SOS led ışığı yanıp sönüyor ve çevredeki tüm Moffi üyelerine bildirim gönderildi.` 
+                                                                : `${pet.name} kaybolursa bu modu aktif edin. GPS güncelleme hızı artar, tasmanın kırmızı SOS ledi yanar ve çevredeki kullanıcılara kayıp ihbarı iletilir.`
+                                                            }
+                                                        </p>
+                                                    </div>
+
+                                                    {/* Acoustic Controls */}
+                                                    <div className="grid grid-cols-3 gap-2.5 pt-1">
+                                                        <button 
+                                                            onClick={() => setToastMsg("🔊 Tasmaya ses sinyali gönderildi.")}
+                                                            className="flex flex-col items-center justify-center p-2.5 bg-gray-55 hover:bg-gray-100 border border-gray-150 rounded-xl transition-all cursor-pointer text-center gap-1"
+                                                        >
+                                                            <Volume2 className="w-4 h-4 text-gray-600" />
+                                                            <span className="text-[8.5px] font-black text-gray-700">Ses Sinyali</span>
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => setToastMsg("📳 Tasmaya hafif titreşim gönderildi.")}
+                                                            className="flex flex-col items-center justify-center p-2.5 bg-gray-55 hover:bg-gray-100 border border-gray-150 rounded-xl transition-all cursor-pointer text-center gap-1"
+                                                        >
+                                                            <Zap className="w-4 h-4 text-gray-600" />
+                                                            <span className="text-[8.5px] font-black text-gray-700">Hafif Titreşim</span>
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => setToastMsg("🚨 Acil Durum Sinyali: Tasma çaldırılıyor!")}
+                                                            className="flex flex-col items-center justify-center p-2.5 bg-red-50 hover:bg-red-100/85 border border-red-100 rounded-xl transition-all cursor-pointer text-center gap-1"
+                                                        >
+                                                            <AlertTriangle className="w-4 h-4 text-red-650" />
+                                                            <span className="text-[8.5px] font-black text-red-650">Tasmayı Çaldır</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* 4. Smart Food & Service Subscriptions (Abonelikler) */}
+                                            <div className="flex flex-col gap-3">
+                                                <span className="text-[10px] font-black tracking-widest text-gray-400 uppercase px-1">MAMA & HİZMET ABONELİKLERİM</span>
+                                                
+                                                <div className="bg-white border border-gray-100 rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3">
+                                                    <div className="flex justify-between items-center pb-3 border-b border-gray-50">
+                                                        <div className="flex items-center gap-2.5">
+                                                            <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center text-orange-655 shrink-0">
+                                                                <ShoppingBag className="w-5 h-5" />
+                                                            </div>
+                                                            <div>
+                                                                <h4 className="text-[11.5px] font-black text-gray-800">Düzenli Somonlu Mama (12kg)</h4>
+                                                                <p className="text-[9.5px] text-gray-400 font-semibold mt-0.5">Her ayın 25'inde teslimat • %20 İndirimli</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <span className="text-[11.5px] font-black text-orange-600 block">960 TL</span>
+                                                            <span className="text-[8px] font-bold text-gray-400 block uppercase font-sans">Mama Aboneliği</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex justify-between items-center">
+                                                        <div className="flex items-center gap-2.5">
+                                                            <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-650 shrink-0">
+                                                                <Scissors className="w-5 h-5" />
+                                                            </div>
+                                                            <div>
+                                                                <h4 className="text-[11.5px] font-black text-gray-800">Moffi Premium Tüy Bakımı</h4>
+                                                                <p className="text-[9.5px] text-gray-400 font-semibold mt-0.5">Her 60 günde bir pet kuaför seansı</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <span className="text-[11.5px] font-black text-indigo-650 block">450 TL</span>
+                                                            <span className="text-[8px] font-bold text-gray-400 block uppercase font-sans">Hizmet Paketi</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* 5. Health & Vaccine Passport Center */}
+                                            <div className="flex flex-col gap-3">
+                                                <span className="text-[10px] font-black tracking-widest text-gray-400 uppercase px-1">MEDİKAL SAĞLIK & DİJİTAL PASAPORT</span>
+                                                
+                                                <div className="bg-white border border-gray-100 rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-4">
+                                                    
+                                                    {/* Glowing Telehealth Consultation Banner */}
+                                                    <div className="flex justify-between items-center p-3.5 bg-gradient-to-r from-emerald-500/10 to-teal-500/5 border border-emerald-100 rounded-2xl relative overflow-hidden group">
+                                                        <div className="absolute right-[-10px] top-[-10px] w-20 h-20 bg-emerald-500/5 rounded-full blur-xl animate-pulse" />
+                                                        <div className="flex items-center gap-2.5 relative z-10">
+                                                            <div className="w-9 h-9 rounded-xl bg-emerald-500/15 flex items-center justify-center text-emerald-600 shrink-0">
+                                                                <Stethoscope className="w-5 h-5" />
+                                                            </div>
+                                                            <div>
+                                                                <h4 className="text-[11.5px] font-black text-emerald-800 leading-tight">7/24 Canlı Veteriner Destek</h4>
+                                                                <p className="text-[9.5px] text-emerald-600 font-semibold mt-0.5">Gold Üye Ayrıcalıklı Canlı Konsültasyon</p>
+                                                            </div>
+                                                        </div>
+                                                        <button className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9.5px] font-black px-3.5 py-2 rounded-xl shadow-sm cursor-pointer transition-colors relative z-10">
+                                                            Bağlan
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Passport Detail Ring and upcoming vaccines */}
+                                                    <div className="flex justify-between items-center p-3.5 bg-gray-50 border border-gray-100 rounded-2xl">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="relative w-10 h-10 flex items-center justify-center">
+                                                                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                                                                    <circle cx="18" cy="18" r="15.915" fill="none" stroke="#E5E7EB" strokeWidth="3" />
+                                                                    <circle cx="18" cy="18" r="15.915" fill="none" stroke="#10B981" strokeWidth="3" strokeDasharray="80, 100" />
+                                                                </svg>
+                                                                <span className="absolute text-[8.5px] font-black text-emerald-700">80%</span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[8.5px] font-black text-gray-400 block uppercase">AŞILAMA TAMAMLIK ORANI</span>
+                                                                <h5 className="text-[11.5px] font-black text-gray-805 mt-0.5">Karma ve Kuduz Aşısı Aktif</h5>
+                                                            </div>
+                                                        </div>
+                                                        <button 
+                                                            onClick={() => setExpandedPanel('passport')}
+                                                            className="text-[9.5px] font-black text-emerald-650 bg-emerald-50 hover:bg-emerald-100/70 border border-emerald-100/50 px-2.5 py-1.5 rounded-xl cursor-pointer shrink-0"
+                                                        >
+                                                            Pasaportu Aç
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Allergy & Diet Information */}
+                                                    <div className="p-3.5 bg-amber-50/40 border border-amber-100 rounded-2xl flex flex-col gap-2">
+                                                        <div className="flex justify-between items-center">
+                                                            <div className="flex items-center gap-1">
+                                                                <span className="text-[9px] font-black text-amber-700 uppercase tracking-widest">ALERJİ & BESLENME PROFİLİ</span>
+                                                            </div>
+                                                            <span className="text-[8px] font-black text-amber-600 bg-amber-100/60 px-2 py-0.5 rounded">Hassas Diyet</span>
+                                                        </div>
+                                                        <p className="text-[9.5px] font-semibold text-gray-700 leading-relaxed">
+                                                            ❌ **Yasaklı Besinler:** Çikolata 🍫, Sarımsak 🧄, Üzüm 🍇. Tahılsız ve yüksek somon proteini diyeti aktif. Günlük kalori hedefi: **1,200 kcal**.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* 6. Moffi Club™ & Sosyalleşme */}
+                                            <div className="flex flex-col gap-3">
+                                                <span className="text-[10px] font-black tracking-widest text-gray-400 uppercase px-1">MOFFI CLUB™ SOSYALLEŞME REHBERİ</span>
+                                                
+                                                <div className="bg-white border border-gray-100 rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3.5">
+                                                    
+                                                    {/* Playdate Matcher */}
+                                                    <div className="flex justify-between items-center p-3.5 bg-rose-50/50 border border-rose-100/60 rounded-2xl">
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="text-2xl shrink-0">🐕‍🦺</span>
+                                                            <div>
+                                                                <h5 className="text-[11.5px] font-black text-rose-800 leading-tight">Pati Flört & Oyun Arkadaşı</h5>
+                                                                <p className="text-[9.5px] text-rose-600 font-semibold mt-0.5">Kadıköy'de **3 yeni oyun adayı** seni bekliyor!</p>
+                                                            </div>
+                                                        </div>
+                                                        <button 
+                                                            onClick={() => setExpandedPanel('match')}
+                                                            className="bg-rose-500 hover:bg-rose-600 text-white text-[9.5px] font-black px-3 py-2 rounded-xl shadow-sm cursor-pointer transition-all shrink-0"
+                                                        >
+                                                            Eşleştir
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Pet Friendly Places */}
+                                                    <div className="flex justify-between items-center p-3.5 bg-amber-50/40 border border-amber-100/50 rounded-2xl">
+                                                        <div className="flex items-center gap-3">
+                                                            <Coffee className="w-5 h-5 text-amber-600 shrink-0" strokeWidth={2.5} />
+                                                            <div>
+                                                                <h5 className="text-[11.5px] font-black text-amber-800 leading-tight">Patili Mekanlar Keşfi</h5>
+                                                                <p className="text-[9.5px] text-amber-600 font-semibold mt-0.5">Moda Pet Cafe'de Pati-Kart sahiplerine **%15 indirim**.</p>
+                                                            </div>
+                                                        </div>
+                                                        <button className="bg-amber-650 hover:bg-amber-700 text-white text-[9.5px] font-black px-3 py-2 rounded-xl shadow-sm cursor-pointer transition-all shrink-0">
+                                                            Keşfet
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Event Ticket */}
+                                                    <div className="p-3.5 bg-indigo-50/50 border border-indigo-100/60 rounded-2xl flex justify-between items-center">
+                                                        <div className="flex items-center gap-3">
+                                                            <QrCode className="w-5 h-5 text-indigo-650 shrink-0" />
+                                                            <div>
+                                                                <h5 className="text-[11.5px] font-black text-indigo-850 leading-tight">Etkinlik Biletlerim</h5>
+                                                                <p className="text-[9.5px] text-indigo-600 font-semibold mt-0.5">Moffi Kadıköy Patimaratonu (24 Mayıs) • 1 Bilet</p>
+                                                            </div>
+                                                        </div>
+                                                        <button 
+                                                            onClick={() => setExpandedPanel('events')}
+                                                            className="bg-indigo-600 hover:bg-indigo-700 text-white text-[9.5px] font-black px-2.5 py-1.5 rounded-xl shadow-sm cursor-pointer transition-all shrink-0"
+                                                        >
+                                                            Göster
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* 7. Trendyol-Style Interactive Orders & Cart System */}
+                                            <div className="flex flex-col gap-3">
+                                                <div className="flex justify-between items-center px-1">
+                                                    <span className="text-[10px] font-black tracking-widest text-gray-400 uppercase">SİPARİŞLERİM & SEPETİM</span>
+                                                    <span className="text-[9.5px] font-black text-green-700 bg-green-50 border border-green-200/50 px-2 py-0.5 rounded-full">
+                                                        {cartQty1 + cartQty2 > 0 ? `${cartQty1 + cartQty2} Ürün` : 'Sepet Boş'}
+                                                    </span>
+                                                </div>
+                                                
+                                                {/* Tab Selector Bar */}
+                                                <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200/40">
+                                                    <button 
+                                                        onClick={() => setProfileOrdersTab('active')}
+                                                        className={`flex-1 text-[9.5px] font-black py-2 rounded-xl transition-all cursor-pointer text-center ${
+                                                            profileOrdersTab === 'active' 
+                                                                ? 'bg-white text-gray-900 shadow-sm' 
+                                                                : 'text-gray-400 hover:text-gray-600'
+                                                        }`}
+                                                    >
+                                                        Aktif Takip
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => setProfileOrdersTab('past')}
+                                                        className={`flex-1 text-[9.5px] font-black py-2 rounded-xl transition-all cursor-pointer text-center ${
+                                                            profileOrdersTab === 'past' 
+                                                                ? 'bg-white text-gray-900 shadow-sm' 
+                                                                : 'text-gray-400 hover:text-gray-600'
+                                                        }`}
+                                                    >
+                                                        Geçmiş
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => setProfileOrdersTab('cart')}
+                                                        className={`flex-1 text-[9.5px] font-black py-2 rounded-xl transition-all cursor-pointer text-center relative ${
+                                                            profileOrdersTab === 'cart' 
+                                                                ? 'bg-white text-gray-900 shadow-sm' 
+                                                                : 'text-gray-400 hover:text-gray-600'
+                                                        }`}
+                                                    >
+                                                        Sepetim
+                                                        {cartQty1 + cartQty2 > 0 && (
+                                                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-orange-600 text-white text-[8px] font-black rounded-full flex items-center justify-center border border-white">
+                                                                {cartQty1 + cartQty2}
+                                                            </span>
+                                                        )}
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => setProfileOrdersTab('settings')}
+                                                        className={`flex-1 text-[9.5px] font-black py-2 rounded-xl transition-all cursor-pointer text-center ${
+                                                            profileOrdersTab === 'settings' 
+                                                                ? 'bg-white text-gray-900 shadow-sm' 
+                                                                : 'text-gray-400 hover:text-gray-600'
+                                                        }`}
+                                                    >
+                                                        Ayarlar
+                                                    </button>
+                                                </div>
+
+                                                {/* TAB 1: AKTİF SİPARİŞLER */}
+                                                {profileOrdersTab === 'active' && (
+                                                    <div className="flex flex-col gap-3">
+                                                        {/* Simulated Live Map */}
+                                                        {showLiveMap && (
+                                                            <div className="p-4 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.02)] flex flex-col gap-3 relative overflow-hidden">
+                                                                <div className="flex justify-between items-center">
+                                                                    <span className="text-[10px] font-black tracking-widest text-[#527958] uppercase">CANLI KURYE HARİTASI</span>
+                                                                    <button 
+                                                                        onClick={() => setShowLiveMap(false)}
+                                                                        className="text-[9.5px] font-black text-gray-400 hover:text-gray-650 cursor-pointer animate-none"
+                                                                    >
+                                                                        Gizle ×
+                                                                    </button>
+                                                                </div>
+                                                                
+                                                                {/* Map container */}
+                                                                <div className="relative h-40 bg-green-50/10 rounded-2xl overflow-hidden border border-gray-100 flex items-center justify-center">
+                                                                    <div className="absolute inset-0 opacity-[0.06] bg-[radial-gradient(#000_1.5px,transparent_1.5px)] [background-size:16px_16px]" />
+                                                                    <svg className="absolute inset-0 w-full h-full" viewBox="0 0 300 160">
+                                                                        {/* Streets */}
+                                                                        <path d="M 0 30 L 300 30" fill="none" stroke="#E5E7EB" strokeWidth="6" />
+                                                                        <path d="M 0 110 L 300 110" fill="none" stroke="#E5E7EB" strokeWidth="6" />
+                                                                        <path d="M 80 0 L 80 160" fill="none" stroke="#E5E7EB" strokeWidth="6" />
+                                                                        <path d="M 200 0 L 200 160" fill="none" stroke="#E5E7EB" strokeWidth="6" />
+                                                                        
+                                                                        {/* Active path */}
+                                                                        <path d="M 80 30 L 200 30 L 200 110" fill="none" stroke="#527958" strokeWidth="3" strokeDasharray="6 6" />
+                                                                        
+                                                                        {/* Address marker */}
+                                                                        <circle cx="200" cy="110" r="10" fill="#EAF5EC" stroke="#22C55E" strokeWidth="2" />
+                                                                        
+                                                                        {/* Courier */}
+                                                                        <motion.circle 
+                                                                            cx="80" 
+                                                                            cy="30" 
+                                                                            r="7" 
+                                                                            fill="#F97316" 
+                                                                            stroke="white" 
+                                                                            strokeWidth="2"
+                                                                            animate={{
+                                                                                cx: [80, 200, 200],
+                                                                                cy: [30, 30, 110]
+                                                                            }}
+                                                                            transition={{
+                                                                                duration: 6,
+                                                                                repeat: Infinity,
+                                                                                ease: "linear"
+                                                                            }}
+                                                                        />
+                                                                    </svg>
+                                                                    <div className="absolute top-2.5 left-2.5 bg-white/95 border border-gray-100 px-2 py-0.5 rounded-lg shadow-sm text-[8px] font-black text-gray-600">
+                                                                        📍 Caferağa Mah. Moda
+                                                                    </div>
+                                                                    <div className="absolute bottom-2.5 right-2.5 bg-[#527958] text-white px-2 py-0.5 rounded-lg shadow-sm text-[8px] font-black">
+                                                                        🛵 Kurye Can yolda
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Shipping tracker list */}
+                                                        {activeOrders.length === 0 ? (
+                                                            <div className="p-8 bg-white border border-gray-100 rounded-3xl text-center flex flex-col items-center justify-center gap-2">
+                                                                <span className="text-2xl">📦</span>
+                                                                <h5 className="text-xs font-black text-gray-800">Aktif Sipariş Yok</h5>
+                                                                <p className="text-[9.5px] text-gray-400 font-semibold">Şu an aktif takipte olan bir siparişiniz bulunmuyor.</p>
+                                                            </div>
+                                                        ) : (
+                                                            activeOrders.map((ord) => (
+                                                                <div key={ord.id} className="p-4 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3.5">
+                                                                    <div className="flex justify-between items-center">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-ping shrink-0" />
+                                                                            <h4 className="text-[10px] font-black text-gray-800 uppercase tracking-wider ml-1">Kurye Yolda • Sipariş Takibi</h4>
+                                                                        </div>
+                                                                        <span className="text-[8.5px] font-black text-green-700 bg-green-55 border border-green-200/50 px-2 py-0.5 rounded-full">{ord.status}</span>
+                                                                    </div>
+                                                                    
+                                                                    <div className="flex justify-between items-start">
+                                                                        <div>
+                                                                            <h5 className="text-[12px] font-black text-gray-805 leading-tight">{ord.name}</h5>
+                                                                            <p className="text-[9.5px] text-gray-400 font-semibold mt-0.5">{ord.desc}</p>
+                                                                        </div>
+                                                                        <span className="text-[12px] font-black text-green-700 shrink-0">{ord.timeRemaining}</span>
+                                                                    </div>
+
+                                                                    {/* Process progress steps */}
+                                                                    <div className="flex justify-between items-center gap-2 mt-1 px-1">
+                                                                        <div className="flex-1 flex flex-col gap-1 items-center">
+                                                                            <div className={`w-full h-1.5 rounded-full ${ord.progress >= 30 ? 'bg-green-600' : 'bg-gray-200'}`} />
+                                                                            <span className="text-[7.5px] font-black text-green-700 uppercase">Hazırlık</span>
+                                                                        </div>
+                                                                        <div className="flex-1 flex flex-col gap-1 items-center">
+                                                                            <div className={`w-full h-1.5 rounded-full ${ord.progress >= 65 ? 'bg-green-600' : 'bg-gray-200'}`} />
+                                                                            <span className="text-[7.5px] font-black text-green-700 uppercase">Dağıtımda</span>
+                                                                        </div>
+                                                                        <div className="flex-1 flex flex-col gap-1 items-center">
+                                                                            <div className={`w-full h-1.5 rounded-full ${ord.progress >= 100 ? 'bg-green-600' : 'bg-gray-200'}`} />
+                                                                            <span className="text-[7.5px] font-black text-gray-400 uppercase">Teslimat</span>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
+                                                                        <button 
+                                                                            onClick={() => setShowLiveMap(true)}
+                                                                            className="py-2.5 rounded-xl bg-[#527958] hover:bg-[#436448] text-white text-[10px] font-black cursor-pointer text-center transition-colors shadow-sm"
+                                                                        >
+                                                                            Haritada Göster 📍
+                                                                        </button>
+                                                                        <button 
+                                                                            onClick={() => setToastMsg("📞 Kurye Can ile bağlantı kuruluyor...")}
+                                                                            className="py-2.5 rounded-xl bg-gray-50 border border-gray-150 hover:bg-gray-100 text-[10px] font-black text-gray-700 cursor-pointer text-center transition-colors"
+                                                                        >
+                                                                            Kuryeyi Ara
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            ))
+                                                        )}
+
+                                                        {/* Booking management */}
+                                                        <div className="p-4 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3">
+                                                            <div className="flex justify-between items-center pb-2.5 border-b border-gray-100">
+                                                                <div>
+                                                                    <span className="text-[8px] font-bold text-gray-400 block uppercase">REZERVASYON 1</span>
+                                                                    <h5 className="text-[11.5px] font-black text-gray-800 mt-0.5">Dog Walker (Gezdirici)</h5>
+                                                                    <p className="text-[9.5px] text-gray-400 font-semibold mt-0.5">Bugün, 18:00 • 60 dk • Emre Kaplan</p>
+                                                                </div>
+                                                                <span className="text-[9px] font-black text-blue-700 bg-blue-50 border border-blue-200/50 px-2 py-0.5 rounded-full shrink-0 h-fit">ONAYLANDI</span>
+                                                            </div>
+
+                                                            <div className="flex justify-between items-center">
+                                                                <div>
+                                                                    <span className="text-[8px] font-bold text-gray-400 block uppercase">REZERVASYON 2</span>
+                                                                    <h5 className="text-[11.5px] font-black text-gray-800 mt-0.5">Premium Pet Groomer</h5>
+                                                                    <p className="text-[9.5px] text-gray-400 font-semibold mt-0.5">20 Mayıs Çarşamba, 14:00 • Tıraş ve Banyo</p>
+                                                                </div>
+                                                                <span className="text-[9px] font-black text-amber-700 bg-amber-50 border border-amber-200/50 px-2 py-0.5 rounded-full shrink-0 h-fit">BEKLEMEDE</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* TAB 2: GEÇMİŞ SİPARİŞLER */}
+                                                {profileOrdersTab === 'past' && (
+                                                    <div className="flex flex-col gap-3">
+                                                        <div className="p-4 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3">
+                                                            <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+                                                                <div>
+                                                                    <span className="text-[9px] font-black text-gray-400">SİPARİŞ #928374</span>
+                                                                    <span className="text-[9.5px] text-gray-500 font-bold block mt-0.5">12 Mayıs 2026</span>
+                                                                </div>
+                                                                <span className="text-[9px] font-black text-green-700 bg-green-50 border border-green-200/55 px-2.5 py-0.5 rounded-full">
+                                                                    Teslim Edildi ✓
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex gap-3 my-1">
+                                                                <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600 shrink-0 border border-orange-100/40">
+                                                                    <ShoppingBag className="w-5 h-5" />
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <h5 className="text-[11.5px] font-bold text-gray-800 leading-tight">Tahılsız Somonlu Kuru Köpek Maması (15kg)</h5>
+                                                                    <p className="text-[9.5px] text-gray-400 font-semibold mt-0.5">Moffi Premium Satıcı • 1,450 TL</p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
+                                                                <button className="py-2 bg-gray-50 hover:bg-gray-100 border border-gray-150 rounded-xl text-[9.5px] font-black text-gray-700 cursor-pointer text-center transition-colors">
+                                                                    Değerlendir (5 ⭐)
+                                                                </button>
+                                                                <button className="py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-[9.5px] font-black cursor-pointer text-center transition-colors">
+                                                                    Tekrar Satın Al
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="p-4 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3">
+                                                            <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+                                                                <div>
+                                                                    <span className="text-[9px] font-black text-gray-450">SİPARİŞ #837261</span>
+                                                                    <span className="text-[9.5px] text-gray-500 font-bold block mt-0.5">28 Nisan 2026</span>
+                                                                </div>
+                                                                <span className="text-[9px] font-black text-green-700 bg-green-50 border border-green-200/55 px-2.5 py-0.5 rounded-full">
+                                                                    Teslim Edildi ✓
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex gap-3 my-1">
+                                                                <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center text-green-600 shrink-0 border border-green-100/40">
+                                                                    <Radio className="w-5 h-5" />
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <h5 className="text-[11.5px] font-bold text-gray-800 leading-tight">Moffi Link™ Akıllı Tasma v2 - Orman Yeşili</h5>
+                                                                    <p className="text-[9.5px] text-gray-400 font-semibold mt-0.5">Moffi Donanım A.Ş. • 2,490 TL</p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
+                                                                <button className="py-2 bg-gray-50 hover:bg-gray-100 border border-gray-150 rounded-xl text-[9.5px] font-black text-gray-700 cursor-pointer text-center transition-colors">
+                                                                    Fatura İndir (PDF)
+                                                                </button>
+                                                                <button className="py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-[9.5px] font-black cursor-pointer text-center transition-colors">
+                                                                    Destek Talebi Aç
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* TAB 3: SEPETİM */}
+                                                {profileOrdersTab === 'cart' && (
+                                                    <div className="flex flex-col gap-3">
+                                                        {cartQty1 + cartQty2 === 0 ? (
+                                                            <div className="p-8 bg-white border border-gray-100 rounded-3xl text-center flex flex-col items-center justify-center gap-2">
+                                                                <span className="text-3xl">🛒</span>
+                                                                <h5 className="text-xs font-black text-gray-800">Sepetiniz Boş</h5>
+                                                                <p className="text-[10px] text-gray-400 font-semibold max-w-[200px]">Luna için eklediğiniz ürünler burada görünür.</p>
+                                                                <button 
+                                                                    onClick={() => setProfileOrdersTab('active')}
+                                                                    className="mt-2 bg-[#527958] text-white text-[10px] font-black px-4 py-2 rounded-xl"
+                                                                >
+                                                                    Alışverişe Başla
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex flex-col gap-3">
+                                                                {/* Cart items list */}
+                                                                <div className="p-4 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3.5">
+                                                                    {cartQty1 > 0 && (
+                                                                        <div className="flex justify-between items-center">
+                                                                            <div className="flex gap-2.5 items-center">
+                                                                                <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-100/35 flex items-center justify-center text-orange-600 shrink-0">
+                                                                                    <ShoppingBag className="w-5 h-5" />
+                                                                                </div>
+                                                                                <div>
+                                                                                    <h5 className="text-[11.5px] font-black text-gray-800">Somonlu Mama (12kg)</h5>
+                                                                                    <span className="text-[9.5px] font-black text-orange-600 block mt-0.5">960 TL <span className="text-[8px] text-gray-400 line-through">1,200 TL</span></span>
+                                                                                </div>
+                                                                            </div>
+                                                                            {/* Quantity Controls */}
+                                                                            <div className="flex items-center gap-2 bg-gray-55 border border-gray-150 px-2 py-1 rounded-xl">
+                                                                                <button 
+                                                                                    onClick={() => setCartQty1(Math.max(0, cartQty1 - 1))}
+                                                                                    className="text-[12px] font-black text-gray-650 w-4 text-center cursor-pointer"
+                                                                                >
+                                                                                    -
+                                                                                </button>
+                                                                                <span className="text-[11px] font-black text-gray-800 w-3 text-center">{cartQty1}</span>
+                                                                                <button 
+                                                                                    onClick={() => setCartQty1(cartQty1 + 1)}
+                                                                                    className="text-[12px] font-black text-gray-650 w-4 text-center cursor-pointer"
+                                                                                >
+                                                                                    +
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {cartQty2 > 0 && (
+                                                                        <div className="flex justify-between items-center pt-3 border-t border-gray-100">
+                                                                            <div className="flex gap-2.5 items-center">
+                                                                                <div className="w-10 h-10 rounded-xl bg-purple-55 border border-purple-100/35 flex items-center justify-center text-purple-650 shrink-0">
+                                                                                    <Shirt className="w-5 h-5" />
+                                                                                </div>
+                                                                                <div>
+                                                                                    <h5 className="text-[11.5px] font-black text-gray-800">Moffi Diş Oyuncağı</h5>
+                                                                                    <span className="text-[9.5px] font-black text-purple-700 block mt-0.5">180 TL</span>
+                                                                                </div>
+                                                                            </div>
+                                                                            {/* Quantity Controls */}
+                                                                            <div className="flex items-center gap-2 bg-gray-55 border border-gray-150 px-2 py-1 rounded-xl">
+                                                                                <button 
+                                                                                    onClick={() => setCartQty2(Math.max(0, cartQty2 - 1))}
+                                                                                    className="text-[12px] font-black text-gray-655 w-4 text-center cursor-pointer"
+                                                                                >
+                                                                                    -
+                                                                                </button>
+                                                                                <span className="text-[11px] font-black text-gray-800 w-3 text-center">{cartQty2}</span>
+                                                                                <button 
+                                                                                    onClick={() => setCartQty2(cartQty2 + 1)}
+                                                                                    className="text-[12px] font-black text-gray-655 w-4 text-center cursor-pointer"
+                                                                                >
+                                                                                    +
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+
+                                                                {/* Checkout calculation */}
+                                                                <div className="p-4 bg-[#FBFBFB] border border-gray-100 rounded-3xl flex flex-col gap-2">
+                                                                    <div className="flex justify-between text-[10px] font-bold text-gray-500">
+                                                                        <span>Sepet Toplamı</span>
+                                                                        <span>{cartQty1 * 1200 + cartQty2 * 180} TL</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between text-[10px] font-bold text-green-700">
+                                                                        <span>Moffi Gold İndirimi</span>
+                                                                        <span>-{cartQty1 * 240} TL</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between text-[10px] font-bold text-gray-500">
+                                                                        <span>Kargo Ücreti</span>
+                                                                        <span className="text-green-600 font-black">Bedava</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between text-[11px] font-black text-gray-800 pt-2 border-t border-gray-200">
+                                                                        <span>Ödenecek Tutar</span>
+                                                                        <span className="text-orange-600 text-sm font-black">{cartQty1 * 960 + cartQty2 * 180} TL</span>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Complete order button */}
+                                                                <button 
+                                                                    onClick={() => {
+                                                                        const totalAmt = cartQty1 * 960 + cartQty2 * 180;
+                                                                        if (nfcPaymentLocked) {
+                                                                            setToastMsg("❌ Ödeme Başarısız: Pati-Kartınız güvenlik nedeniyle kilitli! (Kilidi profilden açabilirsiniz)");
+                                                                            return;
+                                                                        }
+                                                                        if (totalAmt > dailySpendLimit) {
+                                                                            setToastMsg(`❌ Ödeme Başarısız: Günlük harcama limitinizi (${dailySpendLimit} PATI) aştınız!`);
+                                                                            return;
+                                                                        }
+                                                                        if (walletBalance < totalAmt) {
+                                                                            setToastMsg("❌ Yetersiz Bakiye! Lütfen Pati-Kartınıza bakiye yükleyin.");
+                                                                            return;
+                                                                        }
+                                                                        
+                                                                        setWalletBalance(prev => prev - totalAmt);
+                                                                        
+                                                                        const items = [];
+                                                                        if (cartQty1 > 0) items.push(`Somonlu Mama (${cartQty1} ad.)`);
+                                                                        if (cartQty2 > 0) items.push(`Diş Oyuncağı (${cartQty2} ad.)`);
+                                                                        
+                                                                        const newOrder = {
+                                                                            id: `order-${Date.now()}`,
+                                                                            name: items.join(" + "),
+                                                                            desc: "Moda Dağıtım Noktası • Kurye: Walky Can",
+                                                                            timeRemaining: "12 dk kaldı",
+                                                                            status: "Hazırlanıyor",
+                                                                            progress: 30
+                                                                        };
+                                                                        
+                                                                        setActiveOrders(prev => [newOrder, ...prev]);
+                                                                        setCartQty1(0);
+                                                                        setCartQty2(0);
+                                                                        setToastMsg(`🎉 Sipariş alındı! Kurye Can yola çıkıyor. -${totalAmt} PatiPuan`);
+                                                                        setProfileOrdersTab('active');
+                                                                    }}
+                                                                    className="w-full py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs font-black uppercase tracking-wider rounded-2xl cursor-pointer shadow-md shadow-orange-500/10 hover:opacity-95 transition-opacity text-center"
+                                                                >
+                                                                    Pati-Kart ile Öde ve Siparişi Tamamla
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {/* TAB 4: SİPARİŞ AYARLARI */}
+                                                {profileOrdersTab === 'settings' && (
+                                                    <div className="flex flex-col gap-3">
+                                                        <div className="p-4 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-4">
+                                                            
+                                                            {/* Address section */}
+                                                            <div>
+                                                                <h5 className="text-[9.5px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">KAYITLI ADRESLERİM</h5>
+                                                                <div className="flex flex-col gap-2">
+                                                                    <div className="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex justify-between items-start">
+                                                                        <div>
+                                                                            <span className="text-[10px] font-black text-gray-800 block">🏠 Ev (Birincil)</span>
+                                                                            <span className="text-[9.5px] text-gray-450 font-semibold mt-1 block leading-snug">Moda Cd. No: 12, D: 4, Caferağa Mah. Kadıköy / İstanbul</span>
+                                                                        </div>
+                                                                        <span className="text-[8px] font-black text-green-705 bg-green-50 px-1.5 py-0.5 rounded border border-green-150">Varsayılan</span>
+                                                                    </div>
+                                                                    <div className="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex justify-between items-start">
+                                                                        <div>
+                                                                            <span className="text-[10px] font-black text-gray-800 block">💼 İş Adresi</span>
+                                                                            <span className="text-[9.5px] text-gray-450 font-semibold mt-1 block leading-snug">Levent Plaza Kat: 8, Büyükdere Cd. Şişli / İstanbul</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <button className="mt-2 text-[9.5px] font-black text-[#527958] flex items-center gap-1 cursor-pointer">
+                                                                    <Plus className="w-3.5 h-3.5" /> Yeni Adres Ekle
+                                                                </button>
+                                                            </div>
+
+                                                            {/* Payment section */}
+                                                            <div className="pt-3 border-t border-gray-100">
+                                                                <h5 className="text-[9.5px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">KAYITLI KARTLARIM</h5>
+                                                                <div className="flex flex-col gap-2">
+                                                                    <div className="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex justify-between items-center">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <CreditCard className="w-4.5 h-4.5 text-gray-600" />
+                                                                            <div>
+                                                                                <span className="text-[10px] font-black text-gray-800 block">Moffi Pati-Kart (NFC)</span>
+                                                                                <span className="text-[8.5px] text-gray-400 font-semibold">Bakiye: {walletBalance.toLocaleString()} Patipuan</span>
+                                                                            </div>
+                                                                        </div>
+                                                                        <span className="w-2 h-2 rounded-full bg-green-500" />
+                                                                    </div>
+                                                                    <div className="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex justify-between items-center">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <CreditCard className="w-4.5 h-4.5 text-gray-400" />
+                                                                            <div>
+                                                                                <span className="text-[10px] font-bold text-gray-700 block">Yapı Kredi Play Card</span>
+                                                                                <span className="text-[8.5px] text-gray-450 font-mono">•••• 4820</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <button className="mt-2 text-[9.5px] font-black text-[#527958] flex items-center gap-1 cursor-pointer">
+                                                                    <Plus className="w-3.5 h-3.5" /> Yeni Ödeme Yöntemi Ekle
+                                                                </button>
+                                                            </div>
+
+                                                            <div className="pt-3 border-t border-gray-100">
+                                                                <h5 className="text-[9.5px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">TASMA IOT & BİLDİRİM AYARLARI</h5>
+                                                                <div className="flex flex-col gap-2 text-[9.5px] font-bold text-gray-750">
+                                                                    <label className="flex justify-between items-center p-2.5 rounded-2xl bg-gray-50/70 cursor-pointer">
+                                                                        <div className="flex flex-col gap-0.5">
+                                                                            <span>Akıllı Tasma Geofence (Güvenli Çember)</span>
+                                                                            <span className="text-[8px] text-gray-400 font-medium">{pet.name} çember dışına çıkarsa anında bildirim gönder.</span>
+                                                                        </div>
+                                                                        <input 
+                                                                            type="checkbox" 
+                                                                            checked={geofenceAlerts} 
+                                                                            onChange={(e) => {
+                                                                                setGeofenceAlerts(e.target.checked);
+                                                                                setToastMsg(e.target.checked ? "🔔 Geofence (Güvenli Çember) bildirimi aktif edildi!" : "🔕 Geofence bildirimi devredışı bırakıldı.");
+                                                                            }}
+                                                                            className="rounded border-gray-300 text-[#527958] focus:ring-[#527958] w-4 h-4 cursor-pointer animate-none" 
+                                                                        />
+                                                                    </label>
+                                                                    <label className="flex justify-between items-center p-2.5 rounded-2xl bg-gray-50/70 cursor-pointer">
+                                                                        <div className="flex flex-col gap-0.5">
+                                                                            <span>Düşük Pil Uyarısı</span>
+                                                                            <span className="text-[8px] text-gray-400 font-medium">Tasma şarjı %15 altına inerse bildirim gönder.</span>
+                                                                        </div>
+                                                                        <input 
+                                                                            type="checkbox" 
+                                                                            checked={collarLowBattery} 
+                                                                            onChange={(e) => {
+                                                                                setCollarLowBattery(e.target.checked);
+                                                                                setToastMsg(e.target.checked ? "🔋 Düşük pil uyarısı aktif edildi!" : "🔕 Düşük pil uyarısı devredışı bırakıldı.");
+                                                                            }}
+                                                                            className="rounded border-gray-300 text-[#527958] focus:ring-[#527958] w-4 h-4 cursor-pointer animate-none" 
+                                                                        />
+                                                                    </label>
+                                                                    <label className="flex justify-between items-center p-2.5 rounded-2xl bg-gray-50/70 cursor-pointer">
+                                                                        <div className="flex flex-col gap-0.5">
+                                                                            <span>Sağlık Anomalisi SMS Uyarısı</span>
+                                                                            <span className="text-[8px] text-gray-400 font-medium">Stres, kalp ritmi veya anormal havlama durumunda SMS gönder.</span>
+                                                                        </div>
+                                                                        <input 
+                                                                            type="checkbox" 
+                                                                            checked={anomaliesSms} 
+                                                                            onChange={(e) => {
+                                                                                setAnomaliesSms(e.target.checked);
+                                                                                setToastMsg(e.target.checked ? "📲 Sağlık anomalisi SMS bildirimi aktif!" : "🔕 Sağlık anomalisi SMS uyarısı devredışı.");
+                                                                            }}
+                                                                            className="rounded border-gray-300 text-[#527958] focus:ring-[#527958] w-4 h-4 cursor-pointer animate-none" 
+                                                                        />
+                                                                    </label>
+                                                                    <label className="flex justify-between items-center p-2.5 rounded-2xl bg-gray-50/70 cursor-pointer">
+                                                                        <span>Anlık Kurye ve Sipariş Takip Bildirimleri</span>
+                                                                        <input type="checkbox" defaultChecked className="rounded border-gray-300 text-[#527958] focus:ring-[#527958] w-4 h-4 cursor-pointer animate-none" />
+                                                                    </label>
+                                                                    <label className="flex justify-between items-center p-2.5 rounded-2xl bg-gray-50/70 cursor-pointer">
+                                                                        <span>Fatura ve Kampanya E-Postaları</span>
+                                                                        <input type="checkbox" defaultChecked className="rounded border-gray-300 text-[#527958] focus:ring-[#527958] w-4 h-4 cursor-pointer animate-none" />
+                                                                    </label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* 8. Menu: Account Safety, OTP, and Support */}
+                                            <div className="flex flex-col gap-3">
+                                                <span className="text-[10px] font-black tracking-widest text-gray-400 uppercase px-1">HESAP GÜVENLİĞİ & DESTEK</span>
+                                                
+                                                <div className="flex flex-col gap-2">
+                                                    <button className="flex items-center justify-between p-4.5 rounded-3xl bg-white border border-gray-100 hover:bg-gray-50/80 transition-all text-left group cursor-pointer shadow-[0_2px_8px_rgba(0,0,0,0.005)]">
+                                                        <div className="flex items-center gap-3">
+                                                            <Shield className="w-5 h-5 text-gray-500" />
+                                                            <div>
+                                                                <div className="text-[11.5px] font-black text-gray-800">OTP Güvenlik ve E-Posta Ayarları</div>
+                                                                <div className="text-[9px] text-gray-450 font-semibold mt-0.5">OTP şifresiz doğrulama durumu ve iki adımlı güvenlik</div>
+                                                            </div>
+                                                        </div>
+                                                        <ChevronRight className="w-4 h-4 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
+                                                    </button>
+
+                                                    <button className="flex items-center justify-between p-4.5 rounded-3xl bg-white border border-gray-100 hover:bg-gray-50/80 transition-all text-left group cursor-pointer shadow-[0_2px_8px_rgba(0,0,0,0.005)]">
+                                                        <div className="flex items-center gap-3">
+                                                            <Fingerprint className="w-5 h-5 text-gray-500" />
+                                                            <div>
+                                                                <div className="text-[11.5px] font-black text-gray-800">Biometrik Giriş ve Akıllı Pasaport Eşleme</div>
+                                                                <div className="text-[9px] text-gray-450 font-semibold mt-0.5">FaceID/TouchID ile hızlı erişim ve NFC çip entegrasyonu</div>
+                                                            </div>
+                                                        </div>
+                                                        <ChevronRight className="w-4 h-4 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
+                                                    </button>
+
+                                                    <button className="flex items-center justify-between p-4.5 rounded-3xl bg-white border border-gray-100 hover:bg-gray-50/80 transition-all text-left group cursor-pointer shadow-[0_2px_8px_rgba(0,0,0,0.005)]">
+                                                        <div className="flex items-center gap-3">
+                                                            <Info className="w-5 h-5 text-gray-500" />
+                                                            <div>
+                                                                <div className="text-[11.5px] font-black text-gray-800">Moffi Club™ Yardım & Destek Hattı</div>
+                                                                <div className="text-[9px] text-gray-450 font-semibold mt-0.5">Kullanım rehberleri, tasmamı bul desteği ve destek talepleri</div>
+                                                            </div>
+                                                        </div>
+                                                        <ChevronRight className="w-4 h-4 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* 9. Secure Logout Button */}
+                                            <button 
+                                                onClick={() => setExpandedPanel(null)}
+                                                className="w-full py-4 rounded-2.5xl bg-red-50 hover:bg-red-100 text-red-650 text-xs font-black tracking-wider uppercase border border-red-100/60 cursor-pointer transition-colors text-center shadow-sm"
+                                            >
+                                                Güvenli Çıkış Yap
+                                            </button>
+                                        </div>
+                                    )}
+
+                                </motion.div>
+
+                            </motion.div>
+                        </div>
                     </>
                 )}
             </AnimatePresence>
 
-            {/* LOST AD (SOS) MODAL */}
+            {/* FULLSCREEN STORY VIEWER OVERLAY */}
             <AnimatePresence>
-                {isLostAdModalOpen && (
-                    <motion.div
-                        initial={{ opacity: 0, y: "100%" }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: "100%" }}
-                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                        className="fixed inset-0 z-[280] bg-[var(--background)] flex flex-col pt-12 text-[var(--foreground)]"
-                    >
-                        {/* Emergency Header */}
-                        <div className="flex justify-between items-center px-6 pb-4 border-b border-red-500/20">
-                            <button
-                                onClick={() => setIsLostAdModalOpen(false)}
-                                className="w-10 h-10 rounded-full bg-[var(--card-bg)] flex items-center justify-center -ml-2 hover:bg-white/10 transition-colors"
-                            >
-                                <ChevronLeft className="w-6 h-6 text-[var(--foreground)]" />
-                            </button>
-                            <h2 className="text-lg font-black text-red-500 tracking-wider">ACİL DURUM İLANI</h2>
-                            <div className="w-10" />
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1 overflow-y-auto w-full max-w-lg mx-auto p-6 space-y-6">
-
-                            <div className="bg-red-500/10 border border-red-500/30 rounded-3xl p-6 text-center shadow-inner relative overflow-hidden">
-                                <div className="absolute inset-0 bg-red-500/10 animate-pulse pointer-events-none" />
-                                <div className="w-16 h-16 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center mx-auto mb-4 border border-red-500/30">
-                                    <MapPin className="w-8 h-8" />
-                                </div>
-                                <h3 className="text-xl font-bold text-[var(--foreground)] mb-2">Çevredeki Herkesi Uyar!</h3>
-                                <p className="text-sm text-red-500 font-medium leading-relaxed">
-                                    Kaybolan dostunuzun bilgilerini girdiğinizde, 5 km çapındaki tüm Moffi üyelerine anında acil durum (SOS) bildirimi gönderilecektir.
-                                </p>
-                            </div>
-
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="text-xs font-bold text-[var(--secondary-text)] ml-1 uppercase tracking-wider">İsmi</label>
-                                    <input value={lostPetName} onChange={e => setLostPetName(e.target.value)} type="text" placeholder="Örn: Buster" className="w-full mt-1 bg-[var(--card-bg)] border border-white/10 rounded-2xl py-4 px-5 text-[var(--foreground)] outline-none focus:border-red-500 transition-colors" />
-                                </div>
-
-                                <div>
-                                    <label className="text-xs font-bold text-[var(--secondary-text)] ml-1 uppercase tracking-wider">Cinsi / Türü</label>
-                                    <input value={lostPetBreed} onChange={e => setLostPetBreed(e.target.value)} type="text" placeholder="Örn: Golden Retriever" className="w-full mt-1 bg-[var(--card-bg)] border border-white/10 rounded-2xl py-4 px-5 text-[var(--foreground)] outline-none focus:border-red-500 transition-colors" />
-                                </div>
-
-                                <div>
-                                    <label className="text-xs font-bold text-[var(--secondary-text)] ml-1 uppercase tracking-wider">En Son Görüldüğü Yer</label>
-                                    <input value={lostPetLocation} onChange={e => setLostPetLocation(e.target.value)} type="text" placeholder="Örn: Kadıköy Moda Sahili" className="w-full mt-1 bg-[var(--card-bg)] border border-white/10 rounded-2xl py-4 px-5 text-[var(--foreground)] outline-none focus:border-red-500 transition-colors" />
-                                </div>
-
-                                <div>
-                                    <label className="text-xs font-bold text-[var(--secondary-text)] ml-1 uppercase tracking-wider">Detaylar / İletişim Notu</label>
-                                    <textarea value={lostPetDesc} onChange={e => setLostPetDesc(e.target.value)} placeholder="Tasma rengi, belirgin özelliği veya ek iletişim bilgileriniz..." className="w-full mt-1 bg-[var(--card-bg)] border border-white/10 rounded-2xl py-4 px-5 text-[var(--foreground)] outline-none focus:border-red-500 transition-colors resize-none h-24" />
-                                </div>
-
-                                <div>
-                                    <div className="flex justify-between items-center mb-2 px-1">
-                                        <label className="text-xs font-bold text-[var(--secondary-text)] uppercase tracking-wider">Fotoğraflar</label>
-                                        <button onClick={() => sosInputRef.current?.click()} className="text-[10px] bg-red-500/10 text-red-500 px-3 py-1 rounded-full border border-red-500/20 font-bold hover:bg-red-500/20 transition-all uppercase tracking-tighter flex items-center gap-1">
-                                            <Camera className="w-3 h-3" /> Fotoğraf Ekle
-                                        </button>
-                                        <input type="file" ref={sosInputRef} className="hidden" accept="image/*" multiple onChange={handleSosImageSelect} />
-                                    </div>
-
-                                    {lostPetPhotos.length > 0 ? (
-                                        <div className="grid grid-cols-4 gap-3">
-                                            {lostPetPhotos.map((photo, idx) => (
-                                                <div key={idx} className="aspect-square rounded-xl bg-[var(--card-bg)] border border-white/10 relative overflow-hidden group">
-                                                    <img src={photo.preview} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
-                                                    <button
-                                                        onClick={() => setLostPetPhotos(prev => prev.filter((_, i) => i !== idx))}
-                                                        className="absolute top-1 right-1 w-5 h-5 bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center text-[var(--foreground)]/70 hover:text-[var(--foreground)]"
-                                                    >
-                                                        <X className="w-3 h-3" />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                            {lostPetPhotos.length < 4 && (
-                                                <button
-                                                    onClick={() => sosInputRef.current?.click()}
-                                                    className="aspect-square rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-red-500/50 hover:text-red-500 transition-all"
-                                                >
-                                                    <Plus className="w-5 h-5" />
-                                                </button>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <div
-                                            onClick={() => sosInputRef.current?.click()}
-                                            className="w-full py-8 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-red-500/30 hover:bg-red-500/5 transition-all cursor-pointer"
-                                        >
-                                            <Camera className="w-8 h-8 mb-2 opacity-30" />
-                                            <p className="text-xs font-bold">Fotoğraf Ekle</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Sticky Action Button */}
-                        <div className="p-6 border-t border-red-500/20 bg-[var(--background)] shrink-0">
-                            <button
-                                onClick={submitSos}
-                                disabled={isSubmittingSOS}
-                                className={cn("w-full py-4 rounded-2xl font-black text-[var(--foreground)] text-base tracking-wide flex items-center justify-center gap-2 shadow-[0_10px_30px_rgba(220,38,38,0.4)] transition-all", isSubmittingSOS ? "bg-red-800 cursor-not-allowed" : "bg-red-600 active:scale-95")}
-                            >
-                                {isSubmittingSOS ? (
-                                    <span className="animate-pulse">Sinyal İletiliyor...</span>
-                                ) : (
-                                    <><Activity className="w-5 h-5 animate-pulse" /> S.O.S Sinyali Gönder</>
-                                )}
-                            </button>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* IMMERSIVE LOST PET DETAIL MODAL */}
-            <AnimatePresence>
-                {selectedLostPet && (
-                    <motion.div
-                        initial={{ opacity: 0, y: "100%" }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: "100%" }}
-                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                        className="fixed inset-0 z-[290] bg-black text-[var(--foreground)] flex flex-col"
-                    >
-                        {/* Immersive Media Header */}
-                        <div className="relative w-full h-[55vh] shrink-0 bg-gray-900 overflow-hidden">
-                            {selectedLostPet.media_url ? (
-                                <img src={selectedLostPet.media_url} className="w-full h-full object-cover opacity-90 transition-all duration-500" />
-                            ) : (
-                                <div className="absolute inset-x-0 inset-y-0 flex items-center justify-center bg-red-950/30">
-                                    <MapPin className="w-20 h-20 text-red-500/20" />
-                                </div>
-                            )}
-
-                            <div className="absolute inset-0 bg-gradient-to-t from-[var(--background)] via-[var(--background)]/40 to-transparent pointer-events-none" />
-
-                            {/* Multi-photo switcher if available */}
-                            {selectedLostPet.images && selectedLostPet.images.length > 1 && (
-                                <div className="absolute bottom-24 left-6 flex gap-2 z-20 overflow-x-auto no-scrollbar max-w-[calc(100%-48px)] pb-1">
-                                    {selectedLostPet.images.map((url: string, i: number) => (
-                                        <button
-                                            key={i}
-                                            onClick={() => setSelectedLostPet({ ...selectedLostPet, media_url: url })}
-                                            className={cn(
-                                                "w-12 h-12 rounded-xl border-2 overflow-hidden shrink-0 transition-all",
-                                                selectedLostPet.media_url === url ? "border-red-500 scale-105" : "border-white/10 opacity-60"
-                                            )}
-                                        >
-                                            <img src={url} className="w-full h-full object-cover" />
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-
-                            {/* Floating Top Nav */}
-                            <div className="absolute top-0 inset-x-0 p-6 flex justify-between items-center z-10 bg-gradient-to-b from-black/80 to-transparent">
-                                <button
-                                    onClick={() => setSelectedLostPet(null)}
-                                    className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors active:scale-95"
-                                >
-                                    <ChevronLeft className="w-6 h-6 text-[var(--foreground)]" />
-                                </button>
-                                <div className="flex gap-3">
-                                    <button className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors active:scale-95" onClick={() => showToast("SOS Modu Aktif", "İlanınız hazırlanıyor...", "Zap")}>
-                                        <Share2 className="w-5 h-5 text-[var(--foreground)]" />
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Hero Text */}
-                            <div className="absolute bottom-6 left-6 right-6 z-10 flex flex-col gap-1">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <span className="bg-red-600 px-3 py-1 rounded-full text-xs font-black text-[var(--foreground)] tracking-widest uppercase shadow-[0_0_15px_rgba(220,38,38,0.5)]">
-                                        KAYIP İLANI
-                                    </span>
-                                    <span className="bg-black/50 backdrop-blur-md px-3 py-1 rounded-full text-xs font-medium text-[var(--foreground)] border border-white/10">
-                                        {new Date(selectedLostPet.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                </div>
-                                <h1 className="text-4xl font-black text-[var(--foreground)] tracking-tight drop-shadow-xl flex items-center gap-3">
-                                    {selectedLostPet.pet_name}
-                                </h1>
-                                <p className="text-gray-300 text-lg font-medium drop-shadow-md">{selectedLostPet.pet_breed || "Belirtilmedi"}</p>
-                            </div>
-                        </div>
-
-                        {/* Content Scroll Area */}
-                        <div className="flex-1 bg-[var(--background)] overflow-y-auto no-scrollbar pb-32">
-                            <div className="p-6 space-y-8 max-w-lg mx-auto">
-
-                                {/* Info Cards Row */}
-                                <div className="flex gap-4">
-                                    <div className="flex-1 bg-[var(--card-bg)] border border-white/10 rounded-2xl p-4 flex flex-col justify-center items-center text-center gap-1.5 shadow-lg">
-                                        <MapPin className="w-6 h-6 text-red-400 mb-1" />
-                                        <span className="text-[10px] text-[var(--secondary-text)] font-bold uppercase tracking-wider">Son Görülen Yer</span>
-                                        <span className="text-sm text-[var(--foreground)] font-bold leading-tight">{selectedLostPet.last_location}</span>
-                                    </div>
-                                    <div className="flex-1 bg-[var(--card-bg)] border border-white/10 rounded-2xl p-4 flex flex-col justify-center items-center text-center gap-1.5 shadow-lg">
-                                        <User className="w-6 h-6 text-blue-400 mb-1" />
-                                        <span className="text-[10px] text-[var(--secondary-text)] font-bold uppercase tracking-wider">İlan Sahibi</span>
-                                        <span className="text-sm text-[var(--foreground)] font-bold leading-tight line-clamp-1 truncate w-full">{selectedLostPet.author_name}</span>
-                                    </div>
-                                </div>
-
-                                {/* Description */}
-                                <div>
-                                    <h3 className="text-lg font-black text-[var(--foreground)] mb-3">Detaylar</h3>
-                                    <p className="text-gray-300 leading-relaxed font-medium">
-                                        {selectedLostPet.description || "Ek detay girilmemiş."}
-                                    </p>
-                                </div>
-
-                                {/* Warning Box */}
-                                <div className="bg-red-500/10 border-l-4 border-red-500 p-4 rounded-r-xl">
-                                    <p className="text-red-400 text-sm font-medium">
-                                        Eğer bu dostumuzu görüyorsanız lütfen ani hareketler yapmadan, nazikçe yaklaşın ve acil durum olarak iletişime geçin.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Solid Action Bar Bottom */}
-                        <div className="absolute inset-x-0 bottom-0 bg-[var(--background)] border-t border-[var(--card-border)] p-6 pb-8 shrink-0 flex gap-4">
-                            <button className="flex-1 py-4 rounded-2xl bg-cyan-500 text-black font-black text-base flex items-center justify-center gap-2 active:scale-95 transition-transform" onClick={handleMessageOwner}>
-                                <MessageCircle className="w-5 h-5" /> Sahibine Mesaj At
-                            </button>
-                            <button disabled={isReportingLocation} className={cn("flex-1 py-4 rounded-2xl border border-white/20 font-black text-base flex items-center justify-center gap-2 transition-transform", isReportingLocation ? "bg-white/20 text-[var(--secondary-text)] cursor-not-allowed" : "bg-white/10 text-[var(--foreground)] hover:bg-white/20 active:scale-95")} onClick={handleReportLocation}>
-                                {isReportingLocation ? <Activity className="w-5 h-5 animate-spin" /> : <Flame className="w-5 h-5 text-red-500" />} {isReportingLocation ? "Bulunuyor..." : "Onu Gördüm!"}
-                            </button>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* SECURE ANON COMMUNICATION MODAL */}
-            <AnimatePresence>
-                {anonModalType && (
-                    <div className="fixed inset-0 z-[140] flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-                            onClick={() => setAnonModalType(null)}
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="w-full max-w-md bg-[var(--card-bg)] rounded-[2rem] border border-white/10 shadow-2xl relative z-10 overflow-hidden flex flex-col"
-                        >
-                            <div className="p-6 pb-4 border-b border-[var(--card-border)] flex flex-col items-center">
-                                <div className="w-16 h-16 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center mb-4 ring-4 ring-blue-500/10">
-                                    <Lock className="w-8 h-8" />
-                                </div>
-                                <h3 className="text-xl font-black text-[var(--foreground)] text-center">
-                                    {anonModalType === 'report' ? "Gizli İhbar Yap" : "Anonim Mesaj Gönder"}
-                                </h3>
-                            </div>
-
-                            <div className="p-6 space-y-4">
-                                <p className="text-[var(--secondary-text)] text-sm font-medium leading-relaxed text-center">
-                                    Moffi KVKK yükümlülükleri gereğince, iletişim bilgileriniz, gerçek adınız veya net GPS konumunuz {selectedLostPet?.author_name} kullanıcısı ile <strong className="text-[var(--foreground)]">asla paylaşılmayacaktır.</strong>
-                                </p>
-
-                                <div className="bg-red-500/10 border-l-2 border-red-500 p-3 rounded-r-lg">
-                                    <p className="text-xs text-red-400">
-                                        Güvenliğiniz için lütfen buluşma tekliflerini doğrudan kabul etmeyin. Eğer kayıp dostumuzu bulursanız, teslimatı her iki taraf için de kalabalık bir alanda (Örn: Veteriner veya Polis Merkezi) gerçekleştirin.
-                                    </p>
-                                </div>
-
-                                {anonError && (
-                                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="bg-red-500/20 text-red-400 p-3 rounded-xl text-xs font-bold border border-red-500/50">
-                                        <Activity className="w-4 h-4 inline-block mr-1 mb-0.5" /> {anonError}
-                                    </motion.div>
-                                )}
-
-                                <div className="relative">
-                                    <textarea
-                                        value={anonMessage}
-                                        onChange={e => {
-                                            setAnonMessage(e.target.value);
-                                            if (anonError) setAnonError(null);
-                                        }}
-                                        placeholder={anonModalType === 'report' ? "Hangi bölgede gördünüz? (Sadece sokak, park veya mekan adı)" : "Mesajınız (Numaranız veya isminiz gizli kalacaktır)..."}
-                                        className={cn("w-full bg-[var(--background)] border rounded-xl p-4 text-[var(--foreground)] text-sm outline-none transition-colors h-28 resize-none", anonError ? "border-red-500 focus:border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]" : "border-white/10 focus:border-cyan-500")}
-                                    />
-                                    {anonError && (
-                                        <div className="absolute top-2 right-2 p-1.5 bg-red-500 rounded-full animate-bounce">
-                                            <Lock className="w-3 h-3 text-[var(--foreground)]" />
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="flex gap-3 pt-2">
-                                    <button
-                                        onClick={() => { setAnonModalType(null); setAnonError(null); }}
-                                        className="flex-1 py-3 rounded-xl bg-[var(--card-bg)] text-[var(--secondary-text)] font-bold hover:bg-white/10 transition-colors"
-                                    >
-                                        İptal
-                                    </button>
-                                    <button
-                                        disabled={isSubmittingAnon || !anonMessage.trim()}
-                                        onClick={submitAnonAction}
-                                        className={cn("flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all", (!anonMessage.trim() || isSubmittingAnon) ? "bg-cyan-900 text-cyan-500/50 cursor-not-allowed" : "bg-cyan-500 text-black active:scale-95")}
-                                    >
-                                        {isSubmittingAnon ? "Gönderiliyor..." : "Güvenli Gönder"}
-                                    </button>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
-
-
-            {/* ADD ADOPTION PET MODAL (Apple Bottom Sheet Style) */}
-            <AnimatePresence>
-                {isAddAdoptionModalOpen && (
+                {viewerStoryGroupIndex !== null && activeGroup && activeStory && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[300] flex flex-col justify-end"
+                        className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-0 md:p-4 backdrop-blur-lg"
                     >
-                        {/* Blur Backdrop */}
-                        <motion.div
-                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                            onClick={() => setIsAddAdoptionModalOpen(false)}
-                        />
+                        {/* Background Blur Image */}
+                        <div className="absolute inset-0 bg-cover bg-center filter blur-2xl opacity-30 select-none pointer-events-none" style={{ backgroundImage: `url(${activeStory.media_url})` }} />
 
-                        {/* Sliding Sheet */}
+                        {/* Modal Container */}
                         <motion.div
-                            initial={{ y: "100%" }}
-                            animate={{ y: 0 }}
-                            exit={{ y: "100%" }}
-                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            className="relative w-full h-[90vh] bg-[var(--card-bg)] rounded-t-[2.5rem] flex flex-col overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.5)] border-t border-white/10"
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="relative w-full h-full md:max-w-md md:h-[800px] md:rounded-[32px] bg-gray-950 overflow-hidden shadow-2xl flex flex-col justify-between"
                         >
-                            {/* Grab Handle */}
-                            {/* Grab Handle (Click to close) */}
-                            <button 
-                                onClick={() => setIsAddAdoptionModalOpen(false)}
-                                className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/20 rounded-full z-50 hover:bg-white/40 transition-colors cursor-pointer"
-                            />
-
-
-
-                            <div className="p-6 pt-12 pb-4 border-b border-[var(--card-border)] shrink-0 flex items-center gap-4">
-                                <button onClick={() => setIsAddAdoptionModalOpen(false)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center -ml-2 hover:bg-white/10 transition-colors">
-                                    <ChevronLeft className="w-6 h-6" />
-                                </button>
-                                <div>
-                                    <h2 className="text-2xl font-black text-[var(--foreground)] flex items-center gap-2">
-                                        <HeartHandshake className="w-6 h-6 text-cyan-400" /> Sahiplendirme İlanı Ver
-                                    </h2>
-                                    <p className="text-xs text-[var(--secondary-text)] mt-1">Dostumuz için en iyi yuvayı bulalım.</p>
-                                </div>
+                            {/* Left/Right click handlers for navigation (restricted to middle height to keep header close button and footer CTA clickable) */}
+                            <div className="absolute inset-x-0 top-[80px] bottom-[120px] z-10 flex">
+                                <div className="w-1/2 h-full cursor-w-resize" onClick={prevStory} />
+                                <div className="w-1/2 h-full cursor-e-resize" onClick={nextStory} />
                             </div>
 
-                            <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6">
-                                {/* Photo Upload Apple Style */}
-                                <input
-                                    type="file"
-                                    ref={adoptionPhotoRef}
-                                    className="hidden"
-                                    accept="image/*"
-                                    onChange={(e) => {
-                                        const files = e.target.files;
-                                        if (files) {
-                                            const newPhotos = Array.from(files).map(file => ({
-                                                file,
-                                                preview: URL.createObjectURL(file)
-                                            }));
-                                            setAdoptionPetPhotos(prev => [...prev, ...newPhotos]);
-                                            if (adoptionPhotoRef.current) adoptionPhotoRef.current.value = '';
-                                        }
-                                    }}
-                                />
-                                {adoptionPetPhotos.length > 0 ? (
-                                    <div className="grid grid-cols-4 gap-3 mb-2">
-                                        {adoptionPetPhotos.map((photo, idx) => (
-                                            <div key={idx} className="aspect-square rounded-2xl bg-[#1C1C1E] border border-white/10 relative overflow-hidden group">
-                                                <img src={photo.preview} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
-                                                <button
-                                                    onClick={() => setAdoptionPetPhotos(prev => prev.filter((_, i) => i !== idx))}
-                                                    className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center text-[var(--foreground)]/70 hover:text-[var(--foreground)] transition-colors"
-                                                >
-                                                    <X className="w-3.5 h-3.5" />
-                                                </button>
+                            {/* Top Story Header & Bars */}
+                            <div className="absolute top-0 inset-x-0 p-4 bg-gradient-to-b from-black/80 to-transparent z-20 flex flex-col gap-3">
+                                {/* Progress Bars */}
+                                <div className="flex gap-1.5 w-full">
+                                    {activeGroup.stories.map((s, idx) => {
+                                        let pct = 0;
+                                        if (idx < viewerStoryIndex) pct = 100;
+                                        else if (idx === viewerStoryIndex) pct = storyProgress;
+                                        return (
+                                            <div key={s.id} className="flex-1 h-1 bg-white/30 rounded-full overflow-hidden">
+                                                <div 
+                                                    className="h-full bg-white rounded-full"
+                                                    style={{ 
+                                                        width: `${pct}%`,
+                                                        transition: pct === 0 ? 'none' : 'width 5000ms linear'
+                                                    }}
+                                                />
                                             </div>
-                                        ))}
-                                        {adoptionPetPhotos.length < 4 && (
-                                            <button
-                                                onClick={() => adoptionPhotoRef.current?.click()}
-                                                className="aspect-square rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-cyan-400/50 hover:text-cyan-400 transition-all font-bold"
-                                            >
-                                                <Plus className="w-6 h-6" />
-                                                <span className="text-[10px] mt-1">Ekle</span>
-                                            </button>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div
-                                        onClick={() => adoptionPhotoRef.current?.click()}
-                                        className="w-full h-52 rounded-3xl bg-[#1C1C1E] border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-cyan-400/50 hover:bg-cyan-400/5 transition-colors cursor-pointer group mb-2 shadow-inner overflow-hidden"
-                                    >
-                                        <Camera className="w-8 h-8 mb-2 group-hover:text-cyan-400 group-hover:scale-110 transition-all drop-shadow-md" />
-                                        <span className="text-sm font-bold tracking-wide">Net Fotoğraflar Yükle</span>
-                                        <span className="text-[10px] mt-1 text-[var(--secondary-text)] font-medium italic">Sahiplendirme şansını %80 artırır</span>
-                                    </div>
-                                )}
-
-                                <div className="space-y-5">
-                                    <div>
-                                        <label className="text-xs font-bold text-[var(--secondary-text)] uppercase tracking-widest ml-1 mb-2 block">Kategori</label>
-                                        <div className="flex gap-2 mb-4">
-                                            {[
-                                                { id: 'cat', label: 'Kedi', icon: '🐱' },
-                                                { id: 'dog', label: 'Köpek', icon: '🐶' },
-                                                { id: 'bird', label: 'Kuş', icon: '🦜' },
-                                                { id: 'other', label: 'Diğer', icon: '🐾' },
-                                            ].map(type => (
-                                                <button
-                                                    key={type.id}
-                                                    onClick={() => setAdoptionPetType(type.id)}
-                                                    className={cn(
-                                                        "flex-1 py-3 rounded-2xl text-xs font-bold transition-all flex flex-col items-center gap-1 border",
-                                                        adoptionPetType === type.id
-                                                            ? "bg-cyan-500/20 border-cyan-400 text-cyan-400"
-                                                            : "bg-[var(--background)] border-[var(--card-border)] text-[var(--secondary-text)]"
-                                                    )}
-                                                >
-                                                    <span className="text-xl">{type.icon}</span>
-                                                    {type.label}
-                                                </button>
-                                            ))}
-                                        </div>
-
-                                        <label className="text-xs font-bold text-[var(--secondary-text)] uppercase tracking-widest ml-1 mb-1.5 block">İsim & Tür</label>
-                                        <div className="flex gap-3">
-                                            <input
-                                                type="text"
-                                                placeholder="İsim (Örn: Pamuk)"
-                                                value={adoptionPetName}
-                                                onChange={(e) => setAdoptionPetName(e.target.value)}
-                                                className="w-1/2 bg-[var(--background)] border border-[var(--card-border)] rounded-2xl px-4 py-3 text-[var(--foreground)] text-[15px] focus:outline-none focus:border-cyan-400 focus:bg-[var(--card-bg)] transition-colors placeholder:text-gray-600"
-                                            />
-                                            <input
-                                                type="text"
-                                                placeholder="Tür / Irk"
-                                                value={adoptionPetBreed}
-                                                onChange={(e) => setAdoptionPetBreed(e.target.value)}
-                                                className="w-1/2 bg-[var(--background)] border border-[var(--card-border)] rounded-2xl px-4 py-3 text-[var(--foreground)] text-[15px] focus:outline-none focus:border-cyan-400 focus:bg-[var(--card-bg)] transition-colors placeholder:text-gray-600"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className="text-xs font-bold text-[var(--secondary-text)] uppercase tracking-widest ml-1 mb-1.5 block">Yaş & Açıklama</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Yaşı (Örn: 2 Aylık, 3 Yaşında)"
-                                            value={adoptionPetAge}
-                                            onChange={(e) => setAdoptionPetAge(e.target.value)}
-                                            className="w-full bg-[var(--background)] border border-[var(--card-border)] rounded-2xl px-4 py-3 text-[var(--foreground)] text-[15px] focus:outline-none focus:border-cyan-400 focus:bg-[var(--card-bg)] transition-colors mb-3 placeholder:text-gray-600"
-                                        />
-                                        <textarea
-                                            rows={4}
-                                            placeholder="Onu biraz anlatın... Tuvalet eğitimi var mı? Karakteri nasıl?"
-                                            value={adoptionPetDesc}
-                                            onChange={(e) => setAdoptionPetDesc(e.target.value)}
-                                            className="w-full bg-[var(--background)] border border-[var(--card-border)] rounded-2xl px-4 py-3 text-[var(--foreground)] text-[15px] focus:outline-none focus:border-cyan-400 focus:bg-[var(--card-bg)] transition-colors resize-none placeholder:text-gray-600"
-                                        />
-                                    </div>
-
-                                    {/* Alert / Warning Box */}
-                                    <div className="flex items-start gap-3 p-4 bg-red-500/10 rounded-3xl border border-red-500/20 mt-2">
-                                        <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">
-                                            <ShieldAlert className="w-4 h-4 text-red-500" />
-                                        </div>
-                                        <p className="text-[11px] text-gray-300 leading-relaxed font-medium mt-0.5">
-                                            <span className="text-red-400 font-bold tracking-wide">ÜCRET TALEP ETMEK YASAKTIR.</span> Moffi tamamen ücretsiz sahiplendirme üzerine kuruludur. Canlı satışı veya para talebi tespit edildiğinde hesaplar <strong className="text-[var(--foreground)]">kalıcı olarak</strong> kapatılır.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="p-6 pt-3 pb-8 bg-[var(--card-bg)] shrink-0 border-t border-[var(--card-border)] relative z-20">
-                                <button
-                                    onClick={handleAdoptionPost}
-                                    disabled={isSubmittingAdoption}
-                                    className="w-full py-4 rounded-full bg-white text-black font-black text-[15px] shadow-[0_10px_30px_rgba(255,255,255,0.15)] active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
-                                >
-                                    {isSubmittingAdoption ? (
-                                        <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                                    ) : (
-                                        <><CheckCheck className="w-5 h-5" /> İlanı Onaya Gönder</>
-                                    )}
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-
-            {/* APPLE BOTTOM SHEET - ADOPTION DETAY MODAL */}
-            <AnimatePresence>
-                {selectedAdoptionPet && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[310] flex flex-col justify-end"
-                    >
-                        {/* Blur Backdrop */}
-                        <motion.div
-                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                            onClick={() => setSelectedAdoptionPet(null)}
-                        />
-
-                        {/* Sliding Sheet */}
-                        <motion.div
-                            initial={{ y: "100%" }}
-                            animate={{ y: 0 }}
-                            exit={{ y: "100%" }}
-                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            drag="y"
-                            dragConstraints={{ top: 0 }}
-                            dragElastic={0.2}
-                            onDragEnd={(e, { offset, velocity }) => {
-                                if (offset.y > 100 || velocity.y > 500) {
-                                    setSelectedAdoptionPet(null);
-                                }
-                            }}
-                            className="relative w-full h-[85vh] bg-[var(--background)] rounded-t-[2.5rem] flex flex-col overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.5)] border-t border-white/10"
-                        >
-                            {/* Grab Handle */}
-                            {/* Grab Handle (Click to close) */}
-                            <button 
-                                onClick={() => setSelectedAdoptionPet(null)}
-                                className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/20 rounded-full z-50 hover:bg-white/40 transition-colors cursor-pointer"
-                            />
-
-
-
-                            {/* Hero Image */}
-                            <div className="w-full h-[45%] relative shrink-0">
-                                <img src={selectedAdoptionPet.img} className="w-full h-full object-cover transition-all duration-500" />
-                                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[var(--background)] to-transparent" />
-
-                                <button 
-                                    onClick={() => setSelectedAdoptionPet(null)}
-                                    className="absolute top-12 left-6 w-10 h-10 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white z-30 active:scale-90 transition-transform"
-                                >
-                                    <ChevronLeft className="w-6 h-6" />
-                                </button>
-
-                                {selectedAdoptionPet.images && selectedAdoptionPet.images.length > 1 && (
-                                    <div className="absolute bottom-10 left-6 flex gap-2 z-20 overflow-x-auto no-scrollbar max-w-[calc(100%-48px)] pb-1">
-                                        {selectedAdoptionPet.images.map((url: string, i: number) => (
-                                            <button
-                                                key={i}
-                                                onClick={() => setSelectedAdoptionPet({ ...selectedAdoptionPet, img: url })}
-                                                className={cn(
-                                                    "w-12 h-12 rounded-xl border-2 overflow-hidden shrink-0 transition-all",
-                                                    selectedAdoptionPet.img === url ? "border-cyan-400 scale-105" : "border-white/10 opacity-60"
-                                                )}
-                                            >
-                                                <img src={url} className="w-full h-full object-cover" />
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Content */}
-                            <div className="flex-1 overflow-y-auto no-scrollbar px-6 -mt-8 relative z-10">
-                                <span className="text-cyan-400 text-[10px] font-black uppercase tracking-widest">{selectedAdoptionPet.breed}</span>
-                                <h1 className="text-4xl font-black text-[var(--foreground)] leading-tight mt-1">{selectedAdoptionPet.name}</h1>
-
-                                <div className="flex gap-2 mt-4">
-                                    {selectedAdoptionPet.tags?.map((tag: string) => (
-                                        <div key={tag} className="bg-[var(--card-bg)] border border-white/10 px-3 py-1.5 rounded-full text-xs font-bold text-[var(--foreground)] flex items-center gap-1.5">
-                                            <Check className="w-3 h-3 text-cyan-400" /> {tag}
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
 
-                                <div className="mt-8 bg-[var(--card-bg)] rounded-3xl p-5 border border-[var(--card-border)]">
-                                    <h3 className="text-[var(--foreground)]/50 text-xs font-bold uppercase tracking-wider mb-2">Hikaye & Durum</h3>
-                                    <p className="text-gray-300 text-sm leading-relaxed font-medium">
-                                        {selectedAdoptionPet.desc}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Apple iOS Style Floating Action Bar */}
-                            <div className="w-full p-6 pt-2 pb-10 bg-gradient-to-t from-[var(--background)] via-[var(--background)] to-transparent relative z-20">
-                                <div className="flex gap-3">
-                                    <button
-                                        onClick={() => handleStartAdoptionChat(selectedAdoptionPet)}
-                                        className="flex-1 py-4 rounded-full bg-white/10 border border-white/10 text-[var(--foreground)] font-bold text-[15px] active:scale-95 transition-transform flex items-center justify-center gap-2"
+                                {/* Author Profile info */}
+                                <div className="flex justify-between items-center">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white/80 shadow-md">
+                                            <img src={activeGroup.author_avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200"} className="w-full h-full object-cover" alt="Author" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[12px] font-black text-white leading-tight tracking-tight drop-shadow-sm">{activeGroup.author_name}</span>
+                                            <span className="text-[9px] font-semibold text-white/70 leading-none drop-shadow-sm">Duyuru Kanalı</span>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        onClick={closeStoryViewer}
+                                        className="p-1.5 bg-white/10 hover:bg-white/20 text-white rounded-full cursor-pointer z-30 transition-colors"
                                     >
-                                        <MessageCircle className="w-5 h-5" /> Mesaj
-                                    </button>
-                                    <button
-                                        onClick={() => setIsApplicationFormOpen(true)}
-                                        className="flex-[2] py-4 rounded-full bg-cyan-500 text-black font-black text-[15px] shadow-[0_10px_30px_rgba(34,211,238,0.3)] active:scale-95 transition-transform flex items-center justify-center gap-2"
-                                    >
-                                        <HeartHandshake className="w-5 h-5" /> Sahiplenme Başvurusu
+                                        <X className="w-4.5 h-4.5" />
                                     </button>
                                 </div>
-                                <button
-                                    onClick={() => {
-                                        setReportingAdId(selectedAdoptionPet?.id || null);
-                                        setIsReportAdModalOpen(true);
-                                    }}
-                                    className="w-full mt-3 py-3 rounded-full bg-red-500/10 text-red-400 font-bold text-[13px] border border-red-500/20 active:scale-95 transition-transform flex items-center justify-center gap-2"
-                                >
-                                    <ShieldAlert className="w-4 h-4" /> Ücret Talep Ediyor / İhbar Et
-                                </button>
-                                <p className="text-[10px] text-[var(--secondary-text)] text-center font-medium mt-2">Moffi Güvenli Mesajlaşma ile verileriniz uçtan uca korunur.</p>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-
-            {/* REPORT ADOPTION AD MODAL (Apple Action Sheet) */}
-            <AnimatePresence>
-                {isReportAdModalOpen && selectedAdoptionPet && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[501] flex flex-col justify-end"
-                    >
-                        <motion.div
-                            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-                            onClick={() => setIsReportAdModalOpen(false)}
-                        />
-                        <motion.div
-                            initial={{ y: "100%" }}
-                            animate={{ y: 0 }}
-                            exit={{ y: "100%" }}
-                            transition={{ type: "spring", damping: 28, stiffness: 250 }}
-                            drag="y"
-                            dragConstraints={{ top: 0 }}
-                            dragElastic={0.2}
-                            onDragEnd={(e, { offset, velocity }) => {
-                                if (offset.y > 100 || velocity.y > 500) {
-                                    setIsReportAdModalOpen(false);
-                                }
-                            }}
-                            className="relative bg-[var(--card-bg)] rounded-t-[2.5rem] p-6 pb-12 border-t border-white/10 z-10"
-                        >
-                            <button 
-                                onClick={() => setIsReportAdModalOpen(false)}
-                                className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-6 hover:bg-white/40 transition-colors cursor-pointer block" 
-                            />
-
-                            <div className="flex items-center gap-3 mb-6">
-                                <button onClick={() => setIsReportAdModalOpen(false)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center -ml-2 hover:bg-white/10 transition-colors">
-                                    <ChevronLeft className="w-6 h-6" />
-                                </button>
-                                <div className="w-12 h-12 rounded-2xl bg-red-500/20 flex items-center justify-center ml-1">
-                                    <ShieldAlert className="w-6 h-6 text-red-500" />
-                                </div>
-                                <div>
-                                    <h3 className="text-[var(--foreground)] font-black text-lg">İlanı Bildir</h3>
-                                    <p className="text-[var(--secondary-text)] text-xs">Moffi ekibi en kısa sürede inceleyecek</p>
-                                </div>
                             </div>
 
-                            <div className="space-y-2 mb-6">
-                                {[
-                                    { value: 'fee', label: '💸 Ücret Talep Ediyor', desc: 'Sahiplendirme için para isteniyor' },
-                                    { value: 'sale', label: '🏷️ Hayvan Satışı', desc: 'Ticari amaçlı satış ilanı' },
-                                    { value: 'fake', label: '❌ Sahte İlan', desc: 'Görsel veya bilgiler gerçek değil' },
-                                    { value: 'inappropriate', label: '⚠️ Uygunsuz İçerik', desc: 'Kötü muamele veya şiddet' },
-                                    { value: 'other', label: '🔍 Diğer', desc: 'Diğer güvenlik sorunları' }
-                                ].map((opt) => (
+                            {/* Main Story Image */}
+                            <div className="flex-1 w-full h-full flex items-center justify-center bg-gray-900 select-none">
+                                <img src={activeStory.media_url} className="w-full h-full object-cover" alt="Story Media" />
+                            </div>
+
+                            {/* Bottom Story Content */}
+                            <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-black/90 via-black/60 to-transparent z-25 flex flex-col gap-4">
+                                <div className="flex flex-col gap-1.5 text-white">
+                                    {activeStory.badge && (
+                                        <span className="self-start text-[8px] font-black tracking-widest text-yellow-400 bg-yellow-400/10 border border-yellow-450/20 px-2 py-0.5 rounded-md uppercase">
+                                            {activeStory.badge}
+                                        </span>
+                                    )}
+                                    <h3 className="text-base font-black tracking-tight drop-shadow-sm leading-snug">{activeStory.title}</h3>
+                                    <p className="text-[11px] text-white/80 font-medium leading-relaxed drop-shadow-sm">{activeStory.description}</p>
+                                </div>
+
+                                {activeStory.ctaText && (
                                     <button
-                                        key={opt.value}
-                                        onClick={() => setReportReason(opt.value)}
-                                        className={cn(
-                                            "w-full flex items-start gap-3 p-4 rounded-2xl border transition-all text-left",
-                                            reportReason === opt.value ? "bg-red-500/10 border-red-500/30" : "bg-[var(--card-bg)] border-[var(--card-border)]"
-                                        )}
+                                        onClick={handleCtaClick}
+                                        className="w-full py-3.5 bg-white hover:bg-gray-100 text-gray-950 text-xs font-black uppercase tracking-wider rounded-2xl cursor-pointer shadow-md transition-colors z-30 text-center"
                                     >
-                                        <div className="flex-1">
-                                            <p className="text-[var(--foreground)] font-bold text-sm">{opt.label}</p>
-                                            <p className="text-[var(--secondary-text)] text-xs mt-0.5">{opt.desc}</p>
-                                        </div>
+                                        {activeStory.ctaText}
                                     </button>
-                                ))}
-                            </div>
-
-                            <button
-                                onClick={handleReportAdoption}
-                                disabled={!reportReason || isSubmittingReport}
-                                className="w-full py-4 rounded-full bg-red-500 text-[var(--foreground)] font-black text-[15px] active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-40"
-                            >
-                                {isSubmittingReport ? (
-                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                ) : (
-                                    <><ShieldAlert className="w-5 h-5" /> Bildirimi Gönder</>
                                 )}
-                            </button>
+                            </div>
                         </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* ADOPTION APPLICATION FORM MODAL (Apple Style) */}
-            <AnimatePresence>
-                {isApplicationFormOpen && selectedAdoptionPet && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[400] flex flex-col justify-end"
-                    >
-                        <motion.div
-                            className="absolute inset-0 bg-black/80 backdrop-blur-md"
-                            onClick={() => setIsApplicationFormOpen(false)}
-                        />
-                        <motion.div
-                            initial={{ y: "100%" }}
-                            animate={{ y: 0 }}
-                            exit={{ y: "100%" }}
-                            transition={{ type: "spring", damping: 28, stiffness: 250 }}
-                            drag="y"
-                            dragConstraints={{ top: 0 }}
-                            dragElastic={0.2}
-                            onDragEnd={(e, { offset, velocity }) => {
-                                if (offset.y > 100 || velocity.y > 500) {
-                                    setIsApplicationFormOpen(false);
-                                }
-                            }}
-                            className="relative bg-[var(--background)] rounded-t-[3rem] p-6 pb-12 border-t border-white/10 z-10 flex flex-col max-h-[90vh]"
-                        >
-                            <button 
-                                onClick={() => setIsApplicationFormOpen(false)}
-                                className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-6 hover:bg-white/40 transition-colors cursor-pointer block" 
-                            />
-
-                            <div className="flex items-center gap-4 mb-8">
-                                <button onClick={() => setIsApplicationFormOpen(false)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center -ml-2 hover:bg-white/10 transition-colors">
-                                    <ChevronLeft className="w-6 h-6" />
-                                </button>
-                                <div className="w-16 h-16 rounded-[1.5rem] overflow-hidden border border-white/10">
-                                    <img src={selectedAdoptionPet.img} className="w-full h-full object-cover" />
-                                </div>
-                                <div>
-                                    <h3 className="text-[var(--foreground)] font-black text-xl">{selectedAdoptionPet.name} İçin Başvuru</h3>
-                                    <p className="text-cyan-400 text-xs font-bold uppercase tracking-widest mt-1">Son Adım: Yuva Olma Formu</p>
-                                </div>
-                            </div>
-
-                            <div className="flex-1 overflow-y-auto no-scrollbar space-y-6">
-                                <div>
-                                    <label className="text-[var(--secondary-text)] text-[11px] font-black uppercase tracking-widest ml-1 mb-2 block">Evcil Hayvan Tecrübeniz</label>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {['0-2 Yıl', '3-5 Yıl', '5+ Yıl'].map(lvl => (
-                                            <button
-                                                key={lvl}
-                                                onClick={() => setAppExperience(lvl)}
-                                                className={cn(
-                                                    "py-3 rounded-2xl text-[13px] font-bold border transition-all",
-                                                    appExperience === lvl ? "bg-cyan-500/20 border-cyan-400 text-cyan-400" : "bg-[var(--card-bg)] border-[var(--card-border)] text-[var(--secondary-text)]"
-                                                )}
-                                            >
-                                                {lvl}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="text-[var(--secondary-text)] text-[11px] font-black uppercase tracking-widest ml-1 mb-2 block">Yaşam Alanınız</label>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {['Apartman', 'Müstakil', 'Bahçeli'].map(type => (
-                                            <button
-                                                key={type}
-                                                onClick={() => setAppHomeType(type)}
-                                                className={cn(
-                                                    "py-3 rounded-2xl text-[13px] font-bold border transition-all",
-                                                    appHomeType === type ? "bg-cyan-500/20 border-cyan-400 text-cyan-400" : "bg-[var(--card-bg)] border-[var(--card-border)] text-[var(--secondary-text)]"
-                                                )}
-                                            >
-                                                {type}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="text-[var(--secondary-text)] text-[11px] font-black uppercase tracking-widest ml-1 mb-2 block">Kendinizden Bahsedin</label>
-                                    <textarea
-                                        rows={4}
-                                        placeholder="Neden onu sahiplenmek istiyorsunuz? Ona nasıl bir hayat sunacaksınız?"
-                                        value={appNote}
-                                        onChange={(e) => setAppNote(e.target.value)}
-                                        className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-5 py-4 text-[var(--foreground)] text-[15px] focus:outline-none focus:border-cyan-400 transition-colors resize-none placeholder:text-gray-600"
-                                    />
-                                </div>
-
-                                <div className="bg-cyan-500/5 border border-cyan-500/10 rounded-3xl p-4 flex items-start gap-3">
-                                    <ShieldAlert className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
-                                    <p className="text-[11px] text-[var(--secondary-text)] leading-relaxed">
-                                        Moffi, sahiplendirme sürecinde aracıdır. Başvurunuz ilan sahibine iletilir. Kişisel güvenliğiniz için buluşmaları halka açık yerlerde gerçekleştirmenizi öneririz.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <button
-                                onClick={submitAdoptionApplication}
-                                disabled={!appNote.trim() || isSubmittingApp}
-                                className="w-full mt-8 py-4 rounded-full bg-cyan-500 text-black font-black text-[16px] shadow-[0_15px_40px_rgba(34,211,238,0.2)] active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-40"
-                            >
-                                {isSubmittingApp ? (
-                                    <div className="w-6 h-6 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                                ) : (
-                                    <><CheckCheck className="w-5 h-5" /> Başvuruyu Tamamla</>
-                                )}
-                            </button>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* DEDICATED ADOPTION CHAT (Apple iMessage Style) */}
-            <AnimatePresence>
-                {isAdoptionChatOpen && adoptionChatPet && (
-                    <motion.div
-                        initial={{ x: "100%" }}
-                        animate={{ x: 0 }}
-                        exit={{ x: "100%" }}
-                        transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                        className="fixed inset-0 z-[500] bg-black flex flex-col"
-                    >
-                        {/* Header */}
-                        <div className="pt-12 pb-4 px-4 bg-black/80 backdrop-blur-xl border-b border-[var(--card-border)] flex items-center gap-3">
-                            <button onClick={() => setIsAdoptionChatOpen(false)} className="w-10 h-10 rounded-full flex items-center justify-center text-[var(--secondary-text)] hover:text-[var(--foreground)] transition-colors">
-                                <ChevronLeft className="w-6 h-6" />
-                            </button>
-                            <div className="flex items-center gap-3">
-                                <img src={adoptionChatPet.img} className="w-10 h-10 rounded-full object-cover border border-white/10" />
-                                <div>
-                                    <h3 className="text-[var(--foreground)] font-bold text-sm leading-tight">{adoptionChatPet.name} İlanı</h3>
-                                    <p className="text-green-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
-                                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" /> Sahiplendirme Süreci Aktif
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Messages Area */}
-                        <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-4">
-                            {adoptionMessages.map((msg) => (
-                                <motion.div
-                                    key={msg.id}
-                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    className={cn(
-                                        "max-w-[80%] flex flex-col",
-                                        msg.sender === 'me' ? "ml-auto items-end" : msg.sender === 'system' ? "mx-auto items-center" : "mr-auto items-start"
-                                    )}
-                                >
-                                    {msg.sender === 'system' ? (
-                                        <div className="bg-[var(--card-bg)] border border-white/10 rounded-2xl px-4 py-2 text-[11px] text-[var(--secondary-text)] text-center leading-relaxed">
-                                            {msg.text}
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div className={cn(
-                                                "px-4 py-2.5 rounded-2xl text-[14px] font-medium leading-[1.4]",
-                                                msg.sender === 'me' ? "bg-cyan-500 text-[var(--foreground)] rounded-tr-sm" : "bg-[#1C1C1E] text-[var(--foreground)] rounded-tl-sm border border-[var(--card-border)]"
-                                            )}>
-                                                {msg.text}
-                                            </div>
-                                            <span className="text-[9px] text-[var(--secondary-text)] font-bold mt-1 uppercase tracking-tight">{msg.time}</span>
-                                        </>
-                                    )}
-                                </motion.div>
-                            ))}
-                        </div>
-
-                        {/* Input Area */}
-                        <div className="p-4 pb-10 bg-black/80 backdrop-blur-xl border-t border-[var(--card-border)]">
-                            <div className="flex items-center gap-2 bg-[#1C1C1E] rounded-full p-2 pl-4 border border-[var(--card-border)]">
-                                <input
-                                    type="text"
-                                    placeholder="Bir mesaj yazın..."
-                                    value={adoptionNewMsg}
-                                    onChange={(e) => setAdoptionNewMsg(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleSendAdoptionMsg()}
-                                    className="flex-1 bg-transparent border-none outline-none text-[var(--foreground)] text-[15px] placeholder:text-[var(--secondary-text)]"
-                                />
-                                <button
-                                    onClick={handleSendAdoptionMsg}
-                                    className="w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center text-[var(--foreground)] active:scale-95 transition-transform"
-                                >
-                                    <Send className="w-4 h-4 ml-0.5" />
-                                </button>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* INSTAGRAM STYLE STORY VIEWER */}
-            <AnimatePresence>
-                {
-                    viewerStoryGroupIndex !== null && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            transition={{ duration: 0.2 }}
-                            className="fixed inset-0 z-[200] bg-black flex flex-col justify-center items-center"
-                        >
-                            {/* Progress Bars Placeholder */}
-                            <div className="absolute top-4 left-4 right-4 z-10 flex gap-1 h-0.5">
-                                {storyGroups[viewerStoryGroupIndex].stories.map((_, idx) => (
-                                    <div key={idx} className="flex-1 bg-white/20 overflow-hidden rounded-full relative">
-                                        <div
-                                            className={cn(
-                                                "absolute top-0 left-0 bottom-0 bg-white",
-                                                idx === viewerStoryIndex && "shadow-[0_0_10px_white]"
-                                            )}
-                                            style={{
-                                                width: idx < viewerStoryIndex ? '100%' : idx === viewerStoryIndex ? `${storyProgress}%` : '0%',
-                                                transition: idx === viewerStoryIndex && storyProgress === 100 ? 'width 5000ms linear' : 'none'
-                                            }}
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* Top Header */}
-                            <div className="absolute top-8 left-4 right-4 z-10 flex justify-between items-center text-[var(--foreground)] drop-shadow-md">
-                                <div className="flex items-center gap-3">
-                                    <img src={(storyGroups[viewerStoryGroupIndex].user_id === user?.id ? (user?.avatar || storyGroups[viewerStoryGroupIndex].author_avatar) : storyGroups[viewerStoryGroupIndex].author_avatar) || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200"} className="w-8 h-8 rounded-full border border-white/40 object-cover" />
-                                    <span className="font-bold text-sm tracking-wide">{storyGroups[viewerStoryGroupIndex].author_name}</span>
-                                    <span className="text-[var(--foreground)]/60 text-xs mt-0.5">· {formatTimeAgo(storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].created_at)}</span>
-                                </div>
-                                <button onClick={closeStoryViewer} className="w-8 h-8 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center border border-white/20 active:scale-90 transition-transform"><X className="w-5 h-5" /></button>
-                            </div>
-
-                            {/* Media Display */}
-                            <div className="relative w-full h-full md:max-w-md md:aspect-[9/16] md:h-auto md:max-h-[90vh] md:rounded-3xl overflow-hidden bg-[#1c1c1e] md:border md:border-white/10 shadow-2xl">
-                                <img
-                                    key={storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].id}
-                                    src={storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].media_url}
-                                    className="w-full h-full object-cover animate-in fade-in zoom-in-95 duration-300"
-                                />
-
-                                {/* Gradients */}
-                                <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
-                                <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
-
-                                {/* Tap Zones */}
-                                <div className="absolute inset-y-0 left-0 w-1/3 z-20 cursor-pointer" onClick={prevStory} />
-                                <div className="absolute inset-y-0 right-0 w-2/3 z-20 cursor-pointer" onClick={nextStory} />
-
-                                {/* Bottom Actions 📸 */}
-                                <div className="absolute inset-x-0 bottom-0 p-4 z-30 flex items-center gap-3">
-                                    {storyGroups[viewerStoryGroupIndex].user_id === user?.id ? (
-                                        <div className="flex items-center justify-between w-full text-[var(--foreground)]">
-                                            <button className="flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); showToast("İstatistikler", "Luna, Felix ve 12 diğer kişi gördü.", "Users"); }}>
-                                                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
-                                                    <Activity className="w-4 h-4 text-white" />
-                                                </div>
-                                                <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Görüntüleme</span>
-                                            </button>
-                                            <div className="flex gap-4">
-                                                <button className="flex flex-col items-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); showToast("Öne Çıkarılıyor", "Hikayeniz vitrine taşınıyor...", "Sparkles"); }}>
-                                                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
-                                                        <Heart className="w-4 h-4 text-white" />
-                                                    </div>
-                                                    <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Öne Çıkar</span>
-                                                </button>
-                                                <button className="flex flex-col items-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); showToast("Seçenekler", "İşlem menüsü açılıyor...", "List"); }}>
-                                                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
-                                                        <MoreHorizontal className="w-4 h-4 text-white" />
-                                                    </div>
-                                                    <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Daha Fazla</span>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="flex gap-8 pointer-events-auto">
-                                            <button className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-[var(--foreground)] active:scale-90 transition-transform pointer-events-auto" onClick={(e) => { e.stopPropagation(); }}>
-                                                <Heart className="w-7 h-7 text-white" />
-                                            </button>
-                                            <button className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-[var(--foreground)] active:scale-90 transition-transform pointer-events-auto" onClick={(e) => { e.stopPropagation(); }}>
-                                                <Share2 className="w-7 h-7 text-white" />
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </motion.div>
-                    )
-                }
-            </AnimatePresence >
-
-            {/* MODULAR OVERLAY SYSTEM (LIFTED) */}
-            <OverlaySystem 
-                user={user}
-                userPets={userPets}
-                activePet={activePet}
-                switchPet={switchPet}
-                updatePet={updatePet}
-                isProfileMenuOpen={isProfileMenuOpen}
-                setIsProfileMenuOpen={setIsProfileMenuOpen}
-                profileViewMode={profileViewMode}
-                setProfileViewMode={setProfileViewMode}
-                qrModalPet={qrModalPet}
-                setQrModalPet={setQrModalPet}
-                isFullScreenQR={isFullScreenQR}
-                setIsFullScreenQR={setIsFullScreenQR}
-                selectedSharePost={selectedSharePost}
-                setSelectedSharePost={setSelectedSharePost}
-                isNotificationsOpen={isNotificationsOpen}
-                setIsNotificationsOpen={setIsNotificationsOpen}
-                notificationsList={notifications}
-                setNotificationsList={() => {}}
-                isPetSettingsOpen={isPetSettingsOpen}
-                setIsPetSettingsOpen={setIsPetSettingsOpen}
-                settingsPet={settingsPet}
-                isVetQuickSheetOpen={isVetQuickSheetOpen}
-                setIsVetQuickSheetOpen={setIsVetQuickSheetOpen}
-                isWalkQuickSheetOpen={isWalkQuickSheetOpen}
-                setIsWalkQuickSheetOpen={setIsWalkQuickSheetOpen}
-                isMarketQuickSheetOpen={isMarketQuickSheetOpen}
-                setIsMarketQuickSheetOpen={setIsMarketQuickSheetOpen}
-                isStudioQuickSheetOpen={isStudioQuickSheetOpen}
-                setIsStudioQuickSheetOpen={setIsStudioQuickSheetOpen}
-                isGameQuickSheetOpen={isGameQuickSheetOpen}
-                setIsGameQuickSheetOpen={setIsGameQuickSheetOpen}
-                isEcosystemPortalOpen={isEcosystemPortalOpen}
-                setIsEcosystemPortalOpen={setIsEcosystemPortalOpen}
-                isSpotlightOpen={isSpotlightOpen}
-                setIsSpotlightOpen={setIsSpotlightOpen}
-                isDiaryOpen={isDiaryOpen}
-                setIsDiaryOpen={setIsDiaryOpen}
-                setActiveTab={setActiveTab}
+            <PetSettingsModal 
+                isOpen={isPetSettingsOpen}
+                onClose={() => setIsPetSettingsOpen(false)}
+                pet={activePetObj}
+                onSave={handleSavePetSettings}
             />
+
+            <AddPetModal 
+                isOpen={isAddPetOpen}
+                onClose={() => setIsAddPetOpen(false)}
+                step={addPetStep}
+                setStep={setAddPetStep}
+                newPetName={newPetName}
+                setNewPetName={setNewPetName}
+                newPetType={newPetType}
+                setNewPetType={setNewPetType}
+                newPetBreed={newPetBreed}
+                setNewPetBreed={setNewPetBreed}
+                newPetAge={newPetAge}
+                setNewPetAge={setNewPetAge}
+                newPetGender={newPetGender}
+                setNewPetGender={setNewPetGender}
+                newPetNeutered={newPetNeutered}
+                setNewPetNeutered={setNewPetNeutered}
+                newPetSize={newPetSize}
+                setNewPetSize={setNewPetSize}
+                newPetFeatures={newPetFeatures}
+                setNewPetFeatures={setNewPetFeatures}
+                newPetHealth={newPetHealth}
+                setNewPetHealth={setNewPetHealth}
+                newPetCharacter={newPetCharacter}
+                setNewPetCharacter={setNewPetCharacter}
+                newPetMicrochip={newPetMicrochip}
+                setNewPetMicrochip={setNewPetMicrochip}
+                newPetShowPhone={newPetShowPhone}
+                setNewPetShowPhone={setNewPetShowPhone}
+                newPetPhotos={newPetPhotos}
+                setNewPetPhotos={setNewPetPhotos}
+                isSaving={isSavingPet}
+                onSave={handleAddPetSave}
+                newPetWeight={newPetWeight}
+                setNewPetWeight={setNewPetWeight}
+                newPetHealthStatus={newPetHealthStatus}
+                setNewPetHealthStatus={setNewPetHealthStatus}
+                newPetActivityTarget={newPetActivityTarget}
+                setNewPetActivityTarget={setNewPetActivityTarget}
+                newPetWaterTarget={newPetWaterTarget}
+                setNewPetWaterTarget={setNewPetWaterTarget}
+                newPetFoodTarget={newPetFoodTarget}
+                setNewPetFoodTarget={setNewPetFoodTarget}
+                newPetStreak={newPetStreak}
+                setNewPetStreak={setNewPetStreak}
+            />
+
+            <style jsx global>{`
+                .no-scrollbar::-webkit-scrollbar { display: none; }
+                .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+            `}</style>
         </div>
     );
 }
-
-// -- SETTINGS ROW COMPONENT --
-function SettingsRow({ icon: Icon, label, danger, onClick }: { icon: any, label: string, danger?: boolean, onClick: () => void }) {
-    return (
-        <button onClick={onClick} className={cn("w-full flex items-center justify-between p-4 rounded-2xl hover:bg-[var(--card-bg)] transition-colors group", danger && "hover:bg-red-500/10")}>
-            <div className="flex items-center gap-4">
-                <div className={cn("p-2 rounded-full", danger ? "bg-red-500/20 text-red-500" : "bg-white/10 text-[var(--foreground)]")}>
-                    <Icon className="w-5 h-5" />
-                </div>
-                <span className={cn("font-bold", danger ? "text-red-500" : "text-[var(--foreground)]/90")}>{label}</span>
-            </div>
-            <ChevronRight className={cn("w-5 h-5 opacity-50 group-hover:opacity-100 transition-opacity", danger ? "text-red-500" : "text-[var(--secondary-text)]")} />
-        </button>
-    );
-}
-
-// -- NAV BUTTON --
-function NavBtn({ icon: Icon, active, onClick }: { icon: any, active: boolean, onClick: () => void }) {
-    return (
-        <button onClick={onClick} className="relative p-2 transition-colors">
-            <Icon className={cn("w-6 h-6 transition-colors", active ? "text-[var(--foreground)]" : "text-[var(--secondary-text)] hover:text-gray-300")} strokeWidth={active ? 2.5 : 2} />
-            {active && (
-                <motion.div layoutId="nav-pill" className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
-            )}
-        </button>
-    );
-}
-
-
-// --- HELPER COMPONENTS ---
-const TimeWheel = ({ value, onChange, max, label }: { value: number, onChange: (v: number) => void, max: number, label: string }) => {
-    const numbers = Array.from({ length: max + 1 }, (_, i) => i);
-    return (
-        <div className="flex flex-col items-center gap-2">
-            <span className="text-[10px] font-black text-secondary uppercase tracking-widest">{label}</span>
-            <div className="h-40 overflow-y-auto no-scrollbar snap-y snap-mandatory bg-black/20 rounded-2xl border border-white/5 w-16">
-                {numbers.map(n => (
-                    <button 
-                        key={n} 
-                        onClick={() => onChange(n)} 
-                        className={cn(
-                            "h-10 w-full flex items-center justify-center snap-start transition-all", 
-                            value === n ? "text-cyan-400 font-black text-lg bg-cyan-400/10" : "text-white/20 text-sm"
-                        )}
-                    >
-                        {n.toString().padStart(2, '0')}
-                    </button>
-                ))}
-            </div>
-        </div>
-    );
-};

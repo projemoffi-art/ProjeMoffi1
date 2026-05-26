@@ -146,6 +146,10 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
             category: category as any
         };
         setPosts(prev => [newPost, ...prev]);
+        // Quest Engine Event Bus
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('moffi-quest-trigger', { detail: { type: 'post_added' } }));
+        }
     }, []);
 
     const toggleLike = React.useCallback((postId: string) => {
@@ -159,6 +163,10 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
             }
             return p;
         }));
+        // Quest Engine Event Bus
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('moffi-quest-trigger', { detail: { type: 'like_toggled' } }));
+        }
     }, []);
 
     const addComment = React.useCallback((postId: string, text: string) => {
@@ -180,6 +188,10 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
             }
             return p;
         }));
+        // Quest Engine Event Bus
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('moffi-quest-trigger', { detail: { type: 'comment_added' } }));
+        }
     }, []);
 
     const addStory = React.useCallback((image: string) => {

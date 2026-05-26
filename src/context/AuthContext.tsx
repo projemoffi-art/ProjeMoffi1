@@ -271,11 +271,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const updateSettings = async (category: any, data: any) => {
-        // Implement settings persistence if needed
-        setUser(prev => prev ? {
-            ...prev,
-            settings: { ...prev.settings, [category]: { ...prev.settings?.[category], ...data } }
-        } : null);
+        setUser(prev => {
+            if (!prev) return null;
+            const updatedUser = {
+                ...prev,
+                settings: { ...prev.settings, [category]: { ...prev.settings?.[category], ...data } }
+            };
+            if (typeof window !== 'undefined' && !isSupabaseEnabled) {
+                localStorage.setItem('moffi_mock_user', JSON.stringify(updatedUser));
+            }
+            return updatedUser;
+        });
     };
 
     const forgotPassword = async (email: string) => {

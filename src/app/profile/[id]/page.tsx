@@ -98,6 +98,13 @@ export default function ProfilePage() {
   const [newPetShowPhone, setNewPetShowPhone] = useState(true);
   const [newPetPhotos, setNewPetPhotos] = useState<any[]>([]);
   const [isSavingPet, setIsSavingPet] = useState(false);
+  // Yeni hedef ve sağlık alanları
+  const [newPetWeight, setNewPetWeight] = useState("");
+  const [newPetHealthStatus, setNewPetHealthStatus] = useState("İyi");
+  const [newPetActivityTarget, setNewPetActivityTarget] = useState("70");
+  const [newPetWaterTarget, setNewPetWaterTarget] = useState("80");
+  const [newPetFoodTarget, setNewPetFoodTarget] = useState("60");
+  const [newPetStreak, setNewPetStreak] = useState("0");
 
   useEffect(() => {
     if (currentUser && isOwnProfile) {
@@ -384,6 +391,18 @@ export default function ProfilePage() {
           setNewPetPhotos={setNewPetPhotos}
           isSaving={isSavingPet}
           onSave={handleSavePet}
+          newPetWeight={newPetWeight}
+          setNewPetWeight={setNewPetWeight}
+          newPetHealthStatus={newPetHealthStatus}
+          setNewPetHealthStatus={setNewPetHealthStatus}
+          newPetActivityTarget={newPetActivityTarget}
+          setNewPetActivityTarget={setNewPetActivityTarget}
+          newPetWaterTarget={newPetWaterTarget}
+          setNewPetWaterTarget={setNewPetWaterTarget}
+          newPetFoodTarget={newPetFoodTarget}
+          setNewPetFoodTarget={setNewPetFoodTarget}
+          newPetStreak={newPetStreak}
+          setNewPetStreak={setNewPetStreak}
         />
       </main>
     );

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { useQuestEngine } from "@/context/QuestEngineContext";
 
 interface GameQuickSheetProps {
     isOpen: boolean;
@@ -23,12 +24,11 @@ export function GameQuickSheet({
     isOpen, 
     onClose, 
     petName = "Moffi",
-    level = 5,
-    xp = 1250,
-    dailyPoints = 20
 }: GameQuickSheetProps) {
     const router = useRouter();
-    const DAILY_CAP = 100;
+    const { level, totalXP, todayEarned, completedCount, totalCount } = useQuestEngine();
+    const dailyPoints = todayEarned.pp;
+    const DAILY_CAP = 500;
 
     return (
         <AnimatePresence>
@@ -93,7 +93,7 @@ export function GameQuickSheet({
                                         className="h-full bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full shadow-[0_0_10px_rgba(99,102,241,0.5)]"
                                     />
                                 </div>
-                                <p className="text-[9px] text-white/30 font-black uppercase tracking-widest mt-3 text-right">Bugün {DAILY_CAP - dailyPoints} Puan Daha Kazanabilirsin</p>
+                                <p className="text-[9px] text-white/30 font-black uppercase tracking-widest mt-3 text-right">{completedCount}/{totalCount} Görev Tamamlandı</p>
                             </section>
 
                             {/* 2. PET STATUS BENTO */}

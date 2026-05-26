@@ -14,6 +14,11 @@ import { DynamicNavigation } from "@/components/common/DynamicNavigation";
 import { GlobalIdentitySync } from "@/components/common/GlobalIdentitySync";
 import { WellbeingProvider } from "@/context/WellbeingContext";
 import { GlobalAuraBackground } from "@/components/common/GlobalAuraBackground";
+import { WeatherProvider } from "@/context/WeatherContext";
+import { QuestEngineProvider } from "@/context/QuestEngineContext";
+import { LiveEventsProvider } from "@/context/LiveEventsContext";
+import { QuestRewardEngineLoader } from "@/components/quests/QuestRewardEngineLoader";
+import { Phase2Loader } from "@/components/quests/Phase2Loader";
 
 const poppins = Poppins({
   weight: ['400', '600', '700', '900'],
@@ -86,36 +91,44 @@ export default function RootLayout({
         <LanguageProvider>
           <AuthProvider>
             <NotificationProvider>
-              <ActivityProvider>
-                <ChatProvider>
-                  <WellbeingProvider>
-                    <ThemeProvider>
-                      <PetProvider>
-                        <SocialProvider>
-                          <ShopProvider>
-                            <ClientAuthWrapper>
-                              <RootOnboardingWrapper>
-                                <GlobalIdentitySync />
-                                <GlobalAuraBackground />
-                                <div className="min-h-screen relative overflow-hidden">
-                                  <ErrorBoundary>
-                                    {children}
-                                  </ErrorBoundary>
-                                </div>
+              <PetProvider>
+                <ActivityProvider>
+                  <WeatherProvider>
+                    <QuestEngineProvider>
+                      <LiveEventsProvider>
+                      <ChatProvider>
+                        <WellbeingProvider>
+                          <ThemeProvider>
+                            <SocialProvider>
+                              <ShopProvider>
+                                <ClientAuthWrapper>
+                                  <RootOnboardingWrapper>
+                                    <GlobalIdentitySync />
+                                    <GlobalAuraBackground />
+                                    <div className="min-h-screen relative overflow-hidden">
+                                      <ErrorBoundary>
+                                        {children}
+                                      </ErrorBoundary>
+                                    </div>
 
-                                <Suspense fallback={null}>
-                                  <DynamicNavigation />
-                                </Suspense>
-                                <AIWidgetLoader />
-                              </RootOnboardingWrapper>
-                            </ClientAuthWrapper>
-                          </ShopProvider>
-                        </SocialProvider>
-                      </PetProvider>
-                    </ThemeProvider>
-                  </WellbeingProvider>
-                </ChatProvider>
-              </ActivityProvider>
+                                    <Suspense fallback={null}>
+                                      <DynamicNavigation />
+                                    </Suspense>
+                                    <QuestRewardEngineLoader />
+                                    <Phase2Loader />
+                                    <AIWidgetLoader />
+                                  </RootOnboardingWrapper>
+                                </ClientAuthWrapper>
+                              </ShopProvider>
+                            </SocialProvider>
+                          </ThemeProvider>
+                        </WellbeingProvider>
+                      </ChatProvider>
+                      </LiveEventsProvider>
+                    </QuestEngineProvider>
+                  </WeatherProvider>
+                </ActivityProvider>
+              </PetProvider>
             </NotificationProvider>
           </AuthProvider>
         </LanguageProvider>

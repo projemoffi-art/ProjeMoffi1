@@ -11,6 +11,7 @@ export class SupabaseApiService implements IApiService {
     // Custom aggressive caching causes cross-account validation bugs.
     
     private pendingActionLocks = new Set<string>();
+    private mockApi = new MockApiService();
 
     invalidateCache() {
         // No-op for backwards compatibility
@@ -846,7 +847,14 @@ export class SupabaseApiService implements IApiService {
             health_notes: item.health_notes,
             personality: item.character,
             is_lost: item.is_lost,
-            sos_settings: item.sos_settings
+            sos_settings: item.sos_settings,
+            // Hub-preview dashboard alanları — önce direkt kolon, yoksa sos_settings'den oku
+            weight: item.weight || item.sos_settings?.weight || '',
+            health: item.health || item.sos_settings?.health || '',
+            streak: typeof item.streak === 'number' ? item.streak : (item.sos_settings?.streak ?? 0),
+            activity_target: typeof item.activity_target === 'number' ? item.activity_target : (item.sos_settings?.activity_target ?? 70),
+            water_target: typeof item.water_target === 'number' ? item.water_target : (item.sos_settings?.water_target ?? 80),
+            food_target: typeof item.food_target === 'number' ? item.food_target : (item.sos_settings?.food_target ?? 60),
         })) as Pet[];
     }
 
@@ -883,30 +891,64 @@ export class SupabaseApiService implements IApiService {
         const user = await this.getSessionUser();
         if (!user) throw new Error("Giriş gerekli");
 
-        const { data, error } = await supabase
-            .from('pets')
-            .insert({
-                owner_id: user.id,
-                name: pet.name,
-                type: pet.type,
-                breed: pet.breed,
-                age: pet.age,
-                gender: pet.gender,
-                avatar_url: pet.image || pet.avatar,
-                is_neutered: pet.is_neutered || false,
-                size: pet.size,
-                health_notes: pet.health_notes,
-                character: pet.personality,
-                microchip_no: pet.microchip_id
-            })
-            .select()
-            .single();
+        // Temel kolon seti — tüm pets tablolarında mevcut
+        const basePayload: any = {
+            owner_id: user.id,
+            name: pet.name,
+            type: pet.type,
+            breed: pet.breed,
+            age: pet.age,
+            gender: pet.gender,
+            avatar_url: pet.image || pet.avatar,
+            is_neutered: (pet as any).is_neutered || false,
+            size: (pet as any).size,
+            health_notes: (pet as any).health_notes,
+            character: (pet as any).character || (pet as any).personality,
+            microchip_no: (pet as any).microchip_id,
+            weight: pet.weight || (pet as any).sos_settings?.weight || '',
+        };
 
-        if (error) throw error;
+        // sos_settings JSON kolonu varsa ekle — tüm izleme verileri burada
+        const sosPayload = (pet as any).sos_settings 
+            ? { ...basePayload, sos_settings: (pet as any).sos_settings }
+            : basePayload;
+
+        let data: any = null;
+        let insertError: any = null;
+
+        // 1. Deneme: sos_settings ile
+        const res1 = await supabase.from('pets').insert(sosPayload).select().single();
+        if (!res1.error) {
+            data = res1.data;
+        } else {
+            insertError = res1.error;
+            console.warn('addPet with sos_settings failed, trying without:', res1.error.message);
+
+            // 2. Deneme: sos_settings olmadan (kolon yoksa)
+            const res2 = await supabase.from('pets').insert(basePayload).select().single();
+            if (!res2.error) {
+                data = res2.data;
+                insertError = null;
+            } else {
+                insertError = res2.error;
+                console.warn('addPet base failed too:', res2.error.message);
+
+                // 3. Deneme: Sadece zorunlu alanlar
+                const minimalPayload = { owner_id: user.id, name: pet.name };
+                const res3 = await supabase.from('pets').insert(minimalPayload).select().single();
+                if (!res3.error) { data = res3.data; insertError = null; }
+                else { insertError = res3.error; }
+            }
+        }
+
+        if (insertError || !data) {
+            console.error('addPet final error:', insertError);
+            throw insertError || new Error('Pet kaydedilemedi');
+        }
         
-        // Auto-set as active if it's the first pet
+        // Auto-set as active
         const pets = await this.getPets();
-        if (pets.length === 1) {
+        if (pets.length <= 1) {
             await this.setActivePet(data.id);
         }
 
@@ -917,9 +959,11 @@ export class SupabaseApiService implements IApiService {
             breed: data.breed,
             age: data.age,
             gender: data.gender,
-            image: data.avatar_url
+            image: data.avatar_url,
+            sos_settings: data.sos_settings,
         } as Pet;
     }
+
 
     async updatePet(id: string, updates: Partial<Pet>): Promise<Pet> {
         const dbUpdates: any = {
@@ -936,7 +980,8 @@ export class SupabaseApiService implements IApiService {
             health_notes: updates.health_notes,
             character: updates.personality,
             is_lost: updates.is_lost,
-            sos_settings: updates.sos_settings
+            sos_settings: updates.sos_settings,
+            weight: updates.weight || updates.sos_settings?.weight
         };
 
         // Remove undefined keys
@@ -2180,8 +2225,12 @@ export class SupabaseApiService implements IApiService {
         };
     }
 
-    saveData = (k: any, d: any) => this.mockApi.saveData(k, d);
-    loadData = (k: any) => this.mockApi.loadData(k);
+    async saveData<T>(key: string, data: T): Promise<void> {
+        return this.mockApi.saveData(key, data);
+    }
+    async loadData<T>(key: string): Promise<T | null> {
+        return this.mockApi.loadData<T>(key);
+    }
 
     private formatTimeAgo(dateString: string): string {
         const date = new Date(dateString);

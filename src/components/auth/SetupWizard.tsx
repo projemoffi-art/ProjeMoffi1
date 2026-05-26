@@ -11,7 +11,7 @@ interface SetupProps {
     onComplete: () => void;
 }
 
-type SetupStep = 1 | 2 | 3; // 1: Profile, 2: Pet, 3: Subscription
+type SetupStep = 1 | 2; // 1: Profile, 2: Pet
 
 export function SetupWizard({ onComplete }: SetupProps) {
     const { user, updateProfile } = useAuth();
@@ -20,7 +20,7 @@ export function SetupWizard({ onComplete }: SetupProps) {
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadStatus, setUploadStatus] = useState("");
-    const [selectedPlan, setSelectedPlan] = useState<'free' | 'pro' | 'elite'>('pro');
+    const [selectedPlan, setSelectedPlan] = useState<'free' | 'pro' | 'elite'>('free');
 
     // Avatar State
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -183,8 +183,6 @@ export function SetupWizard({ onComplete }: SetupProps) {
                 }
             }
         } else if (step === 2 && petName) {
-            setStep(3);
-        } else if (step === 3) {
             handleFinish();
         }
     };
@@ -193,7 +191,7 @@ export function SetupWizard({ onComplete }: SetupProps) {
         <div className="flex flex-col h-full bg-transparent font-sans relative overflow-hidden notranslate" translate="no">
             {/* Progress Visualization */}
             <div className="h-2 flex gap-2 px-10 pt-10 relative">
-                {[1, 2, 3].map((s) => (
+                {[1, 2].map((s) => (
                     <div 
                         key={s} 
                         className={cn(
@@ -367,106 +365,17 @@ export function SetupWizard({ onComplete }: SetupProps) {
                         </motion.div>
                     )}
 
-                    {step === 3 && (
-                        <motion.div 
-                            key="step3"
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="space-y-10"
-                        >
-                            <div className="text-center">
-                                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-cyan-500/10 border border-cyan-500/20 rounded-full mb-6">
-                                    <Sparkles className="w-3 h-3 text-cyan-400" />
-                                    <span className="text-[8px] font-black text-cyan-400 uppercase tracking-widest">{t('setup.step3.pro')}</span>
-                                </div>
-                                <h2 className="text-3xl font-black text-white tracking-tighter uppercase italic leading-none">{t('setup.step3.title')}</h2>
-                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.3em] mt-4 leading-relaxed">{t('setup.step3.subtitle')}</p>
-                            </div>
 
-                            <div className="space-y-4">
-                                {/* Plan Card: ELITE (Recommended) */}
-                                <button 
-                                    onClick={() => setSelectedPlan('elite')}
-                                    className={cn(
-                                        "w-full p-8 rounded-[3rem] border transition-all relative overflow-hidden group text-left",
-                                        selectedPlan === 'elite' 
-                                            ? "border-cyan-500 bg-gradient-to-br from-cyan-500/20 to-transparent shadow-[0_20px_40px_rgba(6,182,212,0.2)]" 
-                                            : "border-white/5 bg-white/5 opacity-60"
-                                    )}
-                                >
-                                    {selectedPlan === 'elite' && (
-                                        <div className="absolute top-6 right-8">
-                                            <CheckCircle2 className="w-6 h-6 text-cyan-400" />
-                                        </div>
-                                    )}
-                                    <div className="flex items-center gap-5 relative z-10">
-                                        <div className="w-14 h-14 bg-cyan-500/10 rounded-2xl flex items-center justify-center text-cyan-400 border border-cyan-500/20">
-                                            <Crown className="w-7 h-7" />
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <h4 className="text-white font-black text-xl uppercase italic tracking-tight">{t('setup.step3.elite')}</h4>
-                                                <div className="px-2 py-0.5 bg-cyan-500 text-black text-[7px] font-black rounded-full">POPÜLER</div>
-                                            </div>
-                                            <p className="text-[9px] text-cyan-400/60 font-black uppercase tracking-widest mt-1">{t('setup.step3.elite_desc')}</p>
-                                        </div>
-                                    </div>
-                                </button>
-
-                                {/* Plan Card: PRO */}
-                                <button 
-                                    onClick={() => setSelectedPlan('pro')}
-                                    className={cn(
-                                        "w-full p-8 rounded-[3rem] border transition-all relative overflow-hidden group text-left",
-                                        selectedPlan === 'pro' 
-                                            ? "border-purple-500 bg-gradient-to-br from-purple-500/20 to-transparent shadow-[0_20px_40px_rgba(139,92,246,0.2)]" 
-                                            : "border-white/5 bg-white/5 opacity-60"
-                                    )}
-                                >
-                                    <div className="flex items-center gap-5 relative z-10">
-                                        <div className="w-14 h-14 bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-400 border border-purple-500/20">
-                                            <Star className="w-7 h-7" />
-                                        </div>
-                                        <div>
-                                            <h4 className="text-white font-black text-xl uppercase italic tracking-tight">{t('setup.step3.pro')}</h4>
-                                            <p className="text-[9px] text-purple-400/60 font-black uppercase tracking-widest mt-1">{t('setup.step3.pro_desc')}</p>
-                                        </div>
-                                    </div>
-                                </button>
-
-                                {/* Plan Card: FREE */}
-                                <button 
-                                    onClick={() => setSelectedPlan('free')}
-                                    className={cn(
-                                        "w-full p-8 rounded-[3rem] border transition-all relative overflow-hidden group text-left",
-                                        selectedPlan === 'free' 
-                                            ? "border-gray-500 bg-gradient-to-br from-gray-500/20 to-transparent" 
-                                            : "border-white/5 bg-white/5 opacity-60"
-                                    )}
-                                >
-                                    <div className="flex items-center gap-5 relative z-10">
-                                        <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center text-gray-400 border border-white/10">
-                                            <Zap className="w-7 h-7" />
-                                        </div>
-                                        <div>
-                                            <h4 className="text-white font-black text-xl uppercase italic tracking-tight">{t('setup.step3.free')}</h4>
-                                            <p className="text-[9px] text-gray-600 font-black uppercase tracking-widest mt-1">{t('setup.step3.free_desc')}</p>
-                                        </div>
-                                    </div>
-                                </button>
-                            </div>
-                            {usernameError && (
-                                <div className="mt-8 p-6 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-[10px] font-black uppercase tracking-widest text-center animate-shake">
-                                    {usernameError}
-                                </div>
-                            )}
-                        </motion.div>
-                    )}
                 </AnimatePresence>
             </div>
 
             {/* Bottom Global Action Area */}
             <div className="p-10 pb-12 bg-transparent">
+                {usernameError && (
+                    <div className="mb-4 p-5 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-[10px] font-black uppercase tracking-widest text-center animate-shake">
+                        {usernameError}
+                    </div>
+                )}
                 <button
                     onClick={handleNext}
                     disabled={(step === 1 && (!name || !username)) || (step === 2 && !petName) || isUploading}
@@ -477,7 +386,7 @@ export function SetupWizard({ onComplete }: SetupProps) {
                             <Loader2 className="w-6 h-6 animate-spin" />
                         ) : (
                             <>
-                                {step === 3 ? t('setup.step3.launch') : t('setup.step3.continue')}
+                                {step === 2 ? t('setup.step3.launch') : t('setup.step3.continue')}
                                 <ChevronRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
                             </>
                         )}

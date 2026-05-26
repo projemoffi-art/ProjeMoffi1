@@ -7,25 +7,19 @@ import { FloatingControls } from "@/components/common/FloatingControls";
 import { MoffiSidebar } from "@/components/community/MoffiSidebar";
 import { useAuth } from "@/context/AuthContext";
 import { usePet } from "@/context/PetContext";
-import { apiService } from "@/services/apiService";
 import { MoffiBottomNav } from "@/components/common/MoffiBottomNav";
 
-// Lazy loaded components for better performance
+// Lazy loaded overlays — only the ones that SHOULD be overlays
 const ActionHubDrawer = dynamic(() => import("@/components/community/ActionHubDrawer").then(mod => mod.ActionHubDrawer), { ssr: false });
 const WalkQuickSheet = dynamic(() => import("@/components/walk/WalkQuickSheet").then(mod => mod.WalkQuickSheet), { ssr: false });
-const VetQuickSheet = dynamic(() => import("@/components/vet/VetQuickSheet").then(mod => ({ default: mod.VetQuickSheet })), { ssr: false });
 const SettingsDrawer = dynamic(() => import("@/components/community/SettingsDrawer").then(mod => mod.SettingsDrawer), { ssr: false });
 const InboxModal = dynamic(() => import("@/components/community/InboxModal").then(mod => mod.InboxModal), { ssr: false });
 const MoffiMapsModal = dynamic(() => import("@/components/maps/MoffiMapsModal").then(mod => mod.MoffiMapsModal), { ssr: false });
 const HubOverlay = dynamic(() => import("@/components/community/HubOverlay").then(mod => mod.HubOverlay), { ssr: false });
 const SOSCommandCenter = dynamic(() => import("@/components/profile/SOSCommandCenter").then(mod => mod.SOSCommandCenter), { ssr: false });
-const MarketQuickSheet = dynamic(() => import("@/components/shop/MarketQuickSheet").then(mod => mod.MarketQuickSheet), { ssr: false });
-const StudioQuickSheet = dynamic(() => import("@/components/studio/StudioQuickSheet").then(mod => mod.StudioQuickSheet), { ssr: false });
-const GameQuickSheet = dynamic(() => import("@/components/game/GameQuickSheet").then(mod => mod.GameQuickSheet), { ssr: false });
 const SpotlightSearch = dynamic(() => import("@/components/community/SpotlightSearch").then(mod => mod.SpotlightSearch), { ssr: false });
 const AuthModal = dynamic(() => import("@/components/auth/AuthModal").then(mod => mod.default), { ssr: false });
 const NotificationDrawer = dynamic(() => import("@/components/notifications/NotificationDrawer").then(mod => mod.NotificationDrawer), { ssr: false });
-
 
 const HIDDEN_ROUTES = ['/', '/studio', '/lab', '/production-studio'];
 
@@ -34,14 +28,11 @@ export function DynamicNavigation() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const { user } = useAuth();
-    
-    // ACTION HUB (Zap Icon) is global
+    const { pets, updatePet } = usePet();
+
+    // Overlay states — only for things that are genuinely overlays
     const [isActionHubOpen, setIsActionHubOpen] = useState(false);
     const [isWalkOpen, setIsWalkOpen] = useState(false);
-    const [isVetOpen, setIsVetOpen] = useState(false);
-    const [isMarketOpen, setIsMarketOpen] = useState(false);
-    const [isStudioOpen, setIsStudioOpen] = useState(false);
-    const [isGameOpen, setIsGameOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isMapsOpen, setIsMapsOpen] = useState(false);
     const [isActionHubOverlayOpen, setIsActionHubOverlayOpen] = useState(false);
@@ -50,7 +41,6 @@ export function DynamicNavigation() {
     const [isAuthOpen, setIsAuthOpen] = useState(false);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const [isNavVisible, setIsNavVisible] = useState(true);
-    const { pets, updatePet } = usePet();
     const [sosActivePet, setSosActivePet] = useState<any>(null);
 
     useEffect(() => {
@@ -59,7 +49,6 @@ export function DynamicNavigation() {
         }
     }, [pets]);
 
-    // Global Event Listeners for Drawers
     useEffect(() => {
         const handleOpenActionHub = () => {
             window.history.pushState({ modal: 'action-hub' }, "");
@@ -104,32 +93,6 @@ export function DynamicNavigation() {
             setIsSOSOpen(true);
         };
 
-        const handleOpenVet = () => {
-            window.history.pushState({ modal: 'vet' }, "");
-            setIsActionHubOpen(false);
-            setIsSettingsOpen(false);
-            setIsActionHubOverlayOpen(false);
-            setIsVetOpen(true);
-        };
-
-        const handleOpenMarket = () => {
-            window.history.pushState({ modal: 'market' }, "");
-            setIsActionHubOverlayOpen(false);
-            setIsMarketOpen(true);
-        };
-
-        const handleOpenStudio = () => {
-            window.history.pushState({ modal: 'studio' }, "");
-            setIsActionHubOverlayOpen(false);
-            setIsStudioOpen(true);
-        };
-
-        const handleOpenGame = () => {
-            window.history.pushState({ modal: 'game' }, "");
-            setIsActionHubOverlayOpen(false);
-            setIsGameOpen(true);
-        };
-
         const handleOpenSpotlight = () => {
             window.history.pushState({ modal: 'spotlight' }, "");
             setIsActionHubOverlayOpen(false);
@@ -146,25 +109,19 @@ export function DynamicNavigation() {
             setIsNotificationOpen(true);
         };
 
-        // BACK BUTTON INTERCEPTOR - STACK NAVIGATION
+        // BACK BUTTON INTERCEPTOR
         const handlePopState = (e: PopStateEvent) => {
             const modal = e.state?.modal;
-
             setIsActionHubOpen(modal === 'action-hub');
             setIsWalkOpen(modal === 'walk');
             setIsSettingsOpen(modal === 'settings');
             setIsMapsOpen(modal === 'maps');
             setIsActionHubOverlayOpen(modal === 'action-overlay');
             setIsSOSOpen(modal === 'sos');
-            setIsVetOpen(modal === 'vet');
-            setIsMarketOpen(modal === 'market');
-            setIsStudioOpen(modal === 'studio');
-            setIsGameOpen(modal === 'game');
             setIsSpotlightOpen(modal === 'spotlight');
             setIsAuthOpen(modal === 'auth');
             setIsNotificationOpen(modal === 'notifications');
 
-            // Handle external modals like AI Assistant
             if (modal !== 'ai') {
                 window.dispatchEvent(new CustomEvent('close-ai-assistant'));
             } else {
@@ -172,25 +129,22 @@ export function DynamicNavigation() {
             }
         };
 
+        // Global navigation handler — now routes pages directly
         const handleGlobalNavigate = (e: any) => {
             const id = e.detail;
             if (!id) return;
 
-            console.log("Global Navigation Triggered:", id);
-
-            // 1. Internal View Switches (If on community page)
-            if (pathname === '/community') {
+            if (pathname === '/topluluk') {
                 if (id === 'feed' || id === 'radar') {
                     window.dispatchEvent(new CustomEvent('moffi-change-tab', { detail: id }));
                     return;
                 }
             }
 
-            // 2. Cross-Page Navigation
             const profileViews = ['wallet', 'passport', 'family', 'orders', 'appointments', 'routes', 'bookmarks', 'identity'];
-            
+
             if (id === 'feed' || id === 'radar') {
-                router.push(`/community?tab=${id}`);
+                router.push(`/topluluk?tab=${id}`);
             } else if (id === 'profile') {
                 if (user?.id) router.push(`/profile/${user.id}`);
             } else if (profileViews.includes(id)) {
@@ -201,61 +155,34 @@ export function DynamicNavigation() {
             } else if (id === 'maps') {
                 handleOpenMaps();
             } else if (id === 'market') {
-                handleOpenMarket();
+                router.push('/petshop');           // ← Sayfa
             } else if (id === 'studio') {
-                handleOpenStudio();
+                router.push('/studio');            // ← Sayfa
             } else if (id === 'vet') {
-                handleOpenVet();
+                router.push('/vet');               // ← Sayfa
             } else if (id === 'game') {
-                handleOpenGame();
+                router.push('/game');              // ← Sayfa
+            } else if (id === 'quests') {
+                router.push('/quests');            // ← Sayfa
             } else if (id === 'moffinet') {
-                // Future moffinet route
                 window.dispatchEvent(new CustomEvent('moffi-toast', { detail: { message: 'MoffiNet yakında sizlerle! 🌐', icon: 'Zap' } }));
             }
         };
 
-        window.addEventListener('popstate', handlePopState);
-
-        window.addEventListener('open-moffi-hub', handleOpenActionHub);
-        window.addEventListener('open-walk-panel', handleOpenWalk);
-        window.addEventListener('open-moffi-settings', handleOpenSettings);
-        window.addEventListener('open-moffi-maps', handleOpenMaps);
-        window.addEventListener('open-moffi-action-hub', handleOpenActionHubOverlay);
-        window.addEventListener('open-sos-center', handleOpenSOS);
-        window.addEventListener('open-vet-portal', handleOpenVet);
-        window.addEventListener('open-market-portal', handleOpenMarket);
-        window.addEventListener('open-studio-portal', handleOpenStudio);
-        window.addEventListener('open-game-portal', handleOpenGame);
-        window.addEventListener('open-moffi-spotlight', handleOpenSpotlight);
-        window.addEventListener('open-auth-modal', handleOpenAuth);
-        window.addEventListener('open-notification-drawer', handleOpenNotifications);
-        window.addEventListener('moffi-navigate', handleGlobalNavigate);
-
-        // Global window scroll listener for pages that use window scroll (like Profile)
+        // Scroll hide/show nav
         let lastGlobalScrollY = window.scrollY;
         let ticking = false;
-
         const handleGlobalScroll = () => {
             if (!ticking) {
                 window.requestAnimationFrame(() => {
                     const current = window.scrollY;
                     const diff = current - lastGlobalScrollY;
-
-                    // Sensitivity settings
-                    const hideThreshold = 40; // Hide after 40px of downscroll
-                    const showThreshold = -10; // Show immediately on upscroll
-                    const initialOffset = 60; // Don't hide in the very top 60px
-
-                    if (current > initialOffset) {
-                        if (diff > 5) { // Downscrolling
-                            setIsNavVisible(false);
-                        } else if (diff < showThreshold) { // Upscrolling
-                            setIsNavVisible(true);
-                        }
+                    if (current > 60) {
+                        if (diff > 5) setIsNavVisible(false);
+                        else if (diff < -10) setIsNavVisible(true);
                     } else {
                         setIsNavVisible(true);
                     }
-
                     lastGlobalScrollY = current;
                     ticking = false;
                 });
@@ -263,10 +190,19 @@ export function DynamicNavigation() {
             }
         };
 
-        const handleToggleNav = (e: any) => {
-            setIsNavVisible(e.detail);
-        };
+        const handleToggleNav = (e: any) => setIsNavVisible(e.detail);
 
+        window.addEventListener('popstate', handlePopState);
+        window.addEventListener('open-moffi-hub', handleOpenActionHub);
+        window.addEventListener('open-walk-panel', handleOpenWalk);
+        window.addEventListener('open-moffi-settings', handleOpenSettings);
+        window.addEventListener('open-moffi-maps', handleOpenMaps);
+        window.addEventListener('open-moffi-action-hub', handleOpenActionHubOverlay);
+        window.addEventListener('open-sos-center', handleOpenSOS);
+        window.addEventListener('open-moffi-spotlight', handleOpenSpotlight);
+        window.addEventListener('open-auth-modal', handleOpenAuth);
+        window.addEventListener('open-notification-drawer', handleOpenNotifications);
+        window.addEventListener('moffi-navigate', handleGlobalNavigate);
         window.addEventListener('scroll', handleGlobalScroll, { passive: true });
         window.addEventListener('moffi-toggle-nav', handleToggleNav);
 
@@ -277,10 +213,6 @@ export function DynamicNavigation() {
             window.removeEventListener('open-moffi-maps', handleOpenMaps);
             window.removeEventListener('open-moffi-action-hub', handleOpenActionHubOverlay);
             window.removeEventListener('open-sos-center', handleOpenSOS);
-            window.removeEventListener('open-vet-portal', handleOpenVet);
-            window.removeEventListener('open-market-portal', handleOpenMarket);
-            window.removeEventListener('open-studio-portal', handleOpenStudio);
-            window.removeEventListener('open-game-portal', handleOpenGame);
             window.removeEventListener('open-moffi-spotlight', handleOpenSpotlight);
             window.removeEventListener('open-auth-modal', handleOpenAuth);
             window.removeEventListener('open-notification-drawer', handleOpenNotifications);
@@ -289,10 +221,9 @@ export function DynamicNavigation() {
             window.removeEventListener('popstate', handlePopState);
             window.removeEventListener('scroll', handleGlobalScroll);
         };
-    }, []);
+    }, [pathname, user]);
 
-    // Hide global components on studio/lab/walk routes
-    const shouldHide = pathname && HIDDEN_ROUTES.some(route => 
+    const shouldHide = pathname && HIDDEN_ROUTES.some(route =>
         route === '/' ? pathname === '/' : pathname.startsWith(route)
     );
 
@@ -303,8 +234,7 @@ export function DynamicNavigation() {
             <FloatingControls />
             <MoffiSidebar />
 
-            {/* (Zap) ACTION HUB - PERSONAL IDENTITY (Wallet, Passport, Family) */}
-            <ActionHubDrawer 
+            <ActionHubDrawer
                 isOpen={isActionHubOpen}
                 onClose={() => setIsActionHubOpen(false)}
                 onNavigate={(id) => {
@@ -313,42 +243,35 @@ export function DynamicNavigation() {
                 }}
             />
 
-
-
-            <WalkQuickSheet 
+            {/* Walk stays as overlay — instant start makes sense */}
+            <WalkQuickSheet
                 isOpen={isWalkOpen}
                 onClose={() => setIsWalkOpen(false)}
             />
 
-            <VetQuickSheet 
-                isOpen={isVetOpen}
-                onClose={() => setIsVetOpen(false)}
-                petId={pets[0]?.id || 'pet-1'}
-            />
-
-            <SettingsDrawer 
+            <SettingsDrawer
                 isOpen={isSettingsOpen}
                 onClose={() => setIsSettingsOpen(false)}
             />
 
             <InboxModal />
-            
-            <MoffiMapsModal 
+
+            <MoffiMapsModal
                 isOpen={isMapsOpen}
                 onClose={() => setIsMapsOpen(false)}
             />
 
-            <HubOverlay 
+            <HubOverlay
                 isOpen={isActionHubOverlayOpen}
                 onClose={() => setIsActionHubOverlayOpen(false)}
-                onMarketClick={() => window.dispatchEvent(new CustomEvent('open-market-portal'))}
-                onWalkClick={() => window.dispatchEvent(new CustomEvent('open-walk-panel'))}
-                onVetClick={() => window.dispatchEvent(new CustomEvent('open-vet-portal'))}
-                onStudioClick={() => window.dispatchEvent(new CustomEvent('open-studio-portal'))}
-                onGameClick={() => window.dispatchEvent(new CustomEvent('open-game-portal'))}
-                onMoffinetClick={() => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'moffinet' }))}
+                onMarketClick={() => { setIsActionHubOverlayOpen(false); router.push('/petshop'); }}
+                onWalkClick={() => { setIsActionHubOverlayOpen(false); window.dispatchEvent(new CustomEvent('open-walk-panel')); }}
+                onVetClick={() => { setIsActionHubOverlayOpen(false); router.push('/vet'); }}
+                onStudioClick={() => { setIsActionHubOverlayOpen(false); router.push('/studio'); }}
+                onGameClick={() => { setIsActionHubOverlayOpen(false); router.push('/game'); }}
+                onMoffinetClick={() => window.dispatchEvent(new CustomEvent('moffi-toast', { detail: { message: 'MoffiNet yakında! 🌐', icon: 'Zap' } }))}
                 onSearchClick={() => window.dispatchEvent(new CustomEvent('open-moffi-spotlight'))}
-                onCommunityRadarClick={() => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'radar' }))}
+                onCommunityRadarClick={() => { setIsActionHubOverlayOpen(false); router.push('/topluluk?tab=radar'); }}
                 onAIAsistantClick={() => {
                     window.history.pushState({ modal: 'ai' }, "");
                     setIsActionHubOverlayOpen(false);
@@ -357,7 +280,7 @@ export function DynamicNavigation() {
                 onSOSClick={() => window.dispatchEvent(new CustomEvent('open-sos-center'))}
             />
 
-            <SOSCommandCenter 
+            <SOSCommandCenter
                 isOpen={isSOSOpen}
                 onClose={() => setIsSOSOpen(false)}
                 pet={sosActivePet}
@@ -372,24 +295,7 @@ export function DynamicNavigation() {
                 }}
             />
 
-            <MarketQuickSheet 
-                isOpen={isMarketOpen}
-                onClose={() => setIsMarketOpen(false)}
-                petName={pets[0]?.name || 'Moffi'}
-            />
-
-            <StudioQuickSheet 
-                isOpen={isStudioOpen}
-                onClose={() => setIsStudioOpen(false)}
-                petName={pets[0]?.name || 'Moffi'}
-            />
-
-            <GameQuickSheet 
-                isOpen={isGameOpen}
-                onClose={() => setIsGameOpen(false)}
-            />
-
-            <SpotlightSearch 
+            <SpotlightSearch
                 isOpen={isSpotlightOpen}
                 onClose={() => setIsSpotlightOpen(false)}
                 onNavigate={(type, id) => {
@@ -401,35 +307,53 @@ export function DynamicNavigation() {
                     } else if (type === 'user') {
                         router.push(`/profile/${id}`);
                     } else if (type === 'link') {
-                        if (id === 'market') window.dispatchEvent(new CustomEvent('open-market-portal'));
+                        if (id === 'market') router.push('/petshop');
                     }
                 }}
             />
 
-            <AuthModal 
+            <AuthModal
                 isOpen={isAuthOpen}
                 onClose={() => setIsAuthOpen(false)}
             />
 
-            <NotificationDrawer 
+            <NotificationDrawer
                 isOpen={isNotificationOpen}
                 onClose={() => setIsNotificationOpen(false)}
             />
 
             {/* GLOBAL BOTTOM NAVIGATION */}
-            <MoffiBottomNav 
-                activeTab={searchParams?.get('tab') || (pathname?.startsWith('/profile') ? 'profile' : 'feed')}
-                isVisible={isNavVisible}
-                onTabChange={(tab) => {
-                    const params = new URLSearchParams(searchParams.toString());
-                    params.set('tab', tab);
-                    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-                    
-                    if (pathname === '/community') {
-                        window.dispatchEvent(new CustomEvent('moffi-change-tab', { detail: tab }));
+            <div className={`fixed bottom-0 inset-x-0 z-[2900] transition-transform duration-300 ${isNavVisible ? 'translate-y-0' : 'translate-y-full'}`}>
+                <MoffiBottomNav
+                    activeTab={
+                        pathname === '/community' ? 'home' :
+                        pathname === '/quests' ? 'quests' :
+                        pathname?.startsWith('/profile') ? 'profile' :
+                        pathname === '/topluluk' ? (searchParams?.get('tab') || 'feed') :
+                        'home'
                     }
-                }}
-            />
+                    isVisible={true}
+                    onTabChange={(tab) => {
+                        if (tab === 'home') {
+                            router.push('/community');
+                        } else if (tab === 'feed') {
+                            router.push('/topluluk?tab=feed');
+                        } else if (tab === 'quests') {
+                            router.push('/quests');
+                        } else if (tab === 'profile') {
+                            if (user?.id) router.push(`/profile/${user.id}`);
+                        } else {
+                            const params = new URLSearchParams(searchParams.toString());
+                            params.set('tab', tab);
+                            router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+
+                            if (pathname === '/topluluk') {
+                                window.dispatchEvent(new CustomEvent('moffi-change-tab', { detail: tab }));
+                            }
+                        }
+                    }}
+                />
+            </div>
         </>
     );
 }

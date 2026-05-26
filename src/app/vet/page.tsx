@@ -20,7 +20,8 @@ import { MedicationModal } from "@/components/vet/MedicationModal";
 import { NutritionModal } from "@/components/vet/NutritionModal";
 import { PetSwitcher } from "@/components/common/PetSwitcher";
 import { useVet } from "@/hooks/useVet";
-import { VetClinic, Pet } from "@/types/domain";
+import { VetClinic } from "@/types/domain";
+import { Pet } from "@/context/PetContext";
 import { apiService } from "@/services/apiService";
 
 // Dynamic imports to prevent SSR issues
@@ -54,7 +55,7 @@ export default function VetPage() {
     useEffect(() => {
         const loadActivePet = async () => {
             const pet = await apiService.getActivePet();
-            setActivePet(pet);
+            setActivePet(pet as any);
         };
         loadActivePet();
     }, []);
@@ -110,15 +111,16 @@ export default function VetPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[var(--background)] pb-32 font-sans relative text-[var(--foreground)] selection:bg-brand-purple/30">
+        <div className="min-h-screen bg-[#050505] pb-32 font-sans relative text-white selection:bg-cyan-500/30">
             {/* AMBIENT BACKGROUND GLOWS */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden">
-                <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-brand-purple/10 blur-[120px] rounded-full animate-pulse" />
-                <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/5 blur-[100px] rounded-full" />
+                <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-cyan-500/5 blur-[120px] rounded-full animate-pulse" />
+                <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-600/5 blur-[100px] rounded-full" />
+                <div className="absolute top-[30%] left-[20%] w-[30%] h-[30%] bg-emerald-500/3 blur-[90px] rounded-full" />
             </div>
 
             {/* HEADER */}
-            <header className="sticky top-0 z-50 bg-[var(--background)]/60 backdrop-blur-3xl border-b border-[var(--card-border)] pb-4 transition-all">
+            <header className="sticky top-0 z-50 bg-[#050505]/60 backdrop-blur-3xl border-b border-white/5 pb-4 transition-all">
                 <div className="px-6 pt-8 pb-2 flex flex-col gap-6">
                     <div className="flex justify-between items-center">
                         <div className="flex items-center gap-4">
@@ -130,33 +132,30 @@ export default function VetPage() {
                                         router.push('/community');
                                     }
                                 }} 
-                                className="w-11 h-11 rounded-2xl bg-[var(--card-bg)] border border-white/10 flex items-center justify-center hover:bg-white/10 hover:scale-105 active:scale-95 transition-all"
+                                className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 hover:scale-105 active:scale-95 transition-all"
                             >
-                                <ChevronLeft className="w-6 h-6 text-[var(--foreground)]/80" />
+                                <ChevronLeft className="w-6 h-6 text-white/80" />
                             </button>
                             <div>
-                                <h1 className="text-3xl font-black text-[var(--foreground)] tracking-tighter leading-none mb-1.5">
+                                <span className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.3em] block mb-0.5">Moffi Health</span>
+                                <h1 className="text-3xl font-black text-white tracking-tighter leading-none uppercase italic">
                                     Veteriner
                                 </h1>
-                                <div className="scale-95 origin-left opacity-90">
-                                    <PetSwitcher />
-                                </div>
                             </div>
                         </div>
-                        <div className="bg-[var(--card-bg)] border border-white/10 px-4 py-2 rounded-2xl flex items-center gap-2 backdrop-blur-md">
-                            <Coins className="w-4 h-4 text-yellow-500 fill-current" />
-                            <span className="text-sm font-black text-[var(--foreground)]/90">2,450</span>
+                        <div className="scale-90 origin-right">
+                            <PetSwitcher />
                         </div>
                     </div>
 
                     {/* MINIMALIST SEARCH */}
                     <div className="relative group">
-                        <div className="absolute inset-0 bg-brand-purple/10 rounded-2xl blur-md opacity-0 group-focus-within:opacity-100 transition-opacity" />
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--foreground)]/30 group-focus-within:text-brand-purple transition-colors" />
+                        <div className="absolute inset-0 bg-cyan-500/10 rounded-2xl blur-md opacity-0 group-focus-within:opacity-100 transition-opacity" />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30 group-focus-within:text-cyan-400 transition-colors" />
                         <input
                             type="text"
                             placeholder="Klinik, veteriner veya uzmanlık ara..."
-                            className="w-full h-14 pl-12 pr-4 bg-[var(--card-bg)] rounded-2xl border border-white/10 outline-none font-bold text-sm text-[var(--foreground)] placeholder:text-[var(--foreground)]/20 focus:border-brand-purple/50 focus:bg-white/[0.08] transition-all relative z-10 text-center"
+                            className="w-full h-14 pl-12 pr-4 bg-white/5 rounded-2xl border border-white/10 outline-none font-bold text-sm text-white placeholder:text-white/20 focus:border-cyan-400/50 focus:bg-white/[0.08] transition-all relative z-10 text-center"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -178,7 +177,7 @@ export default function VetPage() {
                                     "px-5 py-2.5 rounded-2xl border flex items-center gap-2 whitespace-nowrap transition-all font-bold text-xs",
                                     activeCategory === cat.id 
                                         ? "bg-white text-black border-white shadow-[0_0_20px_rgba(255,255,255,0.2)]" 
-                                        : "bg-[var(--card-bg)] text-[var(--text-secondary)] border-white/10 hover:border-white/20"
+                                        : "bg-white/5 text-white/60 border-white/10 hover:border-white/20"
                                 )}
                             >
                                 <span>{cat.icon}</span>
@@ -189,102 +188,136 @@ export default function VetPage() {
                 </div>
             </header>
 
-            <main className="px-6 py-8 space-y-10 relative z-10">
+            <main className="px-6 py-8 space-y-8 relative z-10">
 
-                {/* BENTO QUICK SERVICES - Glassmorphism 2.0 */}
-                <section className="grid grid-cols-6 grid-rows-3 gap-4 h-[380px]">
-                    {/* LARGE: Randevu Al */}
+                {/* EMERGENCY SOS BANNER */}
+                <motion.button
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setActiveModal('sos')}
+                    className="w-full bg-gradient-to-r from-red-950/40 to-rose-900/30 border border-red-500/20 rounded-[2.2rem] p-5 flex items-center justify-between shadow-2xl relative overflow-hidden group"
+                >
+                    <div className="absolute top-[-30%] right-[-15%] w-32 h-32 bg-red-500/10 blur-[30px] rounded-full group-hover:bg-red-500/20 transition-colors" />
+                    <div className="flex items-center gap-4 relative z-10">
+                        <div className="w-11 h-11 rounded-2xl bg-red-500/20 flex items-center justify-center border border-red-500/30 animate-pulse">
+                            <ShieldAlert className="w-5 h-5 text-red-400" />
+                        </div>
+                        <div className="text-left">
+                            <h3 className="text-sm font-black text-red-400 tracking-tight uppercase italic leading-none mb-1">ACİL YARDIM SİNYALİ</h3>
+                            <p className="text-[9px] text-white/40 font-bold uppercase tracking-widest">En Yakın 7/24 Açık Nöbetçi Klinikler</p>
+                        </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-red-400 group-hover:translate-x-1 transition-transform relative z-10" />
+                </motion.button>
+
+                {/* HEALTH STATUS WIDGET */}
+                <div className="bg-[#0D0D12]/60 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] p-6 flex flex-col gap-4">
+                    <div className="flex justify-between items-center px-1">
+                        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">{activePet?.name || 'Dostunuz'} Sağlık Durumu</span>
+                        <span className="bg-emerald-500/10 text-emerald-400 text-[8px] font-black px-2.5 py-1 rounded-full border border-emerald-500/20 uppercase tracking-wider">Aktif</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3.5">
+                        <div className="bg-white/5 border border-white/5 rounded-2xl p-4.5">
+                            <span className="text-[9px] font-black text-white/30 uppercase tracking-wider block mb-1">Aşı Durumu</span>
+                            <span className="text-xs font-black text-white block">Karma Aşı Vakti</span>
+                            <span className="text-[10px] text-emerald-400 font-bold mt-0.5 block">3 Gün Kaldı</span>
+                        </div>
+                        <div className="bg-white/5 border border-white/5 rounded-2xl p-4.5">
+                            <span className="text-[9px] font-black text-white/30 uppercase tracking-wider block mb-1">İlaç Durumu</span>
+                            <span className="text-xs font-black text-white block">1 Aktif Tedavi</span>
+                            <span className="text-[10px] text-blue-400 font-bold mt-0.5 block">Günde 2 Doz</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* SERVICES GRID */}
+                <section className="grid grid-cols-2 gap-3.5">
+                    {/* Randevu Al Card */}
                     <motion.button
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleServiceClick('appointment')}
-                        className="col-span-4 row-span-2 bg-[#1C1C1E] border border-white/10 rounded-[2.8rem] p-7 text-left flex flex-col justify-between relative overflow-hidden group shadow-2xl"
+                        className="col-span-2 bg-gradient-to-br from-cyan-950/30 via-blue-950/15 to-purple-950/20 border border-white/10 rounded-[2.5rem] p-6 text-left flex flex-col justify-between relative overflow-hidden group shadow-2xl h-[170px]"
                     >
-                        {/* Mesh Glow Background */}
-                        <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-brand-purple/20 blur-[80px] rounded-full group-hover:bg-brand-purple/30 transition-colors duration-500" />
-                        <div className="absolute bottom-[-10%] left-[-10%] w-32 h-32 bg-blue-500/10 blur-[60px] rounded-full" />
-                        
-                        <div className="w-16 h-16 rounded-[1.8rem] bg-white/5 backdrop-blur-2xl flex items-center justify-center border border-white/10 shadow-xl relative z-10">
-                            <Calendar className="w-8 h-8 text-white" />
+                        <div className="absolute top-[-20%] right-[-10%] w-48 h-48 bg-cyan-500/10 blur-[60px] rounded-full group-hover:bg-cyan-500/20 transition-colors duration-500" />
+                        <div className="w-12 h-12 rounded-2xl bg-white/5 backdrop-blur-2xl flex items-center justify-center border border-white/10 shadow-xl">
+                            <Calendar className="w-6 h-6 text-cyan-400" />
                         </div>
-                        
-                        <div className="relative z-10">
-                            <p className="text-brand-purple text-[10px] font-black uppercase tracking-[0.3em] mb-1">Moffi Health</p>
-                            <h3 className="text-3xl font-black text-white tracking-tighter leading-none italic uppercase">Randevu Al</h3>
-                            <p className="text-white/40 text-[11px] font-bold mt-2 uppercase tracking-widest max-w-[140px]">En Yakın Kliniklere Hızlı Erişim</p>
-                        </div>
-                        
-                        <div className="absolute top-8 right-8 w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10 group-hover:translate-x-1 transition-all">
-                            <ChevronRight className="w-6 h-6 text-white/40 group-hover:text-white" />
+                        <div>
+                            <p className="text-cyan-400 text-[9px] font-black uppercase tracking-[0.3em] mb-0.5">Hızlı Randevu</p>
+                            <h3 className="text-2xl font-black text-white tracking-tighter uppercase italic leading-none">Randevu Al</h3>
+                            <p className="text-white/40 text-[9px] font-bold mt-1 uppercase tracking-widest">Çevrendeki Kliniklerden Randevu Al</p>
                         </div>
                     </motion.button>
 
-                    {/* MEDIUM: Aşılar */}
+                    {/* Aşılar Card */}
                     <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleServiceClick('vaccine')}
-                        className="col-span-2 row-span-1 bg-emerald-500/5 border border-emerald-500/10 rounded-[2.2rem] p-5 flex flex-col items-start justify-between group hover:bg-emerald-500/10 transition-all"
+                        className="bg-[#0D0D12]/60 backdrop-blur-3xl border border-white/5 rounded-[2.2rem] p-5 flex flex-col items-start justify-between h-[120px] group hover:bg-white/5 transition-all text-left"
                     >
-                        <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/20 group-hover:scale-110 transition-transform">
+                        <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 group-hover:scale-110 transition-transform">
                             <Syringe className="w-5 h-5 text-emerald-400" />
                         </div>
                         <div>
-                            <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest block mb-1">Takvim</span>
-                            <span className="text-lg font-black text-white tracking-tighter uppercase italic leading-none">Aşılar</span>
+                            <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest block mb-0.5">Takvim</span>
+                            <span className="text-base font-black text-white tracking-tighter uppercase italic leading-none">Aşılar</span>
                         </div>
                     </motion.button>
 
-                    {/* MEDIUM: Eczane */}
+                    {/* İlaçlarım Card */}
                     <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleServiceClick('pharma')}
-                        className="col-span-2 row-span-1 bg-orange-500/5 border border-orange-500/10 rounded-[2.2rem] p-5 flex flex-col items-start justify-between group hover:bg-orange-500/10 transition-all font-sans"
+                        className="bg-[#0D0D12]/60 backdrop-blur-3xl border border-white/5 rounded-[2.2rem] p-5 flex flex-col items-start justify-between h-[120px] group hover:bg-white/5 transition-all text-left"
                     >
-                        <div className="w-10 h-10 rounded-2xl bg-orange-500/20 flex items-center justify-center border border-orange-500/20 group-hover:scale-110 transition-transform">
+                        <div className="w-10 h-10 rounded-2xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20 group-hover:scale-110 transition-transform">
                             <Pill className="w-5 h-5 text-orange-400" />
                         </div>
                         <div>
-                            <span className="text-[10px] font-black text-orange-400 uppercase tracking-widest block mb-1">Takip</span>
-                            <span className="text-lg font-black text-white tracking-tighter uppercase italic leading-none">İlaçlarım</span>
+                            <span className="text-[9px] font-black text-orange-400 uppercase tracking-widest block mb-0.5">Takip</span>
+                            <span className="text-base font-black text-white tracking-tighter uppercase italic leading-none">İlaçlarım</span>
                         </div>
                     </motion.button>
 
-                    {/* NEW ROW: Health Extension */}
+                    {/* Diyet Planı Card */}
                     <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleServiceClick('nutri')}
-                        className="col-span-3 row-span-1 bg-emerald-500/5 border border-white/5 rounded-[2.2rem] p-6 flex items-center gap-5 group hover:bg-emerald-500/10 transition-all"
+                        className="bg-[#0D0D12]/60 backdrop-blur-3xl border border-white/5 rounded-[2.2rem] p-5 flex flex-col items-start justify-between h-[120px] group hover:bg-white/5 transition-all text-left"
                     >
-                        <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/20 group-hover:rotate-12 transition-transform">
-                            <Utensils className="w-6 h-6 text-emerald-400" />
+                        <div className="w-10 h-10 rounded-2xl bg-lime-500/10 flex items-center justify-center border border-lime-500/20 group-hover:scale-110 transition-transform">
+                            <Utensils className="w-5 h-5 text-lime-400" />
                         </div>
-                        <div className="text-left">
-                            <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest block">Beslenme</span>
-                            <span className="text-xl font-black text-white tracking-tighter uppercase italic leading-none">Diyet Planı</span>
+                        <div>
+                            <span className="text-[9px] font-black text-lime-400 uppercase tracking-widest block mb-0.5">Beslenme</span>
+                            <span className="text-base font-black text-white tracking-tighter uppercase italic leading-none">Diyet Planı</span>
                         </div>
                     </motion.button>
 
+                    {/* İlaç Takibi Card */}
                     <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleServiceClick('meds')}
-                        className="col-span-3 row-span-1 bg-blue-500/5 border border-white/5 rounded-[2.2rem] p-6 flex items-center gap-5 group hover:bg-blue-500/10 transition-all"
+                        className="bg-[#0D0D12]/60 backdrop-blur-3xl border border-white/5 rounded-[2.2rem] p-5 flex flex-col items-start justify-between h-[120px] group hover:bg-white/5 transition-all text-left"
                     >
-                        <div className="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center border border-blue-500/20 group-hover:scale-110 transition-transform">
-                            <Clock className="w-6 h-6 text-blue-400" />
+                        <div className="w-10 h-10 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 group-hover:scale-110 transition-transform">
+                            <Clock className="w-5 h-5 text-blue-400" />
                         </div>
-                        <div className="text-left">
-                            <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest block">Zamanlayıcı</span>
-                            <span className="text-xl font-black text-white tracking-tighter uppercase italic leading-none">İlaç Takibi</span>
+                        <div>
+                            <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest block mb-0.5">Zamanlayıcı</span>
+                            <span className="text-base font-black text-white tracking-tighter uppercase italic leading-none">İlaç Takibi</span>
                         </div>
                     </motion.button>
                 </section>
 
                 {/* MAP PREVIEW - SLEEK CRYSTAL VERSION */}
-                <section className="relative w-full h-56 rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl">
+                <section className="relative w-full h-56 rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl">
                     {userLocation ? (
                         <MapboxLiveMap
                             userPos={userLocation}
@@ -293,17 +326,17 @@ export default function VetPage() {
                             isTracking={false}
                         />
                     ) : (
-                        <div className="w-full h-full bg-[var(--card-bg)] flex items-center justify-center text-[var(--foreground)]/20 text-xs font-bold">Harita Hazırlanıyor...</div>
+                        <div className="w-full h-full bg-[#0D0D12] flex items-center justify-center text-white/20 text-xs font-bold">Harita Hazırlanıyor...</div>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-[var(--background)] via-[var(--background)]/20 to-transparent pointer-events-none" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/20 to-transparent pointer-events-none" />
                     <div className="absolute bottom-6 left-6 flex items-end justify-between right-6 pointer-events-none">
                         <div>
-                            <div className="font-black text-lg text-[var(--foreground)] flex items-center gap-2"><MapPin className="w-5 h-5 text-orange-500" /> {allClinics.length} Klinik</div>
-                            <div className="text-[10px] text-[var(--foreground)]/50 font-bold uppercase tracking-widest">Çevrendeki Aktif Noktalar</div>
+                            <div className="font-black text-lg text-white flex items-center gap-2"><MapPin className="w-4 h-4 text-cyan-400" /> {allClinics.length} Klinik</div>
+                            <div className="text-[9px] text-white/40 font-bold uppercase tracking-widest">Çevrendeki Aktif Noktalar</div>
                         </div>
                         <button 
                             onClick={() => setIsExplorerOpen(true)}
-                            className="bg-white text-black px-6 py-2.5 rounded-full text-[10px] font-black pointer-events-auto hover:scale-105 active:scale-95 transition-all shadow-xl uppercase tracking-widest"
+                            className="bg-white text-black px-6 py-2.5 rounded-full text-[10px] font-black pointer-events-auto hover:bg-cyan-400 hover:text-black transition-all shadow-xl uppercase tracking-widest"
                         >
                             Keşfet
                         </button>
@@ -322,7 +355,7 @@ export default function VetPage() {
                         </button>
                     </div>
 
-                    <div className="space-y-8">
+                    <div className="space-y-6">
                         {featuredClinics.map((clinic, index) => (
                             <motion.div
                                 initial={{ opacity: 0, y: 40 }}
@@ -331,42 +364,42 @@ export default function VetPage() {
                                 transition={{ type: "spring", stiffness: 80, damping: 12, delay: index * 0.05 }}
                                 key={clinic.id || `clinic-${index}`}
                                 className={cn(
-                                    "bg-[#1C1C1E] rounded-[3rem] p-6 border transition-all active:scale-[0.98] group relative overflow-hidden",
-                                    clinic.isPremium ? "border-yellow-500/30 shadow-[0_30px_60px_rgba(234,179,8,0.1)]" : "border-white/5 shadow-2xl"
+                                    "bg-[#0D0D12]/80 backdrop-blur-3xl rounded-[2.5rem] p-5 border transition-all active:scale-[0.99] group relative overflow-hidden",
+                                    clinic.isPremium ? "border-cyan-500/30 shadow-[0_20px_40px_rgba(6,182,212,0.08)]" : "border-white/5 shadow-2xl"
                                 )}
                             >
                                 {/* Subtle Background Shimmer */}
                                 <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
 
-                                <div className="flex flex-col gap-6 relative z-10">
+                                <div className="flex flex-col gap-5 relative z-10">
                                     {/* Card Header: Main Image & floating data */}
-                                    <div className="relative h-56 rounded-[2rem] overflow-hidden border border-white/10 cursor-pointer" onClick={() => setDetailClinicId(clinic.id)}>
+                                    <div className="relative h-52 rounded-[2rem] overflow-hidden border border-white/10 cursor-pointer" onClick={() => setDetailClinicId(clinic.id)}>
                                         <img src={clinic.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
                                         
                                         {/* Floating Badges */}
                                         <div className="absolute top-4 left-4 flex gap-2">
                                             {clinic.isPremium && (
-                                                <div className="bg-gradient-to-br from-yellow-400 to-orange-500 text-black text-[10px] font-black px-4 py-1.5 rounded-full shadow-2xl flex items-center gap-1.5">
-                                                    <ShieldCheck className="w-3.5 h-3.5" /> MOFFI VERIFIED
+                                                <div className="bg-gradient-to-r from-cyan-400 to-blue-500 text-black text-[9px] font-black px-3.5 py-1.5 rounded-full shadow-2xl flex items-center gap-1">
+                                                    <ShieldCheck className="w-3 h-3 text-black" strokeWidth={3} /> VERIFIED
                                                 </div>
                                             )}
-                                            <div className="bg-black/40 backdrop-blur-md text-white text-[10px] font-black px-4 py-1.5 rounded-full border border-white/20 whitespace-nowrap">
+                                            <div className="bg-black/40 backdrop-blur-md text-white text-[9px] font-black px-3.5 py-1.5 rounded-full border border-white/20 whitespace-nowrap">
                                                 {clinic.distance}
                                             </div>
                                         </div>
 
-                                        <div className="absolute bottom-4 left-6 right-6 flex items-end justify-between">
+                                        <div className="absolute bottom-4 left-5 right-5 flex items-end justify-between">
                                             <div className="flex-1">
-                                                <h3 className="font-black text-white text-2xl tracking-tighter uppercase italic leading-none">{clinic.name}</h3>
-                                                <p className="text-white/60 text-[10px] font-black uppercase tracking-[0.2em] mt-1 flex items-center gap-1.5">
-                                                    <MapPin className="w-3 h-3 text-orange-500" /> {clinic.address || "İstanbul, Kadıköy"}
+                                                <h3 className="font-black text-white text-xl tracking-tighter uppercase italic leading-none">{clinic.name}</h3>
+                                                <p className="text-white/60 text-[9px] font-black uppercase tracking-[0.2em] mt-1 flex items-center gap-1.5">
+                                                    <MapPin className="w-3 h-3 text-cyan-400" /> {clinic.address || "İstanbul, Kadıköy"}
                                                 </p>
                                             </div>
-                                            <div className="flex flex-col items-end gap-1 translate-y-2">
-                                                <div className="bg-white p-3 rounded-2xl shadow-2xl text-black flex flex-col items-center min-w-[50px]">
-                                                    <Star className="w-4 h-4 text-yellow-500 fill-current mb-0.5" />
-                                                    <span className="text-xs font-black">{clinic.rating}</span>
+                                            <div className="flex flex-col items-end gap-1">
+                                                <div className="bg-white px-2.5 py-2 rounded-xl shadow-2xl text-black flex flex-col items-center min-w-[40px]">
+                                                    <Star className="w-3.5 h-3.5 text-yellow-500 fill-current mb-0.5" />
+                                                    <span className="text-[10px] font-black">{clinic.rating}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -374,21 +407,21 @@ export default function VetPage() {
 
                                     {/* Card Footer: Features & Actions */}
                                     <div className="flex items-center justify-between">
-                                        <div className="flex gap-2">
-                                            {(clinic.features || []).slice(0, 3).map((f: string) => (
-                                                <span key={f} className="text-[9px] font-black bg-white/5 text-white/40 px-3 py-1.5 rounded-lg border border-white/5 uppercase tracking-tighter">{f}</span>
+                                        <div className="flex gap-1.5">
+                                            {(clinic.features || []).slice(0, 2).map((f: string) => (
+                                                <span key={f} className="text-[8px] font-black bg-white/5 text-white/40 px-2.5 py-1.5 rounded-lg border border-white/5 uppercase tracking-tighter">{f}</span>
                                             ))}
                                         </div>
-                                        <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-2.5">
                                             <button 
                                                 onClick={() => setDetailClinicId(clinic.id)}
-                                                className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 text-white/40 flex items-center justify-center hover:bg-white/10 transition-all shadow-xl active:scale-90"
+                                                className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 text-white/40 flex items-center justify-center hover:bg-white/10 transition-all shadow-xl active:scale-90"
                                             >
-                                                <ChevronRight className="w-5 h-5" />
+                                                <ChevronRight className="w-4 h-4 text-white" />
                                             </button>
                                             <button
                                                 onClick={() => openAppointment(clinic)}
-                                                className="bg-white text-black h-12 px-8 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-brand-purple hover:text-white transition-all shadow-2xl active:scale-95 whitespace-nowrap"
+                                                className="bg-white text-black h-11 px-6 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-cyan-400 hover:text-black transition-all shadow-2xl active:scale-95 whitespace-nowrap"
                                             >
                                                 Randevu Al
                                             </button>
@@ -503,7 +536,7 @@ export default function VetPage() {
 
                 {/* 2. SOS MODAL - Critical Apple Alert */}
                 {activeModal === 'sos' && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-emergency flex flex-col items-center justify-center p-8 text-center text-white relative overflow-hidden">
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-emergency flex flex-col items-center justify-center p-8 text-center text-white overflow-hidden">
                         {/* Background Pulsing Radiance */}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                         <motion.div 

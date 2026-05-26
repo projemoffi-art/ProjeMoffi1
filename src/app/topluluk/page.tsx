@@ -1,0 +1,4409 @@
+"use client";
+
+import React, { useState, useRef, useEffect, memo, useMemo } from 'react';
+import { motion, AnimatePresence, useScroll, useTransform, useMotionValueEvent, useMotionValue } from 'framer-motion';
+import {
+    Heart, MessageCircle, Share2, MapPin,
+    Plus, Camera, Compass,
+    Users, Activity, Sparkles, X, Send, PawPrint, Search, Menu, MoreHorizontal, Image as ImageIcon, Video, Mic,
+    Settings, Grid3X3, List, Edit3, Bookmark, Edit2, Trash2, ImagePlus,
+    LogOut, ChevronRight, ChevronLeft, User, Bell, Lock, HelpCircle, Check, HeartHandshake, CheckCheck, ShieldAlert, ChevronDown,
+    AlertTriangle, PhoneCall, BadgeCheck, Radar, Palette, ShoppingBag, Gamepad2, Globe, Filter,
+    Coins, Package, Calendar, Plane, ShieldCheck, Route, TrendingUp, Timer, Footprints, Play, Download, Clock, Syringe, Moon
+} from 'lucide-react';
+import { compressImageToFile } from '@/lib/imageUtils';
+import { cn } from '@/lib/utils';
+import { useRouter, useSearchParams } from 'next/navigation';
+import AuthModal from '../../components/auth/AuthModal';
+import { useAuth } from '../../context/AuthContext';
+import { useStories } from '../../hooks/useStories';
+import { useTheme } from '../../context/ThemeContext';
+import { PetSettingsModal } from '../../components/profile/PetSettingsModal';
+import { SOSCommandCenter } from '../../components/profile/SOSCommandCenter';
+import { QRCodeSVG } from 'qrcode.react';
+import { InboxModal } from '../../components/community/InboxModal';
+import { FeedbackModal } from '../../components/community/modals/FeedbackModal';
+import { MessageSquareHeart } from 'lucide-react';
+
+import { ShareSheet } from '../../components/community/ShareSheet';
+import { NotificationsDrawer } from '../../components/community/NotificationsDrawer';
+import { MoffiAssistant } from '../../components/ai/MoffiAssistant';
+import { ImmersivePostCard } from '../../components/community/ImmersivePostCard';
+import { ProfileTab } from '@/components/community/ProfileTab';
+import { VetQuickSheet } from '@/components/vet/VetQuickSheet';
+import { WalkQuickSheet } from '@/components/walk/WalkQuickSheet';
+import { MarketQuickSheet } from '@/components/shop/MarketQuickSheet';
+import { StudioQuickSheet } from '@/components/studio/StudioQuickSheet';
+import { GameQuickSheet } from '@/components/game/GameQuickSheet';
+import { PetSwitcher } from '@/components/common/PetSwitcher';
+import { usePet } from '@/context/PetContext';
+import { useWellbeing } from '@/context/WellbeingContext';
+import { EcosystemPortal } from '@/components/community/EcosystemPortal';
+import { SpotlightSearch } from '@/components/community/SpotlightSearch';
+import { DiaryModal } from '@/components/community/DiaryModal';
+import { apiService, isSupabaseEnabled } from '../../services/apiService';
+import { supabase } from '@/lib/supabase';
+import { HubOverlay } from '../../components/community/HubOverlay';
+import { MoffiBottomNav } from '@/components/common/MoffiBottomNav';
+import { OverlaySystem } from '@/components/community/OverlaySystem';
+import { ExploreGrid } from '@/components/community/ExploreGrid';
+
+
+import { 
+    MOCK_PETS, MOCK_ADOPTIONS, 
+    MOCK_NOTIFICATIONS, ORDERS, APPOINTMENTS, MOCK_POSTS 
+} from '@/lib/mockData';
+import Image from 'next/image';
+
+import { useChat } from '@/context/ChatContext';
+import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
+
+export default function MoffiSocialMasterpiece() {
+    const { user, logout, updateProfile, updateSettings } = useAuth();
+    const { 
+        isInboxOpen, setIsInboxOpen, 
+        inboxTab, setInboxTab, 
+        unreadCount, 
+        openChat,
+        activeChatUserId, setActiveChatUserId,
+        replyMessage, setReplyMessage,
+        onSendReply, isReplying,
+        sosAlerts, setSosAlerts, inboxMessages,
+        refreshInbox
+    } = useChat();
+    const { theme, setTheme } = useTheme(); // Restored
+    const { storyGroups, uploadStory } = useStories(); // Restored
+    const { pets: userPets, activePet, switchPet, updatePet } = usePet();
+    const { isQuietModeActive } = useWellbeing();
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const [activeTab, setActiveTab] = useState('feed'); 
+    const [radarTabMode, setRadarTabMode] = useState<'lost' | 'adopt'>('lost');
+    const [posts, setPosts] = useState<any[]>([]);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [isPublishing, setIsPublishing] = useState(false);
+    const [isLoadingPosts, setIsLoadingPosts] = useState(false);
+    const [isLoadingLost, setIsLoadingLost] = useState(false);
+    const [isLoadingAdoptions, setIsLoadingAdoptions] = useState(false);
+    const [profileSubView, setProfileSubView] = useState<'main' | 'family' | 'passport' | 'orders' | 'wallet' | 'appointments' | 'routes' | 'impact' | 'bookmarks'>('main');
+    const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+    const { notifications, unreadCount: notifUnreadCount, markAllRead } = useRealtimeNotifications(user?.id);
+    const [selectedSharePost, setSelectedSharePost] = useState<any>(null);
+    const [profileViewMode, setProfileViewMode] = useState('grid');
+    const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+    const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+    const [editName, setEditName] = useState("");
+    const [editUsername, setEditUsername] = useState("");
+    const [editBio, setEditBio] = useState("");
+    const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
+    const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
+    const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
+    const [editCoverPreview, setEditCoverPreview] = useState<string | null>(null);
+    const [isSavingProfile, setIsSavingProfile] = useState(false);
+    const [isAddPetOpen, setIsAddPetOpen] = useState(false);
+    const [storyPreview, setStoryPreview] = useState<string | null>(null);
+    const [pendingStoryFile, setPendingStoryFile] = useState<File | null>(null);
+    const [isUploadingStory, setIsUploadingStory] = useState(false);
+    const [addPetStep, setAddPetStep] = useState(1);
+    const [newPetName, setNewPetName] = useState("");
+    const [newPetType, setNewPetType] = useState("🐶");
+    const [newPetBreed, setNewPetBreed] = useState("");
+    const [newPetAge, setNewPetAge] = useState("");
+    const [newPetGender, setNewPetGender] = useState("Erkek");
+    const [newPetNeutered, setNewPetNeutered] = useState("Evet");
+    const [newPetSize, setNewPetSize] = useState("Orta");
+    const [newPetFeatures, setNewPetFeatures] = useState("");
+    const [newPetHealth, setNewPetHealth] = useState("");
+    const [newPetCharacter, setNewPetCharacter] = useState("");
+    const [newPetMicrochip, setNewPetMicrochip] = useState("");
+    const [newPetShowPhone, setNewPetShowPhone] = useState(true);
+    const [newPetPhotos, setNewPetPhotos] = useState<{ file: File, preview: string }[]>([]);
+    const [isSavingPet, setIsSavingPet] = useState(false);
+    const [qrModalPet, setQrModalPet] = useState<{ name: string, id: string, avatar: string } | null>(null);
+    const [isFullScreenQR, setIsFullScreenQR] = useState(false);
+    const [isPetSettingsOpen, setIsPetSettingsOpen] = useState(false);
+    const [settingsPet, setSettingsPet] = useState<any>(null);
+    const [isSOSCommandCenterOpen, setIsSOSCommandCenterOpen] = useState(false);
+    const [sosActivePet, setSosActivePet] = useState<any>(null);
+    const [isSosFromHub, setIsSosFromHub] = useState(false);
+    const [isLostAdModalOpen, setIsLostAdModalOpen] = useState(false);
+    const [selectedLostPet, setSelectedLostPet] = useState<any | null>(null);
+    const [lostPetName, setLostPetName] = useState("");
+    const [lostPetBreed, setLostPetBreed] = useState("");
+    const [lostPetLocation, setLostPetLocation] = useState("");
+    const [lostPetDesc, setLostPetDesc] = useState("");
+    const [lostPetPhotos, setLostPetPhotos] = useState<{ file: File, preview: string }[]>([]);
+    const [isSubmittingSOS, setIsSubmittingSOS] = useState(false);
+    const [isReportingLocation, setIsReportingLocation] = useState(false);
+    const [lostPets, setLostPets] = useState<any[]>([]);
+    const [selectedAdoptionPet, setSelectedAdoptionPet] = useState<any | null>(null);
+    const [isAddAdoptionModalOpen, setIsAddAdoptionModalOpen] = useState(false);
+    const [adoptionAds, setAdoptionAds] = useState<any[]>([]);
+    const [selectedAdoptionCategory, setSelectedAdoptionCategory] = useState("Hepsi");
+    const [adoptionPetName, setAdoptionPetName] = useState("");
+    const [adoptionPetBreed, setAdoptionPetBreed] = useState("");
+    const [adoptionPetAge, setAdoptionPetAge] = useState("");
+    const [adoptionPetDesc, setAdoptionPetDesc] = useState("");
+    const [adoptionPetPhotos, setAdoptionPetPhotos] = useState<{ file: File, preview: string }[]>([]);
+    const [adoptionPetType, setAdoptionPetType] = useState("cat");
+    const [isSubmittingAdoption, setIsSubmittingAdoption] = useState(false);
+    const [isApplicationFormOpen, setIsApplicationFormOpen] = useState(false);
+    const [appExperience, setAppExperience] = useState('0-2 Yıl');
+    const [viewMode, setViewMode] = useState<'immersive' | 'grid'>('immersive');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+    const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
+
+    const handlePostClickFromGrid = (post: any) => {
+        setViewMode('immersive');
+        setTimeout(() => {
+            const element = document.getElementById(`post-${post.id}`);
+            if (element) {
+                element.scrollIntoView({ behavior: 'auto', block: 'center' });
+            }
+        }, 100);
+    };
+
+
+    const [appHomeType, setAppHomeType] = useState('Apartman');
+    const [appNote, setAppNote] = useState('');
+    const [isSubmittingApp, setIsSubmittingApp] = useState(false);
+    const [isAdoptionChatOpen, setIsAdoptionChatOpen] = useState(false);
+    const [adoptionChatPet, setAdoptionChatPet] = useState<any | null>(null);
+    const [adoptionMessages, setAdoptionMessages] = useState<any[]>([]);
+    const [adoptionNewMsg, setAdoptionNewMsg] = useState("");
+    const [isSendingAdoptionMsg, setIsSendingAdoptionMsg] = useState(false);
+    const [anonModalType, setAnonModalType] = useState<'report' | 'message' | null>(null);
+    const [isHubOpen, setIsHubOpen] = useState(false);
+    const [anonMessage, setAnonMessage] = useState("");
+    const [anonError, setAnonError] = useState<string | null>(null);
+    const [isSubmittingAnon, setIsSubmittingAnon] = useState(false);
+    const [isHubLongPressing, setIsHubLongPressing] = useState(false);
+    const [activeTimePicker, setActiveTimePicker] = useState<'from' | 'to' | null>(null);
+    const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+    const [activeMessageMenuId, setActiveMessageMenuId] = useState<string | null>(null);
+    const [isVetQuickSheetOpen, setIsVetQuickSheetOpen] = useState(false);
+    const [isWalkQuickSheetOpen, setIsWalkQuickSheetOpen] = useState(false);
+    const [isMarketQuickSheetOpen, setIsMarketQuickSheetOpen] = useState(false);
+    const [isStudioQuickSheetOpen, setIsStudioQuickSheetOpen] = useState(false);
+    const [isGameQuickSheetOpen, setIsGameQuickSheetOpen] = useState(false);
+    const [isEcosystemPortalOpen, setIsEcosystemPortalOpen] = useState(false);
+    const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
+    const [isDiaryOpen, setIsDiaryOpen] = useState(false);
+    const [isSOSOpen, setIsSOSOpen] = useState(false);
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [uploadImageURL, setUploadImageURL] = useState<string | null>(null);
+    const [uploadCaption, setUploadCaption] = useState('');
+    const [uploadLocationEnabled, setUploadLocationEnabled] = useState(false);
+    const [uploadMood, setUploadMood] = useState<string | null>(null);
+    const [imageFilter, setImageFilter] = useState('');
+    const [activeFilterIndex, setActiveFilterIndex] = useState(0);
+    const [showFilterName, setShowFilterName] = useState(false);
+    const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+    const [taggedPetIds, setTaggedPetIds] = useState<string[]>([]);
+    
+    // Pro Adjustments States
+    const [brightness, setBrightness] = useState(100);
+    const [contrast, setContrast] = useState(100);
+    const [saturation, setSaturation] = useState(100);
+    
+    // Scheduling States
+    const [scheduledDate, setScheduledDate] = useState<string | null>(null);
+    const [isSchedulingMode, setIsSchedulingMode] = useState(false);
+    const [activeTool, setActiveTool] = useState<'adjust' | 'tag' | 'schedule' | 'mood' | 'ai' | null>(null);
+    
+    const touchStartX = useRef<number | null>(null);
+
+    const IMAGE_FILTERS = useMemo(() => [
+        { name: 'Orijinal', filter: '' },
+        { name: 'Aydınlık', filter: 'brightness(1.1) contrast(1.1)' },
+        { name: 'Canlı', filter: 'contrast(1.2) saturate(1.3)' },
+        { name: 'Sıcak', filter: 'sepia(0.3) saturate(1.2) contrast(1.1)' },
+        { name: 'Soğuk', filter: 'saturate(1.2) contrast(1.1) hue-rotate(-10deg)' },
+        { name: 'Soluk', filter: 'contrast(0.9) brightness(1.1) saturate(0.8)' },
+        { name: 'Krem', filter: 'sepia(0.2) brightness(1.05) saturate(0.9)' },
+        { name: 'Pastel', filter: 'contrast(0.85) brightness(1.1) saturate(1.1) sepia(0.1)' },
+        { name: 'Tozlu', filter: 'sepia(0.4) contrast(0.9) brightness(1.05)' },
+        { name: 'Minimal', filter: 'contrast(1.05) saturate(0.7)' },
+        { name: 'Siyah Beyaz', filter: 'grayscale(1) contrast(1.2)' },
+        { name: 'Sert Siyah', filter: 'grayscale(1) contrast(1.4) brightness(0.9)' },
+        { name: 'Vintage', filter: 'sepia(0.6) contrast(1.1) brightness(0.9) saturate(1.2)' },
+        { name: 'Nostalji', filter: 'sepia(0.8) contrast(1.2) brightness(0.8)' },
+        { name: 'Sinematik', filter: 'contrast(1.3) saturate(0.8) sepia(0.2)' }
+    ], []);
+
+    useEffect(() => {
+        if (showFilterName) {
+            const timer = setTimeout(() => setShowFilterName(false), 1250);
+            return () => clearTimeout(timer);
+        }
+    }, [showFilterName, activeFilterIndex]);
+
+    const handleSwipeFilter = (direction: 'left' | 'right') => {
+        let newIndex = activeFilterIndex;
+        if (direction === 'left') {
+            newIndex = (activeFilterIndex + 1) % IMAGE_FILTERS.length;
+        } else {
+            newIndex = (activeFilterIndex - 1 + IMAGE_FILTERS.length) % IMAGE_FILTERS.length;
+        }
+        setActiveFilterIndex(newIndex);
+        setImageFilter(IMAGE_FILTERS[newIndex].filter);
+        setShowFilterName(true);
+    };
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX;
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (touchStartX.current === null) return;
+        const touchEndX = e.changedTouches[0].clientX;
+        const diff = touchEndX - touchStartX.current;
+        if (diff > 50) handleSwipeFilter('right');
+        else if (diff < -50) handleSwipeFilter('left');
+        touchStartX.current = null;
+    };
+    const [viewerStoryGroupIndex, setViewerStoryGroupIndex] = useState<number | null>(null);
+    const [viewerStoryIndex, setViewerStoryIndex] = useState(0);
+    const [storyProgress, setStoryProgress] = useState(0);
+    const [postToDelete, setPostToDelete] = useState<number | null>(null);
+    const [editingPost, setEditingPost] = useState<{ id: number, desc: string, mood: string | null, media: string } | null>(null);
+    const [isReportAdModalOpen, setIsReportAdModalOpen] = useState(false);
+    const [reportingAdId, setReportingAdId] = useState<string | null>(null);
+    const [reportReason, setReportReason] = useState<string>('');
+    const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+
+    const generateAICaption = () => {
+        setIsGeneratingAI(true);
+        setTimeout(() => {
+            const templates: Record<string, string[]> = {
+                'Mutlu ✨': [
+                    "Bugün enerjimiz yerinde! 🐾",
+                    "Gülümsememizle dünyayı aydınlatıyoruz. ✨",
+                    "En mutlu anlar patilerle geçer. ❤️",
+                    "Mutluluk bir kuyruk sallaması kadar yakın! 🐕"
+                ],
+                'Uykulu 💤': [
+                    "Biraz kestirmenin kimseye zararı olmaz... 😴",
+                    "Rüyalar alemine yolculuk başlıyor. 🌙",
+                    "En sevdiğim aktivite: Uyumak! 💤",
+                    "Pazartesi modumuz tam olarak bu... 😴"
+                ],
+                'Enerjik ⚡': [
+                    "Beni kimse durduramaz! 🔥",
+                    "Koşmak, zıplamak, keşfetmek... 🐾",
+                    "Enerji tavan! ⚡",
+                    "Hadi oyna artık! Bekliyorum... 🎾"
+                ],
+                'Sabırsız 🦉': [
+                    "Mama saati ne zaman? 🍖",
+                    "Dışarı çıkmak için sabırsızlanıyoruz! 🐾",
+                    "Hala bekliyor muyuz? Cidden mi? 🦉"
+                ],
+                'Oyunbaz 🎾': [
+                    "Topu at, getiriyim! 🎾",
+                    "Oyun vakti geldi de geçiyor bile. 🐾",
+                    "Hadi biraz eğlenelim! ✨"
+                ],
+                'Yorgun 🔋': [
+                    "Pillerimiz bitti... 🔋",
+                    "Bugün çok koşturduk, dinlenme vakti. 💤",
+                    "Beni buraya bırakın, uyanınca gelirim. 😴"
+                ]
+            };
+
+            const pool = uploadMood && templates[uploadMood] ? templates[uploadMood] : [
+                "Moffi ile anı biriktiriyoruz. 🐾",
+                "Günün en güzel anı. ✨",
+                "Patili dostumla hayat daha güzel. ❤️",
+                "Harika bir gün! 🐕",
+                "Moffi dünyasında sıradan bir an. 🌍"
+            ];
+
+            const randomCaption = pool[Math.floor(Math.random() * pool.length)];
+            setUploadCaption(randomCaption);
+            setIsGeneratingAI(false);
+            showToast("AI Başarılı! ✨", "Senin için harika bir açıklama buldum.", "success");
+        }, 800);
+    };
+    
+    // VIDEO TRIMMER STATES
+    const [videoDuration, setVideoDuration] = useState(0);
+    const [videoTrimRange, setVideoTrimRange] = useState<[number, number]>([0, 20]);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    
+    // AUDIO SHARING STATES
+    const [audioFile, setAudioFile] = useState<File | null>(null);
+    const [audioURL, setAudioURL] = useState<string | null>(null);
+    const audioInputRef = useRef<HTMLInputElement>(null);
+    
+    // DERIVED STATES
+    const isAnyPetLost = useMemo(() => userPets.some(p => p.is_lost), [userPets]);
+    
+    // TOAST NOTIFICATIONS
+    const [toastMessage, setToastMessage] = useState<{ title: string; desc?: string; type: 'success' | 'error' | 'info' } | null>(null);
+    const showToast = (title: string, desc?: string, type: 'success' | 'error' | 'info' = 'info') => {
+        setToastMessage({ title, desc, type });
+        setTimeout(() => setToastMessage(null), 4000);
+    };
+
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // --- PROFESSIONAL MEDIA ENGINE (Compression & Preview) ---
+    const processVideo = async (file: File, startTime: number, duration: number): Promise<Blob> => {
+        return new Promise((resolve, reject) => {
+            const video = document.createElement('video');
+            video.src = URL.createObjectURL(file);
+            video.muted = false; // Must be false to extract audio track via Web Audio API
+            video.playsInline = true;
+            video.crossOrigin = "anonymous";
+            
+            let isResolvedOrRejected = false;
+            
+            const cleanup = () => {
+                if (!video.paused) video.pause();
+                video.removeAttribute('src');
+                video.load();
+            };
+
+            const safeReject = (err: any) => {
+                if (isResolvedOrRejected) return;
+                isResolvedOrRejected = true;
+                cleanup();
+                reject(err);
+            };
+
+            // Timeout to prevent hanging forever if video metadata/playback fails
+            const timeoutId = setTimeout(() => {
+                safeReject(new Error("Video işleme zaman aşımına uğradı. Orijinal dosya kullanılacak."));
+            }, 10000); 
+
+            video.onloadedmetadata = () => {
+                video.currentTime = startTime;
+            };
+            
+            video.onseeked = () => {
+                video.play().catch(err => {
+                    clearTimeout(timeoutId);
+                    safeReject(err);
+                });
+            };
+
+            video.onplaying = () => {
+                clearTimeout(timeoutId);
+                try {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    const scaleFactor = Math.min(1, 480 / video.videoWidth);
+                    canvas.width = video.videoWidth * scaleFactor;
+                    canvas.height = video.videoHeight * scaleFactor;
+                    
+                    const stream = canvas.captureStream(30); 
+                    
+                    // --- AUDIO EXTRACTION ENGINE ---
+                    // Canvas captureStream only captures video frames. We must extract the audio manually.
+                    try {
+                        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+                        if (AudioContextClass) {
+                            const audioCtx = new AudioContextClass();
+                            const source = audioCtx.createMediaElementSource(video);
+                            const dest = audioCtx.createMediaStreamDestination();
+                            
+                            // Connect source to destination stream (but NOT to speakers/audioCtx.destination)
+                            // This keeps the processing silent while preserving the audio track.
+                            source.connect(dest);
+                            
+                            const audioTrack = dest.stream.getAudioTracks()[0];
+                            if (audioTrack) {
+                                stream.addTrack(audioTrack);
+                            }
+                        }
+                    } catch (audioErr) {
+                        console.warn("Moffi Audio Engine: Ses izi alınamadı veya video sessiz.", audioErr);
+                    }
+
+                    const recorder = new MediaRecorder(stream, { 
+                        mimeType: 'video/webm;codecs=vp8',
+                        videoBitsPerSecond: 1200000 
+                    });
+                    
+                    const chunks: Blob[] = [];
+                    recorder.ondataavailable = (e) => chunks.push(e.data);
+                    
+                    recorder.onstop = () => {
+                        if (isResolvedOrRejected) return;
+                        isResolvedOrRejected = true;
+                        cleanup();
+                        resolve(new Blob(chunks, { type: 'video/webm' }));
+                    };
+                    
+                    recorder.start();
+                    
+                    const drawFrame = () => {
+                        if (isResolvedOrRejected) return;
+                        if (video.paused || video.ended || (video.currentTime >= startTime + duration)) {
+                            if (recorder.state === 'recording') recorder.stop();
+                            return;
+                        }
+                        ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        requestAnimationFrame(drawFrame);
+                    };
+                    drawFrame();
+
+                    // Hard limit safety (21s)
+                    setTimeout(() => {
+                        if (recorder.state === 'recording') recorder.stop();
+                    }, (duration + 1) * 1000);
+                } catch (err) {
+                    safeReject(err);
+                }
+            };
+
+            video.onerror = (e) => {
+                clearTimeout(timeoutId);
+                console.error("Video processing error:", e);
+                safeReject(new Error("Video işlenirken bir hata oluştu."));
+            };
+            
+            video.load();
+        });
+    };
+
+    const compressImage = async (file: File): Promise<File> => {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target?.result as string;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 1200;
+                    const MAX_HEIGHT = 1600;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width *= MAX_HEIGHT / height;
+                            height = MAX_HEIGHT;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx?.drawImage(img, 0, 0, width, height);
+
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            const compressedFile = new File([blob], file.name, {
+                                type: 'image/jpeg',
+                                lastModified: Date.now(),
+                            });
+                            resolve(compressedFile);
+                        } else {
+                            resolve(file);
+                        }
+                    }, 'image/jpeg', 0.8);
+                };
+            };
+        });
+    };
+
+    const handleStoryClick = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = async (e: any) => {
+            const file = e.target.files[0];
+            if (file) {
+                setPendingStoryFile(file);
+                const reader = new FileReader();
+                reader.onloadend = () => setStoryPreview(reader.result as string);
+                reader.readAsDataURL(file);
+            }
+        };
+        input.click();
+    };
+
+    const confirmUploadStory = async () => {
+        if (!pendingStoryFile) return;
+        setIsUploadingStory(true);
+        try {
+            // --- PROFESSIONAL COMPRESSION ---
+            const compressed = await compressImageToFile(pendingStoryFile);
+            const res = await uploadStory(compressed);
+            if (res.success) {
+                showToast("Harika!", "Hikayen başarıyla paylaşıldı.", "success");
+            } else {
+                showToast("Hata", "Hikaye yüklenemedi.", "error");
+            }
+            setStoryPreview(null);
+            setPendingStoryFile(null);
+        } catch (err) {
+            console.error("Story upload failed:", err);
+            showToast("Hata", "Sistem hatası oluştu.", "error");
+        } finally {
+            setIsUploadingStory(false);
+        }
+    };
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const sosInputRef = useRef<HTMLInputElement>(null);
+    const adoptionPhotoRef = useRef<HTMLInputElement>(null);
+    const coverInputRef = useRef<HTMLInputElement>(null);
+    const globalScrollRef = useRef<HTMLDivElement>(null);
+    const scrollY = useMotionValue(0);
+    const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+    const longPressHubTimer = useRef<NodeJS.Timeout | null>(null);
+    const storyTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const feedRef = useRef<HTMLDivElement>(null);
+    const mapRef = useRef<HTMLDivElement>(null);
+    const radarRef = useRef<HTMLDivElement>(null);
+    const profileRef = useRef<HTMLDivElement>(null);
+    const footerRef = useRef<HTMLDivElement>(null);
+    const lastScrollY = useRef(0);
+    const lastInboxScroll = useRef(0);
+    
+    // Global Navigation & Hub Controller (Restored)
+    useEffect(() => {
+        const handleOpenPost = () => {
+            window.dispatchEvent(new CustomEvent('moffi-toast', { 
+                detail: { 
+                    message: 'Yeni gönderi oluşturma merkezi hazırlanıyor... 📸', 
+                    icon: 'Sparkles', 
+                    color: 'text-cyan-400' 
+                } 
+            }));
+        };
+        const handleOpenSOS = () => {
+            // Toggle SOS view or state
+            window.dispatchEvent(new CustomEvent('open-sos-command'));
+        };
+
+        const handleOpenSpotlight = () => setIsSpotlightOpen(true);
+        const handleOpenDiary = () => setIsDiaryOpen(true);
+        const handleOpenAuraStudio = () => setIsStudioQuickSheetOpen(true);
+        const handleOpenMarket = () => setIsMarketQuickSheetOpen(true);
+        const handleOpenVet = () => setIsVetQuickSheetOpen(true);
+        const handleOpenWalk = () => setIsWalkQuickSheetOpen(true);
+        const handleOpenNotif = () => setIsNotificationsOpen(true);
+
+        window.addEventListener('open-add-post', handleOpenPost);
+        window.addEventListener('open-sos-center', handleOpenSOS);
+        window.addEventListener('open-moffi-spotlight', handleOpenSpotlight);
+        window.addEventListener('open-moffi-diary', handleOpenDiary);
+        window.addEventListener('open-aura-studio', handleOpenAuraStudio);
+        window.addEventListener('open-market-sheet', handleOpenMarket);
+        window.addEventListener('open-vet-sheet', handleOpenVet);
+        window.addEventListener('open-walk-sheet', handleOpenWalk);
+        window.addEventListener('open-notification-drawer', handleOpenNotif);
+        
+        const handleChangeTab = (e: any) => {
+            setActiveTab(e.detail);
+        };
+        window.addEventListener('moffi-change-tab', handleChangeTab);
+
+        return () => {
+            window.removeEventListener('open-add-post', handleOpenPost);
+            window.removeEventListener('open-sos-center', handleOpenSOS);
+            window.removeEventListener('open-moffi-spotlight', handleOpenSpotlight);
+            window.removeEventListener('open-moffi-diary', handleOpenDiary);
+            window.removeEventListener('open-aura-studio', handleOpenAuraStudio);
+            window.removeEventListener('open-market-sheet', handleOpenMarket);
+            window.removeEventListener('open-vet-sheet', handleOpenVet);
+            window.removeEventListener('open-walk-sheet', handleOpenWalk);
+            window.removeEventListener('open-notification-drawer', handleOpenNotif);
+            window.removeEventListener('moffi-change-tab', handleChangeTab);
+        };
+    }, [router]);
+
+    // Unified Header Scroll Logic (Works for all tabs)
+
+    
+    // Unified Scroll Handler (Main Container)
+    const handleMainScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const current = e.currentTarget.scrollTop;
+        scrollY.set(current); // Synchronize motion value for header animations
+        
+        // Navigation Hide/Show Logic (Global)
+        if (current > lastScrollY.current && current > 150) {
+            window.dispatchEvent(new CustomEvent('moffi-toggle-nav', { detail: false }));
+        } else if (current < lastScrollY.current - 10 || current < 80) {
+            window.dispatchEvent(new CustomEvent('moffi-toggle-nav', { detail: true }));
+        }
+        lastScrollY.current = current;
+    };
+
+
+
+    useEffect(() => {
+        const loadInitialData = async () => {
+            // Fetch everything independently so one slow request doesn't block others
+            fetchPosts();
+            fetchLostPets();
+            fetchAdoptionAds();
+            fetchNotifications();
+            fetchInbox();
+        };
+        loadInitialData();
+    }, []);
+
+    const fetchNotifications = async () => {
+        // Obsolete, handled by useRealtimeNotifications hook
+    };
+
+    // REAL-TIME GLOBAL SYNC (Professional Event-Driven Architecture)
+    useEffect(() => {
+        const handleCustomPostsSync = () => {
+            fetchPosts(true);
+        };
+        window.addEventListener('moffi_posts_changed', handleCustomPostsSync);
+
+        let channel: any = null;
+        if (isSupabaseEnabled) {
+            channel = supabase
+                .channel('global-feed-events')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => {
+                    fetchPosts(true);
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'likes' }, () => {
+                    fetchPosts(true);
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => {
+                    fetchPosts(true);
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
+                    fetchNotifications();
+                })
+                .subscribe();
+        }
+
+        return () => {
+            window.removeEventListener('moffi_posts_changed', handleCustomPostsSync);
+            if (channel) {
+                supabase.removeChannel(channel);
+            }
+        };
+    }, [user, activeTab]);
+
+    // HANDLE DEEP LINKING (TABS & CHAT)
+    useEffect(() => {
+        const chatWithId = searchParams.get('chat');
+        if (chatWithId) {
+            setActiveChatUserId(chatWithId);
+            setInboxTab('chats');
+            setIsInboxOpen(true);
+        }
+
+        const tab = searchParams.get('tab');
+        if (tab === 'profile') {
+            setActiveTab('profile');
+        } else if (tab === 'feed' || tab === 'radar') {
+            setActiveTab(tab as any);
+        }
+
+        const mode = searchParams.get('mode');
+        if (mode === 'lost' || mode === 'adopt') {
+            setRadarTabMode(mode as any);
+        }
+    }, [searchParams]);
+    
+    // Keyboard Shortcut for AI Spotlight (Cmd+K / Ctrl+K)
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                setIsSpotlightOpen(prev => !prev);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+
+    const fetchPosts = async (isBackground = false) => {
+        if (!isBackground) {
+            setIsLoadingPosts(true);
+        }
+        try {
+            const data = await apiService.getFeedContent();
+            
+            // 1. Filter out Blocked Users
+            const blockedIds = (user?.settings?.moderation?.blockedUsers || []).map((u: any) => u.id);
+            const filteredData = data.filter((post: any) => {
+                const authorId = post.user_id || post.userId || post.authorId || post.owner_id || post.user?.id;
+                return !blockedIds.includes(authorId);
+            });
+
+            // 2. Apply initial sorting
+            const sortType = user?.settings?.feed?.defaultSort || 'new';
+            const sortedData = sortPostsLocally(filteredData, sortType);
+            
+            setPosts(sortedData);
+        } catch (err) {
+            console.error("Posts fetch error:", err);
+            // DO NOT fall back to MOCK_POSTS — show empty feed if Supabase fails
+            // This prevents hardcoded dog photos from appearing
+        } finally {
+            if (!isBackground) {
+                setIsLoadingPosts(false);
+            }
+        }
+    };
+
+    const filteredPosts = useMemo(() => {
+        if (!searchQuery) return posts;
+        return posts.filter(post => 
+            post.desc?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            post.author_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            post.category?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [posts, searchQuery]);
+
+
+    const sortPostsLocally = (data: any[], sortType: string) => {
+        const sorted = [...data];
+        if (sortType === 'popular') {
+            return sorted.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+        } else {
+            // Newest first: Sort by ID descending (Date.now proxy) or index
+            return sorted.sort((a, b) => {
+                const idA = typeof a.id === 'string' ? (parseInt(a.id.split('-').pop() || '0') || 0) : a.id;
+                const idB = typeof b.id === 'string' ? (parseInt(b.id.split('-').pop() || '0') || 0) : b.id;
+                return idB - idA;
+            });
+        }
+    };
+
+    // Reactive Re-sorting when preference changes
+    useEffect(() => {
+        if (posts.length > 0) {
+            const sortType = user?.settings?.feed?.defaultSort || 'new';
+            const sorted = sortPostsLocally(posts, sortType);
+            
+            // Only update if order actually changed to avoid infinite loop
+            const orderChanged = sorted.some((p, i) => p.id !== posts[i].id);
+            if (orderChanged) {
+                setPosts(sorted);
+                
+                // Pure Apple UX: Scroll to top when sorting changes
+                if (globalScrollRef.current) {
+                    globalScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }
+        }
+    }, [user?.settings?.feed?.defaultSort]);
+
+
+    const fetchAdoptionAds = async () => {
+        setIsLoadingAdoptions(true);
+        try {
+            const data = await apiService.getAdoptions();
+            setAdoptionAds(data);
+        } catch (err) {
+            console.error("Sahiplendirme ilanları çekilirken hata:", err);
+            setAdoptionAds(MOCK_ADOPTIONS);
+        } finally {
+            setIsLoadingAdoptions(false);
+        }
+    };
+
+
+
+
+
+
+    // Premium Header Transformations (Apple-Style) - Defined after activeTab
+    const headerHeight = [120, 64];
+
+    const headerHeightTransform = useTransform(scrollY, [0, 80], headerHeight);
+    
+    const headerPadding = useTransform(scrollY, [0, 80], [
+        "48px 24px 16px", 
+        "8px 24px 8px"
+    ]);
+    const logoScale = useTransform(scrollY, [0, 80], [1, 0.8]);
+    const headerBgOpacity = useTransform(scrollY, [0, 60], [0, 0.95]);
+    const headerBlur = useTransform(scrollY, [0, 60], [0, 50]);
+    const headerBorderOpacity = useTransform(scrollY, [0, 60], [0, 0.15]);
+    const headerOpacity = useTransform(scrollY, [0, 80], [1, 1]); // Keeping it 1 for now as per user request to move grid to top
+    const logoY = useTransform(scrollY, [0, 80], [0, -4]); 
+    const iconScale = useTransform(scrollY, [0, 80], [1, 0.9]);
+    const headerBlurTransform = useTransform(headerBlur, (b) => `blur(${b}px)`);
+
+    // Reset scroll when switching tabs for a fresh start
+    useEffect(() => {
+        if (globalScrollRef.current) {
+            globalScrollRef.current.scrollTop = 0;
+        }
+    }, [activeTab]);
+
+    // ADOPTION APPLICATION STATES
+
+
+
+
+    // INBOX & SOS DATA STATES (Consolidated at top level)
+
+
+
+    
+    
+    
+
+
+    
+
+
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    useEffect(() => {
+        if (isInboxOpen) {
+            scrollToBottom();
+        }
+    }, [isInboxOpen, inboxMessages]);
+
+    // TOAST NOTIFICATIONS
+
+
+    // SETTINGS / KVKK STATES
+
+
+
+
+
+
+
+    const MOOD_OPTIONS = ["Mutlu ✨", "Uykulu 💤", "Enerjik ⚡", "Sabırsız 🥶", "Oyunbaz 🎾", "Acıkmış 🦴", "Havalı 😎"];
+
+    // STORY VIEWER STATES
+
+
+    const closeStoryViewer = () => {
+        setViewerStoryGroupIndex(null);
+        setViewerStoryIndex(0);
+        setStoryProgress(0);
+    };
+
+    const nextStory = () => {
+        setStoryProgress(0);
+        if (viewerStoryGroupIndex === null) return;
+        const group = storyGroups[viewerStoryGroupIndex];
+        if (viewerStoryIndex < group.stories.length - 1) {
+            setViewerStoryIndex(prev => prev + 1);
+        } else if (viewerStoryGroupIndex < storyGroups.length - 1) {
+            setViewerStoryGroupIndex(prev => prev! + 1);
+            setViewerStoryIndex(0);
+        } else {
+            closeStoryViewer();
+        }
+    };
+
+    const prevStory = () => {
+        setStoryProgress(0);
+        if (viewerStoryGroupIndex === null) return;
+        if (viewerStoryIndex > 0) {
+            setViewerStoryIndex(prev => prev - 1);
+        } else if (viewerStoryGroupIndex > 0) {
+            setViewerStoryGroupIndex(prev => prev! - 1);
+            setViewerStoryIndex(storyGroups[viewerStoryGroupIndex - 1].stories.length - 1);
+        } else {
+            closeStoryViewer();
+        }
+    };
+
+    useEffect(() => {
+        if (viewerStoryGroupIndex === null) return;
+
+        // Reset progress directly to 0 (no transition)
+        setStoryProgress(0);
+
+        // Wait a tiny bit (next frame) then trigger the CSS transition to 100%
+        const animationTimer = setTimeout(() => {
+            setStoryProgress(100);
+        }, 50);
+
+        // When the 5-second transition finishes, flip to the next story
+        const autoAdvanceTimer = setTimeout(() => {
+            nextStory();
+        }, 5050); // 50ms delay + 5000ms transition
+
+        return () => {
+            clearTimeout(animationTimer);
+            clearTimeout(autoAdvanceTimer);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [viewerStoryGroupIndex, viewerStoryIndex]);
+
+    const formatTimeAgo = (dateStr?: string) => {
+        if (!dateStr) return "Şimdi";
+        const diffInSeconds = Math.floor((new Date().getTime() - new Date(dateStr).getTime()) / 1000);
+        if (diffInSeconds < 60) return `${Math.max(0, diffInSeconds)}s`;
+        const diffInMinutes = Math.floor(diffInSeconds / 60);
+        if (diffInMinutes < 60) return `${diffInMinutes}d`;
+        const diffInHours = Math.floor(diffInMinutes / 60);
+        if (diffInHours < 24) return `${diffInHours}s`;
+        const diffInDays = Math.floor(diffInHours / 24);
+        return `${diffInDays}g`;
+    };
+
+    const cameraInputRef = useRef<HTMLInputElement>(null);
+
+    const toggleLike = async (id: string) => {
+        setPosts(prev => prev.map(post => {
+            if (post.id === id) {
+                const newIsLiked = !post.isLiked;
+                return {
+                    ...post,
+                    isLiked: newIsLiked,
+                    likes: newIsLiked ? (post.likes + 1) : Math.max(0, post.likes - 1)
+                };
+            }
+            return post;
+        }));
+
+        try {
+            await apiService.reactToPost(id, '❤️');
+            window.dispatchEvent(new Event('moffi_posts_changed'));
+        } catch (err) {
+            console.error("Beğeni hatası:", err);
+            fetchPosts(); 
+        }
+    };
+
+    const addComment = async (postId: string, text: string) => {
+        if (!text.trim()) return;
+        
+        // Optimistic UI Update - DB write is handled directly by useRealtimeComments hook
+        setPosts(prev => prev.map(p => {
+            if (p.id === postId) {
+                return { ...p, comments: (Number(p.comments) || 0) + 1 };
+            }
+            return p;
+        }));
+    };
+
+    const toggleCommentLike = (postId: number, commentId: number) => {
+        setPosts(prev => prev.map(p => {
+            if (p.id !== postId) return p;
+
+            const updateCommentLikes = (comments: any[]): any[] => {
+                return comments.map(c => {
+                    if (c.id === commentId) {
+                        return {
+                            ...c,
+                            isLiked: !c.isLiked,
+                            likes: c.isLiked ? c.likes - 1 : c.likes + 1
+                        };
+                    }
+                    if (c.replies && c.replies.length > 0) {
+                        return { ...c, replies: updateCommentLikes(c.replies) };
+                    }
+                    return c;
+                });
+            };
+
+            return { ...p, commentsList: updateCommentLikes(p.commentsList || []) };
+        }));
+    };
+
+    const addCommentReply = (postId: number, parentCommentId: number, text: string) => {
+        if (!text.trim()) return;
+        setPosts(prev => prev.map(p => {
+            if (p.id !== postId) return p;
+
+            const newReply = {
+                id: Date.now(),
+                author: `@${user?.username || 'moffi_user'}`,
+                avatar: user?.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300",
+                text: text,
+                time: "Şimdi",
+                likes: 0,
+                isLiked: false,
+                replies: []
+            };
+
+            const updateCommentReplies = (comments: any[]): any[] => {
+                return comments.map(c => {
+                    if (c.id === parentCommentId) {
+                        return { 
+                            ...c, 
+                            replies: [...(c.replies || []), { ...newReply, isReplyTo: c.author }] 
+                        };
+                    }
+                    if (c.replies && c.replies.length > 0) {
+                        return { ...c, replies: updateCommentReplies(c.replies) };
+                    }
+                    return c;
+                });
+            };
+
+            return { ...p, commentsList: updateCommentReplies(p.commentsList || []) };
+        }));
+    };
+
+    const deleteComment = (postId: number, commentId: number) => {
+        setPosts(prev => prev.map(p => {
+            if (p.id !== postId) return p;
+
+            const removeComment = (comments: any[]): any[] => {
+                return comments
+                    .filter(c => c.id !== commentId)
+                    .map(c => ({
+                        ...c,
+                        replies: c.replies ? removeComment(c.replies) : []
+                    }));
+            };
+
+            return { 
+                ...p, 
+                comments: p.comments - 1,
+                commentsList: removeComment(p.commentsList || []) 
+            };
+        }));
+        showToast("Yorum Silindi", "Yorum ve yanıtları kaldırıldı.", "info");
+    };
+
+    const editComment = (postId: number, commentId: number, text: string) => {
+        setPosts(prev => prev.map(p => {
+            if (p.id !== postId) return p;
+
+            const updateCommentText = (comments: any[]): any[] => {
+                return comments.map(c => {
+                    if (c.id === commentId) {
+                        return { ...c, text };
+                    }
+                    if (c.replies && c.replies.length > 0) {
+                        return { ...c, replies: updateCommentText(c.replies) };
+                    }
+                    return c;
+                });
+            };
+
+            return { ...p, commentsList: updateCommentText(p.commentsList || []) };
+        }));
+        showToast("Yorum Güncellendi", "Değişiklikler kaydedildi.", "success");
+    };
+
+    const reportComment = (postId: number, commentId: number) => {
+        showToast("Bildirim Alındı", "Yorum incelemeye alındı. Teşekkürler!", "info");
+    };
+
+
+
+    const deletePost = async () => {
+        if (!postToDelete) return;
+        try {
+            await apiService.deletePost(postToDelete);
+            setPosts(prev => prev.filter(p => p.id !== postToDelete));
+            setPostToDelete(null);
+            showToast("Gönderi Silindi", "Gönderiniz başarıyla kaldırıldı.", "success");
+        } catch (err: any) {
+            console.error(err);
+            showToast("Hata", "Gönderi silinemedi.", "error");
+        }
+    };
+
+    const saveEditPost = async () => {
+        if (!editingPost) return;
+        setIsPublishing(true);
+        try {
+            await apiService.updatePost(editingPost.id, {
+                desc: editingPost.desc,
+                mood: editingPost.mood
+            });
+            setPosts(prev => prev.map(p => p.id === editingPost.id ? { ...p, desc: editingPost.desc, mood: editingPost.mood } : p));
+            setEditingPost(null);
+            showToast("Güncellendi", "Değişiklikler kaydedildi.", "success");
+        } catch (err: any) {
+            console.error(err);
+            showToast("Hata", "Gönderi güncellenemedi.", "error");
+        } finally {
+            setIsPublishing(false);
+        }
+    };
+
+    const handleCameraUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // --- GLOBAL STANDARDS CHECK ---
+        const MAX_FILE_SIZE = 40 * 1024 * 1024; // 40MB
+        const MAX_VIDEO_DURATION = 20; // 20 Seconds Standard
+
+        if (file.size > MAX_FILE_SIZE) {
+            showToast("Dosya Çok Büyük", "Lütfen 40MB'dan daha küçük bir video/resim seçin. 📏", "error");
+            if (cameraInputRef.current) cameraInputRef.current.value = '';
+            return;
+        }
+
+        if (file.type.startsWith('video/')) {
+            const video = document.createElement('video');
+            video.preload = 'metadata';
+            video.onloadedmetadata = () => {
+                window.URL.revokeObjectURL(video.src);
+                setVideoDuration(video.duration);
+                
+                if (video.duration > MAX_VIDEO_DURATION) {
+                    // Long video: Don't block, just set initial trim
+                    setVideoTrimRange([0, 20]);
+                    showToast("Video Ayarlama", "Videonuz 20 saniyeden uzun. En iyi kısmını seçebilirsiniz. ✨", "info");
+                } else {
+                    setVideoTrimRange([0, video.duration]);
+                }
+                
+                setSelectedFile(file);
+                setUploadImageURL(URL.createObjectURL(file));
+                setIsUploadModalOpen(true);
+            };
+            video.src = URL.createObjectURL(file);
+        } else {
+            setSelectedFile(file);
+            setUploadImageURL(URL.createObjectURL(file));
+            setIsUploadModalOpen(true);
+        }
+        
+        if (cameraInputRef.current) cameraInputRef.current.value = '';
+    };
+
+    const publishPost = async () => {
+        if (!uploadImageURL || !selectedFile) return;
+        if (!user) {
+            showToast("Giriş Gerekli", "Paylaşım yapmak için giriş yapmalısınız.", "Zap");
+            window.dispatchEvent(new CustomEvent('open-auth-modal'));
+            return;
+        }
+
+        setIsPublishing(true);
+        setUploadProgress(0);
+        try {
+            let fileToUpload: any = selectedFile;
+            
+            if (selectedFile.type.startsWith('image/')) {
+                fileToUpload = await compressImageToFile(selectedFile, 1200, 0.8, imageFilter);
+            } else if (selectedFile.type.startsWith('video/')) {
+                // Show "Processing" state
+                showToast("Video Hazırlanıyor...", "Seçtiğiniz 20 saniyelik kısım işleniyor ve optimize ediliyor. ✨", "info");
+                
+                try {
+                    const trimmedVideoBlob = await processVideo(
+                        selectedFile, 
+                        videoTrimRange[0], 
+                        Math.min(20, videoTrimRange[1] - videoTrimRange[0])
+                    );
+                    
+                    fileToUpload = new File([trimmedVideoBlob], "trimmed_video.webm", { type: 'video/webm' });
+                    
+                    // Since we already trimmed it physically, let's reset metadata to the full length of the new file
+                    // But we keep the original intent for the DB check
+                } catch (err) {
+                    console.error("Video processing failed, falling back to original:", err);
+                    showToast("Hata", "Video işlenemedi, orijinal dosya yükleniyor.", "error");
+                    // Fallback to original file
+                }
+            }
+            
+            // 1. Upload to Storage
+            const publicUrl = await apiService.uploadMedia(fileToUpload, 'posts', (p) => {
+                setUploadProgress(p);
+            });
+            if (!publicUrl) throw new Error("Dosya sunucuya yüklenemedi.");
+            
+            // 1.5 Upload Audio if exists
+            let audioPublicUrl = null;
+            if (audioFile) {
+                audioPublicUrl = await apiService.uploadMedia(audioFile, 'sounds');
+            }
+
+            // 2. Add Post to DB
+            const isVideo = selectedFile.type.startsWith('video/');
+            const wasProcessed = fileToUpload.name === "trimmed_video.webm";
+
+            const newPostResult = await apiService.addPost({
+                media: publicUrl,
+                caption: uploadCaption,
+                mood: uploadMood || null,
+                is_video: isVideo,
+                audio_url: audioPublicUrl,
+                tagged_pets: taggedPetIds,
+                scheduled_at: isSchedulingMode ? scheduledDate : null,
+                status: isSchedulingMode ? 'scheduled' : 'published',
+                trim_start: isVideo ? (wasProcessed ? 0 : videoTrimRange[0]) : undefined,
+                trim_end: isVideo ? (wasProcessed ? (videoTrimRange[1] - videoTrimRange[0]) : videoTrimRange[1]) : undefined
+            });
+
+            // 3. OPTIMISTIC UPDATE: Add to local state immediately
+            setPosts(prev => [newPostResult, ...prev]);
+
+            // 4. Clean up
+            setIsUploadModalOpen(false);
+            setUploadImageURL(null);
+            setSelectedFile(null);
+            setAudioFile(null);
+            setAudioURL(null);
+            setUploadCaption('');
+            setUploadMood(null);
+            setTaggedPetIds([]);
+            setBrightness(100);
+            setContrast(100);
+            setSaturation(100);
+            setScheduledDate(null);
+            setIsSchedulingMode(false);
+            setActiveTool(null);
+            setUploadLocationEnabled(false);
+            setActiveTab('feed');
+            showToast("Paylaşıldı", "Yeni gönderiniz yayında!", "success");
+
+            // 5. Background sync
+            fetchPosts();
+        } catch (error: any) {
+            console.error("Post upload error:", error);
+            const errorMsg = error?.message || "Sunucuyla bağlantı kurulamadı veya bir hata oluştu.";
+            showToast("Hata", `Paylaşım yapılamadı: ${errorMsg}`, "error");
+        } finally {
+            setIsPublishing(false);
+        }
+    };
+
+    const handleSosImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (files) {
+            const newPhotos = Array.from(files).map(file => ({
+                file,
+                preview: URL.createObjectURL(file)
+            }));
+            setLostPetPhotos(prev => [...prev, ...newPhotos]);
+            if (sosInputRef.current) sosInputRef.current.value = '';
+        }
+    };
+
+    const submitSos = async () => {
+        if (!lostPetName || !lostPetLocation) {
+            showToast("Eksik Bilgi", "Lütfen isim ve son görüldüğü yer alanlarını doldurun!", "error");
+            return;
+        }
+        if (!user) {
+            showToast("Giriş Gerekli", "Kayıp ilanı verebilmek için üye girişi yapmalısınız!", "Zap");
+            window.dispatchEvent(new CustomEvent('open-auth-modal'));
+            return;
+        }
+
+        setIsSubmittingSOS(true);
+        try {
+            const photoUrls: string[] = [];
+            // 1. Upload Images using apiService (Mockable)
+            for (const photo of lostPetPhotos) {
+                const publicUrl = await apiService.uploadMedia(photo.file, 'posts');
+                if (publicUrl) photoUrls.push(publicUrl);
+            }
+
+            // 2. Insert Record via API
+            const newAlert = await apiService.addLostPet({
+                name: lostPetName,
+                type: 'dog',
+                img: photoUrls[0] || null,
+                location: lostPetLocation,
+                description: lostPetDesc
+            });
+
+            setSosAlerts(prev => [newAlert, ...prev]);
+
+            showToast("GÜÇLÜ SİNYAL GÖNDERİLDİ!", "Acil Durum İlanınız 5km çapındaki herkese ulaştı.", "success");
+
+            setIsLostAdModalOpen(false);
+            setLostPetName("");
+            setLostPetBreed("");
+            setLostPetLocation("");
+            setLostPetDesc("");
+            setLostPetPhotos([]);
+
+        } catch (error: any) {
+            console.error("SOS submission error:", error);
+            showToast("Hata", "İlan gönderilirken hata oluştu.", "error");
+        } finally {
+            setIsSubmittingSOS(false);
+        }
+    };
+
+    const handleDeleteLostPet = async (petId: string) => {
+        if (!window.confirm("Kayıp ilanını sistemden kaldırmak/silmek istediğinize emin misiniz?")) return;
+        try {
+            // Mock delete logic
+            setSosAlerts(prev => prev.filter(p => p.id !== petId));
+            showToast("İlan Kaldırıldı", "İlanınız başarıyla sistemden kaldırıldı.", "success");
+        } catch (err: any) {
+            showToast("Hata", "İlan silinemedi.", "error");
+        }
+    };
+
+    // Logic for adoption posts
+
+    const handleAdoptionPost = async () => {
+        if (!user) {
+            setIsAuthModalOpen(true);
+            return;
+        }
+
+        if (!adoptionPetName || !adoptionPetBreed || adoptionPetPhotos.length === 0) {
+            showToast('Eksik Bilgi', 'Lütfen isim, tür ve en az bir fotoğraf ekleyin.', 'error');
+            return;
+        }
+
+        setIsSubmittingAdoption(true);
+        showToast('Yükleniyor...', 'Fotoğraflar işleniyor ve Moffi AI denetimi başlatılıyor...', 'info');
+        try {
+            const photoUrls: string[] = [];
+            // 1. Upload Photos using apiService (Mockable)
+            for (const photo of adoptionPetPhotos) {
+                const publicUrl = await apiService.uploadMedia(photo.file, 'posts');
+                if (publicUrl) photoUrls.push(publicUrl);
+            }
+
+            // 2. Add via API
+            const newAd = await apiService.addAdoption({
+                name: adoptionPetName,
+                type: adoptionPetType,
+                description: adoptionPetDesc,
+                img: photoUrls[0] || null,
+                owner: user.username
+            });
+
+            setAdoptionAds(prev => [newAd, ...prev]);
+
+            // Simulation: Artificial delay for "AI Moderation"
+            setTimeout(() => {
+                showToast('✅ İlan Yayınlandı!', 'Moffi AI denetiminden geçti. İlanınız görünmeye başladı.', 'success');
+            }, 1000);
+
+            // Reset form
+            setIsAddAdoptionModalOpen(false);
+            setAdoptionPetName("");
+            setAdoptionPetBreed("");
+            setAdoptionPetAge("");
+            setAdoptionPetDesc("");
+            setAdoptionPetPhotos([]);
+            setAdoptionPetType("cat");
+
+        } catch (err: any) {
+            showToast('Hata', "İlan oluşturulamadı.", 'error');
+        } finally {
+            setIsSubmittingAdoption(false);
+        }
+    };
+
+    const handleDeleteAdoptionAd = async (adId: string) => {
+        if (!confirm('Bu ilanı kaldırmak istediğinizden emin misiniz?')) return;
+        try {
+            setAdoptionAds(prev => prev.filter(ad => ad.id !== adId));
+            showToast('İlan Kaldırıldı', 'Sahiplendirme ilanınız silindi.', 'success');
+        } catch (err: any) {
+            showToast('Hata', "İlan silinemedi.", 'error');
+        }
+    };
+
+
+
+    const handleReportAdoption = async () => {
+        if (!reportingAdId || !reportReason) return;
+        setIsSubmittingReport(true);
+        try {
+            await fetch('/api/adoption/report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    adId: reportingAdId,
+                    reportedBy: user?.id || null,
+                    reason: reportReason,
+                    details: ''
+                })
+            });
+            showToast('🚨 Bildirim Alındı', 'Moffi ekibi en kısa sürede inceleyecek.', 'success');
+            setIsReportAdModalOpen(false);
+            setReportReason('');
+            setReportingAdId(null);
+        } catch (err: any) {
+            showToast('Hata', err.message, 'error');
+        } finally {
+            setIsSubmittingReport(false);
+        }
+    };
+
+    const handleStartAdoptionChat = (pet: any) => {
+        setAdoptionChatPet(pet);
+        setIsAdoptionChatOpen(true);
+        // Mock initial system message
+        setAdoptionMessages([
+            { id: 'sys-1', text: `Merhaba! ${pet.name} için sahiplenme süreci başlatıldı. 👋`, sender: 'system', time: 'Şimdi' },
+            { id: 'sys-2', text: 'Moffi Güvenli Mesajlaşma üzerinden ilan sahibiyle iletişime geçiyorsunuz. Lütfen kişisel bilgilerinizi paylaşırken dikkatli olun.', sender: 'system', time: 'Şimdi' }
+        ]);
+    };
+
+    const submitAdoptionApplication = async () => {
+        if (!user || !selectedAdoptionPet) return;
+        setIsSubmittingApp(true);
+        try {
+            // Mock submission
+            showToast("Başvuru İletildi! ❤️", "İlan sahibi başvurunuzu inceledikten sonra size dönecek.", "success");
+            setIsApplicationFormOpen(false);
+            setAppNote("");
+            setSelectedAdoptionPet(null);
+        } catch (err: any) {
+            showToast("Hata", "Başvuru yapılamadı.", "error");
+        } finally {
+            setIsSubmittingApp(false);
+        }
+    };
+
+    const handleSendAdoptionMsg = () => {
+        if (!adoptionNewMsg.trim()) return;
+        const newMsg = {
+            id: Date.now().toString(),
+            text: adoptionNewMsg,
+            sender: 'me',
+            time: 'Şimdi'
+        };
+        setAdoptionMessages(prev => [...prev, newMsg]);
+        setAdoptionNewMsg("");
+
+        // Mock a response after 1s
+        setIsSendingAdoptionMsg(true);
+        setTimeout(() => {
+            setIsSendingAdoptionMsg(false);
+            setAdoptionMessages(prev => [...prev, {
+                id: (Date.now() + 1).toString(),
+                text: "İlginiz için teşekkürler! Birazdan size detaylı bilgi vereceğim. 😊",
+                sender: 'them',
+                time: 'Şimdi'
+            }]);
+        }, 1500);
+    };
+
+    const handleReportLocation = () => {
+        if (!user) {
+            showToast("Giriş Gerekli", "Anonim olarak ihbar verebilmek için üye girişi yapmalısınız.", "Zap");
+            window.dispatchEvent(new CustomEvent('open-auth-modal'));
+            return;
+        }
+        setAnonModalType('report');
+        setAnonMessage("");
+        setAnonError(null);
+    };
+
+    const handleMessageOwner = () => {
+        if (!user) {
+            showToast("Giriş Gerekli", "Mesaj atabilmek için giriş yapmalısınız.", "Zap");
+            window.dispatchEvent(new CustomEvent('open-auth-modal'));
+            return;
+        }
+        setAnonModalType('message');
+        setAnonMessage("");
+        setAnonError(null);
+    };
+
+    const submitAnonAction = async () => {
+        if (!anonMessage.trim()) return;
+        setAnonError(null);
+
+        // --- AI MODERATION / PII CHECK ---
+        // Telefon Numarası Regex: (Örn: 0555 555 55 55, +905555555555, 532 123 4567)
+        const phoneRegex = /(?:\+90|0)?\s?[5]\d{2}\s?\d{3}\s?\d{2}\s?\d{2}/i;
+        // IBAN Regex: TR ile başlayıp 24 hane sayılan temel mantık
+        const ibanRegex = /TR[a-zA-Z0-9]{24}/i;
+
+        // Kelime bazlı basit spam/adres yakalama algoritması (örn. 'mah', 'sokak', 'no:')
+        const rawText = anonMessage.toLowerCase();
+
+        if (phoneRegex.test(rawText)) {
+            setAnonError("Hata: Sistemimiz iletişim bilginizi veya telefon numarası formatı tespit etti. Güvenliğiniz için direkt iletişim bilgisi paylaşmak yasaktır.");
+            return;
+        }
+        if (ibanRegex.test(rawText)) {
+            setAnonError("Hata: İbana ve para transferine yönelik teşebbüsleri reddediyoruz.");
+            return;
+        }
+
+        setIsSubmittingAnon(true);
+        try {
+            if (anonModalType === 'report' || anonModalType === 'message') {
+                const isMsg = anonModalType === 'message';
+                // Mock sighting submission
+                showToast("Sinyal İletildi", isMsg ? "Moffi Acil İhbar Hattına şifreli mesajınız ulaştı." : "Bölge bilgisini güvenle ulaştırdık.", "success");
+            }
+            setAnonModalType(null);
+            setAnonMessage("");
+        } catch (err: any) {
+            showToast("Bağlantı Hatası", "İşlem sırasında beklenmedik bir hata oluştu.", "error");
+        } finally {
+            setIsSubmittingAnon(false);
+        }
+    };
+
+    const fetchInbox = async () => {
+        try {
+            await refreshInbox();
+        } catch (err) {
+            console.error("Inbox load error:", err);
+        }
+    };
+
+
+    // Unified SOS/Lost Pet fetcher used across the component
+    const fetchLostPets = async () => {
+        setIsLoadingLost(true);
+        try {
+            const data = await apiService.getLostPets();
+            setLostPets(data || []);
+            setSosAlerts(data || []);
+        } catch (err) {
+            console.error("Kayıp ilanlar çekilirken hata:", err);
+            setLostPets([]);
+            setSosAlerts([]);
+        } finally {
+            setIsLoadingLost(false);
+        }
+    };
+
+    const filteredSOSAlerts = useMemo(() => {
+        const sosSettings = {
+            radius: 5,
+            quietHours: { enabled: false, from: '23:00', to: '07:00' },
+            petTypes: ['dog', 'cat', 'bird', 'other'],
+            emergencyBypass: true
+        };
+
+        return sosAlerts.filter(alert => {
+            // 1. Radius Filter
+            if (alert.distance > (sosSettings.radius || 5)) return false;
+
+            // 2. Pet Type Filter
+            if (!(sosSettings.petTypes || []).includes(alert.type)) return false;
+
+            // 3. Quiet Hours & Emergency Bypass Logic
+            if (sosSettings.quietHours?.enabled) {
+                const now = new Date();
+                const currentMins = now.getHours() * 60 + now.getMinutes();
+                const [fromH, fromM] = (sosSettings.quietHours.from || '23:00').split(':').map(Number);
+                const [toH, toM] = (sosSettings.quietHours.to || '07:00').split(':').map(Number);
+                const fromMins = fromH * 60 + fromM;
+                const toMins = toH * 60 + toM;
+
+                let isQuietTime = false;
+                if (fromMins < toMins) {
+                    isQuietTime = currentMins >= fromMins && currentMins <= toMins;
+                } else {
+                    isQuietTime = currentMins >= fromMins || currentMins <= toMins;
+                }
+
+                if (isQuietTime) {
+                    // EMERGENCY BYPASS: If enabled, show very close alerts (< 1km) regardless of quiet hours
+                    if (sosSettings.emergencyBypass && alert.distance < 1.0) {
+                        return true;
+                    }
+                    return false;
+                }
+            }
+
+            return true;
+        });
+    }, [sosAlerts, user?.settings?.sos]);
+
+
+
+
+    return (
+        <div className="fixed inset-0 bg-[var(--background)] text-[var(--foreground)] overflow-hidden flex flex-col font-sans">
+
+            {/* iOS STYLE TOAST NOTIFICATION */}
+            <AnimatePresence>
+                {toastMessage && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -50, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -50, scale: 0.95 }}
+                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                        className="fixed top-20 left-1/2 -translate-x-1/2 z-[9999] w-[90%] max-w-sm pointer-events-none"
+                    >
+                        <div className={cn(
+                            "backdrop-blur-xl border rounded-[1.5rem] p-4 shadow-2xl flex items-start gap-4 pointer-events-auto",
+                            toastMessage.type === 'success' ? "bg-cyan-500/20 border-cyan-500/30 text-cyan-100" :
+                                toastMessage.type === 'error' ? "bg-red-500/20 border-red-500/30 text-red-100" :
+                                    "bg-white/10 border-white/20 text-[var(--foreground)]"
+                        )}>
+                            <div className={cn(
+                                "flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center shadow-lg",
+                                toastMessage.type === 'success' ? "bg-cyan-500" :
+                                    toastMessage.type === 'error' ? "bg-red-500" :
+                                        "bg-blue-500"
+                            )}>
+                                {toastMessage.type === 'success' ? <Check className="w-5 h-5 text-black" strokeWidth={3} /> :
+                                    toastMessage.type === 'error' ? <X className="w-5 h-5 text-[var(--foreground)]" strokeWidth={3} /> :
+                                        <Activity className="w-5 h-5 text-[var(--foreground)]" strokeWidth={3} />}
+                            </div>
+                            <div className="flex flex-col gap-0.5 justify-center mt-0.5">
+                                <h4 className="font-black text-[15px] leading-tight text-[var(--foreground)]">{toastMessage.title}</h4>
+                                {toastMessage.desc && <p className="text-xs font-medium text-[var(--foreground)]/80 leading-snug">{toastMessage.desc}</p>}
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* AMBIENT BACKGROUND GLOW */}
+            <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+
+                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-600/20 blur-[120px] rounded-full mix-blend-screen" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-cyan-600/20 blur-[120px] rounded-full mix-blend-screen" />
+            </div>
+
+            {/* HEADER - INTEGRATED MINIMALIST DESIGN */}
+            <motion.header 
+                id="community-main-header"
+                style={{ 
+                    height: isCategoriesOpen ? 'auto' : headerHeightTransform, 
+                    opacity: headerOpacity 
+                }}
+                className={cn(
+                    "fixed top-0 left-0 right-0 z-[150] px-6 flex flex-col justify-end bg-[var(--background)]/80 backdrop-blur-xl border-b border-white/5 transition-all duration-300",
+                    isCategoriesOpen ? "pb-0 pt-16" : "pb-4"
+                )}
+            >
+                <div className="flex justify-between items-center w-full">
+                    <div className="flex items-center gap-2">
+                        <motion.button
+                            style={{ scale: iconScale }}
+                            onClick={() => setIsUploadModalOpen(true)}
+                            className="w-10 h-10 flex items-center justify-center hover:bg-white/5 rounded-full transition-all active:scale-90"
+                        >
+                            <Camera className="w-5 h-5 text-white/80" />
+                        </motion.button>
+
+                        {/* VIEW MODE TOGGLE - PURE MINIMALIST */}
+                        <div className="flex items-center gap-1 ml-1">
+                            <button 
+                                onClick={() => setViewMode('immersive')}
+                                className={cn(
+                                    "p-2 transition-all active:scale-90",
+                                    viewMode === 'immersive' ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] scale-110" : "text-gray-600 hover:text-gray-400"
+                                )}
+                            >
+                                <List className="w-5 h-5" />
+                            </button>
+                            <button 
+                                onClick={() => setViewMode('grid')}
+                                className={cn(
+                                    "p-2 transition-all active:scale-90",
+                                    viewMode === 'grid' ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] scale-110" : "text-gray-600 hover:text-gray-400"
+                                )}
+                            >
+                                <Grid3X3 className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* COLLAPSIBLE CATEGORIES BUTTON */}
+                        <button 
+                            onClick={() => setIsCategoriesOpen(!isCategoriesOpen)}
+                            className={cn(
+                                "flex items-center gap-2 px-4 py-2 rounded-full transition-all active:scale-95 ml-1",
+                                isCategoriesOpen ? "bg-white text-black" : "text-white/50 hover:text-white"
+                            )}
+                        >
+                            <Filter className="w-4 h-4" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Kategoriler</span>
+                            <ChevronDown className={cn("w-3 h-3 transition-transform duration-300", isCategoriesOpen && "rotate-180")} />
+                        </button>
+                    </div>
+
+                    <div className="flex gap-1 items-center">
+                        <motion.button 
+                            style={{ scale: iconScale }}
+                            onClick={() => setIsSpotlightOpen(true)}
+                            className="p-2.5 hover:bg-white/5 rounded-full transition-colors"
+                        >
+                            <Search className="w-5 h-5 text-white/80" />
+                        </motion.button>
+
+                        <motion.button 
+                            style={{ scale: iconScale }}
+                            onClick={() => setIsInboxOpen(true)} 
+                            className="relative p-2.5 hover:bg-white/5 rounded-full transition-colors"
+                        >
+                            <MessageCircle className="w-5 h-5 text-white/80" />
+                            {unreadCount > 0 && (
+                                <div className="absolute top-1 right-1 w-4 h-4 bg-cyan-400 rounded-full border-2 border-background flex items-center justify-center">
+                                    <span className="text-[8px] font-black text-black">{unreadCount}</span>
+                                </div>
+                            )}
+                        </motion.button>
+
+                        <motion.button 
+                            style={{ scale: iconScale }}
+                            onClick={() => setIsNotificationsOpen(true)} 
+                            className="relative p-2.5 hover:bg-white/5 rounded-full transition-colors"
+                        >
+                            <Bell className="w-5 h-5 text-white/80" />
+                            {notifUnreadCount > 0 && (
+                                <div className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-background flex items-center justify-center">
+                                    <span className="text-[8px] font-black text-white">{notifUnreadCount}</span>
+                                </div>
+                            )}
+                        </motion.button>
+                    </div>
+
+                </div>
+
+                {/* COLLAPSIBLE CATEGORIES PANEL - INTEGRATED IN HEADER */}
+                <AnimatePresence>
+                    {isCategoriesOpen && (
+                        <motion.div 
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden bg-white/[0.02] mt-4 -mx-6 px-6 border-t border-white/5"
+                        >
+                            <div className="flex gap-2 overflow-x-auto no-scrollbar py-4">
+                                {['Hepsi', 'Eğlence', 'Eğitim', 'Beslenme', 'Sağlık', 'Veteriner', 'Sahiplenme'].map((cat) => (
+                                    <button
+                                        key={cat}
+                                        onClick={() => {
+                                            setSearchQuery(cat === 'Hepsi' ? '' : cat);
+                                            setIsCategoriesOpen(false);
+                                        }}
+                                        className={cn(
+                                            "px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+                                            searchQuery === (cat === 'Hepsi' ? '' : cat) 
+                                                ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]" 
+                                                : "text-white/20 hover:text-white/50"
+                                        )}
+                                    >
+                                        {cat}
+                                    </button>
+                                ))}
+
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </motion.header>
+
+
+            {/* Header Spacing */}
+            <motion.div 
+                style={{ height: isCategoriesOpen ? '200px' : headerHeightTransform }} 
+                className="shrink-0 transition-all duration-300" 
+            />
+
+
+            {/* MAIN IMMERSIVE CONTENT - Unified Scroll per tab */}
+            <main 
+                id="community-scroll-container"
+                ref={globalScrollRef}
+                onScroll={handleMainScroll}
+                className="flex-1 relative z-10 w-full overflow-y-auto no-scrollbar overscroll-contain snap-y snap-mandatory"
+            >
+                <AnimatePresence>
+
+                    {/* FEED TAB */}
+                    {activeTab === 'feed' && (
+                        <motion.div
+                            key="feed"
+                            initial={{ opacity: 0, filter: "blur(10px)" }}
+                            animate={{ opacity: 1, filter: "blur(0px)" }}
+                            exit={{ opacity: 0, filter: "blur(10px)" }}
+                            transition={{ duration: 0.3 }}
+                            className="w-full pb-32 flex flex-col gap-4"
+                        >
+                            {/* INSTAGRAM-STYLE STORIES BAR */}
+
+
+
+                            <div className="w-full flex gap-4 px-4 py-4 overflow-x-auto no-scrollbar snap-start shrink-0">
+                                {/* Current User Add Story - Apple Style Upgrade */}
+                                <div className="flex flex-col items-center gap-1.5 shrink-0 group">
+                                    <div 
+                                        onClick={handleStoryClick}
+                                        className="relative w-16 h-16 flex items-center justify-center cursor-pointer"
+                                    >
+                                        <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-cyan-500/20 via-purple-500/20 to-pink-500/20 border-2 border-dashed border-white/20 group-hover:border-cyan-400/50 group-hover:bg-white/5 transition-all duration-500" />
+                                        
+                                        <div className="relative z-10 w-12 h-12 rounded-full bg-[var(--card-bg)] backdrop-blur-md border border-white/10 flex items-center justify-center shadow-2xl group-hover:scale-110 group-active:scale-95 transition-all duration-300">
+                                            <div className="absolute inset-0 bg-cyan-400/5 blur-md group-hover:bg-cyan-400/20 transition-all" />
+                                            <Plus className="w-6 h-6 text-[var(--foreground)] group-hover:text-cyan-400" strokeWidth={2.5} />
+                                        </div>
+                                    </div>
+                                    <span className="text-[9px] text-[var(--secondary-text)] font-black uppercase tracking-[0.2em] group-hover:text-cyan-400 transition-colors">Hikaye</span>
+                                </div>
+
+                                {/* Real Database Stories */}
+                                {storyGroups.map((group, index) => (
+                                    <div key={group.user_id} className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group" onClick={() => {
+                                        setViewerStoryGroupIndex(index);
+                                        setViewerStoryIndex(0);
+                                    }}>
+                                        <div className={cn(
+                                            "w-16 h-16 rounded-full p-[2.5px] transition-transform group-hover:scale-105",
+                                            group.hasUnseen ? "bg-gradient-to-tr from-cyan-400 via-blue-500 to-purple-600" : "bg-white/10"
+                                        )}>
+                                            <div className="w-full h-full bg-[var(--background)] rounded-full border-2 border-[var(--background)] overflow-hidden relative">
+                                                <img 
+                                                    src={(group.user_id === user?.id ? (user?.avatar || group.author_avatar) : group.author_avatar) || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200"} 
+                                                    className="w-full h-full object-cover transition-opacity duration-500"
+                                                    onLoad={(e) => (e.target as HTMLImageElement).style.opacity = '1'}
+                                                    style={{ opacity: 0 }}
+                                                />
+                                            </div>
+                                        </div>
+                                        <span className={cn("text-[10px] tracking-wide", group.hasUnseen ? "font-bold text-[var(--foreground)]" : "font-medium text-[var(--secondary-text)] truncate w-16 text-center")}>
+                                            {user?.id === group.user_id ? "Sen" : group.author_name}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Feed SOS Alerts (Respecting Privacy Settings) */}
+
+                            {/* Feed SOS Alerts (Respecting Privacy Settings) */}
+                            {activePet?.is_lost && activePet.sos_settings?.auto_post_sos !== false && (
+                                <motion.div 
+                                    initial={{ scale: 0.9, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    className="px-4 -mt-2 mb-4 snap-start"
+                                >
+                                    <div className="bg-red-500/10 border border-red-500/30 rounded-[2.5rem] p-6 backdrop-blur-xl relative overflow-hidden group">
+                                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-orange-500 to-red-500 animate-pulse" />
+                                        <div className="flex items-center justify-between relative z-10">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-14 h-14 rounded-2xl bg-red-500 flex items-center justify-center shadow-[0_0_20px_rgba(239,68,68,0.4)] animate-bounce">
+                                                    <ShieldAlert className="w-8 h-8 text-white" />
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <h3 className="text-lg font-black text-white uppercase italic tracking-tighter leading-none">{activePet.name} <span className="text-red-400">Kayıp Alarmı</span></h3>
+                                                    <p className="text-[10px] font-bold text-red-200/60 uppercase tracking-widest mt-1">Arama Kurtarma Sinyali Gönderiliyor</p>
+                                                </div>
+                                            </div>
+                                            <button 
+                                                onClick={() => {
+                                                    setSosActivePet(activePet);
+                                                    setIsSOSCommandCenterOpen(true);
+                                                }}
+                                                className="px-6 py-2.5 bg-red-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-red-500/20"
+                                            >
+                                                YÖNET
+                                            </button>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                            {isLoadingPosts ? (
+                                Array(3).fill(0).map((_, i) => (
+                                    <div key={i} className="w-full relative flex flex-col items-center justify-center px-4 shrink-0" style={{ height: "calc(100vh - 180px)" }}>
+                                        <div className="relative w-full h-full max-w-lg mx-auto rounded-[3rem] overflow-hidden bg-[var(--card-bg)] border border-white/10 shadow-2xl animate-pulse">
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                                            <div className="absolute inset-0 bg-[var(--card-bg)] overflow-hidden">
+                                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-shimmer" />
+                                            </div>
+                                            <div className="absolute bottom-8 left-8 right-8 space-y-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-12 h-12 rounded-full bg-white/10" />
+                                                    <div className="space-y-2">
+                                                        <div className="h-4 w-24 bg-white/10 rounded-full" />
+                                                        <div className="h-3 w-16 bg-white/10 rounded-full" />
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <div className="h-3 w-full bg-white/10 rounded-full" />
+                                                    <div className="h-3 w-4/5 bg-white/10 rounded-full" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : viewMode === 'grid' ? (
+                                <ExploreGrid 
+                                    posts={filteredPosts} 
+                                    onPostClick={handlePostClickFromGrid} 
+                                    isLoading={isLoadingPosts} 
+                                />
+                            ) : (
+                                filteredPosts.map((post, feedIdx) => (
+                                    <div key={post.id} id={`post-${post.id}`} className="w-full relative flex flex-col items-center justify-center px-0 shrink-0 snap-start" style={{ height: "calc(100vh - 160px)" }}>
+                                        <ImmersivePostCard
+                                            post={post}
+                                            currentUser={user}
+                                            onLike={() => toggleLike(post.id)}
+                                            onShare={() => setSelectedSharePost(post)}
+                                            onAddComment={(text) => addComment(post.id, text)}
+                                            onToggleCommentLike={(commentId) => toggleCommentLike(post.id, Number(commentId))}
+                                            onReplyComment={(commentId, text) => addCommentReply(post.id, Number(commentId), text)}
+                                            onDeleteComment={(commentId) => deleteComment(post.id, Number(commentId))}
+                                            onEditComment={(commentId, text) => editComment(post.id, Number(commentId), text)}
+                                            onReportComment={(commentId) => reportComment(post.id, Number(commentId))}
+                                            onDeletePost={() => setPostToDelete(post.id)}
+                                            onEditPost={() => setEditingPost({ id: post.id, desc: post.desc, mood: post.mood, media: post.media })}
+                                            priority={feedIdx === 0}
+                                            isCommentsDisabled={!user?.settings?.privacy?.allowComments}
+                                        />
+                                    </div>
+                                ))
+                            )}
+
+                            {/* Space for bottom nav */}
+                            <div className="h-12 w-full shrink-0" />
+                        </motion.div>
+                    )}
+
+                    {/* UNIFIED COMMUNITY RADAR TAB */}
+                    {activeTab === 'radar' && (
+                        <motion.div
+                            key="radar"
+                            initial={{ opacity: 0, scale: 0.98 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.98 }}
+                            className="w-full pb-32 bg-[var(--background)] flex flex-col items-center"
+                        >
+                            <div className="w-full max-w-md mx-auto relative">
+                                
+                                {/* 0. RADAR SUB-TAB SELECTOR (Apple Style Navigation) */}
+                                <div className="w-full px-6 pt-6 pb-2 flex items-center justify-between sticky top-0 z-40 bg-[var(--background)]/80 backdrop-blur-xl">
+                                    <button 
+                                        onClick={() => setActiveTab('feed')}
+                                        className="w-10 h-10 rounded-full bg-[var(--card-bg)] border border-white/5 flex items-center justify-center text-[var(--secondary-text)] hover:text-white transition-all active:scale-90 shadow-lg"
+                                        title="Geri Dön"
+                                    >
+                                        <ChevronLeft className="w-6 h-6" />
+                                    </button>
+                                    
+                                    <div className="flex bg-[var(--card-bg)] p-1 rounded-2xl border border-white/10 w-full max-w-[200px] shadow-sm ml-2">
+                                        <button 
+                                            onClick={() => setRadarTabMode('lost')}
+                                            className={cn(
+                                                "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                                radarTabMode === 'lost' ? "bg-white text-black shadow-lg" : "text-[var(--secondary-text)] hover:text-[var(--foreground)]"
+                                            )}
+                                        >
+                                            Kayıp
+                                        </button>
+                                        <button 
+                                            onClick={() => setRadarTabMode('adopt')}
+                                            className={cn(
+                                                "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                                radarTabMode === 'adopt' ? "bg-white text-black shadow-lg" : "text-[var(--secondary-text)] hover:text-[var(--foreground)]"
+                                            )}
+                                        >
+                                            Sahiplen
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="w-10 h-10" />
+                                </div>
+
+                                {/* Pet Switcher for Radar Context */}
+                                <div className="flex justify-center mt-6 mb-2">
+                                    <PetSwitcher onAddPet={() => setIsLostAdModalOpen(true)} />
+                                </div>
+
+                                {radarTabMode === 'lost' ? (
+                                    <motion.div 
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        className="w-full"
+                                    >
+                                        {/* 1. SOS / KAYIP İLANLARI (Vertical List) */}
+                                        <div className="w-full pt-6 pb-2 relative">
+                                            <div className="px-6 mb-6 flex items-center justify-between">
+                                                <h3 className="text-red-500 font-bold text-sm tracking-wide uppercase flex items-center gap-2"><ShieldAlert className="w-4 h-4" /> Aktif İhbarlar</h3>
+                                                <button onClick={() => setIsLostAdModalOpen(true)} className="px-3 py-1.5 rounded-full bg-red-500/10 text-red-500 text-[10px] font-black uppercase tracking-wider hover:bg-red-500/20 active:scale-95 transition-all border border-red-500/20">
+                                                    + İlan Ekle
+                                                </button>
+                                            </div>
+
+                                            {lostPets.length > 0 ? (
+                                                <div className="space-y-4 px-6 pb-10">
+                                                    {lostPets.map((pet) => (
+                                                        <div key={pet.id} className="w-full bg-red-500/5 border border-red-500/20 rounded-3xl p-4 flex flex-col gap-3 cursor-pointer hover:bg-red-500/10 transition-all active:scale-[0.98] relative group overflow-hidden" onClick={() => setSelectedLostPet(pet)}>
+                                                            {/* Apple style blur background for red accent */}
+                                                            <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 blur-[40px] -mr-10 -mt-10 rounded-full pointer-events-none" />
+                                                            
+                                                            {user?.id === pet.user_id && (
+                                                                <button onClick={(e) => { e.stopPropagation(); handleDeleteLostPet(pet.id); }} className="absolute right-3 top-3 px-3 py-1.5 rounded-full bg-[var(--card-bg)] border border-red-500/30 text-red-400 text-[10px] font-bold uppercase transition-transform hover:scale-105 active:scale-95 flex items-center gap-1 z-10 shadow-lg">
+                                                                    <Trash2 className="w-3 h-3" /> Sil
+                                                                </button>
+                                                            )}
+
+                                                            <div className="flex gap-4 items-center">
+                                                                <div className="w-16 h-16 rounded-2xl bg-red-500/20 flex items-center justify-center shrink-0 border border-red-500/30 shadow-inner overflow-hidden">
+                                                                    {pet.img ? (
+                                                                        <img src={pet.img} className="w-full h-full object-cover" />
+                                                                    ) : (
+                                                                        <div className="flex flex-col items-center">
+                                                                            <ShieldAlert className="w-6 h-6 text-red-500" />
+                                                                            <span className="text-[8px] font-black text-red-500 mt-1">SOS</span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex-1 overflow-hidden">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <p className="text-red-500 font-black text-lg tracking-tight truncate">{pet.name}</p>
+                                                                            <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-500 text-[10px] font-bold border border-red-500/30">Kayıp</span>
+                                                                        </div>
+                                                                        {pet.reward_enabled && pet.reward && (
+                                                                            <span className="px-2 py-0.5 rounded-lg bg-orange-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg -mt-1">ÖDÜL</span>
+                                                                        )}
+                                                                    </div>
+                                                                    <p className="text-[var(--secondary-text)] text-xs font-medium truncate">{pet.type || "Bilinmiyor"}</p>
+                                                                    <p className="text-[10px] text-red-400/80 mt-1.5 flex items-center gap-1 font-black"><MapPin className="w-3 h-3 text-cyan-400" /> {pet.last_seen_location || pet.location}</p>
+                                                                </div>
+                                                                <ChevronRight className="w-5 h-5 text-red-500/50" />
+                                                            </div>
+                                                            <p className="text-[var(--foreground)]/70 text-[11px] mt-1 leading-snug line-clamp-2 px-1 font-medium italic">"{pet.description || "Lütfen görünce acil dönüş yapın."}"</p>
+                                                            
+                                                            <div className="mt-2 flex gap-2">
+                                                                <button 
+                                                                    onClick={(e) => { e.stopPropagation(); /* Logic to open chat */ }}
+                                                                    className="flex-1 py-3 rounded-2xl bg-white text-black text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg"
+                                                                >
+                                                                    İletişime Geç
+                                                                </button>
+                                                                <button 
+                                                                    className="px-4 py-3 rounded-2xl bg-white/10 text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all border border-white/5"
+                                                                >
+                                                                    Konum Paylaş
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="text-center py-12 mx-6 mb-4 bg-red-500/5 rounded-3xl border border-red-500/10">
+                                                    <ShieldAlert className="w-10 h-10 text-red-500/20 mx-auto mb-3" />
+                                                    <p className="text-xs text-red-500/40 font-bold tracking-wide">Aktif İhbar Bulunmuyor</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                ) : (
+                                    <motion.div 
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        className="w-full mt-2"
+                                    >
+                                        {/* ADOPTION PANEL CONTENT */}
+                                        <div className="px-6 mb-8 mt-2 flex items-center justify-between">
+                                            <div>
+                                                <p className="text-[var(--secondary-text)] text-[11px] font-bold uppercase tracking-widest mb-1">
+                                                    Bugün Sahiplen
+                                                </p>
+                                                <h2 className="text-3xl font-black text-[var(--foreground)] tracking-tight mt-1">Sıcak Bir Yuva</h2>
+                                            </div>
+                                            <button onClick={() => setIsAddAdoptionModalOpen(true)} className="px-4 py-2 rounded-full bg-cyan-500/10 text-cyan-400 text-xs font-black uppercase tracking-wider hover:bg-cyan-500/20 active:scale-95 transition-all outline outline-1 outline-cyan-500/30 flex items-center gap-1.5 shadow-[0_0_15px_rgba(6,182,212,0.15)]">
+                                                <Plus className="w-4 h-4" /> İlan Ver
+                                            </button>
+                                        </div>
+
+                                        {/* APPLE-STYLE HORIZONTAL FILTER PILLS */}
+                                        <div className="w-full overflow-x-auto no-scrollbar px-6 mb-8 -mt-2 pb-2 flex gap-3 snap-x">
+                                            {["Hepsi", "🐱 Kediler", "🐶 Köpekler", "🦜 Kuşlar", "🚨 Acil", "🏢 Apartmana"].map((pill) => (
+                                                <button
+                                                    key={pill}
+                                                    onClick={() => setSelectedAdoptionCategory(pill)}
+                                                    className={cn(
+                                                        "snap-start whitespace-nowrap px-4 py-2 rounded-full text-[13px] font-bold transition-all active:scale-95",
+                                                        selectedAdoptionCategory === pill
+                                                            ? "bg-white text-black shadow-lg shadow-white/20"
+                                                            : "bg-[#1C1C1E] text-[#8E8E93] border border-[var(--card-border)] hover:bg-white/10 hover:text-[var(--foreground)]"
+                                                    )}
+                                                >
+                                                    {pill}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        {/* REAL ADOPTION ADS LIST */}
+                                        <div className="px-6 mb-8 w-full">
+                                            <div className="flex justify-between items-end mb-4 pb-3">
+                                                <h2 className="text-2xl font-bold text-[var(--foreground)] tracking-tight">İlanlar</h2>
+                                                <span className="text-xs text-[var(--secondary-text)] font-bold bg-[var(--card-bg)] px-2 py-1 rounded-full">{adoptionAds.length} ilan</span>
+                                            </div>
+                                            {(() => {
+                                                const filtered = adoptionAds.filter(ad => {
+                                                    if (selectedAdoptionCategory === "Hepsi") return true;
+                                                    if (selectedAdoptionCategory === "🐱 Kediler") return ad.pet_type === "cat" || ad.breed?.toLowerCase().includes("kedi");
+                                                    if (selectedAdoptionCategory === "🐶 Köpekler") return ad.pet_type === "dog" || ad.breed?.toLowerCase().includes("köpek");
+                                                    if (selectedAdoptionCategory === "🦜 Kuşlar") return ad.pet_type === "bird" || ad.breed?.toLowerCase().includes("kuş");
+                                                    if (selectedAdoptionCategory === "🚨 Acil") return ad.is_emergency === true;
+                                                    if (selectedAdoptionCategory === "🏢 Apartmana") return ad.is_apartment_friendly === true;
+                                                    return true;
+                                                });
+
+                                                if (isLoadingAdoptions) {
+                                                    return (
+                                                        <div className="space-y-4">
+                                                            {Array(3).fill(0).map((_, i) => (
+                                                                <div key={i} className="flex gap-4 p-4 rounded-[2rem] bg-[var(--card-bg)] border border-[var(--card-border)] animate-pulse overflow-hidden relative">
+                                                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-shimmer" />
+                                                                    <div className="w-16 h-16 rounded-2xl bg-white/10 shrink-0" />
+                                                                    <div className="flex-1 space-y-3 pt-2">
+                                                                        <div className="h-4 w-32 bg-white/10 rounded-full" />
+                                                                        <div className="h-3 w-20 bg-white/10 rounded-full opacity-50" />
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    );
+                                                }
+
+                                                if (filtered.length === 0) {
+                                                    return (
+                                                        <div className="text-center py-12 bg-[var(--card-bg)] rounded-3xl border border-white/10">
+                                                            <HeartHandshake className="w-10 h-10 text-[var(--secondary-text)] mx-auto mb-3" />
+                                                            <p className="text-[var(--secondary-text)] font-bold">Henüz ilan yok</p>
+                                                        </div>
+                                                    );
+                                                }
+
+                                                return (
+                                                    <div className="space-y-4">
+                                                        {filtered.map((ad) => (
+                                                            <div
+                                                                key={ad.id}
+                                                                className="flex flex-row items-center gap-4 bg-[var(--card-bg)] p-3 rounded-2xl border border-[var(--card-border)] active:bg-[var(--card-bg)] transition-colors cursor-pointer relative"
+                                                                onClick={() => setSelectedAdoptionPet({
+                                                                    id: ad.id,
+                                                                    name: ad.name,
+                                                                    breed: ad.breed,
+                                                                    desc: ad.description || `${ad.name} sıcak bir yuva arıyor.`,
+                                                                    img: ad.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=600',
+                                                                    images: ad.images || [ad.image_url],
+                                                                    tags: [ad.age, ad.breed].filter(Boolean),
+                                                                    user_id: ad.user_id,
+                                                                    author_name: ad.author_name,
+                                                                    author_avatar: ad.author_avatar,
+                                                                    created_at: ad.created_at
+                                                                })}
+                                                            >
+                                                                <img src={ad.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=200'} className="w-16 h-16 rounded-[1rem] object-cover shrink-0" />
+                                                                <div className="flex-1 overflow-hidden">
+                                                                    <h4 className="text-[var(--foreground)] font-bold text-base">{ad.name} <span className="text-[var(--secondary-text)] font-medium text-xs ml-1">• {ad.age}</span></h4>
+                                                                    <p className="text-cyan-400 text-xs mt-0.5">{ad.breed}</p>
+                                                                </div>
+                                                                <ChevronRight className="w-5 h-5 text-[var(--secondary-text)] mr-1 shrink-0" />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </div>
+                        </motion.div>
+                    )}
+
+
+
+                </AnimatePresence>
+            </main >
+
+            <input type="file" ref={cameraInputRef} className="hidden" accept="image/*,video/*" onChange={handleCameraUpload} />
+
+            {/* MODALS AND DRAWERS */}
+
+            {/* EDIT PROFILE MODAL (Apple Modern Style) */}
+            <AnimatePresence>
+                {isEditProfileOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[320] bg-black/60 backdrop-blur-xl flex items-center justify-center p-4"
+                        onClick={() => setIsEditProfileOpen(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, y: 20, opacity: 0 }}
+                            animate={{ scale: 1, y: 0, opacity: 1 }}
+                            exit={{ scale: 0.95, y: 20, opacity: 0 }}
+                            className="w-full max-w-sm bg-[#1C1C1E]/80 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Navigation Header */}
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-white/5 backdrop-blur-md">
+                                <button onClick={() => setIsEditProfileOpen(false)} className="flex items-center gap-1 text-sm font-medium text-white/60 hover:text-white transition-all active:scale-95 group">
+                                    <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+                                    Vazgeç
+                                </button>
+                                <h2 className="text-sm font-black text-white uppercase tracking-[0.2em]">Profili Düzenle</h2>
+                                <button 
+                                    disabled={isSavingProfile}
+                                    onClick={async () => {
+                                        if (!user) return;
+                                        setIsSavingProfile(true);
+                                        try {
+                                            let finalAvatarUrl = null;
+                                            if (editAvatarFile) {
+                                                finalAvatarUrl = await apiService.uploadMedia(editAvatarFile, 'avatars');
+                                            }
+
+                                            let finalCoverUrl = null;
+                                            if (editCoverFile) {
+                                                finalCoverUrl = await apiService.uploadMedia(editCoverFile, 'avatars');
+                                            }
+
+                                            await updateProfile({
+                                                username: editUsername, // Use username correctly
+                                                name: editName,
+                                                bio: editBio,
+                                                ...(finalAvatarUrl && { avatar: finalAvatarUrl }),
+                                                ...(finalCoverUrl && { cover_photo: finalCoverUrl })
+                                            });
+
+                                            setIsEditProfileOpen(false);
+                                        } catch (err) {
+                                            console.error("Profile update error:", err);
+                                            showToast("Hata", "Profil güncellenemedi.", "error");
+                                        } finally {
+                                            setIsSavingProfile(false);
+                                        }
+                                    }}
+                                    className="text-sm font-black text-cyan-400 hover:text-cyan-300 transition-colors disabled:opacity-50"
+                                >
+                                    {isSavingProfile ? (
+                                        <div className="w-4 h-4 border-2 border-cyan-400/20 border-t-cyan-400 rounded-full animate-spin" />
+                                    ) : 'Kaydet'}
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto no-scrollbar pb-8">
+                                {/* Photo Management Area */}
+                                <div className="relative h-44 mb-16">
+                                    {/* Cover Photo */}
+                                    <div className="w-full h-full bg-white/5 relative overflow-hidden group cursor-pointer" onClick={() => coverInputRef.current?.click()}>
+                                        {editCoverPreview ? (
+                                            <img src={editCoverPreview} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full bg-gradient-to-tr from-cyan-900/40 to-purple-900/40" />
+                                        )}
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center">
+                                                <Camera className="w-5 h-5 text-white" />
+                                            </div>
+                                        </div>
+                                        <input type="file" ref={coverInputRef} className="hidden" accept="image/*" onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                setEditCoverFile(file);
+                                                setEditCoverPreview(URL.createObjectURL(file));
+                                            }
+                                        }} />
+                                    </div>
+
+                                    {/* Avatar Overlap */}
+                                    <div className="absolute -bottom-12 left-6">
+                                        <label htmlFor="edit-avatar-upload" className="block relative w-24 h-24 rounded-full border-4 border-[#1C1C1E] shadow-2xl cursor-pointer group bg-[#1C1C1E] overflow-hidden">
+                                            {editAvatarPreview ? (
+                                                <img src={editAvatarPreview} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full bg-white/5 flex items-center justify-center">
+                                                    <Camera className="w-6 h-6 text-white/40" />
+                                                </div>
+                                            )}
+                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Camera className="w-5 h-5 text-white" />
+                                            </div>
+                                            <input id="edit-avatar-upload" type="file" className="hidden" accept="image/*" onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) {
+                                                    setEditAvatarFile(file);
+                                                    setEditAvatarPreview(URL.createObjectURL(file));
+                                                }
+                                            }} />
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {/* Form Section: iOS Style Rows */}
+                                <div className="px-4 space-y-6">
+                                    <div className="bg-white/5 rounded-2xl border border-white/5 overflow-hidden">
+                                        <div className="px-4 py-4 border-b border-white/5">
+                                            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest block mb-1">Görünen Ad</label>
+                                            <input 
+                                                type="text" 
+                                                value={editName} 
+                                                onChange={e => setEditName(e.target.value)} 
+                                                className="w-full bg-transparent text-sm font-bold text-white outline-none placeholder:text-white/20"
+                                                placeholder="İsminiz"
+                                            />
+                                        </div>
+                                        <div className="px-4 py-4">
+                                            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest block mb-1">Kullanıcı Adı</label>
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-sm font-bold text-white/40">@</span>
+                                                <input 
+                                                    type="text" 
+                                                    value={editUsername} 
+                                                    onChange={e => setEditUsername(e.target.value)} 
+                                                    className="w-full bg-transparent text-sm font-bold text-white outline-none placeholder:text-white/20"
+                                                    placeholder="kullanici_adi"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white/5 rounded-2xl border border-white/5 px-4 py-4">
+                                        <label className="text-[10px] font-black text-white/40 uppercase tracking-widest block mb-1">Biyografi</label>
+                                        <textarea 
+                                            value={editBio} 
+                                            onChange={e => setEditBio(e.target.value)} 
+                                            className="w-full bg-transparent text-sm font-medium text-white/80 outline-none placeholder:text-white/20 resize-none h-24"
+                                            placeholder="Kendinizden bahsedin..."
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ADD PET (Apple Bottom Sheet Style) MODAL */}
+            <AnimatePresence>
+                {isAddPetOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[600] flex flex-col justify-end bg-black/60 backdrop-blur-sm px-2 pb-8"
+                        onClick={() => setIsAddPetOpen(false)}
+                    >
+                        <motion.div
+                            initial={{ y: "100%", opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: "100%", opacity: 0 }}
+                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                            drag="y"
+                            dragConstraints={{ top: 0 }}
+                            dragElastic={0.2}
+                            onDragEnd={(e, { offset, velocity }) => {
+                                if (offset.y > 100 || velocity.y > 500) {
+                                    setIsAddPetOpen(false);
+                                    setTimeout(() => setAddPetStep(1), 300);
+                                }
+                            }}
+                            className="w-full bg-[var(--card-bg)] border border-white/10 rounded-[2.5rem] p-6 pb-12 shadow-[0_-20px_50px_rgba(0,0,0,0.8)] relative flex flex-col items-center"
+                            onClick={(e) => e.stopPropagation()} // Prevent close on clicking inside modal
+                        >
+                            {/* Drag Indicator */}
+                            <button 
+                                onClick={() => {
+                                    setIsAddPetOpen(false);
+                                    setTimeout(() => setAddPetStep(1), 300);
+                                }}
+                                className="w-12 h-1.5 bg-gray-600 rounded-full mb-6 hover:bg-gray-500 transition-colors cursor-pointer" 
+                            />
+
+                            <div className="w-full flex justify-between items-center mb-6 px-1">
+                                <div className="w-9">
+                                    {addPetStep === 1 && (
+                                        <button onClick={() => setIsAddPetOpen(false)} className="p-2 bg-[var(--card-bg)] rounded-full text-[var(--foreground)]/50 hover:text-[var(--foreground)] transition-colors">
+                                            <ChevronLeft className="w-5 h-5" />
+                                        </button>
+                                    )}
+                                    {addPetStep > 1 && (
+                                        <button onClick={() => setAddPetStep(prev => prev - 1)} className="p-2 bg-[var(--card-bg)] rounded-full text-[var(--foreground)]/50 hover:text-[var(--foreground)] transition-colors">
+                                            <ChevronLeft className="w-5 h-5" />
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="text-center">
+                                    <h2 className="text-2xl font-black text-[var(--foreground)] tracking-tight">
+                                        {addPetStep === 1 ? 'Temel Kimlik' : addPetStep === 2 ? 'Karakter & Tıbbi' : 'Güvenlik & Kayıt'}
+                                    </h2>
+                                    <p className="text-cyan-400 text-xs font-bold tracking-widest uppercase mt-1">Adım {addPetStep} / 3</p>
+                                </div>
+                                <div className="w-9" />
+                            </div>
+
+                            {/* SCROLLABLE FORM AREA */}
+                            <div className="w-full max-h-[60vh] overflow-y-auto no-scrollbar pb-6 px-1 flex flex-col items-center">
+
+                                {addPetStep === 1 && (
+                                    <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="w-full space-y-4 max-w-sm flex flex-col items-center">
+                                        {/* Multi-Photo Picker */}
+                                        <div className="w-full mb-2">
+                                            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 pt-1 items-center px-1">
+                                                {newPetPhotos.map((photo, index) => (
+                                                    <div key={index} className="relative shrink-0 w-24 h-24 rounded-2xl overflow-hidden border border-white/10 shadow-lg group">
+                                                        <img src={photo.preview} className="w-full h-full object-cover" />
+                                                        <button
+                                                            onClick={() => setNewPetPhotos(prev => prev.filter((_, i) => i !== index))}
+                                                            className="absolute top-1 right-1 w-6 h-6 bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        >
+                                                            <X className="w-3 h-3 text-[var(--foreground)]" />
+                                                        </button>
+                                                        {index === 0 && (
+                                                            <div className="absolute bottom-1 left-1 right-1 bg-cyan-500/80 backdrop-blur-md flex items-center justify-center py-0.5 rounded-lg">
+                                                                <span className="text-[9px] font-bold text-[var(--foreground)] uppercase tracking-wider">Kapak</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+
+                                                {newPetPhotos.length < 5 && (
+                                                    <label htmlFor="add-pet-photos" className="shrink-0 w-24 h-24 rounded-2xl bg-gradient-to-tr from-cyan-900/20 to-purple-900/20 border-2 border-dashed border-cyan-500/30 flex flex-col items-center justify-center cursor-pointer hover:border-cyan-400/60 transition-colors">
+                                                        <div className="w-8 h-8 bg-cyan-500/20 rounded-full flex items-center justify-center mb-1">
+                                                            <Plus className="w-4 h-4 text-cyan-400" />
+                                                        </div>
+                                                        <span className="text-[9px] text-cyan-200 font-bold uppercase tracking-wide px-2 text-center">Foto Ekle<br />(Max 5)</span>
+                                                        <input
+                                                            type="file"
+                                                            id="add-pet-photos"
+                                                            className="hidden"
+                                                            accept="image/*"
+                                                            multiple
+                                                            onChange={(e) => {
+                                                                const files = Array.from(e.target.files || []);
+                                                                if (files.length > 0) {
+                                                                    const validFiles = files.slice(0, 5 - newPetPhotos.length);
+                                                                    const newPhotos = validFiles.map(file => ({
+                                                                        file,
+                                                                        preview: URL.createObjectURL(file)
+                                                                    }));
+                                                                    setNewPetPhotos(prev => [...prev, ...newPhotos]);
+                                                                }
+                                                            }}
+                                                        />
+                                                    </label>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* İsim ve Tür */}
+                                        <div className="flex gap-3 w-full">
+                                            <div className="flex-1">
+                                                <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">İsim</label>
+                                                <input type="text" value={newPetName} onChange={e => setNewPetName(e.target.value)} placeholder="Örn: Pamuk" className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-5 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors font-bold" />
+                                            </div>
+                                            <div className="w-24">
+                                                <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Tür</label>
+                                                <select value={newPetType} onChange={e => setNewPetType(e.target.value)} className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-2 py-3.5 text-center text-xl mt-1 outline-none focus:border-cyan-400 transition-colors appearance-none" style={{ textAlignLast: "center" }}>
+                                                    <option value="🐶">🐶</option>
+                                                    <option value="🐱">🐱</option>
+                                                    <option value="🦜">🦜</option>
+                                                    <option value="🐰">🐰</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        {/* Irk ve Yaş */}
+                                        <div className="flex gap-3 w-full">
+                                            <div className="flex-[2]">
+                                                <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Irkı</label>
+                                                <input type="text" value={newPetBreed} onChange={e => setNewPetBreed(e.target.value)} placeholder="Örn: Golden Retriever" className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-5 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors font-medium text-sm" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Yaş</label>
+                                                <input type="text" value={newPetAge} onChange={e => setNewPetAge(e.target.value)} placeholder="Örn: 2 Yaş" className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-4 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors font-medium text-sm text-center" />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-3 w-full">
+                                            <div className="flex-1">
+                                                <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Cinsiyet</label>
+                                                <select value={newPetGender} onChange={e => setNewPetGender(e.target.value)} className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-4 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors text-sm">
+                                                    <option value="Erkek">Erkek</option>
+                                                    <option value="Dişi">Dişi</option>
+                                                </select>
+                                            </div>
+                                            <div className="flex-1">
+                                                <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Kısır Mı?</label>
+                                                <select value={newPetNeutered} onChange={e => setNewPetNeutered(e.target.value)} className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-4 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors text-sm">
+                                                    <option value="Evet">Evet</option>
+                                                    <option value="Hayır">Hayır</option>
+                                                </select>
+                                            </div>
+                                            <div className="flex-1">
+                                                <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Boyut</label>
+                                                <select value={newPetSize} onChange={e => setNewPetSize(e.target.value)} className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-4 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors text-sm">
+                                                    <option value="Küçük">Küçük</option>
+                                                    <option value="Orta">Orta</option>
+                                                    <option value="Büyük">Büyük</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <button onClick={() => setAddPetStep(2)} disabled={!newPetName || !newPetBreed} className="w-full py-4 mt-4 bg-white rounded-2xl font-black text-black hover:bg-gray-200 transition-colors disabled:opacity-50">
+                                            Sonraki Adım
+                                        </button>
+                                    </motion.div>
+                                )}
+
+                                {addPetStep === 2 && (
+                                    <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="w-full space-y-4 max-w-sm">
+                                        <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-2xl flex items-start gap-3">
+                                            <AlertTriangle className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
+                                            <div>
+                                                <h4 className="text-orange-400 text-sm font-bold mb-1">Tıbbi & Fiziksel İşaretler</h4>
+                                                <p className="text-[11px] text-orange-200/80 leading-relaxed font-medium">Bu bilgiler, kayıp durumunda sizi temsil edecek Acil QR Sayfasında (SOS) hayati önem taşır. Doğru girmeye özen gösterin.</p>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Sağlık & Alerji (Kritik!)</label>
+                                            <textarea value={newPetHealth} onChange={e => setNewPetHealth(e.target.value)} placeholder="Örn: Tavuk alerjisi var, lütfen tavuklu mama vermeyin!" className="w-full bg-red-950/20 border border-red-500/30 rounded-2xl px-5 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-red-500 transition-colors font-medium text-sm h-20 resize-none shadow-[0_0_15px_rgba(239,68,68,0.1) inset]" />
+                                        </div>
+
+                                        <div>
+                                            <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Ayırt Edici Özellikleri</label>
+                                            <textarea value={newPetFeatures} onChange={e => setNewPetFeatures(e.target.value)} placeholder="Örn: Sol kulağındaki hafif kesik, kuyruk ucu beyaz..." className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-5 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors font-medium text-sm h-16 resize-none" />
+                                        </div>
+
+                                        <div>
+                                            <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Karakteri (Bulan Kişiye Tavsiye)</label>
+                                            <textarea value={newPetCharacter} onChange={e => setNewPetCharacter(e.target.value)} placeholder="Örn: Çok uysaldır ancak ani seslerden korkup kaçabilir." className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-5 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors font-medium text-sm h-16 resize-none" />
+                                        </div>
+
+                                        <button onClick={() => setAddPetStep(3)} className="w-full py-4 mt-4 bg-white rounded-2xl font-black text-black hover:bg-gray-200 transition-colors disabled:opacity-50">
+                                            Sonraki Adım
+                                        </button>
+                                    </motion.div>
+                                )}
+
+                                {addPetStep === 3 && (
+                                    <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="w-full space-y-5 max-w-sm">
+
+                                        <div>
+                                            <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Mikroçip Numarası</label>
+                                            <div className="relative mt-1">
+                                                <input type="text" value={newPetMicrochip} onChange={e => setNewPetMicrochip(e.target.value)} placeholder="TR-000000000" className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl pl-12 pr-5 py-4 text-[var(--foreground)] outline-none focus:border-cyan-400 transition-colors font-mono tracking-widest text-sm" />
+                                                <ShieldAlert className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--secondary-text)]" />
+                                            </div>
+                                            <p className="text-[10px] text-[var(--secondary-text)] ml-3 mt-1.5 font-medium">Veteriner sorgulamaları için resmi numarasını girebilirsiniz. Uygulamada güvenle saklanır.</p>
+                                        </div>
+
+                                        <div className="bg-[var(--card-bg)] border border-white/10 rounded-3xl p-5 mt-4">
+                                            <div className="flex justify-between items-center mb-1">
+                                                <div className="flex items-center gap-2">
+                                                    <PhoneCall className={cn("w-5 h-5 transition-colors", newPetShowPhone ? "text-cyan-400" : "text-[var(--secondary-text)]")} />
+                                                    <span className="font-bold text-[var(--foreground)] text-sm">Telefonu Göster</span>
+                                                </div>
+                                                <div
+                                                    className={cn("w-12 h-6 rounded-full p-1 cursor-pointer transition-colors relative", newPetShowPhone ? "bg-cyan-500" : "bg-gray-700")}
+                                                    onClick={() => setNewPetShowPhone(!newPetShowPhone)}
+                                                >
+                                                    <motion.div
+                                                        animate={{ x: newPetShowPhone ? 24 : 0 }}
+                                                        className="w-4 h-4 rounded-full bg-white shadow-md"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <p className="text-[11px] text-[var(--secondary-text)] leading-relaxed font-medium mt-2">
+                                                Eğer "Kayıp Alarmı" verirseniz, Moffi QR kodunuzu okutan kişiler doğrudan sizinle telefon numaranız üzerinden görüşebilir. Kapatırsanız; sadece anonim uygulama-içi mesaj atabilirler.
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            disabled={isSavingPet || !user}
+                                            onClick={async () => {
+                                                if (!user) {
+                                                    showToast("Giriş Gerekli", "Lütfen önce giriş yapın.", "Zap");
+                                                    window.dispatchEvent(new CustomEvent('open-auth-modal'));
+                                                    return;
+                                                }
+                                                setIsSavingPet(true);
+
+                                                try {
+                                                    // 1. Upload Photos using apiService
+                                                    const photoUrls: string[] = [];
+                                                    for (const photo of newPetPhotos) {
+                                                        const publicUrl = await apiService.uploadMedia(photo.file, 'posts');
+                                                        if (publicUrl) photoUrls.push(publicUrl);
+                                                    }
+
+                                                    // 2. Add Pet via apiService
+                                                    await apiService.addPet({
+                                                        name: newPetName,
+                                                        type: newPetType,
+                                                        breed: newPetBreed,
+                                                        age: newPetAge,
+                                                        gender: newPetGender,
+                                                        is_neutered: newPetNeutered === "Evet",
+                                                        size: newPetSize,
+                                                        features: newPetFeatures,
+                                                        health_notes: newPetHealth,
+                                                        character_notes: newPetCharacter,
+                                                        microchip_number: newPetMicrochip,
+                                                        communication_preference: newPetShowPhone ? 'public_phone' : 'anonymous_only',
+                                                        avatar: photoUrls[0] || null,
+                                                        image: photoUrls[0] || null,
+                                                        images: photoUrls,
+                                                    });
+
+                                                    showToast("Hoş Geldin! 🐾", `${newPetName} Moffi ailesine katıldı.`, "success");
+                                                    setIsAddPetOpen(false);
+                                                    setAddPetStep(1);
+                                                    
+                                                    // Reset form
+                                                    setNewPetName("");
+                                                    setNewPetBreed("");
+                                                    setNewPetAge("");
+                                                    setNewPetPhotos([]);
+                                                } catch (err: any) {
+                                                    console.error("Pet saving error:", err);
+                                                    showToast("Hata", "Dostunuz kaydedilemedi.", "error");
+                                                } finally {
+                                                    setIsSavingPet(false);
+                                                }
+                                            }}
+                                            className="w-full py-4 mt-6 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl font-black text-[var(--foreground)] shadow-[0_10px_30px_rgba(34,211,238,0.3)] hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2"
+                                        >
+                                            {isSavingPet ? (
+                                                <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                            ) : (
+                                                <>Aileye Ekle & QR Kimlik Oluştur <BadgeCheck className="w-5 h-5" /></>
+                                            )}
+                                        </button>
+                                    </motion.div>
+                                )}
+                            </div>
+
+                            <button onClick={() => setIsAddPetOpen(false)} className="w-full text-center py-2 text-sm text-[var(--secondary-text)] font-bold hover:text-[var(--foreground)] transition-colors mt-2">
+                                Vazgeç
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* UPLOAD NEW POST MODAL */}
+            <AnimatePresence>
+                {isUploadModalOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[9999] bg-[#0a0a0b]/95 backdrop-blur-3xl flex flex-col"
+                    >
+                        {/* Header */}
+                        <div className="flex justify-between items-center px-6 pt-12 pb-4 shrink-0 border-b border-[var(--card-border)]">
+                            <button
+                                onClick={() => { setIsUploadModalOpen(false); setUploadImageURL(null); setUploadCaption(''); setUploadMood(null); }}
+                                className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center -ml-2"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                            <h2 className="text-xl font-black text-[var(--foreground)]">Yeni Gönderi</h2>
+                            <div className="w-10" />
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 overflow-y-auto w-full max-w-lg mx-auto p-4 pb-32 flex flex-col gap-6">
+
+                            {/* MEDIA PICKER / PREVIEW (Apple Native Style) */}
+                            {uploadImageURL ? (
+                                <motion.div 
+                                    initial={{ scale: 0.9, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    className="w-full h-[60vh] min-h-[450px] max-h-[600px] rounded-[2.5rem] overflow-hidden bg-black border border-white/10 relative shadow-2xl group transition-all duration-500 ease-in-out"
+                                >
+                                    {selectedFile?.type.startsWith('video/') ? (
+                                        <div className="relative w-full h-full">
+                                            <video 
+                                                src={uploadImageURL} 
+                                                className="w-full h-full object-cover" 
+                                                autoPlay 
+                                                muted 
+                                                loop 
+                                                playsInline 
+                                            />
+                                            {/* Video Indicator Badge */}
+                                            <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-2 border border-white/10">
+                                                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                                                <span className="text-[10px] font-black text-white uppercase tracking-widest">Video Yayında</span>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div 
+                                            className="relative w-full h-full overflow-hidden"
+                                            onTouchStart={handleTouchStart}
+                                            onTouchEnd={handleTouchEnd}
+                                            onMouseDown={(e) => { touchStartX.current = e.clientX; }}
+                                            onMouseUp={(e) => {
+                                                if (touchStartX.current === null) return;
+                                                const diff = e.clientX - touchStartX.current;
+                                                if (diff > 50) handleSwipeFilter('right');
+                                                else if (diff < -50) handleSwipeFilter('left');
+                                                touchStartX.current = null;
+                                            }}
+                                        >
+                                            <img 
+                                                src={uploadImageURL} 
+                                                className="w-full h-full object-cover touch-pan-y" 
+                                                style={{ 
+                                                    filter: `${IMAGE_FILTERS[activeFilterIndex].filter} brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)` 
+                                                }}
+                                                draggable={false}
+                                            />
+                                            {/* Elegant Filter Name Overlay */}
+                                            <AnimatePresence>
+                                                {showFilterName && (
+                                                    <motion.div 
+                                                        initial={{ opacity: 0 }}
+                                                        animate={{ opacity: 1 }}
+                                                        exit={{ opacity: 0 }}
+                                                        transition={{ duration: 1, ease: 'easeInOut' }}
+                                                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none w-full px-4"
+                                                    >
+                                                        <p className="text-white font-light tracking-[0.4em] uppercase text-2xl drop-shadow-[0_2px_15px_rgba(0,0,0,0.8)] text-center">
+                                                            {IMAGE_FILTERS[activeFilterIndex].name}
+                                                        </p>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+
+                                            {/* Magic Wand Auto-Enhance Button (Streamlined) */}
+                                            {selectedFile?.type.startsWith('image/') && (
+                                                <motion.button
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setActiveFilterIndex(0);
+                                                        setBrightness(115);
+                                                        setContrast(115);
+                                                        setSaturation(130);
+                                                        showToast("AI İyileştirme ✨", "Profesyonel ayarlar uygulandı.", "success");
+                                                    }}
+                                                    className="absolute bottom-6 right-6 z-20 w-8 h-8 flex items-center justify-center text-yellow-400 hover:scale-110 transition-all active:scale-95 group"
+                                                    title="AI İyileştir"
+                                                >
+                                                    <Sparkles className="w-5 h-5 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]" />
+                                                </motion.button>
+                                            )}
+                                        </div>
+                                    )}
+                                    
+                                    {/* Glassmorphism Overlays */}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                                    
+                                    {/* Streamlined Action Sidebar */}
+                                    <div className="absolute top-6 right-6 flex flex-col gap-5 opacity-0 group-hover:opacity-100 transition-all duration-300 z-30">
+                                        <button 
+                                            type="button"
+                                            onClick={() => cameraInputRef.current?.click()}
+                                            className="text-white/60 hover:text-white transition-all active:scale-90"
+                                            title="Medyayı Değiştir"
+                                        >
+                                            <Camera className="w-5 h-5" />
+                                        </button>
+                                        
+                                        <button 
+                                            type="button"
+                                            onClick={() => audioInputRef.current?.click()}
+                                            className={cn(
+                                                "transition-all active:scale-90",
+                                                audioURL ? "text-cyan-400" : "text-white/60 hover:text-white"
+                                            )}
+                                            title="Müzik/Ses Ekle"
+                                        >
+                                            <Mic className="w-5 h-5" />
+                                        </button>
+
+                                        <button 
+                                            type="button"
+                                            onClick={() => { setUploadImageURL(null); setSelectedFile(null); setAudioFile(null); setAudioURL(null); }}
+                                            className="text-red-500/60 hover:text-red-500 transition-all active:scale-90"
+                                            title="Sil"
+                                        >
+                                            <Trash2 className="w-5 h-5" />
+                                        </button>
+                                    </div>
+
+                                    {/* Bottom Info Pill */}
+                                    <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between translate-y-4 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-500">
+                                        <div className="flex gap-2">
+                                            {uploadMood ? (
+                                                <div className="bg-cyan-500 text-black px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-[0_0_20px_rgba(6,182,212,0.5)]">
+                                                    {uploadMood}
+                                                </div>
+                                            ) : (
+                                                <div className="bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black text-white/60 uppercase tracking-widest border border-white/10">
+                                                    Duygu Durumu Yok
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex -space-x-2">
+                                            {/* Removed decorative icons */}
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            ) : (
+                                <motion.div 
+                                    initial={{ y: 20, opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    onClick={() => cameraInputRef.current?.click()}
+                                    className="w-full h-[60vh] min-h-[350px] max-h-[500px] rounded-[2rem] border-2 border-dashed border-white/10 bg-white/[0.02] flex flex-col items-center justify-center gap-6 cursor-pointer hover:bg-white/[0.05] hover:border-cyan-500/40 transition-all duration-700 group relative overflow-hidden"
+                                >
+                                    {/* Background Glow */}
+                                    <div className="absolute inset-0 bg-cyan-500/5 blur-[100px] group-hover:bg-cyan-500/10 transition-colors" />
+                                    
+                                    <div className="relative">
+                                        <div className="w-20 h-20 rounded-[1.5rem] bg-gradient-to-tr from-cyan-500/20 to-purple-500/20 flex items-center justify-center border border-white/10 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-xl">
+                                            <ImagePlus className="w-8 h-8 text-cyan-400 drop-shadow-[0_0_15px_rgba(34,211,238,0.5)]" />
+                                        </div>
+                                        <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-cyan-500 flex items-center justify-center text-black border-4 border-[#0a0a0b] shadow-xl group-hover:scale-110 transition-transform">
+                                            <Plus className="w-4 h-4" strokeWidth={3} />
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="text-center relative z-10">
+                                        <p className="text-white font-black text-lg tracking-tight">Anıyı Ölümsüzleştir</p>
+                                        <p className="text-[var(--secondary-text)] text-xs font-medium mt-1.5 max-w-[200px] mx-auto leading-relaxed">
+                                            En sevdiğin fotoğrafı veya videoyu seç, Moffi topluluğuyla paylaş!
+                                        </p>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </div>
+
+                        {/* SCROLLABLE CONTENT AREA */}
+                        <div className="flex-1 overflow-y-auto px-4 pb-40 flex flex-col gap-6 custom-scrollbar">
+                            {/* Filter guide hint */}
+                            {selectedFile?.type.startsWith('image/') && (
+                                <p className="text-center text-[10px] text-white/30 font-medium tracking-widest uppercase mt-2 mb-1 animate-pulse">
+                                    Filtreleri değiştirmek için fotoğrafı sağa sola kaydır
+                                </p>
+                            )}
+
+                            {/* MINIMAL CAPTION BOX */}
+                            <div className="px-2 pt-2">
+                                <textarea
+                                    value={uploadCaption}
+                                    onChange={(e) => setUploadCaption(e.target.value)}
+                                    onInput={(e) => {
+                                        e.currentTarget.style.height = 'auto';
+                                        e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
+                                    }}
+                                    placeholder="Neler oluyor?.."
+                                    className="w-full bg-transparent outline-none text-[var(--foreground)] resize-none min-h-[40px] max-h-[100px] text-lg font-medium py-1 overflow-hidden placeholder:text-white/20"
+                                    rows={1}
+                                />
+                            </div>
+
+
+
+
+
+
+
+
+
+                            {/* SMART TOOLBAR */}
+                            <div className="flex items-center justify-between px-2 py-4 border-y border-white/5 mt-2">
+                                <div className="flex items-center gap-6">
+                                    <button 
+                                        type="button"
+                                        onClick={() => setActiveTool(activeTool === 'adjust' ? null : 'adjust')}
+                                        className={cn("transition-all active:scale-90", activeTool === 'adjust' ? "text-cyan-400" : "text-white/40 hover:text-white")}
+                                        title="İnce Ayar"
+                                    >
+                                        <Palette className="w-5 h-5" />
+                                    </button>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setActiveTool(activeTool === 'tag' ? null : 'tag')}
+                                        className={cn("transition-all active:scale-90", activeTool === 'tag' ? "text-cyan-400" : "text-white/40 hover:text-white")}
+                                        title="Etiketle"
+                                    >
+                                        <PawPrint className="w-5 h-5" />
+                                    </button>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setActiveTool(activeTool === 'schedule' ? null : 'schedule')}
+                                        className={cn("transition-all active:scale-90", activeTool === 'schedule' ? "text-cyan-400" : "text-white/40 hover:text-white")}
+                                        title="Zamanla"
+                                    >
+                                        <Clock className="w-5 h-5" />
+                                    </button>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setActiveTool(activeTool === 'mood' ? null : 'mood')}
+                                        className={cn("transition-all active:scale-90", activeTool === 'mood' ? "text-cyan-400" : "text-white/40 hover:text-white")}
+                                        title="Ruh Hali"
+                                    >
+                                        <Heart className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                
+                                <button 
+                                    type="button"
+                                    onClick={generateAICaption}
+                                    disabled={isGeneratingAI}
+                                    className={cn(
+                                        "flex items-center gap-2 px-4 py-2 rounded-full transition-all active:scale-95",
+                                        isGeneratingAI ? "bg-white/5 opacity-50" : "bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20"
+                                    )}
+                                >
+                                    {isGeneratingAI ? <div className="w-3 h-3 border-2 border-cyan-400/20 border-t-cyan-400 rounded-full animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                                    <span className="text-[10px] font-black uppercase tracking-widest">AI Öner</span>
+                                </button>
+                            </div>
+
+                            {/* DYNAMIC TOOL DRAWER */}
+                            <AnimatePresence mode="wait">
+                                {activeTool && (
+                                    <motion.div
+                                        key={activeTool}
+                                        initial={{ height: 0, opacity: 0, y: 10 }}
+                                        animate={{ height: 'auto', opacity: 1, y: 0 }}
+                                        exit={{ height: 0, opacity: 0, y: 10 }}
+                                        className="overflow-hidden bg-white/[0.03] rounded-3xl border border-white/5"
+                                    >
+                                        <div className="p-5">
+                                            {activeTool === 'adjust' && (
+                                                <div className="flex flex-col gap-5">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Manuel İnce Ayar</span>
+                                                        <button type="button" onClick={() => { setBrightness(100); setContrast(100); setSaturation(100); }} className="text-[9px] font-bold text-cyan-400 uppercase">Sıfırla</button>
+                                                    </div>
+                                                    <div className="space-y-4">
+                                                        <div className="space-y-2">
+                                                            <div className="flex justify-between text-[10px] font-bold text-white/20 uppercase"><span>Parlaklık</span></div>
+                                                            <input type="range" min="50" max="150" step="0.5" value={brightness} onChange={(e) => setBrightness(parseFloat(e.target.value))} className="w-full h-0.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-500" />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <div className="flex justify-between text-[10px] font-bold text-white/20 uppercase"><span>Kontrast</span></div>
+                                                            <input type="range" min="50" max="150" step="0.5" value={contrast} onChange={(e) => setContrast(parseFloat(e.target.value))} className="w-full h-0.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-500" />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <div className="flex justify-between text-[10px] font-bold text-white/20 uppercase"><span>Doygunluk</span></div>
+                                                            <input type="range" min="0" max="200" step="1" value={saturation} onChange={(e) => setSaturation(parseFloat(e.target.value))} className="w-full h-0.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-500" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {activeTool === 'tag' && (
+                                                <div className="flex flex-col gap-4">
+                                                    <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Dostunu Etiketle</span>
+                                                    <div className="flex gap-4 overflow-x-auto no-scrollbar py-2">
+                                                        {userPets?.map(pet => (
+                                                            <button 
+                                                                key={pet.id} 
+                                                                type="button"
+                                                                onClick={() => setTaggedPetIds(prev => prev.includes(pet.id) ? prev.filter(id => id !== pet.id) : [...prev, pet.id])}
+                                                                className="flex flex-col items-center gap-2 shrink-0"
+                                                            >
+                                                                <div className={cn("w-12 h-12 rounded-full border-2 transition-all relative", taggedPetIds.includes(pet.id) ? "border-cyan-500 scale-110 shadow-[0_0_15px_rgba(6,182,212,0.3)]" : "border-white/10")}>
+                                                                    <img src={pet.avatar} className="w-full h-full rounded-full object-cover p-0.5" />
+                                                                    {taggedPetIds.includes(pet.id) && <div className="absolute -top-1 -right-1 w-4 h-4 bg-cyan-500 rounded-full flex items-center justify-center border-2 border-black"><Check size={8} /></div>}
+                                                                </div>
+                                                                <span className={cn("text-[9px] font-bold uppercase", taggedPetIds.includes(pet.id) ? "text-cyan-400" : "text-white/40")}>{pet.name}</span>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {activeTool === 'schedule' && (
+                                                <div className="flex flex-col gap-4">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Paylaşım Zamanı</span>
+                                                        <button type="button" onClick={() => setIsSchedulingMode(!isSchedulingMode)} className={cn("px-3 py-1 rounded-full text-[9px] font-black uppercase transition-all", isSchedulingMode ? "bg-cyan-500 text-black" : "bg-white/10 text-white/40")}>
+                                                            {isSchedulingMode ? 'Zamanlandı' : 'Şimdi'}
+                                                        </button>
+                                                    </div>
+                                                    {isSchedulingMode && (
+                                                        <input type="datetime-local" value={scheduledDate || ''} onChange={(e) => setScheduledDate(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white [color-scheme:dark]" />
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {activeTool === 'mood' && (
+                                                <div className="flex flex-col gap-4">
+                                                    <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Ruh Hali</span>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {MOOD_OPTIONS.map(mood => (
+                                                            <button type="button" key={mood} onClick={() => setUploadMood(uploadMood === mood ? null : mood)} className={cn("px-4 py-2 rounded-full text-xs font-bold transition-all", uploadMood === mood ? "bg-white text-black scale-105" : "bg-white/5 text-white/40 hover:bg-white/10")}>
+                                                                {mood}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+
+                        {/* FIXED FOOTER AREA */}
+                        <div className="fixed bottom-0 left-0 right-0 p-6 pt-10 bg-gradient-to-t from-[#0a0a0b] via-[#0a0a0b]/95 to-transparent z-[100] flex flex-col gap-4">
+                            {/* LOCATION TOGGLE */}
+                            <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-[1.5rem] p-3 backdrop-blur-md">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center">
+                                        <MapPin className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[var(--foreground)] font-bold text-[13px]">Konum Bilgisini Ekle</p>
+                                        <p className="text-[var(--secondary-text)] text-[10px]">Açmadığınız sürece gizli kalır.</p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setUploadLocationEnabled(!uploadLocationEnabled)}
+                                    className={cn("w-10 h-6 rounded-full transition-colors flex items-center px-1 duration-300", uploadLocationEnabled ? "bg-cyan-500" : "bg-white/20")}
+                                >
+                                    <div className={cn("w-4 h-4 bg-white rounded-full shadow-md transition-transform duration-300", uploadLocationEnabled ? "translate-x-4" : "translate-x-0")} />
+                                </button>
+                            </div>
+
+                            {/* PUBLISH BUTTON */}
+                            <button
+                                onClick={publishPost}
+                                disabled={isPublishing}
+                                className={cn("w-full py-4 rounded-full font-black text-white flex items-center justify-center gap-2 shadow-[0_10px_40px_rgba(34,211,238,0.3)] transition-all", isPublishing ? "bg-gray-800/50 cursor-not-allowed" : "bg-gradient-to-r from-cyan-400 to-purple-500 hover:scale-[1.02] active:scale-95")}
+                            >
+                                {isPublishing ? (
+                                    <div className="flex items-center gap-3">
+                                        <div className="relative w-6 h-6">
+                                            <svg className="w-full h-full -rotate-90">
+                                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="transparent" className="text-white/10" />
+                                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="transparent" strokeDasharray={62.8} strokeDashoffset={62.8 - (62.8 * uploadProgress) / 100} className="text-cyan-400 transition-all duration-300" />
+                                            </svg>
+                                            <span className="absolute inset-0 flex items-center justify-center text-[8px] font-black">{uploadProgress}%</span>
+                                        </div>
+                                        <span className="animate-pulse tracking-widest text-xs">YÜKLENİYOR...</span>
+                                    </div>
+                                ) : (
+                                    <><Send className="w-5 h-5" /> Paylaş</>
+                                )}
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* STORY PREVIEW MODAL (The Professional Review Phase) */}
+            <AnimatePresence>
+                {storyPreview && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[9999] bg-black overflow-y-auto"
+                    >
+                        {/* Immersive Background Blur - FIXED & TOP PRIORITY */}
+                        <div className="fixed inset-0 z-0 pointer-events-none">
+                            <img src={storyPreview} className="w-full h-full object-cover blur-3xl opacity-50" />
+                        </div>
+
+                        <div className="relative z-10 flex flex-col min-h-screen">
+                            {/* Header */}
+                            <div className="flex justify-between items-center p-6 pt-8">
+                                <button
+                                    onClick={() => setStoryPreview(null)}
+                                    className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white border border-white/10 active:scale-90 transition-transform"
+                                >
+                                    <X className="w-6 h-6" />
+                                </button>
+                                <h2 className="text-white font-black text-lg uppercase tracking-tighter">Hikaye Önizleme</h2>
+                                <div className="w-10" />
+                            </div>
+
+                            {/* Preview Content - Responsive & Safe */}
+                            <div className="flex-1 flex items-center justify-center p-6 py-10">
+                                <div className="w-full max-w-[300px] sm:max-w-[340px] max-h-[65vh] aspect-[9/16] rounded-[48px] overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border-[6px] border-white/10 relative">
+                                    <img src={storyPreview} className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60 pointer-events-none" />
+                                    
+                                    {/* Glass Overlay for extra premium feel */}
+                                    <div className="absolute inset-0 border border-white/10 rounded-[42px] pointer-events-none" />
+                                </div>
+                            </div>
+
+                            {/* Footer Controls - Clears Nav Bar */}
+                            <div className="p-8 pb-32 flex flex-col gap-5">
+                            <button
+                                onClick={confirmUploadStory}
+                                disabled={isUploadingStory}
+                                className={cn(
+                                    "w-full py-4 rounded-full font-black text-white text-lg flex items-center justify-center gap-2 shadow-2xl transition-all",
+                                    isUploadingStory ? "bg-gray-600 opacity-50 cursor-not-allowed" : "bg-gradient-to-r from-cyan-400 to-purple-500 hover:scale-[1.02] active:scale-95"
+                                )}
+                            >
+                                {isUploadingStory ? (
+                                    <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Yükleniyor...</>
+                                ) : (
+                                    <><Sparkles className="w-5 h-5" /> Hikayeyi Paylaş</>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setStoryPreview(null)}
+                                className="w-full py-3 text-white/60 font-bold hover:text-white transition-colors"
+                            >
+                                Vazgeç
+                            </button>
+                        </div>
+                    </div>
+                </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* EDIT POST MODAL */}
+            <AnimatePresence>
+                {editingPost && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[505] bg-black/95 backdrop-blur-xl flex flex-col"
+                    >
+                        {/* Header */}
+                        <div className="flex justify-between items-center p-6 shrink-0 border-b border-[var(--card-border)]">
+                            <button
+                                onClick={() => setEditingPost(null)}
+                                className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center -ml-2 text-[var(--foreground)] hover:bg-white/20"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                            <h2 className="text-xl font-black text-[var(--foreground)]">Gönderiyi Düzenle</h2>
+                            <div className="w-10" />
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 overflow-y-auto w-full max-w-lg mx-auto p-4 pb-32 flex flex-col gap-6">
+
+                            {/* PREVIEW */}
+                            <div className="w-full aspect-[4/5] rounded-3xl overflow-hidden bg-gray-900 border border-white/10 relative shadow-2xl">
+                                <img src={editingPost.media} className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+                                <div className="absolute bottom-4 left-4 flex gap-2">
+                                    {editingPost.mood && (
+                                        <div className="bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-[var(--foreground)] border border-white/20">
+                                            {editingPost.mood}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* CAPTION */}
+                            <div className="bg-[var(--card-bg)] border border-white/10 rounded-3xl p-4 flex gap-4">
+                                <img src={user?.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} className="w-10 h-10 rounded-full shrink-0" />
+                                <textarea
+                                    value={editingPost.desc}
+                                    onChange={(e) => setEditingPost({ ...editingPost, desc: e.target.value })}
+                                    placeholder="Bu harika anı anlat..."
+                                    className="w-full bg-transparent outline-none text-[var(--foreground)] resize-none h-24 text-sm mt-1"
+                                />
+                            </div>
+
+
+
+                            {/* MOOD SELECTOR */}
+                            <div className="flex flex-col gap-2">
+                                <span className="text-[var(--foreground)]/60 text-[11px] font-bold uppercase tracking-widest px-1">Ruh Hali (İsteğe Bağlı)</span>
+                                <div className="w-full overflow-x-auto no-scrollbar flex gap-2 pb-2">
+                                    {MOOD_OPTIONS.map(mood => (
+                                        <button
+                                            key={mood}
+                                            onClick={() => setEditingPost({ ...editingPost, mood: editingPost.mood === mood ? null : mood })}
+                                            className={cn(
+                                                "shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors border",
+                                                editingPost.mood === mood ? "bg-cyan-500 text-black border-cyan-400 font-bold" : "bg-[var(--card-bg)] border-white/10 text-[var(--foreground)] hover:bg-white/10"
+                                            )}
+                                        >
+                                            {mood}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* SAVE BUTTON */}
+                            <button
+                                onClick={saveEditPost}
+                                disabled={isPublishing}
+                                className={cn("w-full py-4 mt-auto rounded-full font-black text-[var(--foreground)] flex items-center justify-center gap-2 shadow-[0_10px_40px_rgba(34,211,238,0.3)] transition-all", isPublishing ? "bg-gray-600 cursor-not-allowed" : "bg-gradient-to-r from-cyan-400 to-purple-500 hover:scale-[1.02] active:scale-95")}
+                            >
+                                {isPublishing ? (
+                                    <span className="animate-pulse">Kaydediliyor...</span>
+                                ) : (
+                                    <><Edit2 className="w-5 h-5" /> Kaydet</>
+                                )}
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* APPLE STYLE DELETE CONFIRMATION ALERT (CENTERED DIALOG) */}
+            <AnimatePresence>
+                {postToDelete !== null && (
+                    <>
+                        {/* Overlay */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[290] bg-black/60 backdrop-blur-sm"
+                            onClick={() => setPostToDelete(null)}
+                        />
+                        {/* Elegant iOS-like Center Alert Popup */}
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            transition={{ duration: 0.2, ease: "easeOut" }}
+                            className="fixed inset-0 z-[300] flex items-center justify-center p-4 pointer-events-none"
+                        >
+                            <div className="w-full max-w-[280px] bg-[#252528]/95 backdrop-blur-xl rounded-3xl overflow-hidden pointer-events-auto shadow-2xl border border-white/10 flex flex-col">
+                                <div className="p-6 flex flex-col items-center text-center gap-2 border-b border-white/10">
+                                    <h3 className="text-[var(--foreground)] text-base font-bold">Gönderiyi Sil</h3>
+                                    <p className="text-[var(--foreground)]/70 text-sm leading-snug">Bu gönderiyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.</p>
+                                </div>
+                                <div className="flex flex-col">
+                                    <button
+                                        onClick={deletePost}
+                                        className="w-full py-3.5 text-red-500 font-bold text-[15px] border-b border-white/10 hover:bg-[var(--card-bg)] transition-colors active:bg-white/10"
+                                    >
+                                        Sil
+                                    </button>
+                                    <button
+                                        onClick={() => setPostToDelete(null)}
+                                        className="w-full py-3.5 text-cyan-500 font-normal text-[15px] hover:bg-[var(--card-bg)] transition-colors active:bg-white/10"
+                                    >
+                                        Vazgeç
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* LOST AD (SOS) MODAL */}
+            <AnimatePresence>
+                {isLostAdModalOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, y: "100%" }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: "100%" }}
+                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                        className="fixed inset-0 z-[280] bg-[var(--background)] flex flex-col pt-12 text-[var(--foreground)]"
+                    >
+                        {/* Emergency Header */}
+                        <div className="flex justify-between items-center px-6 pb-4 border-b border-red-500/20">
+                            <button
+                                onClick={() => setIsLostAdModalOpen(false)}
+                                className="w-10 h-10 rounded-full bg-[var(--card-bg)] flex items-center justify-center -ml-2 hover:bg-white/10 transition-colors"
+                            >
+                                <ChevronLeft className="w-6 h-6 text-[var(--foreground)]" />
+                            </button>
+                            <h2 className="text-lg font-black text-red-500 tracking-wider">ACİL DURUM İLANI</h2>
+                            <div className="w-10" />
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 overflow-y-auto w-full max-w-lg mx-auto p-6 space-y-6">
+
+                            <div className="bg-red-500/10 border border-red-500/30 rounded-3xl p-6 text-center shadow-inner relative overflow-hidden">
+                                <div className="absolute inset-0 bg-red-500/10 animate-pulse pointer-events-none" />
+                                <div className="w-16 h-16 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center mx-auto mb-4 border border-red-500/30">
+                                    <MapPin className="w-8 h-8" />
+                                </div>
+                                <h3 className="text-xl font-bold text-[var(--foreground)] mb-2">Çevredeki Herkesi Uyar!</h3>
+                                <p className="text-sm text-red-500 font-medium leading-relaxed">
+                                    Kaybolan dostunuzun bilgilerini girdiğinizde, 5 km çapındaki tüm Moffi üyelerine anında acil durum (SOS) bildirimi gönderilecektir.
+                                </p>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-xs font-bold text-[var(--secondary-text)] ml-1 uppercase tracking-wider">İsmi</label>
+                                    <input value={lostPetName} onChange={e => setLostPetName(e.target.value)} type="text" placeholder="Örn: Buster" className="w-full mt-1 bg-[var(--card-bg)] border border-white/10 rounded-2xl py-4 px-5 text-[var(--foreground)] outline-none focus:border-red-500 transition-colors" />
+                                </div>
+
+                                <div>
+                                    <label className="text-xs font-bold text-[var(--secondary-text)] ml-1 uppercase tracking-wider">Cinsi / Türü</label>
+                                    <input value={lostPetBreed} onChange={e => setLostPetBreed(e.target.value)} type="text" placeholder="Örn: Golden Retriever" className="w-full mt-1 bg-[var(--card-bg)] border border-white/10 rounded-2xl py-4 px-5 text-[var(--foreground)] outline-none focus:border-red-500 transition-colors" />
+                                </div>
+
+                                <div>
+                                    <label className="text-xs font-bold text-[var(--secondary-text)] ml-1 uppercase tracking-wider">En Son Görüldüğü Yer</label>
+                                    <input value={lostPetLocation} onChange={e => setLostPetLocation(e.target.value)} type="text" placeholder="Örn: Kadıköy Moda Sahili" className="w-full mt-1 bg-[var(--card-bg)] border border-white/10 rounded-2xl py-4 px-5 text-[var(--foreground)] outline-none focus:border-red-500 transition-colors" />
+                                </div>
+
+                                <div>
+                                    <label className="text-xs font-bold text-[var(--secondary-text)] ml-1 uppercase tracking-wider">Detaylar / İletişim Notu</label>
+                                    <textarea value={lostPetDesc} onChange={e => setLostPetDesc(e.target.value)} placeholder="Tasma rengi, belirgin özelliği veya ek iletişim bilgileriniz..." className="w-full mt-1 bg-[var(--card-bg)] border border-white/10 rounded-2xl py-4 px-5 text-[var(--foreground)] outline-none focus:border-red-500 transition-colors resize-none h-24" />
+                                </div>
+
+                                <div>
+                                    <div className="flex justify-between items-center mb-2 px-1">
+                                        <label className="text-xs font-bold text-[var(--secondary-text)] uppercase tracking-wider">Fotoğraflar</label>
+                                        <button onClick={() => sosInputRef.current?.click()} className="text-[10px] bg-red-500/10 text-red-500 px-3 py-1 rounded-full border border-red-500/20 font-bold hover:bg-red-500/20 transition-all uppercase tracking-tighter flex items-center gap-1">
+                                            <Camera className="w-3 h-3" /> Fotoğraf Ekle
+                                        </button>
+                                        <input type="file" ref={sosInputRef} className="hidden" accept="image/*" multiple onChange={handleSosImageSelect} />
+                                    </div>
+
+                                    {lostPetPhotos.length > 0 ? (
+                                        <div className="grid grid-cols-4 gap-3">
+                                            {lostPetPhotos.map((photo, idx) => (
+                                                <div key={idx} className="aspect-square rounded-xl bg-[var(--card-bg)] border border-white/10 relative overflow-hidden group">
+                                                    <img src={photo.preview} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                                                    <button
+                                                        onClick={() => setLostPetPhotos(prev => prev.filter((_, i) => i !== idx))}
+                                                        className="absolute top-1 right-1 w-5 h-5 bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center text-[var(--foreground)]/70 hover:text-[var(--foreground)]"
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            {lostPetPhotos.length < 4 && (
+                                                <button
+                                                    onClick={() => sosInputRef.current?.click()}
+                                                    className="aspect-square rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-red-500/50 hover:text-red-500 transition-all"
+                                                >
+                                                    <Plus className="w-5 h-5" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div
+                                            onClick={() => sosInputRef.current?.click()}
+                                            className="w-full py-8 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-red-500/30 hover:bg-red-500/5 transition-all cursor-pointer"
+                                        >
+                                            <Camera className="w-8 h-8 mb-2 opacity-30" />
+                                            <p className="text-xs font-bold">Fotoğraf Ekle</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Sticky Action Button */}
+                        <div className="p-6 border-t border-red-500/20 bg-[var(--background)] shrink-0">
+                            <button
+                                onClick={submitSos}
+                                disabled={isSubmittingSOS}
+                                className={cn("w-full py-4 rounded-2xl font-black text-[var(--foreground)] text-base tracking-wide flex items-center justify-center gap-2 shadow-[0_10px_30px_rgba(220,38,38,0.4)] transition-all", isSubmittingSOS ? "bg-red-800 cursor-not-allowed" : "bg-red-600 active:scale-95")}
+                            >
+                                {isSubmittingSOS ? (
+                                    <span className="animate-pulse">Sinyal İletiliyor...</span>
+                                ) : (
+                                    <><Activity className="w-5 h-5 animate-pulse" /> S.O.S Sinyali Gönder</>
+                                )}
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* IMMERSIVE LOST PET DETAIL MODAL */}
+            <AnimatePresence>
+                {selectedLostPet && (
+                    <motion.div
+                        initial={{ opacity: 0, y: "100%" }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: "100%" }}
+                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                        className="fixed inset-0 z-[290] bg-black text-[var(--foreground)] flex flex-col"
+                    >
+                        {/* Immersive Media Header */}
+                        <div className="relative w-full h-[55vh] shrink-0 bg-gray-900 overflow-hidden">
+                            {selectedLostPet.media_url ? (
+                                <img src={selectedLostPet.media_url} className="w-full h-full object-cover opacity-90 transition-all duration-500" />
+                            ) : (
+                                <div className="absolute inset-x-0 inset-y-0 flex items-center justify-center bg-red-950/30">
+                                    <MapPin className="w-20 h-20 text-red-500/20" />
+                                </div>
+                            )}
+
+                            <div className="absolute inset-0 bg-gradient-to-t from-[var(--background)] via-[var(--background)]/40 to-transparent pointer-events-none" />
+
+                            {/* Multi-photo switcher if available */}
+                            {selectedLostPet.images && selectedLostPet.images.length > 1 && (
+                                <div className="absolute bottom-24 left-6 flex gap-2 z-20 overflow-x-auto no-scrollbar max-w-[calc(100%-48px)] pb-1">
+                                    {selectedLostPet.images.map((url: string, i: number) => (
+                                        <button
+                                            key={i}
+                                            onClick={() => setSelectedLostPet({ ...selectedLostPet, media_url: url })}
+                                            className={cn(
+                                                "w-12 h-12 rounded-xl border-2 overflow-hidden shrink-0 transition-all",
+                                                selectedLostPet.media_url === url ? "border-red-500 scale-105" : "border-white/10 opacity-60"
+                                            )}
+                                        >
+                                            <img src={url} className="w-full h-full object-cover" />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Floating Top Nav */}
+                            <div className="absolute top-0 inset-x-0 p-6 flex justify-between items-center z-10 bg-gradient-to-b from-black/80 to-transparent">
+                                <button
+                                    onClick={() => setSelectedLostPet(null)}
+                                    className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors active:scale-95"
+                                >
+                                    <ChevronLeft className="w-6 h-6 text-[var(--foreground)]" />
+                                </button>
+                                <div className="flex gap-3">
+                                    <button className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors active:scale-95" onClick={() => showToast("SOS Modu Aktif", "İlanınız hazırlanıyor...", "Zap")}>
+                                        <Share2 className="w-5 h-5 text-[var(--foreground)]" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Hero Text */}
+                            <div className="absolute bottom-6 left-6 right-6 z-10 flex flex-col gap-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="bg-red-600 px-3 py-1 rounded-full text-xs font-black text-[var(--foreground)] tracking-widest uppercase shadow-[0_0_15px_rgba(220,38,38,0.5)]">
+                                        KAYIP İLANI
+                                    </span>
+                                    <span className="bg-black/50 backdrop-blur-md px-3 py-1 rounded-full text-xs font-medium text-[var(--foreground)] border border-white/10">
+                                        {new Date(selectedLostPet.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                </div>
+                                <h1 className="text-4xl font-black text-[var(--foreground)] tracking-tight drop-shadow-xl flex items-center gap-3">
+                                    {selectedLostPet.pet_name}
+                                </h1>
+                                <p className="text-gray-300 text-lg font-medium drop-shadow-md">{selectedLostPet.pet_breed || "Belirtilmedi"}</p>
+                            </div>
+                        </div>
+
+                        {/* Content Scroll Area */}
+                        <div className="flex-1 bg-[var(--background)] overflow-y-auto no-scrollbar pb-32">
+                            <div className="p-6 space-y-8 max-w-lg mx-auto">
+
+                                {/* Info Cards Row */}
+                                <div className="flex gap-4">
+                                    <div className="flex-1 bg-[var(--card-bg)] border border-white/10 rounded-2xl p-4 flex flex-col justify-center items-center text-center gap-1.5 shadow-lg">
+                                        <MapPin className="w-6 h-6 text-red-400 mb-1" />
+                                        <span className="text-[10px] text-[var(--secondary-text)] font-bold uppercase tracking-wider">Son Görülen Yer</span>
+                                        <span className="text-sm text-[var(--foreground)] font-bold leading-tight">{selectedLostPet.last_location}</span>
+                                    </div>
+                                    <div className="flex-1 bg-[var(--card-bg)] border border-white/10 rounded-2xl p-4 flex flex-col justify-center items-center text-center gap-1.5 shadow-lg">
+                                        <User className="w-6 h-6 text-blue-400 mb-1" />
+                                        <span className="text-[10px] text-[var(--secondary-text)] font-bold uppercase tracking-wider">İlan Sahibi</span>
+                                        <span className="text-sm text-[var(--foreground)] font-bold leading-tight line-clamp-1 truncate w-full">{selectedLostPet.author_name}</span>
+                                    </div>
+                                </div>
+
+                                {/* Description */}
+                                <div>
+                                    <h3 className="text-lg font-black text-[var(--foreground)] mb-3">Detaylar</h3>
+                                    <p className="text-gray-300 leading-relaxed font-medium">
+                                        {selectedLostPet.description || "Ek detay girilmemiş."}
+                                    </p>
+                                </div>
+
+                                {/* Warning Box */}
+                                <div className="bg-red-500/10 border-l-4 border-red-500 p-4 rounded-r-xl">
+                                    <p className="text-red-400 text-sm font-medium">
+                                        Eğer bu dostumuzu görüyorsanız lütfen ani hareketler yapmadan, nazikçe yaklaşın ve acil durum olarak iletişime geçin.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Solid Action Bar Bottom */}
+                        <div className="absolute inset-x-0 bottom-0 bg-[var(--background)] border-t border-[var(--card-border)] p-6 pb-8 shrink-0 flex gap-4">
+                            <button className="flex-1 py-4 rounded-2xl bg-cyan-500 text-black font-black text-base flex items-center justify-center gap-2 active:scale-95 transition-transform" onClick={handleMessageOwner}>
+                                <MessageCircle className="w-5 h-5" /> Sahibine Mesaj At
+                            </button>
+                            <button disabled={isReportingLocation} className={cn("flex-1 py-4 rounded-2xl border border-white/20 font-black text-base flex items-center justify-center gap-2 transition-transform", isReportingLocation ? "bg-white/20 text-[var(--secondary-text)] cursor-not-allowed" : "bg-white/10 text-[var(--foreground)] hover:bg-white/20 active:scale-95")} onClick={handleReportLocation}>
+                                {isReportingLocation ? <Activity className="w-5 h-5 animate-spin" /> : <Flame className="w-5 h-5 text-red-500" />} {isReportingLocation ? "Bulunuyor..." : "Onu Gördüm!"}
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* SECURE ANON COMMUNICATION MODAL */}
+            <AnimatePresence>
+                {anonModalType && (
+                    <div className="fixed inset-0 z-[140] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                            onClick={() => setAnonModalType(null)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="w-full max-w-md bg-[var(--card-bg)] rounded-[2rem] border border-white/10 shadow-2xl relative z-10 overflow-hidden flex flex-col"
+                        >
+                            <div className="p-6 pb-4 border-b border-[var(--card-border)] flex flex-col items-center">
+                                <div className="w-16 h-16 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center mb-4 ring-4 ring-blue-500/10">
+                                    <Lock className="w-8 h-8" />
+                                </div>
+                                <h3 className="text-xl font-black text-[var(--foreground)] text-center">
+                                    {anonModalType === 'report' ? "Gizli İhbar Yap" : "Anonim Mesaj Gönder"}
+                                </h3>
+                            </div>
+
+                            <div className="p-6 space-y-4">
+                                <p className="text-[var(--secondary-text)] text-sm font-medium leading-relaxed text-center">
+                                    Moffi KVKK yükümlülükleri gereğince, iletişim bilgileriniz, gerçek adınız veya net GPS konumunuz {selectedLostPet?.author_name} kullanıcısı ile <strong className="text-[var(--foreground)]">asla paylaşılmayacaktır.</strong>
+                                </p>
+
+                                <div className="bg-red-500/10 border-l-2 border-red-500 p-3 rounded-r-lg">
+                                    <p className="text-xs text-red-400">
+                                        Güvenliğiniz için lütfen buluşma tekliflerini doğrudan kabul etmeyin. Eğer kayıp dostumuzu bulursanız, teslimatı her iki taraf için de kalabalık bir alanda (Örn: Veteriner veya Polis Merkezi) gerçekleştirin.
+                                    </p>
+                                </div>
+
+                                {anonError && (
+                                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="bg-red-500/20 text-red-400 p-3 rounded-xl text-xs font-bold border border-red-500/50">
+                                        <Activity className="w-4 h-4 inline-block mr-1 mb-0.5" /> {anonError}
+                                    </motion.div>
+                                )}
+
+                                <div className="relative">
+                                    <textarea
+                                        value={anonMessage}
+                                        onChange={e => {
+                                            setAnonMessage(e.target.value);
+                                            if (anonError) setAnonError(null);
+                                        }}
+                                        placeholder={anonModalType === 'report' ? "Hangi bölgede gördünüz? (Sadece sokak, park veya mekan adı)" : "Mesajınız (Numaranız veya isminiz gizli kalacaktır)..."}
+                                        className={cn("w-full bg-[var(--background)] border rounded-xl p-4 text-[var(--foreground)] text-sm outline-none transition-colors h-28 resize-none", anonError ? "border-red-500 focus:border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]" : "border-white/10 focus:border-cyan-500")}
+                                    />
+                                    {anonError && (
+                                        <div className="absolute top-2 right-2 p-1.5 bg-red-500 rounded-full animate-bounce">
+                                            <Lock className="w-3 h-3 text-[var(--foreground)]" />
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex gap-3 pt-2">
+                                    <button
+                                        onClick={() => { setAnonModalType(null); setAnonError(null); }}
+                                        className="flex-1 py-3 rounded-xl bg-[var(--card-bg)] text-[var(--secondary-text)] font-bold hover:bg-white/10 transition-colors"
+                                    >
+                                        İptal
+                                    </button>
+                                    <button
+                                        disabled={isSubmittingAnon || !anonMessage.trim()}
+                                        onClick={submitAnonAction}
+                                        className={cn("flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all", (!anonMessage.trim() || isSubmittingAnon) ? "bg-cyan-900 text-cyan-500/50 cursor-not-allowed" : "bg-cyan-500 text-black active:scale-95")}
+                                    >
+                                        {isSubmittingAnon ? "Gönderiliyor..." : "Güvenli Gönder"}
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+
+            {/* ADD ADOPTION PET MODAL (Apple Bottom Sheet Style) */}
+            <AnimatePresence>
+                {isAddAdoptionModalOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[300] flex flex-col justify-end"
+                    >
+                        {/* Blur Backdrop */}
+                        <motion.div
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                            onClick={() => setIsAddAdoptionModalOpen(false)}
+                        />
+
+                        {/* Sliding Sheet */}
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="relative w-full h-[90vh] bg-[var(--card-bg)] rounded-t-[2.5rem] flex flex-col overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.5)] border-t border-white/10"
+                        >
+                            {/* Grab Handle */}
+                            {/* Grab Handle (Click to close) */}
+                            <button 
+                                onClick={() => setIsAddAdoptionModalOpen(false)}
+                                className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/20 rounded-full z-50 hover:bg-white/40 transition-colors cursor-pointer"
+                            />
+
+
+
+                            <div className="p-6 pt-12 pb-4 border-b border-[var(--card-border)] shrink-0 flex items-center gap-4">
+                                <button onClick={() => setIsAddAdoptionModalOpen(false)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center -ml-2 hover:bg-white/10 transition-colors">
+                                    <ChevronLeft className="w-6 h-6" />
+                                </button>
+                                <div>
+                                    <h2 className="text-2xl font-black text-[var(--foreground)] flex items-center gap-2">
+                                        <HeartHandshake className="w-6 h-6 text-cyan-400" /> Sahiplendirme İlanı Ver
+                                    </h2>
+                                    <p className="text-xs text-[var(--secondary-text)] mt-1">Dostumuz için en iyi yuvayı bulalım.</p>
+                                </div>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6">
+                                {/* Photo Upload Apple Style */}
+                                <input
+                                    type="file"
+                                    ref={adoptionPhotoRef}
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        const files = e.target.files;
+                                        if (files) {
+                                            const newPhotos = Array.from(files).map(file => ({
+                                                file,
+                                                preview: URL.createObjectURL(file)
+                                            }));
+                                            setAdoptionPetPhotos(prev => [...prev, ...newPhotos]);
+                                            if (adoptionPhotoRef.current) adoptionPhotoRef.current.value = '';
+                                        }
+                                    }}
+                                />
+                                {adoptionPetPhotos.length > 0 ? (
+                                    <div className="grid grid-cols-4 gap-3 mb-2">
+                                        {adoptionPetPhotos.map((photo, idx) => (
+                                            <div key={idx} className="aspect-square rounded-2xl bg-[#1C1C1E] border border-white/10 relative overflow-hidden group">
+                                                <img src={photo.preview} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                                                <button
+                                                    onClick={() => setAdoptionPetPhotos(prev => prev.filter((_, i) => i !== idx))}
+                                                    className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center text-[var(--foreground)]/70 hover:text-[var(--foreground)] transition-colors"
+                                                >
+                                                    <X className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {adoptionPetPhotos.length < 4 && (
+                                            <button
+                                                onClick={() => adoptionPhotoRef.current?.click()}
+                                                className="aspect-square rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-cyan-400/50 hover:text-cyan-400 transition-all font-bold"
+                                            >
+                                                <Plus className="w-6 h-6" />
+                                                <span className="text-[10px] mt-1">Ekle</span>
+                                            </button>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div
+                                        onClick={() => adoptionPhotoRef.current?.click()}
+                                        className="w-full h-52 rounded-3xl bg-[#1C1C1E] border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-cyan-400/50 hover:bg-cyan-400/5 transition-colors cursor-pointer group mb-2 shadow-inner overflow-hidden"
+                                    >
+                                        <Camera className="w-8 h-8 mb-2 group-hover:text-cyan-400 group-hover:scale-110 transition-all drop-shadow-md" />
+                                        <span className="text-sm font-bold tracking-wide">Net Fotoğraflar Yükle</span>
+                                        <span className="text-[10px] mt-1 text-[var(--secondary-text)] font-medium italic">Sahiplendirme şansını %80 artırır</span>
+                                    </div>
+                                )}
+
+                                <div className="space-y-5">
+                                    <div>
+                                        <label className="text-xs font-bold text-[var(--secondary-text)] uppercase tracking-widest ml-1 mb-2 block">Kategori</label>
+                                        <div className="flex gap-2 mb-4">
+                                            {[
+                                                { id: 'cat', label: 'Kedi', icon: '🐱' },
+                                                { id: 'dog', label: 'Köpek', icon: '🐶' },
+                                                { id: 'bird', label: 'Kuş', icon: '🦜' },
+                                                { id: 'other', label: 'Diğer', icon: '🐾' },
+                                            ].map(type => (
+                                                <button
+                                                    key={type.id}
+                                                    onClick={() => setAdoptionPetType(type.id)}
+                                                    className={cn(
+                                                        "flex-1 py-3 rounded-2xl text-xs font-bold transition-all flex flex-col items-center gap-1 border",
+                                                        adoptionPetType === type.id
+                                                            ? "bg-cyan-500/20 border-cyan-400 text-cyan-400"
+                                                            : "bg-[var(--background)] border-[var(--card-border)] text-[var(--secondary-text)]"
+                                                    )}
+                                                >
+                                                    <span className="text-xl">{type.icon}</span>
+                                                    {type.label}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        <label className="text-xs font-bold text-[var(--secondary-text)] uppercase tracking-widest ml-1 mb-1.5 block">İsim & Tür</label>
+                                        <div className="flex gap-3">
+                                            <input
+                                                type="text"
+                                                placeholder="İsim (Örn: Pamuk)"
+                                                value={adoptionPetName}
+                                                onChange={(e) => setAdoptionPetName(e.target.value)}
+                                                className="w-1/2 bg-[var(--background)] border border-[var(--card-border)] rounded-2xl px-4 py-3 text-[var(--foreground)] text-[15px] focus:outline-none focus:border-cyan-400 focus:bg-[var(--card-bg)] transition-colors placeholder:text-gray-600"
+                                            />
+                                            <input
+                                                type="text"
+                                                placeholder="Tür / Irk"
+                                                value={adoptionPetBreed}
+                                                onChange={(e) => setAdoptionPetBreed(e.target.value)}
+                                                className="w-1/2 bg-[var(--background)] border border-[var(--card-border)] rounded-2xl px-4 py-3 text-[var(--foreground)] text-[15px] focus:outline-none focus:border-cyan-400 focus:bg-[var(--card-bg)] transition-colors placeholder:text-gray-600"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="text-xs font-bold text-[var(--secondary-text)] uppercase tracking-widest ml-1 mb-1.5 block">Yaş & Açıklama</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Yaşı (Örn: 2 Aylık, 3 Yaşında)"
+                                            value={adoptionPetAge}
+                                            onChange={(e) => setAdoptionPetAge(e.target.value)}
+                                            className="w-full bg-[var(--background)] border border-[var(--card-border)] rounded-2xl px-4 py-3 text-[var(--foreground)] text-[15px] focus:outline-none focus:border-cyan-400 focus:bg-[var(--card-bg)] transition-colors mb-3 placeholder:text-gray-600"
+                                        />
+                                        <textarea
+                                            rows={4}
+                                            placeholder="Onu biraz anlatın... Tuvalet eğitimi var mı? Karakteri nasıl?"
+                                            value={adoptionPetDesc}
+                                            onChange={(e) => setAdoptionPetDesc(e.target.value)}
+                                            className="w-full bg-[var(--background)] border border-[var(--card-border)] rounded-2xl px-4 py-3 text-[var(--foreground)] text-[15px] focus:outline-none focus:border-cyan-400 focus:bg-[var(--card-bg)] transition-colors resize-none placeholder:text-gray-600"
+                                        />
+                                    </div>
+
+                                    {/* Alert / Warning Box */}
+                                    <div className="flex items-start gap-3 p-4 bg-red-500/10 rounded-3xl border border-red-500/20 mt-2">
+                                        <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">
+                                            <ShieldAlert className="w-4 h-4 text-red-500" />
+                                        </div>
+                                        <p className="text-[11px] text-gray-300 leading-relaxed font-medium mt-0.5">
+                                            <span className="text-red-400 font-bold tracking-wide">ÜCRET TALEP ETMEK YASAKTIR.</span> Moffi tamamen ücretsiz sahiplendirme üzerine kuruludur. Canlı satışı veya para talebi tespit edildiğinde hesaplar <strong className="text-[var(--foreground)]">kalıcı olarak</strong> kapatılır.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-6 pt-3 pb-8 bg-[var(--card-bg)] shrink-0 border-t border-[var(--card-border)] relative z-20">
+                                <button
+                                    onClick={handleAdoptionPost}
+                                    disabled={isSubmittingAdoption}
+                                    className="w-full py-4 rounded-full bg-white text-black font-black text-[15px] shadow-[0_10px_30px_rgba(255,255,255,0.15)] active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
+                                >
+                                    {isSubmittingAdoption ? (
+                                        <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                                    ) : (
+                                        <><CheckCheck className="w-5 h-5" /> İlanı Onaya Gönder</>
+                                    )}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+
+            {/* APPLE BOTTOM SHEET - ADOPTION DETAY MODAL */}
+            <AnimatePresence>
+                {selectedAdoptionPet && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[310] flex flex-col justify-end"
+                    >
+                        {/* Blur Backdrop */}
+                        <motion.div
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                            onClick={() => setSelectedAdoptionPet(null)}
+                        />
+
+                        {/* Sliding Sheet */}
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            drag="y"
+                            dragConstraints={{ top: 0 }}
+                            dragElastic={0.2}
+                            onDragEnd={(e, { offset, velocity }) => {
+                                if (offset.y > 100 || velocity.y > 500) {
+                                    setSelectedAdoptionPet(null);
+                                }
+                            }}
+                            className="relative w-full h-[85vh] bg-[var(--background)] rounded-t-[2.5rem] flex flex-col overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.5)] border-t border-white/10"
+                        >
+                            {/* Grab Handle */}
+                            {/* Grab Handle (Click to close) */}
+                            <button 
+                                onClick={() => setSelectedAdoptionPet(null)}
+                                className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/20 rounded-full z-50 hover:bg-white/40 transition-colors cursor-pointer"
+                            />
+
+
+
+                            {/* Hero Image */}
+                            <div className="w-full h-[45%] relative shrink-0">
+                                <img src={selectedAdoptionPet.img} className="w-full h-full object-cover transition-all duration-500" />
+                                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[var(--background)] to-transparent" />
+
+                                <button 
+                                    onClick={() => setSelectedAdoptionPet(null)}
+                                    className="absolute top-12 left-6 w-10 h-10 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white z-30 active:scale-90 transition-transform"
+                                >
+                                    <ChevronLeft className="w-6 h-6" />
+                                </button>
+
+                                {selectedAdoptionPet.images && selectedAdoptionPet.images.length > 1 && (
+                                    <div className="absolute bottom-10 left-6 flex gap-2 z-20 overflow-x-auto no-scrollbar max-w-[calc(100%-48px)] pb-1">
+                                        {selectedAdoptionPet.images.map((url: string, i: number) => (
+                                            <button
+                                                key={i}
+                                                onClick={() => setSelectedAdoptionPet({ ...selectedAdoptionPet, img: url })}
+                                                className={cn(
+                                                    "w-12 h-12 rounded-xl border-2 overflow-hidden shrink-0 transition-all",
+                                                    selectedAdoptionPet.img === url ? "border-cyan-400 scale-105" : "border-white/10 opacity-60"
+                                                )}
+                                            >
+                                                <img src={url} className="w-full h-full object-cover" />
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Content */}
+                            <div className="flex-1 overflow-y-auto no-scrollbar px-6 -mt-8 relative z-10">
+                                <span className="text-cyan-400 text-[10px] font-black uppercase tracking-widest">{selectedAdoptionPet.breed}</span>
+                                <h1 className="text-4xl font-black text-[var(--foreground)] leading-tight mt-1">{selectedAdoptionPet.name}</h1>
+
+                                <div className="flex gap-2 mt-4">
+                                    {selectedAdoptionPet.tags?.map((tag: string) => (
+                                        <div key={tag} className="bg-[var(--card-bg)] border border-white/10 px-3 py-1.5 rounded-full text-xs font-bold text-[var(--foreground)] flex items-center gap-1.5">
+                                            <Check className="w-3 h-3 text-cyan-400" /> {tag}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="mt-8 bg-[var(--card-bg)] rounded-3xl p-5 border border-[var(--card-border)]">
+                                    <h3 className="text-[var(--foreground)]/50 text-xs font-bold uppercase tracking-wider mb-2">Hikaye & Durum</h3>
+                                    <p className="text-gray-300 text-sm leading-relaxed font-medium">
+                                        {selectedAdoptionPet.desc}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Apple iOS Style Floating Action Bar */}
+                            <div className="w-full p-6 pt-2 pb-10 bg-gradient-to-t from-[var(--background)] via-[var(--background)] to-transparent relative z-20">
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => handleStartAdoptionChat(selectedAdoptionPet)}
+                                        className="flex-1 py-4 rounded-full bg-white/10 border border-white/10 text-[var(--foreground)] font-bold text-[15px] active:scale-95 transition-transform flex items-center justify-center gap-2"
+                                    >
+                                        <MessageCircle className="w-5 h-5" /> Mesaj
+                                    </button>
+                                    <button
+                                        onClick={() => setIsApplicationFormOpen(true)}
+                                        className="flex-[2] py-4 rounded-full bg-cyan-500 text-black font-black text-[15px] shadow-[0_10px_30px_rgba(34,211,238,0.3)] active:scale-95 transition-transform flex items-center justify-center gap-2"
+                                    >
+                                        <HeartHandshake className="w-5 h-5" /> Sahiplenme Başvurusu
+                                    </button>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        setReportingAdId(selectedAdoptionPet?.id || null);
+                                        setIsReportAdModalOpen(true);
+                                    }}
+                                    className="w-full mt-3 py-3 rounded-full bg-red-500/10 text-red-400 font-bold text-[13px] border border-red-500/20 active:scale-95 transition-transform flex items-center justify-center gap-2"
+                                >
+                                    <ShieldAlert className="w-4 h-4" /> Ücret Talep Ediyor / İhbar Et
+                                </button>
+                                <p className="text-[10px] text-[var(--secondary-text)] text-center font-medium mt-2">Moffi Güvenli Mesajlaşma ile verileriniz uçtan uca korunur.</p>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+
+            {/* REPORT ADOPTION AD MODAL (Apple Action Sheet) */}
+            <AnimatePresence>
+                {isReportAdModalOpen && selectedAdoptionPet && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[501] flex flex-col justify-end"
+                    >
+                        <motion.div
+                            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                            onClick={() => setIsReportAdModalOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 28, stiffness: 250 }}
+                            drag="y"
+                            dragConstraints={{ top: 0 }}
+                            dragElastic={0.2}
+                            onDragEnd={(e, { offset, velocity }) => {
+                                if (offset.y > 100 || velocity.y > 500) {
+                                    setIsReportAdModalOpen(false);
+                                }
+                            }}
+                            className="relative bg-[var(--card-bg)] rounded-t-[2.5rem] p-6 pb-12 border-t border-white/10 z-10"
+                        >
+                            <button 
+                                onClick={() => setIsReportAdModalOpen(false)}
+                                className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-6 hover:bg-white/40 transition-colors cursor-pointer block" 
+                            />
+
+                            <div className="flex items-center gap-3 mb-6">
+                                <button onClick={() => setIsReportAdModalOpen(false)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center -ml-2 hover:bg-white/10 transition-colors">
+                                    <ChevronLeft className="w-6 h-6" />
+                                </button>
+                                <div className="w-12 h-12 rounded-2xl bg-red-500/20 flex items-center justify-center ml-1">
+                                    <ShieldAlert className="w-6 h-6 text-red-500" />
+                                </div>
+                                <div>
+                                    <h3 className="text-[var(--foreground)] font-black text-lg">İlanı Bildir</h3>
+                                    <p className="text-[var(--secondary-text)] text-xs">Moffi ekibi en kısa sürede inceleyecek</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 mb-6">
+                                {[
+                                    { value: 'fee', label: '💸 Ücret Talep Ediyor', desc: 'Sahiplendirme için para isteniyor' },
+                                    { value: 'sale', label: '🏷️ Hayvan Satışı', desc: 'Ticari amaçlı satış ilanı' },
+                                    { value: 'fake', label: '❌ Sahte İlan', desc: 'Görsel veya bilgiler gerçek değil' },
+                                    { value: 'inappropriate', label: '⚠️ Uygunsuz İçerik', desc: 'Kötü muamele veya şiddet' },
+                                    { value: 'other', label: '🔍 Diğer', desc: 'Diğer güvenlik sorunları' }
+                                ].map((opt) => (
+                                    <button
+                                        key={opt.value}
+                                        onClick={() => setReportReason(opt.value)}
+                                        className={cn(
+                                            "w-full flex items-start gap-3 p-4 rounded-2xl border transition-all text-left",
+                                            reportReason === opt.value ? "bg-red-500/10 border-red-500/30" : "bg-[var(--card-bg)] border-[var(--card-border)]"
+                                        )}
+                                    >
+                                        <div className="flex-1">
+                                            <p className="text-[var(--foreground)] font-bold text-sm">{opt.label}</p>
+                                            <p className="text-[var(--secondary-text)] text-xs mt-0.5">{opt.desc}</p>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+
+                            <button
+                                onClick={handleReportAdoption}
+                                disabled={!reportReason || isSubmittingReport}
+                                className="w-full py-4 rounded-full bg-red-500 text-[var(--foreground)] font-black text-[15px] active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-40"
+                            >
+                                {isSubmittingReport ? (
+                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    <><ShieldAlert className="w-5 h-5" /> Bildirimi Gönder</>
+                                )}
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ADOPTION APPLICATION FORM MODAL (Apple Style) */}
+            <AnimatePresence>
+                {isApplicationFormOpen && selectedAdoptionPet && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[400] flex flex-col justify-end"
+                    >
+                        <motion.div
+                            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                            onClick={() => setIsApplicationFormOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 28, stiffness: 250 }}
+                            drag="y"
+                            dragConstraints={{ top: 0 }}
+                            dragElastic={0.2}
+                            onDragEnd={(e, { offset, velocity }) => {
+                                if (offset.y > 100 || velocity.y > 500) {
+                                    setIsApplicationFormOpen(false);
+                                }
+                            }}
+                            className="relative bg-[var(--background)] rounded-t-[3rem] p-6 pb-12 border-t border-white/10 z-10 flex flex-col max-h-[90vh]"
+                        >
+                            <button 
+                                onClick={() => setIsApplicationFormOpen(false)}
+                                className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-6 hover:bg-white/40 transition-colors cursor-pointer block" 
+                            />
+
+                            <div className="flex items-center gap-4 mb-8">
+                                <button onClick={() => setIsApplicationFormOpen(false)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center -ml-2 hover:bg-white/10 transition-colors">
+                                    <ChevronLeft className="w-6 h-6" />
+                                </button>
+                                <div className="w-16 h-16 rounded-[1.5rem] overflow-hidden border border-white/10">
+                                    <img src={selectedAdoptionPet.img} className="w-full h-full object-cover" />
+                                </div>
+                                <div>
+                                    <h3 className="text-[var(--foreground)] font-black text-xl">{selectedAdoptionPet.name} İçin Başvuru</h3>
+                                    <p className="text-cyan-400 text-xs font-bold uppercase tracking-widest mt-1">Son Adım: Yuva Olma Formu</p>
+                                </div>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto no-scrollbar space-y-6">
+                                <div>
+                                    <label className="text-[var(--secondary-text)] text-[11px] font-black uppercase tracking-widest ml-1 mb-2 block">Evcil Hayvan Tecrübeniz</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {['0-2 Yıl', '3-5 Yıl', '5+ Yıl'].map(lvl => (
+                                            <button
+                                                key={lvl}
+                                                onClick={() => setAppExperience(lvl)}
+                                                className={cn(
+                                                    "py-3 rounded-2xl text-[13px] font-bold border transition-all",
+                                                    appExperience === lvl ? "bg-cyan-500/20 border-cyan-400 text-cyan-400" : "bg-[var(--card-bg)] border-[var(--card-border)] text-[var(--secondary-text)]"
+                                                )}
+                                            >
+                                                {lvl}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-[var(--secondary-text)] text-[11px] font-black uppercase tracking-widest ml-1 mb-2 block">Yaşam Alanınız</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {['Apartman', 'Müstakil', 'Bahçeli'].map(type => (
+                                            <button
+                                                key={type}
+                                                onClick={() => setAppHomeType(type)}
+                                                className={cn(
+                                                    "py-3 rounded-2xl text-[13px] font-bold border transition-all",
+                                                    appHomeType === type ? "bg-cyan-500/20 border-cyan-400 text-cyan-400" : "bg-[var(--card-bg)] border-[var(--card-border)] text-[var(--secondary-text)]"
+                                                )}
+                                            >
+                                                {type}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-[var(--secondary-text)] text-[11px] font-black uppercase tracking-widest ml-1 mb-2 block">Kendinizden Bahsedin</label>
+                                    <textarea
+                                        rows={4}
+                                        placeholder="Neden onu sahiplenmek istiyorsunuz? Ona nasıl bir hayat sunacaksınız?"
+                                        value={appNote}
+                                        onChange={(e) => setAppNote(e.target.value)}
+                                        className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-5 py-4 text-[var(--foreground)] text-[15px] focus:outline-none focus:border-cyan-400 transition-colors resize-none placeholder:text-gray-600"
+                                    />
+                                </div>
+
+                                <div className="bg-cyan-500/5 border border-cyan-500/10 rounded-3xl p-4 flex items-start gap-3">
+                                    <ShieldAlert className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
+                                    <p className="text-[11px] text-[var(--secondary-text)] leading-relaxed">
+                                        Moffi, sahiplendirme sürecinde aracıdır. Başvurunuz ilan sahibine iletilir. Kişisel güvenliğiniz için buluşmaları halka açık yerlerde gerçekleştirmenizi öneririz.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={submitAdoptionApplication}
+                                disabled={!appNote.trim() || isSubmittingApp}
+                                className="w-full mt-8 py-4 rounded-full bg-cyan-500 text-black font-black text-[16px] shadow-[0_15px_40px_rgba(34,211,238,0.2)] active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-40"
+                            >
+                                {isSubmittingApp ? (
+                                    <div className="w-6 h-6 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                                ) : (
+                                    <><CheckCheck className="w-5 h-5" /> Başvuruyu Tamamla</>
+                                )}
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* DEDICATED ADOPTION CHAT (Apple iMessage Style) */}
+            <AnimatePresence>
+                {isAdoptionChatOpen && adoptionChatPet && (
+                    <motion.div
+                        initial={{ x: "100%" }}
+                        animate={{ x: 0 }}
+                        exit={{ x: "100%" }}
+                        transition={{ type: "spring", damping: 30, stiffness: 300 }}
+                        className="fixed inset-0 z-[500] bg-black flex flex-col"
+                    >
+                        {/* Header */}
+                        <div className="pt-12 pb-4 px-4 bg-black/80 backdrop-blur-xl border-b border-[var(--card-border)] flex items-center gap-3">
+                            <button onClick={() => setIsAdoptionChatOpen(false)} className="w-10 h-10 rounded-full flex items-center justify-center text-[var(--secondary-text)] hover:text-[var(--foreground)] transition-colors">
+                                <ChevronLeft className="w-6 h-6" />
+                            </button>
+                            <div className="flex items-center gap-3">
+                                <img src={adoptionChatPet.img} className="w-10 h-10 rounded-full object-cover border border-white/10" />
+                                <div>
+                                    <h3 className="text-[var(--foreground)] font-bold text-sm leading-tight">{adoptionChatPet.name} İlanı</h3>
+                                    <p className="text-green-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
+                                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" /> Sahiplendirme Süreci Aktif
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Messages Area */}
+                        <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-4">
+                            {adoptionMessages.map((msg) => (
+                                <motion.div
+                                    key={msg.id}
+                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    className={cn(
+                                        "max-w-[80%] flex flex-col",
+                                        msg.sender === 'me' ? "ml-auto items-end" : msg.sender === 'system' ? "mx-auto items-center" : "mr-auto items-start"
+                                    )}
+                                >
+                                    {msg.sender === 'system' ? (
+                                        <div className="bg-[var(--card-bg)] border border-white/10 rounded-2xl px-4 py-2 text-[11px] text-[var(--secondary-text)] text-center leading-relaxed">
+                                            {msg.text}
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className={cn(
+                                                "px-4 py-2.5 rounded-2xl text-[14px] font-medium leading-[1.4]",
+                                                msg.sender === 'me' ? "bg-cyan-500 text-[var(--foreground)] rounded-tr-sm" : "bg-[#1C1C1E] text-[var(--foreground)] rounded-tl-sm border border-[var(--card-border)]"
+                                            )}>
+                                                {msg.text}
+                                            </div>
+                                            <span className="text-[9px] text-[var(--secondary-text)] font-bold mt-1 uppercase tracking-tight">{msg.time}</span>
+                                        </>
+                                    )}
+                                </motion.div>
+                            ))}
+                        </div>
+
+                        {/* Input Area */}
+                        <div className="p-4 pb-10 bg-black/80 backdrop-blur-xl border-t border-[var(--card-border)]">
+                            <div className="flex items-center gap-2 bg-[#1C1C1E] rounded-full p-2 pl-4 border border-[var(--card-border)]">
+                                <input
+                                    type="text"
+                                    placeholder="Bir mesaj yazın..."
+                                    value={adoptionNewMsg}
+                                    onChange={(e) => setAdoptionNewMsg(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSendAdoptionMsg()}
+                                    className="flex-1 bg-transparent border-none outline-none text-[var(--foreground)] text-[15px] placeholder:text-[var(--secondary-text)]"
+                                />
+                                <button
+                                    onClick={handleSendAdoptionMsg}
+                                    className="w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center text-[var(--foreground)] active:scale-95 transition-transform"
+                                >
+                                    <Send className="w-4 h-4 ml-0.5" />
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* INSTAGRAM STYLE STORY VIEWER */}
+            <AnimatePresence>
+                {
+                    viewerStoryGroupIndex !== null && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            transition={{ duration: 0.2 }}
+                            className="fixed inset-0 z-[200] bg-black flex flex-col justify-center items-center"
+                        >
+                            {/* Progress Bars Placeholder */}
+                            <div className="absolute top-4 left-4 right-4 z-10 flex gap-1 h-0.5">
+                                {storyGroups[viewerStoryGroupIndex].stories.map((_, idx) => (
+                                    <div key={idx} className="flex-1 bg-white/20 overflow-hidden rounded-full relative">
+                                        <div
+                                            className={cn(
+                                                "absolute top-0 left-0 bottom-0 bg-white",
+                                                idx === viewerStoryIndex && "shadow-[0_0_10px_white]"
+                                            )}
+                                            style={{
+                                                width: idx < viewerStoryIndex ? '100%' : idx === viewerStoryIndex ? `${storyProgress}%` : '0%',
+                                                transition: idx === viewerStoryIndex && storyProgress === 100 ? 'width 5000ms linear' : 'none'
+                                            }}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Top Header */}
+                            <div className="absolute top-8 left-4 right-4 z-10 flex justify-between items-center text-[var(--foreground)] drop-shadow-md">
+                                <div className="flex items-center gap-3">
+                                    <img src={(storyGroups[viewerStoryGroupIndex].user_id === user?.id ? (user?.avatar || storyGroups[viewerStoryGroupIndex].author_avatar) : storyGroups[viewerStoryGroupIndex].author_avatar) || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200"} className="w-8 h-8 rounded-full border border-white/40 object-cover" />
+                                    <span className="font-bold text-sm tracking-wide">{storyGroups[viewerStoryGroupIndex].author_name}</span>
+                                    <span className="text-[var(--foreground)]/60 text-xs mt-0.5">· {formatTimeAgo(storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].created_at)}</span>
+                                </div>
+                                <button onClick={closeStoryViewer} className="w-8 h-8 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center border border-white/20 active:scale-90 transition-transform"><X className="w-5 h-5" /></button>
+                            </div>
+
+                            {/* Media Display */}
+                            <div className="relative w-full h-full md:max-w-md md:aspect-[9/16] md:h-auto md:max-h-[90vh] md:rounded-3xl overflow-hidden bg-[#1c1c1e] md:border md:border-white/10 shadow-2xl">
+                                <img
+                                    key={storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].id}
+                                    src={storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].media_url}
+                                    className="w-full h-full object-cover animate-in fade-in zoom-in-95 duration-300"
+                                />
+
+                                {/* Gradients */}
+                                <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
+                                <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+
+                                {/* Tap Zones */}
+                                <div className="absolute inset-y-0 left-0 w-1/3 z-20 cursor-pointer" onClick={prevStory} />
+                                <div className="absolute inset-y-0 right-0 w-2/3 z-20 cursor-pointer" onClick={nextStory} />
+
+                                {/* Bottom Actions 📸 */}
+                                <div className="absolute inset-x-0 bottom-0 p-4 z-30 flex items-center gap-3">
+                                    {storyGroups[viewerStoryGroupIndex].user_id === user?.id ? (
+                                        <div className="flex items-center justify-between w-full text-[var(--foreground)]">
+                                            <button className="flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); showToast("İstatistikler", "Luna, Felix ve 12 diğer kişi gördü.", "Users"); }}>
+                                                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                                                    <Activity className="w-4 h-4 text-white" />
+                                                </div>
+                                                <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Görüntüleme</span>
+                                            </button>
+                                            <div className="flex gap-4">
+                                                <button className="flex flex-col items-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); showToast("Öne Çıkarılıyor", "Hikayeniz vitrine taşınıyor...", "Sparkles"); }}>
+                                                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                                                        <Heart className="w-4 h-4 text-white" />
+                                                    </div>
+                                                    <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Öne Çıkar</span>
+                                                </button>
+                                                <button className="flex flex-col items-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); showToast("Seçenekler", "İşlem menüsü açılıyor...", "List"); }}>
+                                                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                                                        <MoreHorizontal className="w-4 h-4 text-white" />
+                                                    </div>
+                                                    <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Daha Fazla</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex gap-8 pointer-events-auto">
+                                            <button className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-[var(--foreground)] active:scale-90 transition-transform pointer-events-auto" onClick={(e) => { e.stopPropagation(); }}>
+                                                <Heart className="w-7 h-7 text-white" />
+                                            </button>
+                                            <button className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-[var(--foreground)] active:scale-90 transition-transform pointer-events-auto" onClick={(e) => { e.stopPropagation(); }}>
+                                                <Share2 className="w-7 h-7 text-white" />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </motion.div>
+                    )
+                }
+            </AnimatePresence >
+
+            {/* MODULAR OVERLAY SYSTEM (LIFTED) */}
+            <OverlaySystem 
+                user={user}
+                userPets={userPets}
+                activePet={activePet}
+                switchPet={switchPet}
+                updatePet={updatePet}
+                isProfileMenuOpen={isProfileMenuOpen}
+                setIsProfileMenuOpen={setIsProfileMenuOpen}
+                profileViewMode={profileViewMode}
+                setProfileViewMode={setProfileViewMode}
+                qrModalPet={qrModalPet}
+                setQrModalPet={setQrModalPet}
+                isFullScreenQR={isFullScreenQR}
+                setIsFullScreenQR={setIsFullScreenQR}
+                selectedSharePost={selectedSharePost}
+                setSelectedSharePost={setSelectedSharePost}
+                isNotificationsOpen={isNotificationsOpen}
+                setIsNotificationsOpen={setIsNotificationsOpen}
+                notificationsList={notifications}
+                setNotificationsList={() => {}}
+                isPetSettingsOpen={isPetSettingsOpen}
+                setIsPetSettingsOpen={setIsPetSettingsOpen}
+                settingsPet={settingsPet}
+                isVetQuickSheetOpen={isVetQuickSheetOpen}
+                setIsVetQuickSheetOpen={setIsVetQuickSheetOpen}
+                isWalkQuickSheetOpen={isWalkQuickSheetOpen}
+                setIsWalkQuickSheetOpen={setIsWalkQuickSheetOpen}
+                isMarketQuickSheetOpen={isMarketQuickSheetOpen}
+                setIsMarketQuickSheetOpen={setIsMarketQuickSheetOpen}
+                isStudioQuickSheetOpen={isStudioQuickSheetOpen}
+                setIsStudioQuickSheetOpen={setIsStudioQuickSheetOpen}
+                isGameQuickSheetOpen={isGameQuickSheetOpen}
+                setIsGameQuickSheetOpen={setIsGameQuickSheetOpen}
+                isEcosystemPortalOpen={isEcosystemPortalOpen}
+                setIsEcosystemPortalOpen={setIsEcosystemPortalOpen}
+                isSpotlightOpen={isSpotlightOpen}
+                setIsSpotlightOpen={setIsSpotlightOpen}
+                isDiaryOpen={isDiaryOpen}
+                setIsDiaryOpen={setIsDiaryOpen}
+                setActiveTab={setActiveTab}
+            />
+        </div>
+    );
+}
+
+// -- SETTINGS ROW COMPONENT --
+function SettingsRow({ icon: Icon, label, danger, onClick }: { icon: any, label: string, danger?: boolean, onClick: () => void }) {
+    return (
+        <button onClick={onClick} className={cn("w-full flex items-center justify-between p-4 rounded-2xl hover:bg-[var(--card-bg)] transition-colors group", danger && "hover:bg-red-500/10")}>
+            <div className="flex items-center gap-4">
+                <div className={cn("p-2 rounded-full", danger ? "bg-red-500/20 text-red-500" : "bg-white/10 text-[var(--foreground)]")}>
+                    <Icon className="w-5 h-5" />
+                </div>
+                <span className={cn("font-bold", danger ? "text-red-500" : "text-[var(--foreground)]/90")}>{label}</span>
+            </div>
+            <ChevronRight className={cn("w-5 h-5 opacity-50 group-hover:opacity-100 transition-opacity", danger ? "text-red-500" : "text-[var(--secondary-text)]")} />
+        </button>
+    );
+}
+
+// -- NAV BUTTON --
+function NavBtn({ icon: Icon, active, onClick }: { icon: any, active: boolean, onClick: () => void }) {
+    return (
+        <button onClick={onClick} className="relative p-2 transition-colors">
+            <Icon className={cn("w-6 h-6 transition-colors", active ? "text-[var(--foreground)]" : "text-[var(--secondary-text)] hover:text-gray-300")} strokeWidth={active ? 2.5 : 2} />
+            {active && (
+                <motion.div layoutId="nav-pill" className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
+            )}
+        </button>
+    );
+}
+
+
+// --- HELPER COMPONENTS ---
+const TimeWheel = ({ value, onChange, max, label }: { value: number, onChange: (v: number) => void, max: number, label: string }) => {
+    const numbers = Array.from({ length: max + 1 }, (_, i) => i);
+    return (
+        <div className="flex flex-col items-center gap-2">
+            <span className="text-[10px] font-black text-secondary uppercase tracking-widest">{label}</span>
+            <div className="h-40 overflow-y-auto no-scrollbar snap-y snap-mandatory bg-black/20 rounded-2xl border border-white/5 w-16">
+                {numbers.map(n => (
+                    <button 
+                        key={n} 
+                        onClick={() => onChange(n)} 
+                        className={cn(
+                            "h-10 w-full flex items-center justify-center snap-start transition-all", 
+                            value === n ? "text-cyan-400 font-black text-lg bg-cyan-400/10" : "text-white/20 text-sm"
+                        )}
+                    >
+                        {n.toString().padStart(2, '0')}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+};

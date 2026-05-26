@@ -15,6 +15,7 @@ export interface Pet {
     cover_photo?: string;
     themeColor: string;
     microchip?: string;
+    microchip_id?: string;
     neutered?: boolean;
     birthday?: string;
     city?: string;
@@ -26,6 +27,12 @@ export interface Pet {
     };
     avatar?: string;
     is_lost?: boolean;
+    // Hub-preview dashboard alanları
+    health?: string;
+    streak?: number;
+    activity_target?: number;
+    water_target?: number;
+    food_target?: number;
     sos_settings?: {
         auto_post_sos: boolean;
         sos_radius: '2km' | '5km' | '10km' | 'city';
@@ -39,6 +46,14 @@ export interface Pet {
         quiet_hours?: { enabled: boolean; from: string; to: string };
         emergency_bypass?: boolean;
         header_sos_alert_enabled?: boolean;
+        reward_enabled?: boolean;
+        // Ek izleme alanları
+        weight?: string;
+        health?: string;
+        streak?: number;
+        activity_target?: number;
+        water_target?: number;
+        food_target?: number;
     };
 }
 
@@ -46,7 +61,7 @@ interface PetContextType {
     pets: Pet[];
     activePet: Pet | null;
     isLoading: boolean;
-    addPet: (pet: Omit<Pet, 'id'>) => void;
+    addPet: (pet: Omit<Pet, 'id'> & { id?: string }) => void;
     updatePet: (id: string, updates: Partial<Pet>) => void;
     deletePet: (id: string) => void;
     switchPet: (id: string) => void;
@@ -170,18 +185,23 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
     }, [pets, activePetId, isLoading]);
 
     // --- ACTIONS ---
-    const addPet = React.useCallback((newPetData: Omit<Pet, 'id'>) => {
+    const addPet = React.useCallback((newPetData: Omit<Pet, 'id'> & { id?: string }) => {
+        const defaultSosSettings = {
+            auto_post_sos: true, sos_radius: '5km' as const, secure_proxy_only: false,
+            location_precision: 'exact' as const, emergency_sms_number: "", reward_amount: 0,
+            reward_currency: "TL", critical_health_note: "",
+            finder_message: "Lütfen yardıma ihtiyacım var!",
+            quiet_hours: { enabled: false, from: "23:00", to: "08:00" },
+            emergency_bypass: true, header_sos_alert_enabled: true,
+            reward_enabled: false
+        };
         const newPet: Pet = {
             ...newPetData,
-            id: `pet-${Date.now()}`,
-            sos_settings: {
-                auto_post_sos: true, sos_radius: '5km', secure_proxy_only: false,
-                location_precision: 'exact', emergency_sms_number: "", reward_amount: 0,
-                reward_currency: "TL", critical_health_note: "",
-                finder_message: "Lütfen yardıma ihtiyacım var!",
-                quiet_hours: { enabled: false, from: "23:00", to: "08:00" },
-                emergency_bypass: true, header_sos_alert_enabled: true
-            }
+            id: newPetData.id || `pet-${Date.now()}`,
+            // Kullanıcının girdiği sos_settings değerlerini koru, eksikleri varsayılanla doldur
+            sos_settings: newPetData.sos_settings
+                ? { ...defaultSosSettings, ...newPetData.sos_settings }
+                : defaultSosSettings
         };
         setPets(prev => [...prev, newPet]);
         setActivePetId(newPet.id);

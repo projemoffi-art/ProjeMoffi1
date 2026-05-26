@@ -63,7 +63,6 @@ export interface Post {
     tagged_pets?: string[];
     aspect_ratio?: string;
     scheduled_at?: string | null;
-    status?: string;
 }
 
 export interface UserProfile {

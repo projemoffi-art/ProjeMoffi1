@@ -127,6 +127,49 @@ function Directions({ origin, destination }: { origin: { lat: number, lng: numbe
     return null;
 }
 
+// --- GLOWING PATH LINE COMPONENT ---
+function PathLine({ path }: { path: [number, number][] }) {
+    const map = useMap();
+    const glowRef = useRef<google.maps.Polyline | null>(null);
+    const mainRef = useRef<google.maps.Polyline | null>(null);
+
+    useEffect(() => {
+        if (!map || path.length < 2) return;
+
+        if (glowRef.current) glowRef.current.setMap(null);
+        if (mainRef.current) mainRef.current.setMap(null);
+
+        const pathCoords = path.map(coord => ({ lat: coord[0], lng: coord[1] }));
+
+        // Outer glow line
+        glowRef.current = new google.maps.Polyline({
+            path: pathCoords,
+            geodesic: true,
+            strokeColor: '#c084fc', // purple-400
+            strokeOpacity: 0.35,
+            strokeWeight: 12,
+            map: map
+        });
+
+        // Inner main line
+        mainRef.current = new google.maps.Polyline({
+            path: pathCoords,
+            geodesic: true,
+            strokeColor: '#5B4D9D', // theme color
+            strokeOpacity: 0.9,
+            strokeWeight: 6,
+            map: map
+        });
+
+        return () => {
+            if (glowRef.current) glowRef.current.setMap(null);
+            if (mainRef.current) mainRef.current.setMap(null);
+        };
+    }, [map, path]);
+
+    return null;
+}
+
 
 // --- MAIN COMPONENT ---
 export default function GoogleLiveMap({
@@ -241,6 +284,9 @@ export default function GoogleLiveMap({
 
                     {/* ROUTING */}
                     {routeDest && <Directions origin={userLocation} destination={routeDest} />}
+
+                    {/* PATH TRACKING (NEW GLOWING PATH!) */}
+                    {path.length >= 2 && <PathLine path={path} />}
 
                 </Map>
             </div>

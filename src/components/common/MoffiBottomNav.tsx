@@ -3,12 +3,13 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-    Compass, Search, Plus, MapPin, User, X
+    Home, Compass, Plus, Trophy, User
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useTranslation } from '@/context/LanguageContext';
+import { useQuestEngine } from '@/context/QuestEngineContext';
 
 interface MoffiBottomNavProps {
     activeTab?: string;
@@ -21,32 +22,33 @@ export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisibl
     const router = useRouter();
     const pathname = usePathname();
     const { user } = useAuth();
+    const { completedCount, totalCount } = useQuestEngine();
     
     const [isHubLongPressing, setIsHubLongPressing] = useState(false);
     const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
-    const isCommunityPage = pathname === '/community';
-    const activeTab = propActiveTab || (pathname?.startsWith('/profile') ? 'profile' : 'feed');
+    const activeTab = propActiveTab || (pathname === '/community' ? 'home' : pathname?.startsWith('/profile') ? 'profile' : pathname === '/quests' ? 'quests' : 'feed');
+    const questPct = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+    const allQuestsDone = completedCount === totalCount && totalCount > 0;
 
     const handleTabClick = (tab: string) => {
-        if (isCommunityPage && onTabChange) {
+        if (onTabChange) {
             onTabChange(tab);
         } else {
-            router.push(`/community?tab=${tab}`);
+            if (tab === 'home') {
+                router.push('/community');
+            } else if (tab === 'feed') {
+                router.push('/topluluk?tab=feed');
+            }
         }
     };
 
-    const handleSearchClick = () => {
-        window.dispatchEvent(new CustomEvent('open-moffi-spotlight'));
-    };
-
     const handleHubClick = () => {
-        // Toggle the LOCAL action grid (Market, Walk, Vet, etc.)
         window.dispatchEvent(new CustomEvent('open-moffi-action-hub'));
     };
 
-    const handleMapClick = () => {
-        window.dispatchEvent(new CustomEvent('open-moffi-maps'));
+    const handleQuestClick = () => {
+        router.push('/quests');
     };
 
     const handleProfileClick = () => {
@@ -64,7 +66,19 @@ export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisibl
         >
             <div className="px-4 pt-3 pb-safe max-w-lg mx-auto relative h-[4.5rem] flex items-center justify-between">
                     
-                    {/* 1. KEŞFET */}
+                    {/* 1. ANA SAYFA */}
+                    <button
+                        onClick={() => handleTabClick('home')}
+                        className={cn(
+                            "flex-1 flex flex-col items-center gap-1 transition-all active:scale-90",
+                            activeTab === 'home' ? "text-cyan-400" : "text-white/40 hover:text-white/60"
+                        )}
+                    >
+                        <Home className={cn("w-6 h-6", activeTab === 'home' && "text-cyan-400")} />
+                        <span className="text-[8px] font-black uppercase tracking-widest">{t('navigation.home')}</span>
+                    </button>
+
+                    {/* 2. KEŞFET */}
                     <button
                         onClick={() => handleTabClick('feed')}
                         className={cn(
@@ -74,15 +88,6 @@ export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisibl
                     >
                         <Compass className={cn("w-6 h-6", activeTab === 'feed' && "text-cyan-400")} />
                         <span className="text-[8px] font-black uppercase tracking-widest">{t('navigation.discover')}</span>
-                    </button>
-
-                    {/* 2. ARAMA */}
-                    <button
-                        onClick={handleSearchClick}
-                        className="flex-1 flex flex-col items-center gap-1 transition-all active:scale-90 text-white/40 hover:text-white/60"
-                    >
-                        <Search className="w-6 h-6" />
-                        <span className="text-[8px] font-black uppercase tracking-widest">{t('sidebar.search')}</span>
                     </button>
 
                     {/* 3. CENTER: HUB BUTTON */}
@@ -110,13 +115,33 @@ export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisibl
                         <div className="h-10" />
                     </div>
 
-                    {/* 4. HARİTA */}
+                    {/* 4. GÖREVLER */}
                     <button
-                        onClick={handleMapClick}
-                        className="flex-1 flex flex-col items-center gap-1 transition-all active:scale-90 text-white/40 hover:text-white/60"
+                        onClick={handleQuestClick}
+                        className={cn(
+                            "flex-1 flex flex-col items-center gap-1 transition-all active:scale-90 relative",
+                            activeTab === 'quests' ? "text-orange-400" : "text-white/40 hover:text-white/60"
+                        )}
                     >
-                        <MapPin className="w-6 h-6" />
-                        <span className="text-[8px] font-black uppercase tracking-widest">{t('sidebar.places')}</span>
+                        <div className="relative">
+                            <Trophy className={cn("w-6 h-6", allQuestsDone && 'text-yellow-400')} />
+                            {/* Progress arc indicator */}
+                            {questPct > 0 && questPct < 100 && (
+                                <motion.div
+                                    animate={{ opacity: [0.6, 1, 0.6] }}
+                                    transition={{ duration: 1.5, repeat: Infinity }}
+                                    className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-orange-400 rounded-full border border-[#0c0c0c]"
+                                />
+                            )}
+                            {allQuestsDone && (
+                                <motion.div
+                                    animate={{ scale: [1, 1.3, 1] }}
+                                    transition={{ duration: 1.5, repeat: Infinity }}
+                                    className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full border border-[#0c0c0c]"
+                                />
+                            )}
+                        </div>
+                        <span className="text-[8px] font-black uppercase tracking-widest">Görevler</span>
                     </button>
 
                     {/* 5. PROFİL */}

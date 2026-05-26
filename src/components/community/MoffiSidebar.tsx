@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Sparkles, Plus, QrCode, Zap, 
@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useActivity } from '@/context/ActivityContext';
 import { useNotifications } from '@/context/NotificationContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { getWeather, WeatherData } from '@/services/weatherService';
 import { useTranslation } from '@/context/LanguageContext';
 
@@ -32,6 +32,8 @@ export function MoffiSidebar() {
     const { user, updateSettings } = useAuth();
     const { t } = useTranslation();
     const router = useRouter();
+    const pathname = usePathname();
+    const isLightTheme = pathname === '/community';
     const { 
         activeMode, setActiveMode, 
         walkData, startWalk, stopWalk,
@@ -39,18 +41,29 @@ export function MoffiSidebar() {
     } = useActivity();
     const { unreadCount } = useNotifications();
     
-    // Get edge settings from user object or use defaults
-    const edgeSettings = user?.settings?.edge || {
-        hapticsEnabled: true,
-        handleOpacity: 0.2,
-        glassBlur: 80,
-        capsulePrivate: false,
-        activeActions: ['ai', 'post', 'qr', 'mood', 'steps', 'weather']
-    };
+    // Get edge settings from user object or use defaults (safely merged)
+    const edgeSettings = useMemo(() => {
+        const defaults = {
+            hapticsEnabled: true,
+            handleOpacity: 0.6,
+            glassBlur: 80,
+            capsulePrivate: false,
+            activeActions: ['ai', 'post', 'qr', 'mood', 'steps', 'weather'],
+            position: 'left' as 'left' | 'right'
+        };
+        return {
+            ...defaults,
+            ...(user?.settings?.edge || {})
+        };
+    }, [user?.settings?.edge]);
+
+    const aiPersonality = user?.settings?.ai?.personality || 'casual';
+    const aiCreativity = user?.settings?.ai?.creativity ?? 0.7;
+    const aiDetailLevel = user?.settings?.ai?.detailLevel || 'medium';
 
     const [isOpen, setIsOpen] = useState(false);
     const [isConfiguring, setIsConfiguring] = useState(false);
-    const [showPanelPrefs, setShowPanelPrefs] = useState(false);
+
     const [searchTerm, setSearchTerm] = useState('');
     const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
     const [isWeatherLoading, setIsWeatherLoading] = useState(false);
@@ -60,6 +73,28 @@ export function MoffiSidebar() {
     const [handleOpacity, setHandleOpacity] = useState(edgeSettings.handleOpacity);
     const [glassBlur, setGlassBlur] = useState(edgeSettings.glassBlur);
     const [capsulePrivate, setCapsulePrivate] = useState(edgeSettings.capsulePrivate);
+    const [edgePosition, setEdgePosition] = useState(edgeSettings.position || 'left');
+    const [handleY, setHandleY] = useState(0);
+    const dragStartY = useRef(0);
+    const [windowWidth, setWindowWidth] = useState(375);
+
+    // Track window width dynamically for horizontal drag constraints
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setWindowWidth(window.innerWidth);
+            const handleResize = () => setWindowWidth(window.innerWidth);
+            window.addEventListener('resize', handleResize);
+            return () => window.removeEventListener('resize', handleResize);
+        }
+    }, []);
+
+    // Load saved Y position from localStorage on mount
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const savedY = localStorage.getItem('moffi_edge_y');
+            if (savedY) setHandleY(parseFloat(savedY));
+        }
+    }, []);
 
     // Sync local state when user object changes (e.g. from another device)
     useEffect(() => {
@@ -68,6 +103,7 @@ export function MoffiSidebar() {
             setHandleOpacity(user.settings.edge.handleOpacity);
             setGlassBlur(user.settings.edge.glassBlur);
             setCapsulePrivate(user.settings.edge.capsulePrivate);
+            setEdgePosition(user.settings.edge.position || 'left');
         }
     }, [user?.settings?.edge]);
 
@@ -125,6 +161,7 @@ export function MoffiSidebar() {
         if (key === 'handleOpacity') setHandleOpacity(value);
         if (key === 'glassBlur') setGlassBlur(value);
         if (key === 'capsulePrivate') setCapsulePrivate(value);
+        if (key === 'position') setEdgePosition(value);
 
         // Persistent update (Supabase/AuthContext)
         await updateSettings('edge', { [key]: value });
@@ -146,7 +183,7 @@ export function MoffiSidebar() {
         { id: 'sos', label: t('sidebar.sos'), icon: ShieldAlert, color: 'from-red-500 to-red-700', action: () => window.dispatchEvent(new CustomEvent('open-sos-center')) },
         { id: 'studio', label: t('sidebar.aura'), icon: Palette, color: 'from-cyan-400 to-blue-600', action: () => window.dispatchEvent(new CustomEvent('open-aura-studio')) },
         { id: 'voice', label: t('sidebar.voice_note'), icon: Mic, color: 'from-orange-400 to-red-500', action: () => { triggerHaptic(30); setActiveMode('voice'); setIsOpen(true); } },
-        { id: 'steps', label: t('sidebar.walk'), icon: Footprints, color: 'from-blue-400 to-indigo-500', value: '4.2k', action: () => { triggerHaptic(30); startWalk(); setIsOpen(true); } },
+        { id: 'steps', label: t('sidebar.walk'), icon: Footprints, color: 'from-blue-400 to-indigo-500', value: '4.2k', action: () => { triggerHaptic(30); window.dispatchEvent(new CustomEvent('open-walk-panel')); } },
         { 
             id: 'weather', 
             label: t('sidebar.weather'), 
@@ -215,28 +252,83 @@ export function MoffiSidebar() {
     }, [currentWidgets, pinnedWidgets]);
 
     return (
-        <div className="fixed inset-y-0 right-0 z-[9999] pointer-events-none flex items-center">
-            {/* PERMANENT EDGE HANDLE (SAMSUNG STYLE) */}
-            <motion.div
-                key="edge-handle"
-                whileHover={{ scaleY: 1.05 }}
-                onClick={() => { triggerHaptic(20); setIsOpen(true); }}
-                onPanEnd={(_, info) => {
-                    // Trigger panel on left swipe without moving the handle physically
-                    if (info.offset.x < -15 || info.velocity.x < -100) {
-                        triggerHaptic(25);
-                        setIsOpen(true);
-                    }
-                }}
-                // Precise hit area, perfectly fixed to the right edge
-                className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-auto cursor-pointer w-4 h-32 flex items-center justify-end pr-[1px] touch-none z-[9998]"
-            >
-                {/* The visible premium bar - High Contrast Dynamic Support */}
-                <div 
-                    style={{ opacity: handleOpacity }}
-                    className="w-1.5 h-24 bg-foreground/60 backdrop-blur-3xl shadow-[0_0_20px_rgba(0,0,0,0.15)] dark:shadow-[0_0_20px_rgba(255,255,255,0.25)] rounded-l-full group-hover:bg-foreground/80 transition-all duration-300" 
-                />
-            </motion.div>
+        <div className={cn("fixed inset-y-0 left-0 right-0 z-[9999] pointer-events-none flex items-center", edgePosition === 'right' ? "justify-end" : "justify-start")}>
+                {/* PERMANENT EDGE HANDLE (SAMSUNG STYLE) - Hidden when panel is open */}
+                {!isOpen && (
+                    <motion.div
+                        key={`edge-handle-${edgePosition}`}
+                        drag
+                        dragConstraints={{
+                            left: edgePosition === 'left' ? 0 : -(windowWidth - 32),
+                            right: edgePosition === 'left' ? (windowWidth - 32) : 0,
+                            top: -300,
+                            bottom: 300
+                        }}
+                        dragElastic={0.1}
+                        dragMomentum={false}
+                        style={{ y: handleY }}
+                        onDragStart={(_, info) => {
+                            dragStartY.current = info.point.y;
+                        }}
+                        onDragEnd={(_, info) => {
+                            const dragDistY = Math.abs(info.point.y - dragStartY.current);
+                            if (dragDistY > 5) {
+                                setHandleY(prev => {
+                                    const newY = prev + info.offset.y;
+                                    const constrainedY = Math.max(-280, Math.min(280, newY));
+                                    localStorage.setItem('moffi_edge_y', constrainedY.toString());
+                                    return constrainedY;
+                                });
+                            }
+
+                            // Yatay sürükleme bittiğinde çubuğu en yakın kenara (SOL veya SAĞ) yapıştırır, asla ortada bırakmaz
+                            const currentX = info.point.x;
+                            const midpoint = windowWidth / 2;
+                            if (currentX < midpoint) {
+                                if (edgePosition !== 'left') {
+                                    updateEdgeSetting('position', 'left');
+                                    triggerHaptic(30);
+                                }
+                            } else {
+                                if (edgePosition !== 'right') {
+                                    updateEdgeSetting('position', 'right');
+                                    triggerHaptic(30);
+                                }
+                            }
+                        }}
+                        onTap={() => {
+                            triggerHaptic(20);
+                            setIsOpen(true);
+                        }}
+                        onPanEnd={(_, info) => {
+                            // Swipe gesture to open panel
+                            const isSwipeOpen = edgePosition === 'left'
+                                ? (info.offset.x > 15 || info.velocity.x > 100)
+                                : (info.offset.x < -15 || info.velocity.x < -100);
+                            if (isSwipeOpen) {
+                                triggerHaptic(25);
+                                setIsOpen(true);
+                            }
+                        }}
+                        whileHover={{ scaleY: 1.05 }}
+                        className={cn(
+                            "absolute top-1/2 -translate-y-1/2 pointer-events-auto cursor-grab active:cursor-grabbing w-8 h-32 flex items-center touch-none z-[9998] group",
+                            edgePosition === 'left' ? "left-0 justify-start pl-0" : "right-0 justify-end pr-0"
+                        )}
+                      >
+                          {/* The visible premium bar - Dynamic solid premium background color with high visibility */}
+                          <motion.div 
+                              style={{ opacity: Math.max(0.3, handleOpacity) }}
+                              className={cn(
+                                  "w-2 h-24 transition-all duration-300 group-hover:scale-y-105 group-hover:w-3 shadow-[0_2px_10px_rgba(0,0,0,0.2)]",
+                                  isLightTheme 
+                                      ? "bg-zinc-800 border border-black/10" 
+                                      : "bg-zinc-200 border border-white/20",
+                                  edgePosition === 'left' ? "rounded-r-full" : "rounded-l-full"
+                              )}
+                          />
+                    </motion.div>
+                )}
 
             <AnimatePresence>
                 {isOpen && (
@@ -248,14 +340,18 @@ export function MoffiSidebar() {
                         />
 
                         <motion.div
-                            initial={{ x: "120%" }} 
+                            initial={{ x: edgePosition === 'left' ? "-120%" : "120%" }} 
                             animate={{ x: 0 }} 
-                            exit={{ x: "120%" }}
+                            exit={{ x: edgePosition === 'left' ? "-120%" : "120%" }}
                             drag="x"
                             dragConstraints={{ left: 0, right: 0 }}
-                            dragElastic={{ left: 0, right: 0.5 }}
+                            dragElastic={{ left: 0.5, right: 0 }}
                             onDragEnd={(_, info) => {
-                                if (info.offset.x > 80) {
+                                // Drag to close (drag left on left edge, drag right on right edge)
+                                const isDragClose = edgePosition === 'left'
+                                    ? info.offset.x < -80
+                                    : info.offset.x > 80;
+                                if (isDragClose) {
                                     triggerHaptic(20);
                                     setIsOpen(false);
                                     setSearchTerm('');
@@ -263,7 +359,10 @@ export function MoffiSidebar() {
                             }}
                             transition={{ type: "spring", damping: 30, stiffness: 220 }}
                             style={{ backdropFilter: `blur(${glassBlur}px)` }}
-                            className="w-48 h-[88vh] max-h-[750px] bg-[#0c0c0c]/85 border-l border-white/10 pointer-events-auto shadow-[0_30px_90px_rgba(0,0,0,0.9)] flex flex-col p-5 rounded-l-[3.5rem] relative"
+                            className={cn(
+                                "w-48 h-[88vh] max-h-[750px] bg-[#0c0c0c]/85 border border-white/15 pointer-events-auto shadow-[0_0_40px_rgba(6,182,212,0.12),0_30px_90px_rgba(0,0,0,0.85)] flex flex-col p-5 rounded-[2.5rem] relative",
+                                edgePosition === 'left' ? "ml-3" : "mr-3"
+                            )}
                         >
                             {/* SEARCH BAR (Klas & Minimalist) */}
                             <div className="relative mb-6 group shrink-0">
@@ -427,26 +526,35 @@ export function MoffiSidebar() {
                                     <div className="mb-4">
                                         <h4 className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] mb-3 ml-1">Öncelikli Araçlar</h4>
                                         <div className="grid grid-cols-2 gap-x-4 gap-y-5">
-                                            {pinnedWidgets.map((widget, index) => (
-                                                <motion.button
-                                                    key={`pinned-${widget.id}`}
-                                                    whileHover={{ scale: 1.05, y: -2 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                    onClick={() => { 
-                                                        triggerHaptic(15); 
-                                                        widget.action(); 
-                                                        if(widget.id !== 'steps') { setIsOpen(false); setSearchTerm(''); }
-                                                    }}
-                                                    className="flex flex-col items-center gap-1.5 group"
-                                                >
-                                                    <div className="w-[50px] h-[50px] rounded-[1.2rem] bg-white/15 backdrop-blur-3xl border border-white/30 flex items-center justify-center shadow-2xl relative overflow-hidden group-hover:bg-white/25 transition-colors">
-                                                        <div className={cn("w-10 h-10 rounded-xl bg-gradient-to-tr flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform", widget.color)}>
-                                                            <widget.icon className="w-5.5 h-5.5 text-white drop-shadow-md" strokeWidth={2.8} />
+                                            {pinnedWidgets.map((widget, index) => {
+                                                const match = widget.color.match(/from-([a-z]+)-(\d+)/);
+                                                const glowClass = match 
+                                                    ? `shadow-${match[1]}-${match[2]}/20 group-hover:shadow-${match[1]}-${match[2]}/55`
+                                                    : `shadow-white/5`;
+                                                return (
+                                                    <motion.button
+                                                        key={`pinned-${widget.id}`}
+                                                        initial={{ opacity: 0, y: 12, scale: 0.9 }}
+                                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                        transition={{ type: "spring", stiffness: 350, damping: 22, delay: index * 0.03 }}
+                                                        whileHover={{ scale: 1.05, y: -2 }}
+                                                        whileTap={{ scale: 0.95 }}
+                                                        onClick={() => { 
+                                                            triggerHaptic(15); 
+                                                            widget.action();
+                                                            setIsOpen(false); setSearchTerm('');
+                                                        }}
+                                                        className="flex flex-col items-center gap-1.5 group"
+                                                    >
+                                                        <div className="w-[50px] h-[50px] rounded-[1.2rem] bg-white/15 backdrop-blur-3xl border border-white/30 flex items-center justify-center shadow-2xl relative overflow-hidden group-hover:bg-white/25 transition-colors">
+                                                            <div className={cn("w-10 h-10 rounded-xl bg-gradient-to-tr flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-300", widget.color, glowClass)}>
+                                                                <widget.icon className="w-5.5 h-5.5 text-white drop-shadow-md" strokeWidth={2.8} />
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                    <span className="text-[7.5px] font-black text-white/80 uppercase tracking-tighter text-center group-hover:text-white transition-colors">{widget.label}</span>
-                                                </motion.button>
-                                            ))}
+                                                        <span className="text-[7.5px] font-black text-white/80 uppercase tracking-tighter text-center group-hover:text-white transition-colors">{widget.label}</span>
+                                                    </motion.button>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 )}
@@ -457,41 +565,48 @@ export function MoffiSidebar() {
 
                                 {/* SEARCH RESULTS OR DYNAMIC SECTION */}
                                 <div className="grid grid-cols-2 gap-x-4 gap-y-5">
-                                    {dynamicWidgets.map((widget, index) => (
-                                        <motion.button
-                                            key={widget.id}
-                                            initial={{ opacity: 0, scale: 0.9 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            transition={{ delay: index * 0.04 }}
-                                            whileHover={{ scale: 1.05, y: -2 }}
-                                            whileTap={{ scale: 0.95 }}
-                                            onClick={() => { 
-                                                triggerHaptic(15); 
-                                                widget.action(); 
-                                                if(widget.id !== 'voice' && widget.id !== 'steps') { setIsOpen(false); setSearchTerm(''); }
-                                            }}
-                                            className="flex flex-col items-center gap-1.5 group"
-                                        >
-                                            {/* Button Container (Samsung Glass Style) */}
-                                            <div className="w-[50px] h-[50px] rounded-[1.2rem] bg-white/10 backdrop-blur-2xl border border-white/20 flex items-center justify-center shadow-xl relative overflow-hidden group-hover:bg-white/20 transition-colors">
-                                                {/* Inner Gradient Icon */}
-                                                <div className={cn(
-                                                    "w-10 h-10 rounded-xl bg-gradient-to-tr flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform",
-                                                    widget.color
-                                                )}>
-                                                    <widget.icon className="w-5.5 h-5.5 text-white drop-shadow-md" strokeWidth={2.5} />
+                                    {dynamicWidgets.map((widget, index) => {
+                                        const match = widget.color.match(/from-([a-z]+)-(\d+)/);
+                                        const glowClass = match 
+                                            ? `shadow-${match[1]}-${match[2]}/20 group-hover:shadow-${match[1]}-${match[2]}/55`
+                                            : `shadow-white/5`;
+                                        return (
+                                            <motion.button
+                                                key={widget.id}
+                                                initial={{ opacity: 0, y: 12, scale: 0.9 }}
+                                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                transition={{ type: "spring", stiffness: 350, damping: 22, delay: (pinnedWidgets.length + index) * 0.03 }}
+                                                whileHover={{ scale: 1.05, y: -2 }}
+                                                whileTap={{ scale: 0.95 }}
+                                                onClick={() => { 
+                                                    triggerHaptic(15); 
+                                                    widget.action();
+                                                    if(widget.id !== 'voice') { setIsOpen(false); setSearchTerm(''); }
+                                                }}
+                                                className="flex flex-col items-center gap-1.5 group"
+                                            >
+                                                {/* Button Container (Samsung Glass Style) */}
+                                                <div className="w-[50px] h-[50px] rounded-[1.2rem] bg-white/10 backdrop-blur-2xl border border-white/20 flex items-center justify-center shadow-xl relative overflow-hidden group-hover:bg-white/20 transition-colors">
+                                                    {/* Inner Gradient Icon */}
+                                                    <div className={cn(
+                                                        "w-10 h-10 rounded-xl bg-gradient-to-tr flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-300",
+                                                        widget.color,
+                                                        glowClass
+                                                    )}>
+                                                        <widget.icon className="w-5.5 h-5.5 text-white drop-shadow-md" strokeWidth={2.5} />
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            
-                                            {/* Label / Value */}
-                                            <div className="flex flex-col items-center max-w-[65px]">
-                                                <span className="text-[7.5px] font-black text-white/80 uppercase tracking-tighter text-center group-hover:text-white transition-colors truncate w-full">{widget.label}</span>
-                                                {widget.value && (
-                                                    <span className="text-[9px] font-black text-emerald-400 mt-0.5">{widget.value}</span>
-                                                )}
-                                            </div>
-                                        </motion.button>
-                                    ))}
+                                                
+                                                {/* Label / Value */}
+                                                <div className="flex flex-col items-center max-w-[65px]">
+                                                    <span className="text-[7.5px] font-black text-white/80 uppercase tracking-tighter text-center group-hover:text-white transition-colors truncate w-full">{widget.label}</span>
+                                                    {widget.value && (
+                                                        <span className="text-[9px] font-black text-emerald-400 mt-0.5">{widget.value}</span>
+                                                    )}
+                                                </div>
+                                            </motion.button>
+                                        );
+                                    })}
                                 </div>
                                 
                                 {searchTerm && dynamicWidgets.length === 0 && (
@@ -509,257 +624,267 @@ export function MoffiSidebar() {
                             {/* CONFIGURATION CENTER */}
                             <AnimatePresence>
                                 {isConfiguring && (
-                                    <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} className="absolute inset-0 bg-[#080808]/98 z-50 flex flex-col p-5 border-l border-white/10 rounded-l-[3.5rem]">
-                                        {/* COLLAPSIBLE HEADER */}
-                                        <div 
-                                            onClick={() => { triggerHaptic(10); setShowPanelPrefs(!showPanelPrefs); }}
-                                            className="flex flex-col items-center mb-4 mt-2 cursor-pointer group"
-                                        >
-                                            <h3 className="text-[10px] font-black text-white/40 group-hover:text-white/60 transition-colors uppercase tracking-[0.3em]">{t('sidebar.panel_settings')}</h3>
-                                            <motion.div 
-                                                animate={{ 
-                                                    width: showPanelPrefs ? "40px" : "24px",
-                                                    backgroundColor: showPanelPrefs ? "#f59e0b" : "rgba(255,255,255,0.1)"
-                                                }}
-                                                className="h-1 mt-2 rounded-full relative overflow-hidden"
-                                            >
-                                                {showPanelPrefs && <motion.div animate={{ x: ["-100%", "100%"] }} transition={{ repeat: Infinity, duration: 1.5 }} className="absolute inset-0 bg-white/20" />}
-                                            </motion.div>
+                                    <motion.div initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }} className="absolute inset-0 bg-[#080808]/98 z-50 flex flex-col p-5 border border-white/10 rounded-[2.5rem]">
+                                        {/* HEADER */}
+                                        <div className="flex flex-col items-center mb-5 mt-2 shrink-0">
+                                            <h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">{t('sidebar.panel_settings')}</h3>
+                                            <div className="h-0.5 w-8 bg-amber-500 mt-2 rounded-full" />
                                         </div>
-                                        
-                                        {/* PREMIUM LINEAR CONTROLS */}
-                                        <AnimatePresence>
-                                            {showPanelPrefs && (
-                                                <motion.div 
-                                                    initial={{ height: 0, opacity: 0, marginBottom: 0 }}
-                                                    animate={{ height: "auto", opacity: 1, marginBottom: 40 }}
-                                                    exit={{ height: 0, opacity: 0, marginBottom: 0 }}
-                                                    className="px-2 overflow-hidden flex flex-col gap-6"
+
+                                        {/* PREMIUM LINEAR CONTROLS & WIDGETS - Scrollable list */}
+                                        <div className="flex-1 overflow-y-auto no-scrollbar px-1 pb-4 flex flex-col gap-6">
+                                            {/* BLUR CONTROL TRACK */}
+                                            <div className="flex flex-col gap-3">
+                                                <div className="flex justify-between items-center px-1">
+                                                    <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em]">Bulanıklık Derinliği</span>
+                                                    <span className="text-[8px] font-black text-indigo-400">{glassBlur === 10 ? 'SAF' : glassBlur === 40 ? 'HAFİF' : 'YOĞUN'}</span>
+                                                </div>
+                                                <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.03] rounded-full border border-white/5 shrink-0">
+                                                    {[10, 40, 80].map((level) => (
+                                                        <button 
+                                                            key={level}
+                                                            onClick={() => { triggerHaptic(15); updateEdgeSetting('glassBlur', level); }}
+                                                            className="flex-1 h-full relative z-10 group"
+                                                        >
+                                                            <div className={cn(
+                                                                "absolute left-1/2 -translate-x-1/2 bottom-0 w-full h-1 rounded-full transition-all duration-500",
+                                                                glassBlur === level ? "bg-indigo-500 shadow-[0_-4px_12px_rgba(99,102,241,0.6)]" : "bg-transparent group-hover:bg-white/5"
+                                                            )} />
+                                                            {glassBlur === level && (
+                                                                <motion.div 
+                                                                    layoutId="blur-active-indicator"
+                                                                    className="absolute inset-x-1 inset-y-1.5 bg-indigo-500/20 rounded-lg border border-indigo-500/30"
+                                                                />
+                                                            )}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* HANDLE VISIBILITY TRACK */}
+                                            <div className="flex flex-col gap-3">
+                                                <div className="flex justify-between items-center px-1">
+                                                    <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em]">Tutacak Görünümü</span>
+                                                    <span className="text-[8px] font-black text-amber-400">{handleOpacity < 0.3 ? 'HAYALET' : handleOpacity < 0.6 ? 'SOFT' : 'BELİRGİN'}</span>
+                                                </div>
+                                                <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.03] rounded-full border border-white/5 shrink-0">
+                                                    {[0.1, 0.4, 0.9].map((op) => (
+                                                        <button 
+                                                            key={op}
+                                                            onClick={() => { triggerHaptic(15); updateEdgeSetting('handleOpacity', op); }}
+                                                            className="flex-1 h-full relative z-10 group"
+                                                        >
+                                                            <div className={cn(
+                                                                "absolute left-1/2 -translate-x-1/2 bottom-0 w-full h-1 rounded-full transition-all duration-500",
+                                                                handleOpacity === op ? "bg-amber-500 shadow-[0_-4px_12px_rgba(245,158,11,0.6)]" : "bg-transparent group-hover:bg-white/5"
+                                                            )} />
+                                                            {handleOpacity === op && (
+                                                                <motion.div 
+                                                                    layoutId="op-active-indicator"
+                                                                    className="absolute inset-x-1 inset-y-1.5 bg-amber-500/20 rounded-lg border border-amber-500/30"
+                                                                />
+                                                            )}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* TOGGLE TRACKS (Haptic & Privacy) */}
+                                            <div className="flex items-center gap-4 px-1 pt-2 shrink-0">
+                                                <button 
+                                                    onClick={() => { updateEdgeSetting('hapticsEnabled', !hapticsEnabled); triggerHaptic(25); }}
+                                                    className="flex-1 flex flex-col gap-3 group"
                                                 >
-                                                    {/* BLUR CONTROL TRACK */}
-                                                    <div className="flex flex-col gap-3">
-                                                        <div className="flex justify-between items-center px-1">
-                                                            <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em]">Bulanıklık Derinliği</span>
-                                                            <span className="text-[8px] font-black text-indigo-400">{glassBlur === 10 ? 'SAF' : glassBlur === 40 ? 'HAFİF' : 'YOĞUN'}</span>
-                                                        </div>
-                                                        <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.03] rounded-full border border-white/5">
-                                                            {[10, 40, 80].map((level) => (
-                                                                <button 
-                                                                    key={level}
-                                                                    onClick={() => { triggerHaptic(15); updateEdgeSetting('glassBlur', level); }}
-                                                                    className="flex-1 h-full relative z-10 group"
-                                                                >
-                                                                    <div className={cn(
-                                                                        "absolute left-1/2 -translate-x-1/2 bottom-0 w-full h-1 rounded-full transition-all duration-500",
-                                                                        glassBlur === level ? "bg-indigo-500 shadow-[0_-4px_12px_rgba(99,102,241,0.6)]" : "bg-transparent group-hover:bg-white/5"
-                                                                    )} />
-                                                                    {glassBlur === level && (
-                                                                        <motion.div 
-                                                                            layoutId="blur-active-indicator"
-                                                                            className="absolute inset-x-1 inset-y-1.5 bg-indigo-500/20 rounded-lg border border-indigo-500/30"
-                                                                        />
-                                                                    )}
-                                                                </button>
-                                                            ))}
+                                                    <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em]">Titreşim</span>
+                                                    <div className="h-4 w-full bg-white/[0.03] rounded-full relative overflow-hidden border border-white/5 p-0.5">
+                                                        <motion.div 
+                                                            animate={{ x: hapticsEnabled ? "0%" : "-100%" }}
+                                                            className="absolute inset-0 bg-gradient-to-r from-cyan-600 to-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.4)]"
+                                                        />
+                                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                            <div className={cn("w-1 h-1 rounded-full transition-colors duration-500", hapticsEnabled ? "bg-white" : "bg-white/10")} />
                                                         </div>
                                                     </div>
+                                                </button>
 
-                                                    {/* HANDLE VISIBILITY TRACK */}
-                                                    <div className="flex flex-col gap-3">
-                                                        <div className="flex justify-between items-center px-1">
-                                                            <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em]">Tutacak Görünümü</span>
-                                                            <span className="text-[8px] font-black text-amber-400">{handleOpacity < 0.3 ? 'HAYALET' : handleOpacity < 0.6 ? 'SOFT' : 'BELİRGİN'}</span>
-                                                        </div>
-                                                        <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.03] rounded-full border border-white/5">
-                                                            {[0.1, 0.4, 0.9].map((op) => (
-                                                                <button 
-                                                                    key={op}
-                                                                    onClick={() => { triggerHaptic(15); updateEdgeSetting('handleOpacity', op); }}
-                                                                    className="flex-1 h-full relative z-10 group"
-                                                                >
-                                                                    <div className={cn(
-                                                                        "absolute left-1/2 -translate-x-1/2 bottom-0 w-full h-1 rounded-full transition-all duration-500",
-                                                                        handleOpacity === op ? "bg-amber-500 shadow-[0_-4px_12px_rgba(245,158,11,0.6)]" : "bg-transparent group-hover:bg-white/5"
-                                                                    )} />
-                                                                    {handleOpacity === op && (
-                                                                        <motion.div 
-                                                                            layoutId="op-active-indicator"
-                                                                            className="absolute inset-x-1 inset-y-1.5 bg-amber-500/20 rounded-lg border border-amber-500/30"
-                                                                        />
-                                                                    )}
-                                                                </button>
-                                                            ))}
+                                                <button 
+                                                    onClick={() => { updateEdgeSetting('capsulePrivate', !capsulePrivate); triggerHaptic(25); }}
+                                                    className="flex-1 flex flex-col gap-3 group"
+                                                >
+                                                    <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em]">Gizlilik</span>
+                                                    <div className="h-4 w-full bg-white/[0.03] rounded-full relative overflow-hidden border border-white/5 p-0.5">
+                                                        <motion.div 
+                                                            animate={{ x: capsulePrivate ? "0%" : "-100%" }}
+                                                            className="absolute inset-0 bg-gradient-to-r from-rose-600 to-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.4)]"
+                                                        />
+                                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                            <div className={cn("w-1 h-1 rounded-full transition-colors duration-500", capsulePrivate ? "bg-white" : "bg-white/10")} />
                                                         </div>
                                                     </div>
+                                                </button>
+                                            </div>
 
-                                                    {/* TOGGLE TRACKS (Haptic & Privacy) */}
-                                                    <div className="flex items-center gap-4 px-1 pt-2">
+                                            {/* KENAR KONUMU SEÇİMİ */}
+                                            <div className="flex flex-col gap-3">
+                                                <div className="flex justify-between items-center px-1">
+                                                    <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em]">Kenar Konumu</span>
+                                                    <span className="text-[8px] font-black text-cyan-400">{edgePosition === 'right' ? 'SAĞ' : 'SOL'}</span>
+                                                </div>
+                                                <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.03] rounded-full border border-white/5 shrink-0">
+                                                    {['left', 'right'].map((pos) => (
                                                         <button 
-                                                            onClick={() => { updateEdgeSetting('hapticsEnabled', !hapticsEnabled); triggerHaptic(25); }}
-                                                            className="flex-1 flex flex-col gap-3 group"
+                                                            key={pos}
+                                                            onClick={() => { triggerHaptic(15); updateEdgeSetting('position', pos); }}
+                                                            className="flex-1 h-full relative z-10 group"
                                                         >
-                                                            <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em]">Titreşim</span>
-                                                            <div className="h-4 w-full bg-white/[0.03] rounded-full relative overflow-hidden border border-white/5 p-0.5">
+                                                            <span className="absolute inset-0 flex items-center justify-center text-[8px] font-black uppercase text-white/40 group-hover:text-white/60 tracking-wider">
+                                                                {pos === 'left' ? 'SOL' : 'SAĞ'}
+                                                            </span>
+                                                            {edgePosition === pos && (
                                                                 <motion.div 
-                                                                    animate={{ x: hapticsEnabled ? "0%" : "-100%" }}
-                                                                    className="absolute inset-0 bg-gradient-to-r from-cyan-600 to-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.4)]"
+                                                                    layoutId="pos-active-indicator"
+                                                                    className="absolute inset-x-1 inset-y-1 bg-white/10 rounded-lg border border-white/20"
                                                                 />
-                                                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                                    <div className={cn("w-1 h-1 rounded-full transition-colors duration-500", hapticsEnabled ? "bg-white" : "bg-white/10")} />
-                                                                </div>
-                                                            </div>
+                                                            )}
                                                         </button>
+                                                    ))}
+                                                </div>
+                                            </div>
 
-                                                        <button 
-                                                            onClick={() => { updateEdgeSetting('capsulePrivate', !capsulePrivate); triggerHaptic(25); }}
-                                                            className="flex-1 flex flex-col gap-3 group"
+                                            {/* AI CONFIGURATION SECTION */}
+                                            <div className="pt-4 border-t border-white/5 flex flex-col gap-5">
+                                                <div className="px-1 flex items-center justify-between">
+                                                    <span className="text-[9px] font-black text-violet-400 uppercase tracking-[0.3em]">AI ASİSTAN AYARLARI</span>
+                                                    <Sparkles className="w-3 h-3 text-violet-500/50" />
+                                                </div>
+
+                                                {/* PERSONALITY TRACK */}
+                                                <div className="flex flex-col gap-3">
+                                                    <div className="flex justify-between items-center px-1">
+                                                        <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em]">Asistan Kişiliği</span>
+                                                        <span className="text-[8px] font-black text-violet-400 uppercase tracking-widest">{aiPersonality === 'casual' ? 'Samimi' : aiPersonality === 'professional' ? 'Ciddi' : 'Teknik'}</span>
+                                                    </div>
+                                                    <div className="h-6 flex items-center gap-1 px-1 relative bg-white/[0.03] rounded-full border border-white/5 shrink-0">
+                                                        {[
+                                                            { id: 'casual', label: 'SAMİMİ' },
+                                                            { id: 'professional', label: 'CİDDİ' },
+                                                            { id: 'technical', label: 'TEKNİK' }
+                                                        ].map((p) => (
+                                                            <button 
+                                                                key={p.id}
+                                                                onClick={() => { triggerHaptic(15); updateSettings('ai', { personality: p.id }); }}
+                                                                className="flex-1 h-full relative z-10 group flex items-center justify-center"
+                                                            >
+                                                                <span className={cn("text-[7px] font-black transition-all duration-300 tracking-tighter", aiPersonality === p.id ? "text-white" : "text-white/20")}>{p.label}</span>
+                                                                {aiPersonality === p.id && (
+                                                                    <motion.div 
+                                                                        layoutId="ai-personality-active"
+                                                                        className="absolute inset-x-0.5 inset-y-1 bg-violet-600/30 rounded-lg border border-violet-500/30 z-[-1]"
+                                                                    />
+                                                                )}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+ 
+                                                {/* CREATIVITY TRACK */}
+                                                <div className="flex flex-col gap-3">
+                                                    <div className="flex justify-between items-center px-1">
+                                                        <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em]">Yaratıcılık</span>
+                                                        <span className="text-[8px] font-black text-violet-400 italic">%{Math.round(aiCreativity * 100)}</span>
+                                                    </div>
+                                                    <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.03] rounded-full border border-white/5 overflow-hidden shrink-0">
+                                                        <div className="absolute inset-0 bg-violet-500/5" />
+                                                        {[0.3, 0.7, 1.0].map((val) => (
+                                                            <button 
+                                                                key={val}
+                                                                onClick={() => { triggerHaptic(15); updateSettings('ai', { creativity: val }); }}
+                                                                className="flex-1 h-full relative z-10 group"
+                                                            >
+                                                                <div className={cn(
+                                                                    "absolute left-1/2 -translate-x-1/2 bottom-0 w-full h-1 rounded-full transition-all duration-500",
+                                                                    aiCreativity === val ? "bg-violet-500 shadow-[0_-4px_12px_rgba(139,92,246,0.6)]" : "bg-transparent group-hover:bg-white/5"
+                                                                )} />
+                                                                {aiCreativity === val && (
+                                                                    <motion.div 
+                                                                        layoutId="ai-creativity-indicator"
+                                                                        className="absolute inset-x-1 inset-y-1.5 bg-violet-500/20 rounded-lg border border-violet-500/30"
+                                                                    />
+                                                                )}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+ 
+                                                {/* DETAIL DEPTH TRACK */}
+                                                <div className="flex flex-col gap-3">
+                                                    <div className="flex justify-between items-center px-1">
+                                                        <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em]">Yanıt Derinliği</span>
+                                                        <span className="text-[8px] font-black text-violet-400">{aiDetailLevel === 'short' ? 'ÖZ' : aiDetailLevel === 'medium' ? 'DENGELİ' : 'DETAYLI'}</span>
+                                                    </div>
+                                                    <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.03] rounded-full border border-white/5 shrink-0">
+                                                        {[
+                                                            { id: 'short', label: 'ÖZ' },
+                                                            { id: 'medium', label: 'DENGELİ' },
+                                                            { id: 'long', label: 'DETAYLI' }
+                                                        ].map((d) => (
+                                                            <button 
+                                                                key={d.id}
+                                                                onClick={() => { triggerHaptic(15); updateSettings('ai', { detailLevel: d.id }); }}
+                                                                className="flex-1 h-full relative z-10 group"
+                                                            >
+                                                                <div className={cn(
+                                                                    "absolute left-1/2 -translate-x-1/2 bottom-0 w-full h-1 rounded-full transition-all duration-500",
+                                                                    aiDetailLevel === d.id ? "bg-violet-400 shadow-[0_-4px_12px_rgba(167,139,250,0.6)]" : "bg-transparent group-hover:bg-white/5"
+                                                                )} />
+                                                                {aiDetailLevel === d.id && (
+                                                                    <motion.div 
+                                                                        layoutId="ai-detail-indicator"
+                                                                        className="absolute inset-x-1 inset-y-1.5 bg-violet-400/20 rounded-lg border border-violet-400/30"
+                                                                    />
+                                                                )}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* WIDGET KÜTÜPHANESİ */}
+                                            <div className="pt-4 border-t border-white/5 flex flex-col gap-4">
+                                                <div className="flex flex-col items-center mb-2">
+                                                    <h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">WIDGET KÜTÜPHANESİ</h3>
+                                                    <div className="h-0.5 w-8 bg-cyan-500 mt-2 rounded-full" />
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    {ALL_WIDGETS.map(w => (
+                                                        <button
+                                                            key={w.id}
+                                                            onClick={() => {
+                                                                let newActions = [...activeActions];
+                                                                if (newActions.includes(w.id)) { if (newActions.length <= 2) return; newActions = newActions.filter(a => a !== w.id); } 
+                                                                else { if (newActions.length >= 12) return; newActions.push(w.id); }
+                                                                updateSettings('edge', { activeActions: newActions });
+                                                                triggerHaptic(10);
+                                                            }}
+                                                            className={cn(
+                                                                "flex flex-col items-center gap-1.5 p-2 rounded-2xl transition-all relative", 
+                                                                activeActions.includes(w.id) ? "bg-white/10 border border-white/20 shadow-lg" : "opacity-30 grayscale scale-95"
+                                                            )}
                                                         >
-                                                            <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em]">Gizlilik</span>
-                                                            <div className="h-4 w-full bg-white/[0.03] rounded-full relative overflow-hidden border border-white/5 p-0.5">
-                                                                <motion.div 
-                                                                    animate={{ x: capsulePrivate ? "0%" : "-100%" }}
-                                                                    className="absolute inset-0 bg-gradient-to-r from-rose-600 to-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.4)]"
-                                                                />
-                                                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                                    <div className={cn("w-1 h-1 rounded-full transition-colors duration-500", capsulePrivate ? "bg-white" : "bg-white/10")} />
+                                                            <div className={cn("w-[42px] h-[42px] rounded-xl bg-gradient-to-tr flex items-center justify-center shadow-lg", w.color)}>
+                                                                <w.icon className="w-5 h-5 text-white" strokeWidth={2.5} />
+                                                            </div>
+                                                            <span className="text-[8px] font-black text-white/60 tracking-tight uppercase text-center">{w.label}</span>
+                                                            {activeActions.includes(w.id) && (
+                                                                <div className="absolute top-1 right-1 w-4.5 h-4.5 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg">
+                                                                    <Check className="w-2.5 h-2.5 text-black" strokeWidth={5} />
                                                                 </div>
-                                                            </div>
+                                                            )}
                                                         </button>
-                                                    </div>
-
-                                                    {/* AI CONFIGURATION SECTION */}
-                                                    <div className="pt-4 mt-2 border-t border-white/5 flex flex-col gap-6">
-                                                        <div className="px-1 flex items-center justify-between">
-                                                            <span className="text-[9px] font-black text-violet-400 uppercase tracking-[0.3em]">AI ASİSTAN AYARLARI</span>
-                                                            <Sparkles className="w-3 h-3 text-violet-500/50" />
-                                                        </div>
-
-                                                        {/* PERSONALITY TRACK */}
-                                                        <div className="flex flex-col gap-3">
-                                                            <div className="flex justify-between items-center px-1">
-                                                                <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em]">Asistan Kişiliği</span>
-                                                                <span className="text-[8px] font-black text-violet-400 uppercase tracking-widest">{user?.settings?.ai?.personality === 'casual' ? 'Samimi' : user?.settings?.ai?.personality === 'professional' ? 'Ciddi' : 'Teknik'}</span>
-                                                            </div>
-                                                            <div className="h-6 flex items-center gap-1 px-1 relative bg-white/[0.03] rounded-full border border-white/5">
-                                                                {[
-                                                                    { id: 'casual', label: 'SAMİMİ' },
-                                                                    { id: 'professional', label: 'CİDDİ' },
-                                                                    { id: 'technical', label: 'TEKNİK' }
-                                                                ].map((p) => (
-                                                                    <button 
-                                                                        key={p.id}
-                                                                        onClick={() => { triggerHaptic(15); updateSettings('ai', { personality: p.id }); }}
-                                                                        className="flex-1 h-full relative z-10 group flex items-center justify-center"
-                                                                    >
-                                                                        <span className={cn("text-[7px] font-black transition-all duration-300 tracking-tighter", user?.settings?.ai?.personality === p.id ? "text-white" : "text-white/20")}>{p.label}</span>
-                                                                        {user?.settings?.ai?.personality === p.id && (
-                                                                            <motion.div 
-                                                                                layoutId="ai-personality-active"
-                                                                                className="absolute inset-x-0.5 inset-y-1 bg-violet-600/30 rounded-lg border border-violet-500/30 z-[-1]"
-                                                                            />
-                                                                        )}
-                                                                    </button>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-
-                                                        {/* CREATIVITY TRACK */}
-                                                        <div className="flex flex-col gap-3">
-                                                            <div className="flex justify-between items-center px-1">
-                                                                <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em]">Yaratıcılık</span>
-                                                                <span className="text-[8px] font-black text-violet-400 italic">%{Math.round((user?.settings?.ai?.creativity || 0.7) * 100)}</span>
-                                                            </div>
-                                                            <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.03] rounded-full border border-white/5 overflow-hidden">
-                                                                <div className="absolute inset-0 bg-violet-500/5" />
-                                                                {[0.3, 0.7, 1.0].map((val) => (
-                                                                    <button 
-                                                                        key={val}
-                                                                        onClick={() => { triggerHaptic(15); updateSettings('ai', { creativity: val }); }}
-                                                                        className="flex-1 h-full relative z-10 group"
-                                                                    >
-                                                                        <div className={cn(
-                                                                            "absolute left-1/2 -translate-x-1/2 bottom-0 w-full h-1 rounded-full transition-all duration-500",
-                                                                            user?.settings?.ai?.creativity === val ? "bg-violet-500 shadow-[0_-4px_12px_rgba(139,92,246,0.6)]" : "bg-transparent group-hover:bg-white/5"
-                                                                        )} />
-                                                                        {user?.settings?.ai?.creativity === val && (
-                                                                            <motion.div 
-                                                                                layoutId="ai-creativity-indicator"
-                                                                                className="absolute inset-x-1 inset-y-1.5 bg-violet-500/20 rounded-lg border border-violet-500/30"
-                                                                            />
-                                                                        )}
-                                                                    </button>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-
-                                                        {/* DETAIL DEPTH TRACK */}
-                                                        <div className="flex flex-col gap-3">
-                                                            <div className="flex justify-between items-center px-1">
-                                                                <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em]">Yanıt Derinliği</span>
-                                                                <span className="text-[8px] font-black text-violet-400">{user?.settings?.ai?.detailLevel === 'short' ? 'ÖZ' : user?.settings?.ai?.detailLevel === 'medium' ? 'DENGELİ' : 'DETAYLI'}</span>
-                                                            </div>
-                                                            <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.03] rounded-full border border-white/5">
-                                                                {[
-                                                                    { id: 'short', label: 'ÖZ' },
-                                                                    { id: 'medium', label: 'DENGELİ' },
-                                                                    { id: 'long', label: 'DETAYLI' }
-                                                                ].map((d) => (
-                                                                    <button 
-                                                                        key={d.id}
-                                                                        onClick={() => { triggerHaptic(15); updateSettings('ai', { detailLevel: d.id }); }}
-                                                                        className="flex-1 h-full relative z-10 group"
-                                                                    >
-                                                                        <div className={cn(
-                                                                            "absolute left-1/2 -translate-x-1/2 bottom-0 w-full h-1 rounded-full transition-all duration-500",
-                                                                            user?.settings?.ai?.detailLevel === d.id ? "bg-violet-400 shadow-[0_-4px_12px_rgba(167,139,250,0.6)]" : "bg-transparent group-hover:bg-white/5"
-                                                                        )} />
-                                                                        {user?.settings?.ai?.detailLevel === d.id && (
-                                                                            <motion.div 
-                                                                                layoutId="ai-detail-indicator"
-                                                                                className="absolute inset-x-1 inset-y-1.5 bg-violet-400/20 rounded-lg border border-violet-400/30"
-                                                                            />
-                                                                        )}
-                                                                    </button>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-
-                                        <div className="flex flex-col items-center mb-6"><h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">WIDGET KÜTÜPHANESİ</h3><div className="h-0.5 w-8 bg-cyan-500 mt-2 rounded-full" /></div>
-                                        <div className="flex-1 overflow-y-auto no-scrollbar px-1">
-                                            <div className="grid grid-cols-2 gap-3">
-                                                {ALL_WIDGETS.map(w => (
-                                                    <button
-                                                        key={w.id}
-                                                        onClick={() => {
-                                                            let newActions = [...activeActions];
-                                                            if (newActions.includes(w.id)) { if (newActions.length <= 2) return; newActions = newActions.filter(a => a !== w.id); } 
-                                                            else { if (newActions.length >= 12) return; newActions.push(w.id); }
-                                                            updateSettings('edge', { activeActions: newActions });
-                                                            triggerHaptic(10);
-                                                        }}
-                                                        className={cn(
-                                                            "flex flex-col items-center gap-1.5 p-2 rounded-2xl transition-all relative", 
-                                                            activeActions.includes(w.id) ? "bg-white/10 border border-white/20 shadow-lg" : "opacity-30 grayscale scale-95"
-                                                        )}
-                                                    >
-                                                        <div className={cn("w-[42px] h-[42px] rounded-xl bg-gradient-to-tr flex items-center justify-center shadow-lg", w.color)}>
-                                                            <w.icon className="w-5 h-5 text-white" strokeWidth={2.5} />
-                                                        </div>
-                                                        <span className="text-[8px] font-black text-white/60 tracking-tight uppercase text-center">{w.label}</span>
-                                                        {activeActions.includes(w.id) && (
-                                                            <div className="absolute top-1 right-1 w-4.5 h-4.5 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg">
-                                                                <Check className="w-2.5 h-2.5 text-black" strokeWidth={5} />
-                                                            </div>
-                                                        )}
-                                                    </button>
-                                                ))}
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
-
                                     </motion.div>
                                 )}
                             </AnimatePresence>

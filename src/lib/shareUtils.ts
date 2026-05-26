@@ -44,5 +44,5 @@ export async function copyToClipboard(text: string) {
 
 export function generatePostDeepLink(postId: string | number) {
     if (typeof window === 'undefined') return '';
-    return `${window.location.origin}/community?post=${postId}`;
+    return `${window.location.origin}/topluluk?post=${postId}`;
 }
