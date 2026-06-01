@@ -71,7 +71,7 @@ export function DiaryModal({ isOpen, onClose }: DiaryModalProps) {
                         animate={{ y: 0, opacity: 1, scale: 1 }} 
                         exit={{ y: '100%', opacity: 0, scale: 0.95 }} 
                         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                        className="fixed inset-x-4 bottom-8 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-[500px] bg-[#0c0c0c]/90 backdrop-blur-2xl border border-white/10 rounded-[3.5rem] p-8 shadow-[0_50px_100px_rgba(0,0,0,0.8)] z-[10001] overflow-hidden"
+                        className="fixed inset-x-4 bottom-8 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-[500px] bg-[#0c0c0c]/90 backdrop-blur-2xl border border-card-border rounded-[3.5rem] p-8 shadow-[0_50px_100px_rgba(0,0,0,0.8)] z-[10001] overflow-hidden"
                     >
                         {/* Decorative Background Glow */}
                         <div className="absolute -top-24 -right-24 w-64 h-64 bg-yellow-500/10 blur-[100px] rounded-full" />
@@ -98,10 +98,10 @@ export function DiaryModal({ isOpen, onClose }: DiaryModalProps) {
                             <div className="relative mb-8">
                                 <button 
                                     onClick={() => setShowPetSelector(!showPetSelector)}
-                                    className="w-full flex items-center justify-between p-4 bg-white/[0.03] border border-white/5 rounded-3xl hover:bg-white/5 transition-all group"
+                                    className="w-full flex items-center justify-between p-4 bg-white/[0.03] border border-card-border rounded-3xl hover:bg-white/5 transition-all group"
                                 >
                                     <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-xl overflow-hidden border-2 border-white/10 group-hover:border-yellow-500/30 transition-colors">
+                                        <div className="w-10 h-10 rounded-xl overflow-hidden border-2 border-card-border group-hover:border-yellow-500/30 transition-colors">
                                             <img src={selectedPet?.avatar} alt="" className="w-full h-full object-cover" />
                                         </div>
                                         <div className="text-left">
@@ -118,7 +118,7 @@ export function DiaryModal({ isOpen, onClose }: DiaryModalProps) {
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: 10 }}
-                                            className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border border-white/10 rounded-[2rem] p-2 shadow-2xl z-50 max-h-48 overflow-y-auto no-scrollbar"
+                                            className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border border-card-border rounded-[2rem] p-2 shadow-2xl z-50 max-h-48 overflow-y-auto no-scrollbar"
                                         >
                                             {pets.map(pet => (
                                                 <button 
@@ -146,7 +146,7 @@ export function DiaryModal({ isOpen, onClose }: DiaryModalProps) {
                                             onClick={() => setMood(m.label)}
                                             className={cn(
                                                 "py-3 rounded-2xl border text-[11px] font-black uppercase tracking-tighter transition-all",
-                                                mood === m.label ? "bg-white text-black border-transparent shadow-lg" : "bg-white/[0.02] border-white/5 text-white/40 hover:bg-white/5"
+                                                mood === m.label ? "bg-card text-black border-transparent shadow-lg" : "bg-white/[0.02] border-card-border text-white/40 hover:bg-white/5"
                                             )}
                                         >
                                             {m.label}
@@ -161,7 +161,7 @@ export function DiaryModal({ isOpen, onClose }: DiaryModalProps) {
                                     value={memory}
                                     onChange={(e) => setMemory(e.target.value)}
                                     placeholder="Neler yaptınız? Unutmak istemediğin bir anı yaz..."
-                                    className="w-full h-40 bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-6 text-sm text-white focus:outline-none focus:border-yellow-500/50 transition-all placeholder:text-white/10 resize-none font-medium leading-relaxed"
+                                    className="w-full h-40 bg-white/[0.02] border border-card-border rounded-[2.5rem] p-6 text-sm text-white focus:outline-none focus:border-yellow-500/50 transition-all placeholder:text-white/10 resize-none font-medium leading-relaxed"
                                 />
                                 <div className="absolute bottom-6 right-6 flex gap-2">
                                     <button className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/20 hover:text-white hover:bg-white/10 transition-all">

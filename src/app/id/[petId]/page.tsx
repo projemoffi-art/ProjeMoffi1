@@ -137,7 +137,7 @@ export default function PetIDPage() {
                         exit={{ y: -100, opacity: 0 }}
                         className="fixed top-0 inset-x-0 z-[100] flex justify-center px-6 pointer-events-none"
                     >
-                        <div className="bg-emerald-500 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 backdrop-blur-xl border border-white/20">
+                        <div className="bg-emerald-500 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 backdrop-blur-xl border border-card-border">
                             <BellRing className="w-5 h-5 animate-ring" />
                             <div className="flex flex-col">
                                 <span className="text-[10px] font-black uppercase tracking-wider leading-none">Moffi Güvenlik</span>
@@ -159,10 +159,10 @@ export default function PetIDPage() {
 
             {/* HEADER */}
             <header className="relative z-10 p-5 flex items-center justify-between">
-                <div className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 cursor-pointer active:scale-90 transition-transform" onClick={() => router.push('/')}>
+                <div className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-card-border cursor-pointer active:scale-90 transition-transform" onClick={() => router.push('/')}>
                     <ArrowLeft className="w-5 h-5 text-white" />
                 </div>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10 shadow-lg">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-card-border shadow-lg">
                     {isLost ? <ShieldAlert className="w-4 h-4 text-red-500" /> : <BadgeCheck className="w-4 h-4 text-cyan-400" />}
                     <span className="text-xs font-bold text-white tracking-wide">Moffi Pet-ID</span>
                 </div>
@@ -200,7 +200,7 @@ export default function PetIDPage() {
                     >
                         <div className="absolute inset-0 bg-white/10 animate-shimmer" />
                         <div className="flex items-center gap-4 relative z-10">
-                            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg shrink-0">
+                            <div className="w-12 h-12 bg-card rounded-2xl flex items-center justify-center shadow-lg shrink-0">
                                 <ShieldAlert className="w-7 h-7 text-red-600" />
                             </div>
                             <div className="flex flex-col">
@@ -247,7 +247,7 @@ export default function PetIDPage() {
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ delay: 0.1 }}
                         className={cn(
-                            "w-full rounded-[2.5rem] p-6 shadow-xl backdrop-blur-xl border border-white/10 relative overflow-hidden",
+                            "w-full rounded-[2.5rem] p-6 shadow-xl backdrop-blur-xl border border-card-border relative overflow-hidden",
                             isLost ? "bg-red-500/10" : "bg-white/5"
                         )}
                     >
@@ -295,7 +295,7 @@ export default function PetIDPage() {
                         className="w-full max-w-sm flex flex-col gap-3"
                     >
                         {sosConfig.allowProxyCalls && (
-                             <button onClick={handleCallOwner} className="w-full bg-white text-black hover:bg-gray-100 transition-colors rounded-[20px] p-4 flex items-center justify-center gap-3 font-bold text-[15px] shadow-[0_0_30px_rgba(255,255,255,0.2)] active:scale-95">
+                             <button onClick={handleCallOwner} className="w-full bg-card text-black hover:bg-gray-100 transition-colors rounded-[20px] p-4 flex items-center justify-center gap-3 font-bold text-[15px] shadow-[0_0_30px_rgba(255,255,255,0.2)] active:scale-95">
                                 <PhoneCall className="w-5 h-5 text-emerald-600" />
                                 Sahibini Hemen Ara (Gizli Arama)
                             </button>
@@ -308,7 +308,7 @@ export default function PetIDPage() {
                             </button>
 
                             {sosConfig.allowAnonymousMessaging && (
-                                <button onClick={() => setShowMessageBox(!showMessageBox)} className="flex-1 bg-white/10 hover:bg-white/15 border border-white/10 text-white rounded-[20px] p-4 flex flex-col items-center justify-center gap-2 transition-colors active:scale-95">
+                                <button onClick={() => setShowMessageBox(!showMessageBox)} className="flex-1 bg-white/10 hover:bg-white/15 border border-card-border text-white rounded-[20px] p-4 flex flex-col items-center justify-center gap-2 transition-colors active:scale-95">
                                     <MessageCircle className="w-6 h-6" />
                                     <span className="font-semibold text-xs text-center leading-tight">Anonim Mesaj Bırak</span>
                                 </button>
@@ -324,13 +324,13 @@ export default function PetIDPage() {
                                     exit={{ height: 0, opacity: 0 }}
                                     className="overflow-hidden"
                                 >
-                                    <div className="bg-[#1C1C1E] rounded-3xl p-4 border border-white/10 shadow-xl mt-2 flex flex-col gap-3">
+                                    <div className="bg-[#1C1C1E] rounded-3xl p-4 border border-card-border shadow-xl mt-2 flex flex-col gap-3">
                                         <p className="text-xs text-white/50 text-center uppercase tracking-wide font-bold">Uygulamasız - Güvenli Mesaj</p>
                                         <textarea
                                             value={anonMessage}
                                             onChange={(e) => setAnonMessage(e.target.value)}
                                             placeholder="Örn: Migros'un arkasında gördüm, mama veriyorum..."
-                                            className="w-full bg-black/50 border border-white/5 rounded-2xl p-3 text-sm text-white outline-none focus:border-cyan-500/50 placeholder:text-white/30 resize-none h-20"
+                                            className="w-full bg-black/50 border border-card-border rounded-2xl p-3 text-sm text-white outline-none focus:border-cyan-500/50 placeholder:text-white/30 resize-none h-20"
                                         />
                                         <button
                                             onClick={handleSendMessage}

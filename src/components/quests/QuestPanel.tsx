@@ -44,7 +44,7 @@ export function ConstellationBg() {
 
             {dots.map((d, i) => (
                 <motion.div key={i}
-                    className="absolute rounded-full bg-white"
+                    className="absolute rounded-full bg-card"
                     style={{ left: `${d.x}%`, top: `${d.y}%`, width: d.size, height: d.size }}
                     animate={{ opacity: [0.05, 0.4, 0.05] }}
                     transition={{ duration: d.dur, delay: d.delay, repeat: Infinity }}
@@ -167,7 +167,7 @@ export function QuestOrbitalRing({ pct, petImage, petName, dayNumber, todayPP, s
                     <div className="absolute inset-2 rounded-full border-2 border-purple-400/40 bg-purple-500/10 shadow-[0_0_24px_rgba(139,92,246,0.6)]" />
                     
                     {/* Avatar visual breaking out (scaling larger than the backing circle) */}
-                    <div className="relative w-[78px] h-[78px] rounded-full overflow-hidden border border-white/20 z-10 shadow-[0_4px_16px_rgba(0,0,0,0.6)]">
+                    <div className="relative w-[78px] h-[78px] rounded-full overflow-hidden border border-card-border z-10 shadow-[0_4px_16px_rgba(0,0,0,0.6)]">
                         {petImage ? (
                             <img src={petImage} alt={petName} className="w-full h-full object-cover scale-110" />
                         ) : (
@@ -184,7 +184,7 @@ export function QuestOrbitalRing({ pct, petImage, petName, dayNumber, todayPP, s
                 </div>
 
                 {/* Gün + puan — cam kapsül içinde */}
-                <div className="text-center mt-1.5 bg-black/45 border border-white/10 rounded-full px-3 py-0.5 backdrop-blur-md shadow-[0_4px_12px_rgba(0,0,0,0.5)] z-10">
+                <div className="text-center mt-1.5 bg-black/45 border border-card-border rounded-full px-3 py-0.5 backdrop-blur-md shadow-[0_4px_12px_rgba(0,0,0,0.5)] z-10">
                     <p className="text-[10px] font-black text-white/90 leading-none">{dayNumber}. Gün</p>
                     {todayPP > 0 && <p className="text-[8px] font-black text-orange-400 leading-none mt-0.5">{todayPP} Pati Puan</p>}
                 </div>
@@ -254,7 +254,7 @@ export function NumberedRoadMap({ weeklyStamps, maxStamps }: { weeklyStamps: num
                                         ? 'bg-gradient-to-br from-emerald-500 to-teal-500 border-emerald-400 text-white shadow-[0_0_10px_rgba(16,185,129,0.5)]'
                                         : isCurrent
                                             ? 'bg-gradient-to-br from-purple-500 to-pink-500 border-purple-300 text-white scale-110 shadow-[0_0_12px_rgba(168,85,247,0.6)]'
-                                            : 'bg-black/50 border-white/10 text-white/30 backdrop-blur-md'
+                                            : 'bg-black/50 border-card-border text-white/30 backdrop-blur-md'
                                 }`}
                             >
                                 {isLastDay ? (
@@ -319,7 +319,7 @@ export function PanelQuestCard({ quest, index, onManualComplete }: {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ type: 'spring', damping: 18, delay: index * 0.05 }}
-            className={`rounded-2xl border overflow-hidden ${isCompleted ? 'border-emerald-500/30 bg-emerald-500/8' : 'border-white/10 bg-white/[0.03]'}`}
+            className={`rounded-2xl border overflow-hidden ${isCompleted ? 'border-emerald-500/30 bg-emerald-500/8' : 'border-card-border bg-white/[0.03]'}`}
             style={{ boxShadow: isCompleted ? '0 0 12px rgba(16,185,129,0.1)' : `0 0 10px ${theme.glow}` }}
         >
             <div className="p-3 flex items-center gap-3">
@@ -454,7 +454,7 @@ export function QuestCarousel({ quests, onManualComplete }: QuestCarouselProps) 
                             <span className={`text-[7.5px] font-black uppercase tracking-[0.25em] px-2.5 py-1 rounded-full border ${
                                 isCompleted 
                                     ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
-                                    : 'bg-white/5 border-white/10 text-white/50'
+                                    : 'bg-white/5 border-card-border text-white/50'
                             }`}>
                                 {isCompleted ? '✓ Tamamlandı' : `${theme.label} Görevi`}
                             </span>
@@ -477,7 +477,7 @@ export function QuestCarousel({ quests, onManualComplete }: QuestCarouselProps) 
                                 animate={isCompleted ? {} : { scale: [1, 1.08, 1], y: [-2, 2, -2] }}
                                 transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                                 className={`w-20 h-20 rounded-full flex items-center justify-center text-4xl shadow-inner relative ${
-                                    isCompleted ? 'bg-emerald-500/15 border border-emerald-500/30' : 'bg-white/5 border border-white/10'
+                                    isCompleted ? 'bg-emerald-500/15 border border-emerald-500/30' : 'bg-white/5 border border-card-border'
                                 }`}
                             >
                                 <div className="absolute inset-0 rounded-full bg-inherit filter blur-md opacity-50" />
@@ -683,7 +683,7 @@ export function ResearchPanel({ research }: { research: MonthlyResearch }) {
                             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black border-2 ${
                                 s.completedAt ? 'bg-emerald-500 border-emerald-500 text-white' :
                                 i === research.currentStageIndex ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300' :
-                                'bg-white/5 border-white/10 text-white/20'
+                                'bg-white/5 border-card-border text-white/20'
                             }`}>{s.completedAt ? '✓' : s.emoji}</div>
                             {i < research.stages.length - 1 && <div className={`flex-1 h-0.5 rounded-full ${i < research.currentStageIndex ? 'bg-emerald-500' : 'bg-white/10'}`} />}
                         </React.Fragment>
@@ -839,7 +839,7 @@ export function QuestPanel({ isOpen, onClose }: QuestPanelProps) {
                                         <Star className="w-3.5 h-3.5 text-yellow-400 fill-current" />
                                         <span className="text-[10px] font-black text-yellow-400 font-mono">{totalPatiPuan.toLocaleString()}</span>
                                     </div>
-                                    <button onClick={onClose} className="w-9 h-9 bg-white/5 rounded-full flex items-center justify-center border border-white/10 hover:bg-white/10 transition-all">
+                                    <button onClick={onClose} className="w-9 h-9 bg-white/5 rounded-full flex items-center justify-center border border-card-border hover:bg-white/10 transition-all">
                                         <X className="w-4 h-4 text-white/50" />
                                     </button>
                                 </div>

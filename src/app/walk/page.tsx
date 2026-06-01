@@ -49,7 +49,7 @@ export default function WalkPage() {
     return (
         <div className="min-h-screen bg-[#F8F9FC] dark:bg-[#121212] pb-24 font-sans transition-colors duration-300">
             {/* 1. HEADER & LOCATION */}
-            <header className="px-6 py-4 flex justify-between items-center sticky top-0 z-30 bg-[#F8F9FC]/80 dark:bg-[#121212]/80 backdrop-blur-md border-b border-gray-100/50 dark:border-white/[0.02]">
+            <header className="px-6 py-4 flex justify-between items-center sticky top-0 z-30 bg-[#F8F9FC]/80 dark:bg-[#121212]/80 backdrop-blur-md border-b border-card-border/50 dark:border-white/[0.02]">
                 <div className="flex items-center gap-4">
                     <button 
                         onClick={() => {
@@ -59,9 +59,9 @@ export default function WalkPage() {
                                 router.push('/community');
                             }
                         }} 
-                        className="w-10 h-10 rounded-full bg-white dark:bg-white/5 flex items-center justify-center shadow-sm active:scale-95 transition-all border border-gray-100 dark:border-white/10"
+                        className="w-10 h-10 rounded-full bg-card dark:bg-white/5 flex items-center justify-center shadow-moffi-card active:scale-95 transition-all border border-card-border dark:border-card-border"
                     >
-                        <ChevronLeft className="w-5 h-5 text-gray-700 dark:text-white" />
+                        <ChevronLeft className="w-5 h-5 text-foreground dark:text-white" />
                     </button>
                     <div>
                         <div className="flex items-center gap-1 text-[#5B4D9D] dark:text-purple-400 font-bold text-xs uppercase tracking-wider mb-0.5">
@@ -69,7 +69,7 @@ export default function WalkPage() {
                             <span>Mevcut Konum</span>
                         </div>
                         <div className="flex items-center gap-1">
-                            <h1 className="text-base font-black text-gray-950 dark:text-white">Caddebostan, İstanbul</h1>
+                            <h1 className="text-base font-black text-foreground dark:text-white">Caddebostan, İstanbul</h1>
                             <ChevronRight className="w-4 h-4 text-gray-400" />
                         </div>
                     </div>
@@ -96,7 +96,7 @@ export default function WalkPage() {
                             {weatherLoading ? '⏳' : (weather?.emoji || '☀️')}
                         </div>
                         <div>
-                            <h4 className="text-gray-800 dark:text-white/90 font-black text-xs uppercase tracking-wider leading-none">
+                            <h4 className="text-foreground dark:text-white/90 font-black text-xs uppercase tracking-wider leading-none">
                                 {weatherLoading
                                     ? 'Hava Durumu Yükleniyor...'
                                     : weather
@@ -128,8 +128,8 @@ export default function WalkPage() {
                 </div>
 
                 {/* 3. DOSTUM BENTO DURUM KARTI (NEW!) */}
-                <div className="bg-white/80 dark:bg-[#1A1A1A]/80 border border-gray-100 dark:border-white/5 rounded-2xl p-4 flex gap-4 items-center shadow-sm backdrop-blur-md animate-in fade-in slide-in-from-top-4 duration-400">
-                    <div className="w-14 h-14 rounded-2xl border border-gray-200 dark:border-white/10 overflow-hidden relative shrink-0 bg-gray-50 dark:bg-black/20">
+                <div className="bg-white/80 dark:bg-[#1A1A1A]/80 border border-card-border dark:border-card-border rounded-2xl p-4 flex gap-4 items-center shadow-sm backdrop-blur-md animate-in fade-in slide-in-from-top-4 duration-400">
+                    <div className="w-14 h-14 rounded-2xl border border-card-border dark:border-card-border overflow-hidden relative shrink-0 bg-gray-50 dark:bg-black/20">
                         <img 
                             src={activePet?.avatar || activePet?.image || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300'} 
                             className="w-full h-full object-cover"
@@ -137,7 +137,7 @@ export default function WalkPage() {
                         />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <h4 className="text-gray-900 dark:text-white font-black text-sm uppercase tracking-tight truncate leading-none">
+                        <h4 className="text-foreground dark:text-white font-black text-sm uppercase tracking-tight truncate leading-none">
                             {activePet?.name || 'Dostun'}
                         </h4>
                         <p className="text-[10px] font-bold text-gray-400 truncate mt-1.5 uppercase tracking-wider">
@@ -160,7 +160,7 @@ export default function WalkPage() {
                 <div className="space-y-2.5">
                     {/* Dual progress goals */}
                     <div className="grid grid-cols-2 gap-2.5">
-                        <div className="bg-white/80 dark:bg-[#1A1A1A]/80 p-3.5 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm backdrop-blur-md">
+                        <div className="bg-white/80 dark:bg-[#1A1A1A]/80 p-3.5 rounded-2xl border border-card-border dark:border-card-border shadow-sm backdrop-blur-md">
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-1.5">
                                     <Footprints className="w-3 h-3 text-orange-500" />
@@ -168,7 +168,7 @@ export default function WalkPage() {
                                 </div>
                                 <span className="text-[8px] font-black text-orange-500 font-mono">{Math.round(progressPercent)}%</span>
                             </div>
-                            <div className="text-base font-black text-gray-900 dark:text-white leading-none mb-1">
+                            <div className="text-base font-black text-foreground dark:text-white leading-none mb-1">
                                 {walkData.isActive
                                     ? (walkData.distance >= 1000 ? (walkData.distance / 1000).toFixed(2) : Math.floor(walkData.distance))
                                     : walkStats ? (walkStats.totalDistanceKm ?? 0).toFixed(1) : '0'
@@ -184,7 +184,7 @@ export default function WalkPage() {
                                 />
                             </div>
                         </div>
-                        <div className="bg-white/80 dark:bg-[#1A1A1A]/80 p-3.5 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm backdrop-blur-md">
+                        <div className="bg-white/80 dark:bg-[#1A1A1A]/80 p-3.5 rounded-2xl border border-card-border dark:border-card-border shadow-sm backdrop-blur-md">
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-1.5">
                                     <Timer className="w-3 h-3 text-indigo-500" />
@@ -192,7 +192,7 @@ export default function WalkPage() {
                                 </div>
                                 <span className="text-[8px] font-black text-indigo-500 font-mono">{Math.round(durationPercent)}%</span>
                             </div>
-                            <div className="text-base font-black text-gray-900 dark:text-white leading-none mb-1">
+                            <div className="text-base font-black text-foreground dark:text-white leading-none mb-1">
                                 {Math.floor(walkData.time / 60)}
                                 <span className="text-[9px] font-normal text-gray-400 dark:text-white/30 ml-0.5">
                                     /{dailyGoal.duration}dk
@@ -212,7 +212,7 @@ export default function WalkPage() {
                 <QuestBentoCard />
 
                 {/* 6. WEEKLY ACTIVITY SUMMARY - GERÇEK VERİ */}
-                <div className="bg-white/80 dark:bg-[#1A1A1A]/80 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 space-y-3 backdrop-blur-md">
+                <div className="bg-white/80 dark:bg-[#1A1A1A]/80 p-4 rounded-2xl shadow-sm border border-card-border dark:border-card-border space-y-3 backdrop-blur-md">
                     <div className="flex items-center justify-between">
                         <h4 className="text-[10px] font-black text-gray-400 dark:text-white/45 uppercase tracking-widest flex items-center gap-1.5">
                             <Trophy className="w-3.5 h-3.5 text-purple-500" /> Son 7 Gün
@@ -269,17 +269,17 @@ export default function WalkPage() {
                         })()}
                     </div>
                     {walkStats && (
-                        <div className="grid grid-cols-3 gap-2 pt-1 border-t border-gray-100/50 dark:border-white/[0.03]">
+                        <div className="grid grid-cols-3 gap-2 pt-1 border-t border-card-border/50 dark:border-white/[0.03]">
                             <div className="text-center">
-                                <div className="text-[10px] font-black text-gray-800 dark:text-white">{(walkStats.totalDistanceKm ?? 0).toFixed(1)} km</div>
+                                <div className="text-[10px] font-black text-foreground dark:text-white">{(walkStats.totalDistanceKm ?? 0).toFixed(1)} km</div>
                                 <div className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">Toplam</div>
                             </div>
                             <div className="text-center">
-                                <div className="text-[10px] font-black text-gray-800 dark:text-white">{(walkStats.longestWalkKm ?? 0).toFixed(1)} km</div>
+                                <div className="text-[10px] font-black text-foreground dark:text-white">{(walkStats.longestWalkKm ?? 0).toFixed(1)} km</div>
                                 <div className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">En Uzun</div>
                             </div>
                             <div className="text-center">
-                                <div className="text-[10px] font-black text-gray-800 dark:text-white">{walkStats.bestStreak} gün</div>
+                                <div className="text-[10px] font-black text-foreground dark:text-white">{walkStats.bestStreak} gün</div>
                                 <div className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">En İyi Seri</div>
                             </div>
                         </div>
@@ -294,7 +294,7 @@ export default function WalkPage() {
                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
                     <div className="relative z-10 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center border border-white/20">
+                            <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center border border-card-border">
                                 <Trophy className="w-5 h-5 text-yellow-400 fill-current" />
                             </div>
                             <div>
@@ -306,7 +306,7 @@ export default function WalkPage() {
                             <div className="bg-white/10 px-2 py-0.5 rounded text-[8px] text-white font-bold h-min whitespace-nowrap mb-1">
                                 Gümüş Lig
                             </div>
-                            <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center group-hover:bg-yellow-400 transition-colors">
+                            <div className="w-7 h-7 rounded-full bg-card flex items-center justify-center group-hover:bg-yellow-400 transition-colors">
                                 <ChevronRight className="w-4 h-4 text-black" />
                             </div>
                         </div>
@@ -314,7 +314,7 @@ export default function WalkPage() {
                 </div>
 
                 {/* 8. DISCOVERY MAP (Interactive Preview) */}
-                <div className="relative w-full h-[230px] rounded-2xl overflow-hidden shadow-lg border border-gray-100/50 dark:border-white/10 group">
+                <div className="relative w-full h-[230px] rounded-2xl overflow-hidden shadow-lg border border-card-border/50 dark:border-card-border group">
                     <GoogleLiveMap
                         userPos={userPos}
                         path={[]}
@@ -329,13 +329,13 @@ export default function WalkPage() {
 
                     {/* Floating Elements on Map */}
                     <div className="absolute top-4 left-4 right-4 flex justify-between pointer-events-none">
-                        <div className="bg-white/95 dark:bg-[#0A0A0E]/95 backdrop-blur-xl px-3 py-1.5 rounded-xl text-[9px] font-black text-gray-800 dark:text-white shadow-md flex items-center gap-1.5 border border-white/10">
+                        <div className="bg-white/95 dark:bg-[#0A0A0E]/95 backdrop-blur-xl px-3 py-1.5 rounded-xl text-[9px] font-black text-foreground dark:text-white shadow-md flex items-center gap-1.5 border border-card-border">
                             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> 12 Moffi Arkadaşı Yakınında
                         </div>
                     </div>
 
                     <div className="absolute bottom-4 left-4 right-4 z-10 flex flex-col gap-3">
-                        <div className="bg-black/20 backdrop-blur-sm p-3 rounded-2xl border border-white/10">
+                        <div className="bg-black/20 backdrop-blur-sm p-3 rounded-2xl border border-card-border">
                             <h2 className="text-white font-black text-base mb-0.5 tracking-tight uppercase italic leading-none">
                                 {walkData.isActive ? 'Yürüyüş Takibi' : 'Keşfe Çık'}
                             </h2>
@@ -354,7 +354,7 @@ export default function WalkPage() {
                             }}
                             className={cn(
                                 "w-full h-12 rounded-xl font-black uppercase tracking-[0.15em] flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 group overflow-hidden text-xs",
-                                walkData.isActive ? "bg-red-500 text-white" : "bg-white text-black"
+                                walkData.isActive ? "bg-red-500 text-white" : "bg-card text-black"
                             )}
                         >
                             {walkData.isActive ? (
@@ -369,7 +369,7 @@ export default function WalkPage() {
                 {/* 9. NEARBY DEALS (GAMIFICATION) */}
                 <div className="pb-8">
                     <div className="flex items-center justify-between mb-3 px-1">
-                        <h3 className="font-black text-gray-900 dark:text-white text-base flex items-center gap-2">
+                        <h3 className="font-black text-foreground dark:text-white text-base flex items-center gap-2">
                             <Cookie className="w-4.5 h-4.5 text-orange-500" /> Yakındaki Fırsatlar
                         </h3>
                         <button className="text-xs font-bold text-[#5B4D9D] dark:text-purple-400">Tümü</button>

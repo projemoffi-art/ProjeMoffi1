@@ -57,21 +57,21 @@ export default function AdminFeedbacksPage() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-4xl font-black text-gray-900 tracking-tight">Geri Bildirim Merkezi</h1>
+                    <h1 className="text-4xl font-black text-foreground tracking-tight">Geri Bildirim Merkezi</h1>
                     <p className="text-gray-500 font-medium mt-1">Kullanıcı deneyimini buradan analiz edin ve yönetin.</p>
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm text-center min-w-[120px]">
+                    <div className="bg-card p-4 rounded-2xl border border-card-border shadow-moffi-card text-center min-w-[120px]">
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Ort. Puan</p>
                         <div className="flex items-center justify-center gap-1">
                             <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                            <span className="text-2xl font-black text-gray-900">{averageRating}</span>
+                            <span className="text-2xl font-black text-foreground">{averageRating}</span>
                         </div>
                     </div>
-                    <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm text-center min-w-[120px]">
+                    <div className="bg-card p-4 rounded-2xl border border-card-border shadow-moffi-card text-center min-w-[120px]">
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Toplam Yorum</p>
-                        <span className="text-2xl font-black text-gray-900">{feedbacks.length}</span>
+                        <span className="text-2xl font-black text-foreground">{feedbacks.length}</span>
                     </div>
                 </div>
             </div>
@@ -85,7 +85,7 @@ export default function AdminFeedbacksPage() {
                         placeholder="Kullanıcı adı veya yorum içeriğinde ara..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-12 pr-4 py-4 bg-white border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all font-medium text-gray-900"
+                        className="w-full pl-12 pr-4 py-4 bg-card border border-card-border rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all font-medium text-foreground"
                     />
                 </div>
                 <div className="flex items-center gap-2">
@@ -97,7 +97,7 @@ export default function AdminFeedbacksPage() {
                                 "px-6 py-4 rounded-2xl font-bold text-sm transition-all capitalize",
                                 filterCategory === cat
                                     ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200"
-                                    : "bg-white text-gray-500 border border-gray-100 hover:bg-gray-50"
+                                    : "bg-card text-gray-500 border border-card-border hover:bg-gray-50"
                             )}
                         >
                             {cat === 'all' ? 'Hepsi' : cat}
@@ -114,14 +114,14 @@ export default function AdminFeedbacksPage() {
                     ))}
                 </div>
             ) : filteredFeedbacks.length === 0 ? (
-                <div className="text-center py-32 bg-white rounded-[3rem] border border-dashed border-gray-200">
+                <div className="text-center py-32 bg-card rounded-[3rem] border border-dashed border-card-border">
                     <MessageSquare className="w-16 h-16 text-gray-200 mx-auto mb-4" />
                     <h3 className="text-xl font-bold text-gray-400">Henüz geri bildirim bulunamadı.</h3>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {filteredFeedbacks.map((fb) => (
-                        <div key={fb.id} className="group bg-white rounded-[2.5rem] border border-gray-100 p-8 shadow-sm hover:shadow-xl transition-all duration-500 relative overflow-hidden">
+                        <div key={fb.id} className="group bg-card rounded-[2.5rem] border border-card-border p-8 shadow-moffi-card hover:shadow-xl transition-all duration-500 relative overflow-hidden">
                             {/* Category Indicator */}
                             <div className={cn(
                                 "absolute top-0 right-0 px-6 py-2 rounded-bl-3xl text-[10px] font-black uppercase tracking-tighter",
@@ -139,12 +139,12 @@ export default function AdminFeedbacksPage() {
                                             src={fb.profiles?.avatar_url || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200"}
                                             className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-md"
                                         />
-                                        <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white rounded-lg flex items-center justify-center shadow-sm">
+                                        <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-card rounded-lg flex items-center justify-center shadow-moffi-card">
                                             {fb.rating >= 4 ? <CheckCircle className="w-4 h-4 text-green-500" /> : <AlertTriangle className="w-4 h-4 text-amber-500" />}
                                         </div>
                                     </div>
                                     <div>
-                                        <h4 className="font-black text-gray-900">@{fb.profiles?.username || 'Anonim'}</h4>
+                                        <h4 className="font-black text-foreground">@{fb.profiles?.username || 'Anonim'}</h4>
                                         <p className="text-xs text-gray-400 font-medium flex items-center gap-1">
                                             <Clock className="w-3 h-3" />
                                             {new Date(fb.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -158,8 +158,8 @@ export default function AdminFeedbacksPage() {
                                 </div>
                             </div>
 
-                            <div className="bg-gray-50/50 rounded-3xl p-6 border border-gray-100 group-hover:bg-indigo-50/30 transition-colors h-32 overflow-y-auto no-scrollbar">
-                                <p className="text-gray-700 leading-relaxed font-medium">
+                            <div className="bg-gray-50/50 rounded-3xl p-6 border border-card-border group-hover:bg-indigo-50/30 transition-colors h-32 overflow-y-auto no-scrollbar">
+                                <p className="text-foreground leading-relaxed font-medium">
                                     {fb.comment || <span className="italic text-gray-400">Yorum yapılmadı.</span>}
                                 </p>
                             </div>

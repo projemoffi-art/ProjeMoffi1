@@ -121,7 +121,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                         <motion.div 
                             initial={{ width: 0 }}
                             animate={{ width: i <= currentStep ? '100%' : '0%' }}
-                            className="h-full bg-white transition-all duration-500"
+                            className="h-full bg-card transition-all duration-500"
                         />
                     </div>
                 ))}
@@ -139,7 +139,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                     {/* STEP 1: WELCOME */}
                     {currentStep === 0 && (
                         <div className="space-y-12 max-w-md">
-                            <div className="relative mx-auto w-64 h-64 rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl">
+                            <div className="relative mx-auto w-64 h-64 rounded-[3rem] overflow-hidden border border-card-border shadow-2xl">
                                 <img src={STEPS[0].image} className="w-full h-full object-cover" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                             </div>
@@ -157,7 +157,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                     {/* STEP 2: IDENTITY */}
                     {currentStep === 1 && (
                         <div className="space-y-10 w-full max-w-md">
-                            <div className="w-20 h-20 bg-white/5 rounded-3xl border border-white/10 flex items-center justify-center mx-auto mb-4">
+                            <div className="w-20 h-20 bg-white/5 rounded-3xl border border-card-border flex items-center justify-center mx-auto mb-4">
                                 <PawPrint className="w-10 h-10 text-cyan-400" />
                             </div>
                             <div className="space-y-6 text-center">
@@ -168,7 +168,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                                         autoFocus
                                         value={petData.name}
                                         onChange={(e) => setPetData({...petData, name: e.target.value})}
-                                        className="w-full bg-white/5 border-b-2 border-white/10 py-6 px-4 text-4xl font-black text-center outline-none focus:border-cyan-400 transition-all placeholder:text-white/5"
+                                        className="w-full bg-white/5 border-b-2 border-card-border py-6 px-4 text-4xl font-black text-center outline-none focus:border-cyan-400 transition-all placeholder:text-white/5"
                                         placeholder="Dostunun adı..."
                                     />
                                 </div>
@@ -180,7 +180,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                                         onClick={() => setPetData({...petData, type})}
                                         className={cn(
                                             "px-8 py-4 rounded-2xl border font-black uppercase tracking-widest text-[10px] transition-all",
-                                            petData.type === type ? "bg-white text-black border-white" : "bg-white/5 border-white/10 text-white/40"
+                                            petData.type === type ? "bg-card text-black border-white" : "bg-white/5 border-card-border text-white/40"
                                         )}
                                     >
                                         {type === 'dog' ? 'KÖPEK' : 'KEDİ'}
@@ -201,7 +201,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                             <div 
                                 onClick={() => fileInputRef.current?.click()}
                                 className={cn(
-                                    "relative w-64 h-64 mx-auto rounded-[3.5rem] border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-white/5 hover:border-cyan-400/40 group overflow-hidden",
+                                    "relative w-64 h-64 mx-auto rounded-[3.5rem] border-2 border-dashed border-card-border flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-white/5 hover:border-cyan-400/40 group overflow-hidden",
                                     petData.image ? "border-solid border-cyan-400" : ""
                                 )}
                             >
@@ -252,7 +252,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                                         onClick={() => setPetData({...petData, aura: aura.id})}
                                         className={cn(
                                             "p-6 rounded-[2rem] border transition-all flex flex-col items-center gap-4 relative overflow-hidden group",
-                                            petData.aura === aura.id ? `bg-white/10 border-white/20 ${aura.glow} shadow-lg` : "bg-white/5 border-white/10"
+                                            petData.aura === aura.id ? `bg-white/10 border-card-border ${aura.glow} shadow-lg` : "bg-white/5 border-card-border"
                                         )}
                                     >
                                         <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center", aura.color)}>
@@ -261,7 +261,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                                         <span className="text-xs font-black uppercase tracking-widest">{aura.label}</span>
                                         {petData.aura === aura.id && (
                                             <motion.div layoutId="aura-check" className="absolute top-4 right-4">
-                                                <div className="w-5 h-5 bg-white rounded-full flex items-center justify-center">
+                                                <div className="w-5 h-5 bg-card rounded-full flex items-center justify-center">
                                                     <Check className="w-3 h-3 text-black stroke-[4px]" />
                                                 </div>
                                             </motion.div>
@@ -277,7 +277,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                         <div className="space-y-10 max-w-md">
                             <div className="relative w-72 h-72 mx-auto">
                                 <div className="absolute inset-0 bg-red-500/20 blur-[100px] rounded-full animate-pulse" />
-                                <div className="relative w-full h-full bg-white/5 border border-white/10 rounded-[3rem] flex flex-col items-center justify-center p-8">
+                                <div className="relative w-full h-full bg-white/5 border border-card-border rounded-[3rem] flex flex-col items-center justify-center p-8">
                                     <ShieldCheck className="w-20 h-20 text-red-500 mb-6" />
                                     <h3 className="text-xl font-black uppercase italic text-center">GÜVENLİK <br/>AKTİF</h3>
                                 </div>
@@ -301,12 +301,12 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                                         onClick={() => setPetData({...petData, plan: plan.id})}
                                         className={cn(
                                             "relative p-8 rounded-[3rem] border transition-all text-left flex flex-col justify-between group",
-                                            petData.plan === plan.id ? "border-white/40 ring-4 ring-white/5" : "border-white/10 opacity-60",
+                                            petData.plan === plan.id ? "border-white/40 ring-4 ring-white/5" : "border-card-border opacity-60",
                                             plan.color
                                         )}
                                     >
                                         {plan.popular && (
-                                            <div className="absolute -top-4 right-8 px-4 py-1.5 bg-white text-black text-[9px] font-black rounded-full uppercase tracking-widest shadow-xl">
+                                            <div className="absolute -top-4 right-8 px-4 py-1.5 bg-card text-black text-[9px] font-black rounded-full uppercase tracking-widest shadow-xl">
                                                 En Çok Tercih Edilen
                                             </div>
                                         )}
@@ -321,7 +321,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                                                     </div>
                                                 </div>
                                                 {petData.plan === plan.id && (
-                                                    <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                                                    <div className="w-8 h-8 bg-card rounded-full flex items-center justify-center">
                                                         <Check className="w-5 h-5 text-black stroke-[4px]" />
                                                     </div>
                                                 )}
@@ -337,7 +337,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                                             </div>
                                         </div>
 
-                                        <div className="mt-12 w-full py-4 rounded-2xl bg-white/10 border border-white/10 text-center text-[10px] font-black uppercase tracking-widest group-hover:bg-white/20 transition-all">
+                                        <div className="mt-12 w-full py-4 rounded-2xl bg-white/10 border border-card-border text-center text-[10px] font-black uppercase tracking-widest group-hover:bg-white/20 transition-all">
                                             {plan.button}
                                         </div>
                                     </button>
@@ -362,7 +362,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                     disabled={currentStep === 1 && !petData.name}
                     className={cn(
                         "w-full max-w-md h-20 rounded-3xl font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center gap-4 transition-all active:scale-95",
-                        isLastStep ? "bg-cyan-400 text-black shadow-lg shadow-cyan-400/20" : "bg-white text-black",
+                        isLastStep ? "bg-cyan-400 text-black shadow-lg shadow-cyan-400/20" : "bg-card text-black",
                         (currentStep === 1 && !petData.name) ? "opacity-50 cursor-not-allowed" : "opacity-100"
                     )}
                 >

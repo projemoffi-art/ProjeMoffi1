@@ -111,10 +111,10 @@ export function MedicationModal({ isOpen, onClose, petId }: MedicationModalProps
                         animate={{ y: 0 }} 
                         exit={{ y: "100%" }}
                         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                        className="w-full max-w-xl bg-[#0D0D12] sm:rounded-[3rem] rounded-t-[3rem] border border-white/5 shadow-2xl overflow-hidden relative flex flex-col max-h-[90vh]"
+                        className="w-full max-w-xl bg-[#0D0D12] sm:rounded-[3rem] rounded-t-[3rem] border border-card-border shadow-2xl overflow-hidden relative flex flex-col max-h-[90vh]"
                     >
                         {/* HEADER */}
-                        <div className="p-8 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-white/[0.02] to-transparent">
+                        <div className="p-8 border-b border-card-border flex justify-between items-center bg-gradient-to-r from-white/[0.02] to-transparent">
                             <div className="flex items-center gap-4">
                                 <div className="w-12 h-12 rounded-2xl bg-[#5B4D9D]/20 flex items-center justify-center border border-[#5B4D9D]/30 shadow-lg shadow-[#5B4D9D]/10">
                                     <Pill className="w-6 h-6 text-[#8E7EF4]" />
@@ -124,7 +124,7 @@ export function MedicationModal({ isOpen, onClose, petId }: MedicationModalProps
                                     <p className="text-[10px] text-white/30 font-bold uppercase tracking-[0.2em]">Günlük Hatırlatıcılar</p>
                                 </div>
                             </div>
-                            <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all border border-white/10">
+                            <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all border border-card-border">
                                 <X className="w-5 h-5 text-white/40" />
                             </button>
                         </div>
@@ -147,7 +147,7 @@ export function MedicationModal({ isOpen, onClose, petId }: MedicationModalProps
                                 <div className="py-20 text-center opacity-20 font-black text-white uppercase italic tracking-widest">Yükleniyor...</div>
                             ) : medications.length === 0 && !showAddForm ? (
                                 <div className="py-16 text-center flex flex-col items-center gap-6 opacity-30">
-                                    <div className="w-20 h-20 rounded-full border-2 border-dashed border-white/20 flex items-center justify-center">
+                                    <div className="w-20 h-20 rounded-full border-2 border-dashed border-card-border flex items-center justify-center">
                                         <Clock className="w-8 h-8" />
                                     </div>
                                     <p className="text-xs font-black uppercase tracking-widest leading-loose max-w-[200px]">Henüz bir ilaç hatırlatıcısı eklemediniz</p>
@@ -170,7 +170,7 @@ export function MedicationModal({ isOpen, onClose, petId }: MedicationModalProps
                                                     "p-6 rounded-[2.2rem] border transition-all flex items-center justify-between group",
                                                     taken 
                                                         ? "bg-emerald-500/[0.03] border-emerald-500/20" 
-                                                        : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                                                        : "bg-white/[0.02] border-card-border hover:border-card-border"
                                                 )}
                                             >
                                                 <div className="flex items-center gap-5">
@@ -178,7 +178,7 @@ export function MedicationModal({ isOpen, onClose, petId }: MedicationModalProps
                                                         "w-14 h-14 rounded-2xl flex items-center justify-center border transition-all",
                                                         taken 
                                                             ? "bg-emerald-500/10 border-emerald-500/20" 
-                                                            : "bg-white/5 border-white/10 shadow-inner"
+                                                            : "bg-white/5 border-card-border shadow-inner"
                                                     )}>
                                                         {taken ? <CheckCircle2 className="w-7 h-7 text-emerald-400" /> : <Pill className="w-7 h-7 text-white/20" />}
                                                     </div>
@@ -201,7 +201,7 @@ export function MedicationModal({ isOpen, onClose, petId }: MedicationModalProps
                                                     ) : (
                                                         <button 
                                                             onClick={() => handleLogDose(med.id)}
-                                                            className="h-12 px-6 rounded-2xl bg-white text-black text-[10px] font-black uppercase tracking-widest hover:bg-[#8E7EF4] hover:text-white transition-all shadow-xl active:scale-95"
+                                                            className="h-12 px-6 rounded-2xl bg-card text-black text-[10px] font-black uppercase tracking-widest hover:bg-[#8E7EF4] hover:text-white transition-all shadow-xl active:scale-95"
                                                         >
                                                             ALINDI İŞARETLE
                                                         </button>
@@ -216,7 +216,7 @@ export function MedicationModal({ isOpen, onClose, petId }: MedicationModalProps
                                             initial={{ opacity: 0, scale: 0.95 }}
                                             animate={{ opacity: 1, scale: 1 }}
                                             onSubmit={handleAddMed}
-                                            className="bg-white/[0.03] border border-white/10 p-8 rounded-[2.5rem] space-y-6 shadow-2xl relative overflow-hidden"
+                                            className="bg-white/[0.03] border border-card-border p-8 rounded-[2.5rem] space-y-6 shadow-2xl relative overflow-hidden"
                                         >
                                             <div className="absolute top-0 right-0 p-4">
                                                 <button type="button" onClick={() => setShowAddForm(false)} className="text-white/20 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
@@ -229,7 +229,7 @@ export function MedicationModal({ isOpen, onClose, petId }: MedicationModalProps
                                                     <input 
                                                         required
                                                         placeholder="Örn: VetLife Vitamin"
-                                                        className="w-full bg-black/40 border border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-white outline-none focus:border-[#8E7EF4]/50 transition-all"
+                                                        className="w-full bg-black/40 border border-card-border rounded-2xl px-5 py-4 text-sm font-bold text-white outline-none focus:border-[#8E7EF4]/50 transition-all"
                                                         value={newMed.name}
                                                         onChange={e => setNewMed({...newMed, name: e.target.value})}
                                                     />
@@ -239,7 +239,7 @@ export function MedicationModal({ isOpen, onClose, petId }: MedicationModalProps
                                                         <label className="text-[9px] font-black text-white/30 uppercase tracking-widest ml-1">Dozaj</label>
                                                         <input 
                                                             placeholder="Örn: 5ml / 1 Tablet"
-                                                            className="w-full bg-black/40 border border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-white outline-none focus:border-[#8E7EF4]/50 transition-all"
+                                                            className="w-full bg-black/40 border border-card-border rounded-2xl px-5 py-4 text-sm font-bold text-white outline-none focus:border-[#8E7EF4]/50 transition-all"
                                                             value={newMed.dosage}
                                                             onChange={e => setNewMed({...newMed, dosage: e.target.value})}
                                                         />
@@ -247,7 +247,7 @@ export function MedicationModal({ isOpen, onClose, petId }: MedicationModalProps
                                                     <div className="space-y-2">
                                                         <label className="text-[9px] font-black text-white/30 uppercase tracking-widest ml-1">Frekans</label>
                                                         <select 
-                                                            className="w-full bg-black/40 border border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-white outline-none focus:border-[#8E7EF4]/50 transition-all appearance-none"
+                                                            className="w-full bg-black/40 border border-card-border rounded-2xl px-5 py-4 text-sm font-bold text-white outline-none focus:border-[#8E7EF4]/50 transition-all appearance-none"
                                                             value={newMed.frequency}
                                                             onChange={e => setNewMed({...newMed, frequency: e.target.value})}
                                                         >
@@ -262,7 +262,7 @@ export function MedicationModal({ isOpen, onClose, petId }: MedicationModalProps
                                                     <label className="text-[9px] font-black text-white/30 uppercase tracking-widest ml-1">Özel Talimatlar</label>
                                                     <textarea 
                                                         placeholder="Örn: Tok karnına veriniz..."
-                                                        className="w-full bg-black/40 border border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-white outline-none focus:border-[#8E7EF4]/50 transition-all resize-none h-24"
+                                                        className="w-full bg-black/40 border border-card-border rounded-2xl px-5 py-4 text-sm font-bold text-white outline-none focus:border-[#8E7EF4]/50 transition-all resize-none h-24"
                                                         value={newMed.instructions}
                                                         onChange={e => setNewMed({...newMed, instructions: e.target.value})}
                                                     />
@@ -281,7 +281,7 @@ export function MedicationModal({ isOpen, onClose, petId }: MedicationModalProps
                                     {!showAddForm && medications.length > 0 && (
                                         <button 
                                             onClick={() => setShowAddForm(true)}
-                                            className="w-full py-6 border border-dashed border-white/10 rounded-[2.2rem] flex items-center justify-center gap-2 hover:bg-white/5 transition-all group"
+                                            className="w-full py-6 border border-dashed border-card-border rounded-[2.2rem] flex items-center justify-center gap-2 hover:bg-white/5 transition-all group"
                                         >
                                             <Plus className="w-5 h-5 text-white/20 group-hover:text-[#8E7EF4] transition-colors" />
                                             <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">YENİ İLAÇ EKLE</span>
@@ -292,7 +292,7 @@ export function MedicationModal({ isOpen, onClose, petId }: MedicationModalProps
                         </div>
 
                         {/* FOOTER INFO */}
-                        <div className="p-8 bg-black/40 border-t border-white/5">
+                        <div className="p-8 bg-black/40 border-t border-card-border">
                             <div className="bg-[#5B4D9D]/10 border border-[#5B4D9D]/20 p-5 rounded-[1.8rem] flex items-start gap-4 shadow-inner">
                                 <ShieldCheck className="w-6 h-6 text-[#8E7EF4] shrink-0 mt-0.5" />
                                 <div>

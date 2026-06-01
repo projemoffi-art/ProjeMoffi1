@@ -64,7 +64,7 @@ export function StoryViewer({
                                         duration: idx === storyIndex ? 5 : 0, 
                                         ease: "linear" 
                                     }}
-                                    className="h-full bg-white"
+                                    className="h-full bg-card"
                                 />
                             </div>
                         ))}

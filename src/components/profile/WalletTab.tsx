@@ -96,7 +96,7 @@ export function WalletTab() {
                                 }}
                                 whileTap={{ scale: 0.98 }}
                                 className={cn(
-                                    "absolute inset-x-0 h-56 sm:h-64 rounded-[2.5rem] sm:rounded-[3.5rem] p-6 sm:p-10 cursor-pointer shadow-[0_30px_60px_-15px_rgba(0,0,0,0.7)] overflow-hidden border-t border-white/20 bg-gradient-to-br",
+                                    "absolute inset-x-0 h-56 sm:h-64 rounded-[2.5rem] sm:rounded-[3.5rem] p-6 sm:p-10 cursor-pointer shadow-[0_30px_60px_-15px_rgba(0,0,0,0.7)] overflow-hidden border-t border-card-border bg-gradient-to-br",
                                     card.color
                                 )}
                                 style={{ transformStyle: "preserve-3d" }}
@@ -125,7 +125,7 @@ export function WalletTab() {
                                             </div>
                                             <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tighter uppercase italic leading-none drop-shadow-lg">{card.title}</h3>
                                         </div>
-                                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/10 backdrop-blur-3xl rounded-2xl sm:rounded-[1.8rem] flex items-center justify-center border border-white/20 shadow-2xl relative group-hover:scale-110 transition-transform">
+                                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/10 backdrop-blur-3xl rounded-2xl sm:rounded-[1.8rem] flex items-center justify-center border border-card-border shadow-2xl relative group-hover:scale-110 transition-transform">
                                             <div className="absolute inset-0 bg-white/5 rounded-2xl sm:rounded-[1.8rem] animate-pulse" />
                                             {React.cloneElement(card.icon as React.ReactElement, { className: "w-6 h-6 sm:w-8 sm:h-8" })}
                                         </div>
@@ -152,9 +152,9 @@ export function WalletTab() {
                                 
                                 {/* NFC Indicator */}
                                 <div className="absolute top-1/2 right-10 translate-y-[-50%] flex flex-col gap-1 opacity-20">
-                                     <div className="w-6 h-0.5 bg-white rounded-full rotate-[15deg]" />
-                                     <div className="w-4 h-0.5 bg-white rounded-full rotate-[15deg]" />
-                                     <div className="w-2 h-0.5 bg-white rounded-full rotate-[15deg]" />
+                                     <div className="w-6 h-0.5 bg-card rounded-full rotate-[15deg]" />
+                                     <div className="w-4 h-0.5 bg-card rounded-full rotate-[15deg]" />
+                                     <div className="w-2 h-0.5 bg-card rounded-full rotate-[15deg]" />
                                 </div>
                             </motion.div>
                         );
@@ -171,14 +171,14 @@ export function WalletTab() {
                         exit={{ opacity: 0, y: 20 }}
                         className="flex gap-4 px-2"
                     >
-                        <button className="flex-1 bg-white/[0.03] border border-white/5 rounded-[2.5rem] py-8 flex flex-col items-center gap-3 group active:scale-95 transition-all relative overflow-hidden">
+                        <button className="flex-1 bg-white/[0.03] border border-card-border rounded-[2.5rem] py-8 flex flex-col items-center gap-3 group active:scale-95 transition-all relative overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-t from-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                             <div className="w-14 h-14 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-400 group-hover:scale-110 transition-transform shadow-lg border border-orange-500/20">
                                 <Plus className="w-7 h-7" />
                             </div>
                             <span className="text-[11px] font-black text-white uppercase tracking-widest italic text-center">Yükleme Yap</span>
                         </button>
-                        <button className="flex-1 bg-white/[0.03] border border-white/5 rounded-[2.5rem] py-8 flex flex-col items-center gap-3 group active:scale-95 transition-all relative overflow-hidden">
+                        <button className="flex-1 bg-white/[0.03] border border-card-border rounded-[2.5rem] py-8 flex flex-col items-center gap-3 group active:scale-95 transition-all relative overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-t from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                             <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 group-hover:scale-110 transition-transform shadow-lg border border-cyan-500/20">
                                 <ArrowUpRight className="w-7 h-7" />
@@ -196,17 +196,17 @@ export function WalletTab() {
                         <div className="w-2 h-8 bg-orange-500 rounded-full" />
                         <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase">Son İşlemler</h3>
                     </div>
-                    <div className="px-5 py-2 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-xl">
+                    <div className="px-5 py-2 bg-white/5 rounded-2xl border border-card-border backdrop-blur-xl">
                          <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">Nisan 2024</span>
                     </div>
                 </div>
 
                 <div className="space-y-4 px-1 sm:px-2">
                     {transactions.map(tx => (
-                        <div key={tx.id} className="bg-white/[0.02] border border-white/5 p-4 sm:p-7 rounded-[2rem] sm:rounded-[3rem] flex items-center justify-between group hover:bg-white/5 transition-all cursor-pointer relative overflow-hidden">
+                        <div key={tx.id} className="bg-white/[0.02] border border-card-border p-4 sm:p-7 rounded-[2rem] sm:rounded-[3rem] flex items-center justify-between group hover:bg-white/5 transition-all cursor-pointer relative overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                             <div className="flex items-center gap-4 sm:gap-6 relative z-10">
-                                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-black/40 rounded-xl sm:rounded-2xl flex items-center justify-center transition-transform group-hover:rotate-12 shadow-2xl border border-white/5">
+                                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-black/40 rounded-xl sm:rounded-2xl flex items-center justify-center transition-transform group-hover:rotate-12 shadow-2xl border border-card-border">
                                     <div className="text-white/80 scale-75 sm:scale-100">{tx.icon}</div>
                                 </div>
                                 <div className="text-left">

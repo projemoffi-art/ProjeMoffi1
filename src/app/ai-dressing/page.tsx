@@ -44,7 +44,7 @@ function ResultOverlay({ resultImage, originalImage, onClose, onShare }: { resul
     return (
         <div className="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center gap-4">
             <img src={resultImage || originalImage} className="w-64 h-64 object-cover rounded-3xl" />
-            <button onClick={onClose} className="px-6 py-2 bg-white text-black rounded-full font-bold text-sm">Kapat</button>
+            <button onClick={onClose} className="px-6 py-2 bg-card text-black rounded-full font-bold text-sm">Kapat</button>
         </div>
     );
 }
@@ -89,7 +89,7 @@ function LoadingMiniGame({ onComplete }: MiniGameProps) {
                 <p className="text-white/60 text-xs mt-2 uppercase tracking-[0.2em]">Stil Hesaplanıyor...</p>
             </div>
 
-            <div className="absolute top-24 bg-white/10 border border-white/20 rounded-full px-4 py-1 flex items-center gap-2">
+            <div className="absolute top-24 bg-white/10 border border-card-border rounded-full px-4 py-1 flex items-center gap-2">
                 <Zap className="w-4 h-4 text-yellow-400 fill-current" />
                 <span className="text-white font-bold font-mono text-lg">{score * 150}</span>
             </div>
@@ -107,7 +107,7 @@ function LoadingMiniGame({ onComplete }: MiniGameProps) {
                 ))}
             </div>
 
-            <div className="absolute bottom-10 w-64 h-2 bg-gray-800 rounded-full overflow-hidden border border-white/10">
+            <div className="absolute bottom-10 w-64 h-2 bg-gray-800 rounded-full overflow-hidden border border-card-border">
                 <div className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 animate-[width_5s_linear_forwards]" style={{ width: '0%' }} />
             </div>
             <div className="absolute bottom-14 text-xs text-white/40 font-mono">
@@ -222,20 +222,20 @@ export default function AIDressingPage() {
             <header className="absolute top-0 w-full z-40 px-6 py-6 flex items-center justify-between pointer-events-none">
                 <button
                     onClick={() => router.back()}
-                    className="w-10 h-10 bg-white/40 dark:bg-black/40 backdrop-blur-xl rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition border border-white/20 dark:border-white/10 shadow-lg text-gray-700 dark:text-gray-200 pointer-events-auto"
+                    className="w-10 h-10 bg-white/40 dark:bg-black/40 backdrop-blur-xl rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition border border-card-border dark:border-card-border shadow-lg text-foreground dark:text-gray-200 pointer-events-auto"
                 >
                     <ArrowLeft className="w-5 h-5" />
                 </button>
 
                 <div className="flex flex-col items-center pointer-events-auto">
                     <span className="text-[10px] uppercase font-bold text-gray-400 tracking-widest bg-white/80 dark:bg-black/60 px-2 py-0.5 rounded-full backdrop-blur">Stage</span>
-                    <h1 className="text-sm font-black text-gray-800 dark:text-white mt-0.5">Zeytin</h1>
+                    <h1 className="text-sm font-black text-foreground dark:text-white mt-0.5">Zeytin</h1>
                 </div>
 
                 <div className="flex gap-2 pointer-events-auto">
                     <button
                         onClick={() => { setSelectedImage(null); setGeneratedResult(null); setSelectedOutfit(null); }}
-                        className="w-10 h-10 bg-white/40 dark:bg-black/40 backdrop-blur-xl rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition border border-white/20 dark:border-white/10 shadow-lg text-gray-700 dark:text-gray-200"
+                        className="w-10 h-10 bg-white/40 dark:bg-black/40 backdrop-blur-xl rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition border border-card-border dark:border-card-border shadow-lg text-foreground dark:text-gray-200"
                     >
                         <RotateCcw className="w-4 h-4" />
                     </button>
@@ -280,7 +280,7 @@ export default function AIDressingPage() {
                             {/* Demo Mode Badge */}
                             {generatedResult && (
                                 <div className="absolute top-6 right-6 z-30 animate-in fade-in duration-700">
-                                    <div className="bg-black/50 backdrop-blur text-white text-[10px] font-bold px-3 py-1 rounded-full border border-white/20 flex items-center gap-1.5">
+                                    <div className="bg-black/50 backdrop-blur text-white text-[10px] font-bold px-3 py-1 rounded-full border border-card-border flex items-center gap-1.5">
                                         <Wand2 className="w-3 h-3 text-yellow-400" /> AI Generated
                                     </div>
                                 </div>
@@ -294,7 +294,7 @@ export default function AIDressingPage() {
                                 <div className="absolute inset-0 bg-black/80 backdrop-blur-md z-50 flex flex-col items-center justify-center text-center p-8 animate-in zoom-in-95 text-white">
                                     <h3 className="font-bold text-lg mb-2">Ops!</h3>
                                     <p className="opacity-60 text-sm mb-6">{error}</p>
-                                    <button onClick={() => setError(null)} className="px-6 py-2 bg-white text-black rounded-xl font-bold text-xs">Tekrar Dene</button>
+                                    <button onClick={() => setError(null)} className="px-6 py-2 bg-card text-black rounded-xl font-bold text-xs">Tekrar Dene</button>
                                 </div>
                             )}
 
@@ -331,7 +331,7 @@ export default function AIDressingPage() {
                                     "w-10 h-10 rounded-full backdrop-blur-md border flex items-center justify-center transition-all shadow-lg active:scale-95",
                                     tool.active
                                         ? "bg-indigo-600 border-indigo-500 text-white"
-                                        : "bg-white/80 dark:bg-black/40 border-white/40 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-black hover:text-indigo-600"
+                                        : "bg-white/80 dark:bg-black/40 border-white/40 dark:border-card-border text-gray-600 dark:text-gray-300 hover:bg-card dark:hover:bg-black hover:text-indigo-600"
                                 )}
                             >
                                 <tool.icon className="w-4 h-4" />
@@ -349,11 +349,11 @@ export default function AIDressingPage() {
                 <div className="bg-[#F8F9FB] dark:bg-[#050505] pb-6 pt-2">
                     {/* Header Controls */}
                     <div className="flex justify-between items-center px-8 mb-2">
-                        <h2 className="text-xl font-black text-gray-800 dark:text-gray-200">Stil Seçimi</h2>
+                        <h2 className="text-xl font-black text-foreground dark:text-gray-200">Stil Seçimi</h2>
                         {selectedOutfit && !isGenerating && !generatedResult && (
                             <button
                                 onClick={handleGenerate}
-                                className="bg-black dark:bg-white text-white dark:text-black px-6 py-2 rounded-full font-bold text-xs flex items-center gap-2 shadow-lg hover:scale-105 transition-transform"
+                                className="bg-black dark:bg-card text-white dark:text-black px-6 py-2 rounded-full font-bold text-xs flex items-center gap-2 shadow-lg hover:scale-105 transition-transform"
                             >
                                 <Sparkles className="w-3 h-3" /> AI ile Dene
                             </button>

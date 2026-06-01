@@ -65,7 +65,7 @@ export function ClinicDetailDrawer({ clinicId, onClose, onBookAppointment }: Cli
                         animate={{ x: 0 }}
                         exit={{ x: "100%" }}
                         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                        className="fixed top-0 right-0 z-[120] w-full sm:w-[480px] h-full bg-[#111111] shadow-[-20px_0_50px_rgba(0,0,0,0.5)] border-l border-white/10 flex flex-col"
+                        className="fixed top-0 right-0 z-[120] w-full sm:w-[480px] h-full bg-[#111111] shadow-[-20px_0_50px_rgba(0,0,0,0.5)] border-l border-card-border flex flex-col"
                     >
                         {loading ? (
                             <div className="flex-1 flex flex-col items-center justify-center gap-4">
@@ -81,7 +81,7 @@ export function ClinicDetailDrawer({ clinicId, onClose, onBookAppointment }: Cli
                                     
                                     <button 
                                         onClick={onClose}
-                                        className="absolute top-6 left-6 w-10 h-10 bg-black/40 backdrop-blur-md rounded-full border border-white/20 flex items-center justify-center text-white hover:bg-white/10 transition-all active:scale-90"
+                                        className="absolute top-6 left-6 w-10 h-10 bg-black/40 backdrop-blur-md rounded-full border border-card-border flex items-center justify-center text-white hover:bg-white/10 transition-all active:scale-90"
                                     >
                                         <X className="w-5 h-5" />
                                     </button>
@@ -96,7 +96,7 @@ export function ClinicDetailDrawer({ clinicId, onClose, onBookAppointment }: Cli
                                         </div>
                                         <h2 className="text-3xl font-black text-white tracking-tighter uppercase italic leading-none truncate">{clinic.name}</h2>
                                         <div className="flex items-center gap-3 mt-3">
-                                            <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
+                                            <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-xl border border-card-border">
                                                 <Star className="w-4 h-4 text-yellow-500 fill-current" />
                                                 <span className="text-xs font-black text-white">{clinic.rating}</span>
                                                 <span className="text-[10px] text-white/40 font-bold">({clinic.reviewCount})</span>
@@ -107,7 +107,7 @@ export function ClinicDetailDrawer({ clinicId, onClose, onBookAppointment }: Cli
                                 </div>
 
                                 {/* QUICK ACTIONS */}
-                                <div className="grid grid-cols-3 gap-3 p-6 shrink-0 bg-white/5 border-b border-white/5">
+                                <div className="grid grid-cols-3 gap-3 p-6 shrink-0 bg-white/5 border-b border-card-border">
                                     <button 
                                         onClick={() => window.location.href = `tel:${clinic.phone || '02161234567'}`}
                                         className="flex flex-col items-center justify-center gap-2 py-4 bg-[#5B4D9D] rounded-2xl shadow-lg shadow-[#5B4D9D]/20 active:scale-95 transition-all group"
@@ -117,14 +117,14 @@ export function ClinicDetailDrawer({ clinicId, onClose, onBookAppointment }: Cli
                                     </button>
                                     <button 
                                         onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(clinic.name + " " + clinic.address)}`, '_blank')}
-                                        className="flex flex-col items-center justify-center gap-2 py-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all active:scale-95"
+                                        className="flex flex-col items-center justify-center gap-2 py-4 bg-white/5 border border-card-border rounded-2xl hover:bg-white/10 transition-all active:scale-95"
                                     >
                                         <Navigation className="w-5 h-5 text-emerald-400" />
                                         <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">Yol Tarifi</span>
                                     </button>
                                     <button 
                                         onClick={() => { if (clinicId) openChat(clinicId); }}
-                                        className="flex flex-col items-center justify-center gap-2 py-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all active:scale-95"
+                                        className="flex flex-col items-center justify-center gap-2 py-4 bg-white/5 border border-card-border rounded-2xl hover:bg-white/10 transition-all active:scale-95"
                                     >
                                         <MessageSquare className="w-5 h-5 text-blue-400" />
                                         <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">Mesaj At</span>
@@ -132,7 +132,7 @@ export function ClinicDetailDrawer({ clinicId, onClose, onBookAppointment }: Cli
                                 </div>
 
                                 {/* TABS NAVIGATION */}
-                                <div className="flex px-6 border-b border-white/5 bg-[#111111] sticky top-0 z-20">
+                                <div className="flex px-6 border-b border-card-border bg-[#111111] sticky top-0 z-20">
                                     {[
                                         { id: 'info', label: 'Genel', icon: Info },
                                         { id: 'doctors', label: 'Hekimler', icon: Users },
@@ -160,7 +160,7 @@ export function ClinicDetailDrawer({ clinicId, onClose, onBookAppointment }: Cli
                                     {activeTab === 'info' && (
                                         <div className="p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                             <div className="space-y-4">
-                                                <div className="flex items-start gap-4 p-5 bg-white/[0.02] border border-white/5 rounded-3xl">
+                                                <div className="flex items-start gap-4 p-5 bg-white/[0.02] border border-card-border rounded-3xl">
                                                     <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20 shrink-0">
                                                         <MapPin className="w-6 h-6 text-orange-500" />
                                                     </div>
@@ -169,7 +169,7 @@ export function ClinicDetailDrawer({ clinicId, onClose, onBookAppointment }: Cli
                                                         <p className="text-sm font-bold text-white/90 leading-snug">{clinic.address}</p>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-start gap-4 p-5 bg-white/[0.02] border border-white/5 rounded-3xl">
+                                                <div className="flex items-start gap-4 p-5 bg-white/[0.02] border border-card-border rounded-3xl">
                                                     <div className="w-12 h-12 rounded-2xl bg-[#5B4D9D]/10 flex items-center justify-center border border-[#5B4D9D]/20 shrink-0">
                                                         <Clock className="w-6 h-6 text-[#5B4D9D]" />
                                                     </div>
@@ -192,7 +192,7 @@ export function ClinicDetailDrawer({ clinicId, onClose, onBookAppointment }: Cli
                                                 <h3 className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] px-1">Sunulan Hizmetler</h3>
                                                 <div className="grid grid-cols-2 gap-3">
                                                     {clinic.features?.map((feature: string) => (
-                                                        <div key={feature} className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/5 group hover:bg-white/10 transition-all cursor-default">
+                                                        <div key={feature} className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-card-border group hover:bg-white/10 transition-all cursor-default">
                                                             <ShieldCheck className="w-4 h-4 text-emerald-400" />
                                                             <span className="text-xs font-black text-white/80 uppercase tracking-tight">{feature}</span>
                                                         </div>
@@ -205,11 +205,11 @@ export function ClinicDetailDrawer({ clinicId, onClose, onBookAppointment }: Cli
                                     {activeTab === 'doctors' && (
                                         <div className="p-8 space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                                             {clinic.doctors?.map((doctor: any) => (
-                                                <div key={doctor.id} className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 group hover:bg-white/[0.08] transition-all relative overflow-hidden text-left">
+                                                <div key={doctor.id} className="bg-white/5 border border-card-border rounded-[2.5rem] p-6 group hover:bg-white/[0.08] transition-all relative overflow-hidden text-left">
                                                     <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-[#5B4D9D]/10 blur-3xl rounded-full pointer-events-none" />
                                                     
                                                     <div className="flex items-start gap-5 relative z-10">
-                                                        <div className="w-24 h-24 rounded-3xl overflow-hidden border-2 border-white/5 group-hover:border-[#5B4D9D]/30 transition-all shrink-0">
+                                                        <div className="w-24 h-24 rounded-3xl overflow-hidden border-2 border-card-border group-hover:border-[#5B4D9D]/30 transition-all shrink-0">
                                                             <img src={doctor.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                                                         </div>
                                                         <div className="flex-1">
@@ -224,7 +224,7 @@ export function ClinicDetailDrawer({ clinicId, onClose, onBookAppointment }: Cli
                                                         </div>
                                                     </div>
 
-                                                    <div className="mt-5 p-4 bg-black/40 rounded-2xl border border-white/5 relative z-10">
+                                                    <div className="mt-5 p-4 bg-black/40 rounded-2xl border border-card-border relative z-10">
                                                         <p className="text-[11px] text-white/60 font-medium leading-relaxed italic">
                                                             {doctor.bio}
                                                         </p>
@@ -243,10 +243,10 @@ export function ClinicDetailDrawer({ clinicId, onClose, onBookAppointment }: Cli
                                     {activeTab === 'reviews' && (
                                         <div className="p-8 space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                                             {clinic.reviews?.map((review: any) => (
-                                                <div key={review.id} className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-6 text-left">
+                                                <div key={review.id} className="bg-white/[0.02] border border-card-border rounded-[2rem] p-6 text-left">
                                                     <div className="flex justify-between items-start mb-4">
                                                         <div className="flex items-center gap-3">
-                                                            <img src={review.userAvatar} className="w-10 h-10 rounded-full border border-white/10" />
+                                                            <img src={review.userAvatar} className="w-10 h-10 rounded-full border border-card-border" />
                                                             <div>
                                                                 <p className="text-xs font-black text-white uppercase italic">{review.userName}</p>
                                                                 <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">{new Date(review.createdAt).toLocaleDateString()}</p>
@@ -261,7 +261,7 @@ export function ClinicDetailDrawer({ clinicId, onClose, onBookAppointment }: Cli
                                                     <p className="text-xs text-white/70 leading-relaxed font-bold italic">"{review.comment}"</p>
                                                 </div>
                                             ))}
-                                            <button className="w-full py-4 border border-dashed border-white/10 rounded-2xl text-[10px] font-black text-white/20 uppercase tracking-widest hover:border-[#5B4D9D]/40 hover:text-[#5B4D9D] transition-all">
+                                            <button className="w-full py-4 border border-dashed border-card-border rounded-2xl text-[10px] font-black text-white/20 uppercase tracking-widest hover:border-[#5B4D9D]/40 hover:text-[#5B4D9D] transition-all">
                                                 TÜM YORUMLARI GÖR
                                             </button>
                                         </div>
@@ -269,10 +269,10 @@ export function ClinicDetailDrawer({ clinicId, onClose, onBookAppointment }: Cli
                                 </div>
 
                                 {/* STICKY FOOTER ACTION */}
-                                <div className="p-8 bg-[#111111]/80 backdrop-blur-3xl border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+                                <div className="p-8 bg-[#111111]/80 backdrop-blur-3xl border-t border-card-border shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
                                     <button 
                                         onClick={() => onBookAppointment(clinic)}
-                                        className="w-full bg-white text-black py-5 rounded-[2rem] font-black text-sm uppercase tracking-[0.2em] shadow-[0_20px_40px_rgba(255,255,255,0.1)] hover:bg-[#5B4D9D] hover:text-white transition-all active:scale-95 flex items-center justify-center gap-3 group"
+                                        className="w-full bg-card text-black py-5 rounded-[2rem] font-black text-sm uppercase tracking-[0.2em] shadow-[0_20px_40px_rgba(255,255,255,0.1)] hover:bg-[#5B4D9D] hover:text-white transition-all active:scale-95 flex items-center justify-center gap-3 group"
                                     >
                                         <Calendar className="w-5 h-5" />
                                         RANDEVU TALEP ET

@@ -328,7 +328,7 @@ export function QuestRewardEngine() {
                         {activePet?.avatar && (
                             <img
                                 src={activePet.avatar}
-                                className="w-7 h-7 rounded-full object-cover border border-white/20"
+                                className="w-7 h-7 rounded-full object-cover border border-card-border"
                                 alt="pet"
                             />
                         )}
@@ -484,11 +484,11 @@ export function QuestRewardEngine() {
                             <p className="text-lg font-black text-purple-300 mb-6">{levelUpData.newTitle}</p>
 
                             <div className="flex items-center justify-center gap-4 mb-6">
-                                <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-2">
+                                <div className="bg-white/5 border border-card-border rounded-2xl px-4 py-2">
                                     <div className="text-xl font-black text-orange-400">{totalPatiPuan.toLocaleString()}</div>
                                     <div className="text-[7px] text-white/30 uppercase tracking-widest">Total PP</div>
                                 </div>
-                                <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-2">
+                                <div className="bg-white/5 border border-card-border rounded-2xl px-4 py-2">
                                     <div className="text-xl font-black text-yellow-400">+{todayEarned.pp}</div>
                                     <div className="text-[7px] text-white/30 uppercase tracking-widest">Bugün</div>
                                 </div>
@@ -562,7 +562,7 @@ export function QuestRewardEngine() {
                                 <motion.div
                                     animate={{ opacity: [1, 0.3, 1] }}
                                     transition={{ duration: 1, repeat: Infinity }}
-                                    className="w-1.5 h-1.5 bg-white rounded-full"
+                                    className="w-1.5 h-1.5 bg-card rounded-full"
                                 />
                                 <span className="text-[9px] font-black text-white font-mono">{formatCountdown(countdown)}</span>
                                 <span className="text-[7px] text-white/60 uppercase tracking-widest">kaldı</span>

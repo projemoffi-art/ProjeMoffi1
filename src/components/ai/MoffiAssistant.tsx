@@ -145,9 +145,9 @@ export function MoffiAssistant() {
                         initial={{ opacity: 0, y: 40, scale: 0.9, filter: 'blur(10px)' }}
                         animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
                         exit={{ opacity: 0, y: 40, scale: 0.9, filter: 'blur(10px)' }}
-                        className="fixed bottom-6 right-6 z-[999999] w-[380px] h-[600px] max-h-[90vh] bg-background/80 backdrop-blur-3xl border border-white/10 rounded-[3rem] shadow-[0_20px_80px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden"
+                        className="fixed bottom-6 right-6 z-[999999] w-[380px] h-[600px] max-h-[90vh] bg-background/80 backdrop-blur-3xl border border-card-border rounded-[3rem] shadow-[0_20px_80px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden"
                     >
-                        <div className="p-6 bg-gradient-to-br from-white/[0.05] to-transparent border-b border-white/10 flex items-center justify-between">
+                        <div className="p-6 bg-gradient-to-br from-white/[0.05] to-transparent border-b border-card-border flex items-center justify-between">
                             <div className="flex items-center gap-4">
                                 <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg", isPro ? "bg-violet-600" : "bg-black")}>
                                     {isPro ? <Crown className="w-5 h-5 text-white" /> : <Bot className="w-5 h-5 text-white" />}
@@ -166,25 +166,25 @@ export function MoffiAssistant() {
                         <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar bg-card/10">
                             {messages.map((m) => (
                                 <div key={m.id} className={cn("flex gap-3", m.role === 'user' ? "flex-row-reverse" : "flex-row")}>
-                                    <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border border-white/5", m.role === 'user' ? "bg-accent text-white" : "bg-white/5 text-secondary")}>
+                                    <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border border-card-border", m.role === 'user' ? "bg-accent text-white" : "bg-white/5 text-secondary")}>
                                         {m.role === 'user' ? <UserIcon className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                                     </div>
-                                    <div className={cn("max-w-[80%] p-4 rounded-3xl text-[13px] font-medium leading-relaxed", m.role === 'user' ? "bg-foreground text-background font-bold" : "bg-white/5 text-foreground/90 border border-white/5")}>
+                                    <div className={cn("max-w-[80%] p-4 rounded-3xl text-[13px] font-medium leading-relaxed", m.role === 'user' ? "bg-foreground text-background font-bold" : "bg-white/5 text-foreground/90 border border-card-border")}>
                                         {m.content}
                                     </div>
                                 </div>
                             ))}
                             {isTyping && (
                                 <div className="flex gap-3">
-                                    <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center border border-white/5"><Bot className="w-4 h-4 text-secondary animate-bounce" /></div>
-                                    <div className="bg-white/5 p-4 rounded-3xl border border-white/5 flex gap-1"><div className="w-1 h-1 bg-white/40 rounded-full animate-bounce [animation-delay:-0.3s]" /><div className="w-1 h-1 bg-white/40 rounded-full animate-bounce [animation-delay:-0.15s]" /><div className="w-1 h-1 bg-white/40 rounded-full animate-bounce" /></div>
+                                    <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center border border-card-border"><Bot className="w-4 h-4 text-secondary animate-bounce" /></div>
+                                    <div className="bg-white/5 p-4 rounded-3xl border border-card-border flex gap-1"><div className="w-1 h-1 bg-white/40 rounded-full animate-bounce [animation-delay:-0.3s]" /><div className="w-1 h-1 bg-white/40 rounded-full animate-bounce [animation-delay:-0.15s]" /><div className="w-1 h-1 bg-white/40 rounded-full animate-bounce" /></div>
                                 </div>
                             )}
                         </div>
 
-                        <div className="p-6 bg-white/[0.02] border-t border-white/5">
+                        <div className="p-6 bg-white/[0.02] border-t border-card-border">
                             <form onSubmit={handleSend} className="relative flex items-center">
-                                <input value={input} onChange={e => setInput(e.target.value)} placeholder="Bir şeyler sor..." className="w-full bg-white/5 border border-white/10 hover:border-white/20 focus:border-accent/40 rounded-[2rem] pl-6 pr-14 py-4 text-[13px] text-foreground outline-none transition-all font-medium placeholder:text-secondary/30" />
+                                <input value={input} onChange={e => setInput(e.target.value)} placeholder="Bir şeyler sor..." className="w-full bg-white/5 border border-card-border hover:border-card-border focus:border-accent/40 rounded-[2rem] pl-6 pr-14 py-4 text-[13px] text-foreground outline-none transition-all font-medium placeholder:text-secondary/30" />
                                 <button type="submit" disabled={!input.trim() || isTyping} className="absolute right-2 w-11 h-11 rounded-full bg-foreground text-background flex items-center justify-center hover:scale-105 active:scale-95 transition-all"><Send className="w-5 h-5" /></button>
                             </form>
                         </div>

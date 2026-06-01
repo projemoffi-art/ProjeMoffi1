@@ -70,7 +70,7 @@ export function AddAdoptionModal({
                                 onClose();
                             }
                         }}
-                        className="relative w-full h-[90vh] bg-[#12121A] rounded-t-[2.5rem] flex flex-col overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.8)] border-t border-white/10"
+                        className="relative w-full h-[90vh] bg-[#12121A] rounded-t-[2.5rem] flex flex-col overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.8)] border-t border-card-border"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <button 
@@ -78,7 +78,7 @@ export function AddAdoptionModal({
                             className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/20 rounded-full z-50 hover:bg-white/40 transition-colors cursor-pointer"
                         />
 
-                        <div className="p-6 pt-12 pb-4 border-b border-white/5 shrink-0">
+                        <div className="p-6 pt-12 pb-4 border-b border-card-border shrink-0">
                             <h2 className="text-2xl font-black text-white flex items-center gap-2">
                                 <HeartHandshake className="w-6 h-6 text-cyan-400" /> Sahiplendirme İlanı Ver
                             </h2>
@@ -107,7 +107,7 @@ export function AddAdoptionModal({
                             {adoptionPetPhotos.length > 0 ? (
                                 <div className="grid grid-cols-4 gap-3 mb-2">
                                     {adoptionPetPhotos.map((photo, idx) => (
-                                        <div key={idx} className="aspect-square rounded-2xl bg-[#1C1C1E] border border-white/10 relative overflow-hidden group">
+                                        <div key={idx} className="aspect-square rounded-2xl bg-[#1C1C1E] border border-card-border relative overflow-hidden group">
                                             <img src={photo.preview} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
                                             <button
                                                 onClick={() => setAdoptionPetPhotos((prev: any[]) => prev.filter((_, i) => i !== idx))}
@@ -120,7 +120,7 @@ export function AddAdoptionModal({
                                     {adoptionPetPhotos.length < 4 && (
                                         <button
                                             onClick={() => adoptionPhotoRef.current?.click()}
-                                            className="aspect-square rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-gray-400 hover:border-cyan-400/50 hover:text-cyan-400 transition-all font-bold"
+                                            className="aspect-square rounded-2xl border-2 border-dashed border-card-border flex flex-col items-center justify-center text-gray-400 hover:border-cyan-400/50 hover:text-cyan-400 transition-all font-bold"
                                         >
                                             <Plus className="w-6 h-6" />
                                             <span className="text-[10px] mt-1">Ekle</span>
@@ -130,7 +130,7 @@ export function AddAdoptionModal({
                             ) : (
                                 <div
                                     onClick={() => adoptionPhotoRef.current?.click()}
-                                    className="w-full h-52 rounded-3xl bg-[#1C1C1E] border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-gray-400 hover:border-cyan-400/50 hover:bg-cyan-400/5 transition-colors cursor-pointer group mb-2 shadow-inner overflow-hidden"
+                                    className="w-full h-52 rounded-3xl bg-[#1C1C1E] border-2 border-dashed border-card-border flex flex-col items-center justify-center text-gray-400 hover:border-cyan-400/50 hover:bg-cyan-400/5 transition-colors cursor-pointer group mb-2 shadow-inner overflow-hidden"
                                 >
                                     <Camera className="w-8 h-8 mb-2 group-hover:text-cyan-400 group-hover:scale-110 transition-all" />
                                     <span className="text-sm font-bold">Net Fotoğraflar Yükle</span>
@@ -153,7 +153,7 @@ export function AddAdoptionModal({
                                                 onClick={() => setAdoptionPetType(type.id)}
                                                 className={cn(
                                                     "flex-1 py-3 rounded-2xl text-xs font-bold transition-all flex flex-col items-center gap-1 border",
-                                                    adoptionPetType === type.id ? "bg-cyan-500/20 border-cyan-400 text-cyan-400" : "bg-[#0A0A0E] border-white/5 text-gray-500"
+                                                    adoptionPetType === type.id ? "bg-cyan-500/20 border-cyan-400 text-cyan-400" : "bg-[#0A0A0E] border-card-border text-gray-500"
                                                 )}
                                             >
                                                 <span className="text-xl">{type.icon}</span>
@@ -169,14 +169,14 @@ export function AddAdoptionModal({
                                             placeholder="İsim (Örn: Pamuk)"
                                             value={adoptionPetName}
                                             onChange={(e) => setAdoptionPetName(e.target.value)}
-                                            className="w-1/2 bg-[#0A0A0E] border border-white/5 rounded-2xl px-4 py-3 text-white text-[15px] focus:outline-none focus:border-cyan-400 transition-colors"
+                                            className="w-1/2 bg-[#0A0A0E] border border-card-border rounded-2xl px-4 py-3 text-white text-[15px] focus:outline-none focus:border-cyan-400 transition-colors"
                                         />
                                         <input
                                             type="text"
                                             placeholder="Tür / Irk"
                                             value={adoptionPetBreed}
                                             onChange={(e) => setAdoptionPetBreed(e.target.value)}
-                                            className="w-1/2 bg-[#0A0A0E] border border-white/5 rounded-2xl px-4 py-3 text-white text-[15px] focus:outline-none focus:border-cyan-400 transition-colors"
+                                            className="w-1/2 bg-[#0A0A0E] border border-card-border rounded-2xl px-4 py-3 text-white text-[15px] focus:outline-none focus:border-cyan-400 transition-colors"
                                         />
                                     </div>
                                 </div>
@@ -188,14 +188,14 @@ export function AddAdoptionModal({
                                         placeholder="Yaşı (Örn: 2 Aylık)"
                                         value={adoptionPetAge}
                                         onChange={(e) => setAdoptionPetAge(e.target.value)}
-                                        className="w-full bg-[#0A0A0E] border border-white/5 rounded-2xl px-4 py-3 text-white text-[15px] focus:outline-none focus:border-cyan-400 transition-colors mb-3"
+                                        className="w-full bg-[#0A0A0E] border border-card-border rounded-2xl px-4 py-3 text-white text-[15px] focus:outline-none focus:border-cyan-400 transition-colors mb-3"
                                     />
                                     <textarea
                                         rows={4}
                                         placeholder="Onu biraz anlatın..."
                                         value={adoptionPetDesc}
                                         onChange={(e) => setAdoptionPetDesc(e.target.value)}
-                                        className="w-full bg-[#0A0A0E] border border-white/5 rounded-2xl px-4 py-3 text-white text-[15px] focus:outline-none focus:border-cyan-400 transition-colors resize-none"
+                                        className="w-full bg-[#0A0A0E] border border-card-border rounded-2xl px-4 py-3 text-white text-[15px] focus:outline-none focus:border-cyan-400 transition-colors resize-none"
                                     />
                                 </div>
 
@@ -208,11 +208,11 @@ export function AddAdoptionModal({
                             </div>
                         </div>
 
-                        <div className="p-6 pt-3 pb-8 bg-[#12121A] shrink-0 border-t border-white/5 relative z-20">
+                        <div className="p-6 pt-3 pb-8 bg-[#12121A] shrink-0 border-t border-card-border relative z-20">
                             <button
                                 onClick={onPost}
                                 disabled={isSubmitting}
-                                className="w-full py-4 rounded-full bg-white text-black font-black text-[15px] shadow-[0_10px_30px_rgba(255,255,255,0.15)] active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
+                                className="w-full py-4 rounded-full bg-card text-black font-black text-[15px] shadow-[0_10px_30px_rgba(255,255,255,0.15)] active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
                             >
                                 {isSubmitting ? (
                                     <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
@@ -269,7 +269,7 @@ export function AdoptionPetDetailModal({
                             onClose();
                         }
                     }}
-                    className="relative w-full h-[85vh] bg-[#0A0A0E] rounded-t-[2.5rem] flex flex-col overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.5)] border-t border-white/10"
+                    className="relative w-full h-[85vh] bg-[#0A0A0E] rounded-t-[2.5rem] flex flex-col overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.5)] border-t border-card-border"
                     onClick={(e) => e.stopPropagation()}
                 >
                     <button 
@@ -287,12 +287,12 @@ export function AdoptionPetDetailModal({
                         <h1 className="text-4xl font-black text-white leading-tight mt-1">{pet.name}</h1>
                         <div className="flex gap-2 mt-4">
                             {pet.tags?.map((tag: string) => (
-                                <div key={tag} className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-full text-xs font-bold text-white flex items-center gap-1.5">
+                                <div key={tag} className="bg-white/5 border border-card-border px-3 py-1.5 rounded-full text-xs font-bold text-white flex items-center gap-1.5">
                                     <Check className="w-3 h-3 text-cyan-400" /> {tag}
                                 </div>
                             ))}
                         </div>
-                        <div className="mt-8 bg-white/5 rounded-3xl p-5 border border-white/5">
+                        <div className="mt-8 bg-white/5 rounded-3xl p-5 border border-card-border">
                             <h3 className="text-white/50 text-xs font-bold uppercase tracking-wider mb-2">Hikaye & Durum</h3>
                             <p className="text-gray-300 text-sm leading-relaxed font-medium">{pet.desc}</p>
                         </div>
@@ -300,7 +300,7 @@ export function AdoptionPetDetailModal({
 
                     <div className="w-full p-6 pt-2 pb-10 bg-gradient-to-t from-[#0A0A0E] via-[#0A0A0E] to-transparent relative z-20">
                         <div className="flex gap-3">
-                            <button onClick={() => onChat(pet)} className="flex-1 py-4 rounded-full bg-white/10 border border-white/10 text-white font-bold text-[15px] active:scale-95 transition-transform flex items-center justify-center gap-2">
+                            <button onClick={() => onChat(pet)} className="flex-1 py-4 rounded-full bg-white/10 border border-card-border text-white font-bold text-[15px] active:scale-95 transition-transform flex items-center justify-center gap-2">
                                 <MessageCircle className="w-5 h-5" /> Mesaj
                             </button>
                             <button onClick={onApply} className="flex-[2] py-4 rounded-full bg-cyan-500 text-black font-black text-[15px] shadow-[0_10px_30px_rgba(34,211,238,0.3)] active:scale-95 transition-transform flex items-center justify-center gap-2">
@@ -367,7 +367,7 @@ export function ReportAdoptionModal({
                                 onClose();
                             }
                         }}
-                        className="relative bg-[#12121A] rounded-t-[2.5rem] p-6 pb-12 border-t border-white/10 z-10"
+                        className="relative bg-[#12121A] rounded-t-[2.5rem] p-6 pb-12 border-t border-card-border z-10"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <button 
@@ -388,7 +388,7 @@ export function ReportAdoptionModal({
                                     onClick={() => setReason(opt.value)}
                                     className={cn(
                                         "w-full flex items-start gap-3 p-4 rounded-2xl border transition-all text-left",
-                                        reason === opt.value ? "bg-red-500/10 border-red-500/30" : "bg-white/5 border-white/5"
+                                        reason === opt.value ? "bg-red-500/10 border-red-500/30" : "bg-white/5 border-card-border"
                                     )}
                                 >
                                     <div className="flex-1">
@@ -470,7 +470,7 @@ export function AdoptionApplicationForm({
                                 onClose();
                             }
                         }}
-                        className="relative bg-[#0A0A0E] rounded-t-[3rem] p-6 pb-12 border-t border-white/10 z-10 flex flex-col max-h-[90vh]"
+                        className="relative bg-[#0A0A0E] rounded-t-[3rem] p-6 pb-12 border-t border-card-border z-10 flex flex-col max-h-[90vh]"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <button 
@@ -478,7 +478,7 @@ export function AdoptionApplicationForm({
                             className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-6 hover:bg-white/40 transition-colors cursor-pointer block" 
                         />
                         <div className="flex items-center gap-4 mb-8">
-                            <img src={pet.img} className="w-16 h-16 rounded-[1.5rem] overflow-hidden border border-white/10 object-cover" />
+                            <img src={pet.img} className="w-16 h-16 rounded-[1.5rem] overflow-hidden border border-card-border object-cover" />
                             <div>
                                 <h3 className="text-white font-black text-xl">{pet.name} İçin Başvuru</h3>
                                 <p className="text-cyan-400 text-xs font-bold uppercase mt-1 tracking-widest">Son Adım: Yuva Olma Formu</p>
@@ -489,7 +489,7 @@ export function AdoptionApplicationForm({
                                 <label className="text-gray-500 text-[11px] font-black uppercase tracking-widest ml-1 mb-2 block">Evcil Hayvan Tecrübeniz</label>
                                 <div className="grid grid-cols-3 gap-2">
                                     {['0-2 Yaş', '3-5 Yaş', '5+ Yaş'].map(lvl => (
-                                        <button key={lvl} onClick={() => setExperience(lvl)} className={cn("py-3 rounded-2xl text-xs font-bold border transition-all", experience === lvl ? "bg-cyan-500/20 border-cyan-400 text-cyan-400" : "bg-white/5 border-white/5 text-gray-400")}>{lvl}</button>
+                                        <button key={lvl} onClick={() => setExperience(lvl)} className={cn("py-3 rounded-2xl text-xs font-bold border transition-all", experience === lvl ? "bg-cyan-500/20 border-cyan-400 text-cyan-400" : "bg-white/5 border-card-border text-gray-400")}>{lvl}</button>
                                     ))}
                                 </div>
                             </div>
@@ -497,13 +497,13 @@ export function AdoptionApplicationForm({
                                 <label className="text-gray-500 text-[11px] font-black uppercase tracking-widest ml-1 mb-2 block">Yaşam Alanınız</label>
                                 <div className="grid grid-cols-3 gap-2">
                                     {['Apartman', 'Müstakil', 'Bahçeli'].map(type => (
-                                        <button key={type} onClick={() => setHomeType(type)} className={cn("py-3 rounded-2xl text-xs font-bold border transition-all", homeType === type ? "bg-cyan-500/20 border-cyan-400 text-cyan-400" : "bg-white/5 border-white/5 text-gray-400")}>{type}</button>
+                                        <button key={type} onClick={() => setHomeType(type)} className={cn("py-3 rounded-2xl text-xs font-bold border transition-all", homeType === type ? "bg-cyan-500/20 border-cyan-400 text-cyan-400" : "bg-white/5 border-card-border text-gray-400")}>{type}</button>
                                     ))}
                                 </div>
                             </div>
                             <div>
                                 <label className="text-gray-500 text-[11px] font-black uppercase tracking-widest ml-1 mb-2 block">Kendinizden Bahsedin</label>
-                                <textarea rows={4} placeholder="Neden onu sahiplenmek istiyorsunuz?" value={note} onChange={(e) => setNote(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white text-sm focus:border-cyan-400 transition-colors resize-none" />
+                                <textarea rows={4} placeholder="Neden onu sahiplenmek istiyorsunuz?" value={note} onChange={(e) => setNote(e.target.value)} className="w-full bg-white/5 border border-card-border rounded-2xl px-5 py-4 text-white text-sm focus:border-cyan-400 transition-colors resize-none" />
                             </div>
                         </div>
                         <button onClick={onSubmit} disabled={!note.trim() || isSubmitting} className="w-full mt-8 py-4 rounded-full bg-cyan-500 text-black font-black text-[16px] shadow-[0_15px_40px_rgba(34,211,238,0.2)] active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-40">
@@ -548,12 +548,12 @@ export function AdoptionChat({
                     transition={{ type: "spring", damping: 30, stiffness: 300 }}
                     className="fixed inset-0 z-[500] bg-black flex flex-col pt-safe"
                 >
-                    <div className="pb-4 px-4 bg-black/80 backdrop-blur-xl border-b border-white/5 flex items-center gap-3">
+                    <div className="pb-4 px-4 bg-black/80 backdrop-blur-xl border-b border-card-border flex items-center gap-3">
                         <button onClick={onClose} className="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-colors">
                             <ChevronLeft className="w-6 h-6" />
                         </button>
                         <div className="flex items-center gap-3">
-                            <img src={pet.img} className="w-10 h-10 rounded-full object-cover border border-white/10" />
+                            <img src={pet.img} className="w-10 h-10 rounded-full object-cover border border-card-border" />
                             <div>
                                 <h3 className="text-white font-bold text-sm leading-tight">{pet.name} İlanı</h3>
                                 <p className="text-green-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
@@ -567,10 +567,10 @@ export function AdoptionChat({
                         {messages.map((msg) => (
                             <div key={msg.id} className={cn("max-w-[80%] flex flex-col", msg.sender === 'me' ? "ml-auto items-end" : msg.sender === 'system' ? "mx-auto items-center" : "mr-auto items-start")}>
                                 {msg.sender === 'system' ? (
-                                    <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-2 text-[11px] text-gray-400 text-center">{msg.text}</div>
+                                    <div className="bg-white/5 border border-card-border rounded-2xl px-4 py-2 text-[11px] text-gray-400 text-center">{msg.text}</div>
                                 ) : (
                                     <>
-                                        <div className={cn("px-4 py-2.5 rounded-2xl text-[14px] font-medium", msg.sender === 'me' ? "bg-cyan-500 text-white rounded-tr-sm" : "bg-[#1C1C1E] text-white rounded-tl-sm border border-white/5")}>
+                                        <div className={cn("px-4 py-2.5 rounded-2xl text-[14px] font-medium", msg.sender === 'me' ? "bg-cyan-500 text-white rounded-tr-sm" : "bg-[#1C1C1E] text-white rounded-tl-sm border border-card-border")}>
                                             {msg.text}
                                         </div>
                                         <span className="text-[9px] text-gray-500 font-bold mt-1 uppercase tracking-tight">{msg.time}</span>
@@ -580,8 +580,8 @@ export function AdoptionChat({
                         ))}
                     </div>
 
-                    <div className="p-4 pb-10 bg-black/80 backdrop-blur-xl border-t border-white/5">
-                        <div className="flex items-center gap-2 bg-[#1C1C1E] rounded-full p-2 pl-4 border border-white/5">
+                    <div className="p-4 pb-10 bg-black/80 backdrop-blur-xl border-t border-card-border">
+                        <div className="flex items-center gap-2 bg-[#1C1C1E] rounded-full p-2 pl-4 border border-card-border">
                             <input
                                 type="text"
                                 placeholder="Bir mesaj yazın..."

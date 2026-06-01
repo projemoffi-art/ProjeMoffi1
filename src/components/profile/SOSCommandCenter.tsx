@@ -176,11 +176,11 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                         animate={{ y: 0 }}
                         exit={{ y: "100%" }}
                         transition={{ type: "spring", damping: 32, stiffness: 300 }}
-                        className="w-full h-[90vh] bg-[#0A0A0E] rounded-t-[3.5rem] border-t border-white/10 flex flex-col overflow-hidden shadow-[0_-20px_60px_rgba(0,0,0,0.8)]"
+                        className="w-full h-[90vh] bg-[#0A0A0E] rounded-t-[3.5rem] border-t border-card-border flex flex-col overflow-hidden shadow-[0_-20px_60px_rgba(0,0,0,0.8)]"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header */}
-                        <div className="px-8 py-6 flex items-center justify-between border-b border-white/5 bg-[#0A0A0E]/80 backdrop-blur-md sticky top-0 z-50">
+                        <div className="px-8 py-6 flex items-center justify-between border-b border-card-border bg-[#0A0A0E]/80 backdrop-blur-md sticky top-0 z-50">
                             <button onClick={handleBack} className="flex items-center gap-1 text-white/40 font-bold text-xs uppercase tracking-widest hover:text-white transition-all active:scale-95 group">
                                 <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
                                 {activeTab === 'status' ? "Vazgeç" : "Geri"}
@@ -192,7 +192,7 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                             <button 
                                 onClick={handleSave}
                                 disabled={isSaving}
-                                className="flex items-center gap-2 bg-white text-black px-5 py-2 rounded-full font-black text-xs uppercase tracking-widest hover:bg-gray-200 disabled:opacity-50 transition-all active:scale-95"
+                                className="flex items-center gap-2 bg-card text-black px-5 py-2 rounded-full font-black text-xs uppercase tracking-widest hover:bg-gray-200 disabled:opacity-50 transition-all active:scale-95"
                             >
                                 {isSaving ? <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" /> : "Kaydet"}
                             </button>
@@ -200,7 +200,7 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
 
                         {/* QUICK PET SWITCHER - Apple Style */}
                         {allPets.length > 1 && (
-                            <div className="px-8 py-4 bg-white/5 border-b border-white/5 overflow-x-auto no-scrollbar flex items-center gap-4">
+                            <div className="px-8 py-4 bg-white/5 border-b border-card-border overflow-x-auto no-scrollbar flex items-center gap-4">
                                 <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em] shrink-0">Hızlı Seçim:</span>
                                 {allPets.map(p => (
                                     <button 
@@ -210,10 +210,10 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                                             "flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all active:scale-95 shrink-0",
                                             p.id === pet.id 
                                                 ? "bg-cyan-500/20 border-cyan-500/40 text-white" 
-                                                : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10"
+                                                : "bg-white/5 border-card-border text-white/40 hover:bg-white/10"
                                         )}
                                     >
-                                        <div className="w-6 h-6 rounded-lg overflow-hidden border border-white/10">
+                                        <div className="w-6 h-6 rounded-lg overflow-hidden border border-card-border">
                                             <img src={p.avatar || p.avatar_url} className="w-full h-full object-cover" />
                                         </div>
                                         <span className="text-[10px] font-bold uppercase">{p.name}</span>
@@ -224,7 +224,7 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                         )}
 
                         {/* Navigation Tabs */}
-                        <div className="px-8 py-4 flex gap-2 border-b border-white/5">
+                        <div className="px-8 py-4 flex gap-2 border-b border-card-border">
                             {[
                                 { id: 'status', label: 'Durum', icon: ShieldAlert },
                                 { id: 'config', label: 'Ayarlar', icon: Sparkles },
@@ -236,7 +236,7 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                                     className={cn(
                                         "flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl transition-all border",
                                         activeTab === tab.id 
-                                            ? "bg-white/10 border-white/20 text-white" 
+                                            ? "bg-white/10 border-card-border text-white" 
                                             : "bg-transparent border-transparent text-white/30 hover:text-white/60"
                                     )}
                                 >
@@ -266,7 +266,7 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                                             isLost ? "bg-red-500" : "bg-cyan-500"
                                         )}>
                                             <img src={pet.avatar || pet.avatar_url} className="w-full h-full object-cover rounded-[1.7rem]" />
-                                            <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-black border-2 border-white/10 flex items-center justify-center">
+                                            <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-black border-2 border-card-border flex items-center justify-center">
                                                 {isLost ? <ShieldAlert className="w-4 h-4 text-red-500" /> : <BadgeCheck className="w-4 h-4 text-cyan-400" />}
                                             </div>
                                         </div>
@@ -282,12 +282,12 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                                                 "w-full p-8 rounded-[3rem] border transition-all flex flex-col items-center text-center gap-4 relative overflow-hidden group",
                                                 isLost 
                                                     ? "bg-red-500 border-red-400 shadow-[0_0_50px_rgba(239,68,68,0.3)]" 
-                                                    : "bg-white/5 border-white/10 hover:bg-white/10"
+                                                    : "bg-white/5 border-card-border hover:bg-white/10"
                                             )}
                                         >
                                             <div className={cn(
                                                 "w-16 h-16 rounded-full flex items-center justify-center mb-2 transition-transform group-hover:scale-110",
-                                                isLost ? "bg-white text-red-500" : "bg-white/10 text-white/40"
+                                                isLost ? "bg-card text-red-500" : "bg-white/10 text-white/40"
                                             )}>
                                                 <AlertTriangle className={cn("w-8 h-8", isLost ? "animate-pulse" : "")} />
                                             </div>
@@ -304,7 +304,7 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                                             )}
                                         </button>
 
-                                        <div className="bg-white/5 rounded-3xl p-5 border border-white/5 flex items-start gap-4">
+                                        <div className="bg-white/5 rounded-3xl p-5 border border-card-border flex items-start gap-4">
                                             <Info className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
                                             <p className="text-[11px] text-white/50 leading-relaxed font-bold">
                                                 Durumu <span className="text-white font-black italic">"KAYIP"</span> olarak değiştirdiğinizde, künyeyi tarayan her kullanıcı otomatik olarak acil iletişim butonlarını ve sağlık uyarılarını görür. Ayrıca her taramada size anlık konum bildirimi gelir.
@@ -326,7 +326,7 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                                             <h3 className="text-xs font-black text-white uppercase tracking-widest">Kişisel Yayın Ayarları (Dostum İçin)</h3>
                                         </div>
                                         
-                                        <div className="bg-white/5 border-y border-white/10 divide-y divide-white/5">
+                                        <div className="bg-white/5 border-y border-card-border divide-y divide-white/5">
                                             {/* Reward Row */}
                                             <div className="p-6 space-y-4 bg-orange-500/5">
                                                 <div className="flex items-center justify-between">
@@ -340,12 +340,12 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                                                             )}
                                                         >
                                                             <div className={cn(
-                                                                "absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all shadow-md",
+                                                                "absolute top-0.5 w-3 h-3 rounded-full bg-card transition-all shadow-moffi-card",
                                                                 localSos.sosConfig.rewardEnabled ? "right-0.5" : "left-0.5"
                                                             )} />
                                                         </button>
                                                     </div>
-                                                    <div className="flex items-center gap-2 text-[10px] bg-white/5 px-2 py-1 rounded-lg border border-white/5 font-bold text-orange-400">
+                                                    <div className="flex items-center gap-2 text-[10px] bg-white/5 px-2 py-1 rounded-lg border border-card-border font-bold text-orange-400">
                                                         <Coins className="w-3 h-3" />
                                                         Moffi Coin Opsiyonel
                                                     </div>
@@ -365,7 +365,7 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                                                                         type="number"
                                                                         value={localSos.sosConfig.rewardAmount}
                                                                         onChange={(e) => setLocalSos((prev: any) => ({...prev, sosConfig: {...prev.sosConfig, rewardAmount: Number(e.target.value)}}))}
-                                                                        className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-4 text-lg font-black text-white outline-none focus:border-orange-500/50"
+                                                                        className="w-full bg-black/40 border border-card-border rounded-2xl py-4 px-4 text-lg font-black text-white outline-none focus:border-orange-500/50"
                                                                         placeholder="0"
                                                                     />
                                                                     <div className="absolute right-4 top-1/2 -translate-y-1/2 text-orange-400 font-black">TL</div>
@@ -379,7 +379,7 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                                                                                 "px-4 py-2 rounded-xl text-[10px] font-bold border transition-all whitespace-nowrap",
                                                                                 localSos.sosConfig.rewardAmount === amt 
                                                                                     ? "bg-orange-500 border-orange-400 text-white shadow-lg shadow-orange-500/20" 
-                                                                                    : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10"
+                                                                                    : "bg-white/5 border-card-border text-white/40 hover:bg-white/10"
                                                                             )}
                                                                         >
                                                                             {amt} TL
@@ -414,7 +414,7 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                                                 <textarea 
                                                     value={localSos.sosConfig.criticalHealthAlert}
                                                     onChange={(e) => setLocalSos((prev: any) => ({...prev, sosConfig: {...prev.sosConfig, criticalHealthAlert: e.target.value}}))}
-                                                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm text-red-400 font-bold outline-none focus:border-red-500/50 h-20 resize-none"
+                                                    className="w-full bg-white/5 border border-card-border rounded-2xl p-4 text-sm text-red-400 font-bold outline-none focus:border-red-500/50 h-20 resize-none"
                                                     placeholder="Örn: Piliç alerjisi var! Sadece su verin..."
                                                 />
                                             </div>
@@ -428,7 +428,7 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                                                         type="text"
                                                         value={localSos.sosConfig.emergencySmsNumber}
                                                         onChange={(e) => setLocalSos((prev: any) => ({...prev, sosConfig: {...prev.sosConfig, emergencySmsNumber: e.target.value}}))}
-                                                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold text-white outline-none focus:border-cyan-500/50"
+                                                        className="w-full bg-white/5 border border-card-border rounded-2xl py-4 pl-12 pr-4 text-sm font-bold text-white outline-none focus:border-cyan-500/50"
                                                         placeholder="+90 5XX XXX XX XX"
                                                     />
                                                 </div>
@@ -441,7 +441,7 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                                                 <textarea 
                                                     value={localSos.sosConfig.emergencyMessage}
                                                     onChange={(e) => setLocalSos((prev: any) => ({...prev, sosConfig: {...prev.sosConfig, emergencyMessage: e.target.value}}))}
-                                                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm text-white/80 font-medium outline-none focus:border-cyan-500/50 h-24 resize-none"
+                                                    className="w-full bg-white/5 border border-card-border rounded-2xl p-4 text-sm text-white/80 font-medium outline-none focus:border-cyan-500/50 h-24 resize-none"
                                                     placeholder="Lütfen bahçeye kapatıp beni arayın..."
                                                 />
                                             </div>
@@ -457,7 +457,7 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                                             <h3 className="text-xs font-black text-white uppercase tracking-widest">Komünite & Radar Ayarları (Topluluk)</h3>
                                         </div>
 
-                                        <div className="bg-white/5 border-y border-white/10 divide-y divide-white/5">
+                                        <div className="bg-white/5 border-y border-card-border divide-y divide-white/5">
                                             {/* Radar Radius Row */}
                                             <div className="p-6 space-y-4 bg-cyan-500/5">
                                                 <label className="text-[10px] font-black text-white/40 uppercase tracking-widest block leading-none">Radar Bildirim Menzili</label>
@@ -470,7 +470,7 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                                                                 "py-3 rounded-2xl text-[10px] font-black uppercase transition-all border",
                                                                 localSos.sosConfig.sosRadius === r 
                                                                     ? "bg-cyan-500 border-cyan-400 text-white shadow-lg shadow-cyan-500/20" 
-                                                                    : "bg-white/5 border-white/10 text-white/30 hover:text-white/60"
+                                                                    : "bg-white/5 border-card-border text-white/30 hover:text-white/60"
                                                             )}
                                                         >
                                                             {r === 'city' ? 'Şehir' : r}
@@ -492,7 +492,7 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                                                                 "p-4 rounded-2xl text-start transition-all border relative overflow-hidden",
                                                                 localSos.sosConfig.locationPrecision === p 
                                                                     ? "bg-emerald-500/10 border-emerald-500/50 shadow-lg shadow-emerald-500/5" 
-                                                                    : "bg-white/5 border-white/10"
+                                                                    : "bg-white/5 border-card-border"
                                                             )}
                                                         >
                                                             <div className="relative z-10">
@@ -537,7 +537,7 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                                                             )}
                                                         >
                                                             <div className={cn(
-                                                                "absolute top-1 w-4 h-4 rounded-full bg-white transition-all shadow-md",
+                                                                "absolute top-1 w-4 h-4 rounded-full bg-card transition-all shadow-moffi-card",
                                                                 (localSos.sosConfig as any)[item.id] ? "right-1" : "left-1"
                                                             )} />
                                                         </button>
@@ -565,7 +565,7 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                                                         )}
                                                     >
                                                         <div className={cn(
-                                                            "absolute top-1 w-4 h-4 rounded-full bg-white transition-all shadow-md",
+                                                            "absolute top-1 w-4 h-4 rounded-full bg-card transition-all shadow-moffi-card",
                                                             localSos.sosConfig.quietHours.enabled ? "right-1" : "left-1"
                                                         )} />
                                                     </button>
@@ -578,7 +578,7 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                                                                 onClick={() => setActiveTimePicker(activeTimePicker === 'from' ? null : 'from')}
                                                                 className={cn(
                                                                     "flex-1 border rounded-2xl p-4 flex flex-col items-center transition-all",
-                                                                    activeTimePicker === 'from' ? "bg-cyan-500/10 border-cyan-500/50" : "bg-white/5 border-white/10"
+                                                                    activeTimePicker === 'from' ? "bg-cyan-500/10 border-cyan-500/50" : "bg-white/5 border-card-border"
                                                                 )}
                                                             >
                                                                 <span className="text-[10px] font-black text-white/40 mb-2 uppercase tracking-widest leading-none">Başlangıç</span>
@@ -589,7 +589,7 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                                                                 onClick={() => setActiveTimePicker(activeTimePicker === 'to' ? null : 'to')}
                                                                 className={cn(
                                                                     "flex-1 border rounded-2xl p-4 flex flex-col items-center transition-all",
-                                                                    activeTimePicker === 'to' ? "bg-purple-500/10 border-purple-500/50" : "bg-white/5 border-white/10"
+                                                                    activeTimePicker === 'to' ? "bg-purple-500/10 border-purple-500/50" : "bg-white/5 border-card-border"
                                                                 )}
                                                             >
                                                                 <span className="text-[10px] font-black text-white/40 mb-2 uppercase tracking-widest leading-none">Bitiş</span>
@@ -599,7 +599,7 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
 
                                                         <AnimatePresence>
                                                             {activeTimePicker && (
-                                                                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden bg-black/40 border border-white/5 rounded-[2rem] p-8">
+                                                                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden bg-black/40 border border-card-border rounded-[2rem] p-8">
                                                                     <div className="flex justify-center items-center gap-8">
                                                                         <TimeWheel 
                                                                             label="Saat"
@@ -640,7 +640,7 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                                                             <span className="text-[9px] text-white/20 font-bold uppercase tracking-tighter italic leading-none block mt-1">Acil durumlarda sessiz modu del</span>
                                                         </div>
                                                     </div>
-                                                    <div className={cn("w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all", localSos.sosConfig.emergencyBypass ? "border-cyan-400 bg-cyan-400/20" : "border-white/10")}>
+                                                    <div className={cn("w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all", localSos.sosConfig.emergencyBypass ? "border-cyan-400 bg-cyan-400/20" : "border-card-border")}>
                                                         {localSos.sosConfig.emergencyBypass && <Check className="w-4 h-4 text-cyan-400" />}
                                                     </div>
                                                 </div>
@@ -678,7 +678,7 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                                                 
                                                 {isLost && (
                                                     <div className="mt-4 w-full space-y-2">
-                                                        <div className="w-full h-6 bg-white rounded-lg flex items-center justify-center gap-1.5">
+                                                        <div className="w-full h-6 bg-card rounded-lg flex items-center justify-center gap-1.5">
                                                             <PhoneCall className="w-3 h-3 text-emerald-600" />
                                                             <span className="text-[8px] font-black text-black">Sahibini Ara</span>
                                                         </div>

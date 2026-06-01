@@ -68,7 +68,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                             transition={{ duration: 4, repeat: Infinity }}
                             className={cn("absolute inset-0 blur-[80px] rounded-full bg-gradient-to-tr", slides[currentSlide].color)} 
                         />
-                        <div className="w-48 h-48 rounded-[3.5rem] bg-white/5 border border-white/10 backdrop-blur-3xl flex items-center justify-center shadow-2xl relative z-10 overflow-hidden group">
+                        <div className="w-48 h-48 rounded-[3.5rem] bg-white/5 border border-card-border backdrop-blur-3xl flex items-center justify-center shadow-2xl relative z-10 overflow-hidden group">
                            <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent opacity-50" />
                            {(() => {
                                 const Icon = slides[currentSlide].icon;
@@ -90,14 +90,14 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             </AnimatePresence>
 
             {/* Bottom Controls */}
-            <div className="p-12 pb-16 relative z-10 bg-gradient-to-t from-[#05050A] via-[#05050A]/80 to-transparent">
+            <div className="p-12 pb-16 relative z-10 bg-gradient-to-t from-[#000000] via-[#000000]/80 to-transparent">
                 <div className="flex items-center justify-center gap-3 mb-10">
                     {slides.map((_, i) => (
                         <div
                             key={i}
                             className={cn(
                                 "h-1.5 rounded-full transition-all duration-500",
-                                i === currentSlide ? "w-10 bg-white" : "w-4 bg-white/10"
+                                i === currentSlide ? "w-10 bg-card" : "w-4 bg-white/10"
                             )}
                         />
                     ))}
@@ -105,7 +105,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
                 <button
                     onClick={nextSlide}
-                    className="group relative w-full bg-white text-black py-6 rounded-[2.5rem] font-black text-xs uppercase tracking-[0.2em] overflow-hidden active:scale-95 transition-all shadow-[0_20px_40px_rgba(255,255,255,0.1)]"
+                    className="group relative w-full bg-card text-black py-6 rounded-[2.5rem] font-black text-xs uppercase tracking-[0.2em] overflow-hidden active:scale-95 transition-all shadow-[0_20px_40px_rgba(255,255,255,0.1)]"
                 >
                     <span className="relative z-10 flex items-center justify-center gap-3">
                         {currentSlide === slides.length - 1 ? "Evrene Katıl" : "Sonraki Adım"}

@@ -59,7 +59,7 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ isOpen, 
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-2xl bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row h-[80vh] md:h-[600px]"
+          className="relative w-full max-w-2xl bg-[#0a0a0a] border border-card-border rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row h-[80vh] md:h-[600px]"
         >
           {/* Left: Map (Hybrid Component) */}
           <div className="relative w-full md:w-1/2 h-1/2 md:h-full bg-[#111]">
@@ -72,9 +72,9 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ isOpen, 
             
             {/* Map Overlay Info */}
             <div className="absolute top-6 left-6 right-6 z-10 flex flex-col gap-2">
-                <div className="bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex items-center justify-between">
+                <div className="bg-black/60 backdrop-blur-xl border border-card-border rounded-2xl p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
+                        <div className="w-10 h-10 bg-card rounded-full flex items-center justify-center">
                             <Truck className="text-black" size={20} />
                         </div>
                         <div>
@@ -91,7 +91,7 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ isOpen, 
 
             {/* Bottom Map Controls */}
             <div className="absolute bottom-6 left-6 flex gap-2 z-10">
-                <button className="w-10 h-10 bg-black/60 backdrop-blur-xl border border-white/10 rounded-full flex items-center justify-center text-white">
+                <button className="w-10 h-10 bg-black/60 backdrop-blur-xl border border-card-border rounded-full flex items-center justify-center text-white">
                     <Navigation2 size={18} />
                 </button>
             </div>
@@ -155,7 +155,7 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ isOpen, 
             </div>
 
             {/* Actions */}
-            <div className="mt-8 pt-8 border-t border-white/5 flex gap-3">
+            <div className="mt-8 pt-8 border-t border-card-border flex gap-3">
               <button className="flex-1 h-12 bg-white/5 hover:bg-white/10 rounded-2xl text-white text-sm font-bold transition-all flex items-center justify-center gap-2">
                 <Share2 size={16} />
                 SİPARİŞİ PAYLAŞ

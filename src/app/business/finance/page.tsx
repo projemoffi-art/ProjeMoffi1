@@ -68,11 +68,11 @@ export default function BusinessFinancePage() {
                 {/* Header */}
                 <header className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
                     <div className="flex items-center gap-4">
-                        <button onClick={() => setIsMobileMenuOpen(true)} className="w-10 h-10 rounded-xl bg-white border border-gray-200/50 flex items-center justify-center md:hidden">
+                        <button onClick={() => setIsMobileMenuOpen(true)} className="w-10 h-10 rounded-xl bg-card border border-card-border/50 flex items-center justify-center md:hidden">
                             <Menu className="w-5 h-5 text-gray-600" />
                         </button>
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">Finans</h1>
+                            <h1 className="text-2xl md:text-3xl font-black text-foreground tracking-tight">Finans</h1>
                             <p className="text-sm text-gray-500">Gelir, komisyon ve ödeme takibi</p>
                         </div>
                     </div>
@@ -95,14 +95,14 @@ export default function BusinessFinancePage() {
                 {/* Charts + Pending */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                     {/* Monthly Chart */}
-                    <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                    <div className="lg:col-span-2 bg-card rounded-2xl border border-card-border shadow-moffi-card p-6">
                         <div className="flex items-center justify-between mb-6">
                             <div>
-                                <h3 className="font-bold text-gray-900">Aylık Gelir</h3>
+                                <h3 className="font-bold text-foreground">Aylık Gelir</h3>
                                 <p className="text-xs text-gray-400 mt-0.5">Son 6 ay</p>
                             </div>
                             <div className="bg-gray-50 p-1 rounded-xl flex">
-                                <button className="px-3 py-1 bg-white rounded-lg text-xs font-bold text-gray-900 shadow-sm border border-gray-200/50">Aylık</button>
+                                <button className="px-3 py-1 bg-card rounded-lg text-xs font-bold text-foreground shadow-moffi-card border border-card-border/50">Aylık</button>
                                 <button className="px-3 py-1 text-xs font-bold text-gray-400">Haftalık</button>
                             </div>
                         </div>
@@ -133,12 +133,12 @@ export default function BusinessFinancePage() {
                             <div className="text-xs text-white/80 font-medium mt-1">Bekleyen Gelir</div>
                             <p className="text-[10px] text-white/60 mt-2">Teslim edilmemiş siparişlerden</p>
                         </div>
-                        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                        <div className="bg-card rounded-2xl border border-card-border shadow-moffi-card p-5">
                             <div className="flex items-center gap-2 mb-3">
                                 <BarChart3 className="w-4 h-4 text-gray-400" />
                                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Komisyon Oranı</span>
                             </div>
-                            <div className="text-3xl font-black text-gray-900">%10</div>
+                            <div className="text-3xl font-black text-foreground">%10</div>
                             <p className="text-xs text-gray-400 mt-1">Platform standart oran</p>
                             <div className="mt-3 h-2 bg-gray-100 rounded-full overflow-hidden">
                                 <div className="h-full w-[10%] bg-red-400 rounded-full" />
@@ -148,9 +148,9 @@ export default function BusinessFinancePage() {
                 </div>
 
                 {/* Transaction History */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
-                    <div className="p-5 border-b border-gray-100 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                        <h3 className="font-bold text-gray-900">İşlem Geçmişi</h3>
+                <div className="bg-card rounded-2xl border border-card-border shadow-moffi-card">
+                    <div className="p-5 border-b border-card-border flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                        <h3 className="font-bold text-foreground">İşlem Geçmişi</h3>
                         <div className="flex gap-2 overflow-x-auto pb-1">
                             {(['all', 'sale', 'commission', 'payout', 'refund'] as const).map(t => (
                                 <button
@@ -183,7 +183,7 @@ export default function BusinessFinancePage() {
                                             <TxIcon className="w-5 h-5" />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <div className="font-medium text-gray-900 text-sm truncate">{tx.description}</div>
+                                            <div className="font-medium text-foreground text-sm truncate">{tx.description}</div>
                                             <div className="text-[10px] text-gray-400 mt-0.5">
                                                 {new Date(tx.date).toLocaleString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                             </div>
@@ -229,7 +229,7 @@ function RevenueCard({ icon: Icon, label, value, color, trend, highlight }: {
         emerald: 'bg-emerald-50 text-emerald-600',
     };
     return (
-        <div className={cn("rounded-2xl border p-5 transition-all", highlight ? "bg-white shadow-lg border-gray-100" : "bg-white shadow-sm border-gray-100")}>
+        <div className={cn("rounded-2xl border p-5 transition-all", highlight ? "bg-card shadow-lg border-card-border" : "bg-card shadow-moffi-card border-card-border")}>
             <div className="flex items-center justify-between mb-3">
                 <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center", colors[color])}>
                     <Icon className="w-4 h-4" />
@@ -240,7 +240,7 @@ function RevenueCard({ icon: Icon, label, value, color, trend, highlight }: {
                     </span>
                 )}
             </div>
-            <div className={cn("text-xl font-black tracking-tight", highlight ? "text-gray-900" : "text-gray-800")}>₺{value.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</div>
+            <div className={cn("text-xl font-black tracking-tight", highlight ? "text-foreground" : "text-foreground")}>₺{value.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</div>
             <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-1">{label}</div>
         </div>
     );
@@ -258,23 +258,23 @@ function PayoutModal({ available, onClose }: { available: number; onClose: () =>
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
-            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-card rounded-3xl shadow-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
                 {done ? (
                     <div className="text-center py-8">
                         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"><CheckCircle className="w-8 h-8 text-green-600" /></div>
-                        <h3 className="text-lg font-black text-gray-900">Talep Gönderildi!</h3>
+                        <h3 className="text-lg font-black text-foreground">Talep Gönderildi!</h3>
                         <p className="text-sm text-gray-500 mt-1">Admin onayından sonra hesabınıza aktarılacaktır.</p>
                     </div>
                 ) : (
                     <>
-                        <h2 className="text-lg font-black text-gray-900 mb-1">Ödeme Talebi</h2>
+                        <h2 className="text-lg font-black text-foreground mb-1">Ödeme Talebi</h2>
                         <p className="text-sm text-gray-500 mb-6">Çekilebilir bakiyeniz: <strong className="text-green-600">₺{available.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</strong></p>
                         <div className="mb-6">
                             <label className="text-xs font-bold text-gray-500 mb-1.5 block">Çekmek İstediğiniz Tutar (₺)</label>
-                            <input type="number" value={amount} onChange={e => setAmount(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-lg font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-200" />
+                            <input type="number" value={amount} onChange={e => setAmount(e.target.value)} className="w-full bg-gray-50 border border-card-border rounded-xl px-4 py-3 text-lg font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-green-200" />
                         </div>
                         <div className="flex gap-3">
-                            <button onClick={onClose} className="flex-1 px-5 py-3 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50">İptal</button>
+                            <button onClick={onClose} className="flex-1 px-5 py-3 rounded-xl border border-card-border text-sm font-bold text-gray-600 hover:bg-gray-50">İptal</button>
                             <button onClick={handleRequest} disabled={requesting || Number(amount) <= 0 || Number(amount) > available} className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-5 py-3 rounded-xl font-bold text-sm shadow-lg shadow-green-200 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
                                 {requesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Banknote className="w-4 h-4" />}
                                 {requesting ? 'İşleniyor...' : 'Talep Gönder'}

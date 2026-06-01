@@ -88,7 +88,7 @@ export function ExploreGrid({ posts, onPostClick, isLoading }: ExploreGridProps)
                             {/* Icons (Video/Multiple) */}
                             <div className="absolute top-2 right-2 flex gap-1">
                                 {isVideo && (
-                                    <div className="p-1 bg-black/40 backdrop-blur-md rounded-md border border-white/10">
+                                    <div className="p-1 bg-black/40 backdrop-blur-md rounded-md border border-card-border">
                                         <Play className="w-2.5 h-2.5 text-white fill-white" />
                                     </div>
                                 )}
@@ -125,11 +125,11 @@ export function ExploreGrid({ posts, onPostClick, isLoading }: ExploreGridProps)
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.8, opacity: 0, y: 20 }}
                             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                            className="relative w-full max-w-sm aspect-[4/5] bg-zinc-900 rounded-[2.5rem] overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.8)] border border-white/10"
+                            className="relative w-full max-w-sm aspect-[4/5] bg-zinc-900 rounded-[2.5rem] overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.8)] border border-card-border"
                         >
                             {/* Header Info */}
                             <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/60 to-transparent z-10 flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 overflow-hidden">
+                                <div className="w-8 h-8 rounded-full bg-white/10 border border-card-border overflow-hidden">
                                     <img src={previewPost.avatar} className="w-full h-full object-cover" alt="" />
                                 </div>
                                 <div className="flex flex-col">

@@ -86,7 +86,7 @@ export default function RootLayout({
   return (
     <html lang="en" translate="no" className="notranslate">
       <body
-        className={`${poppins.variable} ${inter.variable} ${pacificoFont.variable} ${satisfyFont.variable} ${playfairFont.variable} font-sans antialiased`}
+        className={`${poppins.variable} ${inter.variable} ${pacificoFont.variable} ${satisfyFont.variable} ${playfairFont.variable} font-sans antialiased bg-background text-foreground`}
       >
         <LanguageProvider>
           <AuthProvider>

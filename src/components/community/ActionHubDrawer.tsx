@@ -136,7 +136,7 @@ export function ActionHubDrawer({
 
                         {/* MOFFI HEALTH SUMMARY PANEL (RESTORED) */}
                         <div className="mb-6 sm:mb-8">
-                            <div className="bg-card border border-card-border rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-6 shadow-sm">
+                            <div className="bg-card border border-card-border rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-6 shadow-moffi-card">
                                 <div className="flex items-center justify-between mb-5 sm:mb-6">
                                     <div className="flex items-center gap-3">
                                         {activePet?.image || activePet?.avatar ? (

@@ -86,16 +86,16 @@ export default function AdvisorChat({ isOpen, onClose, isSmartEnabled = true }: 
                         animate={{ y: 0 }}
                         exit={{ y: "100%" }}
                         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                        className="fixed bottom-0 left-0 right-0 z-[80] bg-white dark:bg-[#0A0A0A] rounded-t-[2.5rem] shadow-[0_-20px_60px_rgba(0,0,0,0.3)] flex flex-col max-h-[80vh] overflow-hidden"
+                        className="fixed bottom-0 left-0 right-0 z-[80] bg-card dark:bg-[#0A0A0A] rounded-t-[2.5rem] shadow-[0_-20px_60px_rgba(0,0,0,0.3)] flex flex-col max-h-[80vh] overflow-hidden"
                     >
                         {/* Header */}
-                        <div className="px-8 pt-6 pb-4 border-b border-gray-100 dark:border-white/5 flex items-center justify-between">
+                        <div className="px-8 pt-6 pb-4 border-b border-card-border dark:border-card-border flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-gray-950 dark:bg-white rounded-2xl flex items-center justify-center shadow-lg">
-                                    <Sparkles className="w-5 h-5 text-white dark:text-gray-900" />
+                                <div className="w-10 h-10 bg-gray-950 dark:bg-card rounded-2xl flex items-center justify-center shadow-lg">
+                                    <Sparkles className="w-5 h-5 text-white dark:text-foreground" />
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter italic">Beslenme Danışmanı</h3>
+                                    <h3 className="text-sm font-black text-foreground dark:text-white uppercase tracking-tighter italic">Beslenme Danışmanı</h3>
                                     <div className="flex items-center gap-1.5">
                                         <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
                                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Canlı Destek · Çevrimiçi</span>
@@ -118,14 +118,14 @@ export default function AdvisorChat({ isOpen, onClose, isSmartEnabled = true }: 
                                         "max-w-[85%] p-4 rounded-3xl text-sm font-medium leading-relaxed shadow-sm",
                                         m.role === "user" 
                                             ? "bg-gray-900 text-white ml-auto rounded-tr-none" 
-                                            : "bg-white dark:bg-white/5 text-gray-700 dark:text-gray-300 mr-auto rounded-tl-none border border-gray-100 dark:border-white/5"
+                                            : "bg-card dark:bg-white/5 text-foreground dark:text-gray-300 mr-auto rounded-tl-none border border-card-border dark:border-card-border"
                                     )}
                                 >
                                     {m.content}
                                 </motion.div>
                             ))}
                             {isTyping && (
-                                <div className="flex gap-1 ml-2 p-2 bg-white dark:bg-white/5 rounded-2xl w-14 justify-center">
+                                <div className="flex gap-1 ml-2 p-2 bg-card dark:bg-white/5 rounded-2xl w-14 justify-center">
                                     <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" />
                                     <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce [animation-delay:0.2s]" />
                                     <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce [animation-delay:0.4s]" />
@@ -134,12 +134,12 @@ export default function AdvisorChat({ isOpen, onClose, isSmartEnabled = true }: 
                         </div>
 
                         {/* Quick Questions */}
-                        <div className="px-6 py-4 bg-white dark:bg-black/40 border-t border-gray-100 dark:border-white/5 overflow-x-auto no-scrollbar flex gap-2">
+                        <div className="px-6 py-4 bg-card dark:bg-black/40 border-t border-card-border dark:border-card-border overflow-x-auto no-scrollbar flex gap-2">
                             {QUICK_QUESTIONS.map((q, i) => (
                                 <button
                                     key={i}
                                     onClick={() => handleSend(q)}
-                                    className="px-4 py-2 bg-gray-50 dark:bg-white/5 hover:bg-orange-50 dark:hover:bg-orange-500/10 rounded-full text-[10px] font-black text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-white/5 whitespace-nowrap transition-colors italic uppercase tracking-tighter"
+                                    className="px-4 py-2 bg-gray-50 dark:bg-white/5 hover:bg-orange-50 dark:hover:bg-orange-500/10 rounded-full text-[10px] font-black text-gray-500 dark:text-gray-400 border border-card-border dark:border-card-border whitespace-nowrap transition-colors italic uppercase tracking-tighter"
                                 >
                                     {q}
                                 </button>
@@ -147,18 +147,18 @@ export default function AdvisorChat({ isOpen, onClose, isSmartEnabled = true }: 
                         </div>
 
                         {/* Input */}
-                        <div className="px-6 pb-10 pt-4 bg-white dark:bg-black/60">
+                        <div className="px-6 pb-10 pt-4 bg-card dark:bg-black/60">
                             <div className="relative group">
                                 <input
                                     value={input}
                                     onChange={e => setInput(e.target.value)}
                                     onKeyDown={e => e.key === "Enter" && handleSend(input)}
                                     placeholder={`${petName} için bir soru sor...`}
-                                    className="w-full h-14 pl-6 pr-16 bg-gray-100 dark:bg-white/5 rounded-2xl text-sm font-medium focus:bg-white dark:focus:bg-black/20 outline-none transition-all"
+                                    className="w-full h-14 pl-6 pr-16 bg-gray-100 dark:bg-white/5 rounded-2xl text-sm font-medium focus:bg-card dark:focus:bg-black/20 outline-none transition-all"
                                 />
                                 <button
                                     onClick={() => handleSend(input)}
-                                    className="absolute right-2 top-2 w-10 h-10 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl flex items-center justify-center active:scale-95 transition-transform"
+                                    className="absolute right-2 top-2 w-10 h-10 bg-gray-900 dark:bg-card text-white dark:text-foreground rounded-xl flex items-center justify-center active:scale-95 transition-transform"
                                 >
                                     <Send className="w-5 h-5" />
                                 </button>

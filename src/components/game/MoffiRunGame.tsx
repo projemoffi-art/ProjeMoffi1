@@ -237,11 +237,11 @@ export default function MoffiRunGame({
                     >
                         {/* Left: Score + Coins */}
                         <div className="flex flex-col gap-2">
-                            <div className="bg-black/60 backdrop-blur px-5 py-2.5 rounded-2xl border border-white/10 flex items-center gap-3">
+                            <div className="bg-black/60 backdrop-blur px-5 py-2.5 rounded-2xl border border-card-border flex items-center gap-3">
                                 <Trophy className="text-amber-400 w-5 h-5" />
                                 <span className="text-2xl font-black text-white tabular-nums">{score}m</span>
                             </div>
-                            <div className="bg-black/60 backdrop-blur px-5 py-2.5 rounded-2xl border border-white/10 flex items-center gap-3">
+                            <div className="bg-black/60 backdrop-blur px-5 py-2.5 rounded-2xl border border-card-border flex items-center gap-3">
                                 <Coins className="text-yellow-400 w-5 h-5" />
                                 <span className="text-2xl font-black text-white tabular-nums">{coins}</span>
                                 {gs.current.multiplier > 1 && (
@@ -252,7 +252,7 @@ export default function MoffiRunGame({
 
                         {/* Right: Active Power-Up */}
                         {powerUp.type && (
-                            <div className="bg-black/60 backdrop-blur px-5 py-3 rounded-2xl border border-white/20 flex items-center gap-2">
+                            <div className="bg-black/60 backdrop-blur px-5 py-3 rounded-2xl border border-card-border flex items-center gap-2">
                                 {powerUp.type === 'MAGNET' && <span className="text-2xl">🧲</span>}
                                 {powerUp.type === 'SHIELD' && <ShieldCheck className="text-blue-400 w-7 h-7" />}
                                 {powerUp.type === 'MULTIPLIER' && <Star className="text-amber-400 w-7 h-7" />}
@@ -289,7 +289,7 @@ export default function MoffiRunGame({
                         </motion.div>
 
                         {/* Daily Missions Preview */}
-                        <div className="bg-white/5 border border-white/10 rounded-3xl p-5 mb-8 w-72">
+                        <div className="bg-white/5 border border-card-border rounded-3xl p-5 mb-8 w-72">
                             <p className="text-white/40 text-xs font-black uppercase tracking-widest mb-3">Günlük Görevler</p>
                             {DAILY_MISSIONS.map(m => (
                                 <div key={m.id} className="flex justify-between items-center py-1.5">
@@ -340,7 +340,7 @@ export default function MoffiRunGame({
                         {/* Mission Results */}
                         <div className="w-full max-w-xs mb-8">
                             {missions.map(m => (
-                                <div key={m.id} className={`flex justify-between items-center py-2 border-b border-white/5 ${m.done ? 'text-green-400' : 'text-white/40'}`}>
+                                <div key={m.id} className={`flex justify-between items-center py-2 border-b border-card-border ${m.done ? 'text-green-400' : 'text-white/40'}`}>
                                     <span className="text-sm font-bold">{m.done ? '✅' : '⬜️'} {m.desc}</span>
                                     <span className="text-xs">{Math.min(m.progress, m.target)}/{m.target}</span>
                                 </div>

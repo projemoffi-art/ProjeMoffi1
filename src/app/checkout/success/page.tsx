@@ -44,7 +44,7 @@ export default function OrderSuccessPage() {
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
-                className="bg-white dark:bg-[#1A1A1A] w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl border border-white/50 dark:border-white/5 text-center relative z-10"
+                className="bg-card dark:bg-[#1A1A1A] w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl border border-white/50 dark:border-card-border text-center relative z-10"
             >
                 <div className="mb-8 relative inline-block">
                     <motion.div
@@ -58,18 +58,18 @@ export default function OrderSuccessPage() {
                     <div className="absolute inset-0 bg-green-500 rounded-full animate-ping opacity-20" />
                 </div>
 
-                <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-2 leading-tight">Siparişin Alındı!</h1>
+                <h1 className="text-3xl font-black text-foreground dark:text-white mb-2 leading-tight">Siparişin Alındı!</h1>
                 <p className="text-gray-500 font-medium mb-8">
                     Teşekkürler Moffi Sever! Siparişin hazırlanmaya başladı. Takip numaranı SMS ile göndereceğiz.
                 </p>
 
                 <div className="bg-gray-50 dark:bg-white/5 rounded-2xl p-4 mb-8 flex items-center gap-4 text-left">
-                    <div className="w-12 h-12 bg-white dark:bg-black rounded-xl flex items-center justify-center text-[#5B4D9D] shadow-sm">
+                    <div className="w-12 h-12 bg-card dark:bg-black rounded-xl flex items-center justify-center text-[#5B4D9D] shadow-moffi-card">
                         <Package className="w-6 h-6" />
                     </div>
                     <div>
                         <div className="text-[10px] uppercase font-bold text-gray-400">Tahmini Teslimat</div>
-                        <div className="font-bold text-gray-900 dark:text-white">12 - 14 Aralık</div>
+                        <div className="font-bold text-foreground dark:text-white">12 - 14 Aralık</div>
                     </div>
                 </div>
 
@@ -80,7 +80,7 @@ export default function OrderSuccessPage() {
                         </button>
                     </Link>
                     <Link href="/studio">
-                        <button className="w-full py-4 bg-white dark:bg-black text-gray-900 dark:text-white border-2 border-transparent hover:border-gray-100 dark:hover:border-white/10 rounded-2xl font-bold text-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-all">
+                        <button className="w-full py-4 bg-card dark:bg-black text-foreground dark:text-white border-2 border-transparent hover:border-card-border dark:hover:border-card-border rounded-2xl font-bold text-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-all">
                             Ana Sayfaya Dön
                         </button>
                     </Link>

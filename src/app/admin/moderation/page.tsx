@@ -96,7 +96,7 @@ export default function ModerationMatrix() {
                 </div>
                 <button 
                     onClick={fetchData} 
-                    className="flex items-center gap-3 px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-xs font-black text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-95 group"
+                    className="flex items-center gap-3 px-6 py-3 bg-white/5 border border-card-border rounded-2xl text-xs font-black text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-95 group"
                 >
                     <RefreshCw className={cn("w-4 h-4 transition-transform group-hover:rotate-180 duration-500", isLoading && "animate-spin")} /> 
                     Synchronize
@@ -131,9 +131,9 @@ export default function ModerationMatrix() {
             </div>
 
             {/* --- WORKSPACE --- */}
-            <div className="bg-[#0A0A0F] rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
+            <div className="bg-[#0A0A0F] rounded-[3rem] border border-card-border overflow-hidden shadow-2xl">
                 {/* TABS */}
-                <div className="flex bg-white/[0.02] border-b border-white/5">
+                <div className="flex bg-white/[0.02] border-b border-card-border">
                     <button 
                         onClick={() => setActiveTab("ads")}
                         className={cn(
@@ -157,7 +157,7 @@ export default function ModerationMatrix() {
                 </div>
 
                 {/* FILTERS */}
-                <div className="p-6 border-b border-white/5 flex flex-col md:flex-row gap-4 bg-white/[0.01]">
+                <div className="p-6 border-b border-card-border flex flex-col md:flex-row gap-4 bg-white/[0.01]">
                     <div className="flex-1 relative group">
                         <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-cyan-400 transition-colors" />
                         <input
@@ -165,7 +165,7 @@ export default function ModerationMatrix() {
                             placeholder="Node Search (Name, Author)..."
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
-                            className="w-full pl-14 pr-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-xs font-bold text-white placeholder:text-white/10 focus:outline-none focus:border-cyan-500/50 transition-all"
+                            className="w-full pl-14 pr-6 py-4 bg-white/5 border border-card-border rounded-2xl text-xs font-bold text-white placeholder:text-white/10 focus:outline-none focus:border-cyan-500/50 transition-all"
                         />
                     </div>
                     <div className="flex gap-2">
@@ -176,8 +176,8 @@ export default function ModerationMatrix() {
                                 className={cn(
                                     "px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all active:scale-95",
                                     filter === s 
-                                        ? "bg-white text-black border-white" 
-                                        : "bg-white/5 border-white/5 text-white/40 hover:text-white hover:bg-white/10"
+                                        ? "bg-card text-black border-white" 
+                                        : "bg-white/5 border-card-border text-white/40 hover:text-white hover:bg-white/10"
                                 )}
                             >
                                 {s}
@@ -206,7 +206,7 @@ export default function ModerationMatrix() {
                                         className="p-6 hover:bg-white/[0.03] flex items-center justify-between cursor-pointer group transition-colors"
                                     >
                                         <div className="flex items-center gap-6">
-                                            <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10 group-hover:scale-110 transition-transform">
+                                            <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center border border-card-border group-hover:scale-110 transition-transform">
                                                 <span className="text-2xl">🐾</span>
                                             </div>
                                             <div>
@@ -258,14 +258,14 @@ export default function ModerationMatrix() {
                             animate={{ y: 0 }}
                             exit={{ y: "100%" }}
                             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            className="fixed inset-x-0 bottom-0 z-[110] bg-[#0A0A0F] border-t border-white/10 rounded-t-[3rem] p-10 max-h-[85vh] overflow-y-auto no-scrollbar"
+                            className="fixed inset-x-0 bottom-0 z-[110] bg-[#0A0A0F] border-t border-card-border rounded-t-[3rem] p-10 max-h-[85vh] overflow-y-auto no-scrollbar"
                         >
                             <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-10" />
                             
                             <div className="max-w-4xl mx-auto space-y-12">
                                 <div className="flex items-start justify-between">
                                     <div className="flex gap-8">
-                                        <div className="w-32 h-32 bg-white/5 rounded-[2rem] border border-white/10 flex items-center justify-center text-5xl">🐾</div>
+                                        <div className="w-32 h-32 bg-white/5 rounded-[2rem] border border-card-border flex items-center justify-center text-5xl">🐾</div>
                                         <div>
                                             <h2 className="text-5xl font-black text-white tracking-tighter uppercase mb-2">{selectedAd.name}</h2>
                                             <div className="flex gap-4">
@@ -284,7 +284,7 @@ export default function ModerationMatrix() {
                                     <div className="space-y-6">
                                         <div>
                                             <h4 className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-3">Author Intelligence</h4>
-                                            <div className="flex items-center gap-4 p-5 bg-white/5 rounded-3xl border border-white/10">
+                                            <div className="flex items-center gap-4 p-5 bg-white/5 rounded-3xl border border-card-border">
                                                 <div className="w-10 h-10 rounded-full bg-cyan-500/20 border border-cyan-500/20" />
                                                 <div>
                                                     <p className="font-bold text-white uppercase text-sm">{selectedAd.author_name}</p>
@@ -294,7 +294,7 @@ export default function ModerationMatrix() {
                                         </div>
                                         <div>
                                             <h4 className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-3">Narrative Data</h4>
-                                            <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl leading-relaxed text-white/60 text-sm font-medium">
+                                            <div className="p-6 bg-white/[0.02] border border-card-border rounded-3xl leading-relaxed text-white/60 text-sm font-medium">
                                                 {selectedAd.desc || "Veri girişi bulunmamaktadır."}
                                             </div>
                                         </div>

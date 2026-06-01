@@ -179,7 +179,7 @@ export function QuestBentoCard() {
 
                         {/* Merkezdeki Pet Avatarı */}
                         <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-[78px] h-[78px] rounded-full overflow-hidden border border-white/10 bg-white/5 shadow-inner flex items-center justify-center">
+                            <div className="w-[78px] h-[78px] rounded-full overflow-hidden border border-card-border bg-white/5 shadow-inner flex items-center justify-center">
                                 {activePet?.avatar || activePet?.image ? (
                                     <img
                                         src={activePet.avatar || activePet.image}

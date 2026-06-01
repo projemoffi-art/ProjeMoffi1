@@ -16,7 +16,7 @@ const LiveMap = dynamic(() => import('@/components/maps/MapboxLiveMap'), {
     ssr: false,
     loading: () => (
         <div className="w-full h-full bg-[#111] flex flex-col items-center justify-center gap-4">
-            <div className="w-12 h-12 border-4 border-white/10 border-t-accent rounded-full animate-spin" />
+            <div className="w-12 h-12 border-4 border-card-border border-t-accent rounded-full animate-spin" />
             <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.5em]">Moffi Maps Yükleniyor...</p>
         </div>
     )
@@ -73,12 +73,12 @@ export function MoffiMapsModal({ isOpen, onClose }: MoffiMapsModalProps) {
                             <div className="flex items-center gap-3 pointer-events-auto">
                                 <button 
                                     onClick={onClose}
-                                    className="w-11 h-11 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white active:scale-90 transition-all shadow-2xl"
+                                    className="w-11 h-11 rounded-2xl bg-black/60 backdrop-blur-xl border border-card-border flex items-center justify-center text-white active:scale-90 transition-all shadow-2xl"
                                 >
                                     <ArrowLeft className="w-5 h-5" />
                                 </button>
 
-                                <div className="flex-1 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl p-0.5 shadow-2xl flex items-center">
+                                <div className="flex-1 bg-black/60 backdrop-blur-xl border border-card-border rounded-2xl p-0.5 shadow-2xl flex items-center">
                                     <div className="p-3">
                                         <Search className="w-4 h-4 text-white/40" />
                                     </div>
@@ -96,7 +96,7 @@ export function MoffiMapsModal({ isOpen, onClose }: MoffiMapsModalProps) {
                                     )}
                                 </div>
 
-                                <button className="w-11 h-11 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white active:scale-90 transition-all shadow-2xl">
+                                <button className="w-11 h-11 rounded-2xl bg-black/60 backdrop-blur-xl border border-card-border flex items-center justify-center text-white active:scale-90 transition-all shadow-2xl">
                                     <Layers className="w-5 h-5" />
                                 </button>
                             </div>
@@ -111,7 +111,7 @@ export function MoffiMapsModal({ isOpen, onClose }: MoffiMapsModalProps) {
                                             "px-4 py-2.5 rounded-xl backdrop-blur-xl border transition-all flex items-center gap-2 whitespace-nowrap active:scale-95 shadow-lg",
                                             activeFilter === f.id 
                                                 ? "bg-accent border-accent text-white" 
-                                                : "bg-black/60 border-white/10 text-white/60 hover:bg-black/80"
+                                                : "bg-black/60 border-card-border text-white/60 hover:bg-black/80"
                                         )}
                                     >
                                         <f.icon className={cn("w-3.5 h-3.5", activeFilter === f.id ? "text-white" : f.color)} />
@@ -178,10 +178,10 @@ export function MoffiMapsModal({ isOpen, onClose }: MoffiMapsModalProps) {
                             {/* EMERGENCY SOS BUTTON */}
                             <div className="flex justify-between items-end">
                                 <div className="flex gap-2">
-                                    <button className="w-14 h-14 rounded-3xl bg-black/40 backdrop-blur-2xl border border-white/10 flex items-center justify-center text-white pointer-events-auto shadow-2xl">
+                                    <button className="w-14 h-14 rounded-3xl bg-black/40 backdrop-blur-2xl border border-card-border flex items-center justify-center text-white pointer-events-auto shadow-2xl">
                                         <Navigation className="w-6 h-6" />
                                     </button>
-                                    <button className="w-14 h-14 rounded-3xl bg-black/40 backdrop-blur-2xl border border-white/10 flex items-center justify-center text-white pointer-events-auto shadow-2xl">
+                                    <button className="w-14 h-14 rounded-3xl bg-black/40 backdrop-blur-2xl border border-card-border flex items-center justify-center text-white pointer-events-auto shadow-2xl">
                                         <Info className="w-6 h-6" />
                                     </button>
                                 </div>
@@ -190,7 +190,7 @@ export function MoffiMapsModal({ isOpen, onClose }: MoffiMapsModalProps) {
                                     onClick={() => setIsSOSActive(!isSOSActive)}
                                     className={cn(
                                         "px-8 h-16 rounded-[2rem] flex items-center gap-3 pointer-events-auto shadow-2xl active:scale-95 transition-all group overflow-hidden relative",
-                                        isSOSActive ? "bg-white text-red-600 shadow-white/20" : "bg-red-500 text-white shadow-red-500/40"
+                                        isSOSActive ? "bg-card text-red-600 shadow-white/20" : "bg-red-500 text-white shadow-red-500/40"
                                     )}
                                 >
                                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />

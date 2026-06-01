@@ -63,7 +63,7 @@ export function MoffiCommandCenter({ isOpen, onClose, onNavigate }: MoffiCommand
                     animate={{ y: 0, opacity: 1 }}
                     exit={{ y: '100%', opacity: 0.5 }}
                     transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                    className="absolute bottom-0 left-0 right-0 bg-[#0A0A0E] border-t border-white/10 rounded-t-[4rem] p-8 pb-12 shadow-[0_-30px_100px_rgba(0,0,0,0.9)] min-h-[90vh] flex flex-col"
+                    className="absolute bottom-0 left-0 right-0 bg-[#0A0A0E] border-t border-card-border rounded-t-[4rem] p-8 pb-12 shadow-[0_-30px_100px_rgba(0,0,0,0.9)] min-h-[90vh] flex flex-col"
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Apple Style Grabber */}
@@ -94,7 +94,7 @@ export function MoffiCommandCenter({ isOpen, onClose, onNavigate }: MoffiCommand
                     {/* WIDGET GRID (Pro vs Free Pulse) */}
                     <div className="grid grid-cols-2 gap-4 mb-8">
                         {/* Live Heartbeat (Pro Guard) */}
-                        <div className="bg-white/[0.02] border border-white/5 rounded-[2.8rem] p-6 relative overflow-hidden group">
+                        <div className="bg-white/[0.02] border border-card-border rounded-[2.8rem] p-6 relative overflow-hidden group">
                             {!isPro && (
                                 <div className="absolute inset-0 z-20 bg-black/40 backdrop-blur-md flex flex-col items-center justify-center p-4 text-center">
                                     <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center mb-2">
@@ -130,7 +130,7 @@ export function MoffiCommandCenter({ isOpen, onClose, onNavigate }: MoffiCommand
                         </div>
 
                         {/* Daily Activity (Free/All) */}
-                        <div className="bg-white/[0.02] border border-white/5 rounded-[2.8rem] p-6 relative overflow-hidden group">
+                        <div className="bg-white/[0.02] border border-card-border rounded-[2.8rem] p-6 relative overflow-hidden group">
                            <div className="flex items-center gap-3 mb-4">
                                 <PawPrint className="text-yellow-400" size={16} />
                                 <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Bugünkü Efor</span>
@@ -155,7 +155,7 @@ export function MoffiCommandCenter({ isOpen, onClose, onNavigate }: MoffiCommand
                             <h3 className="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em] mb-4 pl-4">Aktif Teslimat</h3>
                             <button 
                                 onClick={() => onNavigate('orders')}
-                                className="w-full bg-gradient-to-br from-white/[0.04] to-transparent border border-white/10 rounded-[3rem] p-6 flex items-center justify-between group active:scale-[0.98] transition-all"
+                                className="w-full bg-gradient-to-br from-white/[0.04] to-transparent border border-card-border rounded-[3rem] p-6 flex items-center justify-between group active:scale-[0.98] transition-all"
                             >
                                 <div className="flex items-center gap-5">
                                     <div className="w-16 h-16 rounded-[1.8rem] bg-orange-500 flex items-center justify-center text-white shadow-[0_10px_30px_rgba(249,115,22,0.3)] group-hover:rotate-6 transition-transform">
@@ -176,7 +176,7 @@ export function MoffiCommandCenter({ isOpen, onClose, onNavigate }: MoffiCommand
                     )}
 
                     {/* ACTIONS QUICK ACCESS (The Core Launcher) */}
-                    <div className="mb-8 p-6 bg-white/[0.02] border border-white/5 rounded-[3rem]">
+                    <div className="mb-8 p-6 bg-white/[0.02] border border-card-border rounded-[3rem]">
                         <div className="grid grid-cols-4 gap-4">
                             {[
                                 { id: 'market', icon: ShoppingBag, color: 'text-orange-400', bg: 'bg-orange-500/10' },
@@ -189,7 +189,7 @@ export function MoffiCommandCenter({ isOpen, onClose, onNavigate }: MoffiCommand
                                     onClick={() => onNavigate(item.id)}
                                     className="flex flex-col items-center gap-3 active:scale-95 transition-all"
                                 >
-                                    <div className={cn("w-16 h-16 rounded-[1.8rem] flex items-center justify-center shadow-xl border border-white/5", item.bg, item.color)}>
+                                    <div className={cn("w-16 h-16 rounded-[1.8rem] flex items-center justify-center shadow-xl border border-card-border", item.bg, item.color)}>
                                         <item.icon size={26} />
                                     </div>
                                 </button>
@@ -201,7 +201,7 @@ export function MoffiCommandCenter({ isOpen, onClose, onNavigate }: MoffiCommand
                     {nextHealthAlert && (
                         <button 
                             onClick={() => onNavigate('appointments')}
-                            className="mt-auto w-full p-6 bg-white/[0.03] border border-white/5 rounded-[2.8rem] flex items-center justify-between group overflow-hidden"
+                            className="mt-auto w-full p-6 bg-white/[0.03] border border-card-border rounded-[2.8rem] flex items-center justify-between group overflow-hidden"
                         >
                             <div className="flex items-center gap-5">
                                 <div className="w-14 h-14 rounded-2x bg-red-500/10 flex items-center justify-center text-red-500 border border-red-500/20">

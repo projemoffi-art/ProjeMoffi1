@@ -19,7 +19,6 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { exportUserData } from '@/lib/utils/dataExport';
-import { PremiumUpgradeModal } from './modals/PremiumUpgradeModal';
 import { apiService } from '@/services/apiService';
 
 interface SettingsDrawerProps {
@@ -125,7 +124,7 @@ const ToggleRow = React.memo(({ icon: Icon, label, desc, category, id, color, us
                     isActive ? "bg-accent shadow-[0_0_10px_var(--color-accent)] border-transparent" : "bg-foreground/5"
                 )}
             >
-                <div className={cn("absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white transition-all shadow-sm", isActive ? "left-4" : "left-0.5")} />
+                <div className={cn("absolute top-0.5 w-3.5 h-3.5 rounded-full bg-card transition-all shadow-moffi-card", isActive ? "left-4" : "left-0.5")} />
             </div>
         </button>
     );
@@ -232,7 +231,7 @@ const MainView = ({ user, setView, handleToggle, handleExport, isExporting, expo
         </Section>
 
         <Section title="Erişilebilirlik ve Görünüm">
-            <ActionRow icon={Palette} label="Tema ve Arayüz Seçimi" desc="Karanlık/Açık mod ve özel temalar." onClick={() => setView('appearance_detail')} />
+            <ActionRow icon={Palette} label="Görünüm Ayarları" desc="Yazı tipi ve görsel efekt ayarları." onClick={() => setView('appearance_detail')} />
             <ActionRow icon={Layers} label="Kenar Paneli Ayarları" desc="Paneldeki hızlı erişim butonlarını seç." onClick={() => setView('sidebar_config')} />
             <ActionRow icon={Type} label="Metin ve Renk Ayarları" desc="Yazı boyutu ve görme desteği." onClick={() => setView('accessibility')} />
         </Section>
@@ -421,66 +420,10 @@ const MainView = ({ user, setView, handleToggle, handleExport, isExporting, expo
     </motion.div>
 );
 
-const AppearanceDetailView = ({ user, setView, theme, setTheme, updateSettings }: ViewProps) => {
-    const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
-    const themes = [
-        { id: 'apple-midnight', label: 'Moffi Midnight', color: 'bg-black', icon: Moon, desc: 'Premium Karanlık' },
-        { id: 'apple-light', label: 'Moffi Light', color: 'bg-[#F5F5F7]', icon: Sun, desc: 'Aydınlık & Sade' },
-        { id: 'pastel-soft', label: 'Apple Rose Gold', color: 'bg-gradient-to-br from-[#FFF9FB] to-[#FF375F]/30', icon: Sparkles, desc: 'Zarif & Canlı (Prime)', isPrime: true },
-        { id: 'prime-cyber', label: 'Cyber Neon', color: 'bg-gradient-to-br from-[#020205] to-[#00F3FF]/40', icon: Zap, desc: 'Futuristik Prime', isPrime: true },
-    ];
-
+const AppearanceDetailView = ({ user, setView, updateSettings }: ViewProps) => {
     return (
         <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(94vh - 180px)' }}>
             <div className="space-y-8 pb-10 px-2">
-                <div className="space-y-4">
-                    <div className="flex items-center gap-3 px-1">
-                        <div className="w-8 h-8 rounded-2xl bg-accent/10 flex items-center justify-center"><Layout className="w-4 h-4 text-accent" /></div>
-                        <h3 className="text-[12px] font-black text-foreground uppercase tracking-[0.2em]">Arayüz Teması</h3>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        {themes.map((t) => (
-                            <button 
-                                key={t.id} 
-                                onClick={() => {
-                                    if (t.isPrime && !user?.is_prime) {
-                                        setIsUpgradeModalOpen(true);
-                                        return;
-                                    }
-                                    setTheme?.(t.id as any);
-                                }}
-                                className={cn(
-                                    "flex flex-col gap-3 p-4 rounded-[3rem] transition-all border group relative overflow-hidden",
-                                    theme === t.id 
-                                        ? "bg-foreground border-transparent shadow-2xl scale-100" 
-                                        : "bg-foreground/[0.03] border-card-border hover:bg-foreground/10"
-                                )}
-                            >
-                                <div className={cn("w-full h-16 rounded-2xl mb-1 shadow-inner", t.color)} />
-                                <div className="flex flex-col px-1">
-                                    <div className="flex items-center justify-between">
-                                        <span className={cn("text-[10px] font-black uppercase tracking-widest leading-tight", theme === t.id ? "text-background" : "text-foreground")}>{t.label}</span>
-                                        <t.icon className={cn("w-4 h-4 transition-transform group-hover:scale-110", theme === t.id ? "text-background" : "text-foreground/40")} />
-                                    </div>
-                                    <span className={cn("text-[8px] font-bold uppercase tracking-tighter mt-1 opacity-60", theme === t.id ? "text-background" : "text-secondary")}>{(t as any).desc}</span>
-                                </div>
-                                {t.isPrime && (
-                                    <div className="absolute top-4 left-4 flex items-center gap-1 bg-accent/20 backdrop-blur-md px-2 py-0.5 rounded-full border border-accent/30 scale-75 origin-top-left">
-                                        <Crown className="w-2.5 h-2.5 text-accent" />
-                                        <span className="text-[7px] font-black text-accent uppercase tracking-widest">PRIME</span>
-                                    </div>
-                                )}
-                                {theme === t.id && <motion.div layoutId="theme-check" className="absolute top-2 right-2 w-5 h-5 bg-background rounded-full flex items-center justify-center"><Check className="w-3 h-3 text-foreground" /></motion.div>}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <PremiumUpgradeModal 
-                    isOpen={isUpgradeModalOpen} 
-                    onClose={() => setIsUpgradeModalOpen(false)} 
-                />
-
                 <div className="space-y-3">
                     <p className="text-[9px] font-black text-secondary uppercase tracking-[0.2em] px-1">Gelişmiş Görsel Özellikler</p>
                     <div className="space-y-1 bg-foreground/[0.02] rounded-[2.5rem] p-2 border border-card-border">
@@ -645,7 +588,7 @@ const NotificationsView = ({ user, setView, updateSettings }: ViewProps) => (
                         <p className="text-[9.5px] text-secondary font-black uppercase mt-1.5 tracking-tighter">Push bildirimlerini yönetir.</p>
                     </div>
                     <button onClick={() => updateSettings('notifications', { pushEnabled: !user?.settings?.notifications?.pushEnabled })} className={cn("w-12 h-6 rounded-full transition-all relative border border-card-border", user?.settings?.notifications?.pushEnabled ? "bg-emerald-500 border-transparent shadow-lg shadow-emerald-500/20" : "bg-foreground/5")}>
-                        <div className={cn("absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all shadow-lg", user?.settings?.notifications?.pushEnabled ? "left-6.5" : "left-0.5")} />
+                        <div className={cn("absolute top-0.5 w-5 h-5 rounded-full bg-card transition-all shadow-lg", user?.settings?.notifications?.pushEnabled ? "left-6.5" : "left-0.5")} />
                     </button>
                 </div>
             </div>
@@ -715,7 +658,7 @@ const AccessibilityView = ({
                             <p className="text-[9.5px] text-secondary mt-1.5 font-bold uppercase tracking-tighter">Tüm yazıları daha belirgin hale getirir.</p>
                         </div>
                         <div className={cn("w-10 h-5.5 rounded-full transition-all relative shrink-0 border border-card-border", boldText ? "bg-emerald-500 border-transparent shadow-lg shadow-emerald-500/20" : "bg-foreground/5")}>
-                            <div className={cn("absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-all shadow-sm", boldText ? "left-5" : "left-0.5")} />
+                            <div className={cn("absolute top-0.5 w-4.5 h-4.5 rounded-full bg-card transition-all shadow-moffi-card", boldText ? "left-5" : "left-0.5")} />
                         </div>
                     </button>
                     <button onClick={() => setHighContrast?.(!highContrast)} className="flex items-center justify-between py-4 px-4 hover:bg-foreground/[0.03] transition-all rounded-3xl border-b border-card-border last:border-0 grow text-left w-full">
@@ -724,7 +667,7 @@ const AccessibilityView = ({
                             <p className="text-[9.5px] text-secondary mt-1.5 font-bold uppercase tracking-tighter">Renkler ve çizgiler arası netliği artırır.</p>
                         </div>
                         <div className={cn("w-10 h-5.5 rounded-full transition-all relative shrink-0 border border-card-border", highContrast ? "bg-emerald-500 border-transparent shadow-lg shadow-emerald-500/20" : "bg-foreground/5")}>
-                            <div className={cn("absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-all shadow-sm", highContrast ? "left-5" : "left-0.5")} />
+                            <div className={cn("absolute top-0.5 w-4.5 h-4.5 rounded-full bg-card transition-all shadow-moffi-card", highContrast ? "left-5" : "left-0.5")} />
                         </div>
                     </button>
                 </div>
@@ -745,7 +688,7 @@ const AccessibilityView = ({
                             <p className="text-[9.5px] text-secondary mt-1.5 font-bold uppercase tracking-tighter">Göz yorgunluğu için animasyonları kısıtlar.</p>
                         </div>
                         <div className={cn("w-10 h-5.5 rounded-full transition-all relative shrink-0 border border-card-border", reduceMotion ? "bg-emerald-500 border-transparent shadow-lg shadow-emerald-500/20" : "bg-foreground/5")}>
-                            <div className={cn("absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-all shadow-sm", reduceMotion ? "left-5" : "left-0.5")} />
+                            <div className={cn("absolute top-0.5 w-4.5 h-4.5 rounded-full bg-card transition-all shadow-moffi-card", reduceMotion ? "left-5" : "left-0.5")} />
                         </div>
                     </button>
                     <button onClick={() => setReduceTransparency?.(!reduceTransparency)} className="flex items-center justify-between py-4 px-4 hover:bg-foreground/[0.03] transition-all rounded-3xl border-b border-card-border last:border-0 grow text-left w-full">
@@ -754,7 +697,7 @@ const AccessibilityView = ({
                             <p className="text-[9.5px] text-secondary mt-1.5 font-bold uppercase tracking-tighter">Blur efektlerini kaldırıp odaklanmayı artırır.</p>
                         </div>
                         <div className={cn("w-10 h-5.5 rounded-full transition-all relative shrink-0 border border-card-border", reduceTransparency ? "bg-emerald-500 border-transparent shadow-lg shadow-emerald-500/20" : "bg-foreground/5")}>
-                            <div className={cn("absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-all shadow-sm", reduceTransparency ? "left-5" : "left-0.5")} />
+                            <div className={cn("absolute top-0.5 w-4.5 h-4.5 rounded-full bg-card transition-all shadow-moffi-card", reduceTransparency ? "left-5" : "left-0.5")} />
                         </div>
                     </button>
                 </div>
@@ -829,7 +772,7 @@ const WellbeingView = ({ user, setView, updateSettings }: ViewProps) => {
                         <button onClick={() => updateSettings('wellbeing', { quietMode: { ...wellbeing.quietMode, enabled: !wellbeing.quietMode.enabled } })} className="flex items-center justify-between p-6 w-full text-left group">
                             <div className="flex items-center gap-3"><span className="text-[13px] font-black text-foreground uppercase tracking-tight">Sessiz Mod Aktivasyonu</span></div>
                             <div className={cn("w-12 h-6 rounded-full transition-all relative border border-card-border shrink-0", wellbeing.quietMode.enabled ? "bg-accent border-transparent shadow-lg shadow-accent/20" : "bg-foreground/5")}>
-                                <div className={cn("absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all shadow-lg", wellbeing.quietMode.enabled ? "left-6.5" : "left-0.5")} />
+                                <div className={cn("absolute top-0.5 w-5 h-5 rounded-full bg-card transition-all shadow-lg", wellbeing.quietMode.enabled ? "left-6.5" : "left-0.5")} />
                             </div>
                         </button>
                         <div className={cn("grid grid-cols-2 gap-3 transition-all p-2", wellbeing.quietMode.enabled ? "opacity-100" : "opacity-30 pointer-events-none grayscale")}>
@@ -886,7 +829,7 @@ const HiddenWordsView = ({ user, setView, newWord, setNewWord, handleAddWord, ha
             </h3>
             <div className="py-2">
                 <div className="flex gap-2 mb-4">
-                    <input type="text" value={newWord} onChange={(e) => setNewWord?.(e.target.value)} placeholder="Yeni kelime..." className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-[12px] outline-none focus:border-indigo-500/30" onKeyDown={(e) => e.key === 'Enter' && handleAddWord?.()} />
+                    <input type="text" value={newWord} onChange={(e) => setNewWord?.(e.target.value)} placeholder="Yeni kelime..." className="flex-1 bg-white/5 border border-card-border rounded-xl px-4 py-2 text-white text-[12px] outline-none focus:border-indigo-500/30" onKeyDown={(e) => e.key === 'Enter' && handleAddWord?.()} />
                     <button onClick={handleAddWord} className="w-9 h-9 rounded-xl bg-indigo-500 flex items-center justify-center text-white active:scale-95 transition-all"><Plus className="w-4 h-4" /></button>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
@@ -913,7 +856,7 @@ const StorySettingsView = ({ user, setView, updateSettings }: ViewProps) => (
                 <div className="py-2">
                     <div className="space-y-2">
                         {[{ id: 'all', label: 'Herkes' }, { id: 'followers', label: 'Takipçiler' }, { id: 'close_friends', label: 'Yakın Arkadaşlar' }].map((opt) => (
-                            <button key={opt.id} onClick={() => updateSettings('content', { stories: { ...user?.settings?.content?.stories, visibility: opt.id } })} className={cn("w-full p-4 rounded-xl border text-left transition-all font-bold text-[12px] uppercase justify-between flex items-center", user?.settings?.content?.stories?.visibility === opt.id ? "bg-cyan-500/10 border-cyan-500/30 text-white" : "bg-white/5 border-white/5 text-gray-600")}>{opt.label} {user?.settings?.content?.stories?.visibility === opt.id && <Check className="w-3 h-3" />}</button>
+                            <button key={opt.id} onClick={() => updateSettings('content', { stories: { ...user?.settings?.content?.stories, visibility: opt.id } })} className={cn("w-full p-4 rounded-xl border text-left transition-all font-bold text-[12px] uppercase justify-between flex items-center", user?.settings?.content?.stories?.visibility === opt.id ? "bg-cyan-500/10 border-cyan-500/30 text-white" : "bg-white/5 border-card-border text-gray-600")}>{opt.label} {user?.settings?.content?.stories?.visibility === opt.id && <Check className="w-3 h-3" />}</button>
                         ))}
                     </div>
                 </div>
@@ -997,7 +940,7 @@ const PasswordChangeView = ({ setView, changePassword }: ViewProps) => {
                 </div>
 
                 <div className="space-y-4">
-                    <div className="bg-white/5 rounded-3xl p-4 border border-white/5">
+                    <div className="bg-white/5 rounded-3xl p-4 border border-card-border">
                         <label className="text-[10px] font-black text-white/20 uppercase tracking-widest block mb-2 px-1">Mevcut Şifre</label>
                         <input 
                             type="password" 
@@ -1007,7 +950,7 @@ const PasswordChangeView = ({ setView, changePassword }: ViewProps) => {
                             placeholder="••••••••"
                         />
                     </div>
-                    <div className="bg-white/5 rounded-3xl p-4 border border-white/5">
+                    <div className="bg-white/5 rounded-3xl p-4 border border-card-border">
                         <label className="text-[10px] font-black text-white/20 uppercase tracking-widest block mb-2 px-1">Yeni Şifre</label>
                         <input 
                             type="password" 
@@ -1025,7 +968,7 @@ const PasswordChangeView = ({ setView, changePassword }: ViewProps) => {
                 <button 
                     disabled={loading || !oldPass || !newPass}
                     onClick={handleSave}
-                    className="w-full py-4 rounded-3xl bg-white text-black font-black text-[13.5px] uppercase tracking-widest hover:bg-gray-200 transition-all active:scale-95 disabled:opacity-50 mt-4 shadow-xl shadow-white/5"
+                    className="w-full py-4 rounded-3xl bg-card text-black font-black text-[13.5px] uppercase tracking-widest hover:bg-gray-200 transition-all active:scale-95 disabled:opacity-50 mt-4 shadow-xl shadow-white/5"
                 >
                     {loading ? <Activity className="w-4 h-4 animate-spin mx-auto" /> : 'Şifreyi Güncelle'}
                 </button>
@@ -1391,7 +1334,7 @@ const AIAssistantView = ({ user, setView, updateSettings }: ViewProps) => {
                                  </div>
                              </div>
                              <div className={cn("w-8 h-4.5 rounded-full transition-all relative border border-card-border shrink-0", ai.autoHealthTips ? "bg-accent shadow-[0_0_10px_var(--color-accent)] border-transparent" : "bg-foreground/5")}>
-                                 <div className={cn("absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white transition-all shadow-sm", ai.autoHealthTips ? "left-4" : "left-0.5")} />
+                                 <div className={cn("absolute top-0.5 w-3.5 h-3.5 rounded-full bg-card transition-all shadow-moffi-card", ai.autoHealthTips ? "left-4" : "left-0.5")} />
                              </div>
                          </div>
 
@@ -1406,7 +1349,7 @@ const AIAssistantView = ({ user, setView, updateSettings }: ViewProps) => {
                                  </div>
                              </div>
                              <div className={cn("w-8 h-4.5 rounded-full transition-all relative border border-card-border shrink-0", ai.smartModeration ? "bg-accent shadow-[0_0_10px_var(--color-accent)] border-transparent" : "bg-foreground/5")}>
-                                 <div className={cn("absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white transition-all shadow-sm", ai.smartModeration ? "left-4" : "left-0.5")} />
+                                 <div className={cn("absolute top-0.5 w-3.5 h-3.5 rounded-full bg-card transition-all shadow-moffi-card", ai.smartModeration ? "left-4" : "left-0.5")} />
                              </div>
                          </div>
                     </div>

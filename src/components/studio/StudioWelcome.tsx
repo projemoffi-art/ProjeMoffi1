@@ -20,7 +20,7 @@ export function StudioWelcome({ onStart }: { onStart: () => void }) {
 
             {/* Hero Title */}
             <div className="mb-8">
-                <h1 className="text-4xl font-black text-gray-900 dark:text-white leading-[1.1] mb-4">
+                <h1 className="text-4xl font-black text-foreground dark:text-white leading-[1.1] mb-4">
                     Hayalindeki <br /> <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#5B4D9D] to-purple-400">Tasarımı</span> <br /> Yarat.
                 </h1>
                 <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
@@ -29,7 +29,7 @@ export function StudioWelcome({ onStart }: { onStart: () => void }) {
             </div>
 
             {/* Hero Visual */}
-            <div className="bg-white dark:bg-gray-900 rounded-[2rem] p-6 shadow-xl relative overflow-hidden mb-8 h-64 flex items-center justify-center group cursor-pointer" onClick={onStart}>
+            <div className="bg-card dark:bg-gray-900 rounded-[2rem] p-6 shadow-xl relative overflow-hidden mb-8 h-64 flex items-center justify-center group cursor-pointer" onClick={onStart}>
                 <div className="absolute inset-0 bg-gradient-to-br from-[#F5F5FA] to-white dark:from-gray-800 dark:to-black opacity-50" />
                 <img
                     src="https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?q=80&w=600&auto=format&fit=crop"
@@ -49,11 +49,11 @@ export function StudioWelcome({ onStart }: { onStart: () => void }) {
                     { name: "Mama Kabı", icon: Package, color: "bg-green-50 text-green-600" },
                     { name: "Tasma", icon: Dog, color: "bg-pink-50 text-pink-600" }
                 ].map((cat, i) => (
-                    <button key={i} onClick={onStart} className="bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center gap-3 hover:scale-[1.02] active:scale-95 transition-all text-left">
+                    <button key={i} onClick={onStart} className="bg-card dark:bg-gray-900 p-4 rounded-2xl shadow-moffi-card border border-card-border dark:border-gray-800 flex items-center gap-3 hover:scale-[1.02] active:scale-95 transition-all text-left">
                         <div className={`w-10 h-10 rounded-xl ${cat.color} flex items-center justify-center`}>
                             <cat.icon className="w-5 h-5" />
                         </div>
-                        <span className="text-sm font-bold text-gray-800 dark:text-gray-200">{cat.name}</span>
+                        <span className="text-sm font-bold text-foreground dark:text-gray-200">{cat.name}</span>
                     </button>
                 ))}
             </div>

@@ -19,7 +19,7 @@ export function Skeleton({ className }: SkeletonProps) {
 
 export function PostSkeleton() {
     return (
-        <div className="bg-[#12121A] border border-white/5 rounded-[3.5rem] overflow-hidden space-y-6 pb-8">
+        <div className="bg-[#12121A] border border-card-border rounded-[3.5rem] overflow-hidden space-y-6 pb-8">
             <div className="p-8 pb-0 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <Skeleton className="w-14 h-14 rounded-2xl" />

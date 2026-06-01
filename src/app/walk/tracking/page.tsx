@@ -182,7 +182,7 @@ function TrackingContent() {
             {/* BACK BUTTON */}
             <button
                 onClick={() => router.back()}
-                className="absolute top-4 left-4 z-[60] w-10 h-10 bg-white/10 backdrop-blur-md border border-white/20 rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-colors shadow-lg active:scale-95"
+                className="absolute top-4 left-4 z-[60] w-10 h-10 bg-white/10 backdrop-blur-md border border-card-border rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-colors shadow-lg active:scale-95"
             >
                 <ChevronLeft className="w-6 h-6" />
             </button>
@@ -299,7 +299,7 @@ function TrackingContent() {
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
-                        className="fixed top-28 left-6 right-6 z-[60] bg-black/85 backdrop-blur border border-white/10 px-4 py-3 rounded-2xl text-white font-bold text-center text-xs shadow-2xl pointer-events-none font-sans"
+                        className="fixed top-28 left-6 right-6 z-[60] bg-black/85 backdrop-blur border border-card-border px-4 py-3 rounded-2xl text-white font-bold text-center text-xs shadow-2xl pointer-events-none font-sans"
                     >
                         {toastMessage}
                     </motion.div>
@@ -317,21 +317,21 @@ function TrackingContent() {
                             className="flex flex-col gap-2.5 mb-1"
                         >
                             {/* Widget 1: Health */}
-                            <button className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-lg group active:scale-90 transition-transform">
+                            <button className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-xl border border-card-border flex items-center justify-center shadow-lg group active:scale-90 transition-transform">
                                 <div className="w-6.5 h-6.5 rounded-lg bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow-md">
                                     <Heart className="w-3.5 h-3.5 text-white fill-white/20" />
                                 </div>
                             </button>
 
                             {/* Widget 2: Environment */}
-                            <button className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-lg group active:scale-90 transition-transform">
+                            <button className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-xl border border-card-border flex items-center justify-center shadow-lg group active:scale-90 transition-transform">
                                 <div className="w-6.5 h-6.5 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-md">
                                     <Droplets className="w-3.5 h-3.5 text-white" />
                                 </div>
                             </button>
 
                             {/* Widget 3: Social/Community */}
-                            <button className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-lg group active:scale-90 transition-transform">
+                            <button className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-xl border border-card-border flex items-center justify-center shadow-lg group active:scale-90 transition-transform">
                                 <div className="w-6.5 h-6.5 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-md">
                                     <MessageSquarePlus className="w-3.5 h-3.5 text-white" />
                                 </div>
@@ -340,7 +340,7 @@ function TrackingContent() {
                             {/* Widget 4: Danger/SOS */}
                             <button 
                                 onClick={() => setActiveSidebar('danger')}
-                                className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-lg group active:scale-90 transition-transform"
+                                className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-xl border border-card-border flex items-center justify-center shadow-lg group active:scale-90 transition-transform"
                             >
                                 <div className="w-6.5 h-6.5 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-md">
                                     <AlertOctagon className="w-3.5 h-3.5 text-white animate-pulse" />
@@ -355,8 +355,8 @@ function TrackingContent() {
                     className={cn(
                         "w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-xl border backdrop-blur-2xl",
                         isActionMenuOpen 
-                            ? "bg-white text-black border-white" 
-                            : "bg-black/40 text-white border-white/10 hover:bg-black/60"
+                            ? "bg-card text-black border-white" 
+                            : "bg-black/40 text-white border-card-border hover:bg-black/60"
                     )}
                 >
                     {isActionMenuOpen ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
@@ -365,7 +365,7 @@ function TrackingContent() {
 
             {/* PET COMPANION LIVE INDICATORS (NEW EXTENSION!) */}
             <div className="absolute right-6 bottom-32 z-[55] flex flex-col gap-2">
-                <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-3 flex flex-col gap-1.5 shadow-2xl min-w-[90px]">
+                <div className="bg-black/40 backdrop-blur-xl border border-card-border rounded-2xl p-3 flex flex-col gap-1.5 shadow-2xl min-w-[90px]">
                     <div className="flex items-center gap-1.5">
                         <span className="text-[10px]">🐕</span>
                         <span className="text-[8px] font-black text-white/80 uppercase tracking-wider">{activePet?.name || 'Moffi'}</span>
@@ -386,7 +386,7 @@ function TrackingContent() {
             {/* BOTTOM CONTROLS */}
             <div className="absolute bottom-0 left-0 right-0 z-[50] p-6 pb-10 bg-gradient-to-t from-black via-black/80 to-transparent">
                 <div className="flex items-center justify-between gap-6 max-w-xs mx-auto">
-                    <button onClick={() => setActiveModal('camera')} className="w-10 h-10 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center text-white active:scale-90 transition-transform">
+                    <button onClick={() => setActiveModal('camera')} className="w-10 h-10 rounded-full bg-white/10 backdrop-blur border border-card-border flex items-center justify-center text-white active:scale-90 transition-transform">
                         <Camera className="w-4.5 h-4.5" />
                     </button>
                     <div className="relative">
@@ -398,7 +398,7 @@ function TrackingContent() {
                                     if (walkData.isPaused) resumeWalk();
                                     else pauseWalk();
                                 }
-                            }} className={`w-16 h-16 rounded-full flex items-center justify-center shadow-xl active:scale-95 transition-all ${(!walkData.isActive || walkData.isPaused) ? 'bg-green-500 text-white' : 'bg-white text-black'}`}>
+                            }} className={`w-16 h-16 rounded-full flex items-center justify-center shadow-xl active:scale-95 transition-all ${(!walkData.isActive || walkData.isPaused) ? 'bg-green-500 text-white' : 'bg-card text-black'}`}>
                                 {(!walkData.isActive || walkData.isPaused) ? <Play className="w-6 h-6 fill-current translate-x-0.5" /> : <Pause className="w-6 h-6 fill-current" />}
                             </button>
                         ) : (
@@ -413,7 +413,7 @@ function TrackingContent() {
                             </button>
                         )}
                     </div>
-                    <button onClick={() => setActiveModal('music')} className="w-10 h-10 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center text-white active:scale-90 transition-transform">
+                    <button onClick={() => setActiveModal('music')} className="w-10 h-10 rounded-full bg-white/10 backdrop-blur border border-card-border flex items-center justify-center text-white active:scale-90 transition-transform">
                         <Music className="w-4.5 h-4.5" />
                     </button>
                 </div>
@@ -427,11 +427,11 @@ function TrackingContent() {
                         initial={{ opacity: 0, y: 50, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 50, scale: 0.95 }}
-                        className="fixed inset-x-6 bottom-28 z-[70] bg-[#121212]/80 backdrop-blur-xl border border-white/10 p-5 rounded-[2.5rem] shadow-2xl flex flex-col gap-4 max-w-sm mx-auto"
+                        className="fixed inset-x-6 bottom-28 z-[70] bg-[#121212]/80 backdrop-blur-xl border border-card-border p-5 rounded-[2.5rem] shadow-2xl flex flex-col gap-4 max-w-sm mx-auto"
                     >
                         <div className="flex justify-between items-center">
                             <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">Çalan Şarkı</span>
-                            <button onClick={() => setActiveModal(null)} className="w-6 h-6 bg-white/5 rounded-full flex items-center justify-center border border-white/5 hover:bg-white/10 transition-colors">
+                            <button onClick={() => setActiveModal(null)} className="w-6 h-6 bg-white/5 rounded-full flex items-center justify-center border border-card-border hover:bg-white/10 transition-colors">
                                 <X className="w-3.5 h-3.5 text-white/50" />
                             </button>
                         </div>
@@ -460,7 +460,7 @@ function TrackingContent() {
 
                         <div className="flex justify-center items-center gap-8 py-1">
                             <button className="text-white/50 hover:text-white transition-colors active:scale-95"><SkipBack className="w-4.5 h-4.5" /></button>
-                            <button className="w-10 h-10 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all"><Play className="w-4.5 h-4.5 fill-current translate-x-0.5" /></button>
+                            <button className="w-10 h-10 bg-card text-black rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all"><Play className="w-4.5 h-4.5 fill-current translate-x-0.5" /></button>
                             <button className="text-white/50 hover:text-white transition-colors active:scale-95"><SkipForward className="w-4.5 h-4.5" /></button>
                         </div>
                     </motion.div>
@@ -485,14 +485,14 @@ function TrackingContent() {
                                     setCapturedPhoto(null); 
                                     setActiveModal(null); 
                                 }} 
-                                className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center border border-white/10 text-white"
+                                className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center border border-card-border text-white"
                             >
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
 
                         {/* Camera Viewfinder Borders & Background Pet Image */}
-                        <div className="flex-1 border border-white/20 rounded-[2.5rem] my-4 relative overflow-hidden flex items-center justify-center bg-zinc-950">
+                        <div className="flex-1 border border-card-border rounded-[2.5rem] my-4 relative overflow-hidden flex items-center justify-center bg-zinc-950">
                             <img
                                 src={activePet?.avatar || activePet?.image || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=600'}
                                 className={cn(
@@ -554,11 +554,11 @@ function TrackingContent() {
                                 {selectedTemplate === 2 && (
                                     <>
                                         <div className="flex justify-between items-start">
-                                            <div className="w-10 h-10 rounded-full border border-white/20 bg-black/30 backdrop-blur-sm flex items-center justify-center text-lg shadow-lg">
+                                            <div className="w-10 h-10 rounded-full border border-card-border bg-black/30 backdrop-blur-sm flex items-center justify-center text-lg shadow-lg">
                                                 🏆
                                             </div>
                                         </div>
-                                        <div className="bg-black/45 backdrop-blur-md border border-white/10 rounded-2xl p-3.5 flex justify-between items-center w-full shadow-2xl font-sans">
+                                        <div className="bg-black/45 backdrop-blur-md border border-card-border rounded-2xl p-3.5 flex justify-between items-center w-full shadow-2xl font-sans">
                                             <div>
                                                 <div className="text-white font-black text-xs uppercase tracking-tight">{activePet?.name || 'Moffi'}</div>
                                                 <div className="text-white/60 text-[8px] font-bold uppercase mt-0.5">{activePet?.breed || 'Dostun'}</div>
@@ -616,8 +616,8 @@ function TrackingContent() {
                                             className={cn(
                                                 "px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all border whitespace-nowrap cursor-pointer",
                                                 selectedTemplate === t.id 
-                                                    ? "bg-white text-black border-white shadow-lg scale-105" 
-                                                    : "bg-white/10 text-white/80 border-white/10 hover:bg-white/20"
+                                                    ? "bg-card text-black border-white shadow-lg scale-105" 
+                                                    : "bg-white/10 text-white/80 border-card-border hover:bg-white/20"
                                             )}
                                         >
                                             {t.emoji} {t.label}
@@ -667,7 +667,7 @@ function TrackingContent() {
                                         }}
                                         className="w-16 h-16 rounded-full border-4 border-white p-1 flex items-center justify-center active:scale-90 transition-transform cursor-pointer"
                                     >
-                                        <div className="w-full h-full bg-white rounded-full" />
+                                        <div className="w-full h-full bg-card rounded-full" />
                                     </button>
                                     <div className="w-10" />
                                 </div>
@@ -679,7 +679,7 @@ function TrackingContent() {
                 {/* Reward Modal */}
                 {reward && (
                     <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} className="fixed inset-0 z-[70] flex items-center justify-center">
-                        <div className="bg-[#121212]/90 border border-white/10 backdrop-blur-md text-white p-8 rounded-[2.5rem] text-center shadow-2xl">
+                        <div className="bg-[#121212]/90 border border-card-border backdrop-blur-md text-white p-8 rounded-[2.5rem] text-center shadow-2xl">
                             <h3 className="text-xl font-black mb-1">{reward.name}</h3>
                             <div className="text-yellow-400 font-black text-3xl mb-4">+{reward.coinReward} PC</div>
                             <button onClick={() => setReward(null)} className="w-full bg-purple-600 px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-wider active:scale-95 transition-all">Devam Et</button>

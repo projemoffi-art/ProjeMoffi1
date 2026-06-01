@@ -2,6 +2,7 @@
 
 import { X, Moon, Sun, Bell, Shield, HelpCircle, LogOut } from "lucide-react";
 import { useSocial } from "@/context/SocialContext";
+import { useTheme } from "@/context/ThemeContext";
 import { cn } from "@/lib/utils";
 
 interface SettingsDrawerProps {
@@ -10,7 +11,12 @@ interface SettingsDrawerProps {
 }
 
 export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
-    const { theme, toggleTheme, logout } = useSocial();
+    const { theme, setTheme } = useTheme();
+    const { logout } = useSocial();
+
+    const toggleTheme = () => {
+        setTheme(theme === 'dark' ? 'light' : 'dark');
+    };
 
     if (!isOpen) return null;
 
@@ -23,7 +29,7 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
             />
 
             {/* Drawer */}
-            <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-t-[2.5rem] p-6 pointer-events-auto relative shadow-2xl animate-in slide-in-from-bottom duration-300 transition-colors">
+            <div className="bg-card dark:bg-slate-900 w-full max-w-md rounded-t-[2.5rem] p-6 pointer-events-auto relative shadow-2xl animate-in slide-in-from-bottom duration-300 transition-colors">
 
                 {/* Handle */}
                 <div className="w-full flex justify-center mb-6">
@@ -31,7 +37,7 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
                 </div>
 
                 <div className="flex items-center justify-between mb-8">
-                    <h2 className="text-xl font-black text-gray-900 dark:text-white font-poppins">Ayarlar</h2>
+                    <h2 className="text-xl font-black text-foreground dark:text-white font-poppins">Ayarlar</h2>
                     <button onClick={onClose} className="p-2 bg-gray-50 dark:bg-slate-800 rounded-full text-gray-500 dark:text-gray-400">
                         <X className="w-5 h-5" />
                     </button>
@@ -39,13 +45,13 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
 
                 <div className="space-y-4 mb-10">
                     {/* Theme Toggle Item */}
-                    <div className="flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 transition-colors">
+                    <div className="flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-slate-800 border border-card-border dark:border-slate-700 transition-colors">
                         <div className="flex items-center gap-3">
                             <div className={cn("w-10 h-10 rounded-full flex items-center justify-center transition-colors", theme === 'dark' ? "bg-indigo-900/50 text-indigo-400" : "bg-orange-100 text-orange-500")}>
                                 {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
                             </div>
                             <div>
-                                <div className="text-sm font-bold text-gray-900 dark:text-white">Görünüm Modu</div>
+                                <div className="text-sm font-bold text-foreground dark:text-white">Görünüm Modu</div>
                                 <div className="text-xs text-gray-400 dark:text-gray-500">{theme === 'dark' ? 'Karanlık Mod' : 'Aydınlık Mod'}</div>
                             </div>
                         </div>
@@ -53,7 +59,7 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
                             onClick={toggleTheme}
                             className={cn("w-12 h-7 rounded-full p-1 transition-colors duration-300", theme === 'dark' ? "bg-indigo-600" : "bg-gray-300")}
                         >
-                            <div className={cn("w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform duration-300", theme === 'dark' ? "translate-x-5" : "translate-x-0")} />
+                            <div className={cn("w-5 h-5 bg-card rounded-full shadow-moffi-card transform transition-transform duration-300", theme === 'dark' ? "translate-x-5" : "translate-x-0")} />
                         </button>
                     </div>
 
@@ -63,7 +69,7 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
                             <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-500">
                                 <Bell className="w-5 h-5" />
                             </div>
-                            <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Bildirimler</span>
+                            <span className="text-sm font-bold text-foreground dark:text-gray-200">Bildirimler</span>
                         </div>
                     </div>
                 </div>

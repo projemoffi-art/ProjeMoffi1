@@ -66,7 +66,7 @@ export function FeedTab({
             className="h-full w-full overflow-y-scroll no-scrollbar pb-32 flex flex-col gap-0"
         >
             {/* SEARCH & EXPLORE HEADER */}
-            <div className="px-6 pt-6 pb-2 space-y-6 sticky top-0 z-[100] bg-gradient-to-b from-[#05050A] via-[#05050A]/90 to-transparent backdrop-blur-sm">
+            <div className="px-6 pt-6 pb-2 space-y-6 sticky top-0 z-[100] bg-gradient-to-b from-[#000000] via-[#000000]/90 to-transparent backdrop-blur-sm">
                 <div className="relative group">
                     <motion.div 
                         animate={{ 
@@ -104,8 +104,8 @@ export function FeedTab({
                             className={cn(
                                 "flex items-center gap-2 px-5 py-2.5 rounded-full whitespace-nowrap text-[11px] font-black uppercase tracking-widest transition-all duration-300 active:scale-95",
                                 activeCategory === cat.id 
-                                    ? "bg-white text-black shadow-[0_10px_20px_rgba(255,255,255,0.1)]" 
-                                    : "bg-white/5 text-gray-500 border border-white/5 hover:bg-white/10"
+                                    ? "bg-card text-black shadow-[0_10px_20px_rgba(255,255,255,0.1)]" 
+                                    : "bg-white/5 text-gray-500 border border-card-border hover:bg-white/10"
                             )}
                         >
                             <span>{cat.icon}</span>
@@ -117,7 +117,7 @@ export function FeedTab({
             {/* STORIES BAR */}
             <div className="w-full flex gap-4 px-4 py-4 overflow-x-auto no-scrollbar shrink-0">
                 <div className="flex flex-col items-center gap-1.5 shrink-0 px-1">
-                    <div className="w-16 h-16 rounded-full p-[2px] bg-white/10 flex items-center justify-center cursor-pointer border-2 border-dashed border-white/20">
+                    <div className="w-16 h-16 rounded-full p-[2px] bg-white/10 flex items-center justify-center cursor-pointer border-2 border-dashed border-card-border">
                         <Plus className="w-6 h-6 text-white/50" />
                     </div>
                     <span className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Sen</span>

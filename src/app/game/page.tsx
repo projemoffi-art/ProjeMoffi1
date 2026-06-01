@@ -128,7 +128,7 @@ export default function GamePage() {
                 {/* Pet Avatar & Status */}
                 <div className="flex items-center gap-4">
                     <div className="relative">
-                        <div className="w-16 h-16 rounded-full border-4 border-[#5B4D9D] overflow-hidden bg-white">
+                        <div className="w-16 h-16 rounded-full border-4 border-[#5B4D9D] overflow-hidden bg-card">
                             <img src="/images/game_mascot.jpg" alt="Pet" className="w-full h-full object-cover" />
                         </div>
                         <div className="absolute -bottom-1 -right-1 bg-green-500 w-5 h-5 rounded-full border-2 border-[#2D2D2D]" />
@@ -168,7 +168,7 @@ export default function GamePage() {
     const GameCard = ({ title, desc, icon: Icon, color, difficulty, onClick }: any) => (
         <div
             onClick={onClick}
-            className="group relative bg-white dark:bg-[#1A1A1A] p-5 rounded-[2rem] shadow-lg border border-gray-100 dark:border-white/5 overflow-hidden active:scale-[0.98] transition-all cursor-pointer hover:border-[#5B4D9D]/30"
+            className="group relative bg-card dark:bg-[#1A1A1A] p-5 rounded-[2rem] shadow-lg border border-card-border dark:border-card-border overflow-hidden active:scale-[0.98] transition-all cursor-pointer hover:border-[#5B4D9D]/30"
         >
             <div className="flex items-start justify-between mb-4">
                 <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200/50", color)}>
@@ -186,7 +186,7 @@ export default function GamePage() {
                 </div>
             </div>
 
-            <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">{title}</h3>
+            <h3 className="text-xl font-black text-foreground dark:text-white mb-2">{title}</h3>
             <p className="text-xs text-gray-500 font-medium leading-relaxed">{desc}</p>
 
             {/* Hover Effect */}
@@ -206,9 +206,9 @@ export default function GamePage() {
                         router.push('/community');
                     }
                 }} 
-                className="fixed top-6 left-6 z-[60] w-12 h-12 bg-white/20 dark:bg-black/40 backdrop-blur-xl border border-gray-200 dark:border-white/10 rounded-2xl flex items-center justify-center hover:bg-white/10 hover:scale-105 active:scale-95 transition-all shadow-xl"
+                className="fixed top-6 left-6 z-[60] w-12 h-12 bg-white/20 dark:bg-black/40 backdrop-blur-xl border border-card-border dark:border-card-border rounded-2xl flex items-center justify-center hover:bg-white/10 hover:scale-105 active:scale-95 transition-all shadow-xl"
             >
-                <ChevronLeft className="w-6 h-6 text-gray-800 dark:text-white" />
+                <ChevronLeft className="w-6 h-6 text-foreground dark:text-white" />
             </button>
 
             {/* GAME MODALS */}
@@ -272,12 +272,12 @@ export default function GamePage() {
             </AnimatePresence>
 
             {/* TOP NAVIGATION TOGGLE */}
-            <div className="sticky top-0 z-30 bg-[#F8F9FC]/80 dark:bg-black/80 backdrop-blur-xl p-4 flex justify-center border-b border-gray-200/50 dark:border-white/5">
-                <div className="bg-white dark:bg-[#1A1A1A] p-1 rounded-2xl shadow-sm border border-gray-200 dark:border-white/10 flex p-1">
-                    <button onClick={() => setActiveTab('home')} className={cn("px-6 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2", activeTab === 'home' ? "bg-black dark:bg-white text-white dark:text-black shadow-lg" : "text-gray-500")}>
+            <div className="sticky top-0 z-30 bg-[#F8F9FC]/80 dark:bg-black/80 backdrop-blur-xl p-4 flex justify-center border-b border-card-border/50 dark:border-card-border">
+                <div className="bg-card dark:bg-[#1A1A1A] p-1 rounded-2xl shadow-moffi-card border border-card-border dark:border-card-border flex p-1">
+                    <button onClick={() => setActiveTab('home')} className={cn("px-6 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2", activeTab === 'home' ? "bg-black dark:bg-card text-white dark:text-black shadow-lg" : "text-gray-500")}>
                         <Heart className="w-3.5 h-3.5" /> Evim
                     </button>
-                    <button onClick={() => setActiveTab('arena')} className={cn("px-6 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2", activeTab === 'arena' ? "bg-black dark:bg-white text-white dark:text-black shadow-lg" : "text-gray-500")}>
+                    <button onClick={() => setActiveTab('arena')} className={cn("px-6 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2", activeTab === 'arena' ? "bg-black dark:bg-card text-white dark:text-black shadow-lg" : "text-gray-500")}>
                         <Gamepad2 className="w-3.5 h-3.5" /> Arena
                     </button>
                 </div>
@@ -335,9 +335,9 @@ export default function GamePage() {
                             </div>
 
                             {/* LEADERBOARD */}
-                            <div className="bg-white dark:bg-[#1A1A1A] p-6 rounded-[2rem] border border-gray-100 dark:border-white/5">
+                            <div className="bg-card dark:bg-[#1A1A1A] p-6 rounded-[2rem] border border-card-border dark:border-card-border">
                                 <div className="flex justify-between items-center mb-6">
-                                    <h3 className="font-black text-gray-900 dark:text-white flex items-center gap-2">
+                                    <h3 className="font-black text-foreground dark:text-white flex items-center gap-2">
                                         <Trophy className="w-5 h-5 text-yellow-500" />
                                         Haftalık Liderler
                                     </h3>
@@ -354,14 +354,14 @@ export default function GamePage() {
                                     ].map((user, i) => (
                                         <div key={i} className="flex items-center gap-4">
                                             <div className="font-black text-gray-300 w-4 text-center">{i + 1}</div>
-                                            <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center text-lg shadow-sm border border-gray-100">
+                                            <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center text-lg shadow-sm border border-card-border">
                                                 {user.img}
                                             </div>
                                             <div className="flex-1">
-                                                <h4 className="font-bold text-sm text-gray-900 dark:text-white">{user.name}</h4>
+                                                <h4 className="font-bold text-sm text-foreground dark:text-white">{user.name}</h4>
                                                 {i < 3 && <span className="text-[10px] text-gray-500 font-bold bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 px-2 py-0.5 rounded">Pro Oyuncu</span>}
                                             </div>
-                                            <div className="font-black text-gray-900 dark:text-white">{user.score}</div>
+                                            <div className="font-black text-foreground dark:text-white">{user.score}</div>
                                         </div>
                                     ))}
                                 </div>

@@ -133,12 +133,12 @@ export default function FoodCatchGame({ onGameOver, onClose }: GameProps) {
             <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-20">
                 <div className="bg-white/80 backdrop-blur rounded-2xl px-4 py-2 flex items-center gap-2 font-black text-xl shadow-lg border border-white/40">
                     <Trophy className="w-6 h-6 text-yellow-500" />
-                    <span className="text-gray-900">{score}</span>
+                    <span className="text-foreground">{score}</span>
                 </div>
 
                 <div className="bg-white/80 backdrop-blur rounded-2xl px-4 py-2 flex items-center gap-2 font-black text-xl shadow-lg border border-white/40">
                     <Timer className="w-6 h-6 text-blue-500" />
-                    <span className={timeLeft < 10 ? "text-red-500" : "text-gray-900"}>{timeLeft}s</span>
+                    <span className={timeLeft < 10 ? "text-red-500" : "text-foreground"}>{timeLeft}s</span>
                 </div>
 
                 <button

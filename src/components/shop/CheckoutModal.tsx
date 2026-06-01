@@ -65,7 +65,7 @@ export function CheckoutModal({ isOpen, onClose, onSuccess, plan }: CheckoutModa
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            className="relative w-full max-w-lg bg-[#0A0A0E] border border-white/10 rounded-[3rem] overflow-hidden shadow-[0_0_100px_rgba(34,211,238,0.2)]"
+            className="relative w-full max-w-lg bg-[#0A0A0E] border border-card-border rounded-[3rem] overflow-hidden shadow-[0_0_100px_rgba(34,211,238,0.2)]"
           >
             {/* Header Gradient */}
             <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-cyan-500/10 to-transparent pointer-events-none" />
@@ -74,7 +74,7 @@ export function CheckoutModal({ isOpen, onClose, onSuccess, plan }: CheckoutModa
             {step !== 'processing' && (
               <button 
                 onClick={onClose}
-                className="absolute top-6 right-6 p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-white/40 hover:text-white transition-all z-10"
+                className="absolute top-6 right-6 p-3 bg-white/5 hover:bg-white/10 border border-card-border rounded-full text-white/40 hover:text-white transition-all z-10"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -97,7 +97,7 @@ export function CheckoutModal({ isOpen, onClose, onSuccess, plan }: CheckoutModa
                   </div>
 
                   {/* Summary Card */}
-                  <div className="bg-white/5 border border-white/10 rounded-[2rem] p-6 space-y-4">
+                  <div className="bg-white/5 border border-card-border rounded-[2rem] p-6 space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-bold text-gray-400">Seçilen Plan</span>
                       <span className="text-sm font-black text-white uppercase italic">{plan.name}</span>
@@ -120,7 +120,7 @@ export function CheckoutModal({ isOpen, onClose, onSuccess, plan }: CheckoutModa
                         onClick={() => setPaymentMethod('card')}
                         className={cn(
                           "py-4 rounded-2xl border flex flex-col items-center gap-2 transition-all active:scale-95",
-                          paymentMethod === 'card' ? "bg-white text-black border-white" : "bg-white/5 text-white/40 border-white/10"
+                          paymentMethod === 'card' ? "bg-card text-black border-white" : "bg-white/5 text-white/40 border-card-border"
                         )}
                       >
                         <CreditCard className="w-5 h-5" />
@@ -130,7 +130,7 @@ export function CheckoutModal({ isOpen, onClose, onSuccess, plan }: CheckoutModa
                         onClick={() => setPaymentMethod('apple')}
                         className={cn(
                           "py-4 rounded-2xl border flex flex-col items-center gap-2 transition-all active:scale-95",
-                          paymentMethod === 'apple' ? "bg-white text-black border-white" : "bg-white/5 text-white/40 border-white/10"
+                          paymentMethod === 'apple' ? "bg-card text-black border-white" : "bg-white/5 text-white/40 border-card-border"
                         )}
                       >
                         <Apple className="w-5 h-5" />
@@ -140,7 +140,7 @@ export function CheckoutModal({ isOpen, onClose, onSuccess, plan }: CheckoutModa
                         onClick={() => setPaymentMethod('google')}
                         className={cn(
                           "py-4 rounded-2xl border flex flex-col items-center gap-2 transition-all active:scale-95",
-                          paymentMethod === 'google' ? "bg-white text-black border-white" : "bg-white/5 text-white/40 border-white/10"
+                          paymentMethod === 'google' ? "bg-card text-black border-white" : "bg-white/5 text-white/40 border-card-border"
                         )}
                       >
                         <Smartphone className="w-5 h-5" />
@@ -206,7 +206,7 @@ export function CheckoutModal({ isOpen, onClose, onSuccess, plan }: CheckoutModa
                     <p className="text-sm text-emerald-400 font-black uppercase tracking-widest">Ödeme Başarılı</p>
                   </div>
 
-                  <div className="w-full bg-white/5 border border-white/10 rounded-[2rem] p-6 space-y-3">
+                  <div className="w-full bg-white/5 border border-card-border rounded-[2rem] p-6 space-y-3">
                     <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-gray-500">
                       <span>Sipariş No</span>
                       <span className="text-white">#{orderId}</span>
@@ -226,7 +226,7 @@ export function CheckoutModal({ isOpen, onClose, onSuccess, plan }: CheckoutModa
                       if (onSuccess) onSuccess();
                       onClose();
                     }}
-                    className="w-full py-5 bg-white text-black rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg active:scale-[0.98] transition-all"
+                    className="w-full py-5 bg-card text-black rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg active:scale-[0.98] transition-all"
                   >
                     Macerayı Başlat
                   </button>
@@ -235,7 +235,7 @@ export function CheckoutModal({ isOpen, onClose, onSuccess, plan }: CheckoutModa
             </div>
 
             {/* Bottom Branding */}
-            <div className="p-8 border-t border-white/5 bg-white/[0.02] flex items-center justify-between">
+            <div className="p-8 border-t border-card-border bg-white/[0.02] flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-cyan-400" />
                 <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Moffi Secure Payment</span>

@@ -86,13 +86,13 @@ export function PharmacyModal({ isOpen, onClose }: PharmacyModalProps) {
                 initial={{ y: "100%" }}
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}
-                className="w-full max-w-lg bg-[#111111] rounded-t-[3.5rem] sm:rounded-[4rem] h-[90vh] flex flex-col overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.8)] border border-white/10 relative"
+                className="w-full max-w-lg bg-[#111111] rounded-t-[3.5rem] sm:rounded-[4rem] h-[90vh] flex flex-col overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.8)] border border-card-border relative"
             >
                 {/* iOS Style Grab Handle */}
                 <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/10 rounded-full sm:hidden z-50" />
 
                 {/* HEADER */}
-                <div className="p-8 pb-4 bg-[#111111]/80 backdrop-blur-3xl z-30 sticky top-0 border-b border-white/5">
+                <div className="p-8 pb-4 bg-[#111111]/80 backdrop-blur-3xl z-30 sticky top-0 border-b border-card-border">
                     <div className="flex justify-between items-center mb-8 mt-2 sm:mt-0">
                         <div className="flex items-center gap-4">
                             <div className="w-14 h-14 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center shadow-2xl relative overflow-hidden group">
@@ -109,7 +109,7 @@ export function PharmacyModal({ isOpen, onClose }: PharmacyModalProps) {
                                 </div>
                             </div>
                         </div>
-                        <button onClick={onClose} className="w-11 h-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all">
+                        <button onClick={onClose} className="w-11 h-11 rounded-full bg-white/5 border border-card-border flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all">
                             <X className="w-5 h-5" />
                         </button>
                     </div>
@@ -124,7 +124,7 @@ export function PharmacyModal({ isOpen, onClose }: PharmacyModalProps) {
                     {loading ? (
                         <div className="space-y-6">
                             {[1, 2, 3].map(i => (
-                                <div key={i} className="bg-[#1C1C1E] p-6 rounded-[2.5rem] border border-white/5 animate-pulse">
+                                <div key={i} className="bg-[#1C1C1E] p-6 rounded-[2.5rem] border border-card-border animate-pulse">
                                     <div className="h-6 w-2/3 bg-white/5 rounded-full mb-4" />
                                     <div className="h-4 w-1/2 bg-white/5 rounded-full mb-6" />
                                     <div className="flex gap-3">
@@ -142,7 +142,7 @@ export function PharmacyModal({ isOpen, onClose }: PharmacyModalProps) {
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: index * 0.1 }}
                                     key={pharmacy.id}
-                                    className="bg-[#1C1C1E] p-7 rounded-[3rem] border border-white/5 shadow-2xl relative overflow-hidden group hover:bg-[#252528] transition-all"
+                                    className="bg-[#1C1C1E] p-7 rounded-[3rem] border border-card-border shadow-2xl relative overflow-hidden group hover:bg-[#252528] transition-all"
                                 >
                                     <div className="absolute top-0 right-0 p-8 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity">
                                         <Pill className="w-32 h-32" />
@@ -158,13 +158,13 @@ export function PharmacyModal({ isOpen, onClose }: PharmacyModalProps) {
                                                 {pharmacy.distance} • {pharmacy.address}
                                             </div>
                                         </div>
-                                        <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 text-white/40 flex items-center justify-center shrink-0 group-hover:bg-purple-500/10 group-hover:text-purple-400 group-hover:border-purple-500/20 transition-all">
+                                        <div className="w-12 h-12 rounded-2xl bg-white/5 border border-card-border text-white/40 flex items-center justify-center shrink-0 group-hover:bg-purple-500/10 group-hover:text-purple-400 group-hover:border-purple-500/20 transition-all">
                                             <Clock className="w-6 h-6" />
                                         </div>
                                     </div>
 
                                     <div className="flex gap-3 relative z-10">
-                                        <button className="flex-1 h-14 bg-white text-black rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-white/90 active:scale-95 transition-all shadow-xl">
+                                        <button className="flex-1 h-14 bg-card text-black rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-white/90 active:scale-95 transition-all shadow-xl">
                                             <Navigation className="w-4 h-4" /> YOL TARİFİ
                                         </button>
                                         <button className="w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all active:scale-95">
@@ -174,7 +174,7 @@ export function PharmacyModal({ isOpen, onClose }: PharmacyModalProps) {
                                 </motion.div>
                             ))}
 
-                            <div className="text-center mt-12 mb-8 p-10 rounded-[3rem] bg-white/5 border border-white/5 relative overflow-hidden group">
+                            <div className="text-center mt-12 mb-8 p-10 rounded-[3rem] bg-white/5 border border-card-border relative overflow-hidden group">
                                 <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
                                 <Shield className="w-8 h-8 mx-auto mb-4 text-purple-400/40 group-hover:text-purple-400 transition-colors" />
                                 <p className="text-[10px] font-black text-purple-400/60 uppercase tracking-[0.2em] mb-2 italic">MOFFİ DOĞRULANMIŞ VERİ</p>

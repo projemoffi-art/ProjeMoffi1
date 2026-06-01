@@ -3,7 +3,7 @@ import Image from "next/image";
 
 export function Header() {
     return (
-        <header className="flex items-center justify-between px-6 py-4 bg-white sticky top-0 z-10">
+        <header className="flex items-center justify-between px-6 py-4 bg-card sticky top-0 z-10">
             {/* Profile Section */}
             <div className="flex items-center gap-2">
                 <div className="relative">

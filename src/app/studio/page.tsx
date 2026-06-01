@@ -31,7 +31,7 @@ export default function ProductionStudio() {
     // Left Toolbar States
     const [activePanel, setActivePanel] = useState<string | null>(null);
     const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
-    const [selectedColor, setSelectedColor] = useState('bg-white'); 
+    const [selectedColor, setSelectedColor] = useState('bg-card'); 
     const [selectedModel, setSelectedModel] = useState('Klasik Tişört');
 
     // Checkout & Order States
@@ -50,7 +50,7 @@ export default function ProductionStudio() {
     const [printFilter, setPrintFilter] = useState("none");
 
     const colors = [
-        { label: 'Beyaz (Önerilen)', hex: 'bg-white', blend: 'mix-blend-normal' },
+        { label: 'Beyaz (Önerilen)', hex: 'bg-card', blend: 'mix-blend-normal' },
         { label: 'Açık Gri', hex: 'bg-gray-200', blend: 'mix-blend-multiply' },
         { label: 'Krem', hex: 'bg-[#F5F5DC]', blend: 'mix-blend-multiply' },
         { label: 'Açık Mavi', hex: 'bg-blue-100', blend: 'mix-blend-multiply' }
@@ -236,11 +236,11 @@ export default function ProductionStudio() {
             </div>
 
             {/* HEADER */}
-            <header className="relative z-50 px-8 py-6 flex items-center justify-between border-b border-white/5 backdrop-blur-xl">
+            <header className="relative z-50 px-8 py-6 flex items-center justify-between border-b border-card-border backdrop-blur-xl">
                 <div className="flex items-center gap-6">
                     <button 
                         onClick={() => router.push('/community')}
-                        className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all active:scale-95"
+                        className="w-12 h-12 rounded-2xl bg-white/5 border border-card-border flex items-center justify-center hover:bg-white/10 transition-all active:scale-95"
                     >
                         <ChevronLeft className="w-6 h-6" />
                     </button>
@@ -251,7 +251,7 @@ export default function ProductionStudio() {
                 </div>
 
                 <div className="relative flex items-center gap-3">
-                    <button onClick={() => setIsShareMenuOpen(!isShareMenuOpen)} className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-xs font-bold hover:bg-white/10 transition-all flex items-center gap-2 active:scale-95">
+                    <button onClick={() => setIsShareMenuOpen(!isShareMenuOpen)} className="px-6 py-3 rounded-xl bg-white/5 border border-card-border text-xs font-bold hover:bg-white/10 transition-all flex items-center gap-2 active:scale-95">
                         <Share2 className="w-4 h-4" /> Paylaş
                     </button>
                     
@@ -261,7 +261,7 @@ export default function ProductionStudio() {
                                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                className="absolute top-16 right-[180px] w-64 bg-[card] backdrop-blur-3xl border border-white/10 rounded-2xl p-4 shadow-[0_0_50px_rgba(0,0,0,0.8)] z-50 flex flex-col gap-2"
+                                className="absolute top-16 right-[180px] w-64 bg-[card] backdrop-blur-3xl border border-card-border rounded-2xl p-4 shadow-[0_0_50px_rgba(0,0,0,0.8)] z-50 flex flex-col gap-2"
                             >
                                 <div className="flex items-center justify-between px-2 mb-2">
                                     <h4 className="text-[10px] uppercase tracking-widest text-white/50 font-black">Paylaşım Ağı</h4>
@@ -276,7 +276,7 @@ export default function ProductionStudio() {
                                         <span className="text-[9px] text-zinc-500 tracking-wider">Topluluk ile buluştur</span>
                                     </div>
                                 </button>
-                                <button onClick={handleShareToDevice} className="w-full text-left px-4 py-4 rounded-xl hover:bg-white/5 hover:text-white transition-colors flex items-center gap-4 text-sm font-bold text-zinc-400 group border border-transparent hover:border-white/10">
+                                <button onClick={handleShareToDevice} className="w-full text-left px-4 py-4 rounded-xl hover:bg-white/5 hover:text-white transition-colors flex items-center gap-4 text-sm font-bold text-zinc-400 group border border-transparent hover:border-card-border">
                                     <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
                                         <Smartphone className="w-4 h-4 text-white" />
                                     </div>
@@ -312,7 +312,7 @@ export default function ProductionStudio() {
             <main className="flex-1 relative flex flex-col lg:flex-row overflow-hidden">
                 
                 {/* 1. LEFT TOOLBAR */}
-                <aside className="w-full lg:w-20 border-r border-white/5 flex lg:flex-col items-center py-8 gap-8 bg-black/20 backdrop-blur-sm z-30 overflow-x-auto lg:overflow-y-auto no-scrollbar justify-center relative">
+                <aside className="w-full lg:w-20 border-r border-card-border flex lg:flex-col items-center py-8 gap-8 bg-black/20 backdrop-blur-sm z-30 overflow-x-auto lg:overflow-y-auto no-scrollbar justify-center relative">
                     <ToolbarIcon icon={Palette} active={activePanel === 'color'} label="Kumaş" onClick={() => setActivePanel(p => p === 'color' ? null : 'color')} />
                     <ToolbarIcon icon={Box} active={activePanel === 'model'} label="Model" onClick={() => setActivePanel(p => p === 'model' ? null : 'model')} />
                     
@@ -332,14 +332,14 @@ export default function ProductionStudio() {
                             animate={{ opacity: 1, x: 0, scale: 1 }}
                             exit={{ opacity: 0, x: -20, scale: 0.95 }}
                             transition={{ duration: 0.2 }}
-                            className="absolute left-4 lg:left-28 top-32 lg:top-16 w-72 bg-black/90 backdrop-blur-3xl border border-white/10 rounded-2xl p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] z-50 overflow-hidden"
+                            className="absolute left-4 lg:left-28 top-32 lg:top-16 w-72 bg-black/90 backdrop-blur-3xl border border-card-border rounded-2xl p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] z-50 overflow-hidden"
                         >
                             {activePanel === 'color' && (
                                 <div>
                                     <h4 className="text-xs font-black uppercase tracking-widest text-white mb-4">Kumaş Rengi</h4>
                                     <div className="grid grid-cols-2 gap-3">
                                         {colors.map((c, i) => (
-                                            <button key={i} onClick={() => setSelectedColor(c.hex)} className={cn("w-full h-10 rounded-xl border-2 transition-all shadow-inner", c.hex, selectedColor === c.hex ? "border-cyan-400 scale-105" : "border-white/10 opacity-70 hover:opacity-100")} title={c.label} />
+                                            <button key={i} onClick={() => setSelectedColor(c.hex)} className={cn("w-full h-10 rounded-xl border-2 transition-all shadow-inner", c.hex, selectedColor === c.hex ? "border-cyan-400 scale-105" : "border-card-border opacity-70 hover:opacity-100")} title={c.label} />
                                         ))}
                                     </div>
                                 </div>
@@ -349,7 +349,7 @@ export default function ProductionStudio() {
                                     <h4 className="text-xs font-black uppercase tracking-widest text-white mb-4">Ürün Tipi</h4>
                                     <div className="flex flex-col gap-2">
                                         {models.map(m => (
-                                            <button key={m} onClick={() => setSelectedModel(m)} className={cn("text-xs font-bold p-3 rounded-xl text-left transition-all", selectedModel === m ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/50" : "bg-white/5 border border-white/5 text-zinc-400 hover:bg-white/10")}>{m}</button>
+                                            <button key={m} onClick={() => setSelectedModel(m)} className={cn("text-xs font-bold p-3 rounded-xl text-left transition-all", selectedModel === m ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/50" : "bg-white/5 border border-card-border text-zinc-400 hover:bg-white/10")}>{m}</button>
                                         ))}
                                     </div>
                                 </div>
@@ -366,21 +366,21 @@ export default function ProductionStudio() {
                                             value={topText} 
                                             onChange={e => setTopText(e.target.value)} 
                                             placeholder="Üst Metin (Örn: KRAL)..."
-                                            className="w-full bg-black/40 border border-white/20 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400 transition-colors placeholder:text-zinc-600"
+                                            className="w-full bg-black/40 border border-card-border rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400 transition-colors placeholder:text-zinc-600"
                                         />
                                         <input 
                                             type="text" 
                                             value={bottomText} 
                                             onChange={e => setBottomText(e.target.value)} 
                                             placeholder="Alt Metin (Örn: LEO)..."
-                                            className="w-full bg-black/40 border border-white/20 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400 transition-colors placeholder:text-zinc-600"
+                                            className="w-full bg-black/40 border border-card-border rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400 transition-colors placeholder:text-zinc-600"
                                         />
                                     </div>
                                     
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="flex flex-col gap-2">
                                             <span className="text-[10px] text-white/40 uppercase font-black tracking-widest">Renk</span>
-                                            <div className="flex items-center gap-3 bg-white/5 p-2 rounded-xl border border-white/5">
+                                            <div className="flex items-center gap-3 bg-white/5 p-2 rounded-xl border border-card-border">
                                                 <input type="color" value={textColor} onChange={e => setTextColor(e.target.value)} className="w-6 h-6 rounded-full cursor-pointer bg-transparent border-0 p-0" />
                                                 <span className="text-[10px] font-mono text-zinc-400">{textColor}</span>
                                             </div>
@@ -396,7 +396,7 @@ export default function ProductionStudio() {
                                             <span className="text-[10px] text-white/40 uppercase font-black tracking-widest">Font Stili</span>
                                             <div className="flex flex-col gap-1">
                                                 {fonts.map(font => (
-                                                    <button key={font.name} onClick={() => setTextFont(font.class)} className={cn("text-[10px] py-2 border rounded-lg transition-all", textFont === font.class ? "border-cyan-500 bg-cyan-500/10 text-cyan-400 font-bold" : "border-white/10 text-white/50 hover:bg-white/5")}>{font.name}</button>
+                                                    <button key={font.name} onClick={() => setTextFont(font.class)} className={cn("text-[10px] py-2 border rounded-lg transition-all", textFont === font.class ? "border-cyan-500 bg-cyan-500/10 text-cyan-400 font-bold" : "border-card-border text-white/50 hover:bg-white/5")}>{font.name}</button>
                                                 ))}
                                             </div>
                                         </div>
@@ -410,12 +410,12 @@ export default function ProductionStudio() {
                                             Konum (Baskı Bölgesi) <span className="text-cyan-400 text-[10px]">{printPosition.toUpperCase()}</span>
                                         </h4>
                                         <div className="grid grid-cols-2 gap-2">
-                                            <button onClick={() => setPrintPosition('top-left')} className={cn("py-2 text-[9px] font-bold rounded-lg border transition-all", printPosition === 'top-left' ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400' : 'border-white/10 text-white/50 hover:bg-white/5')}>Sol Üst (Cep)</button>
-                                            <button onClick={() => setPrintPosition('top-right')} className={cn("py-2 text-[9px] font-bold rounded-lg border transition-all", printPosition === 'top-right' ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400' : 'border-white/10 text-white/50 hover:bg-white/5')}>Sağ Üst</button>
-                                            <button onClick={() => setPrintPosition('bottom-left')} className={cn("py-2 text-[9px] font-bold rounded-lg border transition-all", printPosition === 'bottom-left' ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400' : 'border-white/10 text-white/50 hover:bg-white/5')}>Sol Alt</button>
-                                            <button onClick={() => setPrintPosition('bottom-right')} className={cn("py-2 text-[9px] font-bold rounded-lg border transition-all", printPosition === 'bottom-right' ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400' : 'border-white/10 text-white/50 hover:bg-white/5')}>Sağ Alt</button>
+                                            <button onClick={() => setPrintPosition('top-left')} className={cn("py-2 text-[9px] font-bold rounded-lg border transition-all", printPosition === 'top-left' ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400' : 'border-card-border text-white/50 hover:bg-white/5')}>Sol Üst (Cep)</button>
+                                            <button onClick={() => setPrintPosition('top-right')} className={cn("py-2 text-[9px] font-bold rounded-lg border transition-all", printPosition === 'top-right' ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400' : 'border-card-border text-white/50 hover:bg-white/5')}>Sağ Üst</button>
+                                            <button onClick={() => setPrintPosition('bottom-left')} className={cn("py-2 text-[9px] font-bold rounded-lg border transition-all", printPosition === 'bottom-left' ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400' : 'border-card-border text-white/50 hover:bg-white/5')}>Sol Alt</button>
+                                            <button onClick={() => setPrintPosition('bottom-right')} className={cn("py-2 text-[9px] font-bold rounded-lg border transition-all", printPosition === 'bottom-right' ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400' : 'border-card-border text-white/50 hover:bg-white/5')}>Sağ Alt</button>
                                         </div>
-                                        <button onClick={() => setPrintPosition('center')} className={cn("w-full mt-2 py-3 text-[10px] font-black uppercase tracking-widest rounded-lg border transition-all", printPosition === 'center' ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.2)]' : 'border-white/10 text-white/50 hover:bg-white/5')}>
+                                        <button onClick={() => setPrintPosition('center')} className={cn("w-full mt-2 py-3 text-[10px] font-black uppercase tracking-widest rounded-lg border transition-all", printPosition === 'center' ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.2)]' : 'border-card-border text-white/50 hover:bg-white/5')}>
                                             Ana Merkez Göğüs
                                         </button>
                                     </div>
@@ -440,7 +440,7 @@ export default function ProductionStudio() {
                                         <button 
                                             key={filter.name} 
                                             onClick={() => setPrintFilter(filter.value)} 
-                                            className={cn("text-xs font-bold p-3 rounded-xl text-left transition-all", printFilter === filter.value ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/50" : "bg-white/5 border border-white/5 text-zinc-400 hover:bg-white/10")}
+                                            className={cn("text-xs font-bold p-3 rounded-xl text-left transition-all", printFilter === filter.value ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/50" : "bg-white/5 border border-card-border text-zinc-400 hover:bg-white/10")}
                                         >
                                             {filter.name}
                                         </button>
@@ -486,7 +486,7 @@ export default function ProductionStudio() {
                                 className="relative w-full max-w-2xl aspect-square flex items-center justify-center"
                             >
                                 {/* TEXTILE PREVIEW STAGE (The Real POD Canvas) */}
-                                <div className={cn("relative w-full h-full rounded-[4rem] flex items-center justify-center overflow-hidden group shadow-[inset_0_0_100px_rgba(0,0,0,0.5)] transition-colors duration-500", selectedColor === 'bg-white' ? 'bg-[#f0f0f0]' : selectedColor)}>
+                                <div className={cn("relative w-full h-full rounded-[4rem] flex items-center justify-center overflow-hidden group shadow-[inset_0_0_100px_rgba(0,0,0,0.5)] transition-colors duration-500", selectedColor === 'bg-card' ? 'bg-[#f0f0f0]' : selectedColor)}>
                                     
                                     {/* BLANK APPAREL MOCKUP (Folded Shirt) overlay pattern */}
                                     <img 
@@ -575,7 +575,7 @@ export default function ProductionStudio() {
                 </section>
 
                 {/* 3. RIGHT CONTROLS */}
-                <aside className="w-full lg:w-[400px] border-l border-white/5 bg-black/20 backdrop-blur-xl p-8 flex flex-col gap-8 z-20 overflow-y-auto no-scrollbar">
+                <aside className="w-full lg:w-[400px] border-l border-card-border bg-black/20 backdrop-blur-xl p-8 flex flex-col gap-8 z-20 overflow-y-auto no-scrollbar">
                     
                     {/* LOGISTICS INFO */}
                     <div className="bg-cyan-500/5 border border-cyan-500/20 rounded-2xl p-4 flex flex-col gap-2">
@@ -595,7 +595,7 @@ export default function ProductionStudio() {
                                 value={activePrompt}
                                 onChange={(e) => setActivePrompt(e.target.value)}
                                 placeholder="Yapay zeka ile tasarla (Örn: Neo-noir bir kedi)..."
-                                className="w-full h-24 bg-white/5 border border-white/10 rounded-2xl p-4 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/50 resize-none transition-all placeholder:text-zinc-600"
+                                className="w-full h-24 bg-white/5 border border-card-border rounded-2xl p-4 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/50 resize-none transition-all placeholder:text-zinc-600"
                             />
                         </div>
                         <div className="grid grid-cols-5 gap-2">
@@ -611,7 +611,7 @@ export default function ProductionStudio() {
                             <input type="file" id="upload-image" accept="image/*" className="hidden" onChange={handleFileUpload} />
                             <button 
                                 onClick={() => document.getElementById('upload-image')?.click()}
-                                className="col-span-2 h-12 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl flex items-center justify-center gap-2 transition-colors group"
+                                className="col-span-2 h-12 bg-white/5 border border-card-border hover:bg-white/10 rounded-xl flex items-center justify-center gap-2 transition-colors group"
                             >
                                 <Upload className="w-4 h-4 text-white/50 group-hover:text-cyan-400" />
                                 <span className="text-white font-bold text-[10px] sm:text-xs text-white/70 group-hover:text-cyan-400 uppercase">Yükle</span>
@@ -632,7 +632,7 @@ export default function ProductionStudio() {
                                     <button 
                                         key={idx} 
                                         onClick={() => setPrintDesign(url)}
-                                        className="w-16 h-16 bg-white rounded-xl border border-white/10 shrink-0 overflow-hidden hover:border-cyan-400 transition-all focus:outline-none"
+                                        className="w-16 h-16 bg-card rounded-xl border border-card-border shrink-0 overflow-hidden hover:border-cyan-400 transition-all focus:outline-none"
                                     >
                                         <img src={url} className="w-full h-full object-cover mix-blend-multiply" />
                                     </button>
@@ -650,7 +650,7 @@ export default function ProductionStudio() {
                                     <button 
                                         key={item.id} 
                                         onClick={() => setPrintDesign(item.image)}
-                                        className="aspect-square bg-white border-2 border-transparent rounded-xl shrink-0 overflow-hidden hover:border-purple-500 transition-all focus:outline-none relative group"
+                                        className="aspect-square bg-card border-2 border-transparent rounded-xl shrink-0 overflow-hidden hover:border-purple-500 transition-all focus:outline-none relative group"
                                         title="Bu tasarımı tuvale geri yükle"
                                     >
                                         <img src={item.image} className="w-full h-full object-cover mix-blend-multiply" />
@@ -664,7 +664,7 @@ export default function ProductionStudio() {
                     )}
 
                     {/* OPTIONS */}
-                    <div className="space-y-4 pt-4 border-t border-white/5">
+                    <div className="space-y-4 pt-4 border-t border-card-border">
                         <OptionRow icon={Download} label="Grafiği Bilgisayara İndir (.PNG)" onClick={handleDownloadGraphic} />
                         <OptionRow icon={Save} label="Gardıroba Kaydet" onClick={handleSaveToWardrobe} />
                     </div>
@@ -679,7 +679,7 @@ export default function ProductionStudio() {
                             exit={{ opacity: 0, y: -20, scale: 0.9 }}
                             className="fixed top-0 left-0 right-0 z-[200] flex justify-center pointer-events-none"
                         >
-                            <div className="bg-green-500 text-black px-6 py-3 rounded-full font-black text-xs lg:text-sm uppercase tracking-widest flex items-center gap-3 shadow-[0_10px_40px_rgba(34,197,94,0.4)] border border-white/20">
+                            <div className="bg-green-500 text-black px-6 py-3 rounded-full font-black text-xs lg:text-sm uppercase tracking-widest flex items-center gap-3 shadow-[0_10px_40px_rgba(34,197,94,0.4)] border border-card-border">
                                 <span className="w-6 h-6 bg-black/20 rounded-full flex items-center justify-center text-xs">📦</span>
                                 Tasarım Üretim Sepetine Bırakıldı!
                             </div>
@@ -700,10 +700,10 @@ export default function ProductionStudio() {
                                 initial={{ scale: 0.95, y: 30 }}
                                 animate={{ scale: 1, y: 0 }}
                                 exit={{ scale: 0.95, y: 30 }}
-                                className="w-full max-w-md bg-[card] border border-white/10 shadow-[0_0_100px_rgba(34,211,238,0.15)] rounded-3xl overflow-hidden flex flex-col"
+                                className="w-full max-w-md bg-[card] border border-card-border shadow-[0_0_100px_rgba(34,211,238,0.15)] rounded-3xl overflow-hidden flex flex-col"
                             >
                                 {/* Header */}
-                                <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                                <div className="p-6 border-b border-card-border flex items-center justify-between">
                                     <div>
                                         <h3 className="text-xl font-black italic tracking-tighter uppercase">Üretim Onayı</h3>
                                         <p className="text-[10px] text-cyan-500 font-bold tracking-widest uppercase">Lojistik Verisi Sağlanıyor</p>
@@ -716,8 +716,8 @@ export default function ProductionStudio() {
                                 {/* Content */}
                                 <div className="p-6 flex flex-col gap-6">
                                     {/* Preview Banner */}
-                                    <div className="p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center gap-4">
-                                        <div className="w-16 h-16 bg-black/50 rounded-xl border border-white/5 overflow-hidden p-2 flex items-center justify-center">
+                                    <div className="p-4 bg-white/5 border border-card-border rounded-2xl flex items-center gap-4">
+                                        <div className="w-16 h-16 bg-black/50 rounded-xl border border-card-border overflow-hidden p-2 flex items-center justify-center">
                                             <img src={printDesign!} className="w-full h-full object-contain mix-blend-screen" />
                                         </div>
                                         <div className="flex-1">
@@ -746,14 +746,14 @@ export default function ProductionStudio() {
                                     </div>
 
                                     {/* Price / Action */}
-                                    <div className="pt-2 border-t border-white/5 flex items-center justify-between mt-2">
+                                    <div className="pt-2 border-t border-card-border flex items-center justify-between mt-2">
                                         <div className="flex flex-col">
                                             <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Nihai Tutar</span>
                                             <span className="text-3xl font-black text-white tracking-tighter">1.499<span className="text-xl">₺</span></span>
                                         </div>
                                         <button 
                                             onClick={handleCompleteOrder}
-                                            className="h-14 px-8 bg-white text-black font-black uppercase tracking-widest rounded-xl hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)] flex items-center gap-2"
+                                            className="h-14 px-8 bg-card text-black font-black uppercase tracking-widest rounded-xl hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)] flex items-center gap-2"
                                         >
                                             <ShoppingBag className="w-5 h-5" /> Sepete Ekle
                                         </button>
@@ -783,7 +783,7 @@ function ToolbarIcon({ icon: Icon, active, label, onClick }: any) {
 
 function CanvasActionIcon({ icon: Icon }: any) {
     return (
-        <button className="w-10 h-10 rounded-xl bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all text-white/60 hover:text-white">
+        <button className="w-10 h-10 rounded-xl bg-black/40 backdrop-blur-md border border-card-border flex items-center justify-center hover:bg-white/10 transition-all text-white/60 hover:text-white">
             <Icon className="w-5 h-5" />
         </button>
     );

@@ -385,7 +385,7 @@ function WeatherSphereEffect({ condition, temp, windSpeed = 5 }: { condition: st
             {state === 'rain' && (
                 /* Lightning flash */
                 <motion.div 
-                    className="absolute inset-0 bg-white pointer-events-none"
+                    className="absolute inset-0 bg-card pointer-events-none"
                     style={{ zIndex: 0 }}
                     animate={{ 
                         opacity: [0, 0, 0.7, 0, 0, 0.85, 0, 0] 
@@ -988,7 +988,7 @@ function QuestBar({ quest }: { quest: Quest }) {
                 "relative rounded-2xl p-4 transition-all duration-300 overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.015)] border-0",
                 isCompleted
                     ? "bg-emerald-50/80"
-                    : `bg-white`
+                    : `bg-card`
             )}
         >
             <div className="flex items-start gap-3.5 relative z-10">
@@ -1233,7 +1233,7 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                                 </div>
                                 <button
                                     onClick={onClose}
-                                    className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.03)] hover:bg-slate-50 transition-all cursor-pointer border-0"
+                                    className="w-9 h-9 bg-card rounded-full flex items-center justify-center shadow-moffi-card hover:bg-slate-50 transition-all cursor-pointer border-0"
                                 >
                                     <X className="w-5 h-5 text-slate-450" />
                                 </button>
@@ -1260,7 +1260,7 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                                         {/* Floating Live Weather Info (Left Side of Theme) */}
                                         <button 
                                             onClick={() => setIsWeatherDetailOpen(true)}
-                                            className="absolute top-6 left-6 z-20 flex flex-col items-start bg-black/15 backdrop-blur-[2px] border border-white/20 p-3 rounded-2xl shadow-[0_8px_16px_rgba(0,0,0,0.1)] cursor-pointer hover:scale-105 active:scale-95 transition-all text-left"
+                                            className="absolute top-6 left-6 z-20 flex flex-col items-start bg-black/15 backdrop-blur-[2px] border border-card-border p-3 rounded-2xl shadow-[0_8px_16px_rgba(0,0,0,0.1)] cursor-pointer hover:scale-105 active:scale-95 transition-all text-left"
                                         >
                                             <span className="text-2xl filter drop-shadow-md mb-2">{weatherLoading ? '⏳' : (activeWeather?.emoji || '☀️')}</span>
                                             <div className="flex flex-col">
@@ -1283,10 +1283,10 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                                     </div>
 
                                     {/* 2. DYNAMIC METRICS DASHBOARD (Nike Run Club Style - Huge text, borderless) */}
-                                    <div className="bg-white rounded-3xl p-5 flex flex-col items-center justify-center text-center shadow-[0_15px_40px_rgba(0,0,0,0.02)] border-0 shrink-0 -mt-5 relative z-20 w-full">
+                                    <div className="bg-card rounded-3xl p-5 flex flex-col items-center justify-center text-center shadow-moffi-card border-0 shrink-0 -mt-5 relative z-20 w-full">
                                         
                                         {/* Live Dynamic Island Status Capsule */}
-                                        <div className="mb-4 px-3 py-1 rounded-full bg-slate-950 text-white flex items-center justify-center gap-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.12)] border border-white/5 animate-pulse max-w-full">
+                                        <div className="mb-4 px-3 py-1 rounded-full bg-slate-950 text-white flex items-center justify-center gap-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.12)] border border-card-border animate-pulse max-w-full">
                                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping shrink-0" />
                                             <span className="text-[8px] font-black uppercase tracking-widest text-slate-200 truncate max-w-[200px]">
                                                 {liveStatusText}
@@ -1420,7 +1420,7 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                                                         "flex-shrink-0 px-2.5 py-1.5 rounded-xl text-[8px] font-black cursor-pointer transition-all border border-slate-200/50 shadow-sm",
                                                         isSelected 
                                                             ? "bg-slate-900 text-white border-slate-900 scale-105 shadow-md" 
-                                                            : "bg-white text-slate-600 hover:bg-slate-50"
+                                                            : "bg-card text-slate-600 hover:bg-slate-50"
                                                     )}
                                                 >
                                                     {w.label}
@@ -1448,7 +1448,7 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                                                 "py-2 rounded-2xl text-[9px] font-black transition-all flex flex-col items-center justify-center gap-1 border cursor-pointer",
                                                 isWalkSimulation 
                                                     ? "bg-slate-900 text-white border-slate-900 shadow-md scale-[1.02]" 
-                                                    : "bg-white text-slate-650 border-slate-200/60 hover:bg-slate-50"
+                                                    : "bg-card text-slate-650 border-slate-200/60 hover:bg-slate-50"
                                             )}
                                         >
                                             <span className="text-sm">🧭</span>
@@ -1460,7 +1460,7 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                                                 "py-2 rounded-2xl text-[9px] font-black transition-all flex flex-col items-center justify-center gap-1 border cursor-pointer",
                                                 !isWalkSimulation 
                                                     ? "bg-slate-900 text-white border-slate-900 shadow-md scale-[1.02]" 
-                                                    : "bg-white text-slate-650 border-slate-200/60 hover:bg-slate-50"
+                                                    : "bg-card text-slate-650 border-slate-200/60 hover:bg-slate-50"
                                             )}
                                         >
                                             <span className="text-sm">📍</span>
@@ -1492,7 +1492,7 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                                                             "flex-shrink-0 px-4 py-3 rounded-2xl border-0 text-left transition-all cursor-pointer flex items-center gap-3 shadow-[0_10px_25px_rgba(0,0,0,0.015)]",
                                                             isSelected
                                                                 ? "bg-slate-900 text-white shadow-[0_12px_30px_rgba(15,23,42,0.18)] scale-[1.03]"
-                                                                : "bg-white text-slate-700 hover:bg-slate-50"
+                                                                : "bg-card text-slate-700 hover:bg-slate-50"
                                                         )}
                                                     >
                                                         <span className="text-lg leading-none">{route.icon}</span>
@@ -1509,7 +1509,7 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
 
                                 {/* 5. YÜRÜYÜŞ ÖNCESİ HAZIRLIK KONTROL LİSTESİ (Pebble-styled interactive buttons) */}
                                 {!walkData.isActive && (
-                                    <div className="bg-white rounded-3xl p-4.5 space-y-3.5 shadow-[0_15px_40px_rgba(0,0,0,0.02)] border-0">
+                                    <div className="bg-card rounded-3xl p-4.5 space-y-3.5 shadow-moffi-card border-0">
                                         <div className="flex items-center justify-between">
                                             <span className="text-[9px] font-black text-slate-455 uppercase tracking-[0.2em]">Yürüyüş Hazırlığı</span>
                                         <span className="text-[9px] font-black text-orange-600 bg-orange-50 px-2.5 py-0.5 rounded-full border border-orange-100/50">
@@ -1563,7 +1563,7 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                             <div className="grid grid-cols-2 gap-3">
                                 <button 
                                     onClick={() => { onClose(); router.push('/walk'); }}
-                                    className="bg-white rounded-3xl p-4.5 shadow-[0_12px_36px_rgba(0,0,0,0.015)] border-0 relative overflow-hidden text-left cursor-pointer hover:scale-[1.02] active:scale-95 transition-all group"
+                                    className="bg-card rounded-3xl p-4.5 shadow-moffi-card border-0 relative overflow-hidden text-left cursor-pointer hover:scale-[1.02] active:scale-95 transition-all group"
                                 >
                                     {/* Small background flame glow */}
                                     <div className="absolute -right-2 -bottom-2 w-12 h-12 bg-orange-500/5 rounded-full blur-xl pointer-events-none" />
@@ -1582,7 +1582,7 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
 
                                 <button 
                                     onClick={() => { onClose(); router.push('/quests?tab=league'); }}
-                                    className="bg-white rounded-3xl p-4.5 shadow-[0_12px_36px_rgba(0,0,0,0.015)] border-0 relative overflow-hidden text-left cursor-pointer hover:scale-[1.02] active:scale-95 transition-all group"
+                                    className="bg-card rounded-3xl p-4.5 shadow-moffi-card border-0 relative overflow-hidden text-left cursor-pointer hover:scale-[1.02] active:scale-95 transition-all group"
                                 >
                                     <div className="absolute -right-2 -bottom-2 w-12 h-12 bg-yellow-500/5 rounded-full blur-xl pointer-events-none" />
                                     <div className="flex items-center gap-2 mb-1 z-10 relative">
@@ -1597,7 +1597,7 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                             </div>
 
                             {/* 9. LIVE RADAR + SOSYAL DAVET ET (Floating Pod) */}
-                            <div className="bg-white rounded-3xl p-4 flex items-center justify-between shadow-[0_15px_40px_rgba(0,0,0,0.02)] border-0">
+                            <div className="bg-card rounded-3xl p-4 flex items-center justify-between shadow-moffi-card border-0">
                                 <div className="flex items-center gap-3">
                                     <div className="relative">
                                         <div className="w-8 h-8 bg-indigo-50 rounded-full flex items-center justify-center border border-indigo-100">
@@ -1651,7 +1651,7 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                                         {/* Taktil Sürgülü Buton (Swipe to Start - Pill container with heavy drop-shadow) */}
                                         <div 
                                             ref={sliderTrackRef} 
-                                            className="relative w-full h-14 bg-white rounded-full flex items-center p-1 overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.03)] border-0"
+                                            className="relative w-full h-14 bg-card rounded-full flex items-center p-1 overflow-hidden shadow-moffi-card border-0"
                                         >
                                             {/* Dinamik dolgu */}
                                             <motion.div 
@@ -1699,7 +1699,7 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
 
                                 <button
                                     onClick={() => { router.push('/walk'); onClose(); }}
-                                    className="w-full bg-white py-3.5 rounded-3xl flex items-center justify-center gap-1.5 group hover:bg-slate-50 transition-all cursor-pointer shadow-[0_8px_32px_rgba(0,0,0,0.02)] border-0"
+                                    className="w-full bg-card py-3.5 rounded-3xl flex items-center justify-center gap-1.5 group hover:bg-slate-50 transition-all cursor-pointer shadow-moffi-card border-0"
                                 >
                                     <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] group-hover:text-slate-700 transition-colors">Yürüyüş İstatistikleri</span>
                                     <ArrowRight className="w-3 h-3 text-slate-400 group-hover:translate-x-0.5 group-hover:text-slate-650 transition-all" />

@@ -19,7 +19,7 @@ const CATEGORY_LABELS: Record<ProductCategory, string> = {
 
 const STATUS_CONFIG: Record<ProductStatus, { label: string; color: string; bg: string }> = {
     active: { label: 'Aktif', color: 'text-green-700', bg: 'bg-green-50 border-green-100' },
-    inactive: { label: 'Pasif', color: 'text-gray-500', bg: 'bg-gray-50 border-gray-200' },
+    inactive: { label: 'Pasif', color: 'text-gray-500', bg: 'bg-gray-50 border-card-border' },
     out_of_stock: { label: 'Tükendi', color: 'text-red-700', bg: 'bg-red-50 border-red-100' },
 };
 
@@ -59,11 +59,11 @@ export default function BusinessProductsPage() {
                 {/* Header */}
                 <header className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
                     <div className="flex items-center gap-4">
-                        <button onClick={() => setIsMobileMenuOpen(true)} className="w-10 h-10 rounded-xl bg-white border border-gray-200/50 flex items-center justify-center md:hidden">
+                        <button onClick={() => setIsMobileMenuOpen(true)} className="w-10 h-10 rounded-xl bg-card border border-card-border/50 flex items-center justify-center md:hidden">
                             <Menu className="w-5 h-5 text-gray-600" />
                         </button>
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">Ürünler</h1>
+                            <h1 className="text-2xl md:text-3xl font-black text-foreground tracking-tight">Ürünler</h1>
                             <p className="text-sm text-gray-500">{allProducts.length} ürün listeleniyor</p>
                         </div>
                     </div>
@@ -84,20 +84,20 @@ export default function BusinessProductsPage() {
                 </div>
 
                 {/* Filters */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-6 flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+                <div className="bg-card rounded-2xl border border-card-border shadow-moffi-card p-4 mb-6 flex flex-col md:flex-row gap-3 items-stretch md:items-center">
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             placeholder="Ürün ara..."
-                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-card-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200"
                         />
                     </div>
                     <select
                         value={categoryFilter}
                         onChange={e => setCategoryFilter(e.target.value as ProductCategory | 'all')}
-                        className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                        className="px-4 py-2.5 bg-gray-50 border border-card-border rounded-xl text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-200"
                     >
                         <option value="all">Tüm Kategoriler</option>
                         {Object.entries(CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -105,16 +105,16 @@ export default function BusinessProductsPage() {
                     <select
                         value={statusFilter}
                         onChange={e => setStatusFilter(e.target.value as ProductStatus | 'all')}
-                        className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                        className="px-4 py-2.5 bg-gray-50 border border-card-border rounded-xl text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-200"
                     >
                         <option value="all">Tüm Durumlar</option>
                         {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                     </select>
                     <div className="flex bg-gray-100 rounded-xl p-1 self-center">
-                        <button onClick={() => setViewMode('grid')} className={cn("p-2 rounded-lg transition", viewMode === 'grid' ? "bg-white shadow-sm" : "text-gray-400")}>
+                        <button onClick={() => setViewMode('grid')} className={cn("p-2 rounded-lg transition", viewMode === 'grid' ? "bg-card shadow-moffi-card" : "text-gray-400")}>
                             <LayoutGrid className="w-4 h-4" />
                         </button>
-                        <button onClick={() => setViewMode('list')} className={cn("p-2 rounded-lg transition", viewMode === 'list' ? "bg-white shadow-sm" : "text-gray-400")}>
+                        <button onClick={() => setViewMode('list')} className={cn("p-2 rounded-lg transition", viewMode === 'list' ? "bg-card shadow-moffi-card" : "text-gray-400")}>
                             <List className="w-4 h-4" />
                         </button>
                     </div>
@@ -122,9 +122,9 @@ export default function BusinessProductsPage() {
 
                 {/* Product Grid/List */}
                 {filtered.length === 0 ? (
-                    <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center">
+                    <div className="bg-card rounded-2xl border border-card-border p-16 text-center">
                         <Package className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                        <h3 className="font-bold text-gray-700 mb-1">Ürün bulunamadı</h3>
+                        <h3 className="font-bold text-foreground mb-1">Ürün bulunamadı</h3>
                         <p className="text-sm text-gray-400">Filtrelerinizi değiştirin veya yeni ürün ekleyin.</p>
                     </div>
                 ) : viewMode === 'grid' ? (
@@ -134,10 +134,10 @@ export default function BusinessProductsPage() {
                         ))}
                     </div>
                 ) : (
-                    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                    <div className="bg-card rounded-2xl border border-card-border overflow-hidden">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b border-gray-100 bg-gray-50/50">
+                                <tr className="border-b border-card-border bg-gray-50/50">
                                     <th className="text-left p-4 font-bold text-gray-500 text-xs uppercase">Ürün</th>
                                     <th className="text-left p-4 font-bold text-gray-500 text-xs uppercase hidden md:table-cell">Kategori</th>
                                     <th className="text-right p-4 font-bold text-gray-500 text-xs uppercase">Fiyat</th>
@@ -152,13 +152,13 @@ export default function BusinessProductsPage() {
                                         <td className="p-4">
                                             <div className="flex items-center gap-3">
                                                 <img src={product.images[0]} alt="" className="w-10 h-10 rounded-lg object-cover" />
-                                                <span className="font-medium text-gray-900 truncate max-w-[200px]">{product.name}</span>
+                                                <span className="font-medium text-foreground truncate max-w-[200px]">{product.name}</span>
                                             </div>
                                         </td>
                                         <td className="p-4 hidden md:table-cell"><span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">{CATEGORY_LABELS[product.category]}</span></td>
-                                        <td className="p-4 text-right font-bold text-gray-900">₺{product.price}</td>
+                                        <td className="p-4 text-right font-bold text-foreground">₺{product.price}</td>
                                         <td className="p-4 text-right hidden sm:table-cell">
-                                            <span className={cn("font-bold", product.stock === 0 ? "text-red-600" : product.stock <= 10 ? "text-amber-600" : "text-gray-700")}>{product.stock}</span>
+                                            <span className={cn("font-bold", product.stock === 0 ? "text-red-600" : product.stock <= 10 ? "text-amber-600" : "text-foreground")}>{product.stock}</span>
                                         </td>
                                         <td className="p-4 text-center">
                                             <span className={cn("text-[10px] font-bold px-2 py-1 rounded-full border", STATUS_CONFIG[product.status].bg, STATUS_CONFIG[product.status].color)}>{STATUS_CONFIG[product.status].label}</span>
@@ -199,11 +199,11 @@ function MiniStat({ icon: Icon, label, value, color }: { icon: typeof Package; l
         red: 'bg-red-50 text-red-600',
     };
     return (
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+        <div className="bg-card rounded-2xl border border-card-border p-4 shadow-moffi-card">
             <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center mb-3", colors[color])}>
                 <Icon className="w-4 h-4" />
             </div>
-            <div className="text-2xl font-black text-gray-900">{value}</div>
+            <div className="text-2xl font-black text-foreground">{value}</div>
             <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-1">{label}</div>
         </div>
     );
@@ -213,7 +213,7 @@ function ProductCard({ product, onEdit }: { product: BusinessProduct; onEdit: ()
     const isOutOfStock = product.status === 'out_of_stock';
 
     return (
-        <div className={cn("bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden group hover:shadow-lg transition-all duration-300", isOutOfStock && "opacity-75")}>
+        <div className={cn("bg-card rounded-2xl border border-card-border shadow-moffi-card overflow-hidden group hover:shadow-lg transition-all duration-300", isOutOfStock && "opacity-75")}>
             <div className="relative h-40 bg-gray-100">
                 <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
                 {isOutOfStock && (
@@ -229,10 +229,10 @@ function ProductCard({ product, onEdit }: { product: BusinessProduct; onEdit: ()
             </div>
             <div className="p-4">
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{CATEGORY_LABELS[product.category]}</span>
-                <h3 className="font-bold text-gray-900 text-sm mt-1 line-clamp-1">{product.name}</h3>
+                <h3 className="font-bold text-foreground text-sm mt-1 line-clamp-1">{product.name}</h3>
                 <div className="flex items-center justify-between mt-3">
                     <div className="flex items-center gap-2">
-                        <span className="text-lg font-black text-gray-900">₺{product.price}</span>
+                        <span className="text-lg font-black text-foreground">₺{product.price}</span>
                         {product.originalPrice && (
                             <span className="text-xs text-gray-400 line-through">₺{product.originalPrice}</span>
                         )}
@@ -273,41 +273,41 @@ function ProductModal({ product, onClose }: { product: BusinessProduct | null; o
         >
             <motion.div
                 initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-                className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+                className="bg-card rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
                 onClick={e => e.stopPropagation()}
             >
-                <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-                    <h2 className="text-lg font-black text-gray-900">{isEdit ? 'Ürünü Düzenle' : 'Yeni Ürün Ekle'}</h2>
+                <div className="p-6 border-b border-card-border flex items-center justify-between">
+                    <h2 className="text-lg font-black text-foreground">{isEdit ? 'Ürünü Düzenle' : 'Yeni Ürün Ekle'}</h2>
                     <button onClick={onClose} className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
                 </div>
                 <div className="p-6 space-y-4">
                     <div>
                         <label className="text-xs font-bold text-gray-500 mb-1.5 block">Ürün Adı</label>
-                        <input value={name} onChange={e => setName(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" placeholder="Ürün adı" />
+                        <input value={name} onChange={e => setName(e.target.value)} className="w-full bg-gray-50 border border-card-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" placeholder="Ürün adı" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="text-xs font-bold text-gray-500 mb-1.5 block">Fiyat (₺)</label>
-                            <input type="number" value={price} onChange={e => setPrice(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" />
+                            <input type="number" value={price} onChange={e => setPrice(e.target.value)} className="w-full bg-gray-50 border border-card-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" />
                         </div>
                         <div>
                             <label className="text-xs font-bold text-gray-500 mb-1.5 block">Stok</label>
-                            <input type="number" value={stock} onChange={e => setStock(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" />
+                            <input type="number" value={stock} onChange={e => setStock(e.target.value)} className="w-full bg-gray-50 border border-card-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" />
                         </div>
                     </div>
                     <div>
                         <label className="text-xs font-bold text-gray-500 mb-1.5 block">Kategori</label>
-                        <select value={category} onChange={e => setCategory(e.target.value as ProductCategory)} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                        <select value={category} onChange={e => setCategory(e.target.value as ProductCategory)} className="w-full bg-gray-50 border border-card-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200">
                             {Object.entries(CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                         </select>
                     </div>
                     <div>
                         <label className="text-xs font-bold text-gray-500 mb-1.5 block">Açıklama</label>
-                        <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-200" placeholder="Ürün açıklaması" />
+                        <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} className="w-full bg-gray-50 border border-card-border rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-200" placeholder="Ürün açıklaması" />
                     </div>
                 </div>
-                <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
-                    <button onClick={onClose} className="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50">İptal</button>
+                <div className="p-6 border-t border-card-border flex justify-end gap-3">
+                    <button onClick={onClose} className="px-5 py-2.5 rounded-xl border border-card-border text-sm font-bold text-gray-600 hover:bg-gray-50">İptal</button>
                     <button onClick={handleSave} disabled={saving || saved || !name || !price} className={cn(
                         "px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all",
                         saved ? "bg-green-500 text-white" : "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-200 hover:-translate-y-0.5"

@@ -47,8 +47,8 @@ export default function LeaderboardPage() {
 
             {/* HEADER */}
             <header className="sticky top-0 z-40 bg-[#F8F9FC]/80 dark:bg-[#121212]/80 backdrop-blur-md px-6 py-4 flex items-center justify-between">
-                <button onClick={() => router.back()} className="w-10 h-10 rounded-full bg-white dark:bg-white/10 flex items-center justify-center shadow-sm">
-                    <ChevronLeft className="w-6 h-6 text-gray-700 dark:text-white" />
+                <button onClick={() => router.back()} className="w-10 h-10 rounded-full bg-card dark:bg-white/10 flex items-center justify-center shadow-moffi-card">
+                    <ChevronLeft className="w-6 h-6 text-foreground dark:text-white" />
                 </button>
                 <h1 className="text-lg font-black bg-gradient-to-r from-[#5B4D9D] to-purple-400 bg-clip-text text-transparent uppercase tracking-wider">
                     Global Arena
@@ -71,7 +71,7 @@ export default function LeaderboardPage() {
                         <div className={`w-24 h-24 rounded-full bg-gradient-to-br ${league.color} flex items-center justify-center shadow-2xl mb-3 ring-4 ring-white/20`}>
                             <league.icon className="w-12 h-12 text-white drop-shadow-md" />
                         </div>
-                        <h2 className="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">{league.label}</h2>
+                        <h2 className="text-3xl font-black text-foreground dark:text-white uppercase tracking-tighter">{league.label}</h2>
                         <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">Haftalık Sıfırlama: 2 Gün</p>
                     </motion.div>
 
@@ -93,7 +93,7 @@ export default function LeaderboardPage() {
 
             {/* TAB SWITCHER */}
             <div className="px-6 mb-8">
-                <div className="bg-white dark:bg-white/5 p-1 rounded-2xl flex relative shadow-sm">
+                <div className="bg-card dark:bg-white/5 p-1 rounded-2xl flex relative shadow-moffi-card">
                     <motion.div
                         className="absolute top-1 bottom-1 w-[48%] bg-[#5B4D9D] rounded-xl shadow-md z-0"
                         animate={{ left: activeTab === 'users' ? '1%' : '51%' }}
@@ -122,7 +122,7 @@ export default function LeaderboardPage() {
                         <div className="absolute -bottom-2 inset-x-0 mx-auto w-6 h-6 bg-slate-300 text-white font-bold rounded-full flex items-center justify-center text-xs shadow">2</div>
                         <span className="absolute -top-1 -right-1 text-xl">🥈</span>
                     </div>
-                    <div className="text-xs font-bold text-gray-800 dark:text-gray-200 text-center line-clamp-1 w-20">{currentData[1].name}</div>
+                    <div className="text-xs font-bold text-foreground dark:text-gray-200 text-center line-clamp-1 w-20">{currentData[1].name}</div>
                     <div className="text-[10px] font-black text-[#5B4D9D]">{currentData[1].score.toLocaleString()} PC</div>
                 </div>
 
@@ -133,7 +133,7 @@ export default function LeaderboardPage() {
                         <img src={currentData[0].avatar || currentData[0].image} className="w-full h-full rounded-full object-cover" />
                         <div className="absolute -bottom-3 inset-x-0 mx-auto w-8 h-8 bg-yellow-400 text-white font-bold rounded-full flex items-center justify-center text-sm shadow">1</div>
                     </div>
-                    <div className="text-sm font-black text-gray-900 dark:text-white text-center line-clamp-1 w-24">{currentData[0].name}</div>
+                    <div className="text-sm font-black text-foreground dark:text-white text-center line-clamp-1 w-24">{currentData[0].name}</div>
                     <div className="text-xs font-black text-[#5B4D9D]">{currentData[0].score.toLocaleString()} PC</div>
                 </div>
 
@@ -144,7 +144,7 @@ export default function LeaderboardPage() {
                         <div className="absolute -bottom-2 inset-x-0 mx-auto w-6 h-6 bg-orange-400 text-white font-bold rounded-full flex items-center justify-center text-xs shadow">3</div>
                         <span className="absolute -top-1 -right-1 text-xl">🥉</span>
                     </div>
-                    <div className="text-xs font-bold text-gray-800 dark:text-gray-200 text-center line-clamp-1 w-20">{currentData[2].name}</div>
+                    <div className="text-xs font-bold text-foreground dark:text-gray-200 text-center line-clamp-1 w-20">{currentData[2].name}</div>
                     <div className="text-[10px] font-black text-[#5B4D9D]">{currentData[2].score.toLocaleString()} PC</div>
                 </div>
             </div>
@@ -157,8 +157,8 @@ export default function LeaderboardPage() {
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
-                        className={cn("bg-white dark:bg-[#1A1A1A] p-4 rounded-2xl flex items-center shadow-sm border border-transparent transform transition-all active:scale-95",
-                            item.name === 'You' ? "border-[#5B4D9D] bg-[#5B4D9D]/5" : "border-gray-100 dark:border-white/5"
+                        className={cn("bg-card dark:bg-[#1A1A1A] p-4 rounded-2xl flex items-center shadow-moffi-card border border-transparent transform transition-all active:scale-95",
+                            item.name === 'You' ? "border-[#5B4D9D] bg-[#5B4D9D]/5" : "border-card-border dark:border-card-border"
                         )}
                     >
                         <div className="font-bold text-gray-400 w-6 text-center">{i + 4}</div>
@@ -170,7 +170,7 @@ export default function LeaderboardPage() {
                             </div>
                         </div>
                         <div className="flex-1">
-                            <div className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+                            <div className="font-bold text-sm text-foreground dark:text-white flex items-center gap-2">
                                 {item.name}
                                 {item.name === 'You' && <span className="bg-[#5B4D9D] text-white text-[9px] px-1.5 py-0.5 rounded uppercase">Sen</span>}
                             </div>
@@ -188,7 +188,7 @@ export default function LeaderboardPage() {
             </div>
 
             {/* STICKY USER RANK (If not in top 3) */}
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 dark:bg-black/80 backdrop-blur-lg border-t border-gray-200 dark:border-white/10 z-40">
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 dark:bg-black/80 backdrop-blur-lg border-t border-card-border dark:border-card-border z-40">
                 <div className="bg-[#5B4D9D] rounded-xl p-3 flex items-center text-white shadow-xl shadow-purple-500/30">
                     <div className="font-black w-8 text-center text-white/50">#6</div>
                     <div className="w-10 h-10 rounded-full bg-white/20 mx-3 overflow-hidden">

@@ -24,15 +24,15 @@ export default function WalkHistoryPage() {
     const displayWalks = [...walkHistory, ...MOCK_HISTORY_WALKS];
 
     return (
-        <main className="min-h-screen bg-gray-50 pb-20 max-w-md mx-auto relative shadow-2xl overflow-hidden font-sans flex flex-col border-x border-gray-100">
+        <main className="min-h-screen bg-gray-50 pb-20 max-w-md mx-auto relative shadow-2xl overflow-hidden font-sans flex flex-col border-x border-card-border">
 
             {/* Header */}
-            <div className="bg-white px-6 py-6 border-b border-gray-100 sticky top-0 z-20">
+            <div className="bg-card px-6 py-6 border-b border-card-border sticky top-0 z-20">
                 <div className="flex items-center justify-between mb-6">
                     <button onClick={() => router.back()} className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center hover:bg-gray-100 transition">
-                        <ArrowLeft className="w-5 h-5 text-gray-700" />
+                        <ArrowLeft className="w-5 h-5 text-foreground" />
                     </button>
-                    <h1 className="text-lg font-bold text-gray-800 font-poppins">Yürüyüş Geçmişi</h1>
+                    <h1 className="text-lg font-bold text-foreground font-poppins">Yürüyüş Geçmişi</h1>
                     <div className="w-10" />
                 </div>
 
@@ -42,7 +42,7 @@ export default function WalkHistoryPage() {
                         onClick={() => setActiveTab('list')}
                         className={cn(
                             "flex-1 py-3 rounded-xl text-xs font-bold transition-all relative z-10",
-                            activeTab === 'list' ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                            activeTab === 'list' ? "bg-card text-foreground shadow-moffi-card" : "text-gray-400 hover:text-gray-600"
                         )}
                     >
                         Yürüyüşlerim
@@ -51,7 +51,7 @@ export default function WalkHistoryPage() {
                         onClick={() => setActiveTab('stats')}
                         className={cn(
                             "flex-1 py-3 rounded-xl text-xs font-bold transition-all relative z-10",
-                            activeTab === 'stats' ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                            activeTab === 'stats' ? "bg-card text-foreground shadow-moffi-card" : "text-gray-400 hover:text-gray-600"
                         )}
                     >
                         İstatistikler
@@ -64,7 +64,7 @@ export default function WalkHistoryPage() {
                 {activeTab === 'list' && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         {displayWalks.map((walk) => (
-                            <div key={walk.id} className="bg-white rounded-[2rem] p-3 shadow-md border border-gray-100 group hover:scale-[1.02] transition-transform">
+                            <div key={walk.id} className="bg-card rounded-[2rem] p-3 shadow-moffi-card border border-card-border group hover:scale-[1.02] transition-transform">
                                 {/* Map Visual Area */}
                                 <div className="h-32 w-full rounded-[1.5rem] bg-gray-100 relative overflow-hidden mb-3">
                                     <img src={(walk as any).mapImage || "https://img.freepik.com/free-vector/city-map-navigation-app_23-2148530386.jpg"} className="w-full h-full object-cover opacity-80 mix-blend-multiply" />
@@ -76,7 +76,7 @@ export default function WalkHistoryPage() {
                                         <circle cx="10" cy="90" r="3" fill="#10B981" />
                                     </svg>
 
-                                    <div className="absolute top-3 right-3 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold text-gray-800 shadow-sm border border-gray-100">
+                                    <div className="absolute top-3 right-3 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold text-foreground shadow-sm border border-card-border">
                                         {walk.date}
                                     </div>
                                 </div>
@@ -88,7 +88,7 @@ export default function WalkHistoryPage() {
                                             <Footprints className="w-5 h-5 text-orange-500" />
                                         </div>
                                         <div>
-                                            <div className="text-lg font-black text-gray-800">{walk.steps}</div>
+                                            <div className="text-lg font-black text-foreground">{walk.steps}</div>
                                             <div className="text-[10px] font-bold text-gray-400 uppercase">Adım</div>
                                         </div>
                                     </div>
@@ -100,7 +100,7 @@ export default function WalkHistoryPage() {
                                             <Clock className="w-5 h-5 text-blue-500" />
                                         </div>
                                         <div>
-                                            <div className="text-lg font-black text-gray-800">{walk.duration}</div>
+                                            <div className="text-lg font-black text-foreground">{walk.duration}</div>
                                             <div className="text-[10px] font-bold text-gray-400 uppercase">Süre</div>
                                         </div>
                                     </div>
@@ -112,7 +112,7 @@ export default function WalkHistoryPage() {
                                             <MapPin className="w-5 h-5 text-green-500" />
                                         </div>
                                         <div>
-                                            <div className="text-lg font-black text-gray-800">{walk.distance}</div>
+                                            <div className="text-lg font-black text-foreground">{walk.distance}</div>
                                             <div className="text-[10px] font-bold text-gray-400 uppercase">Mesafe</div>
                                         </div>
                                     </div>

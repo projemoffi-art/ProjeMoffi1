@@ -210,12 +210,12 @@ export default function MoffiJumpGame({ onGameOver, onClose }: GameProps) {
 
             {/* HUD */}
             <div className="absolute top-6 left-6 z-20 flex gap-4">
-                <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="bg-white rounded-full p-2 shadow-lg">
-                    <X className="w-6 h-6 text-gray-800" />
+                <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="bg-card rounded-full p-2 shadow-lg">
+                    <X className="w-6 h-6 text-foreground" />
                 </button>
                 <div className="bg-white/90 rounded-full px-6 py-2 shadow-lg flex items-center gap-2">
                     <Trophy className="w-5 h-5 text-yellow-500" />
-                    <span className="font-black text-2xl text-gray-800">{score}</span>
+                    <span className="font-black text-2xl text-foreground">{score}</span>
                 </div>
             </div>
 
@@ -278,7 +278,7 @@ export default function MoffiJumpGame({ onGameOver, onClose }: GameProps) {
             {/* START SCREEN */}
             {gameState === 'start' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm z-30">
-                    <div className="bg-white p-8 rounded-3xl shadow-2xl text-center max-w-sm mx-4 transform transition-all hover:scale-105">
+                    <div className="bg-card p-8 rounded-3xl shadow-2xl text-center max-w-sm mx-4 transform transition-all hover:scale-105">
                         <img src="https://cdn-icons-png.flaticon.com/512/10476/10476140.png" className="w-20 h-20 mx-auto mb-4 animate-bounce" />
                         <h2 className="text-3xl font-black text-[#5B4D9D] mb-2">Moffi Jump</h2>
                         <p className="text-gray-500 mb-6 font-medium">Zıplamak için ekrana dokun. Engelleri aş ve stickerları topla!</p>
@@ -295,14 +295,14 @@ export default function MoffiJumpGame({ onGameOver, onClose }: GameProps) {
             {/* GAMEOVER SCREEN */}
             {gameState === 'gameover' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm z-30">
-                    <div className="bg-white p-8 rounded-3xl shadow-2xl text-center max-w-sm mx-4 animate-in fade-in zoom-in duration-300">
+                    <div className="bg-card p-8 rounded-3xl shadow-2xl text-center max-w-sm mx-4 animate-in fade-in zoom-in duration-300">
                         <div className="text-gray-400 font-bold mb-2 uppercase tracking-widest text-xs">Oyun Bitti</div>
                         <h2 className="text-5xl font-black text-[#5B4D9D] mb-6">{score}</h2>
 
                         <div className="grid grid-cols-2 gap-4 mb-8 w-full">
-                            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                            <div className="bg-gray-50 p-3 rounded-xl border border-card-border">
                                 <div className="text-xs text-gray-400 font-bold uppercase">Skor</div>
-                                <div className="text-xl font-black text-gray-800">{score}</div>
+                                <div className="text-xl font-black text-foreground">{score}</div>
                             </div>
                             <div className="bg-yellow-50 p-3 rounded-xl border border-yellow-100">
                                 <div className="text-xs text-yellow-600 font-bold uppercase">En Yüksek</div>
@@ -319,7 +319,7 @@ export default function MoffiJumpGame({ onGameOver, onClose }: GameProps) {
                             </button>
                             <button
                                 onClick={(e) => { e.stopPropagation(); prepareGame(); }}
-                                className="w-full bg-white text-gray-600 border-2 border-gray-100 py-3.5 rounded-xl font-bold hover:bg-gray-50 transition"
+                                className="w-full bg-card text-gray-600 border-2 border-card-border py-3.5 rounded-xl font-bold hover:bg-gray-50 transition"
                             >
                                 Tekrar Dene
                             </button>

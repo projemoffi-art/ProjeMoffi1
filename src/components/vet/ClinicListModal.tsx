@@ -38,13 +38,13 @@ export function ClinicListModal({ isOpen, onClose, clinics, onSelectClinic, isLo
                 initial={{ y: "100%" }}
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}
-                className="w-full max-w-xl bg-[#111111] rounded-t-[3.5rem] sm:rounded-[4rem] h-[90vh] flex flex-col overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.8)] border border-white/10 relative"
+                className="w-full max-w-xl bg-[#111111] rounded-t-[3.5rem] sm:rounded-[4rem] h-[90vh] flex flex-col overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.8)] border border-card-border relative"
             >
                 {/* iOS Style Grab Handle */}
                 <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/10 rounded-full sm:hidden z-50" />
 
                 {/* HEADER */}
-                <div className="p-8 pb-4 bg-[#111111]/80 backdrop-blur-3xl z-30 sticky top-0 border-b border-white/5">
+                <div className="p-8 pb-4 bg-[#111111]/80 backdrop-blur-3xl z-30 sticky top-0 border-b border-card-border">
                     <div className="flex justify-between items-center mb-8 mt-2 sm:mt-0">
                         <div className="flex items-center gap-4">
                             <div className="w-14 h-14 rounded-2xl bg-[#5B4D9D]/10 border border-[#5B4D9D]/20 text-[#5B4D9D] flex items-center justify-center shadow-2xl relative overflow-hidden group">
@@ -56,7 +56,7 @@ export function ClinicListModal({ isOpen, onClose, clinics, onSelectClinic, isLo
                                 <p className="text-[10px] text-white/20 font-black uppercase tracking-widest mt-2">{clinics.length} KAYITLI NOKTA</p>
                             </div>
                         </div>
-                        <button onClick={onClose} className="w-11 h-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all">
+                        <button onClick={onClose} className="w-11 h-11 rounded-full bg-white/5 border border-card-border flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all">
                             <X className="w-5 h-5" />
                         </button>
                     </div>
@@ -68,7 +68,7 @@ export function ClinicListModal({ isOpen, onClose, clinics, onSelectClinic, isLo
                         <input
                             type="text"
                             placeholder="Klinik ismi veya uzmanlık yazın..."
-                            className="w-full h-16 pl-14 pr-6 bg-white/5 rounded-3xl border border-white/10 outline-none font-bold text-sm text-white placeholder:text-white/20 focus:border-[#5B4D9D]/50 focus:bg-white/[0.08] transition-all relative z-10"
+                            className="w-full h-16 pl-14 pr-6 bg-white/5 rounded-3xl border border-card-border outline-none font-bold text-sm text-white placeholder:text-white/20 focus:border-[#5B4D9D]/50 focus:bg-white/[0.08] transition-all relative z-10"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -80,7 +80,7 @@ export function ClinicListModal({ isOpen, onClose, clinics, onSelectClinic, isLo
                     {isLoading ? (
                         <div className="space-y-6">
                             {[1, 2, 3, 4].map(i => (
-                                <div key={i} className="bg-[#1C1C1E] h-32 rounded-[2.5rem] border border-white/5 animate-pulse" />
+                                <div key={i} className="bg-[#1C1C1E] h-32 rounded-[2.5rem] border border-card-border animate-pulse" />
                             ))}
                         </div>
                     ) : (
@@ -95,11 +95,11 @@ export function ClinicListModal({ isOpen, onClose, clinics, onSelectClinic, isLo
                                         onClick={() => onSelectClinic(clinic)}
                                         className={cn(
                                             "bg-[#1C1C1E] p-6 rounded-[2.5rem] border transition-all active:scale-[0.98] cursor-pointer group hover:bg-[#252528] relative overflow-hidden",
-                                            clinic.isPremium ? "border-yellow-500/20 shadow-[0_15px_40px_rgba(234,179,8,0.05)]" : "border-white/5"
+                                            clinic.isPremium ? "border-yellow-500/20 shadow-[0_15px_40px_rgba(234,179,8,0.05)]" : "border-card-border"
                                         )}
                                     >
                                         <div className="flex items-center gap-5 relative z-10">
-                                            <div className="w-20 h-20 rounded-2xl overflow-hidden border border-white/10 shrink-0">
+                                            <div className="w-20 h-20 rounded-2xl overflow-hidden border border-card-border shrink-0">
                                                 <img src={clinic.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                                             </div>
                                             <div className="flex-1 min-w-0">
@@ -114,11 +114,11 @@ export function ClinicListModal({ isOpen, onClose, clinics, onSelectClinic, isLo
                                                 </div>
                                                 <div className="flex gap-1.5 mt-3">
                                                     {(clinic.features || []).slice(0, 2).map(f => (
-                                                        <span key={f} className="text-[8px] font-black bg-white/5 text-white/20 px-2 py-1 rounded-md border border-white/5 uppercase tracking-tighter">{f}</span>
+                                                        <span key={f} className="text-[8px] font-black bg-white/5 text-white/20 px-2 py-1 rounded-md border border-card-border uppercase tracking-tighter">{f}</span>
                                                     ))}
                                                 </div>
                                             </div>
-                                            <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/20 group-hover:bg-[#5B4D9D] group-hover:text-white group-hover:border-[#5B4D9D] transition-all">
+                                            <div className="w-12 h-12 rounded-2xl bg-white/5 border border-card-border flex items-center justify-center text-white/20 group-hover:bg-[#5B4D9D] group-hover:text-white group-hover:border-[#5B4D9D] transition-all">
                                                 <ChevronRight className="w-6 h-6" />
                                             </div>
                                         </div>
@@ -134,10 +134,10 @@ export function ClinicListModal({ isOpen, onClose, clinics, onSelectClinic, isLo
                     )}
                 </div>
 
-                <div className="p-8 bg-[#111111]/80 backdrop-blur-3xl border-t border-white/5">
+                <div className="p-8 bg-[#111111]/80 backdrop-blur-3xl border-t border-card-border">
                     <button 
                         onClick={onClose}
-                        className="w-full h-16 bg-white/5 border border-white/10 rounded-3xl text-white/40 font-black text-[10px] uppercase tracking-[0.3em] hover:bg-white/10 transition-all uppercase"
+                        className="w-full h-16 bg-white/5 border border-card-border rounded-3xl text-white/40 font-black text-[10px] uppercase tracking-[0.3em] hover:bg-white/10 transition-all uppercase"
                     >
                         Pencereyi Kapat
                     </button>

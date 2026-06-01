@@ -43,10 +43,10 @@ export default function AdminUsersPage() {
     );
 
     return (
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-card rounded-3xl border border-card-border shadow-moffi-card overflow-hidden">
             {/* Toolbar */}
-            <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <h2 className="text-xl font-bold text-gray-900">Kullanıcı Listesi ({filteredUsers.length})</h2>
+            <div className="p-6 border-b border-card-border flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <h2 className="text-xl font-bold text-foreground">Kullanıcı Listesi ({filteredUsers.length})</h2>
                 <div className="relative">
                     <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
@@ -75,7 +75,7 @@ export default function AdminUsersPage() {
                             <tr key={u.id} className="hover:bg-gray-50/50 transition-colors group">
                                 <td className="px-6 py-4">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden relative border border-gray-200">
+                                        <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden relative border border-card-border">
                                             {u.avatar ? (
                                                 <Image src={u.avatar} fill alt="" className="object-cover" />
                                             ) : (
@@ -85,7 +85,7 @@ export default function AdminUsersPage() {
                                             )}
                                         </div>
                                         <div>
-                                            <div className="font-bold text-gray-900">{u.username}</div>
+                                            <div className="font-bold text-foreground">{u.username}</div>
                                             <div className="text-xs text-gray-500">{u.email}</div>
                                         </div>
                                     </div>

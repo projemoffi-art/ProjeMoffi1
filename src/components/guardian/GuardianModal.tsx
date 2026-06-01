@@ -96,7 +96,7 @@ export function GuardianModal({ isOpen, onClose, onActivate }: GuardianModalProp
                 {/* --- STATE: IDLE --- */}
                 {step === 'idle' && (
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-                        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-left mb-8">
+                        <div className="bg-white/5 border border-card-border rounded-2xl p-6 text-left mb-8">
                             <h3 className="text-white font-bold mb-4 flex items-center gap-2">
                                 <Activity className="w-4 h-4 text-red-500" /> Sistem Durumu
                             </h3>
@@ -134,7 +134,7 @@ export function GuardianModal({ isOpen, onClose, onActivate }: GuardianModalProp
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-20"
                             />
                             <div
-                                className="absolute top-1 bottom-1 w-14 bg-white rounded-full shadow-lg flex items-center justify-center transition-all duration-75 pointer-events-none z-10"
+                                className="absolute top-1 bottom-1 w-14 bg-card rounded-full shadow-lg flex items-center justify-center transition-all duration-75 pointer-events-none z-10"
                                 style={{ left: `calc(${sliderValue}% - ${sliderValue > 10 ? '56px' : '0px'})` }} // Simple clamping logic
                             >
                                 <ChevronRight className="w-6 h-6 text-red-600" />

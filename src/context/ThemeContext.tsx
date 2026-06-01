@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
 
-type Theme = 'apple-midnight' | 'apple-light' | 'pastel-soft' | 'prime-cyber';
+type Theme = 'light' | 'dark';
 type FontSize = 'small' | 'medium' | 'large';
 type ColorBlindMode = 'none' | 'protanopia' | 'deuteranopia' | 'tritanopia';
 
@@ -30,7 +30,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const { user, updateSettings } = useAuth();
-    const [theme, setThemeState] = useState<Theme>('apple-midnight');
+    const [theme, setThemeState] = useState<Theme>('dark');
     const [fontSize, setFontSizeState] = useState<FontSize>('medium');
     const [colorBlindMode, setColorBlindModeState] = useState<ColorBlindMode>('none');
     
@@ -43,7 +43,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // localStorage'dan theme'i yükle (sadece ilk açılışta)
     useEffect(() => {
         const savedTheme = localStorage.getItem('moffi-theme') as Theme;
-        if (savedTheme) setThemeState(savedTheme);
+        if (savedTheme === 'light' || savedTheme === 'dark') {
+            setThemeState(savedTheme);
+        } else {
+            setThemeState('dark');
+        }
     }, []);
 
 
@@ -52,7 +56,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         const root = document.documentElement;
         
         const classesToRemove = [
-            'apple-midnight', 'apple-light', 'pastel-soft', 'prime-cyber',
+            'apple-midnight', 'apple-light', 'pastel-soft', 'prime-cyber', 'light', 'dark',
             'font-size-small', 'font-size-medium', 'font-size-large',
             'font-sans', 'font-serif', 'font-mono', 'font-pacifico', 'font-satisfy', 'font-playfair',
             'cb-protanopia', 'cb-deuteranopia', 'cb-tritanopia',
@@ -78,7 +82,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const setTheme = React.useCallback((newTheme: Theme) => {
         setThemeState(newTheme);
         localStorage.setItem('moffi-theme', newTheme);
-    }, []);
+        updateSettings('appearance', { theme: newTheme });
+    }, [updateSettings]);
 
     const setFontSize = React.useCallback((size: FontSize) => {
         setFontSizeState(size);
@@ -127,8 +132,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         // 1. Initial LocalStorage load (Client-side only)
         const savedTheme = localStorage.getItem('moffi-theme') as Theme;
-        if (savedTheme && savedTheme !== theme) {
-            setThemeState(savedTheme);
+        const validTheme = savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : 'dark';
+        if (validTheme !== theme) {
+            setThemeState(validTheme);
+        }
+
+        // 2. Sync from AuthContext (Stable primitives)
+        if (user?.settings?.appearance?.theme) {
+            const userTheme = user.settings.appearance.theme;
+            if ((userTheme === 'light' || userTheme === 'dark') && userTheme !== theme) {
+                setThemeState(userTheme);
+                localStorage.setItem('moffi-theme', userTheme);
+            }
         }
 
         // 2. Sync from AuthContext (Stable primitives)

@@ -38,9 +38,9 @@ export function NotificationsDrawer({
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: "100%", opacity: 0 }}
                         transition={{ type: "spring", damping: 30, stiffness: 300, mass: 0.8 }}
-                        className="fixed inset-y-0 right-0 w-[85%] max-w-sm bg-[#0A0A0E] z-[120] border-l border-white/5 shadow-2xl flex flex-col pt-safe"
+                        className="fixed inset-y-0 right-0 w-[85%] max-w-sm bg-[#0A0A0E] z-[120] border-l border-card-border shadow-2xl flex flex-col pt-safe"
                     >
-                        <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                        <div className="p-6 border-b border-card-border flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center relative">
                                     <Bell className="w-5 h-5 text-cyan-400" />
@@ -88,7 +88,7 @@ export function NotificationsDrawer({
                                             )}
                                         >
                                             <div className="relative shrink-0">
-                                                <div className="w-11 h-11 rounded-full overflow-hidden bg-white/5 border border-white/10">
+                                                <div className="w-11 h-11 rounded-full overflow-hidden bg-white/5 border border-card-border">
                                                     {notif.avatar && !notif.avatar.includes('cdn-icons') ? (
                                                         <img src={notif.avatar} className="w-full h-full object-cover" />
                                                     ) : (
@@ -132,7 +132,7 @@ export function NotificationsDrawer({
                             )}
                         </div>
 
-                        <div className="p-6 border-t border-white/5 mb-safe-bottom">
+                        <div className="p-6 border-t border-card-border mb-safe-bottom">
                             <button
                                 onClick={onMarkAllRead}
                                 className="w-full py-4 rounded-[2rem] bg-accent/10 border border-accent/20 text-accent text-[11px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-accent hover:text-white transition-all shadow-lg active:scale-95"

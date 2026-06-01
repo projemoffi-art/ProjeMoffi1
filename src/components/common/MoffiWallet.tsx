@@ -41,7 +41,7 @@ export function MoffiWallet({ isOpen, onClose }: MoffiWalletProps) {
             />
 
             {/* Wallet Card */}
-            <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 pointer-events-auto relative shadow-2xl animate-in slide-in-from-bottom duration-500 transition-colors">
+            <div className="bg-card dark:bg-slate-900 w-full max-w-sm rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 pointer-events-auto relative shadow-2xl animate-in slide-in-from-bottom duration-500 transition-colors">
 
                 {/* Close Button */}
                 <button
@@ -57,7 +57,7 @@ export function MoffiWallet({ isOpen, onClose }: MoffiWalletProps) {
                         <Wallet className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                     </div>
                     <div>
-                        <h2 className="text-lg font-black text-gray-900 dark:text-white font-poppins">Moffi Cüzdan</h2>
+                        <h2 className="text-lg font-black text-foreground dark:text-white font-poppins">Moffi Cüzdan</h2>
                         <p className="text-xs text-gray-400 dark:text-gray-500 font-bold">Resmi Bakiye</p>
                     </div>
                 </div>
@@ -79,19 +79,19 @@ export function MoffiWallet({ isOpen, onClose }: MoffiWalletProps) {
                         <div className="flex gap-2 w-full mb-4">
                             <button 
                                 onClick={() => handleAddCoins(100)}
-                                className="flex-1 bg-white/10 hover:bg-white/20 border border-white/10 py-2 rounded-xl text-[10px] font-bold transition-all"
+                                className="flex-1 bg-white/10 hover:bg-white/20 border border-card-border py-2 rounded-xl text-[10px] font-bold transition-all"
                             >
                                 +100💎
                             </button>
                             <button 
                                 onClick={() => handleAddCoins(500)}
-                                className="flex-1 bg-white/10 hover:bg-white/20 border border-white/10 py-2 rounded-xl text-[10px] font-bold transition-all"
+                                className="flex-1 bg-white/10 hover:bg-white/20 border border-card-border py-2 rounded-xl text-[10px] font-bold transition-all"
                             >
                                 +500💎
                             </button>
                         </div>
 
-                        <div className="w-full bg-black/20 h-10 rounded-xl mt-4 flex items-center px-4 justify-between border border-white/10">
+                        <div className="w-full bg-black/20 h-10 rounded-xl mt-4 flex items-center px-4 justify-between border border-card-border">
                             <div className="flex items-center gap-2">
                                 <Crown className="w-4 h-4 text-yellow-400" />
                                 <span className="text-xs font-bold">Seviye {economy?.level || 1}</span>
@@ -107,18 +107,18 @@ export function MoffiWallet({ isOpen, onClose }: MoffiWalletProps) {
 
                 {/* History List */}
                 <div>
-                    <h3 className="text-sm font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-foreground dark:text-white mb-4 flex items-center gap-2">
                         <History className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                         Son İşlemler
                     </h3>
 
                     <div className="space-y-3 max-h-48 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-700">
                         {economy?.history.map((tx: any) => (
-                            <div key={tx.id} className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 transition-colors">
+                            <div key={tx.id} className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 dark:bg-slate-800 border border-card-border dark:border-slate-700 transition-colors">
                                 <div className="flex items-center gap-3">
                                     <div className="text-xl">{tx.icon}</div>
                                     <div>
-                                        <div className="text-xs font-bold text-gray-800 dark:text-white">{tx.description}</div>
+                                        <div className="text-xs font-bold text-foreground dark:text-white">{tx.description}</div>
                                         <div className="text-[10px] text-gray-400 dark:text-gray-500">
                                             {new Date(tx.date).toLocaleDateString()} • {new Date(tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </div>
@@ -133,7 +133,7 @@ export function MoffiWallet({ isOpen, onClose }: MoffiWalletProps) {
                 </div>
 
                 {/* Action Button */}
-                <button className="w-full mt-6 bg-gray-900 dark:bg-white text-white dark:text-gray-900 py-4 rounded-xl font-bold hover:scale-[1.02] active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2 border border-transparent dark:border-gray-200">
+                <button className="w-full mt-6 bg-gray-900 dark:bg-card text-white dark:text-foreground py-4 rounded-xl font-bold hover:scale-[1.02] active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2 border border-transparent dark:border-card-border">
                     <TrendingUp className="w-4 h-4 text-green-400 dark:text-green-600" />
                     Market ve Ödüller
                 </button>

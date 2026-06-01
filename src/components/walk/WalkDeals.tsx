@@ -29,7 +29,7 @@ export function WalkDeals() {
     return (
         <div className="mb-8 pl-6">
             <div className="flex items-center justify-between pr-6 mb-3">
-                <h3 className="text-sm font-black text-gray-800 dark:text-white flex items-center gap-2 transition-colors">
+                <h3 className="text-sm font-black text-foreground dark:text-white flex items-center gap-2 transition-colors">
                     <Store className="w-4 h-4 text-indigo-500" />
                     Walk Deals
                 </h3>
@@ -63,7 +63,7 @@ export function WalkDeals() {
                         </div>
 
                         {/* Hover Effect */}
-                        <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity" />
+                        <div className="absolute inset-0 bg-card opacity-0 group-hover:opacity-10 transition-opacity" />
                     </div>
                 ))}
             </div>

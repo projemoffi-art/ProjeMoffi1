@@ -48,7 +48,7 @@ export default function ProfileTestPage() {
                         {MOCK_PETS.map((pet) => (
                             <div 
                                 key={pet.id}
-                                className="min-w-[240px] bg-card border border-card-border rounded-[2.5rem] p-6 flex flex-col items-center gap-4 shadow-sm"
+                                className="min-w-[240px] bg-card border border-card-border rounded-[2.5rem] p-6 flex flex-col items-center gap-4 shadow-moffi-card"
                             >
                                 <div className="w-24 h-24 rounded-full border-2 border-accent/20 p-1 bg-background shadow-lg">
                                     <img src={pet.avatar} className="w-full h-full object-cover rounded-full" alt={pet.name} />

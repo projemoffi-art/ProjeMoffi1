@@ -60,11 +60,11 @@ export function AddVaccineModal({ isOpen, onClose, onAdd }: AddVaccineModalProps
                         initial={{ scale: 0.9, opacity: 0, y: 20 }}
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                        className="relative w-full max-w-lg bg-[#12121A] border border-white/10 rounded-[3rem] overflow-hidden shadow-2xl"
+                        className="relative w-full max-w-lg bg-[#12121A] border border-card-border rounded-[3rem] overflow-hidden shadow-2xl"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* HEADER */}
-                        <div className="p-8 border-b border-white/5 flex items-center justify-between bg-gradient-to-br from-emerald-500/5 to-transparent">
+                        <div className="p-8 border-b border-card-border flex items-center justify-between bg-gradient-to-br from-emerald-500/5 to-transparent">
                             <div className="flex items-center gap-4">
                                 <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 border border-emerald-500/20">
                                     <Syringe className="w-6 h-6" />
@@ -90,7 +90,7 @@ export function AddVaccineModal({ isOpen, onClose, onAdd }: AddVaccineModalProps
                                         value={formData.name}
                                         onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
                                         placeholder="Örn: Karma Aşı, Kuduz..."
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-6 py-4 text-sm text-white focus:border-emerald-500/50 focus:bg-white/10 outline-none transition-all placeholder:text-gray-700"
+                                        className="w-full bg-white/5 border border-card-border rounded-2xl pl-12 pr-6 py-4 text-sm text-white focus:border-emerald-500/50 focus:bg-white/10 outline-none transition-all placeholder:text-foreground"
                                     />
                                 </div>
                             </div>
@@ -104,7 +104,7 @@ export function AddVaccineModal({ isOpen, onClose, onAdd }: AddVaccineModalProps
                                             type="date"
                                             value={formData.date}
                                             onChange={e => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-6 py-4 text-sm text-white focus:border-emerald-500/50 outline-none transition-all"
+                                            className="w-full bg-white/5 border border-card-border rounded-2xl pl-12 pr-6 py-4 text-sm text-white focus:border-emerald-500/50 outline-none transition-all"
                                         />
                                     </div>
                                 </div>
@@ -113,7 +113,7 @@ export function AddVaccineModal({ isOpen, onClose, onAdd }: AddVaccineModalProps
                                     <select 
                                         value={formData.status}
                                         onChange={e => setFormData(prev => ({ ...prev, status: e.target.value }))}
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-sm text-white focus:border-emerald-500/50 outline-none transition-all appearance-none"
+                                        className="w-full bg-white/5 border border-card-border rounded-2xl px-6 py-4 text-sm text-white focus:border-emerald-500/50 outline-none transition-all appearance-none"
                                     >
                                         <option value="completed">Tamamlandı</option>
                                         <option value="pending">Planlandı</option>
@@ -129,7 +129,7 @@ export function AddVaccineModal({ isOpen, onClose, onAdd }: AddVaccineModalProps
                                         value={formData.vetName}
                                         onChange={e => setFormData(prev => ({ ...prev, vetName: e.target.value }))}
                                         placeholder="Hekim adı veya klinik..."
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-6 py-4 text-sm text-white focus:border-emerald-500/50 outline-none transition-all placeholder:text-gray-700"
+                                        className="w-full bg-white/5 border border-card-border rounded-2xl pl-12 pr-6 py-4 text-sm text-white focus:border-emerald-500/50 outline-none transition-all placeholder:text-foreground"
                                     />
                                 </div>
                             </div>
@@ -146,7 +146,7 @@ export function AddVaccineModal({ isOpen, onClose, onAdd }: AddVaccineModalProps
                                         value={formData.batchNumber}
                                         onChange={e => setFormData(prev => ({ ...prev, batchNumber: e.target.value }))}
                                         placeholder="Örn: VAX-2024-X9..."
-                                        className="w-full bg-white/5 border border-emerald-500/20 rounded-2xl pl-12 pr-6 py-4 text-sm text-white focus:border-emerald-500/50 focus:bg-emerald-500/5 outline-none transition-all placeholder:text-gray-800"
+                                        className="w-full bg-white/5 border border-emerald-500/20 rounded-2xl pl-12 pr-6 py-4 text-sm text-white focus:border-emerald-500/50 focus:bg-emerald-500/5 outline-none transition-all placeholder:text-foreground"
                                     />
                                 </div>
                                 <p className="text-[9px] text-gray-600 italic ml-4 leading-relaxed">

@@ -39,12 +39,12 @@ export function MarkCreationModal({ isOpen, onClose, onSubmit }: MarkCreationMod
 
     return (
         <div className="fixed inset-0 z-[6000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-[#1A1A1A] w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 relative overflow-hidden">
+            <div className="bg-card dark:bg-[#1A1A1A] w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 relative overflow-hidden">
 
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
                     <div>
-                        <h2 className="text-xl font-black text-gray-900 dark:text-white">İşaret Bırak</h2>
+                        <h2 className="text-xl font-black text-foreground dark:text-white">İşaret Bırak</h2>
                         <p className="text-xs text-gray-500 dark:text-gray-400">Diğer Moffi'lere bir not bırakın.</p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-full transition-colors">
@@ -65,7 +65,7 @@ export function MarkCreationModal({ isOpen, onClose, onSubmit }: MarkCreationMod
                                     "flex flex-col items-center gap-2 p-2 rounded-2xl border transition-all",
                                     selectedType === type.id
                                         ? "border-[#5B4D9D] bg-[#5B4D9D]/5"
-                                        : "border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5"
+                                        : "border-card-border dark:border-card-border hover:bg-gray-50 dark:hover:bg-white/5"
                                 )}
                             >
                                 <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-colors", type.color)}>
@@ -107,7 +107,7 @@ export function MarkCreationModal({ isOpen, onClose, onSubmit }: MarkCreationMod
                             placeholder="Örn: Buradaki çeşme çalışıyor!"
                             rows={3}
                             maxLength={80}
-                            className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl p-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#5B4D9D]"
+                            className="w-full bg-gray-50 dark:bg-white/5 border border-card-border dark:border-card-border rounded-xl p-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#5B4D9D]"
                         />
                         <div className="text-right mt-1 text-[10px] text-gray-400 font-bold">{message.length}/80</div>
                     </div>

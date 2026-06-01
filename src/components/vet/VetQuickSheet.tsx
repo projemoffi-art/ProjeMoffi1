@@ -46,7 +46,7 @@ export function VetQuickSheet({ isOpen, onClose, petId = "pet-1" }: VetQuickShee
                         animate={{ y: 0 }}
                         exit={{ y: "100%" }}
                         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                        className="fixed bottom-0 inset-x-0 z-[3001] bg-[#1C1C1E] rounded-t-[3rem] border-t border-white/10 shadow-[0_-20px_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col max-h-[90vh]"
+                        className="fixed bottom-0 inset-x-0 z-[3001] bg-[#1C1C1E] rounded-t-[3rem] border-t border-card-border shadow-[0_-20px_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col max-h-[90vh]"
                     >
                         {/* iOS Style Grab Handle */}
                         <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/10 rounded-full" />
@@ -58,7 +58,7 @@ export function VetQuickSheet({ isOpen, onClose, petId = "pet-1" }: VetQuickShee
                             </div>
                             <button 
                                 onClick={onClose}
-                                className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center border border-white/10 hover:bg-white/10 transition-all"
+                                className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center border border-card-border hover:bg-white/10 transition-all"
                             >
                                 <X className="w-5 h-5 text-white/50" />
                             </button>
@@ -80,10 +80,10 @@ export function VetQuickSheet({ isOpen, onClose, petId = "pet-1" }: VetQuickShee
                                 ) : nearestClinic ? (
                                     <div 
                                         onClick={() => { router.push(`/vet?clinicId=${nearestClinic.id}`); onClose(); }}
-                                        className="bg-gradient-to-br from-white/[0.05] to-transparent border border-white/10 rounded-[2.2rem] p-5 relative group overflow-hidden cursor-pointer active:scale-[0.98] transition-all"
+                                        className="bg-gradient-to-br from-white/[0.05] to-transparent border border-card-border rounded-[2.2rem] p-5 relative group overflow-hidden cursor-pointer active:scale-[0.98] transition-all"
                                     >
                                         <div className="flex items-start gap-4 relative z-10">
-                                            <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/10 shrink-0">
+                                            <div className="w-16 h-16 rounded-2xl overflow-hidden border border-card-border shrink-0">
                                                 <img src={nearestClinic.imageUrl} className="w-full h-full object-cover" />
                                             </div>
                                             <div className="flex-1 min-w-0">
@@ -104,13 +104,13 @@ export function VetQuickSheet({ isOpen, onClose, petId = "pet-1" }: VetQuickShee
                                         <div className="flex gap-2 mt-5">
                                             <button 
                                                 onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${nearestClinic.phone || '02161234567'}`; }}
-                                                className="flex-1 bg-white text-black h-12 rounded-xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                                className="flex-1 bg-card text-black h-12 rounded-xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all"
                                             >
                                                 <Phone className="w-4 h-4 fill-current" /> Ara
                                             </button>
                                             <button 
                                                 onClick={(e) => { e.stopPropagation(); window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(nearestClinic.name)}`, '_blank'); }}
-                                                className="flex-1 bg-white/5 border border-white/10 text-white h-12 rounded-xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                                className="flex-1 bg-white/5 border border-card-border text-white h-12 rounded-xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all"
                                             >
                                                 <Navigation className="w-4 h-4" /> Yol Tarifi
                                             </button>
@@ -149,7 +149,7 @@ export function VetQuickSheet({ isOpen, onClose, petId = "pet-1" }: VetQuickShee
                             <section className="grid grid-cols-2 gap-4">
                                 <button
                                     onClick={() => { router.push('/vet?modal=vaccine'); onClose(); }}
-                                    className="bg-white/5 border border-white/10 rounded-[1.8rem] p-5 text-left flex flex-col justify-between h-32 hover:bg-white/10 transition-all group"
+                                    className="bg-white/5 border border-card-border rounded-[1.8rem] p-5 text-left flex flex-col justify-between h-32 hover:bg-white/10 transition-all group"
                                 >
                                     <div className="w-10 h-10 bg-emerald-500/20 text-emerald-400 rounded-xl flex items-center justify-center border border-emerald-500/20 group-hover:scale-110 transition-transform">
                                         <ShieldCheck className="w-5 h-5" />
@@ -158,7 +158,7 @@ export function VetQuickSheet({ isOpen, onClose, petId = "pet-1" }: VetQuickShee
                                 </button>
                                 <button
                                     onClick={() => { router.push('/vet?modal=clinicList'); onClose(); }}
-                                    className="bg-white/5 border border-white/10 rounded-[1.8rem] p-5 text-left flex flex-col justify-between h-32 hover:bg-white/10 transition-all group"
+                                    className="bg-white/5 border border-card-border rounded-[1.8rem] p-5 text-left flex flex-col justify-between h-32 hover:bg-white/10 transition-all group"
                                 >
                                     <div className="w-10 h-10 bg-blue-500/20 text-blue-400 rounded-xl flex items-center justify-center border border-blue-500/20 group-hover:scale-110 transition-transform">
                                         <Stethoscope className="w-5 h-5" />
@@ -170,7 +170,7 @@ export function VetQuickSheet({ isOpen, onClose, petId = "pet-1" }: VetQuickShee
                             {/* 4. FOOTER: VIEW ALL */}
                             <button
                                 onClick={() => { router.push('/vet'); onClose(); }}
-                                className="w-full bg-white/5 border border-white/10 py-5 rounded-[2rem] flex items-center justify-center gap-3 group hover:bg-white hover:text-black transition-all"
+                                className="w-full bg-white/5 border border-card-border py-5 rounded-[2rem] flex items-center justify-center gap-3 group hover:bg-card hover:text-black transition-all"
                             >
                                 <span className="text-[11px] font-black uppercase tracking-[0.3em]">Tüm Detayları Gör</span>
                                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

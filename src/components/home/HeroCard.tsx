@@ -82,13 +82,13 @@ export default function HeroCard() {
                     <motion.button
                         layoutId="weather-widget"
                         onClick={toggleWeather}
-                        className={cn("bg-white/20 backdrop-blur-md border border-white/20 rounded-3xl p-2 pr-4 flex items-center gap-3 shadow-lg transition-all active:scale-95", showWeather && "bg-white/90 border-white text-black")}
+                        className={cn("bg-white/20 backdrop-blur-md border border-card-border rounded-3xl p-2 pr-4 flex items-center gap-3 shadow-lg transition-all active:scale-95", showWeather && "bg-white/90 border-white text-black")}
                     >
                         <div className={cn("p-2 rounded-full transition-colors", showWeather ? "bg-orange-500 text-white" : "bg-orange-400 text-white")}>
                             <CloudSun className="w-5 h-5" />
                         </div>
                         <div className="text-left">
-                            <div className={cn("text-xs font-black leading-none mb-0.5", showWeather ? "text-gray-900" : "text-white")}>{WEATHER_DATA.temp}°C</div>
+                            <div className={cn("text-xs font-black leading-none mb-0.5", showWeather ? "text-foreground" : "text-white")}>{WEATHER_DATA.temp}°C</div>
                             <div className={cn("text-[10px] font-medium leading-none", showWeather ? "text-gray-500" : "text-white/80")}>{WEATHER_DATA.condition}</div>
                         </div>
                     </motion.button>
@@ -103,7 +103,7 @@ export default function HeroCard() {
                     </AnimatePresence>
 
                     {/* STATUS EDIT (Simplified) */}
-                    <div className="bg-black/30 backdrop-blur-md border border-white/10 rounded-full px-3 py-1.5 flex items-center gap-2 text-white/90 shadow-lg">
+                    <div className="bg-black/30 backdrop-blur-md border border-card-border rounded-full px-3 py-1.5 flex items-center gap-2 text-white/90 shadow-lg">
                         <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                         <span className="text-[10px] font-bold">Çevrimiçi</span>
                     </div>
@@ -116,7 +116,7 @@ export default function HeroCard() {
                             initial={{ opacity: 0, y: -20, height: 0 }}
                             animate={{ opacity: 1, y: 0, height: 'auto' }}
                             exit={{ opacity: 0, y: -10, height: 0 }}
-                            className="absolute top-20 left-6 right-6 bg-white/90 backdrop-blur-xl rounded-3xl p-4 shadow-2xl z-20 overflow-hidden text-gray-800"
+                            className="absolute top-20 left-6 right-6 bg-white/90 backdrop-blur-xl rounded-3xl p-4 shadow-2xl z-20 overflow-hidden text-foreground"
                         >
                             <div className="flex justify-between items-center mb-4">
                                 <div className="flex items-center gap-2 text-xs font-bold text-gray-500">
@@ -128,9 +128,9 @@ export default function HeroCard() {
                             </div>
                             <div className="flex justify-between gap-2">
                                 {WEATHER_DATA.hourly.map((h, i) => (
-                                    <div key={i} className="flex flex-col items-center gap-1 bg-white p-2 rounded-xl shadow-sm w-full">
+                                    <div key={i} className="flex flex-col items-center gap-1 bg-card p-2 rounded-xl shadow-moffi-card w-full">
                                         <span className="text-[10px] font-bold text-gray-400">{h.time}</span>
-                                        <h.icon className="w-5 h-5 text-gray-700" />
+                                        <h.icon className="w-5 h-5 text-foreground" />
                                         <span className="text-xs font-bold">{h.temp}°</span>
                                     </div>
                                 ))}
@@ -157,7 +157,7 @@ export default function HeroCard() {
                     {/* ACTIVITY RINGS (Clickable) */}
                     <div className="w-full grid grid-cols-3 gap-3 mb-5">
                         {/* Walk */}
-                        <button onClick={() => router.push('/walk')} className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10 flex flex-col items-center gap-2 hover:bg-white/20 transition-colors active:scale-95">
+                        <button onClick={() => router.push('/walk')} className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-card-border flex flex-col items-center gap-2 hover:bg-white/20 transition-colors active:scale-95">
                             <div className="relative w-12 h-12 flex items-center justify-center">
                                 <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
                                     <path className="text-white/10" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentcolor" strokeWidth="3" />
@@ -169,7 +169,7 @@ export default function HeroCard() {
                         </button>
 
                         {/* Food */}
-                        <button onClick={handleFeed} className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10 flex flex-col items-center gap-2 hover:bg-white/20 transition-colors active:scale-95 relative overflow-hidden">
+                        <button onClick={handleFeed} className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-card-border flex flex-col items-center gap-2 hover:bg-white/20 transition-colors active:scale-95 relative overflow-hidden">
                             {fedState && <div className="absolute inset-0 bg-green-500/20 flex items-center justify-center text-white font-bold text-xs">Mmm! 🥣</div>}
                             <div className="relative w-12 h-12 flex items-center justify-center">
                                 <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
@@ -182,7 +182,7 @@ export default function HeroCard() {
                         </button>
 
                         {/* Love */}
-                        <button onClick={handleLove} className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10 flex flex-col items-center gap-2 hover:bg-white/20 transition-colors active:scale-95">
+                        <button onClick={handleLove} className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-card-border flex flex-col items-center gap-2 hover:bg-white/20 transition-colors active:scale-95">
                             <div className="relative w-12 h-12 flex items-center justify-center">
                                 <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
                                     <path className="text-white/10" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentcolor" strokeWidth="3" />
@@ -197,7 +197,7 @@ export default function HeroCard() {
                     {/* MAIN CTA */}
                     <button
                         onClick={() => router.push('/walk')}
-                        className="w-full bg-[#5B4D9D] text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-xl hover:bg-[#4a3e80] transition-colors active:scale-95 border border-white/10"
+                        className="w-full bg-[#5B4D9D] text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-xl hover:bg-[#4a3e80] transition-colors active:scale-95 border border-card-border"
                     >
                         <Play className="w-5 h-5 fill-current" />
                         Günün Macerasını Başlat

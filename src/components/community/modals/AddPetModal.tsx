@@ -120,7 +120,7 @@ export function AddPetModal({
                         exit={{ y: "100%", opacity: 0 }}
                         transition={{ type: "spring", damping: 25, stiffness: 300 }}
                         className={cn(
-                            "w-full max-w-md bg-[#FBFBFB] border border-gray-100/80 shadow-[0_-20px_50px_rgba(0,0,0,0.06)] relative flex flex-col",
+                            "w-full max-w-md bg-[#FBFBFB] border border-card-border/80 shadow-[0_-20px_50px_rgba(0,0,0,0.06)] relative flex flex-col",
                             "rounded-t-[40px] sm:rounded-[36px] p-6",
                             "pb-safe sm:pb-8 max-h-[92vh] overflow-y-auto no-scrollbar"
                         )}
@@ -133,7 +133,7 @@ export function AddPetModal({
                             {step > 1 ? (
                                 <button 
                                     onClick={() => setStep(prev => prev - 1)} 
-                                    className="w-10 h-10 bg-white border border-gray-100 rounded-full text-gray-400 hover:text-gray-800 transition-all flex items-center justify-center shadow-sm cursor-pointer"
+                                    className="w-10 h-10 bg-card border border-card-border rounded-full text-gray-400 hover:text-foreground transition-all flex items-center justify-center shadow-moffi-card cursor-pointer"
                                 >
                                     <ChevronLeft className="w-5 h-5" />
                                 </button>
@@ -150,7 +150,7 @@ export function AddPetModal({
 
                             <button 
                                 onClick={onClose} 
-                                className="w-10 h-10 bg-white border border-gray-100 rounded-full text-gray-400 hover:text-gray-800 transition-all flex items-center justify-center shadow-sm cursor-pointer"
+                                className="w-10 h-10 bg-card border border-card-border rounded-full text-gray-400 hover:text-foreground transition-all flex items-center justify-center shadow-moffi-card cursor-pointer"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -161,11 +161,11 @@ export function AddPetModal({
                                 <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="w-full space-y-6">
                                     
                                     {/* PHOTO GALLERY SECTION */}
-                                    <div className="bg-white rounded-[28px] p-5 border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.01)] space-y-3">
+                                    <div className="bg-card rounded-[28px] p-5 border border-card-border shadow-moffi-card space-y-3">
                                         <label className="text-[10px] text-gray-400 font-black uppercase tracking-wider ml-1">Fotoğraflar (En Fazla 5)</label>
                                         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
                                             {newPetPhotos.map((photo, index) => (
-                                                <div key={index} className="relative shrink-0 w-20 h-20 rounded-2xl overflow-hidden border border-gray-100 shadow-sm group">
+                                                <div key={index} className="relative shrink-0 w-20 h-20 rounded-2xl overflow-hidden border border-card-border shadow-sm group">
                                                     <img src={photo.preview} className="w-full h-full object-cover" alt="Pet Preview" />
                                                     <button
                                                         onClick={() => setNewPetPhotos((prev: any[]) => prev.filter((_, i) => i !== index))}
@@ -182,7 +182,7 @@ export function AddPetModal({
                                             ))}
 
                                             {newPetPhotos.length < 5 && (
-                                                <label htmlFor="add-pet-photos" className="shrink-0 w-20 h-20 rounded-2xl bg-gray-50 border-2 border-dashed border-gray-200 flex flex-col items-center justify-center cursor-pointer hover:border-[#527958]/40 transition-all group">
+                                                <label htmlFor="add-pet-photos" className="shrink-0 w-20 h-20 rounded-2xl bg-gray-50 border-2 border-dashed border-card-border flex flex-col items-center justify-center cursor-pointer hover:border-[#527958]/40 transition-all group">
                                                     <div className="w-7 h-7 bg-green-50 rounded-lg flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
                                                         <Plus className="w-4 h-4 text-[#527958]" />
                                                     </div>
@@ -211,7 +211,7 @@ export function AddPetModal({
                                     </div>
 
                                     {/* CORE INFO CARD */}
-                                    <div className="bg-white rounded-[28px] p-5 border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.01)] space-y-4">
+                                    <div className="bg-card rounded-[28px] p-5 border border-card-border shadow-moffi-card space-y-4">
                                         <div className="grid grid-cols-3 gap-3">
                                             <div className="col-span-2 space-y-1.5">
                                                 <label className="text-[10px] text-gray-400 font-black uppercase tracking-wider ml-1">İsim</label>
@@ -220,7 +220,7 @@ export function AddPetModal({
                                                     value={newPetName} 
                                                     onChange={e => setNewPetName(e.target.value)} 
                                                     placeholder="Örn: Pamuk" 
-                                                    className="w-full bg-[#FBFBFB] border border-gray-150 rounded-2xl px-4 py-3 text-gray-800 text-sm outline-none focus:border-[#527958]/50 transition-all font-bold placeholder-gray-400" 
+                                                    className="w-full bg-[#FBFBFB] border border-card-border rounded-2xl px-4 py-3 text-foreground text-sm outline-none focus:border-[#527958]/50 transition-all font-bold placeholder-gray-400" 
                                                 />
                                             </div>
                                             <div className="space-y-1.5">
@@ -229,7 +229,7 @@ export function AddPetModal({
                                                     <select 
                                                         value={newPetType} 
                                                         onChange={e => setNewPetType(e.target.value)} 
-                                                        className="w-full bg-[#FBFBFB] border border-gray-150 rounded-2xl px-2 py-3 text-center text-lg outline-none focus:border-[#527958]/50 transition-all appearance-none cursor-pointer" 
+                                                        className="w-full bg-[#FBFBFB] border border-card-border rounded-2xl px-2 py-3 text-center text-lg outline-none focus:border-[#527958]/50 transition-all appearance-none cursor-pointer" 
                                                         style={{ textAlignLast: "center" }}
                                                     >
                                                         <option value="🐶">🐶</option>
@@ -249,7 +249,7 @@ export function AddPetModal({
                                                     value={newPetBreed} 
                                                     onChange={e => setNewPetBreed(e.target.value)} 
                                                     placeholder="Golden" 
-                                                    className="w-full bg-[#FBFBFB] border border-gray-150 rounded-2xl px-4 py-3 text-gray-850 text-sm outline-none focus:border-[#527958]/50 transition-all font-semibold placeholder-gray-400" 
+                                                    className="w-full bg-[#FBFBFB] border border-card-border rounded-2xl px-4 py-3 text-gray-850 text-sm outline-none focus:border-[#527958]/50 transition-all font-semibold placeholder-gray-400" 
                                                 />
                                             </div>
                                             <div className="space-y-1.5 col-span-1">
@@ -259,7 +259,7 @@ export function AddPetModal({
                                                     value={newPetAge} 
                                                     onChange={e => setNewPetAge(e.target.value)} 
                                                     placeholder="2 Yaş" 
-                                                    className="w-full bg-[#FBFBFB] border border-gray-150 rounded-2xl px-4 py-3 text-gray-850 text-sm text-center outline-none focus:border-[#527958]/50 transition-all font-semibold placeholder-gray-400" 
+                                                    className="w-full bg-[#FBFBFB] border border-card-border rounded-2xl px-4 py-3 text-gray-850 text-sm text-center outline-none focus:border-[#527958]/50 transition-all font-semibold placeholder-gray-400" 
                                                 />
                                             </div>
                                             <div className="space-y-1.5 col-span-1">
@@ -269,7 +269,7 @@ export function AddPetModal({
                                                     value={newPetWeight} 
                                                     onChange={e => setNewPetWeight(e.target.value)} 
                                                     placeholder="Örn: 24.5" 
-                                                    className="w-full bg-[#FBFBFB] border border-gray-150 rounded-2xl px-4 py-3 text-gray-850 text-sm text-center outline-none focus:border-[#527958]/50 transition-all font-semibold placeholder-gray-400" 
+                                                    className="w-full bg-[#FBFBFB] border border-card-border rounded-2xl px-4 py-3 text-gray-850 text-sm text-center outline-none focus:border-[#527958]/50 transition-all font-semibold placeholder-gray-400" 
                                                 />
                                             </div>
                                         </div>
@@ -277,21 +277,21 @@ export function AddPetModal({
                                         <div className="grid grid-cols-3 gap-2 pt-1">
                                             <div className="space-y-1.5">
                                                 <label className="text-[9px] text-gray-400 font-black uppercase tracking-wider text-center block">Cinsiyet</label>
-                                                <select value={newPetGender} onChange={e => setNewPetGender(e.target.value)} className="w-full bg-[#FBFBFB] border border-gray-150 rounded-xl py-2.5 text-gray-700 outline-none focus:border-[#527958]/50 transition-all text-xs font-bold text-center appearance-none cursor-pointer">
+                                                <select value={newPetGender} onChange={e => setNewPetGender(e.target.value)} className="w-full bg-[#FBFBFB] border border-card-border rounded-xl py-2.5 text-foreground outline-none focus:border-[#527958]/50 transition-all text-xs font-bold text-center appearance-none cursor-pointer">
                                                     <option value="Erkek">Erkek</option>
                                                     <option value="Dişi">Dişi</option>
                                                 </select>
                                             </div>
                                             <div className="space-y-1.5">
                                                 <label className="text-[9px] text-gray-400 font-black uppercase tracking-wider text-center block">Kısır mı?</label>
-                                                <select value={newPetNeutered} onChange={e => setNewPetNeutered(e.target.value)} className="w-full bg-[#FBFBFB] border border-gray-150 rounded-xl py-2.5 text-gray-700 outline-none focus:border-[#527958]/50 transition-all text-xs font-bold text-center appearance-none cursor-pointer">
+                                                <select value={newPetNeutered} onChange={e => setNewPetNeutered(e.target.value)} className="w-full bg-[#FBFBFB] border border-card-border rounded-xl py-2.5 text-foreground outline-none focus:border-[#527958]/50 transition-all text-xs font-bold text-center appearance-none cursor-pointer">
                                                     <option value="Evet">Evet</option>
                                                     <option value="Hayır">Hayır</option>
                                                 </select>
                                             </div>
                                             <div className="space-y-1.5">
                                                 <label className="text-[9px] text-gray-400 font-black uppercase tracking-wider text-center block">Boyut</label>
-                                                <select value={newPetSize} onChange={e => setNewPetSize(e.target.value)} className="w-full bg-[#FBFBFB] border border-gray-150 rounded-xl py-2.5 text-gray-700 outline-none focus:border-[#527958]/50 transition-all text-xs font-bold text-center appearance-none cursor-pointer">
+                                                <select value={newPetSize} onChange={e => setNewPetSize(e.target.value)} className="w-full bg-[#FBFBFB] border border-card-border rounded-xl py-2.5 text-foreground outline-none focus:border-[#527958]/50 transition-all text-xs font-bold text-center appearance-none cursor-pointer">
                                                     <option value="Küçük">Küçük</option>
                                                     <option value="Orta">Orta</option>
                                                     <option value="Büyük">Büyük</option>
@@ -323,13 +323,13 @@ export function AddPetModal({
                                         </div>
                                     </div>
 
-                                    <div className="bg-white rounded-[28px] p-5 border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.01)] space-y-4">
+                                    <div className="bg-card rounded-[28px] p-5 border border-card-border shadow-moffi-card space-y-4">
                                         <div className="space-y-1.5">
                                             <label className="text-[10px] text-gray-400 font-black uppercase tracking-wider block ml-1">Sağlık Durumu</label>
                                             <select 
                                                 value={newPetHealthStatus} 
                                                 onChange={e => setNewPetHealthStatus(e.target.value)} 
-                                                className="w-full bg-[#FBFBFB] border border-gray-150 rounded-2xl px-4 py-3 text-gray-700 outline-none focus:border-[#527958]/50 transition-all text-xs font-bold appearance-none cursor-pointer text-center"
+                                                className="w-full bg-[#FBFBFB] border border-card-border rounded-2xl px-4 py-3 text-foreground outline-none focus:border-[#527958]/50 transition-all text-xs font-bold appearance-none cursor-pointer text-center"
                                                 style={{ textAlignLast: "center" }}
                                             >
                                                 <option value="Mükemmel">Mükemmel 🌟</option>
@@ -345,7 +345,7 @@ export function AddPetModal({
                                                 value={newPetHealth} 
                                                 onChange={e => setNewPetHealth(e.target.value)} 
                                                 placeholder="Örn: Tavuk alerjisi var, günlük ilaç kullanımı vb..." 
-                                                className="w-full bg-[#FDF5F5] border border-red-100 rounded-2xl px-4.5 py-3 text-gray-800 placeholder-gray-400 outline-none focus:border-red-500/30 transition-all font-medium text-xs h-16 resize-none leading-relaxed" 
+                                                className="w-full bg-[#FDF5F5] border border-red-100 rounded-2xl px-4.5 py-3 text-foreground placeholder-gray-400 outline-none focus:border-red-500/30 transition-all font-medium text-xs h-16 resize-none leading-relaxed" 
                                             />
                                         </div>
 
@@ -355,7 +355,7 @@ export function AddPetModal({
                                                 value={newPetFeatures} 
                                                 onChange={e => setNewPetFeatures(e.target.value)} 
                                                 placeholder="Örn: Sol gözünün üstünde küçük beyaz bir leke var..." 
-                                                className="w-full bg-[#FBFBFB] border border-gray-150 rounded-2xl px-4.5 py-3 text-gray-850 placeholder-gray-400 outline-none focus:border-[#527958]/50 transition-all font-medium text-xs h-16 resize-none leading-relaxed" 
+                                                className="w-full bg-[#FBFBFB] border border-card-border rounded-2xl px-4.5 py-3 text-gray-850 placeholder-gray-400 outline-none focus:border-[#527958]/50 transition-all font-medium text-xs h-16 resize-none leading-relaxed" 
                                             />
                                         </div>
 
@@ -365,7 +365,7 @@ export function AddPetModal({
                                                 value={newPetCharacter} 
                                                 onChange={e => setNewPetCharacter(e.target.value)} 
                                                 placeholder="Örn: İnsanlara karşı çok sevecendir fakat gürültüden korkar..." 
-                                                className="w-full bg-[#FBFBFB] border border-gray-150 rounded-2xl px-4.5 py-3 text-gray-850 placeholder-gray-400 outline-none focus:border-[#527958]/50 transition-all font-medium text-xs h-16 resize-none leading-relaxed" 
+                                                className="w-full bg-[#FBFBFB] border border-card-border rounded-2xl px-4.5 py-3 text-gray-850 placeholder-gray-400 outline-none focus:border-[#527958]/50 transition-all font-medium text-xs h-16 resize-none leading-relaxed" 
                                             />
                                         </div>
                                     </div>
@@ -382,7 +382,7 @@ export function AddPetModal({
                             {step === 3 && (
                                 <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="w-full space-y-6">
                                     
-                                    <div className="bg-white rounded-[28px] p-5 border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.01)] space-y-4">
+                                    <div className="bg-card rounded-[28px] p-5 border border-card-border shadow-moffi-card space-y-4">
                                         <div className="space-y-1.5">
                                             <label className="text-[10px] text-gray-400 font-black uppercase tracking-wider ml-1">Mikroçip Numarası</label>
                                             <div className="relative">
@@ -391,7 +391,7 @@ export function AddPetModal({
                                                     value={newPetMicrochip} 
                                                     onChange={e => setNewPetMicrochip(e.target.value)} 
                                                     placeholder="TR-000000000" 
-                                                    className="w-full bg-[#FBFBFB] border border-gray-150 rounded-2xl pl-12 pr-5 py-4 text-gray-800 outline-none focus:border-[#527958]/50 transition-all font-mono tracking-widest text-sm" 
+                                                    className="w-full bg-[#FBFBFB] border border-card-border rounded-2xl pl-12 pr-5 py-4 text-foreground outline-none focus:border-[#527958]/50 transition-all font-mono tracking-widest text-sm" 
                                                 />
                                                 <ShieldAlert className="absolute left-4.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400/80" />
                                             </div>
@@ -399,8 +399,8 @@ export function AddPetModal({
                                     </div>
 
                                     {/* Gezi, Su, Beslenme Hedefleri & Seri İstikrarı */}
-                                    <div className="bg-white rounded-[28px] p-5 border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.01)] space-y-4">
-                                        <span className="text-[10px] text-gray-800 font-black uppercase tracking-wider block ml-1">Günlük Hedefler & İstikrar Serisi</span>
+                                    <div className="bg-card rounded-[28px] p-5 border border-card-border shadow-moffi-card space-y-4">
+                                        <span className="text-[10px] text-foreground font-black uppercase tracking-wider block ml-1">Günlük Hedefler & İstikrar Serisi</span>
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="space-y-1.5">
                                                 <label className="text-[9px] text-gray-400 font-bold uppercase tracking-wider ml-1">Aktivite Hedefi (%)</label>
@@ -411,7 +411,7 @@ export function AddPetModal({
                                                     value={newPetActivityTarget} 
                                                     onChange={e => setNewPetActivityTarget(e.target.value)} 
                                                     placeholder="Örn: 70" 
-                                                    className="w-full bg-[#FBFBFB] border border-gray-150 rounded-2xl px-4 py-3 text-gray-800 text-xs outline-none focus:border-[#527958]/50 transition-all font-semibold" 
+                                                    className="w-full bg-[#FBFBFB] border border-card-border rounded-2xl px-4 py-3 text-foreground text-xs outline-none focus:border-[#527958]/50 transition-all font-semibold" 
                                                 />
                                             </div>
                                             <div className="space-y-1.5">
@@ -423,7 +423,7 @@ export function AddPetModal({
                                                     value={newPetWaterTarget} 
                                                     onChange={e => setNewPetWaterTarget(e.target.value)} 
                                                     placeholder="Örn: 80" 
-                                                    className="w-full bg-[#FBFBFB] border border-gray-150 rounded-2xl px-4 py-3 text-gray-800 text-xs outline-none focus:border-[#527958]/50 transition-all font-semibold" 
+                                                    className="w-full bg-[#FBFBFB] border border-card-border rounded-2xl px-4 py-3 text-foreground text-xs outline-none focus:border-[#527958]/50 transition-all font-semibold" 
                                                 />
                                             </div>
                                         </div>
@@ -437,7 +437,7 @@ export function AddPetModal({
                                                     value={newPetFoodTarget} 
                                                     onChange={e => setNewPetFoodTarget(e.target.value)} 
                                                     placeholder="Örn: 60" 
-                                                    className="w-full bg-[#FBFBFB] border border-gray-150 rounded-2xl px-4 py-3 text-gray-800 text-xs outline-none focus:border-[#527958]/50 transition-all font-semibold" 
+                                                    className="w-full bg-[#FBFBFB] border border-card-border rounded-2xl px-4 py-3 text-foreground text-xs outline-none focus:border-[#527958]/50 transition-all font-semibold" 
                                                 />
                                             </div>
                                             <div className="space-y-1.5">
@@ -449,20 +449,20 @@ export function AddPetModal({
                                                     value={newPetStreak} 
                                                     onChange={e => setNewPetStreak(e.target.value)} 
                                                     placeholder="Örn: 4" 
-                                                    className="w-full bg-[#FBFBFB] border border-gray-150 rounded-2xl px-4 py-3 text-gray-850 text-xs outline-none focus:border-[#527958]/50 transition-all font-semibold text-center" 
+                                                    className="w-full bg-[#FBFBFB] border border-card-border rounded-2xl px-4 py-3 text-gray-850 text-xs outline-none focus:border-[#527958]/50 transition-all font-semibold text-center" 
                                                 />
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="bg-white border border-gray-100 rounded-[28px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.01)] relative overflow-hidden group">
+                                    <div className="bg-card border border-card-border rounded-[28px] p-5 shadow-moffi-card relative overflow-hidden group">
                                         <div className="flex justify-between items-center mb-3 relative z-10">
                                             <div className="flex items-center gap-3">
                                                 <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center transition-all shadow-sm", newPetShowPhone ? "bg-green-50 text-[#527958]" : "bg-gray-150 text-gray-400")}>
                                                     <PhoneCall className="w-5 h-5" />
                                                 </div>
                                                 <div>
-                                                    <span className="font-black text-gray-800 text-sm tracking-tight block">Telefonu Göster</span>
+                                                    <span className="font-black text-foreground text-sm tracking-tight block">Telefonu Göster</span>
                                                     <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mt-0.5">SOS Arama Yetkisi</p>
                                                 </div>
                                             </div>
@@ -472,7 +472,7 @@ export function AddPetModal({
                                             >
                                                 <motion.div
                                                     animate={{ x: newPetShowPhone ? 22 : 0 }}
-                                                    className="w-4.5 h-4.5 rounded-full bg-white shadow-md"
+                                                    className="w-4.5 h-4.5 rounded-full bg-card shadow-moffi-card"
                                                 />
                                             </div>
                                         </div>
@@ -487,7 +487,7 @@ export function AddPetModal({
                                         className="w-full py-5 bg-[#527958] hover:bg-[#436448] text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:opacity-95 active:scale-[0.98] transition-all disabled:opacity-50 shadow-lg shadow-green-950/10 cursor-pointer"
                                     >
                                         {isSaving ? (
-                                            <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                            <div className="w-5 h-5 border-2 border-card-border border-t-white rounded-full animate-spin" />
                                         ) : (
                                             <>
                                                 <Sparkles className="w-5 h-5" />

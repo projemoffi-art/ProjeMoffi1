@@ -47,14 +47,14 @@ export function InboxModal() {
                     className="fixed inset-0 z-[5000] flex flex-col pt-safe-top bg-black text-white"
                 >
                     {/* HEADER */}
-                    <div className="px-6 py-4 flex items-center justify-between border-b border-white/10 backdrop-blur-3xl sticky top-0 z-10 bg-black/80">
+                    <div className="px-6 py-4 flex items-center justify-between border-b border-card-border backdrop-blur-3xl sticky top-0 z-10 bg-black/80">
                         {activeChatUserId ? (
                             <div className="flex items-center gap-3">
                                 <button onClick={() => setActiveChatUserId(null)} className="p-2 rounded-full bg-white/5 active:scale-95 transition-all">
                                     <ChevronRight className="w-6 h-6 rotate-180 text-white" />
                                 </button>
                                 <div className="flex items-center gap-2">
-                                    <div className="w-10 h-10 rounded-full border border-white/10 overflow-hidden bg-gray-900">
+                                    <div className="w-10 h-10 rounded-full border border-card-border overflow-hidden bg-gray-900">
                                         <img src={inboxMessages.find(m => m.userId === activeChatUserId)?.avatar || ""} className="w-full h-full object-cover" />
                                     </div>
                                     <div>
@@ -80,10 +80,10 @@ export function InboxModal() {
 
                     {!activeChatUserId && (
                         <div className="px-6 py-4 flex gap-2">
-                            <button onClick={() => setInboxTab('chats')} className={cn("flex-1 py-3 rounded-2xl flex items-center justify-center gap-2 font-bold text-sm transition-all shadow-lg active:scale-95", inboxTab === 'chats' ? "bg-white text-black shadow-white/10" : "bg-white/5 text-white/40 border border-white/10")}>
+                            <button onClick={() => setInboxTab('chats')} className={cn("flex-1 py-3 rounded-2xl flex items-center justify-center gap-2 font-bold text-sm transition-all shadow-lg active:scale-95", inboxTab === 'chats' ? "bg-card text-black shadow-white/10" : "bg-white/5 text-white/40 border border-card-border")}>
                                 <MessageCircle className="w-4 h-4" /> Sohbetler
                             </button>
-                            <button onClick={() => setInboxTab('sos')} className={cn("flex-1 py-3 rounded-2xl flex items-center justify-center gap-2 font-bold text-sm transition-all shadow-lg active:scale-95", inboxTab === 'sos' ? "bg-red-500 text-white shadow-red-500/20" : "bg-white/5 text-white/40 border border-white/10")}>
+                            <button onClick={() => setInboxTab('sos')} className={cn("flex-1 py-3 rounded-2xl flex items-center justify-center gap-2 font-bold text-sm transition-all shadow-lg active:scale-95", inboxTab === 'sos' ? "bg-red-500 text-white shadow-red-500/20" : "bg-white/5 text-white/40 border border-card-border")}>
                                 <ShieldAlert className="w-4 h-4" /> SOS Alarmları
                             </button>
                         </div>
@@ -94,7 +94,7 @@ export function InboxModal() {
                             <div className="flex flex-col min-h-full px-6 py-6 pb-24 space-y-4">
                                 {currentChatMessages.map((m: any, idx: number) => (
                                     <div key={m.id || idx} className={cn("group flex flex-col max-w-[85%] relative", m.sentByMe ? "ml-auto items-end" : "mr-auto items-start")}>
-                                        <div className={cn("px-4 py-3 rounded-[1.5rem] relative active:scale-[0.98] transition-all shadow-sm", m.sentByMe ? "bg-cyan-500 text-black font-medium rounded-tr-none" : "bg-white/10 text-white border border-white/10 rounded-tl-none")}>
+                                        <div className={cn("px-4 py-3 rounded-[1.5rem] relative active:scale-[0.98] transition-all shadow-sm", m.sentByMe ? "bg-cyan-500 text-black font-medium rounded-tr-none" : "bg-white/10 text-white border border-card-border rounded-tl-none")}>
                                             <p className="text-sm leading-relaxed">{m.text}</p>
                                             <div className={cn("flex items-center gap-1 mt-1.5", m.sentByMe ? "justify-end" : "justify-start")}>
                                                 <span className={cn("text-[9px] font-bold uppercase tracking-tighter opacity-60", m.sentByMe ? "text-black" : "text-white/40")}>{m.time}</span>
@@ -117,9 +117,9 @@ export function InboxModal() {
                                     </div>
                                 ) : (
                                     inboxMessages.map((m: any) => (
-                                        <div key={m.userId} onClick={() => setActiveChatUserId(m.userId)} className="px-6 py-5 flex items-center gap-4 hover:bg-white/5 active:bg-white/5 transition-colors cursor-pointer border-b border-white/5 relative group">
+                                        <div key={m.userId} onClick={() => setActiveChatUserId(m.userId)} className="px-6 py-5 flex items-center gap-4 hover:bg-white/5 active:bg-white/5 transition-colors cursor-pointer border-b border-card-border relative group">
                                             <div className="relative">
-                                                <div className="w-14 h-14 rounded-full border border-white/10 overflow-hidden bg-gray-900">
+                                                <div className="w-14 h-14 rounded-full border border-card-border overflow-hidden bg-gray-900">
                                                     <img src={m.avatar} className="w-full h-full object-cover" />
                                                 </div>
                                                 {m.online && <div className="absolute bottom-0.5 right-0.5 w-4 h-4 bg-green-500 rounded-full border-4 border-black" />}
@@ -152,7 +152,7 @@ export function InboxModal() {
                                     </div>
                                 ) : (
                                     sosAlerts.map((sos: any) => (
-                                        <div key={sos.id} className="px-6 py-5 flex items-start gap-4 hover:bg-red-500/5 transition-colors cursor-pointer border-b border-white/5 relative group">
+                                        <div key={sos.id} className="px-6 py-5 flex items-start gap-4 hover:bg-red-500/5 transition-colors cursor-pointer border-b border-card-border relative group">
                                             <div className="w-14 h-14 rounded-2xl bg-red-500/20 flex items-center justify-center text-red-500 border border-red-500/30">
                                                 <ShieldAlert className="w-7 h-7" />
                                             </div>
@@ -174,11 +174,11 @@ export function InboxModal() {
                     </div>
 
                     {activeChatUserId && (
-                        <div className="absolute bottom-0 inset-x-0 bg-black/80 backdrop-blur-3xl px-6 py-4 border-t border-white/10 flex items-center gap-3">
+                        <div className="absolute bottom-0 inset-x-0 bg-black/80 backdrop-blur-3xl px-6 py-4 border-t border-card-border flex items-center gap-3">
                             <button className="p-3 rounded-full bg-white/5 text-white/40 hover:text-white transition-all">
                                 <Plus className="w-6 h-6" />
                             </button>
-                            <div className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-5 py-3 flex items-center gap-2 focus-within:border-cyan-400/50 transition-all">
+                            <div className="flex-1 bg-white/5 border border-card-border rounded-2xl px-5 py-3 flex items-center gap-2 focus-within:border-cyan-400/50 transition-all">
                                 <input
                                     type="text"
                                     value={replyMessage}
@@ -195,7 +195,7 @@ export function InboxModal() {
                                 disabled={!replyMessage.trim() || isReplying}
                                 onClick={onSendReply}
                                 className={cn("p-4 rounded-2xl flex items-center justify-center transition-all active:scale-95 shadow-lg",
-                                    replyMessage.trim() ? "bg-white text-black shadow-lg" : "bg-white/5 text-white/20"
+                                    replyMessage.trim() ? "bg-card text-black shadow-lg" : "bg-white/5 text-white/20"
                                 )}
                             >
                                 {isReplying ? <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" /> : <Send className="w-5 h-5" />}

@@ -167,7 +167,7 @@ export default function PetMemoryGame({ onGameOver, onClose }: GameProps) {
 
             {/* HEADER */}
             <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-center z-20">
-                <button onClick={onClose} className="bg-white p-2 rounded-xl shadow-sm hover:bg-gray-50 transition">
+                <button onClick={onClose} className="bg-card p-2 rounded-xl shadow-moffi-card hover:bg-gray-50 transition">
                     <X className="w-6 h-6 text-gray-400" />
                 </button>
 
@@ -178,11 +178,11 @@ export default function PetMemoryGame({ onGameOver, onClose }: GameProps) {
                     </div>
                     <div className="bg-white/80 backdrop-blur px-4 py-2 rounded-xl border border-white/50 shadow-sm flex items-center gap-2">
                         <Timer className={cn("w-5 h-5", timeLeft < 10 ? "text-red-500 animate-pulse" : "text-blue-500")} />
-                        <span className="font-black text-xl text-gray-700">{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</span>
+                        <span className="font-black text-xl text-foreground">{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</span>
                     </div>
                     <div className="bg-white/80 backdrop-blur px-4 py-2 rounded-xl border border-white/50 shadow-sm flex items-center gap-2">
                         <Trophy className="w-5 h-5 text-yellow-500" />
-                        <span className="font-black text-xl text-gray-700">{totalScore}</span>
+                        <span className="font-black text-xl text-foreground">{totalScore}</span>
                     </div>
                 </div>
             </div>
@@ -197,11 +197,11 @@ export default function PetMemoryGame({ onGameOver, onClose }: GameProps) {
                         <div key={`${currentLevel}-${card.id}`} className="aspect-square relative perspective-1000" onClick={() => handleCardClick(index)}>
                             <div className={cn(
                                 "w-full h-full relative preserve-3d transition-all duration-500 cursor-pointer rounded-2xl shadow-sm",
-                                card.isFlipped || card.isMatched ? "rotate-y-180" : "bg-white border-b-4 border-gray-100 hover:-translate-y-1",
+                                card.isFlipped || card.isMatched ? "rotate-y-180" : "bg-card border-b-4 border-card-border hover:-translate-y-1",
                                 card.isMatched && "opacity-0 cursor-default" // Hide container on match
                             )}>
                                 {/* FRONT */}
-                                <div className="absolute inset-0 backface-hidden bg-white rounded-2xl flex items-center justify-center border-2 border-transparent">
+                                <div className="absolute inset-0 backface-hidden bg-card rounded-2xl flex items-center justify-center border-2 border-transparent">
                                     <Brain className="w-8 h-8 text-indigo-100" />
                                 </div>
                                 {/* BACK */}
@@ -226,7 +226,7 @@ export default function PetMemoryGame({ onGameOver, onClose }: GameProps) {
                 <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
                     <motion.div
                         initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                        className="bg-white rounded-[2.5rem] p-8 text-center max-w-sm w-full shadow-2xl relative overflow-hidden"
+                        className="bg-card rounded-[2.5rem] p-8 text-center max-w-sm w-full shadow-2xl relative overflow-hidden"
                     >
                         <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-green-50 to-transparent pointer-events-none" />
 
@@ -234,7 +234,7 @@ export default function PetMemoryGame({ onGameOver, onClose }: GameProps) {
                             <Star className="w-12 h-12 text-green-600 fill-current" />
                         </div>
 
-                        <h2 className="text-3xl font-black text-gray-900 mb-2 relative z-10">Tebrikler!</h2>
+                        <h2 className="text-3xl font-black text-foreground mb-2 relative z-10">Tebrikler!</h2>
                         <p className="text-gray-500 font-medium mb-8 relative z-10">{LEVELS[currentLevel - 1].name} tamamlandı.</p>
 
                         <button
@@ -252,7 +252,7 @@ export default function PetMemoryGame({ onGameOver, onClose }: GameProps) {
                 <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
                     <motion.div
                         initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                        className="bg-white rounded-[2.5rem] p-8 text-center max-w-sm w-full shadow-2xl"
+                        className="bg-card rounded-[2.5rem] p-8 text-center max-w-sm w-full shadow-2xl"
                     >
                         {gameState === 'game_complete' ? (
                             <div className="w-24 h-24 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -264,7 +264,7 @@ export default function PetMemoryGame({ onGameOver, onClose }: GameProps) {
                             </div>
                         )}
 
-                        <h2 className="text-3xl font-black text-gray-900 mb-2">
+                        <h2 className="text-3xl font-black text-foreground mb-2">
                             {gameState === 'game_complete' ? 'Muhteşem Hafıza!' : 'Süre Doldu'}
                         </h2>
                         <p className="text-gray-500 font-medium mb-8">

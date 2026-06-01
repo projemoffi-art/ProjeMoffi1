@@ -102,7 +102,7 @@ export function AdoptionTab({
                             <p className="text-white text-sm font-medium leading-relaxed drop-shadow-md line-clamp-3 mb-4">
                                 Sakin, sevecen ve tamamen tuvalet eğitimli. Daha önce bir aile ortamında yaşadı, şimdi ikinci bir şans arıyor.
                             </p>
-                            <button className="w-full py-4 rounded-full bg-white text-black font-bold shadow-lg shadow-white/20 active:scale-95 transition-transform">
+                            <button className="w-full py-4 rounded-full bg-card text-black font-bold shadow-lg shadow-white/20 active:scale-95 transition-transform">
                                 Hikayeyi Oku & Başvur
                             </button>
                         </div>
@@ -119,7 +119,7 @@ export function AdoptionTab({
                     {isLoading ? (
                         <div className="space-y-4">
                             {Array(4).fill(0).map((_, i) => (
-                                <div key={i} className="flex gap-4 p-4 rounded-[2rem] bg-white/5 border border-white/5 animate-pulse overflow-hidden relative">
+                                <div key={i} className="flex gap-4 p-4 rounded-[2rem] bg-white/5 border border-card-border animate-pulse overflow-hidden relative">
                                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-shimmer" />
                                     <div className="w-24 h-24 rounded-2xl bg-white/10 shrink-0" />
                                     <div className="flex-1 space-y-3 pt-2">
@@ -131,7 +131,7 @@ export function AdoptionTab({
                             ))}
                         </div>
                     ) : filtered.length === 0 ? (
-                        <div className="text-center py-12 bg-white/5 rounded-3xl border border-white/10">
+                        <div className="text-center py-12 bg-white/5 rounded-3xl border border-card-border">
                             <HeartHandshake className="w-10 h-10 text-gray-500 mx-auto mb-3" />
                             <p className="text-gray-400 font-bold">Henüz ilan yok</p>
                         </div>

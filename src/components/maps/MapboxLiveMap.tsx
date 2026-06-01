@@ -109,7 +109,7 @@ export default function MapboxLiveMap({
                 <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:20px_20px]" />
                 
                 <div className="relative z-10 space-y-8 max-w-sm">
-                    <div className="w-24 h-24 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 backdrop-blur-3xl rounded-[2.5rem] border border-white/10 flex items-center justify-center mx-auto shadow-[0_0_50px_rgba(99,102,241,0.2)]">
+                    <div className="w-24 h-24 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 backdrop-blur-3xl rounded-[2.5rem] border border-card-border flex items-center justify-center mx-auto shadow-[0_0_50px_rgba(99,102,241,0.2)]">
                         <Compass className="w-12 h-12 text-indigo-400 animate-spin-slow" />
                     </div>
                     
@@ -124,7 +124,7 @@ export default function MapboxLiveMap({
                     </div>
 
                     <div className="pt-8">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full">
+                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-card-border rounded-full">
                             <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse" />
                             <span className="text-[9px] font-black text-white/60 tracking-widest uppercase">Radar Taranıyor...</span>
                         </div>
@@ -229,7 +229,7 @@ export default function MapboxLiveMap({
                             }}
                         >
                             <div className={cn(
-                                "w-10 h-10 rounded-[1.2rem] flex items-center justify-center text-xl shadow-2xl transition-all hover:scale-110 cursor-pointer border-2 border-white/20 backdrop-blur-xl",
+                                "w-10 h-10 rounded-[1.2rem] flex items-center justify-center text-xl shadow-2xl transition-all hover:scale-110 cursor-pointer border-2 border-card-border backdrop-blur-xl",
                                 isVisited ? "bg-gray-800 grayscale" : ""
                             )} style={{ backgroundColor: isVisited ? undefined : `${color}33`, borderColor: color }}>
                                 <span className="drop-shadow-lg">{isVisited ? "✅" : icon}</span>
@@ -241,7 +241,7 @@ export default function MapboxLiveMap({
                 {/* COMMUNITY MARKS */}
                 {displayedMarks.map(mark => (
                     <Marker key={mark.id} latitude={mark.lat} longitude={mark.lng} anchor="center">
-                        <div className="w-9 h-9 rounded-tr-none rounded-full bg-white/90 backdrop-blur-md border border-white/20 shadow-xl flex items-center justify-center text-xl transform -rotate-45 hover:scale-110 transition-transform">
+                        <div className="w-9 h-9 rounded-tr-none rounded-full bg-white/90 backdrop-blur-md border border-card-border shadow-xl flex items-center justify-center text-xl transform -rotate-45 hover:scale-110 transition-transform">
                             <div className="transform rotate-45 drop-shadow-md">{mark.emoji}</div>
                         </div>
                     </Marker>
@@ -252,7 +252,7 @@ export default function MapboxLiveMap({
                     <Marker key={marker.id} latitude={marker.lat} longitude={marker.lng} anchor="bottom">
                         <div className="flex flex-col items-center group cursor-pointer">
                             <div className={cn(
-                                "p-1 rounded-full border-2 bg-white shadow-xl mb-1 transition-transform group-hover:scale-110",
+                                "p-1 rounded-full border-2 bg-card shadow-xl mb-1 transition-transform group-hover:scale-110",
                                 marker.type === 'lost' ? "border-red-500 animate-bounce" : "border-indigo-500"
                             )}>
                                 {marker.img ? (
@@ -271,16 +271,16 @@ export default function MapboxLiveMap({
                 {/* CONTROLS */}
                 {!hideInternalUI && (
                     <div className="absolute top-4 right-4 space-y-2 flex flex-col items-end">
-                        <div className="bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl p-1 flex flex-col gap-1 shadow-2xl pointer-events-auto">
+                        <div className="bg-black/60 backdrop-blur-xl border border-card-border rounded-2xl p-1 flex flex-col gap-1 shadow-2xl pointer-events-auto">
                             <button 
                                 onClick={() => setMapStyle(STYLES.night)}
-                                className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all", mapStyle === STYLES.night ? "bg-white text-black" : "text-white/40 hover:text-white")}
+                                className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all", mapStyle === STYLES.night ? "bg-card text-black" : "text-white/40 hover:text-white")}
                             >
                                 <Zap className="w-5 h-5" />
                             </button>
                             <button 
                                 onClick={() => setMapStyle(STYLES.hybrid)}
-                                className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all", mapStyle === STYLES.hybrid ? "bg-white text-black" : "text-white/40 hover:text-white")}
+                                className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all", mapStyle === STYLES.hybrid ? "bg-card text-black" : "text-white/40 hover:text-white")}
                             >
                                 <Layers className="w-5 h-5" />
                             </button>

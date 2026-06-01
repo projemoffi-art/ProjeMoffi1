@@ -207,7 +207,7 @@ export function SetupWizard({ onComplete }: SetupProps) {
                 <div className="absolute top-10 right-10 flex gap-2 z-50">
                     <button 
                         onClick={() => setLanguage(language === 'tr' ? 'en' : 'tr')}
-                        className="p-2 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition-all flex items-center gap-2"
+                        className="p-2 bg-white/5 border border-card-border rounded-xl text-white hover:bg-white/10 transition-all flex items-center gap-2"
                     >
                         <Globe className="w-3 h-3 text-cyan-400" />
                         <span className="text-[10px] font-black uppercase tracking-widest">{language === 'tr' ? 'EN' : 'TR'}</span>
@@ -233,14 +233,14 @@ export function SetupWizard({ onComplete }: SetupProps) {
                             <div className="flex justify-center py-6">
                                 <label
                                     htmlFor="profile-upload"
-                                    className="w-36 h-36 bg-white/5 rounded-[2.5rem] flex items-center justify-center relative border border-white/10 shadow-2xl cursor-pointer overflow-hidden group"
+                                    className="w-36 h-36 bg-white/5 rounded-[2.5rem] flex items-center justify-center relative border border-card-border shadow-2xl cursor-pointer overflow-hidden group"
                                 >
                                     {avatarPreview ? (
                                         <img src={avatarPreview} alt="Profile" className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="flex flex-col items-center gap-2">
                                             <User className="w-10 h-10 text-gray-600 group-hover:scale-110 transition-transform" />
-                                            <span className="text-[8px] font-black text-gray-700 uppercase tracking-widest">{t('setup.step1.add_photo')}</span>
+                                            <span className="text-[8px] font-black text-foreground uppercase tracking-widest">{t('setup.step1.add_photo')}</span>
                                         </div>
                                     )}
                                     <div className="absolute inset-0 bg-cyan-500/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all backdrop-blur-sm">
@@ -257,7 +257,7 @@ export function SetupWizard({ onComplete }: SetupProps) {
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
                                         type="text"
-                                        className="w-full px-6 py-5 bg-white/5 rounded-2xl border border-white/10 focus:border-cyan-500/50 outline-none text-white placeholder-gray-800"
+                                        className="w-full px-6 py-5 bg-white/5 rounded-2xl border border-card-border focus:border-cyan-500/50 outline-none text-white placeholder-gray-800"
                                         placeholder="Örn: Ayşe Yılmaz"
                                     />
                                 </div>
@@ -270,7 +270,7 @@ export function SetupWizard({ onComplete }: SetupProps) {
                                             type="text"
                                             className={cn(
                                                 "w-full px-6 py-5 bg-white/5 rounded-2xl border outline-none text-white placeholder-gray-800 transition-all",
-                                                isUsernameTaken ? "border-red-500 bg-red-500/5" : (username.length >= 3 && !isCheckingUsername ? "border-emerald-500/30 bg-emerald-500/5" : "border-white/10 focus:border-cyan-500/50")
+                                                isUsernameTaken ? "border-red-500 bg-red-500/5" : (username.length >= 3 && !isCheckingUsername ? "border-emerald-500/30 bg-emerald-500/5" : "border-card-border focus:border-cyan-500/50")
                                             )}
                                             placeholder="@ayseyilmaz"
                                         />
@@ -341,7 +341,7 @@ export function SetupWizard({ onComplete }: SetupProps) {
                                                     "py-4 rounded-2xl border flex flex-col items-center gap-2 transition-all",
                                                     petType === item.id 
                                                         ? "border-orange-500 bg-orange-500/10 text-orange-400" 
-                                                        : "border-white/5 bg-white/5 text-gray-600"
+                                                        : "border-card-border bg-white/5 text-gray-600"
                                                 )}
                                             >
                                                 <item.icon className="w-6 h-6" />
@@ -357,7 +357,7 @@ export function SetupWizard({ onComplete }: SetupProps) {
                                         value={petName}
                                         onChange={(e) => setPetName(e.target.value)}
                                         type="text"
-                                        className="w-full px-6 py-5 bg-white/5 rounded-2xl border border-white/10 focus:border-orange-500/50 outline-none text-white placeholder-gray-800"
+                                        className="w-full px-6 py-5 bg-white/5 rounded-2xl border border-card-border focus:border-orange-500/50 outline-none text-white placeholder-gray-800"
                                         placeholder="Örn: Pamuk"
                                     />
                                 </div>
@@ -379,7 +379,7 @@ export function SetupWizard({ onComplete }: SetupProps) {
                 <button
                     onClick={handleNext}
                     disabled={(step === 1 && (!name || !username)) || (step === 2 && !petName) || isUploading}
-                    className="group relative w-full bg-white text-black py-6 rounded-[2.5rem] font-black text-xs uppercase tracking-[0.2em] overflow-hidden active:scale-95 transition-all shadow-[0_20px_40px_rgba(255,255,255,0.1)]"
+                    className="group relative w-full bg-card text-black py-6 rounded-[2.5rem] font-black text-xs uppercase tracking-[0.2em] overflow-hidden active:scale-95 transition-all shadow-[0_20px_40px_rgba(255,255,255,0.1)]"
                 >
                     <span className="relative z-10 flex items-center justify-center gap-3">
                         {isUploading ? (

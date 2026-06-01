@@ -1352,7 +1352,7 @@ export class SupabaseApiService implements IApiService {
         if (!user) throw new Error('Giriş gerekli');
         const { error } = await supabase
             .from('pets')
-            .update({ sos_status: status })
+            .update({ is_lost: status === 'lost' })
             .eq('id', petId)
             .eq('owner_id', user.id);
         if (error) throw error;

@@ -73,10 +73,10 @@ export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps)
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-[#0A0A0E] border-l border-white/10 z-[6001] flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)]"
+            className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-[#0A0A0E] border-l border-card-border z-[6001] flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)]"
           >
             {/* Header */}
-            <div className="p-8 border-b border-white/5 flex items-center justify-between">
+            <div className="p-8 border-b border-card-border flex items-center justify-between">
               <div>
                 <h2 className="text-3xl font-black text-white tracking-tighter uppercase italic flex items-center gap-3">
                   Bildirimler
@@ -93,14 +93,14 @@ export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps)
               <div className="flex items-center gap-3">
                 <button 
                   onClick={simulateNotification}
-                  className="p-3 bg-white/5 border border-white/10 rounded-2xl text-violet-400 hover:text-white transition-all active:scale-95 group"
+                  className="p-3 bg-white/5 border border-card-border rounded-2xl text-violet-400 hover:text-white transition-all active:scale-95 group"
                   title="Test Bildirimi Gönder"
                 >
                   <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
                 </button>
                 <button 
                   onClick={onClose}
-                  className="p-3 bg-white/5 border border-white/10 rounded-2xl text-gray-500 hover:text-white transition-all active:scale-95"
+                  className="p-3 bg-white/5 border border-card-border rounded-2xl text-gray-500 hover:text-white transition-all active:scale-95"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -109,7 +109,7 @@ export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps)
 
             {/* Actions */}
             {notifications.length > 0 && (
-              <div className="px-8 py-4 flex justify-between items-center bg-white/[0.02] border-b border-white/5">
+              <div className="px-8 py-4 flex justify-between items-center bg-white/[0.02] border-b border-card-border">
                 <button 
                   onClick={() => markAllAsRead()}
                   className="flex items-center gap-2 text-[9px] font-black text-cyan-400 uppercase tracking-widest hover:text-cyan-300 transition-colors"
@@ -129,8 +129,8 @@ export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps)
                 </div>
               ) : notifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center p-10">
-                  <div className="w-20 h-20 bg-white/5 border border-white/10 rounded-3xl flex items-center justify-center mb-6">
-                    <Bell className="w-10 h-10 text-gray-700" />
+                  <div className="w-20 h-20 bg-white/5 border border-card-border rounded-3xl flex items-center justify-center mb-6">
+                    <Bell className="w-10 h-10 text-foreground" />
                   </div>
                   <h3 className="text-xl font-black text-white uppercase italic mb-2 tracking-tight">Henüz bir şey yok</h3>
                   <p className="text-xs text-gray-500 font-bold leading-relaxed uppercase tracking-widest">
@@ -147,8 +147,8 @@ export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps)
                     className={cn(
                       "group p-5 rounded-3xl border transition-all relative overflow-hidden",
                       notif.is_read 
-                        ? "bg-white/[0.02] border-white/5 opacity-60" 
-                        : "bg-white/[0.05] border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.2)]"
+                        ? "bg-white/[0.02] border-card-border opacity-60" 
+                        : "bg-white/[0.05] border-card-border shadow-[0_4px_20px_rgba(0,0,0,0.2)]"
                     )}
                   >
                     {!notif.is_read && (
@@ -158,7 +158,7 @@ export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps)
                     <div className="flex gap-4">
                       <div className={cn(
                         "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border",
-                        notif.is_read ? "bg-white/5 border-white/5" : "bg-white/10 border-white/10"
+                        notif.is_read ? "bg-white/5 border-card-border" : "bg-white/10 border-card-border"
                       )}>
                         {getIcon(notif.type)}
                       </div>

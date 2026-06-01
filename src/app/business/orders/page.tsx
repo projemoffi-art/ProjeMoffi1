@@ -18,7 +18,7 @@ const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; bg: str
     shipped: { label: 'Kargoda', color: 'text-indigo-700', bg: 'bg-indigo-50 border-indigo-200', icon: Truck },
     delivered: { label: 'Teslim Edildi', color: 'text-green-700', bg: 'bg-green-50 border-green-200', icon: CheckCircle },
     cancelled: { label: 'İptal', color: 'text-red-700', bg: 'bg-red-50 border-red-200', icon: XCircle },
-    returned: { label: 'İade', color: 'text-gray-700', bg: 'bg-gray-50 border-gray-200', icon: RotateCcw },
+    returned: { label: 'İade', color: 'text-foreground', bg: 'bg-gray-50 border-card-border', icon: RotateCcw },
 };
 
 const STATUS_FLOW: OrderStatus[] = ['pending', 'preparing', 'shipped', 'delivered'];
@@ -56,11 +56,11 @@ export default function BusinessOrdersPage() {
             <main className="flex-1 p-4 md:p-8 md:pl-80 transition-all duration-300 w-full">
                 {/* Header */}
                 <header className="flex items-center gap-4 mb-8">
-                    <button onClick={() => setIsMobileMenuOpen(true)} className="w-10 h-10 rounded-xl bg-white border border-gray-200/50 flex items-center justify-center md:hidden">
+                    <button onClick={() => setIsMobileMenuOpen(true)} className="w-10 h-10 rounded-xl bg-card border border-card-border/50 flex items-center justify-center md:hidden">
                         <Menu className="w-5 h-5 text-gray-600" />
                     </button>
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">Siparişler</h1>
+                        <h1 className="text-2xl md:text-3xl font-black text-foreground tracking-tight">Siparişler</h1>
                         <p className="text-sm text-gray-500">{allOrders.length} toplam sipariş</p>
                     </div>
                 </header>
@@ -75,7 +75,7 @@ export default function BusinessOrdersPage() {
                                 "px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap border transition-all",
                                 statusFilter === s
                                     ? "bg-indigo-50 border-indigo-200 text-indigo-700"
-                                    : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"
+                                    : "bg-card border-card-border text-gray-500 hover:bg-gray-50"
                             )}
                         >
                             {s === 'all' ? 'Tümü' : STATUS_CONFIG[s].label}
@@ -85,23 +85,23 @@ export default function BusinessOrdersPage() {
                 </div>
 
                 {/* Search */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-6">
+                <div className="bg-card rounded-2xl border border-card-border shadow-moffi-card p-4 mb-6">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             placeholder="Sipariş no veya müşteri adı ara..."
-                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-card-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200"
                         />
                     </div>
                 </div>
 
                 {/* Orders */}
                 {filtered.length === 0 ? (
-                    <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center">
+                    <div className="bg-card rounded-2xl border border-card-border p-16 text-center">
                         <ClipboardList className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                        <h3 className="font-bold text-gray-700 mb-1">Sipariş bulunamadı</h3>
+                        <h3 className="font-bold text-foreground mb-1">Sipariş bulunamadı</h3>
                         <p className="text-sm text-gray-400">Bu kategoride henüz sipariş yok.</p>
                     </div>
                 ) : (
@@ -113,7 +113,7 @@ export default function BusinessOrdersPage() {
                                 <div
                                     key={order.id}
                                     onClick={() => setDetailModal(order)}
-                                    className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 md:p-5 hover:shadow-md transition-all cursor-pointer group"
+                                    className="bg-card rounded-2xl border border-card-border shadow-moffi-card p-4 md:p-5 hover:shadow-moffi-card transition-all cursor-pointer group"
                                 >
                                     <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-6">
                                         {/* Order ID + Customer */}
@@ -126,7 +126,7 @@ export default function BusinessOrdersPage() {
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <User className="w-3.5 h-3.5 text-gray-400" />
-                                                <span className="font-bold text-gray-900 text-sm">{order.customerName}</span>
+                                                <span className="font-bold text-foreground text-sm">{order.customerName}</span>
                                             </div>
                                         </div>
 
@@ -142,7 +142,7 @@ export default function BusinessOrdersPage() {
 
                                         {/* Amount */}
                                         <div className="text-right flex-shrink-0">
-                                            <div className="text-lg font-black text-gray-900">₺{order.totalAmount.toLocaleString('tr-TR')}</div>
+                                            <div className="text-lg font-black text-foreground">₺{order.totalAmount.toLocaleString('tr-TR')}</div>
                                             <div className="text-[10px] text-gray-400">{new Date(order.orderedAt).toLocaleDateString('tr-TR')}</div>
                                         </div>
 
@@ -187,13 +187,13 @@ function OrderDetailModal({ order, onClose }: { order: BusinessOrder; onClose: (
         >
             <motion.div
                 initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
-                className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+                className="bg-card rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+                <div className="p-6 border-b border-card-border flex items-center justify-between">
                     <div>
-                        <h2 className="text-lg font-black text-gray-900">Sipariş #{order.id.slice(-4).toUpperCase()}</h2>
+                        <h2 className="text-lg font-black text-foreground">Sipariş #{order.id.slice(-4).toUpperCase()}</h2>
                         <span className={cn("text-xs font-bold px-2 py-0.5 rounded-full border inline-flex items-center gap-1 mt-1", statusInfo.bg, statusInfo.color)}>
                             {statusInfo.label}
                         </span>
@@ -210,7 +210,7 @@ function OrderDetailModal({ order, onClose }: { order: BusinessOrder; onClose: (
                                 {order.customerName.charAt(0)}
                             </div>
                             <div>
-                                <div className="font-bold text-gray-900 text-sm">{order.customerName}</div>
+                                <div className="font-bold text-foreground text-sm">{order.customerName}</div>
                                 <div className="text-xs text-gray-500">{order.customerEmail}</div>
                             </div>
                         </div>
@@ -221,7 +221,7 @@ function OrderDetailModal({ order, onClose }: { order: BusinessOrder; onClose: (
                         <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Teslimat Adresi</h4>
                         <div className="flex items-start gap-2 bg-gray-50 rounded-xl p-3">
                             <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm text-gray-700">{order.shippingAddress}</span>
+                            <span className="text-sm text-foreground">{order.shippingAddress}</span>
                         </div>
                     </div>
 
@@ -236,11 +236,11 @@ function OrderDetailModal({ order, onClose }: { order: BusinessOrder; onClose: (
                                             <Package className="w-4 h-4" />
                                         </div>
                                         <div>
-                                            <span className="text-sm font-medium text-gray-900">{item.productName}</span>
+                                            <span className="text-sm font-medium text-foreground">{item.productName}</span>
                                             <span className="text-xs text-gray-400 ml-2">x{item.quantity}</span>
                                         </div>
                                     </div>
-                                    <span className="font-bold text-gray-900 text-sm">₺{(item.price * item.quantity).toLocaleString('tr-TR')}</span>
+                                    <span className="font-bold text-foreground text-sm">₺{(item.price * item.quantity).toLocaleString('tr-TR')}</span>
                                 </div>
                             ))}
                         </div>
@@ -248,9 +248,9 @@ function OrderDetailModal({ order, onClose }: { order: BusinessOrder; onClose: (
 
                     {/* Financial Summary */}
                     <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-                        <div className="flex justify-between text-sm"><span className="text-gray-500">Ara Toplam</span><span className="font-bold text-gray-900">₺{order.totalAmount.toLocaleString('tr-TR')}</span></div>
+                        <div className="flex justify-between text-sm"><span className="text-gray-500">Ara Toplam</span><span className="font-bold text-foreground">₺{order.totalAmount.toLocaleString('tr-TR')}</span></div>
                         <div className="flex justify-between text-sm"><span className="text-gray-500">Komisyon (%10)</span><span className="font-bold text-red-600">-₺{order.commission.toFixed(2)}</span></div>
-                        <div className="border-t border-gray-200 pt-2 flex justify-between text-sm"><span className="font-bold text-gray-900">Net Gelir</span><span className="font-black text-green-600 text-base">₺{order.netAmount.toFixed(2)}</span></div>
+                        <div className="border-t border-card-border pt-2 flex justify-between text-sm"><span className="font-bold text-foreground">Net Gelir</span><span className="font-black text-green-600 text-base">₺{order.netAmount.toFixed(2)}</span></div>
                     </div>
 
                     {/* Tracking Number */}
@@ -261,7 +261,7 @@ function OrderDetailModal({ order, onClose }: { order: BusinessOrder; onClose: (
                                 value={trackingNumber}
                                 onChange={e => setTrackingNumber(e.target.value)}
                                 placeholder="Kargo takip numarası girin"
-                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                                className="w-full bg-gray-50 border border-card-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200"
                             />
                         </div>
                     )}
@@ -275,7 +275,7 @@ function OrderDetailModal({ order, onClose }: { order: BusinessOrder; onClose: (
                 </div>
 
                 {/* Actions */}
-                <div className="p-6 border-t border-gray-100 flex justify-between items-center">
+                <div className="p-6 border-t border-card-border flex justify-between items-center">
                     <div className="text-[10px] text-gray-400">
                         {new Date(order.orderedAt).toLocaleString('tr-TR')}
                     </div>

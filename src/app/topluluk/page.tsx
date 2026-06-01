@@ -153,8 +153,9 @@ export default function MoffiSocialMasterpiece() {
     const [viewMode, setViewMode] = useState<'immersive' | 'grid'>('immersive');
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearchFocused, setIsSearchFocused] = useState(false);
+    const [isSosAlertDismissed, setIsSosAlertDismissed] = useState(false);
 
-    const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
+
 
     const handlePostClickFromGrid = (post: any) => {
         setViewMode('immersive');
@@ -1667,17 +1668,13 @@ export default function MoffiSocialMasterpiece() {
                 <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-cyan-600/20 blur-[120px] rounded-full mix-blend-screen" />
             </div>
 
-            {/* HEADER - INTEGRATED MINIMALIST DESIGN */}
             <motion.header 
                 id="community-main-header"
                 style={{ 
-                    height: isCategoriesOpen ? 'auto' : headerHeightTransform, 
+                    height: headerHeightTransform, 
                     opacity: headerOpacity 
                 }}
-                className={cn(
-                    "fixed top-0 left-0 right-0 z-[150] px-6 flex flex-col justify-end bg-[var(--background)]/80 backdrop-blur-xl border-b border-white/5 transition-all duration-300",
-                    isCategoriesOpen ? "pb-0 pt-16" : "pb-4"
-                )}
+                className="fixed top-0 left-0 right-0 z-[150] px-6 flex flex-col justify-end bg-[var(--background)]/80 backdrop-blur-xl border-b border-white/5 transition-all duration-300 pb-4"
             >
                 <div className="flex justify-between items-center w-full">
                     <div className="flex items-center gap-2">
@@ -1711,18 +1708,7 @@ export default function MoffiSocialMasterpiece() {
                             </button>
                         </div>
 
-                        {/* COLLAPSIBLE CATEGORIES BUTTON */}
-                        <button 
-                            onClick={() => setIsCategoriesOpen(!isCategoriesOpen)}
-                            className={cn(
-                                "flex items-center gap-2 px-4 py-2 rounded-full transition-all active:scale-95 ml-1",
-                                isCategoriesOpen ? "bg-white text-black" : "text-white/50 hover:text-white"
-                            )}
-                        >
-                            <Filter className="w-4 h-4" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Kategoriler</span>
-                            <ChevronDown className={cn("w-3 h-3 transition-transform duration-300", isCategoriesOpen && "rotate-180")} />
-                        </button>
+
                     </div>
 
                     <div className="flex gap-1 items-center">
@@ -1759,48 +1745,29 @@ export default function MoffiSocialMasterpiece() {
                                 </div>
                             )}
                         </motion.button>
+
+                        <motion.button
+                            style={{ scale: iconScale }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => {
+                                if (user?.id) {
+                                    router.push(`/profile/${user.id}`);
+                                }
+                            }}
+                            className="w-8 h-8 rounded-full overflow-hidden border border-white/10 shadow-sm cursor-pointer hover:border-white/30 transition-colors ml-1"
+                        >
+                            <img src={user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100"} className="w-full h-full object-cover" alt="User Profile" />
+                        </motion.button>
                     </div>
 
                 </div>
 
-                {/* COLLAPSIBLE CATEGORIES PANEL - INTEGRATED IN HEADER */}
-                <AnimatePresence>
-                    {isCategoriesOpen && (
-                        <motion.div 
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="overflow-hidden bg-white/[0.02] mt-4 -mx-6 px-6 border-t border-white/5"
-                        >
-                            <div className="flex gap-2 overflow-x-auto no-scrollbar py-4">
-                                {['Hepsi', 'Eğlence', 'Eğitim', 'Beslenme', 'Sağlık', 'Veteriner', 'Sahiplenme'].map((cat) => (
-                                    <button
-                                        key={cat}
-                                        onClick={() => {
-                                            setSearchQuery(cat === 'Hepsi' ? '' : cat);
-                                            setIsCategoriesOpen(false);
-                                        }}
-                                        className={cn(
-                                            "px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
-                                            searchQuery === (cat === 'Hepsi' ? '' : cat) 
-                                                ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]" 
-                                                : "text-white/20 hover:text-white/50"
-                                        )}
-                                    >
-                                        {cat}
-                                    </button>
-                                ))}
-
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
             </motion.header>
 
 
             {/* Header Spacing */}
             <motion.div 
-                style={{ height: isCategoriesOpen ? '200px' : headerHeightTransform }} 
+                style={{ height: headerHeightTransform }} 
                 className="shrink-0 transition-all duration-300" 
             />
 
@@ -1874,33 +1841,68 @@ export default function MoffiSocialMasterpiece() {
                             {/* Feed SOS Alerts (Respecting Privacy Settings) */}
 
                             {/* Feed SOS Alerts (Respecting Privacy Settings) */}
-                            {activePet?.is_lost && activePet.sos_settings?.auto_post_sos !== false && (
+                            {activePet?.is_lost && !isSosAlertDismissed && activePet.sos_settings?.auto_post_sos !== false && (
                                 <motion.div 
-                                    initial={{ scale: 0.9, opacity: 0 }}
+                                    initial={{ scale: 0.95, opacity: 0 }}
                                     animate={{ scale: 1, opacity: 1 }}
-                                    className="px-4 -mt-2 mb-4 snap-start"
+                                    exit={{ scale: 0.95, opacity: 0 }}
+                                    className="px-4 -mt-2 mb-4 snap-start animate-in fade-in duration-300"
                                 >
-                                    <div className="bg-red-500/10 border border-red-500/30 rounded-[2.5rem] p-6 backdrop-blur-xl relative overflow-hidden group">
-                                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-orange-500 to-red-500 animate-pulse" />
-                                        <div className="flex items-center justify-between relative z-10">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-14 h-14 rounded-2xl bg-red-500 flex items-center justify-center shadow-[0_0_20px_rgba(239,68,68,0.4)] animate-bounce">
-                                                    <ShieldAlert className="w-8 h-8 text-white" />
+                                    <div className="bg-red-500/[0.04] dark:bg-red-950/20 border border-red-500/20 rounded-2xl p-2.5 px-3 backdrop-blur-xl relative overflow-hidden group shadow-lg shadow-red-950/10">
+                                        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-red-500/40 to-transparent" />
+                                        <div className="absolute -inset-10 bg-red-500/5 blur-2xl rounded-full pointer-events-none" />
+                                        
+                                        <div className="flex items-center justify-between relative z-10 gap-3">
+                                            <div className="flex items-center gap-2.5">
+                                                <div className="relative shrink-0">
+                                                    <div className="w-8 h-8 rounded-full border border-red-500/30 p-[1.5px] bg-red-500/10 flex items-center justify-center overflow-hidden">
+                                                        {activePet.avatar ? (
+                                                            <img 
+                                                                src={activePet.avatar} 
+                                                                alt={activePet.name} 
+                                                                className="w-full h-full object-cover rounded-full" 
+                                                            />
+                                                        ) : (
+                                                            <ShieldAlert className="w-4 h-4 text-red-400" />
+                                                        )}
+                                                    </div>
+                                                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full animate-ping" />
+                                                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 border border-[var(--background)] rounded-full" />
                                                 </div>
-                                                <div className="flex flex-col">
-                                                    <h3 className="text-lg font-black text-white uppercase italic tracking-tighter leading-none">{activePet.name} <span className="text-red-400">Kayıp Alarmı</span></h3>
-                                                    <p className="text-[10px] font-bold text-red-200/60 uppercase tracking-widest mt-1">Arama Kurtarma Sinyali Gönderiliyor</p>
+                                                
+                                                <div className="flex flex-col text-left">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <h3 className="text-[11px] font-black text-white uppercase tracking-wide leading-none">
+                                                            {activePet.name}
+                                                        </h3>
+                                                        <span className="text-[7.5px] font-black text-red-500 dark:text-red-400 bg-red-500/15 border border-red-500/25 px-1 py-[1.5px] rounded uppercase tracking-wider leading-none">
+                                                            KAYIP
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-[8.5px] font-bold text-red-200/50 uppercase tracking-wider mt-1 leading-none">
+                                                        Arama Kurtarma Sinyali Aktif
+                                                    </p>
                                                 </div>
                                             </div>
-                                            <button 
-                                                onClick={() => {
-                                                    setSosActivePet(activePet);
-                                                    setIsSOSCommandCenterOpen(true);
-                                                }}
-                                                className="px-6 py-2.5 bg-red-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-red-500/20"
-                                            >
-                                                YÖNET
-                                            </button>
+                                            
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <button 
+                                                    onClick={() => {
+                                                        setSosActivePet(activePet);
+                                                        setIsSOSCommandCenterOpen(true);
+                                                    }}
+                                                    className="px-2.5 py-1.5 bg-red-500 hover:bg-red-600 active:scale-95 text-white rounded-lg text-[8.5px] font-black uppercase tracking-wider transition-all duration-200 shadow-md shadow-red-500/20 cursor-pointer"
+                                                >
+                                                    YÖNET
+                                                </button>
+                                                <button 
+                                                    onClick={() => setIsSosAlertDismissed(true)}
+                                                    className="p-1.5 hover:bg-red-500/10 rounded-lg text-white/30 hover:text-red-400 transition-colors cursor-pointer shrink-0"
+                                                    title="Alarm Kartını Kapat (Kayıp modu aktif kalır)"
+                                                >
+                                                    <X className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </motion.div>

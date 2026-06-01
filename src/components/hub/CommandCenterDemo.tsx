@@ -58,7 +58,7 @@ export function CommandCenterDemo({ isOpen, onClose }: CommandCenterDemoProps) {
                     animate={{ y: 0 }}
                     exit={{ y: '100%' }}
                     transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                    className="absolute bottom-0 left-0 right-0 bg-white/5 border-t border-white/10 rounded-t-[3.5rem] p-8 shadow-[0_-20px_80px_rgba(0,0,0,0.8)] flex flex-col min-h-[85vh] overflow-hidden"
+                    className="absolute bottom-0 left-0 right-0 bg-white/5 border-t border-card-border rounded-t-[3.5rem] p-8 shadow-[0_-20px_80px_rgba(0,0,0,0.8)] flex flex-col min-h-[85vh] overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Apple Handle */}
@@ -82,7 +82,7 @@ export function CommandCenterDemo({ isOpen, onClose }: CommandCenterDemoProps) {
                     {/* LIVE STATUS WIDGETS (The Pulse) */}
                     <div className="grid grid-cols-2 gap-4 mb-10">
                         {/* Pet Heart Rate */}
-                        <div className="bg-white/[0.03] border border-white/5 rounded-[2.5rem] p-6 relative overflow-hidden group">
+                        <div className="bg-white/[0.03] border border-card-border rounded-[2.5rem] p-6 relative overflow-hidden group">
                             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
                                 <Heart className="text-red-500" size={60} strokeWidth={1} />
                             </div>
@@ -100,7 +100,7 @@ export function CommandCenterDemo({ isOpen, onClose }: CommandCenterDemoProps) {
                         </div>
 
                         {/* Steps / Activity */}
-                        <div className="bg-white/[0.03] border border-white/5 rounded-[2.5rem] p-6 relative overflow-hidden group">
+                        <div className="bg-white/[0.03] border border-card-border rounded-[2.5rem] p-6 relative overflow-hidden group">
                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
                                 <Zap className="text-yellow-500" size={60} strokeWidth={1} />
                             </div>
@@ -123,7 +123,7 @@ export function CommandCenterDemo({ isOpen, onClose }: CommandCenterDemoProps) {
                     {/* LIVE LOGISTICS (Delivery Tracking) */}
                     <div className="mb-10">
                         <h3 className="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em] mb-4 pl-4">Aktif Teslimatlar</h3>
-                        <div className="bg-gradient-to-br from-white/[0.04] to-transparent border border-white/5 rounded-[3rem] p-6 flex flex-col gap-6 group hover:border-orange-500/20 transition-all">
+                        <div className="bg-gradient-to-br from-white/[0.04] to-transparent border border-card-border rounded-[3rem] p-6 flex flex-col gap-6 group hover:border-orange-500/20 transition-all">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4">
                                     <div className="w-14 h-14 rounded-full bg-orange-500 flex items-center justify-center text-white shadow-[0_0_20px_rgba(249,115,22,0.3)]">
@@ -149,7 +149,7 @@ export function CommandCenterDemo({ isOpen, onClose }: CommandCenterDemoProps) {
                                 </div>
                                 <motion.div 
                                     animate={{ left: `${(1.4 - courierDist + 0.1) / 1.5 * 100}%` }}
-                                    className="absolute top-2 -mt-1 w-3 h-3 bg-white border-2 border-orange-500 rounded-full shadow-lg"
+                                    className="absolute top-2 -mt-1 w-3 h-3 bg-card border-2 border-orange-500 rounded-full shadow-lg"
                                 />
                             </div>
                         </div>
@@ -168,7 +168,7 @@ export function CommandCenterDemo({ isOpen, onClose }: CommandCenterDemoProps) {
                             ].map((item, i) => (
                                 <button key={i} className="flex flex-col items-center gap-3 active:scale-95 transition-all relative group">
                                     <div className={cn(
-                                        "w-16 h-16 rounded-[1.8rem] bg-white/5 border border-white/5 flex items-center justify-center text-white shadow-xl hover:bg-white/10 transition-colors",
+                                        "w-16 h-16 rounded-[1.8rem] bg-white/5 border border-card-border flex items-center justify-center text-white shadow-xl hover:bg-white/10 transition-colors",
                                         `hover:border-${item.color}-500/30`
                                     )}>
                                         <item.icon size={24} />
@@ -192,7 +192,7 @@ export function CommandCenterDemo({ isOpen, onClose }: CommandCenterDemoProps) {
                     </div>
 
                     {/* BOTTOM BANNER: Next Appointment */}
-                    <button className="mt-auto w-full p-6 bg-white/[0.03] border border-white/5 rounded-[2.5rem] flex items-center justify-between group overflow-hidden relative">
+                    <button className="mt-auto w-full p-6 bg-white/[0.03] border border-card-border rounded-[2.5rem] flex items-center justify-between group overflow-hidden relative">
                          <div className="absolute inset-0 bg-red-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                          <div className="flex items-center gap-4 relative z-10">
                             <div className="w-12 h-12 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-400">
@@ -205,7 +205,7 @@ export function CommandCenterDemo({ isOpen, onClose }: CommandCenterDemoProps) {
                          </div>
                          <div className="text-right relative z-10">
                             <p className="text-sm font-black text-red-400 uppercase italic">3 GÜN KALDI</p>
-                            <ChevronRight size={18} className="text-gray-700 ml-auto mt-1" />
+                            <ChevronRight size={18} className="text-foreground ml-auto mt-1" />
                          </div>
                     </button>
                     

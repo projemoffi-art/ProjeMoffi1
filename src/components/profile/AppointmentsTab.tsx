@@ -67,7 +67,7 @@ export function AppointmentsTab({
                         <span className="text-[9px] font-bold text-gray-400 uppercase">Her şey yolunda</span>
                     </div>
                 </div>
-                <div className="bg-[#12121A] border border-white/5 rounded-[2.5rem] p-6 relative overflow-hidden">
+                <div className="bg-[#12121A] border border-card-border rounded-[2.5rem] p-6 relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-10">
                         <Syringe className="w-12 h-12 text-white" />
                     </div>
@@ -86,7 +86,7 @@ export function AppointmentsTab({
                 <div className="space-y-4">
                     <h4 className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em] px-2 mb-2">Aktif Randevular</h4>
                     {currentAppointments.map((appt: any) => (
-                        <div key={appt.id} className="bg-[#12121A] border border-white/10 rounded-[2.5rem] p-6 flex items-center justify-between group transition-all hover:bg-white/5">
+                        <div key={appt.id} className="bg-[#12121A] border border-card-border rounded-[2.5rem] p-6 flex items-center justify-between group transition-all hover:bg-white/5">
                             <div className="flex items-center gap-5">
                                 <div className="text-3xl bg-white/5 w-16 h-16 rounded-[1.5rem] flex items-center justify-center transition-transform group-hover:scale-110">{appt.icon}</div>
                                 <div>
@@ -118,7 +118,7 @@ export function AppointmentsTab({
                         return (
                             <motion.div key={record.id || `rec-${i}`} className={cn(
                                 "bg-white/5 backdrop-blur-xl border rounded-[2.5rem] p-6 group transition-all relative overflow-hidden",
-                                isOverdue ? "border-red-500/30 bg-red-500/5" : isUpcoming ? "border-yellow-500/30 bg-yellow-500/5" : "border-white/5"
+                                isOverdue ? "border-red-500/30 bg-red-500/5" : isUpcoming ? "border-yellow-500/30 bg-yellow-500/5" : "border-card-border"
                             )}>
                                 <div className="flex justify-between items-start mb-4 relative z-10">
                                     <div className="flex items-center gap-4">
@@ -127,7 +127,7 @@ export function AppointmentsTab({
                                             record.status === 'completed' ? "bg-emerald-500 text-black border-emerald-400" : 
                                             isOverdue ? "bg-red-500 text-white border-red-400" :
                                             isUpcoming ? "bg-yellow-500 text-black border-yellow-400" :
-                                            "bg-white/5 text-gray-400 border-white/10 border-dashed"
+                                            "bg-white/5 text-gray-400 border-card-border border-dashed"
                                         )}>
                                             {record.status === 'completed' ? <ShieldCheck className="w-6 h-6" /> : <Clock className="w-6 h-6" />}
                                         </div>
@@ -143,7 +143,7 @@ export function AppointmentsTab({
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <button className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10 text-gray-400 hover:text-white transition-all shadow-inner">
+                                        <button className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-card-border text-gray-400 hover:text-white transition-all shadow-inner">
                                             <Edit3 className="w-4 h-4" />
                                         </button>
                                         {isCustom && (
@@ -166,7 +166,7 @@ export function AppointmentsTab({
                                             </div>
                                         )}
 
-                                        <button onClick={() => onUploadDocument(record.id || `custom-${i}`)} className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all group/btn">
+                                        <button onClick={() => onUploadDocument(record.id || `custom-${i}`)} className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-card-border rounded-xl hover:bg-white/10 transition-all group/btn">
                                             <Camera className="w-3.5 h-3.5 text-white/40 group-hover/btn:text-white" />
                                             <span className="text-[9px] font-black text-gray-500 group-hover/btn:text-white uppercase tracking-widest">+ Belge</span>
                                         </button>
@@ -176,7 +176,7 @@ export function AppointmentsTab({
                                         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 pt-2">
                                             {recordDocuments[record.id].map((doc: string, dIdx: number) => (
                                                 <div key={dIdx} className="relative group/doc shrink-0">
-                                                    <img src={doc} onClick={() => setPreviewImage(doc)} className="w-24 h-24 rounded-2xl object-cover border border-white/10 cursor-pointer hover:border-emerald-500/50 transition-all" />
+                                                    <img src={doc} onClick={() => setPreviewImage(doc)} className="w-24 h-24 rounded-2xl object-cover border border-card-border cursor-pointer hover:border-emerald-500/50 transition-all" />
                                                     <button onClick={() => onDeleteDocument(record.id, dIdx)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center border-2 border-black opacity-0 group-hover/doc:opacity-100 transition-opacity"><X className="w-3.5 h-3.5" /></button>
                                                 </div>
                                             ))}
@@ -189,14 +189,14 @@ export function AppointmentsTab({
                 )}
             </div>
 
-            <button onClick={handleGenerate} className="w-full bg-[#12121A] border-2 border-white/10 py-10 rounded-[3rem] group hover:bg-white/5 transition-all relative overflow-hidden shadow-2xl mt-12">
+            <button onClick={handleGenerate} className="w-full bg-[#12121A] border-2 border-card-border py-10 rounded-[3rem] group hover:bg-white/5 transition-all relative overflow-hidden shadow-2xl mt-12">
                 <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-transparent to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                 <div className="w-16 h-16 rounded-[1.5rem] bg-white/5 flex items-center justify-center mx-auto mb-4 group-hover:scale-110"><FileText className="w-7 h-7 text-white" /></div>
                 <h4 className="text-lg font-black text-white uppercase italic tracking-tighter leading-none">Resmi Karne Oluştur (PDF)</h4>
                 <p className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em] mt-1 px-4 text-center">Veteriner Hekim Onaylı Dijital Mühür Dahildir</p>
             </button>
 
-            <div className="p-6 rounded-[2rem] bg-white/[0.02] border border-white/5 flex gap-4 mt-6">
+            <div className="p-6 rounded-[2rem] bg-white/[0.02] border border-card-border flex gap-4 mt-6">
                 <AlertCircle className="w-6 h-6 text-yellow-500/50 shrink-0" />
                 <p className="text-[10px] text-gray-600 leading-relaxed italic">
                     Tüm kayıtlar kullanıcı beyanı esasına dayanmaktadır. Moffi, girilen verilerin doğruluğunu resmi makamlarca onaylamaz.
@@ -207,7 +207,7 @@ export function AppointmentsTab({
             <AnimatePresence>
                 {previewImage && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[6000] bg-black/95 flex items-center justify-center p-4" onClick={() => setPreviewImage(null)}>
-                        <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="max-w-4xl max-h-[80vh] bg-black rounded-[3rem] overflow-hidden border border-white/10 relative"><img src={previewImage} className="max-w-full max-h-full object-contain" /></motion.div>
+                        <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="max-w-4xl max-h-[80vh] bg-black rounded-[3rem] overflow-hidden border border-card-border relative"><img src={previewImage} className="max-w-full max-h-full object-contain" /></motion.div>
                     </motion.div>
                 )}
 
@@ -267,7 +267,7 @@ export function AppointmentsTab({
                         <div className="relative w-full max-w-md my-auto">
                             <button 
                                 onClick={() => setShowPreview(false)}
-                                className="absolute -top-12 -right-2 w-10 h-10 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 hover:bg-white/20 transition-all active:scale-90 z-[130]"
+                                className="absolute -top-12 -right-2 w-10 h-10 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-card-border hover:bg-white/20 transition-all active:scale-90 z-[130]"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -276,15 +276,15 @@ export function AppointmentsTab({
                                 initial={{ scale: 0.9, y: 50 }}
                                 animate={{ scale: 1, y: 0 }}
                                 exit={{ scale: 0.9, y: 50 }}
-                                className="w-full bg-white rounded-[4rem] p-6 flex flex-col shadow-2xl text-black relative cursor-default"
+                                className="w-full bg-card rounded-[4rem] p-6 flex flex-col shadow-2xl text-black relative cursor-default"
                             >
                                 <div className="absolute top-6 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-black/10 rounded-full" />
 
-                                <div className="flex justify-between items-start mb-6 border-b-2 border-dashed border-gray-100 pb-6 pt-10">
+                                <div className="flex justify-between items-start mb-6 border-b-2 border-dashed border-card-border pb-6 pt-10">
                                     <div>
                                         <div className="flex items-center gap-2 mb-1">
                                             <div className="w-5 h-5 bg-black rounded flex items-center justify-center">
-                                                <div className="w-2 h-2 bg-white rounded-full" />
+                                                <div className="w-2 h-2 bg-card rounded-full" />
                                             </div>
                                             <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Moffi Health System</span>
                                         </div>
@@ -294,7 +294,7 @@ export function AppointmentsTab({
                                             <ShieldCheck className="w-3 h-3" /> Veteriner Mührü Uygulandı
                                         </div>
                                     </div>
-                                    <div className="p-2 border-2 border-gray-200 rounded-2xl scale-90">
+                                    <div className="p-2 border-2 border-card-border rounded-2xl scale-90">
                                         <QRCodeSVG value={`moffi://verify/health/${activePet?.id}`} size={48} />
                                     </div>
                                 </div>

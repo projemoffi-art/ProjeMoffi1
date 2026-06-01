@@ -138,7 +138,7 @@ export function ShareSheet({
                                 onClose();
                             }
                         }}
-                        className="fixed bottom-0 left-0 right-0 z-[1200] bg-[#0a0a0b]/60 backdrop-blur-[50px] border-t border-white/10 rounded-t-[48px] shadow-[0_-20px_80px_rgba(0,0,0,0.8)] flex flex-col pointer-events-auto overflow-hidden max-h-[92%] w-full max-w-lg mx-auto"
+                        className="fixed bottom-0 left-0 right-0 z-[1200] bg-[#000000]/60 backdrop-blur-[50px] border-t border-card-border rounded-t-[48px] shadow-[0_-20px_80px_rgba(0,0,0,0.8)] flex flex-col pointer-events-auto overflow-hidden max-h-[92%] w-full max-w-lg mx-auto"
                     >
                         {/* HANDLEBAR */}
                         <div 
@@ -153,8 +153,8 @@ export function ShareSheet({
                             {/* POST PREVIEW (Subtle) */}
                             {selectedPost && (
                                 <div className="px-6 py-4">
-                                    <div className="flex items-center gap-4 bg-white/5 p-4 rounded-[32px] border border-white/10">
-                                        <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white/5 shrink-0 border border-white/10 relative">
+                                    <div className="flex items-center gap-4 bg-white/5 p-4 rounded-[32px] border border-card-border">
+                                        <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white/5 shrink-0 border border-card-border relative">
                                             <img src={selectedPost.media || selectedPost.image} className="w-full h-full object-cover" />
                                         </div>
                                         <div className="min-w-0">
@@ -178,7 +178,7 @@ export function ShareSheet({
                                             <div className="w-16 h-16 rounded-3xl p-0.5 bg-gradient-to-tr from-cyan-500/20 to-purple-500/20 relative">
                                                 <div className="w-full h-full rounded-[20px] bg-black p-0.5">
                                                     <img src={group.author_avatar} className={cn(
-                                                        "w-full h-full rounded-[18px] object-cover border border-white/10 transition-all duration-500",
+                                                        "w-full h-full rounded-[18px] object-cover border border-card-border transition-all duration-500",
                                                         sendingTo === group.author_name ? "blur-md scale-90 opacity-50" : ""
                                                     )} />
                                                 </div>
@@ -202,7 +202,7 @@ export function ShareSheet({
                                         </button>
                                     ))}
                                     <button className="flex flex-col items-center gap-2 shrink-0 group active:scale-95 transition-transform">
-                                        <div className="w-16 h-16 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 group-hover:bg-white/10 transition-colors">
+                                        <div className="w-16 h-16 rounded-3xl bg-white/5 border border-card-border flex items-center justify-center text-white/40 group-hover:bg-white/10 transition-colors">
                                             <MoreHorizontal className="w-6 h-6" />
                                         </div>
                                         <span className="text-[11px] font-medium text-white/30 uppercase">Tümü</span>
@@ -246,7 +246,7 @@ export function ShareSheet({
                                         className="w-full px-6 py-5 flex items-center justify-between active:bg-white/[0.07] transition-all group"
                                     >
                                         <div className="flex items-center gap-5">
-                                            <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-white/60">
+                                            <div className="p-3 bg-white/5 rounded-2xl border border-card-border text-white/60">
                                                 {isCopying ? <CheckCircle2 className="w-6 h-6 text-emerald-400" /> : <Copy className="w-6 h-6" />}
                                             </div>
                                             <span className="text-white font-bold text-[17px]">{isCopying ? 'Kopyalandı!' : 'Bağlantıyı Kopyala'}</span>
@@ -272,7 +272,7 @@ export function ShareSheet({
                                         onClick={handleNativeShare}
                                         className="w-full px-6 py-5 flex items-center gap-5 active:bg-white/[0.07] transition-all"
                                     >
-                                        <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-white/60">
+                                        <div className="p-3 bg-white/5 rounded-2xl border border-card-border text-white/60">
                                             <Share2 className="w-6 h-6" />
                                         </div>
                                         <span className="text-white/90 font-semibold text-[17px]">Diğer Paylaşım Seçenekleri</span>
@@ -294,7 +294,7 @@ export function ShareSheet({
                                         }}
                                         className="w-full px-6 py-5 flex items-center gap-5 active:bg-white/[0.07] transition-all"
                                     >
-                                        <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-white/60">
+                                        <div className="p-3 bg-white/5 rounded-2xl border border-card-border text-white/60">
                                             <Download className="w-6 h-6" />
                                         </div>
                                         <span className="text-white/90 font-semibold text-[17px]">Medyayı Kaydet</span>
@@ -307,7 +307,7 @@ export function ShareSheet({
                         <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black via-black/95 to-transparent pt-12 shrink-0">
                             <button 
                                 onClick={onClose}
-                                className="w-full py-5 bg-white text-black rounded-[28px] font-black text-[18px] active:scale-[0.97] transition-all shadow-xl"
+                                className="w-full py-5 bg-card text-black rounded-[28px] font-black text-[18px] active:scale-[0.97] transition-all shadow-xl"
                             >
                                 Kapat
                             </button>
@@ -325,10 +325,10 @@ export function ShareSheet({
                                 onClick={() => setShowQR(false)}
                             >
                                 <motion.div 
-                                    className="bg-[#1C1C1E] p-8 rounded-[40px] border border-white/10 flex flex-col items-center gap-6 max-w-sm w-full shadow-2xl relative"
+                                    className="bg-[#1C1C1E] p-8 rounded-[40px] border border-card-border flex flex-col items-center gap-6 max-w-sm w-full shadow-2xl relative"
                                     onClick={(e) => e.stopPropagation()}
                                 >
-                                    <div className="bg-white p-4 rounded-[2rem] shadow-inner flex items-center justify-center">
+                                    <div className="bg-card p-4 rounded-[2rem] shadow-inner flex items-center justify-center">
                                         <QRCodeSVG 
                                             value={postUrl}
                                             size={200}

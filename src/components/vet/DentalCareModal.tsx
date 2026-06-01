@@ -102,13 +102,13 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
                 initial={{ y: "100%" }}
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}
-                className="w-full max-w-lg bg-[#111111] rounded-t-[3.5rem] sm:rounded-[4rem] h-[90vh] flex flex-col overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.8)] border border-white/10 relative"
+                className="w-full max-w-lg bg-[#111111] rounded-t-[3.5rem] sm:rounded-[4rem] h-[90vh] flex flex-col overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.8)] border border-card-border relative"
             >
                 {/* iOS Style Grab Handle */}
                 <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/10 rounded-full sm:hidden z-50" />
 
                 {/* HEADER */}
-                <div className="p-8 pb-4 bg-[#111111]/80 backdrop-blur-3xl z-30 sticky top-0 border-b border-white/5">
+                <div className="p-8 pb-4 bg-[#111111]/80 backdrop-blur-3xl z-30 sticky top-0 border-b border-card-border">
                     <div className="flex justify-between items-center mb-8 mt-2 sm:mt-0">
                         <div className="flex items-center gap-4">
                             <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shadow-2xl">
@@ -119,18 +119,18 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
                                 <p className="text-[10px] text-white/30 font-black uppercase tracking-[0.3em] mt-2">DENTAL CARE 2.0</p>
                             </div>
                         </div>
-                        <button onClick={onClose} className="w-11 h-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all">
+                        <button onClick={onClose} className="w-11 h-11 rounded-full bg-white/5 border border-card-border flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all">
                             <X className="w-5 h-5" />
                         </button>
                     </div>
 
                     {/* TABS - Apple Glass style */}
-                    <div className="flex bg-white/5 border border-white/10 p-1.5 rounded-[1.8rem]">
+                    <div className="flex bg-white/5 border border-card-border p-1.5 rounded-[1.8rem]">
                         <button
                             onClick={() => setActiveTab('checkup')}
                             className={cn(
                                 "flex-1 py-3.5 rounded-[1.4rem] text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2",
-                                activeTab === 'checkup' ? "bg-white text-black shadow-2xl" : "text-white/30 hover:text-white/60"
+                                activeTab === 'checkup' ? "bg-card text-black shadow-2xl" : "text-white/30 hover:text-white/60"
                             )}
                         >
                             <Search className="w-3.5 h-3.5" /> KONTROL
@@ -172,7 +172,7 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
                                         className="flex-1 flex flex-col justify-center py-6"
                                     >
                                         <div className="text-center mb-10">
-                                            <div className="inline-block bg-white/5 text-white/40 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.3em] mb-6 border border-white/5">
+                                            <div className="inline-block bg-white/5 text-white/40 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.3em] mb-6 border border-card-border">
                                                 SORU {currentStep + 1} / {QUESTIONS.length}
                                             </div>
                                             <h3 className="text-3xl font-black text-white leading-tight tracking-tighter uppercase italic">
@@ -185,7 +185,7 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
                                                 <button
                                                     key={idx}
                                                     onClick={() => handleAnswer(opt.score)}
-                                                    className="w-full bg-[#1C1C1E] p-6 rounded-[2.5rem] border border-white/5 hover:border-emerald-500/30 group transition-all shadow-xl flex items-center gap-5 text-left active:scale-[0.98]"
+                                                    className="w-full bg-[#1C1C1E] p-6 rounded-[2.5rem] border border-card-border hover:border-emerald-500/30 group transition-all shadow-xl flex items-center gap-5 text-left active:scale-[0.98]"
                                                 >
                                                     <span className="text-4xl group-hover:scale-125 transition-transform">{opt.icon}</span>
                                                     <span className="font-black text-white/70 uppercase tracking-tight text-lg">{opt.label}</span>
@@ -209,7 +209,7 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
                                                 VETERİNER RANDEVUSU AL
                                             </button>
                                         )}
-                                        <button onClick={resetCheckup} className="w-full h-16 rounded-[2rem] bg-white text-black font-black uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all text-xs">
+                                        <button onClick={resetCheckup} className="w-full h-16 rounded-[2rem] bg-card text-black font-black uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all text-xs">
                                             TEKRAR KONTROL ET
                                         </button>
                                     </div>
@@ -248,7 +248,7 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
                                 <button
                                     onClick={() => setIsTimerRunning(!isTimerRunning)}
                                     className={cn(
-                                        "w-24 h-24 rounded-full flex items-center justify-center shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-all hover:scale-105 active:scale-90 border-4 border-white/5",
+                                        "w-24 h-24 rounded-full flex items-center justify-center shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-all hover:scale-105 active:scale-90 border-4 border-card-border",
                                         isTimerRunning ? "bg-[#FF9500] text-white" : "bg-emerald-500 text-white"
                                     )}
                                 >
@@ -256,7 +256,7 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
                                 </button>
                                 <button
                                     onClick={() => { setIsTimerRunning(false); setTimeLeft(120); }}
-                                    className="w-16 h-16 rounded-full bg-white/5 text-white/30 flex items-center justify-center hover:bg-white/10 hover:text-white transition-all active:scale-90 border border-white/10"
+                                    className="w-16 h-16 rounded-full bg-white/5 text-white/30 flex items-center justify-center hover:bg-white/10 hover:text-white transition-all active:scale-90 border border-card-border"
                                 >
                                     <RotateCcw className="w-7 h-7" />
                                 </button>
@@ -271,7 +271,7 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
                     {/* 3. GUIDE */}
                     {activeTab === 'guide' && (
                         <div className="space-y-6">
-                            <div className="bg-[#1C1C1E] p-8 rounded-[3rem] border border-white/5 shadow-2xl relative overflow-hidden group">
+                            <div className="bg-[#1C1C1E] p-8 rounded-[3rem] border border-card-border shadow-2xl relative overflow-hidden group">
                                 <div className="absolute -right-10 -top-10 w-40 h-40 bg-emerald-500/5 rounded-full blur-3xl group-hover:bg-emerald-500/10 transition-colors" />
                                 <h3 className="text-lg font-black text-white italic tracking-tight uppercase mb-6 z-10 relative">Fırçalama Tekniği 101</h3>
                                 <div className="space-y-5 relative z-10">

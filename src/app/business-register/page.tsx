@@ -84,12 +84,12 @@ export default function BusinessRegisterPage() {
                 <motion.div
                     initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    className="bg-white rounded-3xl shadow-2xl p-12 text-center max-w-md w-full"
+                    className="bg-card rounded-3xl shadow-2xl p-12 text-center max-w-md w-full"
                 >
                     <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
                         <CheckCircle className="w-10 h-10 text-green-600" />
                     </div>
-                    <h2 className="text-2xl font-black text-gray-900 mb-2">Başvurunuz Alındı!</h2>
+                    <h2 className="text-2xl font-black text-foreground mb-2">Başvurunuz Alındı!</h2>
                     <p className="text-gray-500 mb-2">İşletmeniz incelendikten sonra paneliniz aktif olacaktır.</p>
                     <p className="text-xs text-gray-400">Yönlendiriliyorsunuz...</p>
                     <div className="mt-6 w-full h-1 bg-gray-100 rounded-full overflow-hidden">
@@ -116,7 +116,7 @@ export default function BusinessRegisterPage() {
                     <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
                         <Sparkles className="w-4 h-4 text-white" />
                     </div>
-                    <span className="font-bold text-gray-900">MoffiBusiness</span>
+                    <span className="font-bold text-foreground">MoffiBusiness</span>
                 </div>
             </header>
 
@@ -133,7 +133,7 @@ export default function BusinessRegisterPage() {
                             )}>
                                 {i < step ? <CheckCircle className="w-4 h-4" /> : i + 1}
                             </div>
-                            <span className={cn("text-xs font-medium hidden sm:block", i <= step ? "text-gray-700" : "text-gray-400")}>{s.label}</span>
+                            <span className={cn("text-xs font-medium hidden sm:block", i <= step ? "text-foreground" : "text-gray-400")}>{s.label}</span>
                             {i < STEPS.length - 1 && <div className={cn("w-8 sm:w-16 h-0.5 mx-1", i < step ? "bg-indigo-600" : "bg-gray-200")} />}
                         </div>
                     ))}
@@ -149,12 +149,12 @@ export default function BusinessRegisterPage() {
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -20 }}
                         transition={{ duration: 0.2 }}
-                        className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 p-6 sm:p-8"
+                        className="bg-card rounded-3xl shadow-xl shadow-gray-200/50 border border-card-border p-6 sm:p-8"
                     >
                         {/* ===== STEP 0: BUSINESS TYPE ===== */}
                         {step === 0 && (
                             <>
-                                <h2 className="text-xl font-black text-gray-900 mb-1">İşletme Türünü Seçin</h2>
+                                <h2 className="text-xl font-black text-foreground mb-1">İşletme Türünü Seçin</h2>
                                 <p className="text-sm text-gray-500 mb-6">Hangi alanda hizmet veriyorsunuz?</p>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {BUSINESS_TYPES.map(bt => (
@@ -165,13 +165,13 @@ export default function BusinessRegisterPage() {
                                                 "p-4 rounded-2xl border-2 text-left transition-all duration-200 group",
                                                 businessType === bt.key
                                                     ? "border-indigo-500 bg-indigo-50/50 shadow-lg shadow-indigo-100"
-                                                    : "border-gray-100 hover:border-gray-200 hover:shadow-md"
+                                                    : "border-card-border hover:border-card-border hover:shadow-md"
                                             )}
                                         >
                                             <div className={cn("w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center mb-3", bt.color)}>
                                                 <bt.icon className="w-5 h-5 text-white" />
                                             </div>
-                                            <h3 className="font-bold text-gray-900 text-sm">{bt.label}</h3>
+                                            <h3 className="font-bold text-foreground text-sm">{bt.label}</h3>
                                             <p className="text-xs text-gray-500 mt-0.5">{bt.desc}</p>
                                         </button>
                                     ))}
@@ -182,7 +182,7 @@ export default function BusinessRegisterPage() {
                         {/* ===== STEP 1: BASIC INFO ===== */}
                         {step === 1 && (
                             <>
-                                <h2 className="text-xl font-black text-gray-900 mb-1">Temel Bilgiler</h2>
+                                <h2 className="text-xl font-black text-foreground mb-1">Temel Bilgiler</h2>
                                 <p className="text-sm text-gray-500 mb-6">İşletme ve hesap bilgileriniz</p>
                                 <div className="space-y-4">
                                     <InputField icon={Building2} label="İşletme Adı" value={businessName} onChange={setBusinessName} placeholder="örn: Paws & Claws Pet Shop" />
@@ -197,7 +197,7 @@ export default function BusinessRegisterPage() {
                         {/* ===== STEP 2: LEGAL INFO ===== */}
                         {step === 2 && (
                             <>
-                                <h2 className="text-xl font-black text-gray-900 mb-1">Yasal Bilgiler</h2>
+                                <h2 className="text-xl font-black text-foreground mb-1">Yasal Bilgiler</h2>
                                 <p className="text-sm text-gray-500 mb-6">Vergi ve ödeme bilgileri</p>
                                 <div className="space-y-4">
                                     <InputField icon={FileText} label="Vergi Numarası" value={taxId} onChange={setTaxId} placeholder="10 haneli vergi no" />
@@ -210,7 +210,7 @@ export default function BusinessRegisterPage() {
                         {/* ===== STEP 3: CONFIRMATION ===== */}
                         {step === 3 && (
                             <>
-                                <h2 className="text-xl font-black text-gray-900 mb-1">Başvuru Özeti</h2>
+                                <h2 className="text-xl font-black text-foreground mb-1">Başvuru Özeti</h2>
                                 <p className="text-sm text-gray-500 mb-6">Bilgilerinizi kontrol edin</p>
 
                                 <div className="space-y-3 mb-6">
@@ -224,7 +224,7 @@ export default function BusinessRegisterPage() {
                                     <SummaryRow label="Adres" value={address} />
                                 </div>
 
-                                <label className="flex items-start gap-3 p-4 rounded-2xl border border-gray-100 bg-gray-50/50 cursor-pointer hover:bg-gray-50 transition">
+                                <label className="flex items-start gap-3 p-4 rounded-2xl border border-card-border bg-gray-50/50 cursor-pointer hover:bg-gray-50 transition">
                                     <input
                                         type="checkbox"
                                         checked={agreeTerms}
@@ -304,7 +304,7 @@ export default function BusinessRegisterPage() {
 function InputField({ icon: Icon, label, value, onChange, placeholder, type = 'text', multiline = false }: {
     icon: typeof Building2; label: string; value: string; onChange: (v: string) => void; placeholder: string; type?: string; multiline?: boolean;
 }) {
-    const baseClass = "w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 pl-11 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition";
+    const baseClass = "w-full bg-gray-50 border border-card-border rounded-xl px-4 py-3 pl-11 text-sm text-foreground placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition";
 
     return (
         <div>
@@ -335,9 +335,9 @@ function InputField({ icon: Icon, label, value, onChange, placeholder, type = 't
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
     return (
-        <div className="flex justify-between items-start py-2 border-b border-gray-100 last:border-0">
+        <div className="flex justify-between items-start py-2 border-b border-card-border last:border-0">
             <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{label}</span>
-            <span className="text-sm font-medium text-gray-900 text-right max-w-[60%]">{value}</span>
+            <span className="text-sm font-medium text-foreground text-right max-w-[60%]">{value}</span>
         </div>
     );
 }

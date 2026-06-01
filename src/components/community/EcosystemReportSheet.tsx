@@ -115,7 +115,7 @@ export function EcosystemReportSheet({
                                         </div>
                                     </div>
 
-                                    <div className="w-24 h-24 rounded-full border-8 border-white/5 p-1 relative">
+                                    <div className="w-24 h-24 rounded-full border-8 border-card-border p-1 relative">
                                         <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                                             <circle cx="50" cy="50" r="45" fill="transparent" stroke="currentColor" strokeWidth="8" className="text-white/5" />
                                             <motion.circle 
@@ -143,7 +143,7 @@ export function EcosystemReportSheet({
                                         { label: "Uyku", val: stats.sleep, icon: Heart, color: "text-blue-400 bg-blue-400/10" },
                                         { label: "Ruh Hali", val: stats.mood, icon: Sparkles, color: "text-purple-400 bg-purple-400/10" }
                                     ].map((m, i) => (
-                                        <div key={i} className="bg-white/[0.03] border border-white/5 p-5 rounded-[2rem] space-y-4">
+                                        <div key={i} className="bg-white/[0.03] border border-card-border p-5 rounded-[2rem] space-y-4">
                                             <div className="flex items-center justify-between">
                                                 <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", m.color)}>
                                                     <m.icon className="w-5 h-5" />
@@ -179,7 +179,7 @@ export function EcosystemReportSheet({
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="mt-6 h-3 w-full bg-white/5 rounded-full border border-white/5 p-0.5 overflow-hidden">
+                                    <div className="mt-6 h-3 w-full bg-white/5 rounded-full border border-card-border p-0.5 overflow-hidden">
                                         <motion.div 
                                             initial={{ width: 0 }}
                                             animate={{ width: isMilo ? "85%" : "95%" }}

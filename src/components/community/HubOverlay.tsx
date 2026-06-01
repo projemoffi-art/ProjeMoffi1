@@ -145,7 +145,7 @@ export function HubOverlay({
                     style={{ background: 'var(--background)' }}
                 >
                     {/* MOFFI PRO STICKY HEADER */}
-                    <div className="pt-safe px-6 pb-4 border-b border-white/5 bg-background/80 backdrop-blur-xl z-[2001]">
+                    <div className="pt-safe px-6 pb-4 border-b border-card-border bg-background/80 backdrop-blur-xl z-[2001]">
                         <div className="flex justify-between items-center py-4">
                             <div>
                                 <div className="flex items-center gap-2 mb-0.5">
@@ -163,7 +163,7 @@ export function HubOverlay({
                                 </button>
                                 <button 
                                     onClick={onClose}
-                                    className="w-10 h-10 rounded-xl bg-foreground/5 text-foreground flex items-center justify-center border border-white/10 active:scale-95 transition-all"
+                                    className="w-10 h-10 rounded-xl bg-foreground/5 text-foreground flex items-center justify-center border border-card-border active:scale-95 transition-all"
                                 >
                                     <X size={20} />
                                 </button>
@@ -246,7 +246,7 @@ export function HubOverlay({
                                 </div>
                                 <div className="flex gap-4 overflow-x-auto no-scrollbar px-1">
                                     {fastBasket.map((item) => (
-                                        <div key={item.id} className="min-w-[130px] bg-foreground/5 border border-white/5 rounded-[2rem] p-4 flex flex-col gap-3">
+                                        <div key={item.id} className="min-w-[130px] bg-foreground/5 border border-card-border rounded-[2rem] p-4 flex flex-col gap-3">
                                             <div className="w-full aspect-square rounded-2xl overflow-hidden relative">
                                                 <img src={item.img} alt={item.name} className="w-full h-full object-cover" />
                                                 <button className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg"><ShoppingCart size={12} /></button>
@@ -280,7 +280,7 @@ export function HubOverlay({
                             <div className="space-y-4 px-1">
                                 <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Yakın Klinikler</h3>
                                 {nearbyClinics.map((clinic, i) => (
-                                    <button key={i} onClick={() => onVetClick()} className="w-full bg-foreground/5 border border-white/5 rounded-[2rem] p-5 flex items-center justify-between active:scale-[0.98] transition-all">
+                                    <button key={i} onClick={() => onVetClick()} className="w-full bg-foreground/5 border border-card-border rounded-[2rem] p-5 flex items-center justify-between active:scale-[0.98] transition-all">
                                         <div className="flex items-center gap-4 text-left">
                                             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400"><MapPin size={18} /></div>
                                             <div>
@@ -308,7 +308,7 @@ export function HubOverlay({
                             </div>
 
                             <div className="pt-4 pb-12">
-                                <div className="bg-white/[0.03] border border-white/5 rounded-[2.5rem] p-6">
+                                <div className="bg-white/[0.03] border border-card-border rounded-[2.5rem] p-6">
                                     <div className="grid grid-cols-3 gap-6">
                                         {[
                                             { icon: Palette, label: 'Stüdyo', color: 'text-purple-400', bg: 'bg-purple-500/10', onClick: onStudioClick },
@@ -316,7 +316,7 @@ export function HubOverlay({
                                             { icon: PawPrint, label: 'Yürüyüş', color: 'text-emerald-400', bg: 'bg-emerald-500/10', onClick: onWalkClick },
                                         ].map((service, i) => (
                                             <button key={i} onClick={() => service.onClick()} className="flex flex-col items-center gap-2.5 active:scale-95 transition-all">
-                                                <div className={cn("w-14 h-14 rounded-[1.5rem] flex items-center justify-center border border-white/5 shadow-lg shadow-black/20", service.bg)}>
+                                                <div className={cn("w-14 h-14 rounded-[1.5rem] flex items-center justify-center border border-card-border shadow-lg shadow-black/20", service.bg)}>
                                                     <service.icon className={cn("w-6 h-6", service.color)} />
                                                 </div>
                                                 <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{service.label}</span>

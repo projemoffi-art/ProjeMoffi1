@@ -54,7 +54,7 @@ export default function CreatePostModal({ isOpen, onClose, onSubmit }: CreatePos
                         initial={{ opacity: 0, y: 100, scale: 0.9 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 100, scale: 0.9 }}
-                        className="fixed inset-x-4 top-20 bottom-24 z-50 bg-[#1A1A1A] border border-white/10 rounded-[2rem] p-6 flex flex-col shadow-2xl overflow-y-auto"
+                        className="fixed inset-x-4 top-20 bottom-24 z-50 bg-[#1A1A1A] border border-card-border rounded-[2rem] p-6 flex flex-col shadow-2xl overflow-y-auto"
                     >
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-xl font-bold text-white">Yeni Gönderi</h2>
@@ -64,7 +64,7 @@ export default function CreatePostModal({ isOpen, onClose, onSubmit }: CreatePos
                         {/* Image Preview / Selector */}
                         <div
                             onClick={() => fileInputRef.current?.click()}
-                            className="w-full aspect-video rounded-2xl bg-gray-900 border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-purple-500/50 transition-colors mb-6 overflow-hidden relative"
+                            className="w-full aspect-video rounded-2xl bg-gray-900 border-2 border-dashed border-card-border flex flex-col items-center justify-center cursor-pointer hover:border-purple-500/50 transition-colors mb-6 overflow-hidden relative"
                         >
                             {preview ? (
                                 <img src={preview} className="w-full h-full object-cover" />

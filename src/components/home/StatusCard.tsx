@@ -22,11 +22,11 @@ export function StatusCard() {
 
             {/* Action Buttons */}
             <div className="relative z-10 grid grid-cols-2 gap-3">
-                <button className="flex items-center justify-center gap-2 bg-white py-3 px-4 rounded-xl shadow-sm active:scale-95 transition-transform">
+                <button className="flex items-center justify-center gap-2 bg-card py-3 px-4 rounded-xl shadow-moffi-card active:scale-95 transition-transform">
                     <Footprints className="w-5 h-5 text-moffi-primary" />
                     <span className="font-bold text-moffi-text text-sm whitespace-nowrap">Moffi Walk'a Başla</span>
                 </button>
-                <button className="flex items-center justify-center gap-2 bg-white py-3 px-4 rounded-xl shadow-sm active:scale-95 transition-transform">
+                <button className="flex items-center justify-center gap-2 bg-card py-3 px-4 rounded-xl shadow-moffi-card active:scale-95 transition-transform">
                     <Stethoscope className="w-5 h-5 text-teal-600" />
                     <span className="font-bold text-moffi-text text-sm whitespace-nowrap">Vet Randevusu</span>
                 </button>

@@ -412,7 +412,7 @@ export function ImmersivePostCard({
                             {!isVideoLoading && (
                                 <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/20 overflow-hidden z-[100]">
                                     <motion.div 
-                                        className="h-full bg-white shadow-[0_0_5px_rgba(255,255,255,0.8)]"
+                                        className="h-full bg-card shadow-[0_0_5px_rgba(255,255,255,0.8)]"
                                         style={{ width: `${videoProgress}%` }}
                                         transition={{ ease: "linear", duration: 0.1 }}
                                     />
@@ -429,7 +429,7 @@ export function ImmersivePostCard({
                             sizes="(max-width: 768px) 100vw, 50vw"
                         />
                     )}
-                    <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-background via-background/40 to-transparent opacity-90 pointer-events-none" />
+                    <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/75 via-black/20 to-transparent opacity-90 pointer-events-none" />
                 </motion.div>
                 
                 {/* BACKGROUND AUDIO ELEMENT */}
@@ -540,7 +540,7 @@ export function ImmersivePostCard({
                                         onClick={() => { setIsMoreOpen(false); alert('Bu hesap hakkında bilgiler...'); }}
                                         className="w-full px-6 py-5 flex items-center gap-5 active:bg-white/[0.07] transition-all"
                                     >
-                                        <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-white/60">
+                                        <div className="p-3 bg-white/5 rounded-2xl border border-card-border text-white/60">
                                             <Info className="w-6 h-6" />
                                         </div>
                                         <span className="text-white/90 font-semibold text-[17px]">Bu Hesap Hakkında</span>
@@ -592,7 +592,7 @@ export function ImmersivePostCard({
                                             onClick={() => { setIsMoreOpen(false); alert('Sessize alındı 🔇'); }}
                                             className="w-full px-6 py-5 flex items-center gap-5 active:bg-white/[0.07] transition-all"
                                         >
-                                            <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-white/40">
+                                            <div className="p-3 bg-white/5 rounded-2xl border border-card-border text-white/40">
                                                 <VolumeX className="w-6 h-6" />
                                             </div>
                                             <span className="text-white/90 font-semibold text-[17px]">Sessize Al</span>
@@ -635,9 +635,9 @@ export function ImmersivePostCard({
                             <motion.div
                                 initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
                                 onClick={(e) => e.stopPropagation()}
-                                className="w-full max-w-sm bg-[#121316] border border-white/10 rounded-[32px] p-6 flex flex-col gap-5 shadow-2xl text-white"
+                                className="w-full max-w-sm bg-[#121316] border border-card-border rounded-[32px] p-6 flex flex-col gap-5 shadow-2xl text-white"
                             >
-                                <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                                <div className="flex items-center justify-between pb-3 border-b border-card-border">
                                     <div className="flex items-center gap-2">
                                         <MessageSquare className="w-5 h-5 text-cyan-400" />
                                         <h4 className="font-bold text-base">Yorum Ayarları</h4>
@@ -661,13 +661,13 @@ export function ImmersivePostCard({
                                             )}
                                         >
                                             <div className={cn(
-                                                "w-5 h-5 rounded-full bg-white transition-transform duration-300 shadow-md",
+                                                "w-5 h-5 rounded-full bg-card transition-transform duration-300 shadow-moffi-card",
                                                 localAllowComments ? "translate-x-6" : "translate-x-0"
                                             )} />
                                         </button>
                                     </div>
 
-                                    <div className="flex flex-col gap-2 pt-2 border-t border-white/5">
+                                    <div className="flex flex-col gap-2 pt-2 border-t border-card-border">
                                         <span className="font-bold text-sm">Kimler Yorum Yapabilir?</span>
                                         <div className="grid grid-cols-2 gap-2">
                                             {[
@@ -681,7 +681,7 @@ export function ImmersivePostCard({
                                                         "py-2.5 px-3 rounded-xl border text-xs font-bold transition-all",
                                                         localCommentPrivacy === item.id 
                                                             ? "bg-cyan-500/20 border-cyan-500 text-cyan-400" 
-                                                            : "bg-white/5 border-white/10 text-white/60 hover:text-white"
+                                                            : "bg-white/5 border-card-border text-white/60 hover:text-white"
                                                     )}
                                                 >
                                                     {item.label}
@@ -736,7 +736,7 @@ export function ImmersivePostCard({
                         onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
                         className={cn(
                             "absolute bottom-3 right-3 w-7 h-7 rounded-full backdrop-blur-md border flex items-center justify-center transition-all shadow-lg z-30",
-                            isMuted ? "bg-black/40 border-white/10" : "bg-cyan-500/30 border-cyan-400/50"
+                            isMuted ? "bg-black/40 border-card-border" : "bg-cyan-500/30 border-cyan-400/50"
                         )}
                     >
                         {isMuted ? <VolumeX className="w-3.5 h-3.5 text-white/50" /> : <Volume2 className="w-3.5 h-3.5 text-cyan-300" />}
@@ -756,7 +756,7 @@ export function ImmersivePostCard({
                                 }
                                 onLike();
                             }} 
-                            className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center transition-transform active:scale-90 hover:bg-white/20 shadow-xl"
+                            className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-md border border-card-border flex items-center justify-center transition-transform active:scale-90 hover:bg-white/20 shadow-xl"
                         >
                             {post.isLiked ? (
                                 <Heart className="w-4 h-4 text-red-500 fill-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]" />
@@ -781,8 +781,8 @@ export function ImmersivePostCard({
                             className={cn(
                                 "w-8 h-8 rounded-full backdrop-blur-md border flex items-center justify-center transition-all shadow-xl active:scale-90",
                                 allowComments === false
-                                    ? "bg-white/5 border-white/5 opacity-40 cursor-not-allowed" 
-                                    : "bg-white/10 border-white/20 hover:bg-white/20 hover:border-white/40"
+                                    ? "bg-white/5 border-card-border opacity-40 cursor-not-allowed" 
+                                    : "bg-white/10 border-card-border hover:bg-white/20 hover:border-white/40"
                             )}
                         >
                             <MessageCircle className={cn("w-4 h-4 drop-shadow-md", allowComments === false ? "text-white/20" : "text-white")} />
@@ -794,7 +794,7 @@ export function ImmersivePostCard({
 
                     {/* SHARE */}
                     <div className="flex flex-col items-center gap-0.5">
-                        <button onClick={handleShareClick} className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center transition-transform active:scale-90 hover:bg-white/20 shadow-xl">
+                        <button onClick={handleShareClick} className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-md border border-card-border flex items-center justify-center transition-transform active:scale-90 hover:bg-white/20 shadow-xl">
                             <Share2 className="w-4 h-4 text-white drop-shadow-md" />
                         </button>
                         <span className="text-[9px] font-bold text-white drop-shadow-md">Paylaş</span>
@@ -804,7 +804,7 @@ export function ImmersivePostCard({
                 <div className="pr-16 w-full flex items-center gap-3">
                     <div 
                         onClick={handleProfileNavigation}
-                        className="w-12 h-12 rounded-full border-2 border-white/20 p-0.5 relative pointer-events-auto cursor-pointer active:scale-95 transition-transform"
+                        className="w-12 h-12 rounded-full border-2 border-card-border p-0.5 relative pointer-events-auto cursor-pointer active:scale-95 transition-transform"
                     >
                         <Image src={(isOwner ? (currentUser?.avatar || post.avatar || post.author_avatar || post.user?.avatar) : (post.avatar || post.author_avatar || post.user?.avatar)) || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} fill className="rounded-full object-cover" alt="Author" />
                         {!isOwner && !isFollowingAuthor && (
@@ -846,9 +846,9 @@ export function ImmersivePostCard({
                                 <div 
                                     className={cn(
                                         "px-2.5 py-0.5 flex items-center gap-1.5 transition-all duration-500 backdrop-blur-md",
-                                        post.aura_settings.frameStyle === 'glass' && "rounded-full bg-white/10 border border-white/20 shadow-xl",
-                                        post.aura_settings.frameStyle === 'neon' && "rounded-lg bg-black/40 border-[0.5px] border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.05)]",
-                                        post.aura_settings.frameStyle === 'metal' && "rounded-md bg-gradient-to-br from-gray-700 to-black border border-white/20",
+                                        post.aura_settings.frameStyle === 'glass' && "rounded-full bg-white/10 border border-card-border shadow-xl",
+                                        post.aura_settings.frameStyle === 'neon' && "rounded-lg bg-black/40 border-[0.5px] border-card-border shadow-[0_0_15px_rgba(255,255,255,0.05)]",
+                                        post.aura_settings.frameStyle === 'metal' && "rounded-md bg-gradient-to-br from-gray-700 to-black border border-card-border",
                                         post.aura_settings.frameStyle === 'minimal' && "px-1"
                                     )}
                                 >
@@ -875,7 +875,7 @@ export function ImmersivePostCard({
                                     </span>
                                     
                                     {/* BADGES IN FEED PILL */}
-                                    <div className="flex items-center gap-0.5 border-l border-white/10 pl-1.5">
+                                    <div className="flex items-center gap-0.5 border-l border-card-border pl-1.5">
                                         {(post.aura_settings.badges || []).map((bid: string) => {
                                             if (bid === 'verified') return <ShieldCheck key={bid} className="w-2.5 h-2.5 text-emerald-400" />;
                                             if (bid === 'premium') return <Crown key={bid} className="w-2.5 h-2.5 text-orange-400" />;
@@ -917,7 +917,7 @@ export function ImmersivePostCard({
                 )}
             </div>
 
-            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-background via-background/40 to-transparent pointer-events-none" />
+            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/75 via-black/20 to-transparent pointer-events-none" />
 
             <AnimatePresence>
                 {showComments && (
@@ -1042,7 +1042,7 @@ export function ImmersivePostCard({
                                             <button
                                                 key={i}
                                                 onClick={() => setCommentInput(suggestion)}
-                                                className="whitespace-nowrap px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 rounded-full text-[11px] font-bold text-white/90 transition-all active:scale-95"
+                                                className="whitespace-nowrap px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-card-border rounded-full text-[11px] font-bold text-white/90 transition-all active:scale-95"
                                             >
                                                 {suggestion}
                                             </button>
@@ -1088,9 +1088,9 @@ export function ImmersivePostCard({
                                             initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                             animate={{ opacity: 1, y: 0, scale: 1 }}
                                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                            className="absolute bottom-full left-0 right-0 mb-4 bg-[#1a1b1e]/90 backdrop-blur-3xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-50 mx-2"
+                                            className="absolute bottom-full left-0 right-0 mb-4 bg-[#1a1b1e]/90 backdrop-blur-3xl border border-card-border rounded-2xl overflow-hidden shadow-2xl z-50 mx-2"
                                         >
-                                            <div className="p-3 border-b border-white/5 bg-white/5">
+                                            <div className="p-3 border-b border-card-border bg-white/5">
                                                 <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Kişi Etiketle</span>
                                             </div>
                                             <div className="max-h-48 overflow-y-auto no-scrollbar divide-y divide-white/5">
@@ -1117,7 +1117,7 @@ export function ImmersivePostCard({
                                     )}
                                 </AnimatePresence>
 
-                                <div className="flex items-center gap-3 relative bg-white/5 border border-white/10 rounded-[2rem] py-2 px-2 shrink-0">
+                                <div className="flex items-center gap-3 relative bg-white/5 border border-card-border rounded-[2rem] py-2 px-2 shrink-0">
                                     <div className="flex items-center gap-1 shrink-0">
                                         <button
                                             onClick={() => alert('Fotoğraf seçimi yakında aktif! 📸')}
@@ -1125,7 +1125,7 @@ export function ImmersivePostCard({
                                         >
                                             <Plus className="w-4 h-4" />
                                         </button>
-                                        <div className="w-8 h-8 rounded-full border border-white/10 relative overflow-hidden">
+                                        <div className="w-8 h-8 rounded-full border border-card-border relative overflow-hidden">
                                             <Image src={currentUser?.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} fill className="object-cover" alt="User" />
                                         </div>
                                     </div>
@@ -1157,14 +1157,14 @@ export function ImmersivePostCard({
                                             onClick={() => setShowGIFPicker(!showGIFPicker)}
                                             className={cn(
                                                 "w-8 h-8 rounded-full flex items-center justify-center font-black text-[10px] border transition-all",
-                                                showGIFPicker ? "bg-cyan-500 border-cyan-400 text-black" : "hover:bg-white/10 text-cyan-400 border-white/5"
+                                                showGIFPicker ? "bg-cyan-500 border-cyan-400 text-black" : "hover:bg-white/10 text-cyan-400 border-card-border"
                                             )}
                                         >
                                             GIF
                                         </button>
                                         <button
                                             onClick={handleSendComment}
-                                            className="w-9 h-9 rounded-full bg-white hover:bg-gray-200 flex items-center justify-center text-black font-bold transition-transform active:scale-95 shadow-xl"
+                                            className="w-9 h-9 rounded-full bg-card hover:bg-gray-200 flex items-center justify-center text-black font-bold transition-transform active:scale-95 shadow-xl"
                                         >
                                             <Send className="w-4 h-4 -ml-0.5" />
                                         </button>
@@ -1240,7 +1240,7 @@ function CommentItem({
                             }}
                             className="relative cursor-pointer"
                         >
-                            <div className="w-8 h-8 rounded-full border border-white/10 relative overflow-hidden shrink-0">
+                            <div className="w-8 h-8 rounded-full border border-card-border relative overflow-hidden shrink-0">
                                 <Image src={comment.avatar || comment.userImg || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} fill className="object-cover" alt="Commenter" />
                             </div>
                             {isLikedLocal && (
@@ -1302,7 +1302,7 @@ function CommentItem({
                             </p>
 
                             {comment.media && (
-                                <div className="mt-2 rounded-2xl overflow-hidden border border-white/5 shadow-2xl max-w-[200px]">
+                                <div className="mt-2 rounded-2xl overflow-hidden border border-card-border shadow-2xl max-w-[200px]">
                                     <img src={comment.media.url} className="w-full h-auto object-cover" />
                                 </div>
                             )}
@@ -1356,7 +1356,7 @@ function CommentItem({
                             initial={{ opacity: 0, scale: 0.9, y: -10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                            className="absolute right-2 top-8 z-[70] min-w-[160px] bg-[#121316]/95 backdrop-blur-3xl border border-white/10 rounded-2xl p-1.5 shadow-2xl"
+                            className="absolute right-2 top-8 z-[70] min-w-[160px] bg-[#121316]/95 backdrop-blur-3xl border border-card-border rounded-2xl p-1.5 shadow-2xl"
                         >
                             {isCommentOwner && (
                                 <>
@@ -1400,7 +1400,7 @@ function CommentItem({
 
             {/* NESTED REPLIES */}
             {comment.replies && comment.replies.length > 0 && (
-                <div className="ml-6 flex flex-col gap-3 mt-1 pl-4 border-l border-white/5 relative">
+                <div className="ml-6 flex flex-col gap-3 mt-1 pl-4 border-l border-card-border relative">
                     {!showReplies ? (
                         <button
                             onClick={() => setShowReplies(true)}

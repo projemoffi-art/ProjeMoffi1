@@ -323,7 +323,7 @@ export function MoffiSidebar() {
                                   "w-2 h-24 transition-all duration-300 group-hover:scale-y-105 group-hover:w-3 shadow-[0_2px_10px_rgba(0,0,0,0.2)]",
                                   isLightTheme 
                                       ? "bg-zinc-800 border border-black/10" 
-                                      : "bg-zinc-200 border border-white/20",
+                                      : "bg-zinc-200 border border-card-border",
                                   edgePosition === 'left' ? "rounded-r-full" : "rounded-l-full"
                               )}
                           />
@@ -371,7 +371,7 @@ export function MoffiSidebar() {
                                     placeholder={t('navigation.search_placeholder')}
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full h-8 bg-transparent border-b border-white/5 rounded-none pl-1 pr-8 text-[11px] font-medium text-white placeholder:text-white/10 focus:outline-none focus:border-white/30 transition-all tracking-tight"
+                                    className="w-full h-8 bg-transparent border-b border-card-border rounded-none pl-1 pr-8 text-[11px] font-medium text-white placeholder:text-white/10 focus:outline-none focus:border-white/30 transition-all tracking-tight"
                                 />
                                 {searchTerm && (
                                     <button 
@@ -395,7 +395,7 @@ export function MoffiSidebar() {
                                 }}
                                 transition={{ type: "spring", damping: 25, stiffness: 200 }}
                                 className={cn(
-                                    "z-50 border border-white/10 rounded-[2rem] mb-4 flex flex-col items-center justify-center overflow-hidden relative shrink-0",
+                                    "z-50 border border-card-border rounded-[2rem] mb-4 flex flex-col items-center justify-center overflow-hidden relative shrink-0",
                                     activeMode === 'walk' ? "shadow-[0_0_40px_rgba(16,185,129,0.15)] border-emerald-500/30" : 
                                     activeMode === 'voice' ? "shadow-[0_0_40px_rgba(244,63,94,0.15)] border-rose-500/30" : 
                                     activeMode === 'sos' ? "shadow-[0_0_50_px_rgba(239,68,68,0.4)] border-red-500" :
@@ -439,7 +439,7 @@ export function MoffiSidebar() {
                                                     <ShieldAlert className="w-6 h-6 text-white" />
                                                 </div>
                                             </div>
-                                            <button onClick={() => { triggerHaptic(100); setActiveMode('none'); }} className="w-full py-2 bg-white text-black rounded-xl font-black text-[9px] uppercase tracking-widest">ALARMIP KAPAT</button>
+                                            <button onClick={() => { triggerHaptic(100); setActiveMode('none'); }} className="w-full py-2 bg-card text-black rounded-xl font-black text-[9px] uppercase tracking-widest">ALARMIP KAPAT</button>
                                         </motion.div>
                                     ) : activeMode === 'ai' ? (
                                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center w-full px-5">
@@ -489,7 +489,7 @@ export function MoffiSidebar() {
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2.5 w-full mt-1">
-                                                <button onClick={() => { triggerHaptic(10); setActiveMode('none'); }} className="flex-1 py-1.5 bg-white/5 text-white/60 rounded-lg font-black text-[8px] uppercase border border-white/5">İPTAL</button>
+                                                <button onClick={() => { triggerHaptic(10); setActiveMode('none'); }} className="flex-1 py-1.5 bg-white/5 text-white/60 rounded-lg font-black text-[8px] uppercase border border-card-border">İPTAL</button>
                                                 <button onClick={() => { triggerHaptic(40); setActiveMode('none'); alert('Sesli not kaydedildi! 🐾'); }} className="flex-1 py-1.5 bg-rose-500 text-white rounded-lg font-black text-[8px] uppercase shadow-lg shadow-rose-500/20">KAYDET</button>
                                             </div>
                                         </motion.div>
@@ -511,7 +511,7 @@ export function MoffiSidebar() {
                                                 </motion.div>
                                             </div>
                                             <div className="flex items-center gap-2 w-full mt-1">
-                                                <button onClick={() => { triggerHaptic(20); router.push('/walk/tracking'); setIsOpen(false); }} className="flex-1 py-2 bg-white/5 text-white/80 rounded-xl font-black text-[8px] uppercase tracking-wider border border-white/5 transition-colors hover:bg-white/10">TAKİP</button>
+                                                <button onClick={() => { triggerHaptic(20); router.push('/walk/tracking'); setIsOpen(false); }} className="flex-1 py-2 bg-white/5 text-white/80 rounded-xl font-black text-[8px] uppercase tracking-wider border border-card-border transition-colors hover:bg-white/10">TAKİP</button>
                                                 <button onClick={() => { triggerHaptic(50); stopWalk(); }} className="flex-1 py-2 bg-emerald-500 text-black rounded-xl font-black text-[8px] uppercase tracking-wider shadow-lg shadow-emerald-500/20">BİTİR</button>
                                             </div>
                                         </motion.div>
@@ -586,7 +586,7 @@ export function MoffiSidebar() {
                                                 className="flex flex-col items-center gap-1.5 group"
                                             >
                                                 {/* Button Container (Samsung Glass Style) */}
-                                                <div className="w-[50px] h-[50px] rounded-[1.2rem] bg-white/10 backdrop-blur-2xl border border-white/20 flex items-center justify-center shadow-xl relative overflow-hidden group-hover:bg-white/20 transition-colors">
+                                                <div className="w-[50px] h-[50px] rounded-[1.2rem] bg-white/10 backdrop-blur-2xl border border-card-border flex items-center justify-center shadow-xl relative overflow-hidden group-hover:bg-white/20 transition-colors">
                                                     {/* Inner Gradient Icon */}
                                                     <div className={cn(
                                                         "w-10 h-10 rounded-xl bg-gradient-to-tr flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-300",
@@ -617,14 +617,14 @@ export function MoffiSidebar() {
                                 )}
                             </div>
 
-                            <div className="mt-4 flex justify-center border-t border-white/5 pt-4">
-                                <button onClick={() => { triggerHaptic(20); setIsConfiguring(!isConfiguring); }} className={cn("w-10 h-10 rounded-full border border-white/10 flex items-center justify-center transition-all duration-500", isConfiguring ? "bg-white text-black rotate-180" : "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white")}><Settings className="w-5 h-5" /></button>
+                            <div className="mt-4 flex justify-center border-t border-card-border pt-4">
+                                <button onClick={() => { triggerHaptic(20); setIsConfiguring(!isConfiguring); }} className={cn("w-10 h-10 rounded-full border border-card-border flex items-center justify-center transition-all duration-500", isConfiguring ? "bg-card text-black rotate-180" : "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white")}><Settings className="w-5 h-5" /></button>
                             </div>
 
                             {/* CONFIGURATION CENTER */}
                             <AnimatePresence>
                                 {isConfiguring && (
-                                    <motion.div initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }} className="absolute inset-0 bg-[#080808]/98 z-50 flex flex-col p-5 border border-white/10 rounded-[2.5rem]">
+                                    <motion.div initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }} className="absolute inset-0 bg-[#080808]/98 z-50 flex flex-col p-5 border border-card-border rounded-[2.5rem]">
                                         {/* HEADER */}
                                         <div className="flex flex-col items-center mb-5 mt-2 shrink-0">
                                             <h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">{t('sidebar.panel_settings')}</h3>
@@ -639,7 +639,7 @@ export function MoffiSidebar() {
                                                     <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em]">Bulanıklık Derinliği</span>
                                                     <span className="text-[8px] font-black text-indigo-400">{glassBlur === 10 ? 'SAF' : glassBlur === 40 ? 'HAFİF' : 'YOĞUN'}</span>
                                                 </div>
-                                                <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.03] rounded-full border border-white/5 shrink-0">
+                                                <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.03] rounded-full border border-card-border shrink-0">
                                                     {[10, 40, 80].map((level) => (
                                                         <button 
                                                             key={level}
@@ -667,7 +667,7 @@ export function MoffiSidebar() {
                                                     <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em]">Tutacak Görünümü</span>
                                                     <span className="text-[8px] font-black text-amber-400">{handleOpacity < 0.3 ? 'HAYALET' : handleOpacity < 0.6 ? 'SOFT' : 'BELİRGİN'}</span>
                                                 </div>
-                                                <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.03] rounded-full border border-white/5 shrink-0">
+                                                <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.03] rounded-full border border-card-border shrink-0">
                                                     {[0.1, 0.4, 0.9].map((op) => (
                                                         <button 
                                                             key={op}
@@ -696,13 +696,13 @@ export function MoffiSidebar() {
                                                     className="flex-1 flex flex-col gap-3 group"
                                                 >
                                                     <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em]">Titreşim</span>
-                                                    <div className="h-4 w-full bg-white/[0.03] rounded-full relative overflow-hidden border border-white/5 p-0.5">
+                                                    <div className="h-4 w-full bg-white/[0.03] rounded-full relative overflow-hidden border border-card-border p-0.5">
                                                         <motion.div 
                                                             animate={{ x: hapticsEnabled ? "0%" : "-100%" }}
                                                             className="absolute inset-0 bg-gradient-to-r from-cyan-600 to-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.4)]"
                                                         />
                                                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                            <div className={cn("w-1 h-1 rounded-full transition-colors duration-500", hapticsEnabled ? "bg-white" : "bg-white/10")} />
+                                                            <div className={cn("w-1 h-1 rounded-full transition-colors duration-500", hapticsEnabled ? "bg-card" : "bg-white/10")} />
                                                         </div>
                                                     </div>
                                                 </button>
@@ -712,13 +712,13 @@ export function MoffiSidebar() {
                                                     className="flex-1 flex flex-col gap-3 group"
                                                 >
                                                     <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em]">Gizlilik</span>
-                                                    <div className="h-4 w-full bg-white/[0.03] rounded-full relative overflow-hidden border border-white/5 p-0.5">
+                                                    <div className="h-4 w-full bg-white/[0.03] rounded-full relative overflow-hidden border border-card-border p-0.5">
                                                         <motion.div 
                                                             animate={{ x: capsulePrivate ? "0%" : "-100%" }}
                                                             className="absolute inset-0 bg-gradient-to-r from-rose-600 to-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.4)]"
                                                         />
                                                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                            <div className={cn("w-1 h-1 rounded-full transition-colors duration-500", capsulePrivate ? "bg-white" : "bg-white/10")} />
+                                                            <div className={cn("w-1 h-1 rounded-full transition-colors duration-500", capsulePrivate ? "bg-card" : "bg-white/10")} />
                                                         </div>
                                                     </div>
                                                 </button>
@@ -730,7 +730,7 @@ export function MoffiSidebar() {
                                                     <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em]">Kenar Konumu</span>
                                                     <span className="text-[8px] font-black text-cyan-400">{edgePosition === 'right' ? 'SAĞ' : 'SOL'}</span>
                                                 </div>
-                                                <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.03] rounded-full border border-white/5 shrink-0">
+                                                <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.03] rounded-full border border-card-border shrink-0">
                                                     {['left', 'right'].map((pos) => (
                                                         <button 
                                                             key={pos}
@@ -743,7 +743,7 @@ export function MoffiSidebar() {
                                                             {edgePosition === pos && (
                                                                 <motion.div 
                                                                     layoutId="pos-active-indicator"
-                                                                    className="absolute inset-x-1 inset-y-1 bg-white/10 rounded-lg border border-white/20"
+                                                                    className="absolute inset-x-1 inset-y-1 bg-white/10 rounded-lg border border-card-border"
                                                                 />
                                                             )}
                                                         </button>
@@ -752,7 +752,7 @@ export function MoffiSidebar() {
                                             </div>
 
                                             {/* AI CONFIGURATION SECTION */}
-                                            <div className="pt-4 border-t border-white/5 flex flex-col gap-5">
+                                            <div className="pt-4 border-t border-card-border flex flex-col gap-5">
                                                 <div className="px-1 flex items-center justify-between">
                                                     <span className="text-[9px] font-black text-violet-400 uppercase tracking-[0.3em]">AI ASİSTAN AYARLARI</span>
                                                     <Sparkles className="w-3 h-3 text-violet-500/50" />
@@ -764,7 +764,7 @@ export function MoffiSidebar() {
                                                         <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em]">Asistan Kişiliği</span>
                                                         <span className="text-[8px] font-black text-violet-400 uppercase tracking-widest">{aiPersonality === 'casual' ? 'Samimi' : aiPersonality === 'professional' ? 'Ciddi' : 'Teknik'}</span>
                                                     </div>
-                                                    <div className="h-6 flex items-center gap-1 px-1 relative bg-white/[0.03] rounded-full border border-white/5 shrink-0">
+                                                    <div className="h-6 flex items-center gap-1 px-1 relative bg-white/[0.03] rounded-full border border-card-border shrink-0">
                                                         {[
                                                             { id: 'casual', label: 'SAMİMİ' },
                                                             { id: 'professional', label: 'CİDDİ' },
@@ -793,7 +793,7 @@ export function MoffiSidebar() {
                                                         <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em]">Yaratıcılık</span>
                                                         <span className="text-[8px] font-black text-violet-400 italic">%{Math.round(aiCreativity * 100)}</span>
                                                     </div>
-                                                    <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.03] rounded-full border border-white/5 overflow-hidden shrink-0">
+                                                    <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.03] rounded-full border border-card-border overflow-hidden shrink-0">
                                                         <div className="absolute inset-0 bg-violet-500/5" />
                                                         {[0.3, 0.7, 1.0].map((val) => (
                                                             <button 
@@ -822,7 +822,7 @@ export function MoffiSidebar() {
                                                         <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em]">Yanıt Derinliği</span>
                                                         <span className="text-[8px] font-black text-violet-400">{aiDetailLevel === 'short' ? 'ÖZ' : aiDetailLevel === 'medium' ? 'DENGELİ' : 'DETAYLI'}</span>
                                                     </div>
-                                                    <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.03] rounded-full border border-white/5 shrink-0">
+                                                    <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.03] rounded-full border border-card-border shrink-0">
                                                         {[
                                                             { id: 'short', label: 'ÖZ' },
                                                             { id: 'medium', label: 'DENGELİ' },
@@ -850,7 +850,7 @@ export function MoffiSidebar() {
                                             </div>
 
                                             {/* WIDGET KÜTÜPHANESİ */}
-                                            <div className="pt-4 border-t border-white/5 flex flex-col gap-4">
+                                            <div className="pt-4 border-t border-card-border flex flex-col gap-4">
                                                 <div className="flex flex-col items-center mb-2">
                                                     <h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">WIDGET KÜTÜPHANESİ</h3>
                                                     <div className="h-0.5 w-8 bg-cyan-500 mt-2 rounded-full" />
@@ -868,7 +868,7 @@ export function MoffiSidebar() {
                                                             }}
                                                             className={cn(
                                                                 "flex flex-col items-center gap-1.5 p-2 rounded-2xl transition-all relative", 
-                                                                activeActions.includes(w.id) ? "bg-white/10 border border-white/20 shadow-lg" : "opacity-30 grayscale scale-95"
+                                                                activeActions.includes(w.id) ? "bg-white/10 border border-card-border shadow-lg" : "opacity-30 grayscale scale-95"
                                                             )}
                                                         >
                                                             <div className={cn("w-[42px] h-[42px] rounded-xl bg-gradient-to-tr flex items-center justify-center shadow-lg", w.color)}>

@@ -89,7 +89,7 @@ export const OverlaySystem: React.FC<OverlaySystemProps> = ({
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.9, y: 20 }}
                             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                            className="bg-[#1C1C1E] border border-white/10 p-6 rounded-[2.5rem] w-full max-w-sm flex flex-col items-center shadow-2xl relative overflow-hidden"
+                            className="bg-[#1C1C1E] border border-card-border p-6 rounded-[2.5rem] w-full max-w-sm flex flex-col items-center shadow-2xl relative overflow-hidden"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <img src={qrModalPet.avatar} className="absolute inset-0 w-full h-full object-cover opacity-10 blur-xl pointer-events-none" />
@@ -102,7 +102,7 @@ export const OverlaySystem: React.FC<OverlaySystemProps> = ({
                                 <p className="text-sm text-secondary font-medium mb-6">Bu QR Kodu Moffi Künyesine yazdırın veya tasmaya yapıştırın.</p>
 
                                 <div 
-                                    className="bg-white p-4 rounded-3xl shadow-[0_0_30px_rgba(34,211,238,0.4)] border-4 border-cyan-400/50 mb-6 active:scale-95 transition-transform cursor-pointer" 
+                                    className="bg-card p-4 rounded-3xl shadow-[0_0_30px_rgba(34,211,238,0.4)] border-4 border-cyan-400/50 mb-6 active:scale-95 transition-transform cursor-pointer" 
                                     onClick={() => setIsFullScreenQR(true)}
                                 >
                                     <QRCodeSVG
@@ -115,7 +115,7 @@ export const OverlaySystem: React.FC<OverlaySystemProps> = ({
                                 </div>
 
                                 <div className="flex gap-2 w-full">
-                                    <button className="flex-1 bg-white text-black font-bold py-3 rounded-2xl flex items-center justify-center gap-2 text-xs" onClick={() => showToast("İndirme Başlatıldı", "QR Kimlik PDF formatında hazırlandı.", "info")}>
+                                    <button className="flex-1 bg-card text-black font-bold py-3 rounded-2xl flex items-center justify-center gap-2 text-xs" onClick={() => showToast("İndirme Başlatıldı", "QR Kimlik PDF formatında hazırlandı.", "info")}>
                                         <Download className="w-4 h-4" />
                                         PDF İndir
                                     </button>
@@ -147,7 +147,7 @@ export const OverlaySystem: React.FC<OverlaySystemProps> = ({
                             initial={{ scale: 0.8, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.8, opacity: 0 }}
-                            className="bg-white p-10 rounded-[4rem] shadow-[0_0_100px_rgba(34,211,238,0.3)] flex flex-col items-center gap-8"
+                            className="bg-card p-10 rounded-[4rem] shadow-[0_0_100px_rgba(34,211,238,0.3)] flex flex-col items-center gap-8"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <div className="text-center">
@@ -155,7 +155,7 @@ export const OverlaySystem: React.FC<OverlaySystemProps> = ({
                                 <p className="text-xs font-bold text-cyan-600 uppercase tracking-[0.4em] mt-1">Moffi Akıllı Kimlik</p>
                             </div>
 
-                            <div className="p-4 bg-white rounded-[2rem]">
+                            <div className="p-4 bg-card rounded-[2rem]">
                                 <QRCodeSVG
                                     value={`${window.location.origin}/id/${qrModalPet.id}`}
                                     size={300}
@@ -197,7 +197,7 @@ export const OverlaySystem: React.FC<OverlaySystemProps> = ({
                             onDragEnd={(_, info) => {
                                 if (info.offset.y > 100) setIsProfileMenuOpen(false);
                             }}
-                            className="w-full max-w-sm bg-[#0A0A0E]/60 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-8 pb-12 shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative"
+                            className="w-full max-w-sm bg-[#0A0A0E]/60 backdrop-blur-3xl border border-card-border rounded-[3rem] p-8 pb-12 shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <div 
@@ -229,8 +229,8 @@ export const OverlaySystem: React.FC<OverlaySystemProps> = ({
                                             "flex flex-col items-center justify-center p-4 rounded-[2rem] border transition-all active:scale-95 group relative overflow-hidden",
                                             tab.span,
                                             profileViewMode === tab.id 
-                                                ? "bg-white border-white shadow-[0_15px_40px_rgba(255,255,255,0.2)]" 
-                                                : "bg-white/5 border-white/10 backdrop-blur-md hover:bg-white/10"
+                                                ? "bg-card border-white shadow-[0_15px_40px_rgba(255,255,255,0.2)]" 
+                                                : "bg-white/5 border-card-border backdrop-blur-md hover:bg-white/10"
                                         )}
                                     >
                                         <div className={cn(

@@ -215,7 +215,7 @@ export function EditProfileModal({
                                     >
                                         <motion.div
                                             layout
-                                            className="w-4 h-4 rounded-full bg-white shadow-md"
+                                            className="w-4 h-4 rounded-full bg-card shadow-moffi-card"
                                             style={{ float: editAllowComments ? "right" : "left" }}
                                         />
                                     </button>

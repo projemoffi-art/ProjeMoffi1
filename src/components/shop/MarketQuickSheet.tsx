@@ -43,7 +43,7 @@ export function MarketQuickSheet({ isOpen, onClose, petName = "Dostun" }: Market
                         animate={{ y: 0 }}
                         exit={{ y: "100%" }}
                         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                        className="fixed bottom-0 inset-x-0 z-[3001] bg-[#0A0A0A] rounded-t-[3rem] border-t border-white/10 shadow-[0_-20px_50px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col max-h-[92vh]"
+                        className="fixed bottom-0 inset-x-0 z-[3001] bg-[#0A0A0A] rounded-t-[3rem] border-t border-card-border shadow-[0_-20px_50px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col max-h-[92vh]"
                     >
                         {/* Grab Handle */}
                         <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/10 rounded-full" />
@@ -55,7 +55,7 @@ export function MarketQuickSheet({ isOpen, onClose, petName = "Dostun" }: Market
                             </div>
                             <button 
                                 onClick={onClose}
-                                className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center border border-white/10 hover:bg-white/10 transition-all"
+                                className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center border border-card-border hover:bg-white/10 transition-all"
                             >
                                 <X className="w-5 h-5 text-white/50" />
                             </button>
@@ -68,7 +68,7 @@ export function MarketQuickSheet({ isOpen, onClose, petName = "Dostun" }: Market
                                 <div className="absolute -right-8 -top-8 w-32 h-32 bg-orange-500/10 blur-3xl rounded-full" />
                                 <div className="flex items-center justify-between relative z-10">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10">
+                                        <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-card-border">
                                             <Wallet className="w-6 h-6 text-orange-400" />
                                         </div>
                                         <div>
@@ -76,7 +76,7 @@ export function MarketQuickSheet({ isOpen, onClose, petName = "Dostun" }: Market
                                             <h4 className="text-2xl font-black text-white tracking-tight">1,250 <span className="text-xs text-white/40 uppercase font-black">PC</span></h4>
                                         </div>
                                     </div>
-                                    <button className="bg-white/10 hover:bg-white/20 p-3 rounded-xl transition-all active:scale-95 border border-white/10">
+                                    <button className="bg-white/10 hover:bg-white/20 p-3 rounded-xl transition-all active:scale-95 border border-card-border">
                                         <ArrowRight className="w-4 h-4 text-white" />
                                     </button>
                                 </div>
@@ -93,15 +93,15 @@ export function MarketQuickSheet({ isOpen, onClose, petName = "Dostun" }: Market
 
                                 <div className="flex gap-4 overflow-x-auto no-scrollbar pb-3 -mx-2 px-2">
                                     {deals.map((product) => (
-                                        <div key={product.id} className="min-w-[200px] bg-white/5 border border-white/10 rounded-[2rem] p-4 flex flex-col group active:scale-[0.98] transition-all">
-                                            <div className="relative aspect-square rounded-2xl overflow-hidden mb-4 border border-white/5">
+                                        <div key={product.id} className="min-w-[200px] bg-white/5 border border-card-border rounded-[2rem] p-4 flex flex-col group active:scale-[0.98] transition-all">
+                                            <div className="relative aspect-square rounded-2xl overflow-hidden mb-4 border border-card-border">
                                                 <img src={product.image} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
                                                 {product.tag && (
                                                     <div className="absolute top-2 left-2 bg-orange-500 text-white text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-tighter">
                                                         {product.tag}
                                                     </div>
                                                 )}
-                                                <button className="absolute top-2 right-2 w-7 h-7 bg-black/40 backdrop-blur-md rounded-lg flex items-center justify-center border border-white/10 text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button className="absolute top-2 right-2 w-7 h-7 bg-black/40 backdrop-blur-md rounded-lg flex items-center justify-center border border-card-border text-white opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <Heart className="w-3.5 h-3.5" />
                                                 </button>
                                             </div>
@@ -135,7 +135,7 @@ export function MarketQuickSheet({ isOpen, onClose, petName = "Dostun" }: Market
                                     <RefreshCw className="w-3.5 h-3.5" /> Hızlı Tekrar Sipariş
                                 </h4>
                                 
-                                <div className="bg-white/5 border border-white/10 rounded-[2rem] p-5 flex items-center justify-between hover:bg-white/[0.08] transition-all group cursor-pointer">
+                                <div className="bg-white/5 border border-card-border rounded-[2rem] p-5 flex items-center justify-between hover:bg-white/[0.08] transition-all group cursor-pointer">
                                     <div className="flex items-center gap-4">
                                         <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center p-2">
                                             <img src="https://images.unsplash.com/photo-1548676632-4467d1656e6d?q=80&w=150" className="w-full h-full object-contain" />
@@ -147,7 +147,7 @@ export function MarketQuickSheet({ isOpen, onClose, petName = "Dostun" }: Market
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="bg-white text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl group-hover:scale-105 transition-transform">
+                                    <div className="bg-card text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl group-hover:scale-105 transition-transform">
                                         Tekrarla
                                     </div>
                                 </div>
@@ -155,13 +155,13 @@ export function MarketQuickSheet({ isOpen, onClose, petName = "Dostun" }: Market
 
                             {/* CATEGORY QUICK LINKS */}
                             <div className="grid grid-cols-2 gap-4">
-                                <button className="bg-white/5 border border-white/10 rounded-[1.8rem] p-5 flex flex-col justify-between h-32 hover:bg-white/10 transition-all group">
+                                <button className="bg-white/5 border border-card-border rounded-[1.8rem] p-5 flex flex-col justify-between h-32 hover:bg-white/10 transition-all group">
                                     <div className="w-10 h-10 bg-cyan-500/10 text-cyan-400 rounded-xl flex items-center justify-center border border-cyan-500/20">
                                         <Tag className="w-5 h-5 transition-transform group-hover:rotate-12" />
                                     </div>
                                     <span className="text-sm font-black text-white uppercase italic leading-none">Kuponlarım</span>
                                 </button>
-                                <button className="bg-white/5 border border-white/10 rounded-[1.8rem] p-5 flex flex-col justify-between h-32 hover:bg-white/10 transition-all group">
+                                <button className="bg-white/5 border border-card-border rounded-[1.8rem] p-5 flex flex-col justify-between h-32 hover:bg-white/10 transition-all group">
                                     <div className="w-10 h-10 bg-pink-500/10 text-pink-400 rounded-xl flex items-center justify-center border border-pink-500/20">
                                         <Heart className="w-5 h-5 transition-transform group-hover:scale-125" />
                                     </div>

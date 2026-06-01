@@ -1,6 +1,6 @@
 export default function ShopPage() {
     return (
-        <main className="fixed inset-0 bg-white z-40 flex flex-col">
+        <main className="fixed inset-0 bg-card z-40 flex flex-col">
             <div className="flex-1 w-full h-full pt-0 pb-20">
                 <iframe
                     src="https://moffi.net"

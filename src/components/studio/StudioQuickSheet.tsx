@@ -51,7 +51,7 @@ export function StudioQuickSheet({ isOpen, onClose, petName = "Dostun" }: Studio
                         animate={{ y: 0 }}
                         exit={{ y: "100%" }}
                         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                        className="fixed bottom-0 inset-x-0 z-[3001] bg-[#0A0A0A] rounded-t-[3rem] border-t border-white/10 shadow-[0_-20px_50px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col max-h-[92vh]"
+                        className="fixed bottom-0 inset-x-0 z-[3001] bg-[#0A0A0A] rounded-t-[3rem] border-t border-card-border shadow-[0_-20px_50px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col max-h-[92vh]"
                     >
                         {/* Grab Handle */}
                         <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/10 rounded-full" />
@@ -63,7 +63,7 @@ export function StudioQuickSheet({ isOpen, onClose, petName = "Dostun" }: Studio
                             </div>
                             <button 
                                 onClick={onClose}
-                                className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center border border-white/10 hover:bg-white/10 transition-all"
+                                className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center border border-card-border hover:bg-white/10 transition-all"
                             >
                                 <X className="w-5 h-5 text-white/50" />
                             </button>
@@ -76,7 +76,7 @@ export function StudioQuickSheet({ isOpen, onClose, petName = "Dostun" }: Studio
                                 <div className="absolute -right-8 -top-8 w-32 h-32 bg-purple-500/10 blur-3xl rounded-full" />
                                 <div className="flex items-center justify-between relative z-10 mb-4">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10">
+                                        <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-card-border">
                                             <Palette className="w-6 h-6 text-purple-400" />
                                         </div>
                                         <div>
@@ -110,8 +110,8 @@ export function StudioQuickSheet({ isOpen, onClose, petName = "Dostun" }: Studio
 
                                 <div className="flex gap-4 overflow-x-auto no-scrollbar pb-3 -mx-2 px-2">
                                     {RECENT_DRAFTS.map((draft) => (
-                                        <div key={draft.id} className="min-w-[160px] bg-white/5 border border-white/10 rounded-[2rem] p-3 flex flex-col group active:scale-[0.98] transition-all">
-                                            <div className="relative aspect-square rounded-2xl overflow-hidden mb-3 border border-white/5">
+                                        <div key={draft.id} className="min-w-[160px] bg-white/5 border border-card-border rounded-[2rem] p-3 flex flex-col group active:scale-[0.98] transition-all">
+                                            <div className="relative aspect-square rounded-2xl overflow-hidden mb-3 border border-card-border">
                                                 <img src={draft.image} alt={draft.title} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
                                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                                     <ArrowRight className="w-6 h-6 text-white" />
@@ -124,9 +124,9 @@ export function StudioQuickSheet({ isOpen, onClose, petName = "Dostun" }: Studio
                                     
                                     <button 
                                         onClick={() => { router.push('/studio'); onClose(); }}
-                                        className="min-w-[160px] border-2 border-dashed border-white/10 rounded-[2rem] flex flex-col items-center justify-center gap-3 hover:border-purple-500/50 hover:bg-purple-500/5 transition-all text-white/20 hover:text-purple-400 group"
+                                        className="min-w-[160px] border-2 border-dashed border-card-border rounded-[2rem] flex flex-col items-center justify-center gap-3 hover:border-purple-500/50 hover:bg-purple-500/5 transition-all text-white/20 hover:text-purple-400 group"
                                     >
-                                        <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/5 group-hover:scale-110 transition-transform">
+                                        <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-card-border group-hover:scale-110 transition-transform">
                                             <Palette className="w-5 h-5" />
                                         </div>
                                         <span className="text-[10px] font-black uppercase tracking-widest">Yeni Taslak</span>
@@ -137,7 +137,7 @@ export function StudioQuickSheet({ isOpen, onClose, petName = "Dostun" }: Studio
                             <div className="grid grid-cols-2 gap-4">
                                 <button
                                     onClick={() => { router.push('/studio'); onClose(); }}
-                                    className="bg-white/5 border border-white/10 rounded-[2rem] p-5 text-left flex flex-col justify-between h-40 hover:bg-white/10 transition-all group"
+                                    className="bg-white/5 border border-card-border rounded-[2rem] p-5 text-left flex flex-col justify-between h-40 hover:bg-white/10 transition-all group"
                                 >
                                     <div className="w-12 h-12 bg-cyan-500/10 text-cyan-400 rounded-2xl flex items-center justify-center border border-cyan-500/20 group-hover:scale-110 transition-transform">
                                         <Box className="w-6 h-6" />
@@ -149,7 +149,7 @@ export function StudioQuickSheet({ isOpen, onClose, petName = "Dostun" }: Studio
                                 </button>
                                 <button
                                     onClick={() => { alert("Klasik koleksiyon çok yakında yeni arayüzle geri dönecek!"); onClose(); }}
-                                    className="bg-white/5 border border-white/10 rounded-[2rem] p-5 text-left flex flex-col justify-between h-40 hover:bg-white/10 opacity-50 cursor-not-allowed group"
+                                    className="bg-white/5 border border-card-border rounded-[2rem] p-5 text-left flex flex-col justify-between h-40 hover:bg-white/10 opacity-50 cursor-not-allowed group"
                                 >
                                     <div className="w-12 h-12 bg-pink-500/10 text-pink-400 rounded-2xl flex items-center justify-center border border-pink-500/20">
                                         <Shirt className="w-6 h-6" />

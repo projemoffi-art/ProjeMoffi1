@@ -56,7 +56,7 @@ function FlashChallengeModal({ event, onAccept, onDismiss }: {
                 animate={{ scale: 1, rotate: 0, y: 0 }}
                 exit={{ scale: 0.6, rotate: 8, y: 60 }}
                 transition={{ type: 'spring', damping: 14, stiffness: 220 }}
-                className={`w-full max-w-sm bg-gradient-to-br ${event.color} rounded-[2.5rem] p-6 border border-white/20 shadow-[0_30px_80px_rgba(0,0,0,0.6)] relative overflow-hidden`}
+                className={`w-full max-w-sm bg-gradient-to-br ${event.color} rounded-[2.5rem] p-6 border border-card-border shadow-[0_30px_80px_rgba(0,0,0,0.6)] relative overflow-hidden`}
             >
                 {/* Animated BG glow */}
                 <motion.div
@@ -137,7 +137,7 @@ function FlashChallengeModal({ event, onAccept, onDismiss }: {
                         whileTap={{ scale: 0.94 }}
                         whileHover={{ scale: 1.02 }}
                         onClick={onAccept}
-                        className="flex-1 bg-white text-black font-black py-3.5 rounded-2xl text-sm uppercase tracking-wider shadow-xl active:scale-95 transition-all"
+                        className="flex-1 bg-card text-black font-black py-3.5 rounded-2xl text-sm uppercase tracking-wider shadow-xl active:scale-95 transition-all"
                     >
                         {event.cta} →
                     </motion.button>
@@ -156,7 +156,7 @@ function FlashChallengeModal({ event, onAccept, onDismiss }: {
 // ─── EVENT TOAST CARD ─────────────────────────────────────────────────────────
 
 const URGENCY_STYLES = {
-    low:      { border: 'border-white/10', dot: 'bg-gray-400' },
+    low:      { border: 'border-card-border', dot: 'bg-gray-400' },
     medium:   { border: 'border-blue-500/30', dot: 'bg-blue-400' },
     high:     { border: 'border-orange-500/40', dot: 'bg-orange-400' },
     critical: { border: 'border-red-500/50', dot: 'bg-red-400' },

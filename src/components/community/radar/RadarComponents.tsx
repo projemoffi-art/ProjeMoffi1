@@ -105,14 +105,14 @@ export function AddLostPetModal({
                                 {lostPetPhotos.length > 0 ? (
                                     <div className="grid grid-cols-4 gap-3">
                                         {lostPetPhotos.map((photo, idx) => (
-                                            <div key={idx} className="aspect-square rounded-xl bg-white/5 border border-white/10 relative overflow-hidden group">
+                                            <div key={idx} className="aspect-square rounded-xl bg-white/5 border border-card-border relative overflow-hidden group">
                                                 <img src={photo.preview} className="w-full h-full object-cover" />
                                                 <button onClick={() => setLostPetPhotos((prev: any[]) => prev.filter((_, i) => i !== idx))} className="absolute top-1 right-1 w-5 h-5 bg-black/60 rounded-full flex items-center justify-center"><X className="w-3 h-3" /></button>
                                             </div>
                                         ))}
                                     </div>
                                 ) : (
-                                    <div onClick={() => sosInputRef.current?.click()} className="w-full py-8 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center text-gray-600 hover:border-red-500/30 transition-all cursor-pointer">
+                                    <div onClick={() => sosInputRef.current?.click()} className="w-full py-8 border-2 border-dashed border-card-border rounded-2xl flex flex-col items-center justify-center text-gray-600 hover:border-red-500/30 transition-all cursor-pointer">
                                         <Camera className="w-8 h-8 mb-2 opacity-30" />
                                         <p className="text-[11px] font-bold uppercase tracking-widest">Fotoğraf Ekle</p>
                                     </div>
@@ -168,14 +168,14 @@ export function LostPetDetailModal({
                     <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
                     
                     <div className="absolute top-0 inset-x-0 p-6 flex justify-between items-center z-10 bg-gradient-to-b from-black/80 to-transparent pt-12">
-                        <button onClick={onClose} className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center"><ChevronLeft className="w-6 h-6" /></button>
-                        <button onClick={onShare} className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center"><Share2 className="w-5 h-5" /></button>
+                        <button onClick={onClose} className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-card-border flex items-center justify-center"><ChevronLeft className="w-6 h-6" /></button>
+                        <button onClick={onShare} className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-card-border flex items-center justify-center"><Share2 className="w-5 h-5" /></button>
                     </div>
 
                     <div className="absolute bottom-6 left-6 right-6 z-10">
                         <div className="flex items-center gap-2 mb-2">
                             <span className="bg-red-600 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase shadow-[0_0_15px_rgba(220,38,38,0.5)]">KAYIP İLANI</span>
-                            <span className="bg-black/50 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold border border-white/10 flex items-center gap-1.5"><Clock className="w-3 h-3" /> {new Date(pet.created_at).toLocaleDateString('tr-TR')}</span>
+                            <span className="bg-black/50 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold border border-card-border flex items-center gap-1.5"><Clock className="w-3 h-3" /> {new Date(pet.created_at).toLocaleDateString('tr-TR')}</span>
                         </div>
                         <h1 className="text-4xl font-black tracking-tight">{pet.pet_name}</h1>
                         <p className="text-gray-300 text-lg font-medium">{pet.pet_breed || "Belirtilmedi"}</p>
@@ -185,7 +185,7 @@ export function LostPetDetailModal({
                 <div className="flex-1 bg-background overflow-y-auto no-scrollbar pb-32">
                     <div className="p-6 space-y-8 max-w-lg mx-auto">
                         <div className="flex gap-4">
-                            <div className="flex-1 bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col items-center gap-1.5">
+                            <div className="flex-1 bg-white/5 border border-card-border rounded-2xl p-4 flex flex-col items-center gap-1.5">
                                 <MapPin className="w-6 h-6 text-red-400" />
                                 <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Son Konumu</span>
                                 <span className="text-sm font-bold text-gray-200">{pet.last_location || "Bilinmiyor"}</span>
@@ -194,7 +194,7 @@ export function LostPetDetailModal({
 
                         <div className="space-y-4">
                             <h3 className="text-[11px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">İlan Detayları</h3>
-                            <div className="bg-white/5 border border-white/10 rounded-3xl p-6 relative overflow-hidden">
+                            <div className="bg-white/5 border border-card-border rounded-3xl p-6 relative overflow-hidden">
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 blur-3xl rounded-full" />
                                 <p className="text-gray-300 text-base leading-relaxed font-medium relative z-10">{pet.description || "Açıklama belirtilmemiş."}</p>
                             </div>
@@ -209,7 +209,7 @@ export function LostPetDetailModal({
 
                 <div className="fixed bottom-0 inset-x-0 p-6 bg-gradient-to-t from-black via-black to-transparent z-20 pb-10">
                     <div className="flex gap-4 max-w-lg mx-auto">
-                        <button onClick={onReportLocation} className="flex-[2] py-4 rounded-2xl bg-white text-black font-black text-base shadow-[0_15px_40px_rgba(255,255,255,0.1)] active:scale-95 transition-all flex items-center justify-center gap-2">
+                        <button onClick={onReportLocation} className="flex-[2] py-4 rounded-2xl bg-card text-black font-black text-base shadow-[0_15px_40px_rgba(255,255,255,0.1)] active:scale-95 transition-all flex items-center justify-center gap-2">
                             <MapPin className="w-5 h-5" /> Gördüm / Konum Bildir
                         </button>
                         <a href={`tel:${pet.phone || ''}`} className="flex-1 py-4 rounded-2xl bg-red-600 text-white font-black text-base shadow-[0_15px_40px_rgba(220,38,38,0.3)] active:scale-95 transition-all flex items-center justify-center">

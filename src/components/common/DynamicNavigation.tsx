@@ -28,7 +28,7 @@ export function DynamicNavigation() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const { user } = useAuth();
-    const { pets, updatePet } = usePet();
+    const { pets, updatePet, activePet } = usePet();
 
     // Overlay states — only for things that are genuinely overlays
     const [isActionHubOpen, setIsActionHubOpen] = useState(false);
@@ -44,10 +44,12 @@ export function DynamicNavigation() {
     const [sosActivePet, setSosActivePet] = useState<any>(null);
 
     useEffect(() => {
-        if (pets.length > 0 && !sosActivePet) {
+        if (activePet) {
+            setSosActivePet(activePet);
+        } else if (pets.length > 0 && !sosActivePet) {
             setSosActivePet(pets[0]);
         }
-    }, [pets]);
+    }, [activePet, pets]);
 
     useEffect(() => {
         const handleOpenActionHub = () => {
@@ -87,9 +89,14 @@ export function DynamicNavigation() {
             setIsActionHubOverlayOpen(true);
         };
 
-        const handleOpenSOS = () => {
+        const handleOpenSOS = (e: any) => {
             window.history.pushState({ modal: 'sos' }, "");
             setIsActionHubOverlayOpen(false);
+            if (e?.detail) {
+                setSosActivePet(e.detail);
+            } else if (activePet) {
+                setSosActivePet(activePet);
+            }
             setIsSOSOpen(true);
         };
 

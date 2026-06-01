@@ -198,7 +198,7 @@ export default function GoogleLiveMap({
                 <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-purple-500/10 blur-[100px] rounded-full" />
 
                 <div className="relative z-10 space-y-6">
-                    <div className="w-20 h-20 bg-white/5 backdrop-blur-xl rounded-[2rem] border border-white/10 flex items-center justify-center mx-auto shadow-2xl relative overflow-hidden">
+                    <div className="w-20 h-20 bg-white/5 backdrop-blur-xl rounded-[2rem] border border-card-border flex items-center justify-center mx-auto shadow-2xl relative overflow-hidden">
                         {isTracking && (
                             <div className="absolute inset-0 bg-indigo-500/20 animate-pulse" />
                         )}
@@ -276,7 +276,7 @@ export default function GoogleLiveMap({
                             key={mark.id}
                             position={{ lat: mark.lat, lng: mark.lng }}
                         >
-                            <div className="w-8 h-8 rounded-tr-none rounded-full bg-white border border-gray-200 shadow-md flex items-center justify-center text-lg transform -rotate-45">
+                            <div className="w-8 h-8 rounded-tr-none rounded-full bg-card border border-card-border shadow-moffi-card flex items-center justify-center text-lg transform -rotate-45">
                                 <div className="transform rotate-45">{mark.emoji}</div>
                             </div>
                         </AdvancedMarker>

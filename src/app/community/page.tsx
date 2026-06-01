@@ -590,6 +590,13 @@ export default function LegendaryLightDashboard() {
     const [nfcPaymentLocked, setNfcPaymentLocked] = useState(false);
     const [dailySpendLimit, setDailySpendLimit] = useState(250);
     const [lostPetMode, setLostPetMode] = useState(false);
+
+    useEffect(() => {
+        if (activePetObj) {
+            setLostPetMode(!!activePetObj.is_lost);
+        }
+    }, [activePetObj?.is_lost, activePetObj?.id]);
+
     const [matchIndex, setMatchIndex] = useState(0);
 
     // Yürüyüş canlı zamanlayıcı
@@ -733,7 +740,7 @@ export default function LegendaryLightDashboard() {
     }, [toastMsg]);
 
     return (
-        <div className="min-h-screen bg-[#FBFBFB] text-gray-900 font-sans selection:bg-green-500/30 overflow-x-hidden pb-32">
+        <div className="min-h-screen bg-background text-foreground font-sans selection:bg-green-500/30 overflow-x-hidden pb-32">
             
             {/* Top Floating Toast Notification */}
             <AnimatePresence>
@@ -772,28 +779,35 @@ export default function LegendaryLightDashboard() {
                 
                 {/* 1. Header */}
                 <header className="flex justify-between items-center mb-6">
-                    <div className="flex items-center gap-2">
-                        <div className="w-9 h-9 rounded-2xl bg-gray-900 flex items-center justify-center shadow-lg shadow-gray-900/10">
-                            <Bone className="w-5 h-5 text-white" />
+                    <motion.div 
+                        layoutId="collar-card-container"
+                        onClick={() => setExpandedPanel('collar')}
+                        className="flex items-center gap-2.5 cursor-pointer group"
+                    >
+                        <div className="relative">
+                            <div className="w-9 h-9 rounded-2xl bg-gray-900 flex items-center justify-center shadow-lg shadow-gray-900/10 text-green-400">
+                                <Radio className="w-5 h-5" />
+                            </div>
+                            {pet.collar.connected && (
+                                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white animate-pulse" />
+                            )}
                         </div>
-                        <span className="text-2xl font-black tracking-tighter">moffi</span>
-                    </div>
+                        <div className="flex flex-col text-left">
+                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest leading-none">TASMA DURUMU</span>
+                            <span className="text-[10px] font-bold text-gray-700 mt-0.5 flex items-center gap-1.5 leading-none">
+                                {pet.collar.connected ? `Bağlı (%${pet.collar.battery})` : 'Bağlantı Yok'}
+                            </span>
+                        </div>
+                    </motion.div>
                     
                     <div className="flex items-center gap-3">
                         <motion.button 
                             whileTap={{ scale: 0.9 }}
-                            onClick={() => {
-                                const nextMode = !lostPetMode;
-                                setLostPetMode(nextMode);
-                                setToastMsg(nextMode 
-                                    ? `🚨 Kayıp Modu Aktif! ${pet.name} için acil durum sinyali başlatıldı.` 
-                                    : `🔕 Kayıp Modu Kapatıldı. ${pet.name} güvende.`
-                                );
-                            }}
+                            onClick={() => window.dispatchEvent(new CustomEvent('open-sos-center'))}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full shadow-sm relative overflow-hidden group cursor-pointer border ${
                                 lostPetMode 
-                                    ? 'bg-red-650 border-red-500 text-white animate-pulse' 
-                                    : 'bg-red-50 border-red-200/60 text-red-600'
+                                    ? 'bg-red-600 border-red-500 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]' 
+                                    : 'bg-red-50 border-red-200/60 text-red-600 hover:bg-red-100/50'
                              }`}
                         >
                             <span className="absolute inset-0 bg-red-500/10 animate-pulse rounded-full" />
@@ -819,9 +833,7 @@ export default function LegendaryLightDashboard() {
 
                 {/* 2. Hikayeler (Stories) - Dynamic from useStories */}
                 <section className="mb-6">
-                    <div className="flex justify-between items-end mb-3 px-1">
-                        <h3 className="text-[15px] font-bold text-gray-800 tracking-tight">Hikayeler</h3>
-                    </div>
+                    {/* Hikayeler başlığı kaldırıldı */}
                     <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 pt-1 -mx-5 px-5 items-center">
                         {storyGroups.map((group, index) => {
                             let customType: 'normal' | 'sos' | 'ai' | 'featured' = 'normal';
@@ -891,7 +903,7 @@ export default function LegendaryLightDashboard() {
                             animate={{ opacity: 1, scale: 1 }}
                             className={`px-3 py-1 rounded-full border text-[9px] font-black tracking-widest uppercase ${
                                 lostPetMode 
-                                    ? "text-white bg-red-650 border-red-500 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.4)]" 
+                                    ? "text-white bg-red-600 border-red-500 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]" 
                                     : pet.statusColor
                             }`}
                         >
@@ -1288,7 +1300,7 @@ export default function LegendaryLightDashboard() {
                                 <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center">
                                     <MapPin className="w-5 h-5 text-red-500" />
                                 </div>
-                                <span className="text-[9px] font-black text-red-650 bg-red-50 px-2 py-0.5 rounded-full uppercase tracking-wider">Kayıp</span>
+                                <span className="text-[9px] font-black text-red-600 bg-red-50 px-2 py-0.5 rounded-full uppercase tracking-wider">Kayıp</span>
                             </div>
                             <div>
                                 <h4 className="text-[12px] font-black text-gray-800 leading-tight">Çevrede Kayıp</h4>
@@ -1354,53 +1366,7 @@ export default function LegendaryLightDashboard() {
 
 
 
-                {/* 10. Moffi Link™ Smart Collar Card */}
-                <motion.div 
-                    layoutId="collar-card-container"
-                    onClick={() => setExpandedPanel('collar')}
-                    className="bg-white border border-gray-100 rounded-[30px] p-4 shadow-[0_10px_35px_rgba(0,0,0,0.03)] mb-6 flex flex-col gap-3.5 relative overflow-hidden cursor-pointer group hover:scale-[1.01] transition-transform duration-300"
-                >
-                    <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2.5">
-                            <div className="relative">
-                                <div className="w-10 h-10 rounded-2xl bg-green-50 flex items-center justify-center text-green-600 border border-green-100/30">
-                                    <Radio className="w-5 h-5" />
-                                </div>
-                                {pet.collar.connected && (
-                                    <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-pulse" />
-                                )}
-                            </div>
-                            <div>
-                                <div className="flex items-center gap-1.5">
-                                    <span className="text-[9px] font-black tracking-widest text-gray-400 uppercase">DONANIM DESTEĞİ</span>
-                                    <span className="text-[9px] font-black text-green-600 uppercase tracking-wider">moffi link™ v2</span>
-                                </div>
-                                <h4 className="text-xs font-bold text-gray-700 mt-0.5 flex items-center gap-1.5">
-                                    Akıllı Tasma Durumu 
-                                    <span className={`w-1.5 h-1.5 rounded-full ${pet.collar.connected ? 'bg-green-500' : 'bg-red-400'}`} />
-                                </h4>
-                            </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-3 shrink-0">
-                            {pet.collar.connected ? (
-                                <>
-                                    <div className="flex items-center gap-1 text-[10px] font-bold text-gray-500 bg-gray-50 border border-gray-100 px-2 py-1 rounded-lg">
-                                        <Battery className="w-3.5 h-3.5 text-green-600" />
-                                        <span>%{pet.collar.battery}</span>
-                                    </div>
-                                    <span className="text-[9.5px] font-bold text-gray-400 group-hover:text-green-700 transition-colors flex items-center gap-1">
-                                        Yönet <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                                    </span>
-                                </>
-                            ) : (
-                                <div className="text-[10px] font-bold text-red-500 bg-red-50 border border-red-100 px-2 py-1 rounded-lg">
-                                    Bağlantı Kesildi
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </motion.div>
+                {/* Eski Akıllı Tasma Durumu kartı buradan kaldırıldı (header alanına taşındı) */}
 
 
                 {/* 12. Dynamic Shop Live Offer */}
@@ -1527,6 +1493,7 @@ export default function LegendaryLightDashboard() {
                                         <span className="text-sm font-black text-gray-900 tracking-tight">Moffi Hesabım</span>
                                         <motion.button 
                                             whileTap={{ scale: 0.95 }}
+                                            onClick={() => window.dispatchEvent(new CustomEvent('open-moffi-settings'))}
                                             className="p-2 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-xl cursor-pointer transition-colors"
                                         >
                                             <Sliders className="w-4.5 h-4.5" />
@@ -2259,21 +2226,26 @@ export default function LegendaryLightDashboard() {
                                                         <div className="flex justify-between items-center">
                                                             <div className="flex items-center gap-1.5 font-black text-[9.5px]">
                                                                 <span>🚨</span>
-                                                                <span className={lostPetMode ? 'text-red-750' : 'text-gray-600'}>ACİL SOS / KAYIP MODU</span>
+                                                                <span className={lostPetMode ? 'text-red-700' : 'text-gray-600'}>ACİL SOS / KAYIP MODU</span>
                                                             </div>
                                                             <button 
-                                                                onClick={() => {
-                                                                    const nextMode = !lostPetMode;
-                                                                    setLostPetMode(nextMode);
-                                                                    setToastMsg(nextMode 
-                                                                        ? `🚨 Kayıp Modu Aktif! ${pet.name} için acil durum sinyali başlatıldı.` 
-                                                                        : `🔕 Kayıp Modu Kapatıldı. ${pet.name} güvende.`
-                                                                    );
+                                                                onClick={async () => {
+                                                                    if (lostPetMode) {
+                                                                        updatePet(pet.id, { is_lost: false });
+                                                                        try {
+                                                                            await apiService.togglePetSosStatus(pet.id, 'safe');
+                                                                        } catch (e) {
+                                                                            console.error(e);
+                                                                        }
+                                                                        setToastMsg(`🔕 Kayıp Modu Kapatıldı. ${pet.name} güvende.`);
+                                                                    } else {
+                                                                        window.dispatchEvent(new CustomEvent('open-sos-center', { detail: pet }));
+                                                                    }
                                                                 }}
                                                                 className={`text-[9px] font-black px-2.5 py-1.5 rounded-xl cursor-pointer transition-all border ${
                                                                     lostPetMode 
                                                                         ? 'bg-red-600 text-white border-red-700 shadow-sm' 
-                                                                        : 'bg-white text-red-650 border-red-200 hover:bg-red-50'
+                                                                        : 'bg-white text-red-600 border-red-200 hover:bg-red-50'
                                                                 }`}
                                                             >
                                                                 {lostPetMode ? "Kayıp Modunu Kapat" : "Kayıp Modunu Aç"}
@@ -2307,8 +2279,8 @@ export default function LegendaryLightDashboard() {
                                                             onClick={() => setToastMsg("🚨 Acil Durum Sinyali: Tasma çaldırılıyor!")}
                                                             className="flex flex-col items-center justify-center p-2.5 bg-red-50 hover:bg-red-100/85 border border-red-100 rounded-xl transition-all cursor-pointer text-center gap-1"
                                                         >
-                                                            <AlertTriangle className="w-4 h-4 text-red-650" />
-                                                            <span className="text-[8.5px] font-black text-red-650">Tasmayı Çaldır</span>
+                                                            <AlertTriangle className="w-4 h-4 text-red-600" />
+                                                            <span className="text-[8.5px] font-black text-red-600">Tasmayı Çaldır</span>
                                                         </button>
                                                     </div>
                                                 </div>
@@ -3045,7 +3017,7 @@ export default function LegendaryLightDashboard() {
                                             {/* 9. Secure Logout Button */}
                                             <button 
                                                 onClick={() => setExpandedPanel(null)}
-                                                className="w-full py-4 rounded-2.5xl bg-red-50 hover:bg-red-100 text-red-650 text-xs font-black tracking-wider uppercase border border-red-100/60 cursor-pointer transition-colors text-center shadow-sm"
+                                                className="w-full py-4 rounded-2.5xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-black tracking-wider uppercase border border-red-100/60 cursor-pointer transition-colors text-center shadow-sm"
                                             >
                                                 Güvenli Çıkış Yap
                                             </button>

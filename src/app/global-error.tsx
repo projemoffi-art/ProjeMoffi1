@@ -1,26 +1,30 @@
 "use client";
 
+import React from 'react';
+
 export default function GlobalError({
-    error,
-    reset,
+  error,
+  reset,
 }: {
-    error: Error & { digest?: string };
-    reset: () => void;
+  error: Error & { digest?: string }
+  reset: () => void
 }) {
-    return (
-        <html>
-            <body style={{ margin: 0, background: '#050508', color: '#fff', fontFamily: 'sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-                <div style={{ textAlign: 'center', padding: '40px' }}>
-                    <h2 style={{ fontSize: '20px', marginBottom: '12px' }}>Bir şeyler ters gitti</h2>
-                    <p style={{ color: '#666', marginBottom: '24px', fontSize: '14px' }}>{error?.message || 'Beklenmeyen bir hata oluştu.'}</p>
-                    <button
-                        onClick={() => reset()}
-                        style={{ background: '#fff', color: '#000', border: 'none', padding: '12px 32px', borderRadius: '12px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}
-                    >
-                        Yeniden Dene
-                    </button>
-                </div>
-            </body>
-        </html>
-    );
+  return (
+    <html lang="en" className="notranslate" translate="no">
+      <body className="bg-background text-foreground font-sans antialiased">
+        <div className="min-h-screen flex items-center justify-center p-6 bg-black">
+          <div className="max-w-md w-full bg-[#1C1C1E] border border-white/5 rounded-[2rem] p-8 text-center shadow-2xl">
+            <h2 className="text-2xl font-black text-red-500 mb-4">Bir şeyler ters gitti!</h2>
+            <p className="text-gray-400 text-sm mb-8">Kritik bir hata oluştu. Lütfen sayfayı yenilemeyi deneyin.</p>
+            <button
+              onClick={() => reset()}
+              className="w-full bg-[#0A84FF] text-white font-bold py-4 rounded-2xl active:scale-95 transition-transform"
+            >
+              Yeniden Dene
+            </button>
+          </div>
+        </div>
+      </body>
+    </html>
+  )
 }

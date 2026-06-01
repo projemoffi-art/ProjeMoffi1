@@ -2,12 +2,18 @@
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { AlertTriangle, Car, Skull, AlertOctagon, Footprints, X } from "lucide-react";
+import { AlertTriangle, Car, Skull, AlertOctagon, Footprints, X, Sun, Moon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "@/context/ThemeContext";
 
 export function FloatingControls() {
     const pathname = usePathname();
     const [isDangerOpen, setIsDangerOpen] = useState(false);
+    const { theme, setTheme } = useTheme();
+
+    const toggleTheme = () => {
+        setTheme(theme === 'dark' ? 'light' : 'dark');
+    };
 
     // Show Danger Button ONLY on /walk... pages (Disabled for premium cleanup as per request)
     const showDanger = false;
@@ -60,7 +66,7 @@ export function FloatingControls() {
                                 initial={{ opacity: 0, x: 10, scale: 0.9 }}
                                 animate={{ opacity: 1, x: 0, scale: 1 }}
                                 exit={{ opacity: 0, x: 10, scale: 0.9 }}
-                                className="absolute top-0 right-full mr-3 bg-black/80 backdrop-blur-xl p-2 rounded-2xl border border-white/10 shadow-2xl flex flex-col gap-2"
+                                className="absolute top-0 right-full mr-3 bg-black/80 backdrop-blur-xl p-2 rounded-2xl border border-card-border shadow-2xl flex flex-col gap-2"
                             >
                                 {DANGER_TYPES.map(type => (
                                     <button
@@ -82,6 +88,20 @@ export function FloatingControls() {
 
     return (
         <div className={`fixed bottom-32 right-6 z-[100] flex flex-col items-center gap-3 transition-all duration-300`}>
+            {/* Quick Theme Toggle Button */}
+            <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={toggleTheme}
+                className="w-11 h-11 rounded-full flex items-center justify-center shadow-lg border border-card-border bg-glass backdrop-blur-md text-foreground transition-all duration-300 pointer-events-auto cursor-pointer"
+                title={theme === 'dark' ? 'Gündüz Moduna Geç' : 'Gece Moduna Geç'}
+            >
+                {theme === 'dark' ? (
+                    <Sun className="w-5 h-5 text-amber-400 fill-amber-400" />
+                ) : (
+                    <Moon className="w-5 h-5 text-indigo-400 fill-indigo-400/20" />
+                )}
+            </motion.button>
 
             {/* VET PAGE: Global is enough now */}
 

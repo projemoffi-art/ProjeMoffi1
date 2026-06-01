@@ -200,7 +200,7 @@ function WalkSummaryContent() {
 
                     <motion.div
                         whileHover={{ scale: 1.05 }}
-                        className="relative w-48 h-48 rounded-full border-4 border-white dark:border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.1)] dark:shadow-[0_0_60px_rgba(255,255,255,0.05)] overflow-hidden bg-gray-100"
+                        className="relative w-48 h-48 rounded-full border-4 border-white dark:border-card-border shadow-[0_20px_60px_rgba(0,0,0,0.1)] dark:shadow-[0_0_60px_rgba(255,255,255,0.05)] overflow-hidden bg-gray-100"
                     >
                         <img
                             src={currentUser.avatar || "https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=400&auto=format&fit=crop"}
@@ -209,7 +209,7 @@ function WalkSummaryContent() {
                         />
                         {/* Glossy Overlay & Depth */}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-white/10 pointer-events-none" />
-                        <div className="absolute inset-0 border-[6px] border-white/10 rounded-full pointer-events-none" />
+                        <div className="absolute inset-0 border-[6px] border-card-border rounded-full pointer-events-none" />
                     </motion.div>
 
                     {/* MOOD CARD - MINI & MODERN (Apple Glare Style) */}
@@ -219,7 +219,7 @@ function WalkSummaryContent() {
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             transition={{ delay: 0.5, type: "spring" }}
                             className={cn(
-                                "bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl px-2 py-2 pr-5 rounded-full shadow-2xl flex items-center gap-2.5 border border-white/40 dark:border-white/5",
+                                "bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl px-2 py-2 pr-5 rounded-full shadow-2xl flex items-center gap-2.5 border border-white/40 dark:border-card-border",
                                 moodStyle.color // specific shadow
                             )}
                         >
@@ -242,7 +242,7 @@ function WalkSummaryContent() {
                 <div className="w-full max-w-[90%] mb-10 z-10">
                     <motion.div
                         transition={{ delay: 0.5 }}
-                        className="bg-white/60 dark:bg-[#1E293B]/60 backdrop-blur-3xl rounded-[3rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-white/50 dark:border-white/5 relative overflow-hidden group"
+                        className="bg-white/60 dark:bg-[#1E293B]/60 backdrop-blur-3xl rounded-[3rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-white/50 dark:border-card-border relative overflow-hidden group"
                     >
                         {/* Shimmer Effect */}
                         <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
@@ -253,7 +253,7 @@ function WalkSummaryContent() {
                                 <div className="p-3 bg-emerald-100/50 dark:bg-emerald-900/30 rounded-full mb-1 shadow-sm">
                                     <Footprints className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                                 </div>
-                                <span className="text-3xl font-black text-gray-800 dark:text-white tracking-tighter drop-shadow-sm">{stats.steps}</span>
+                                <span className="text-3xl font-black text-foreground dark:text-white tracking-tighter drop-shadow-sm">{stats.steps}</span>
                                 <span className="text-[10px] font-bold text-gray-400/80 uppercase tracking-widest">Adım</span>
                             </div>
 
@@ -262,7 +262,7 @@ function WalkSummaryContent() {
                                 <div className="p-3 bg-blue-100/50 dark:bg-blue-900/30 rounded-full mb-1 shadow-sm">
                                     <Timer className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                                 </div>
-                                <span className="text-3xl font-black text-gray-800 dark:text-white tracking-tighter leading-none flex items-baseline drop-shadow-sm">
+                                <span className="text-3xl font-black text-foreground dark:text-white tracking-tighter leading-none flex items-baseline drop-shadow-sm">
                                     {stats.time}<span className="text-sm font-bold text-gray-400/80 ml-0.5">dk</span>
                                 </span>
                                 <span className="text-[10px] font-bold text-gray-400/80 uppercase tracking-widest">Süre</span>
@@ -274,7 +274,7 @@ function WalkSummaryContent() {
                                     <Zap className="w-6 h-6 text-orange-600 dark:text-orange-400" />
                                 </div>
                                 <div className="flex flex-col items-center leading-none">
-                                    <span className="text-3xl font-black text-gray-800 dark:text-white tracking-tighter drop-shadow-sm">{stats.km}</span>
+                                    <span className="text-3xl font-black text-foreground dark:text-white tracking-tighter drop-shadow-sm">{stats.km}</span>
                                     <span className="text-[10px] font-bold text-gray-400/80 uppercase tracking-widest mt-1">KM</span>
                                 </div>
                             </div>
@@ -293,13 +293,13 @@ function WalkSummaryContent() {
                     <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98, y: 4 }}
-                        className="group relative w-full h-16 bg-gradient-to-br from-[#2D3342] to-[#0F1218] rounded-[2rem] border border-white/10 shadow-[0_8px_0_#0B0D11,0_20px_40px_rgba(0,0,0,0.4)] active:shadow-none active:translate-y-2 transition-all flex items-center justify-center gap-3 overflow-hidden"
+                        className="group relative w-full h-16 bg-gradient-to-br from-[#2D3342] to-[#0F1218] rounded-[2rem] border border-card-border shadow-[0_8px_0_#0B0D11,0_20px_40px_rgba(0,0,0,0.4)] active:shadow-none active:translate-y-2 transition-all flex items-center justify-center gap-3 overflow-hidden"
                     >
                         {/* Shimmer / Ripple Hint */}
                         <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
 
                         {/* Glowing Icon Frame */}
-                        <div className="relative w-10 h-10 rounded-full bg-gradient-to-br from-white/10 to-transparent border border-white/20 flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.15)] group-hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] transition-shadow duration-500">
+                        <div className="relative w-10 h-10 rounded-full bg-gradient-to-br from-white/10 to-transparent border border-card-border flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.15)] group-hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] transition-shadow duration-500">
                             <div className="absolute inset-0 rounded-full bg-white/20 blur-md opacity-50 group-hover:opacity-100 transition-opacity" />
                             <Play className="relative z-10 w-5 h-5 text-white fill-white ml-0.5" />
                         </div>
@@ -329,12 +329,12 @@ function WalkSummaryContent() {
                         <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
-                            className="flex-1 h-12 bg-white dark:bg-[#1E2B3A] rounded-full border border-gray-100 dark:border-white/10 shadow-[0_8px_20px_rgba(37,211,102,0.15)] hover:shadow-[0_12px_25px_rgba(37,211,102,0.25)] flex items-center justify-center gap-2 transition-all group"
+                            className="flex-1 h-12 bg-card dark:bg-[#1E2B3A] rounded-full border border-card-border dark:border-card-border shadow-[0_8px_20px_rgba(37,211,102,0.15)] hover:shadow-[0_12px_25px_rgba(37,211,102,0.25)] flex items-center justify-center gap-2 transition-all group"
                         >
                             <div className="w-8 h-8 rounded-full bg-[#25D366]/10 flex items-center justify-center group-hover:bg-[#25D366] transition-colors duration-300">
                                 <MessageCircle className="w-4 h-4 text-[#25D366] group-hover:text-white transition-colors duration-300 fill-current" />
                             </div>
-                            <span className="text-sm font-bold text-gray-700 dark:text-white group-hover:text-[#25D366] dark:group-hover:text-[#25D366] transition-colors">WhatsApp</span>
+                            <span className="text-sm font-bold text-foreground dark:text-white group-hover:text-[#25D366] dark:group-hover:text-[#25D366] transition-colors">WhatsApp</span>
                         </motion.button>
                     </div>
 

@@ -172,7 +172,7 @@ export function EcosystemPortal({ isOpen, onClose }: EcosystemPortalProps) {
                         </div>
 
                         {/* 4. FOOTER INFO */}
-                        <div className="pt-12 border-t border-white/5 text-center">
+                        <div className="pt-12 border-t border-card-border text-center">
                             <p className="text-[9px] font-bold text-gray-600 uppercase tracking-[0.4em] leading-relaxed">
                                 Moffi Ecosystem © 2024<br/>
                                 Global Verified Node: #2847-AX (İSTANBUL/KADIKÖY)

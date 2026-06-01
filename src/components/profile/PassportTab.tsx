@@ -26,7 +26,7 @@ interface PassportTabProps {
 }
 
 export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }: PassportTabProps) {
-    const { activePet, isLoading: isPetLoading } = usePet();
+    const { activePet, isLoading: isPetLoading, updatePet } = usePet();
     const currentPet = propPet || activePet;
     const { schedule, isLoading } = useVaccineSchedule(currentPet?.id || 'pet-1');
     const [isHovered, setIsHovered] = useState(false);
@@ -91,7 +91,7 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                     ref={cardRef}
                     whileHover={{ rotateY: 2, rotateX: -2, scale: 1.02 }}
                     transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                    className="bg-gradient-to-br from-[#1C1C1E] via-[#0A0A0E] to-[#1C1C1E] rounded-[2.5rem] sm:rounded-[3.5rem] p-6 sm:p-10 border border-white/20 shadow-[0_50px_100px_rgba(0,0,0,0.6)] relative overflow-hidden flex flex-col min-h-[480px] sm:min-h-[520px]"
+                    className="bg-gradient-to-br from-[#1C1C1E] via-[#0A0A0E] to-[#1C1C1E] rounded-[2.5rem] sm:rounded-[3.5rem] p-6 sm:p-10 border border-card-border shadow-[0_50px_100px_rgba(0,0,0,0.6)] relative overflow-hidden flex flex-col min-h-[480px] sm:min-h-[520px]"
                 >
                     {/* Apple Style Glass Header */}
                     <div className="absolute top-0 left-0 right-0 h-20 sm:h-24 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
@@ -104,7 +104,7 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
 
                     {/* Travel Readiness Badge */}
                     <div className="absolute top-6 sm:top-8 left-1/2 -translate-x-1/2 z-30">
-                        <div className="flex items-center gap-2 bg-black/40 backdrop-blur-2xl px-4 sm:px-5 py-1.5 sm:py-2 rounded-full border border-white/10 shadow-2xl whitespace-nowrap">
+                        <div className="flex items-center gap-2 bg-black/40 backdrop-blur-2xl px-4 sm:px-5 py-1.5 sm:py-2 rounded-full border border-card-border shadow-2xl whitespace-nowrap">
                             <Plane className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-400" />
                             <span className="text-[9px] sm:text-[10px] font-black text-white uppercase tracking-[0.2em]">Seyahate Uygun (AB)</span>
                         </div>
@@ -129,7 +129,7 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                             <div className="text-left ml-2 sm:ml-4">
                                 <p className="text-[9px] sm:text-[11px] font-black text-emerald-400 uppercase tracking-[0.3em] sm:tracking-[0.4em] mb-1">Moffi Passport</p>
                                 <h1 className="text-4xl sm:text-6xl font-black text-white tracking-tighter leading-none italic uppercase">{petData.name}</h1>
-                                <div className="mt-2 sm:mt-4 flex items-center gap-1.5 sm:gap-2 bg-white/5 px-2.5 sm:px-3 py-1 rounded-lg w-fit border border-white/5">
+                                <div className="mt-2 sm:mt-4 flex items-center gap-1.5 sm:gap-2 bg-white/5 px-2.5 sm:px-3 py-1 rounded-lg w-fit border border-card-border">
                                     <Fingerprint className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white/40" />
                                     <span className="text-[8px] sm:text-[10px] font-black text-white/40 uppercase tracking-widest">Digital Verified</span>
                                 </div>
@@ -138,7 +138,7 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                         <div className="flex flex-row sm:flex-col gap-3 items-center sm:items-end w-full sm:w-auto">
                             <div 
                                 onClick={() => setIsQRExpanded(true)}
-                                className="bg-white p-2 sm:p-3 rounded-2xl sm:rounded-[2rem] shadow-[0_20px_40px_rgba(255,255,255,0.1)] hover:scale-110 active:scale-95 transition-all cursor-pointer relative overflow-hidden group/qr"
+                                className="bg-card p-2 sm:p-3 rounded-2xl sm:rounded-[2rem] shadow-[0_20px_40px_rgba(255,255,255,0.1)] hover:scale-110 active:scale-95 transition-all cursor-pointer relative overflow-hidden group/qr"
                             >
                                 <div className="absolute inset-0 bg-cyan-500/10 opacity-0 group-hover/qr:opacity-100 transition-opacity" />
                                 <QRCodeSVG value={`moffi://id/${petData.id}`} size={64} fgColor="#000000" bgColor="#FFFFFF" level="H" />
@@ -146,7 +146,7 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                             {onEdit && !isPublic && (
                                 <button 
                                     onClick={onEdit}
-                                    className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10 text-white hover:bg-white/20 transition-all active:scale-90 shadow-xl ml-auto sm:ml-0"
+                                    className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-card-border text-white hover:bg-white/20 transition-all active:scale-90 shadow-xl ml-auto sm:ml-0"
                                 >
                                     <Zap className="w-5 h-5 text-yellow-400" />
                                 </button>
@@ -155,7 +155,7 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                     </div>
 
                     {/* Stats Grid */}
-                    <div className="grid grid-cols-2 gap-y-10 relative z-10 border-t border-white/10 pt-10 mt-auto pb-4">
+                    <div className="grid grid-cols-2 gap-y-10 relative z-10 border-t border-card-border pt-10 mt-auto pb-4">
                         {[
                             { label: 'Cins / Irk', value: petData.breed, icon: Award },
                             { label: 'Microchip ID', value: isPublic ? `${petData.microchip?.slice(0, 3)}***${petData.microchip?.slice(-3)}` : petData.microchip, icon: Hash, mono: true, color: 'text-emerald-400' },
@@ -175,7 +175,7 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                     </div>
 
                     {/* Microchip Barcode Visual */}
-                    <div className="mt-4 pt-4 border-t border-white/5 opacity-30 flex justify-center">
+                    <div className="mt-4 pt-4 border-t border-card-border opacity-30 flex justify-center">
                         <Barcode className="w-full h-8 text-white" />
                     </div>
                 </motion.div>
@@ -184,7 +184,7 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
             {/* 2. OFFICIAL SECTIONS BENTO GRID */}
             <div className="grid grid-cols-2 gap-4 px-2">
                 {/* Veli Bilgileri */}
-                <div className="col-span-2 bg-[#12121A] border border-white/10 rounded-[2.5rem] p-8 flex flex-col gap-6 relative overflow-hidden group">
+                <div className="col-span-2 bg-[#12121A] border border-card-border rounded-[2.5rem] p-8 flex flex-col gap-6 relative overflow-hidden group">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 blur-3xl rounded-full" />
                     <div className="flex items-center justify-between">
                         <h4 className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em]">Veli / Sahip Bilgileri</h4>
@@ -203,13 +203,13 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                             </div>
                         </div>
                     </div>
-                    <p className="text-xs text-gray-500 font-medium leading-relaxed border-t border-white/5 pt-4">
+                    <p className="text-xs text-gray-500 font-medium leading-relaxed border-t border-card-border pt-4">
                         <MapPin className="w-3 h-3 inline mr-1 opacity-40" /> {petData.owner?.address || "Adres Kaydı Yok"}
                     </p>
                 </div>
 
                 {/* Fiziksel Özellikler */}
-                <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 space-y-4">
+                <div className="bg-white/5 border border-card-border rounded-[2.5rem] p-6 space-y-4">
                     <h4 className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em]">Biyometrik</h4>
                     <div className="space-y-3">
                         <div className="flex justify-between items-center text-xs">
@@ -228,7 +228,7 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                 </div>
 
                 {/* Kısırlaştırma Durumu */}
-                <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 flex flex-col justify-between items-center text-center group active:scale-95 transition-all">
+                <div className="bg-white/5 border border-card-border rounded-[2.5rem] p-6 flex flex-col justify-between items-center text-center group active:scale-95 transition-all">
                     <h4 className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] w-full">Operasyonel</h4>
                     <div className={cn(
                         "w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:rotate-12",
@@ -271,19 +271,19 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
 
                 {/* Parazit Uygulamaları (Smart Widget) - Hide for Public */}
                 {!isPublic && (
-                    <div className="col-span-2 bg-[#12121A] border border-white/10 rounded-[2.5rem] p-8 space-y-6">
+                    <div className="col-span-2 bg-[#12121A] border border-card-border rounded-[2.5rem] p-8 space-y-6">
                         <div className="flex items-center justify-between">
                             <h4 className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em]">Parazit Kontrol Takibi</h4>
                             <Stethoscope className="w-4 h-4 text-emerald-400 opacity-40" />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-white/5 p-5 rounded-3xl border border-white/5 flex flex-col items-center gap-2 group">
+                            <div className="bg-white/5 p-5 rounded-3xl border border-card-border flex flex-col items-center gap-2 group">
                                 <Zap className="w-5 h-5 text-yellow-400 mb-1 group-hover:scale-110 transition-transform" />
                                 <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">İç Parazit</span>
                                 <span className="text-xs font-black text-white">12 Ara 2024</span>
                                 <div className="text-[8px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full mt-1">GÜNCEL</div>
                             </div>
-                            <div className="bg-white/5 p-5 rounded-3xl border border-white/5 flex flex-col items-center gap-2 group">
+                            <div className="bg-white/5 p-5 rounded-3xl border border-card-border flex flex-col items-center gap-2 group">
                                 <Zap className="w-5 h-5 text-orange-400 mb-1 group-hover:scale-110 transition-transform" />
                                 <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">Dış Parazit</span>
                                 <span className="text-xs font-black text-white">15 Ara 2024</span>
@@ -310,7 +310,7 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                             animate={{ scale: 1, opacity: 1, rotate: 0 }}
                             exit={{ scale: 0.8, opacity: 0, rotate: 5 }}
                             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                            className="bg-white p-8 rounded-[4rem] shadow-[0_0_80px_rgba(255,255,255,0.2)] flex flex-col items-center gap-6"
+                            className="bg-card p-8 rounded-[4rem] shadow-[0_0_80px_rgba(255,255,255,0.2)] flex flex-col items-center gap-6"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <div className="text-center space-y-2 mb-2">
@@ -338,12 +338,24 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                         <div className="flex flex-col gap-2">
                             <button 
                                 onClick={() => setIsTagModalOpen(true)}
-                                className="w-full py-4 bg-white/5 border border-white/10 hover:border-cyan-500/50 hover:bg-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-cyan-400 transition-all flex items-center justify-center gap-2"
+                                className="w-full py-4 bg-white/5 border border-card-border hover:border-cyan-500/50 hover:bg-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-cyan-400 transition-all flex items-center justify-center gap-2"
                             >
                                 <Radio className="w-4 h-4" /> Yeni Künye Eşleştir (NFC/QR)
                             </button>
                             <button 
-                                onClick={() => onEdit?.(currentPet)}
+                                onClick={async () => {
+                                    if (currentPet?.is_lost) {
+                                        updatePet(currentPet.id, { is_lost: false });
+                                        try {
+                                            const { apiService } = await import('@/services/apiService');
+                                            await apiService.togglePetSosStatus(currentPet.id, 'safe');
+                                        } catch (e) {
+                                            console.error(e);
+                                        }
+                                    } else {
+                                        window.dispatchEvent(new CustomEvent('open-sos-center', { detail: currentPet }));
+                                    }
+                                }}
                                 className={cn(
                                     "w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2",
                                     currentPet?.is_lost 
@@ -419,7 +431,7 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                             {/* Close Button - Positioned Top Right just outside the box */}
                             <button 
                                 onClick={() => setShowPreview(false)}
-                                className="absolute -top-12 -right-2 w-10 h-10 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 hover:bg-white/20 transition-all active:scale-90 z-[130]"
+                                className="absolute -top-12 -right-2 w-10 h-10 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-card-border hover:bg-white/20 transition-all active:scale-90 z-[130]"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -428,17 +440,17 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                                 initial={{ scale: 0.9, y: 50 }}
                                 animate={{ scale: 1, y: 0 }}
                                 exit={{ scale: 0.9, y: 50 }}
-                                className="w-full bg-white rounded-[4rem] p-6 flex flex-col shadow-2xl text-black relative cursor-default"
+                                className="w-full bg-card rounded-[4rem] p-6 flex flex-col shadow-2xl text-black relative cursor-default"
                             >
                                 {/* iOS Style Grab Handle - Visual only now */}
                                 <div className="absolute top-6 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-black/10 rounded-full" />
 
                                 {/* Preview Header */}
-                                <div className="flex justify-between items-start mb-6 border-b-2 border-dashed border-gray-100 pb-6 pt-10">
+                                <div className="flex justify-between items-start mb-6 border-b-2 border-dashed border-card-border pb-6 pt-10">
                                     <div>
                                         <div className="flex items-center gap-2 mb-1">
                                             <div className="w-5 h-5 bg-black rounded flex items-center justify-center">
-                                                <div className="w-2 h-2 bg-white rounded-full" />
+                                                <div className="w-2 h-2 bg-card rounded-full" />
                                             </div>
                                             <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Moffi Passport System</span>
                                         </div>
@@ -448,12 +460,12 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                                             <ShieldCheck className="w-3 h-3" /> Dijital Mühür Uygulandı
                                         </div>
                                     </div>
-                                    <div className="p-2 border-2 border-gray-200 rounded-2xl scale-90">
+                                    <div className="p-2 border-2 border-card-border rounded-2xl scale-90">
                                         <QRCodeSVG value={`moffi://verify/${petData.id}`} size={48} />
                                     </div>
                                 </div>
                             {/* Official Disclaimer Note */}
-                            <div className="mb-6 px-4 py-3 bg-gray-50 rounded-2xl border border-gray-100">
+                            <div className="mb-6 px-4 py-3 bg-gray-50 rounded-2xl border border-card-border">
                                 <p className="text-[7px] font-bold text-gray-400 uppercase leading-relaxed">
                                     ⓘ Bu belge, evcil hayvanın fiziksel pasaportunun doğrulanmış bir dijital ikizidir. Resmi kurumlarda fiziksel pasaportun ibraz edilmesi gerekebilir. 
                                 </p>

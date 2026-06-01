@@ -49,7 +49,7 @@ export function TagPairingModal({ isOpen, onClose, pet }: TagPairingModalProps) 
                         initial={{ scale: 0.9, y: 20 }}
                         animate={{ scale: 1, y: 0 }}
                         exit={{ scale: 0.9, y: 20 }}
-                        className="w-full max-w-md bg-[#12121A] rounded-[3rem] p-8 border border-white/10 shadow-2xl relative overflow-hidden"
+                        className="w-full max-w-md bg-[#12121A] rounded-[3rem] p-8 border border-card-border shadow-2xl relative overflow-hidden"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* DECORATIVE BACKGROUND */}
@@ -64,7 +64,7 @@ export function TagPairingModal({ isOpen, onClose, pet }: TagPairingModalProps) 
                             {/* STEP 1: CHOOSE METHOD */}
                             {step === 1 && (
                                 <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="w-full">
-                                    <div className="w-20 h-20 rounded-[1.5rem] bg-gradient-to-tr from-cyan-500/20 to-purple-500/20 flex items-center justify-center mb-6 mx-auto border border-white/10">
+                                    <div className="w-20 h-20 rounded-[1.5rem] bg-gradient-to-tr from-cyan-500/20 to-purple-500/20 flex items-center justify-center mb-6 mx-auto border border-card-border">
                                         <Smartphone className="w-10 h-10 text-cyan-400" />
                                     </div>
                                     <h2 className="text-2xl font-black text-white mb-2">Künye Eşleştir</h2>
@@ -75,7 +75,7 @@ export function TagPairingModal({ isOpen, onClose, pet }: TagPairingModalProps) 
                                     <div className="space-y-3">
                                         <button 
                                             onClick={() => handleStartPairing('nfc')}
-                                            className="w-full p-6 rounded-[2rem] bg-white/5 border border-white/10 hover:border-cyan-500/50 hover:bg-white/10 transition-all flex items-center gap-4 group"
+                                            className="w-full p-6 rounded-[2rem] bg-white/5 border border-card-border hover:border-cyan-500/50 hover:bg-white/10 transition-all flex items-center gap-4 group"
                                         >
                                             <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 flex items-center justify-center text-cyan-400 group-hover:scale-110 transition-transform">
                                                 <Radio className="w-6 h-6" />
@@ -84,12 +84,12 @@ export function TagPairingModal({ isOpen, onClose, pet }: TagPairingModalProps) 
                                                 <h4 className="font-bold text-white">NFC ile Eşleştir</h4>
                                                 <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Dokun ve Tanımla</p>
                                             </div>
-                                            <ChevronRight className="w-5 h-5 text-gray-700" />
+                                            <ChevronRight className="w-5 h-5 text-foreground" />
                                         </button>
 
                                         <button 
                                             onClick={() => handleStartPairing('qr')}
-                                            className="w-full p-6 rounded-[2rem] bg-white/5 border border-white/10 hover:border-purple-500/50 hover:bg-white/10 transition-all flex items-center gap-4 group"
+                                            className="w-full p-6 rounded-[2rem] bg-white/5 border border-card-border hover:border-purple-500/50 hover:bg-white/10 transition-all flex items-center gap-4 group"
                                         >
                                             <div className="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform">
                                                 <QrCode className="w-6 h-6" />
@@ -98,7 +98,7 @@ export function TagPairingModal({ isOpen, onClose, pet }: TagPairingModalProps) 
                                                 <h4 className="font-bold text-white">QR Kod ile Eşleştir</h4>
                                                 <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Kamera ile Tara</p>
                                             </div>
-                                            <ChevronRight className="w-5 h-5 text-gray-700" />
+                                            <ChevronRight className="w-5 h-5 text-foreground" />
                                         </button>
                                     </div>
                                 </motion.div>
@@ -145,7 +145,7 @@ export function TagPairingModal({ isOpen, onClose, pet }: TagPairingModalProps) 
                                         Artık <span className="text-white font-bold">{pet.name}</span> dijital dünyada tamamen güvende. Künye her tarandığında anlık bildirim alacaksınız.
                                     </p>
 
-                                    <div className="bg-white/5 border border-white/10 rounded-3xl p-4 mb-8 flex items-center gap-4 text-left">
+                                    <div className="bg-white/5 border border-card-border rounded-3xl p-4 mb-8 flex items-center gap-4 text-left">
                                         <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 shadow-lg">
                                             <img src={pet.avatar} className="w-full h-full object-cover" />
                                         </div>
@@ -160,7 +160,7 @@ export function TagPairingModal({ isOpen, onClose, pet }: TagPairingModalProps) 
 
                                     <button 
                                         onClick={onClose}
-                                        className="w-full py-4 bg-white text-black font-black rounded-2xl flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors active:scale-95 shadow-[0_0_30px_rgba(255,255,255,0.1)]"
+                                        className="w-full py-4 bg-card text-black font-black rounded-2xl flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors active:scale-95 shadow-[0_0_30px_rgba(255,255,255,0.1)]"
                                     >
                                         Mükemmel <ArrowRight className="w-4 h-4" />
                                     </button>

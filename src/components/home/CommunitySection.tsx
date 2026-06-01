@@ -18,14 +18,14 @@ export function CommunitySection() {
             <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6 scrollbar-hide">
                 {posts.map((post) => (
                     <div key={post.id} className="min-w-[140px] flex flex-col gap-2">
-                        <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 border border-gray-100">
+                        <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 border border-card-border">
                             {/* Placeholder for actual image */}
                             <div className="absolute inset-0 bg-gray-200 flex items-center justify-center text-gray-400 text-xs">
                                 Pet Image
                             </div>
 
                             {/* User Avatar Overlay */}
-                            <div className="absolute top-2 right-2 w-8 h-8 rounded-full border-2 border-white bg-white overflow-hidden shadow-sm">
+                            <div className="absolute top-2 right-2 w-8 h-8 rounded-full border-2 border-white bg-card overflow-hidden shadow-moffi-card">
                                 <div className="w-full h-full bg-blue-100" />
                             </div>
                         </div>

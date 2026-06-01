@@ -51,7 +51,7 @@ export default function AdminPlatformSettingsPage() {
         <div>
             <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">Platform Ayarları</h1>
+                    <h1 className="text-2xl md:text-3xl font-black text-foreground tracking-tight">Platform Ayarları</h1>
                     <p className="text-sm text-gray-500 mt-1">Komisyon oranları, ödeme limitleri ve platform kontrolleri</p>
                 </div>
                 <button
@@ -100,7 +100,7 @@ export default function AdminPlatformSettingsPage() {
                                 type="number"
                                 value={settings.minPayoutAmount}
                                 onChange={e => update('minPayoutAmount', Number(e.target.value))}
-                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                                className="w-full bg-gray-50 border border-card-border rounded-xl px-4 py-3 text-sm font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-200"
                             />
                             <p className="text-[10px] text-gray-400 mt-1">İşletmelerin çekim yapabilmesi için gereken minimum bakiye</p>
                         </div>
@@ -138,10 +138,10 @@ export default function AdminPlatformSettingsPage() {
                         {settings.businessTypes.map(bt => {
                             const BtIcon = bt.icon;
                             return (
-                                <div key={bt.key} className="flex items-center justify-between p-3 rounded-xl bg-gray-50/50 border border-gray-100">
+                                <div key={bt.key} className="flex items-center justify-between p-3 rounded-xl bg-gray-50/50 border border-card-border">
                                     <div className="flex items-center gap-3">
                                         <BtIcon className="w-4 h-4 text-gray-500" />
-                                        <span className="text-sm font-medium text-gray-900">{bt.label}</span>
+                                        <span className="text-sm font-medium text-foreground">{bt.label}</span>
                                     </div>
                                     <button onClick={() => toggleBusinessType(bt.key)} className="transition">
                                         {bt.enabled
@@ -177,10 +177,10 @@ export default function AdminPlatformSettingsPage() {
 
 function SettingsCard({ title, icon: Icon, children }: { title: string; icon: typeof Sliders; children: React.ReactNode }) {
     return (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="bg-card rounded-2xl border border-card-border shadow-moffi-card p-6">
             <div className="flex items-center gap-2 mb-5">
                 <Icon className="w-4 h-4 text-gray-400" />
-                <h3 className="font-bold text-gray-900 text-sm">{title}</h3>
+                <h3 className="font-bold text-foreground text-sm">{title}</h3>
             </div>
             {children}
         </div>
@@ -193,7 +193,7 @@ function ToggleRow({ label, description, enabled, onToggle, danger }: {
     return (
         <div className="flex items-center justify-between">
             <div>
-                <div className={cn("text-sm font-medium", danger ? "text-red-700" : "text-gray-900")}>{label}</div>
+                <div className={cn("text-sm font-medium", danger ? "text-red-700" : "text-foreground")}>{label}</div>
                 <div className="text-[10px] text-gray-400 mt-0.5">{description}</div>
             </div>
             <button onClick={onToggle} className="transition">

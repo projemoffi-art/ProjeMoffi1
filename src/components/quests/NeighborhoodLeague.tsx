@@ -149,7 +149,7 @@ export function NeighborhoodLeague() {
                         { icon: <Flame className="w-3 h-3" />, label: 'Seri', value: `${walkStats?.currentStreak || 0} gün`, color: 'text-orange-400' },
                         { icon: <TrendingUp className="w-3 h-3" />, label: 'Puanın', value: myScore.toLocaleString(), color: 'text-blue-400' },
                     ].map((s, i) => (
-                        <div key={i} className="bg-white/5 rounded-xl p-2.5 text-center border border-white/5">
+                        <div key={i} className="bg-white/5 rounded-xl p-2.5 text-center border border-card-border">
                             <div className={`flex justify-center mb-1 ${s.color}`}>{s.icon}</div>
                             <p className={`text-[11px] font-black ${s.color}`}>{s.value}</p>
                             <p className="text-[7px] text-white/30 font-bold uppercase tracking-wider">{s.label}</p>
@@ -233,7 +233,7 @@ export function NeighborhoodLeague() {
                         className={`flex items-center gap-3 p-3 rounded-2xl border transition-all ${
                             player.isMe
                                 ? 'bg-purple-500/15 border-purple-500/30 shadow-[0_0_16px_rgba(168,85,247,0.1)]'
-                                : 'bg-white/[0.02] border-white/5 hover:bg-white/5'
+                                : 'bg-white/[0.02] border-card-border hover:bg-white/5'
                         }`}
                     >
                         <span className="text-[11px] font-black text-white/30 w-5 text-center shrink-0">

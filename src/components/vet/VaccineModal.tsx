@@ -44,13 +44,13 @@ export function VaccineModal({ isOpen, onClose }: VaccineModalProps) {
                 initial={{ y: "100%" }}
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}
-                className="w-full max-w-lg bg-[#111111] rounded-t-[3.5rem] sm:rounded-[4rem] h-[90vh] flex flex-col overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.8)] border border-white/10 relative"
+                className="w-full max-w-lg bg-[#111111] rounded-t-[3.5rem] sm:rounded-[4rem] h-[90vh] flex flex-col overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.8)] border border-card-border relative"
             >
                 {/* iOS Style Grab Handle */}
                 <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/10 rounded-full sm:hidden z-50" />
 
                 {/* HEADER */}
-                <div className="p-8 pb-4 bg-[#111111]/80 backdrop-blur-3xl z-30 sticky top-0 border-b border-white/5">
+                <div className="p-8 pb-4 bg-[#111111]/80 backdrop-blur-3xl z-30 sticky top-0 border-b border-card-border">
                     <div className="flex justify-between items-center mb-8 mt-2 sm:mt-0">
                         <div className="flex items-center gap-4">
                             <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center shadow-2xl">
@@ -63,18 +63,18 @@ export function VaccineModal({ isOpen, onClose }: VaccineModalProps) {
                                 </p>
                             </div>
                         </div>
-                        <button onClick={onClose} className="w-11 h-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all">
+                        <button onClick={onClose} className="w-11 h-11 rounded-full bg-white/5 border border-card-border flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all">
                             <X className="w-5 h-5" />
                         </button>
                     </div>
 
                     {/* TABS - Apple Glass style */}
-                    <div className="flex bg-white/5 border border-white/10 p-1.5 rounded-[1.8rem]">
+                    <div className="flex bg-white/5 border border-card-border p-1.5 rounded-[1.8rem]">
                         <button
                             onClick={() => setActiveTab('calendar')}
                             className={cn(
                                 "flex-1 py-3.5 rounded-[1.4rem] text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 relative overflow-hidden",
-                                activeTab === 'calendar' ? "bg-white text-black shadow-2xl" : "text-white/30 hover:text-white/60"
+                                activeTab === 'calendar' ? "bg-card text-black shadow-2xl" : "text-white/30 hover:text-white/60"
                             )}
                         >
                             <Calendar className="w-4 h-4" /> TAKVİMİM
@@ -160,7 +160,7 @@ export function VaccineModal({ isOpen, onClose }: VaccineModalProps) {
                                             {!isCompleted && (
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleBookAppointment(item); }}
-                                                    className="w-full h-12 bg-white text-black text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl flex items-center justify-center gap-2 hover:bg-white/90 active:scale-95 transition-all shadow-xl"
+                                                    className="w-full h-12 bg-card text-black text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl flex items-center justify-center gap-2 hover:bg-white/90 active:scale-95 transition-all shadow-xl"
                                                 >
                                                     Randevu Al <ChevronRight className="w-4 h-4" />
                                                 </button>
@@ -187,7 +187,7 @@ export function VaccineModal({ isOpen, onClose }: VaccineModalProps) {
                                     animate={{ opacity: 1, y: 0 }}
                                     key={def.id}
                                     onClick={() => { setSelectedDefId(def.id); setSelectedRichRecord(null); }}
-                                    className="bg-[#1C1C1E] p-6 rounded-[2.5rem] border border-white/5 shadow-2xl flex items-center gap-5 cursor-pointer hover:bg-[#252528] transition-all group active:scale-[0.98]"
+                                    className="bg-[#1C1C1E] p-6 rounded-[2.5rem] border border-card-border shadow-2xl flex items-center gap-5 cursor-pointer hover:bg-[#252528] transition-all group active:scale-[0.98]"
                                 >
                                     <div className={cn(
                                         "w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 border shadow-inner",
@@ -203,7 +203,7 @@ export function VaccineModal({ isOpen, onClose }: VaccineModalProps) {
                                 </motion.div>
                             ))}
 
-                            <div className="mt-8 p-10 rounded-[3rem] bg-white/5 border border-white/5 text-center relative overflow-hidden group">
+                            <div className="mt-8 p-10 rounded-[3rem] bg-white/5 border border-card-border text-center relative overflow-hidden group">
                                 <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
                                 <FileText className="w-8 h-8 mx-auto mb-4 text-white/20 group-hover:text-white/40 transition-colors" />
                                 <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-1">KAYNAK: {ruleset.source}</p>
@@ -223,8 +223,8 @@ export function VaccineModal({ isOpen, onClose }: VaccineModalProps) {
                             className="absolute inset-0 z-40 bg-[#111111] overflow-y-auto custom-scrollbar"
                         >
                             {/* Details Header */}
-                            <div className="sticky top-0 bg-[#111111]/80 backdrop-blur-3xl p-6 border-b border-white/5 flex items-center justify-between z-50">
-                                <button onClick={() => { setSelectedRichRecord(null); setSelectedDefId(null); }} className="w-11 h-11 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-white/40 hover:text-white transition-all">
+                            <div className="sticky top-0 bg-[#111111]/80 backdrop-blur-3xl p-6 border-b border-card-border flex items-center justify-between z-50">
+                                <button onClick={() => { setSelectedRichRecord(null); setSelectedDefId(null); }} className="w-11 h-11 flex items-center justify-center rounded-full bg-white/5 border border-card-border text-white/40 hover:text-white transition-all">
                                     <ChevronRight className="w-6 h-6 rotate-180" />
                                 </button>
                                 <h3 className="text-xs font-black text-white/30 uppercase tracking-[0.4em]">AŞI DETAYLARI</h3>
@@ -246,7 +246,7 @@ export function VaccineModal({ isOpen, onClose }: VaccineModalProps) {
                                 </div>
 
                                 <div className="space-y-8">
-                                    <div className="bg-white/5 border border-white/5 p-8 rounded-[3rem] relative overflow-hidden">
+                                    <div className="bg-white/5 border border-card-border p-8 rounded-[3rem] relative overflow-hidden">
                                          <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
                                         <h4 className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] mb-4 flex items-center gap-2 italic"> Tıbbi Açıklama</h4>
                                         <p className="text-sm font-bold text-white/70 dark:text-gray-300 leading-relaxed uppercase tracking-tight">{activeDefinition.description}</p>
@@ -273,7 +273,7 @@ export function VaccineModal({ isOpen, onClose }: VaccineModalProps) {
                                         <h4 className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] mb-4 px-2 italic">KATEGORİLER</h4>
                                         <div className="flex flex-wrap gap-2 px-1">
                                             {activeDefinition.tags.map(p => (
-                                                <span key={p} className="bg-white/5 border border-white/5 text-white/40 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:text-white hover:bg-white/10 transition-all cursor-default">
+                                                <span key={p} className="bg-white/5 border border-card-border text-white/40 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:text-white hover:bg-white/10 transition-all cursor-default">
                                                     {p}
                                                 </span>
                                             ))}
@@ -282,7 +282,7 @@ export function VaccineModal({ isOpen, onClose }: VaccineModalProps) {
 
                                     <button 
                                         onClick={() => { setSelectedRichRecord(null); setSelectedDefId(null); }}
-                                        className="w-full mt-8 bg-white text-black py-5 rounded-[2.5rem] font-black text-xs uppercase tracking-[0.3em] shadow-2xl active:scale-95 transition-all"
+                                        className="w-full mt-8 bg-card text-black py-5 rounded-[2.5rem] font-black text-xs uppercase tracking-[0.3em] shadow-2xl active:scale-95 transition-all"
                                     >
                                         BİLGİYİ KAPAT
                                     </button>

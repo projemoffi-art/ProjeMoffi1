@@ -41,7 +41,7 @@ function EmptyState({ icon: Icon, title, description }: { icon: any; title: stri
             <div className="w-16 h-16 bg-gray-100 dark:bg-white/5 rounded-2xl flex items-center justify-center mb-4">
                 <Icon className="w-7 h-7 text-gray-400" />
             </div>
-            <h3 className="text-base font-bold text-gray-700 dark:text-gray-300 mb-1">{title}</h3>
+            <h3 className="text-base font-bold text-foreground dark:text-gray-300 mb-1">{title}</h3>
             <p className="text-sm text-gray-400 max-w-xs">{description}</p>
         </div>
     );
@@ -194,7 +194,7 @@ export default function PetShopPage() {
         <div className="min-h-screen bg-[#F9FAFB] dark:bg-[#050505] pb-32 font-sans selection:bg-orange-500/30">
 
             {/* HEADER */}
-            <div className="sticky top-0 z-50 bg-white/70 dark:bg-black/70 backdrop-blur-3xl border-b border-gray-100 dark:border-white/5 transition-colors">
+            <div className="sticky top-0 z-50 bg-white/70 dark:bg-black/70 backdrop-blur-3xl border-b border-card-border dark:border-card-border transition-colors">
                 <div className="flex items-center justify-between px-5 pt-4 pb-2">
                     <button 
                         onClick={() => {
@@ -203,11 +203,11 @@ export default function PetShopPage() {
                         }} 
                         className="w-10 h-10 flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-all active:scale-95"
                     >
-                        <ChevronLeft className="w-6 h-6 text-gray-900 dark:text-white" />
+                        <ChevronLeft className="w-6 h-6 text-foreground dark:text-white" />
                     </button>
-                    <h1 className="text-xl font-black tracking-tighter text-gray-900 dark:text-white italic uppercase">Moffi PetShop</h1>
+                    <h1 className="text-xl font-black tracking-tighter text-foreground dark:text-white italic uppercase">Moffi PetShop</h1>
                     <button onClick={() => setShowCart(true)} className="relative w-10 h-10 flex items-center justify-center group">
-                        <ShoppingCart className="w-6 h-6 text-gray-900 dark:text-white group-active:scale-90 transition-transform" />
+                        <ShoppingCart className="w-6 h-6 text-foreground dark:text-white group-active:scale-90 transition-transform" />
                         {cartCount > 0 && (
                             <motion.span 
                                 initial={{ scale: 0 }} animate={{ scale: 1 }}
@@ -227,7 +227,7 @@ export default function PetShopPage() {
                             value={searchQuery}
                             onChange={e => handleSearch(e.target.value)}
                             placeholder="Ürün veya marka ara..."
-                            className="w-full h-11 pl-10 pr-4 bg-gray-200/50 dark:bg-white/5 rounded-2xl text-sm text-gray-900 dark:text-white placeholder:text-gray-500 outline-none border-2 border-transparent focus:border-orange-500/10 focus:bg-white dark:focus:bg-black/20 transition-all font-medium"
+                            className="w-full h-11 pl-10 pr-4 bg-gray-200/50 dark:bg-white/5 rounded-2xl text-sm text-foreground dark:text-white placeholder:text-gray-500 outline-none border-2 border-transparent focus:border-orange-500/10 focus:bg-card dark:focus:bg-black/20 transition-all font-medium"
                         />
                     </div>
                 </div>
@@ -236,7 +236,7 @@ export default function PetShopPage() {
             {/* QUICK BUY BAR (MILO'S FAVORITES or TREND) */}
             <div className="px-5 pt-4 pb-2">
                 <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-[13px] font-black text-gray-900 dark:text-white uppercase tracking-tighter">
+                    <h2 className="text-[13px] font-black text-foreground dark:text-white uppercase tracking-tighter">
                         {isSmartShopEnabled ? "Milo'nun Favorileri 🦴" : "Haftanın Trendleri 🔥"}
                     </h2>
                     <span className="text-[10px] font-bold text-orange-500 uppercase tracking-widest">Hızlı Al</span>
@@ -247,14 +247,14 @@ export default function PetShopPage() {
                             key={`quick-${product.id}`}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => addToCart(product.id)}
-                            className="flex flex-col items-center shrink-0 w-24 bg-white dark:bg-white/5 rounded-3xl p-3 border border-gray-100 dark:border-white/5 shadow-sm active:bg-orange-50 transition-colors"
+                            className="flex flex-col items-center shrink-0 w-24 bg-card dark:bg-white/5 rounded-3xl p-3 border border-card-border dark:border-card-border shadow-moffi-card active:bg-orange-50 transition-colors"
                         >
                             <span className="text-3xl mb-2 drop-shadow-md">{product.image}</span>
-                            <span className="text-[9px] font-black text-gray-900 dark:text-white/80 text-center line-clamp-1 italic uppercase tracking-tighter">{product.name}</span>
+                            <span className="text-[9px] font-black text-foreground dark:text-white/80 text-center line-clamp-1 italic uppercase tracking-tighter">{product.name}</span>
                             <span className="text-[10px] font-black text-orange-500 mt-1">₺{(product.price || 0).toLocaleString('tr-TR')}</span>
                         </motion.button>
                     ))}
-                    <div className="flex flex-col items-center justify-center shrink-0 w-24 bg-gray-50 dark:bg-white/5 rounded-3xl p-3 border border-dashed border-gray-200 dark:border-white/10">
+                    <div className="flex flex-col items-center justify-center shrink-0 w-24 bg-gray-50 dark:bg-white/5 rounded-3xl p-3 border border-dashed border-card-border dark:border-card-border">
                         <Plus className="w-5 h-5 text-gray-400 mb-1" />
                         <span className="text-[8px] font-bold text-gray-400 uppercase">Daha Fazla</span>
                     </div>
@@ -287,7 +287,7 @@ export default function PetShopPage() {
                                 "flex items-center gap-1.5 px-4 h-11 rounded-[1.2rem] text-xs font-black uppercase tracking-tighter whitespace-nowrap transition-all active:scale-95 shadow-sm",
                                 activeCategory === cat.id
                                     ? `bg-gradient-to-r ${cat.color} text-white shadow-[0_10px_20px_-5px_rgba(0,0,0,0.15)] ring-2 ring-white/10`
-                                    : "bg-white dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-white/10 hover:border-orange-500/20"
+                                    : "bg-card dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-card-border dark:border-card-border hover:border-orange-500/20"
                             )}
                         >
                             <cat.icon className="w-3.5 h-3.5" />
@@ -307,7 +307,7 @@ export default function PetShopPage() {
                             onClick={() => setSortBy(sKey)}
                             className={cn(
                                 "px-3 py-1 rounded-lg text-[10px] font-bold transition-all",
-                                sortBy === sKey ? "bg-gray-900 dark:bg-white text-white dark:text-black" : "bg-gray-100 dark:bg-white/5 text-gray-500"
+                                sortBy === sKey ? "bg-gray-900 dark:bg-card text-white dark:text-black" : "bg-gray-100 dark:bg-white/5 text-gray-500"
                             )}
                         >
                             {sKey === 'popular' ? 'Popüler' : sKey === 'price_low' ? 'En Ucuz' : 'En Pahalı'}
@@ -339,13 +339,13 @@ export default function PetShopPage() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: i * 0.04 }}
-                                className="bg-white dark:bg-white/5 rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5 shadow-sm group"
+                                className="bg-card dark:bg-white/5 rounded-2xl overflow-hidden border border-card-border dark:border-card-border shadow-moffi-card group"
                             >
                                 <div className="relative h-36 bg-gradient-to-br from-white to-gray-100/50 dark:from-white/5 dark:to-transparent flex items-center justify-center overflow-hidden">
                                     <span className="text-5xl drop-shadow-2xl group-hover:scale-125 transition-transform duration-500">{product.image}</span>
                                     {product.tag && (
                                         <span className={cn(
-                                            "absolute top-2.5 left-2.5 px-2 py-0.5 rounded-lg text-[8px] font-black text-white uppercase tracking-widest shadow-xl border border-white/20",
+                                            "absolute top-2.5 left-2.5 px-2 py-0.5 rounded-lg text-[8px] font-black text-white uppercase tracking-widest shadow-xl border border-card-border",
                                             product.tag === 'Çok Satan' ? 'bg-red-500/90' : 'bg-blue-500/90'
                                         )}>
                                             {product.tag}
@@ -354,7 +354,7 @@ export default function PetShopPage() {
                                     <motion.button
                                         whileTap={{ scale: 0.8 }}
                                         onClick={e => { e.stopPropagation(); toggleFav(product.id); }}
-                                        className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-white/90 dark:bg-black/60 backdrop-blur-md flex items-center justify-center shadow-lg border border-white/20"
+                                        className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-white/90 dark:bg-black/60 backdrop-blur-md flex items-center justify-center shadow-lg border border-card-border"
                                     >
                                         <Heart className={cn("w-4 h-4 transition-all", favorites.has(product.id) ? "fill-red-500 text-red-500" : "text-gray-400")} />
                                     </motion.button>
@@ -368,9 +368,9 @@ export default function PetShopPage() {
                                     )}
                                 </div>
 
-                                <div className="p-4 bg-white dark:bg-black/20">
+                                <div className="p-4 bg-card dark:bg-black/20">
                                     <p className="text-[9px] text-gray-400 font-black uppercase tracking-wider mb-1 leading-none">{product.brand?.name || "Moffi"}</p>
-                                    <h3 className="text-xs font-black text-gray-900 dark:text-white leading-snug line-clamp-2 h-8 italic mb-2">{product.name}</h3>
+                                    <h3 className="text-xs font-black text-foreground dark:text-white leading-snug line-clamp-2 h-8 italic mb-2">{product.name}</h3>
                                     
                                     <div className="flex items-center gap-1.5 mb-3">
                                         {product.category === 'snack' && isSmartShopEnabled && (
@@ -391,7 +391,7 @@ export default function PetShopPage() {
                                             "flex items-center gap-2 mb-3 p-2 rounded-xl border transition-all cursor-pointer",
                                             subscriptions.find(s => s.id === product.id)
                                                 ? "bg-orange-500 border-orange-600 shadow-md scale-[1.02]"
-                                                : "bg-gray-50 dark:bg-white/5 border-gray-100 dark:border-white/5 hover:bg-orange-50"
+                                                : "bg-gray-50 dark:bg-white/5 border-card-border dark:border-card-border hover:bg-orange-50"
                                         )}
                                     >
                                         <div className={cn(
@@ -403,7 +403,7 @@ export default function PetShopPage() {
                                             <div className={cn(
                                                 "w-2 h-2 rounded-full transition-all",
                                                 subscriptions.find(s => s.id === product.id)
-                                                    ? "bg-white scale-100"
+                                                    ? "bg-card scale-100"
                                                     : "bg-orange-500 opacity-0 group-hover:opacity-100"
                                             )} />
                                         </div>
@@ -419,7 +419,7 @@ export default function PetShopPage() {
 
                                     <div className="flex items-center justify-between mt-auto">
                                         <div className="flex flex-col">
-                                            <span className="text-sm font-black text-gray-950 dark:text-white">₺{(product.price || 0).toLocaleString('tr-TR')}</span>
+                                            <span className="text-sm font-black text-foreground dark:text-white">₺{(product.price || 0).toLocaleString('tr-TR')}</span>
                                         </div>
                                         {qty > 0 ? (
                                             <div className="flex items-center gap-1 bg-orange-500 rounded-xl px-2 py-1 shadow-lg">
@@ -449,12 +449,12 @@ export default function PetShopPage() {
 
             {/* DELIVERY INFO */}
             <div className="px-5 mt-8 mb-4">
-                <div className="bg-white/40 dark:bg-white/5 backdrop-blur-md rounded-[2.2rem] border border-white/40 dark:border-white/10 p-5 flex items-center gap-5 group shadow-sm">
+                <div className="bg-white/40 dark:bg-white/5 backdrop-blur-md rounded-[2.2rem] border border-white/40 dark:border-card-border p-5 flex items-center gap-5 group shadow-sm">
                     <div className="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center border border-emerald-500/20">
                         <Truck className="w-7 h-7 text-emerald-600" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter italic">Ücretsiz Kargo</h3>
+                        <h3 className="text-sm font-black text-foreground dark:text-white uppercase tracking-tighter italic">Ücretsiz Kargo</h3>
                         <p className="text-[11px] text-gray-500 font-bold mt-0.5">₺200 üzeri siparişlerde · Aynı gün kapında ⚡</p>
                     </div>
                 </div>
@@ -467,10 +467,10 @@ export default function PetShopPage() {
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setShowAdvisor(true)}
-                className="fixed bottom-32 right-6 z-40 w-14 h-14 bg-gray-900 dark:bg-white rounded-full flex items-center justify-center shadow-2xl group border-4 border-white dark:border-black transition-all"
+                className="fixed bottom-32 right-6 z-40 w-14 h-14 bg-gray-900 dark:bg-card rounded-full flex items-center justify-center shadow-2xl group border-4 border-white dark:border-black transition-all"
             >
-                <div className="absolute inset-0 bg-gray-900 dark:bg-white rounded-full animate-ping opacity-20" />
-                <Sparkles className="w-6 h-6 text-white dark:text-gray-900 group-hover:rotate-12 transition-transform" />
+                <div className="absolute inset-0 bg-gray-900 dark:bg-card rounded-full animate-ping opacity-20" />
+                <Sparkles className="w-6 h-6 text-white dark:text-foreground group-hover:rotate-12 transition-transform" />
             </motion.button>
 
             {/* SMART INTEGRATION MODAL */}
@@ -489,7 +489,7 @@ export default function PetShopPage() {
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
                             className="fixed inset-0 z-[101] flex items-center justify-center px-6 pointer-events-none"
                         >
-                            <div className="w-full max-w-sm bg-white dark:bg-[#0F0F0F] rounded-[2.5rem] overflow-hidden shadow-[0_32px_64px_rgba(0,0,0,0.5)] border border-white/20 pointer-events-auto">
+                            <div className="w-full max-w-sm bg-card dark:bg-[#0F0F0F] rounded-[2.5rem] overflow-hidden shadow-moffi-card border border-card-border pointer-events-auto">
                                 <div className="relative h-48 bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center">
                                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20" />
                                     <div className="relative">
@@ -499,14 +499,14 @@ export default function PetShopPage() {
                                         <motion.div
                                             animate={{ y: [0, -10, 0] }}
                                             transition={{ repeat: Infinity, duration: 2 }}
-                                            className="absolute -top-4 -right-4 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg"
+                                            className="absolute -top-4 -right-4 w-12 h-12 bg-card rounded-full flex items-center justify-center shadow-lg"
                                         >
                                             <Bone className="w-6 h-6 text-orange-500" />
                                         </motion.div>
                                     </div>
                                 </div>
                                 <div className="p-8 text-center">
-                                    <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tighter italic leading-tight">
+                                    <h3 className="text-xl font-black text-foreground dark:text-white uppercase tracking-tighter italic leading-tight">
                                         Akıllı Mağaza<br/>Deneyimine Hazır mısın?
                                     </h3>
                                     <p className="text-xs text-gray-500 font-medium mt-3 leading-relaxed px-2">
@@ -523,13 +523,13 @@ export default function PetShopPage() {
                                         </button>
                                         <button
                                             onClick={() => handleEnableSmart(false)}
-                                            className="w-full h-12 text-[10px] font-black text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-widest"
+                                            className="w-full h-12 text-[10px] font-black text-gray-400 hover:text-foreground dark:hover:text-white transition-colors uppercase tracking-widest"
                                         >
                                             Şimdilik Bağımsız Kalsın
                                         </button>
                                     </div>
                                     
-                                    <div className="mt-6 flex items-center justify-center gap-2 text-[8px] font-bold text-gray-400 uppercase tracking-widest border-t border-gray-100 dark:border-white/5 pt-6">
+                                    <div className="mt-6 flex items-center justify-center gap-2 text-[8px] font-bold text-gray-400 uppercase tracking-widest border-t border-card-border dark:border-card-border pt-6">
                                         <Info className="w-3 h-3" />
                                         İstediğin zaman ayarlardan değiştirebilirsin
                                     </div>
@@ -554,7 +554,7 @@ export default function PetShopPage() {
                             className="w-full h-16 bg-orange-500 rounded-[2rem] flex items-center justify-between px-8 text-white shadow-2xl active:scale-95 transition-all group overflow-hidden"
                         >
                             <div className="flex items-center gap-4 relative z-10">
-                                <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center border border-white/20">
+                                <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center border border-card-border">
                                     <ShoppingBag className="w-4 h-4" />
                                 </div>
                                 <span className="font-black text-sm uppercase tracking-widest">{cartCount} ÜRÜN SEPETTE</span>
@@ -586,9 +586,9 @@ export default function PetShopPage() {
                             <div className="w-12 h-1.5 bg-gray-200 dark:bg-white/10 rounded-full mx-auto mt-3 mb-1 shrink-0" />
 
                             {/* Cart Header */}
-                            <div className="px-8 pt-4 pb-6 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-white/50 dark:bg-black/20 backdrop-blur-md">
+                            <div className="px-8 pt-4 pb-6 border-b border-card-border dark:border-card-border flex items-center justify-between bg-white/50 dark:bg-black/20 backdrop-blur-md">
                                 <div>
-                                    <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tighter italic uppercase">Sepetim</h2>
+                                    <h2 className="text-2xl font-black text-foreground dark:text-white tracking-tighter italic uppercase">Sepetim</h2>
                                     <p className="text-[10px] text-orange-500 font-black uppercase tracking-widest mt-1">ÖDEME ADIMINA HAZIR</p>
                                 </div>
                                 <button onClick={() => setShowCart(false)} className="w-10 h-10 bg-gray-100 dark:bg-white/10 rounded-full flex items-center justify-center">
@@ -609,10 +609,10 @@ export default function PetShopPage() {
                                             const product = products.find(p => p.id === item.productId);
                                             if (!product) return null;
                                             return (
-                                                <div key={item.productId} className="flex items-center gap-5 bg-white dark:bg-white/5 rounded-[1.8rem] p-4 border border-gray-100 dark:border-white/5 shadow-sm">
+                                                <div key={item.productId} className="flex items-center gap-5 bg-card dark:bg-white/5 rounded-[1.8rem] p-4 border border-card-border dark:border-card-border shadow-moffi-card">
                                                     <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center text-4xl">{product.image}</div>
                                                     <div className="flex-1 min-w-0">
-                                                        <h4 className="text-sm font-bold text-gray-900 dark:text-white truncate italic">{product.name}</h4>
+                                                        <h4 className="text-sm font-bold text-foreground dark:text-white truncate italic">{product.name}</h4>
                                                         <p className="text-base font-black text-orange-500 mt-1.5 leading-none">₺{((product.price || 0) * (item.quantity || 1)).toLocaleString('tr-TR')}</p>
                                                     </div>
                                                     <div className="flex items-center gap-3 bg-gray-100 dark:bg-white/10 rounded-xl px-2 py-1.5">
@@ -620,7 +620,7 @@ export default function PetShopPage() {
                                                             if (item.quantity <= 1) removeFromCart(item.productId);
                                                             else updateCartItem(item.productId, item.quantity - 1);
                                                         }}><Minus className="w-4 h-4 text-gray-500" /></button>
-                                                        <span className="text-sm font-black text-gray-900 dark:text-white w-5 text-center">{item.quantity}</span>
+                                                        <span className="text-sm font-black text-foreground dark:text-white w-5 text-center">{item.quantity}</span>
                                                         <button onClick={() => updateCartItem(item.productId, item.quantity + 1)}>
                                                             <Plus className="w-4 h-4 text-gray-500" />
                                                         </button>
@@ -634,19 +634,19 @@ export default function PetShopPage() {
                                                 value={discountCode}
                                                 onChange={e => { setDiscountCode(e.target.value); setDiscountResult(null); }}
                                                 placeholder="İndirim kodu..."
-                                                className="flex-1 h-12 px-5 bg-white dark:bg-white/5 rounded-2xl text-sm border-2 border-transparent focus:border-orange-500/20 outline-none"
+                                                className="flex-1 h-12 px-5 bg-card dark:bg-white/5 rounded-2xl text-sm border-2 border-transparent focus:border-orange-500/20 outline-none"
                                             />
-                                            <button onClick={handleApplyDiscount} className="px-6 h-12 bg-gray-950 dark:bg-white text-white dark:text-black text-[11px] font-black uppercase rounded-2xl">Uygula</button>
+                                            <button onClick={handleApplyDiscount} className="px-6 h-12 bg-gray-950 dark:bg-card text-white dark:text-black text-[11px] font-black uppercase rounded-2xl">Uygula</button>
                                         </div>
                                     </div>
                                 )}
                             </div>
 
                             {cart.length > 0 && (
-                                <div className="sticky bottom-0 bg-white/80 dark:bg-black/60 backdrop-blur-2xl px-8 py-8 border-t border-gray-100 dark:border-white/5">
+                                <div className="sticky bottom-0 bg-white/80 dark:bg-black/60 backdrop-blur-2xl px-8 py-8 border-t border-card-border dark:border-card-border">
                                     <div className="flex items-center justify-between mb-6">
-                                        <span className="text-base font-black text-gray-900 dark:text-white uppercase tracking-tighter italic">Toplam</span>
-                                        <span className="text-2xl font-black text-gray-950 dark:text-white italic">₺{(cartTotal || 0).toLocaleString('tr-TR')}</span>
+                                        <span className="text-base font-black text-foreground dark:text-white uppercase tracking-tighter italic">Toplam</span>
+                                        <span className="text-2xl font-black text-foreground dark:text-white italic">₺{(cartTotal || 0).toLocaleString('tr-TR')}</span>
                                     </div>
                                     <button
                                         onClick={handleCheckoutInit}
@@ -677,7 +677,7 @@ export default function PetShopPage() {
                             initial={{ y: '100%' }}
                             animate={{ y: 0 }}
                             exit={{ y: '100%' }}
-                            className="fixed bottom-0 left-0 right-0 z-[111] bg-[#0a0a0a] rounded-t-[3rem] p-8 border-t border-white/10"
+                            className="fixed bottom-0 left-0 right-0 z-[111] bg-[#0a0a0a] rounded-t-[3rem] p-8 border-t border-card-border"
                         >
                             <div className="max-w-md mx-auto">
                                 <div className="flex items-center justify-between mb-8">

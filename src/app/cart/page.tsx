@@ -30,14 +30,14 @@ export default function CartPage() {
         <main className="min-h-screen bg-[#F8F9FC] dark:bg-black font-sans pb-32">
 
             {/* HEADER */}
-            <header className="sticky top-0 z-40 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-b border-gray-100 dark:border-white/10 px-6 h-16 flex items-center justify-between">
+            <header className="sticky top-0 z-40 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-b border-card-border dark:border-card-border px-6 h-16 flex items-center justify-between">
                 <button
                     onClick={() => router.back()}
                     className="p-2 -ml-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition"
                 >
-                    <ArrowLeft className="w-5 h-5 text-gray-900 dark:text-white" />
+                    <ArrowLeft className="w-5 h-5 text-foreground dark:text-white" />
                 </button>
-                <span className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-widest">
+                <span className="text-sm font-bold text-foreground dark:text-white uppercase tracking-widest">
                     Sepetim ({cartItems.length})
                 </span>
                 <div className="w-8" />
@@ -55,7 +55,7 @@ export default function CartPage() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, x: -100 }}
-                                className="bg-white dark:bg-[#1A1A1A] p-4 rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/5 flex gap-4 overflow-hidden relative group"
+                                className="bg-card dark:bg-[#1A1A1A] p-4 rounded-[2rem] shadow-moffi-card border border-card-border dark:border-card-border flex gap-4 overflow-hidden relative group"
                             >
                                 {/* Image */}
                                 <div className="w-28 h-32 bg-gray-50 dark:bg-black rounded-2xl overflow-hidden flex-shrink-0 relative">
@@ -70,7 +70,7 @@ export default function CartPage() {
                                 {/* Details */}
                                 <div className="flex-1 py-1 flex flex-col justify-between">
                                     <div>
-                                        <h3 className="font-bold text-gray-900 dark:text-white mb-1">{item.name}</h3>
+                                        <h3 className="font-bold text-foreground dark:text-white mb-1">{item.name}</h3>
                                         <p className="text-xs text-gray-500 font-medium">{item.variant}</p>
                                     </div>
 
@@ -79,14 +79,14 @@ export default function CartPage() {
                                         <div className="flex items-center gap-3 bg-gray-50 dark:bg-white/5 rounded-xl p-1">
                                             <button
                                                 onClick={() => updateQuantity(item.id, -1)}
-                                                className="w-7 h-7 bg-white dark:bg-black rounded-lg flex items-center justify-center shadow-sm text-gray-600 dark:text-gray-400 hover:scale-105 active:scale-95 transition"
+                                                className="w-7 h-7 bg-card dark:bg-black rounded-lg flex items-center justify-center shadow-moffi-card text-gray-600 dark:text-gray-400 hover:scale-105 active:scale-95 transition"
                                             >
                                                 <Minus className="w-3 h-3" />
                                             </button>
                                             <span className="text-sm font-bold w-4 text-center">{item.quantity}</span>
                                             <button
                                                 onClick={() => updateQuantity(item.id, 1)}
-                                                className="w-7 h-7 bg-white dark:bg-black rounded-lg flex items-center justify-center shadow-sm text-gray-600 dark:text-gray-400 hover:scale-105 active:scale-95 transition"
+                                                className="w-7 h-7 bg-card dark:bg-black rounded-lg flex items-center justify-center shadow-moffi-card text-gray-600 dark:text-gray-400 hover:scale-105 active:scale-95 transition"
                                             >
                                                 <Plus className="w-3 h-3" />
                                             </button>
@@ -128,8 +128,8 @@ export default function CartPage() {
 
                 {/* SUMMARY CARD */}
                 <div className="lg:col-span-1">
-                    <div className="bg-white dark:bg-[#1A1A1A] p-6 rounded-[2rem] shadow-xl border border-gray-100 dark:border-white/5 sticky top-24">
-                        <h2 className="text-lg font-black text-gray-900 dark:text-white mb-6">Sipariş Özeti</h2>
+                    <div className="bg-card dark:bg-[#1A1A1A] p-6 rounded-[2rem] shadow-xl border border-card-border dark:border-card-border sticky top-24">
+                        <h2 className="text-lg font-black text-foreground dark:text-white mb-6">Sipariş Özeti</h2>
 
                         <div className="space-y-4 mb-6">
                             <div className="flex justify-between text-sm font-medium text-gray-500">
@@ -145,7 +145,7 @@ export default function CartPage() {
                                 )}
                             </div>
                             <div className="h-px bg-gray-100 dark:bg-white/10 my-4" />
-                            <div className="flex justify-between text-xl font-black text-gray-900 dark:text-white">
+                            <div className="flex justify-between text-xl font-black text-foreground dark:text-white">
                                 <span>Toplam</span>
                                 <span>{total}₺</span>
                             </div>

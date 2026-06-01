@@ -128,7 +128,7 @@ function RealPostsGallery({ userId, onPostClick }: { userId?: string; onPostClic
                 animate={{ opacity: 1, y: 0 }}
                 className="flex flex-col items-center justify-center py-20 px-8 text-center"
             >
-                <div className="w-20 h-20 rounded-[2rem] bg-white/5 border border-white/10 flex items-center justify-center mb-6">
+                <div className="w-20 h-20 rounded-[2rem] bg-white/5 border border-card-border flex items-center justify-center mb-6">
                     <ImageIcon className="w-9 h-9 text-white/20" />
                 </div>
                 <h3 className="text-foreground font-black text-lg uppercase italic tracking-tighter">Henüz Gönderi Yok</h3>
@@ -155,7 +155,7 @@ function RealPostsGallery({ userId, onPostClick }: { userId?: string; onPostClic
                             "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all border",
                             filterType === f.id
                                 ? "bg-foreground text-background border-foreground"
-                                : "bg-white/5 text-secondary border-white/10 hover:bg-white/10"
+                                : "bg-white/5 text-secondary border-card-border hover:bg-white/10"
                         )}
                     >
                         {f.label}
@@ -237,7 +237,7 @@ function RealPostsGallery({ userId, onPostClick }: { userId?: string; onPostClic
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 40 }}
                             transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-                            className="fixed inset-x-4 top-20 bottom-20 z-[510] bg-[#1C1C1E] rounded-[2.5rem] overflow-hidden flex flex-col border border-white/10 shadow-2xl"
+                            className="fixed inset-x-4 top-20 bottom-20 z-[510] bg-[#1C1C1E] rounded-[2.5rem] overflow-hidden flex flex-col border border-card-border shadow-2xl"
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Media */}
@@ -259,7 +259,7 @@ function RealPostsGallery({ userId, onPostClick }: { userId?: string; onPostClic
                                 )}
                                 <button
                                     onClick={() => setSelectedPost(null)}
-                                    className="absolute top-4 right-4 w-9 h-9 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20"
+                                    className="absolute top-4 right-4 w-9 h-9 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-card-border"
                                 >
                                     <X className="w-4 h-4" />
                                 </button>
@@ -387,10 +387,7 @@ export function ProfileTab({
                     <div className="w-full h-48 bg-card relative overflow-hidden">
                         <img src={user?.cover_photo || "https://images.unsplash.com/photo-1550439062-609e1531270e?q=80&w=1200"} className="w-full h-full object-cover opacity-40" />
                         <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
-                        <button onClick={onSettings} className="absolute top-4 right-4 w-10 h-10 rounded-full bg-background/40 backdrop-blur-md border border-card-border flex items-center justify-center text-foreground z-10 transition-transform active:scale-90">
-                                <Settings className="w-5 h-5" />
-                            </button>
-                        </div>
+                    </div>
 
                         <div className="px-6 relative -mt-16 mb-6">
                             <div className="flex justify-between items-center mb-6">
@@ -566,7 +563,7 @@ function PetDashboardView({ pets, activePet, switchPet, onAddPet, posts, safeAct
                                 key={p.id}
                                 onClick={() => switchPet(p.id)}
                                 className={cn(
-                                    "w-9 h-9 rounded-xl transition-all overflow-hidden border border-white/5",
+                                    "w-9 h-9 rounded-xl transition-all overflow-hidden border border-card-border",
                                     activePet?.id === p.id ? "ring-2 ring-cyan-500 ring-offset-2 ring-offset-[#1A1A2E] scale-110 shadow-lg shadow-cyan-500/20" : "opacity-30 grayscale hover:opacity-100 hover:grayscale-0"
                                 )}
                             >
@@ -610,7 +607,7 @@ function PetDashboardView({ pets, activePet, switchPet, onAddPet, posts, safeAct
                         </div>
 
                         {/* ANIMATED CIRCULAR PROGRESS */}
-                        <div className="w-28 h-28 rounded-full border-4 border-white/5 p-1 relative flex items-center justify-center text-center group-hover/card:scale-110 transition-transform duration-500">
+                        <div className="w-28 h-28 rounded-full border-4 border-card-border p-1 relative flex items-center justify-center text-center group-hover/card:scale-110 transition-transform duration-500">
                             <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
                                 <circle cx="50" cy="50" r="46" fill="transparent" stroke="currentColor" strokeWidth="8" className="text-white/5" />
                                 <motion.circle 

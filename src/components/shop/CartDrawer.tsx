@@ -31,10 +31,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, onCheck
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed top-0 right-0 h-full w-full max-w-md bg-[#0a0a0a] border-l border-white/10 z-[101] flex flex-col shadow-2xl"
+            className="fixed top-0 right-0 h-full w-full max-w-md bg-[#0a0a0a] border-l border-card-border z-[101] flex flex-col shadow-2xl"
           >
             {/* Header */}
-            <div className="p-6 border-b border-white/5 flex items-center justify-between">
+            <div className="p-6 border-b border-card-border flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-[var(--moffi-blue)] rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(91,77,157,0.3)]">
                   <ShoppingBag size={20} className="text-white" />
@@ -67,9 +67,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, onCheck
                     layout
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="bg-white/5 border border-white/5 rounded-2xl p-4 flex gap-4 group"
+                    className="bg-white/5 border border-card-border rounded-2xl p-4 flex gap-4 group"
                   >
-                    <div className="w-20 h-20 bg-black/40 rounded-xl flex items-center justify-center text-3xl border border-white/5 relative overflow-hidden">
+                    <div className="w-20 h-20 bg-black/40 rounded-xl flex items-center justify-center text-3xl border border-card-border relative overflow-hidden">
                        <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent" />
                        <span className="relative z-10">📦</span>
                     </div>
@@ -82,7 +82,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, onCheck
                       <div className="flex items-center justify-between">
                         <p className="font-bold text-[var(--moffi-blue)]">{item.product?.price || 0} TL</p>
                         
-                        <div className="flex items-center gap-3 bg-black/40 rounded-lg p-1 border border-white/5">
+                        <div className="flex items-center gap-3 bg-black/40 rounded-lg p-1 border border-card-border">
                           <button 
                             onClick={() => updateQuantity(item.productId, Math.max(1, item.quantity - 1))}
                             className="p-1 hover:bg-white/10 rounded transition-all text-white/50"
@@ -113,7 +113,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, onCheck
 
             {/* Footer / Summary */}
             {cart.length > 0 && (
-              <div className="p-8 bg-[#0d0d0d] border-t border-white/5 space-y-6">
+              <div className="p-8 bg-[#0d0d0d] border-t border-card-border space-y-6">
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm text-[var(--text-tertiary)]">
                     <span>Ara Toplam</span>
@@ -132,7 +132,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, onCheck
                 <button
                   onClick={onCheckout}
                   disabled={isLoading}
-                  className="w-full h-14 bg-white text-black font-bold rounded-2xl flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_30px_rgba(255,255,255,0.1)]"
+                  className="w-full h-14 bg-card text-black font-bold rounded-2xl flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_30px_rgba(255,255,255,0.1)]"
                 >
                   <CreditCard size={20} />
                   ÖDEMEYE GEÇ

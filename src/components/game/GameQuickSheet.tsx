@@ -49,7 +49,7 @@ export function GameQuickSheet({
                         animate={{ y: 0 }}
                         exit={{ y: "100%" }}
                         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                        className="fixed bottom-0 inset-x-0 z-[3001] bg-[#0A0A0A] rounded-t-[3rem] border-t border-white/10 shadow-[0_-20px_50px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col max-h-[92vh]"
+                        className="fixed bottom-0 inset-x-0 z-[3001] bg-[#0A0A0A] rounded-t-[3rem] border-t border-card-border shadow-[0_-20px_50px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col max-h-[92vh]"
                     >
                         {/* Grab Handle */}
                         <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/10 rounded-full" />
@@ -61,7 +61,7 @@ export function GameQuickSheet({
                             </div>
                             <button 
                                 onClick={onClose}
-                                className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center border border-white/10 hover:bg-white/10 transition-all"
+                                className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center border border-card-border hover:bg-white/10 transition-all"
                             >
                                 <X className="w-5 h-5 text-white/50" />
                             </button>
@@ -74,7 +74,7 @@ export function GameQuickSheet({
                                 <div className="absolute -right-8 -top-8 w-32 h-32 bg-indigo-500/10 blur-3xl rounded-full" />
                                 <div className="flex items-center justify-between relative z-10 mb-4">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10">
+                                        <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-card-border">
                                             <Coins className="w-6 h-6 text-indigo-400" />
                                         </div>
                                         <div>
@@ -98,7 +98,7 @@ export function GameQuickSheet({
 
                             {/* 2. PET STATUS BENTO */}
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-white/5 border border-white/10 rounded-[2rem] p-5 flex flex-col items-center justify-center gap-2 group hover:bg-white/10 transition-all">
+                                <div className="bg-white/5 border border-card-border rounded-[2rem] p-5 flex flex-col items-center justify-center gap-2 group hover:bg-white/10 transition-all">
                                     <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-400 border border-green-500/20">
                                         <Star className="w-5 h-5" />
                                     </div>
@@ -107,7 +107,7 @@ export function GameQuickSheet({
                                         <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Seviye</span>
                                     </div>
                                 </div>
-                                <div className="bg-white/5 border border-white/10 rounded-[2rem] p-5 flex flex-col items-center justify-center gap-2 group hover:bg-white/10 transition-all">
+                                <div className="bg-white/5 border border-card-border rounded-[2rem] p-5 flex flex-col items-center justify-center gap-2 group hover:bg-white/10 transition-all">
                                     <div className="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center text-pink-400 border border-pink-500/20">
                                         <Heart className="w-5 h-5" />
                                     </div>
@@ -127,9 +127,9 @@ export function GameQuickSheet({
                                     <span className="text-[9px] font-black text-white/30 uppercase tracking-widest cursor-pointer hover:text-white transition-colors">Tümünü Gör</span>
                                 </div>
 
-                                <div className="bg-gradient-to-br from-[#1A1A1A] to-transparent border border-white/10 rounded-[2.2rem] p-5 flex items-center justify-between group cursor-pointer hover:bg-white/5 transition-all">
+                                <div className="bg-gradient-to-br from-[#1A1A1A] to-transparent border border-card-border rounded-[2.2rem] p-5 flex items-center justify-between group cursor-pointer hover:bg-white/5 transition-all">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10 relative overflow-hidden">
+                                        <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center border border-card-border relative overflow-hidden">
                                             <Trophy className="w-7 h-7 text-yellow-500 relative z-10" />
                                             <div className="absolute inset-0 bg-yellow-500/10 animate-pulse" />
                                         </div>
@@ -152,7 +152,7 @@ export function GameQuickSheet({
                                     <Activity className="w-3.5 h-3.5" /> Son Aktiviteler
                                 </h4>
                                 <div className="space-y-3">
-                                    <div className="flex items-center justify-between bg-white/5 p-4 rounded-2xl border border-white/5">
+                                    <div className="flex items-center justify-between bg-white/5 p-4 rounded-2xl border border-card-border">
                                         <div className="flex items-center gap-3">
                                             <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400">
                                                 <Flame className="w-4 h-4" />

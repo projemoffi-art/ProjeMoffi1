@@ -26,10 +26,10 @@ export function PublicPassportTab({ pet }: PublicPassportTabProps) {
             animate={{ opacity: 1, y: 0 }} 
             className="space-y-8 pb-40 relative px-2 mb-12"
         >
-            <div className="bg-gradient-to-br from-[#1C1C1E] via-[#0A0A0E] to-[#1C1C1E] rounded-[3.5rem] p-10 border border-white/10 shadow-2xl relative overflow-hidden flex flex-col min-h-[480px]">
+            <div className="bg-gradient-to-br from-[#1C1C1E] via-[#0A0A0E] to-[#1C1C1E] rounded-[3.5rem] p-10 border border-card-border shadow-2xl relative overflow-hidden flex flex-col min-h-[480px]">
                 {/* Public Badge */}
                 <div className="absolute top-8 left-1/2 -translate-x-1/2 z-30">
-                    <div className="flex items-center gap-2 bg-black/40 backdrop-blur-2xl px-5 py-2 rounded-full border border-white/10">
+                    <div className="flex items-center gap-2 bg-black/40 backdrop-blur-2xl px-5 py-2 rounded-full border border-card-border">
                         <BadgeCheck className="w-3.5 h-3.5 text-cyan-400" />
                         <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Moffi Onaylı Profil</span>
                     </div>
@@ -44,13 +44,13 @@ export function PublicPassportTab({ pet }: PublicPassportTabProps) {
                             <h1 className="text-5xl font-black text-white tracking-tighter leading-none italic uppercase">{pet.name}</h1>
                         </div>
                     </div>
-                    <div className="bg-white p-2 rounded-2xl">
+                    <div className="bg-card p-2 rounded-2xl">
                         <QRCodeSVG value={`moffi://id/${pet.id}`} size={64} />
                     </div>
                 </div>
 
                 {/* Stats Grid - Public Only */}
-                <div className="grid grid-cols-2 gap-y-10 relative z-10 border-t border-white/10 pt-10 mt-auto">
+                <div className="grid grid-cols-2 gap-y-10 relative z-10 border-t border-card-border pt-10 mt-auto">
                     {[
                         { label: 'Irk', value: pet.breed, icon: Award },
                         { label: 'Kimlik No', value: maskedMicrochip, icon: Hash, mono: true, color: 'text-gray-500' },
@@ -71,7 +71,7 @@ export function PublicPassportTab({ pet }: PublicPassportTabProps) {
             </div>
 
             {/* Restricted Info Notice */}
-            <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 text-center space-y-4">
+            <div className="bg-white/5 border border-card-border rounded-[2.5rem] p-8 text-center space-y-4">
                 <div className="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center mx-auto text-indigo-400">
                     <Fingerprint className="w-6 h-6" />
                 </div>
@@ -81,7 +81,7 @@ export function PublicPassportTab({ pet }: PublicPassportTabProps) {
                         Bu kullanıcının detaylı tıbbi verileri ve iletişim bilgileri gizlilik gereği sadece sahibi tarafından görülebilir.
                     </p>
                 </div>
-                <button className="px-6 py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 transition-colors">
+                <button className="px-6 py-2 bg-white/5 border border-card-border rounded-xl text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 transition-colors">
                     Mesaj Gönder
                 </button>
             </div>

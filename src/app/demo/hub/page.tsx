@@ -35,10 +35,10 @@ export default function HubDemoPage() {
     return (
         <div className="min-h-screen bg-gray-50 flex justify-center">
             {/* Mobile Frame Simulation */}
-            <div className="w-full max-w-md bg-white min-h-screen relative shadow-2xl overflow-hidden flex flex-col">
+            <div className="w-full max-w-md bg-card min-h-screen relative shadow-2xl overflow-hidden flex flex-col">
                 
                 {/* Header Simulation */}
-                <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 p-4 flex items-center justify-between">
+                <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-card-border p-4 flex items-center justify-between">
                     <h1 className="text-2xl font-black italic tracking-tighter text-[#5B4D9D]">MOFFI</h1>
                     <div className="flex gap-4">
                         <Search className="text-gray-400" size={24} />
@@ -76,7 +76,7 @@ export default function HubDemoPage() {
                 </div>
 
                 {/* Bottom Navigation Simulation */}
-                <div className="absolute bottom-0 left-0 right-0 h-20 bg-white border-t border-gray-100 px-8 flex items-center justify-between pointer-events-none opacity-40">
+                <div className="absolute bottom-0 left-0 right-0 h-20 bg-card border-t border-card-border px-8 flex items-center justify-between pointer-events-none opacity-40">
                     <div className="w-8 h-8 rounded-lg bg-gray-200" />
                     <div className="w-8 h-8 rounded-lg bg-gray-200" />
                     <div className="w-10 h-10" /> {/* Spacer for Plus */}

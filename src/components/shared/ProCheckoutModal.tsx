@@ -89,10 +89,10 @@ export function ProCheckoutModal({ isOpen, onClose, onSuccess }: ProCheckoutModa
                         initial={{ scale: 0.9, opacity: 0, y: 20 }}
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                        className="fixed inset-x-4 top-[10%] bottom-[10%] md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-[480px] z-[9501] bg-[#0D0D12] border border-white/10 rounded-[3.5rem] shadow-[0_40px_100px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden"
+                        className="fixed inset-x-4 top-[10%] bottom-[10%] md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-[480px] z-[9501] bg-[#0D0D12] border border-card-border rounded-[3.5rem] shadow-[0_40px_100px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden"
                     >
                         {/* Header */}
-                        <div className="px-8 pt-8 pb-4 flex items-center justify-between border-b border-white/5">
+                        <div className="px-8 pt-8 pb-4 flex items-center justify-between border-b border-card-border">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
                                     <Crown className="w-5 h-5 text-white" />
@@ -102,7 +102,7 @@ export function ProCheckoutModal({ isOpen, onClose, onSuccess }: ProCheckoutModa
                                     <p className="text-[9px] text-indigo-400 font-bold uppercase tracking-widest">Premium Yükseltme</p>
                                 </div>
                             </div>
-                            <button onClick={onClose} className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-all border border-white/10">
+                            <button onClick={onClose} className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-all border border-card-border">
                                 <X className="w-4 h-4 text-white/50" />
                             </button>
                         </div>
@@ -119,10 +119,10 @@ export function ProCheckoutModal({ isOpen, onClose, onSuccess }: ProCheckoutModa
                                     >
                                         {/* Card Preview */}
                                         <div className="relative group perspective-1000">
-                                            <div className="w-full aspect-[1.6/1] bg-gradient-to-br from-[#1C1C26] via-[#12121A] to-[#0A0A0F] rounded-3xl p-8 border border-white/10 shadow-2xl relative overflow-hidden group-hover:rotate-x-2 transition-transform duration-500">
+                                            <div className="w-full aspect-[1.6/1] bg-gradient-to-br from-[#1C1C26] via-[#12121A] to-[#0A0A0F] rounded-3xl p-8 border border-card-border shadow-2xl relative overflow-hidden group-hover:rotate-x-2 transition-transform duration-500">
                                                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-[60px] rounded-full" />
                                                 <div className="flex justify-between items-start mb-12">
-                                                    <div className="w-12 h-10 bg-white/5 rounded-lg border border-white/10 flex items-center justify-center">
+                                                    <div className="w-12 h-10 bg-white/5 rounded-lg border border-card-border flex items-center justify-center">
                                                         <div className="w-8 h-6 bg-yellow-500/20 rounded border border-yellow-500/20" />
                                                     </div>
                                                     <CreditCard className="w-8 h-8 text-white/20" />
@@ -158,7 +158,7 @@ export function ProCheckoutModal({ isOpen, onClose, onSuccess }: ProCheckoutModa
                                                     type="text"
                                                     value={cardData.name}
                                                     onChange={(e) => setCardData({...cardData, name: e.target.value})}
-                                                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-5 text-white font-bold outline-none focus:border-indigo-500/50 transition-all placeholder:text-white/10 uppercase"
+                                                    className="w-full bg-white/5 border border-card-border rounded-2xl py-4 px-5 text-white font-bold outline-none focus:border-indigo-500/50 transition-all placeholder:text-white/10 uppercase"
                                                     placeholder="AD SOYAD"
                                                 />
                                             </div>
@@ -171,7 +171,7 @@ export function ProCheckoutModal({ isOpen, onClose, onSuccess }: ProCheckoutModa
                                                         maxLength={16}
                                                         value={cardData.number}
                                                         onChange={(e) => setCardData({...cardData, number: e.target.value.replace(/\D/g, '')})}
-                                                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-5 text-white font-mono font-bold text-lg outline-none focus:border-indigo-500/50 transition-all"
+                                                        className="w-full bg-white/5 border border-card-border rounded-2xl py-4 px-5 text-white font-mono font-bold text-lg outline-none focus:border-indigo-500/50 transition-all"
                                                         placeholder="0000 0000 0000 0000"
                                                     />
                                                     <Lock className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
@@ -190,7 +190,7 @@ export function ProCheckoutModal({ isOpen, onClose, onSuccess }: ProCheckoutModa
                                                             if (val.length >= 2) val = val.substring(0,2) + '/' + val.substring(2);
                                                             setCardData({...cardData, expiry: val});
                                                         }}
-                                                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-5 text-white font-bold outline-none focus:border-indigo-500/50 transition-all"
+                                                        className="w-full bg-white/5 border border-card-border rounded-2xl py-4 px-5 text-white font-bold outline-none focus:border-indigo-500/50 transition-all"
                                                         placeholder="AA/YY"
                                                     />
                                                 </div>
@@ -201,7 +201,7 @@ export function ProCheckoutModal({ isOpen, onClose, onSuccess }: ProCheckoutModa
                                                         maxLength={3}
                                                         value={cardData.cvc}
                                                         onChange={(e) => setCardData({...cardData, cvc: e.target.value.replace(/\D/g, '')})}
-                                                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-5 text-white font-bold outline-none focus:border-indigo-500/50 transition-all"
+                                                        className="w-full bg-white/5 border border-card-border rounded-2xl py-4 px-5 text-white font-bold outline-none focus:border-indigo-500/50 transition-all"
                                                         placeholder="123"
                                                     />
                                                 </div>
@@ -220,7 +220,7 @@ export function ProCheckoutModal({ isOpen, onClose, onSuccess }: ProCheckoutModa
                                             disabled={!isFormValid}
                                             className={cn(
                                                 "w-full py-6 rounded-[2.5rem] flex items-center justify-center gap-3 transition-all active:scale-95 group shadow-2xl shadow-indigo-500/20",
-                                                isFormValid ? "bg-white text-black font-black uppercase tracking-[0.2em]" : "bg-white/5 border border-white/10 text-white/20 cursor-not-allowed"
+                                                isFormValid ? "bg-card text-black font-black uppercase tracking-[0.2em]" : "bg-white/5 border border-card-border text-white/20 cursor-not-allowed"
                                             )}
                                         >
                                             {isFormValid ? (
@@ -258,7 +258,7 @@ export function ProCheckoutModal({ isOpen, onClose, onSuccess }: ProCheckoutModa
                                             <h4 className="text-2xl font-black text-white italic uppercase tracking-tighter">İşlem Yapılıyor</h4>
                                             <p className="text-[10px] text-white/30 font-black uppercase tracking-[0.3em]">Bankanızdan onay bekleniyor...</p>
                                         </div>
-                                        <div className="bg-white/5 px-6 py-3 rounded-2xl flex items-center gap-3 border border-white/5">
+                                        <div className="bg-white/5 px-6 py-3 rounded-2xl flex items-center gap-3 border border-card-border">
                                             <Lock className="w-4 h-4 text-indigo-400" />
                                             <span className="text-[9px] font-black text-white/50 uppercase tracking-widest">3D SECURE ACTIVE</span>
                                         </div>
@@ -297,11 +297,11 @@ export function ProCheckoutModal({ isOpen, onClose, onSuccess }: ProCheckoutModa
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
-                                            <div className="bg-white/5 p-4 rounded-2xl border border-white/5 flex flex-col items-center">
+                                            <div className="bg-white/5 p-4 rounded-2xl border border-card-border flex flex-col items-center">
                                                 <Sparkles className="w-4 h-4 text-orange-400 mb-2" />
                                                 <span className="text-[8px] font-black text-white/40 uppercase">Premium Aura</span>
                                             </div>
-                                            <div className="bg-white/5 p-4 rounded-2xl border border-white/5 flex flex-col items-center">
+                                            <div className="bg-white/5 p-4 rounded-2xl border border-card-border flex flex-col items-center">
                                                 <BellRing className="w-4 h-4 text-cyan-400 mb-2" />
                                                 <span className="text-[8px] font-black text-white/40 uppercase">Öncelikli SOS</span>
                                             </div>

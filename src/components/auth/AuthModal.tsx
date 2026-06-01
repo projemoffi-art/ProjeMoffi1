@@ -143,14 +143,14 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                         exit={{ opacity: 0, scale: 0.9, y: 40 }}
                         transition={{ type: "spring", stiffness: 200, damping: 25 }}
                         className={cn(
-                            "relative w-full max-w-lg bg-[#0A0A0E] border border-white/10 rounded-[4rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,1)] overflow-hidden",
+                            "relative w-full max-w-lg bg-[#0A0A0E] border border-card-border rounded-[4rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,1)] overflow-hidden",
                             step === 'welcome' ? 'h-[650px]' : 'h-auto min-h-[500px]'
                         )}
                     >
                         {/* Close Button */}
                         <button
                             onClick={onClose}
-                            className="absolute top-10 right-10 w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all z-[100] active:scale-95"
+                            className="absolute top-10 right-10 w-12 h-12 rounded-full bg-white/5 border border-card-border flex items-center justify-center hover:bg-white/10 transition-all z-[100] active:scale-95"
                         >
                             <X className="w-5 h-5 text-gray-400" />
                         </button>
@@ -189,7 +189,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
                                         <button 
                                             onClick={() => setStep('choice')}
-                                            className="group relative w-full mt-4 bg-white text-black py-6 rounded-[2.5rem] font-black text-xs uppercase tracking-[0.2em] overflow-hidden active:scale-95 transition-all"
+                                            className="group relative w-full mt-4 bg-card text-black py-6 rounded-[2.5rem] font-black text-xs uppercase tracking-[0.2em] overflow-hidden active:scale-95 transition-all"
                                         >
                                             <span className="relative z-10 flex items-center justify-center gap-3">
                                                 Keşfetmeye Başla <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -215,7 +215,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                                         <div className="grid grid-cols-1 gap-4">
                                             <button 
                                                 onClick={() => setStep('login')}
-                                                className="group p-8 rounded-[2.5rem] bg-white/[0.03] border border-white/5 hover:bg-white/5 transition-all text-left flex items-center justify-between"
+                                                className="group p-8 rounded-[2.5rem] bg-white/[0.03] border border-card-border hover:bg-white/5 transition-all text-left flex items-center justify-between"
                                             >
                                                 <div className="flex items-center gap-6">
                                                     <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 border border-cyan-500/20">
@@ -231,7 +231,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
                                             <button 
                                                 onClick={() => setStep('register')}
-                                                className="group p-8 rounded-[2.5rem] bg-white/[0.03] border border-white/5 hover:bg-white/5 transition-all text-left flex items-center justify-between"
+                                                className="group p-8 rounded-[2.5rem] bg-white/[0.03] border border-card-border hover:bg-white/5 transition-all text-left flex items-center justify-between"
                                             >
                                                 <div className="flex items-center gap-6">
                                                     <div className="w-14 h-14 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-400 border border-purple-500/20">
@@ -247,10 +247,10 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                                         </div>
 
                                         <div className="mt-8 flex flex-col items-center gap-6">
-                                            <span className="text-[9px] text-gray-700 font-black uppercase tracking-[0.5em]">Diğer Seçenekler</span>
+                                            <span className="text-[9px] text-foreground font-black uppercase tracking-[0.5em]">Diğer Seçenekler</span>
                                             <div className="flex gap-4">
-                                                <button className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-all"><Chrome className="w-6 h-6" /></button>
-                                                <button className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-all"><Github className="w-6 h-6" /></button>
+                                                <button className="w-16 h-16 rounded-2xl bg-white/5 border border-card-border flex items-center justify-center text-white hover:bg-white/10 transition-all"><Chrome className="w-6 h-6" /></button>
+                                                <button className="w-16 h-16 rounded-2xl bg-white/5 border border-card-border flex items-center justify-center text-white hover:bg-white/10 transition-all"><Github className="w-6 h-6" /></button>
                                             </div>
                                         </div>
                                     </motion.div>
@@ -289,7 +289,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                                                         onChange={(e) => setName(e.target.value)}
                                                         required
                                                         placeholder="Moffi Kullanıcısı"
-                                                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-sm text-white placeholder-gray-700 focus:border-cyan-500/50 outline-none transition-all"
+                                                        className="w-full bg-white/5 border border-card-border rounded-2xl py-5 px-6 text-sm text-white placeholder-gray-700 focus:border-cyan-500/50 outline-none transition-all"
                                                     />
                                                 </div>
                                             )}
@@ -302,7 +302,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                                                     onChange={(e) => setEmail(e.target.value)}
                                                     required
                                                     placeholder="merhaba@moffi.net"
-                                                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-sm text-white placeholder-gray-700 focus:border-cyan-500/50 outline-none transition-all"
+                                                    className="w-full bg-white/5 border border-card-border rounded-2xl py-5 px-6 text-sm text-white placeholder-gray-700 focus:border-cyan-500/50 outline-none transition-all"
                                                 />
                                             </div>
 
@@ -314,7 +314,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                                                     onChange={(e) => setPassword(e.target.value)}
                                                     required
                                                     placeholder="••••••••"
-                                                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-sm text-white placeholder-gray-700 focus:border-cyan-500/50 outline-none transition-all"
+                                                    className="w-full bg-white/5 border border-card-border rounded-2xl py-5 px-6 text-sm text-white placeholder-gray-700 focus:border-cyan-500/50 outline-none transition-all"
                                                 />
                                             </div>
 

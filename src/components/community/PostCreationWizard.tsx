@@ -163,10 +163,10 @@ export default function PostCreationWizard({ isOpen, onClose, user, userPets, on
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[10000] bg-[#0a0a0b] flex flex-col"
+                    className="fixed inset-0 z-[10000] bg-[#000000] flex flex-col"
                 >
                     {/* Header */}
-                    <div className="flex justify-between items-center px-6 pt-12 pb-4 shrink-0 border-b border-white/5 bg-black/40 backdrop-blur-md">
+                    <div className="flex justify-between items-center px-6 pt-12 pb-4 shrink-0 border-b border-card-border bg-black/40 backdrop-blur-md">
                         <button
                             onClick={() => {
                                 if (step === 1) onClose();
@@ -201,7 +201,7 @@ export default function PostCreationWizard({ isOpen, onClose, user, userPets, on
                         {step === 1 ? (
                             <>
                                 {/* Step 1: Preview (Top) */}
-                                <div className="w-full aspect-square bg-black relative flex items-center justify-center overflow-hidden border-b border-white/5">
+                                <div className="w-full aspect-square bg-black relative flex items-center justify-center overflow-hidden border-b border-card-border">
                                     {mediaURL ? (
                                         <motion.img 
                                             key={mediaURL}
@@ -219,8 +219,8 @@ export default function PostCreationWizard({ isOpen, onClose, user, userPets, on
                                 </div>
 
                                 {/* Step 1: Gallery Grid (Bottom) */}
-                                <div className="flex-1 flex flex-col bg-[#0a0a0b]">
-                                    <div className="px-6 py-4 flex justify-between items-center border-b border-white/5">
+                                <div className="flex-1 flex flex-col bg-[#000000]">
+                                    <div className="px-6 py-4 flex justify-between items-center border-b border-card-border">
                                         <span className="text-[11px] font-black text-white/40 uppercase tracking-[0.2em]">Galeri</span>
                                         <button 
                                             onClick={() => fileInputRef.current?.click()}
@@ -241,7 +241,7 @@ export default function PostCreationWizard({ isOpen, onClose, user, userPets, on
                                             </div>
                                             <button 
                                                 onClick={() => fileInputRef.current?.click()}
-                                                className="w-full py-4 bg-white text-black rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-200 transition-colors"
+                                                className="w-full py-4 bg-card text-black rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-200 transition-colors"
                                             >
                                                 Erişim İzni Ver
                                             </button>
@@ -260,7 +260,7 @@ export default function PostCreationWizard({ isOpen, onClose, user, userPets, on
                                                     <img src={photo.url} className="w-full h-full object-cover" />
                                                     <div className={cn(
                                                         "absolute inset-0 border-2 transition-all",
-                                                        selectedGalleryIndex === idx ? "border-cyan-400" : "border-transparent group-hover:border-white/20"
+                                                        selectedGalleryIndex === idx ? "border-cyan-400" : "border-transparent group-hover:border-card-border"
                                                     )} />
                                                 </button>
                                             ))}
@@ -274,7 +274,7 @@ export default function PostCreationWizard({ isOpen, onClose, user, userPets, on
                             </>
                         ) : step === 2 ? (
                             <>
-                                <div className="w-full h-[45vh] bg-black relative flex items-center justify-center overflow-hidden border-b border-white/5">
+                                <div className="w-full h-[45vh] bg-black relative flex items-center justify-center overflow-hidden border-b border-card-border">
                                     <motion.div 
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
@@ -325,7 +325,7 @@ export default function PostCreationWizard({ isOpen, onClose, user, userPets, on
                                 </div>
 
                                 <div className="flex-1 overflow-y-auto bg-black flex flex-col">
-                                    <div className="px-6 py-6 flex items-center justify-around border-b border-white/5">
+                                    <div className="px-6 py-6 flex items-center justify-around border-b border-card-border">
                                         <ToolBtn icon={Palette} label="Ayar" active={activeTool === 'adjust'} onClick={() => setActiveTool(activeTool === 'adjust' ? null : 'adjust')} />
                                         <ToolBtn icon={Maximize} label="Oran" active={activeTool === 'ratio'} onClick={() => setActiveTool(activeTool === 'ratio' ? null : 'ratio')} />
                                         <ToolBtn icon={Type} label="Metin" active={activeTool === 'text'} onClick={() => setActiveTool(activeTool === 'text' ? null : 'text')} />
@@ -360,11 +360,11 @@ export default function PostCreationWizard({ isOpen, onClose, user, userPets, on
                                                     <input 
                                                         type="text" value={postText} onChange={(e) => setPostText(e.target.value)} 
                                                         placeholder="Buraya bir şeyler yaz..."
-                                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white outline-none focus:border-cyan-500"
+                                                        className="w-full bg-white/5 border border-card-border rounded-2xl px-6 py-4 text-white outline-none focus:border-cyan-500"
                                                     />
                                                     <div className="flex gap-3">
                                                         {['#ffffff', '#000000', '#facc15', '#ef4444', '#22d3ee'].map(c => (
-                                                            <button key={c} onClick={() => setPostTextColor(c)} className={cn("w-8 h-8 rounded-full border-2", postTextColor === c ? "border-cyan-400" : "border-white/20")} style={{ backgroundColor: c }} />
+                                                            <button key={c} onClick={() => setPostTextColor(c)} className={cn("w-8 h-8 rounded-full border-2", postTextColor === c ? "border-cyan-400" : "border-card-border")} style={{ backgroundColor: c }} />
                                                         ))}
                                                     </div>
                                                     <Slider label="Yükseklik" value={postTextY} min={0} max={100} onChange={setPostTextY} />
@@ -375,11 +375,11 @@ export default function PostCreationWizard({ isOpen, onClose, user, userPets, on
                                 </div>
                             </>
                         ) : step === 3 && (
-                            <div className="flex-1 overflow-y-auto bg-[#0a0a0b] flex flex-col">
+                            <div className="flex-1 overflow-y-auto bg-[#000000] flex flex-col">
                                 <div className="p-6 space-y-8 pb-40">
                                     <div className="flex gap-4">
-                                        <img src={user?.avatar || "https://api.dicebear.com/7.x/notionists/svg?seed=User"} className="w-12 h-12 rounded-full border border-white/10" />
-                                        <div className="flex-1 bg-white/[0.03] rounded-3xl p-4 border border-white/5 relative">
+                                        <img src={user?.avatar || "https://api.dicebear.com/7.x/notionists/svg?seed=User"} className="w-12 h-12 rounded-full border border-card-border" />
+                                        <div className="flex-1 bg-white/[0.03] rounded-3xl p-4 border border-card-border relative">
                                             <textarea 
                                                 value={caption} 
                                                 onChange={(e) => setCaption(e.target.value)}
@@ -406,7 +406,7 @@ export default function PostCreationWizard({ isOpen, onClose, user, userPets, on
                                                         onClick={() => setTaggedPetIds(prev => prev.includes(pet.id) ? prev.filter(id => id !== pet.id) : [...prev, pet.id])}
                                                         className="flex flex-col items-center gap-2 shrink-0"
                                                     >
-                                                        <div className={cn("w-14 h-14 rounded-full border-2 p-0.5", taggedPetIds.includes(pet.id) ? "border-cyan-500" : "border-white/10")}>
+                                                        <div className={cn("w-14 h-14 rounded-full border-2 p-0.5", taggedPetIds.includes(pet.id) ? "border-cyan-500" : "border-card-border")}>
                                                             <img src={pet.avatar} className="w-full h-full rounded-full object-cover" />
                                                         </div>
                                                         <span className="text-[10px] text-white/40 font-bold">{pet.name}</span>
@@ -418,7 +418,7 @@ export default function PostCreationWizard({ isOpen, onClose, user, userPets, on
                                         <Section title="Ruh Hali" icon={Heart}>
                                             <div className="flex flex-wrap gap-2">
                                                 {MOOD_OPTIONS.map(m => (
-                                                    <button key={m} onClick={() => setMood(mood === m ? null : m)} className={cn("px-4 py-2 rounded-full text-xs font-bold transition-all", mood === m ? "bg-white text-black" : "bg-white/5 text-white/40")}>
+                                                    <button key={m} onClick={() => setMood(mood === m ? null : m)} className={cn("px-4 py-2 rounded-full text-xs font-bold transition-all", mood === m ? "bg-card text-black" : "bg-white/5 text-white/40")}>
                                                         {m}
                                                     </button>
                                                 ))}
@@ -445,7 +445,7 @@ export default function PostCreationWizard({ isOpen, onClose, user, userPets, on
                                     >
                                         {isPublishing ? (
                                             <div className="flex items-center gap-3">
-                                                <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                                <div className="w-5 h-5 border-2 border-card-border border-t-white rounded-full animate-spin" />
                                                 <span className="uppercase tracking-widest text-xs">{uploadProgress}% Yükleniyor</span>
                                             </div>
                                         ) : (
@@ -502,7 +502,7 @@ function Section({ title, icon: Icon, children }: any) {
 
 function ToggleRow({ icon: Icon, label, value, onClick }: any) {
     return (
-        <button onClick={onClick} className="w-full flex items-center justify-between p-4 bg-white/[0.03] border border-white/5 rounded-2xl hover:bg-white/5 transition-all">
+        <button onClick={onClick} className="w-full flex items-center justify-between p-4 bg-white/[0.03] border border-card-border rounded-2xl hover:bg-white/5 transition-all">
             <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/40"><Icon size={16} /></div>
                 <span className="text-xs font-bold text-white/80">{label}</span>

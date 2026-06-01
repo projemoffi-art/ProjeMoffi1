@@ -45,7 +45,7 @@ function LegalModal({ isOpen, onClose, type }: { isOpen: boolean, onClose: () =>
                         initial={{ y: "100%" }}
                         animate={{ y: 0 }}
                         exit={{ y: "100%" }}
-                        className="w-full max-w-xl bg-zinc-900 border-t sm:border border-white/10 rounded-t-[2.5rem] sm:rounded-[3rem] p-8 pb-12 sm:pb-8 flex flex-col gap-6 shadow-2xl relative"
+                        className="w-full max-w-xl bg-zinc-900 border-t sm:border border-card-border rounded-t-[2.5rem] sm:rounded-[3rem] p-8 pb-12 sm:pb-8 flex flex-col gap-6 shadow-2xl relative"
                     >
                         <div className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/10 rounded-full sm:hidden" />
                         
@@ -71,7 +71,7 @@ function LegalModal({ isOpen, onClose, type }: { isOpen: boolean, onClose: () =>
 
                         <button 
                             onClick={onClose}
-                            className="w-full py-5 bg-white text-black rounded-3xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all"
+                            className="w-full py-5 bg-card text-black rounded-3xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all"
                         >
                             Anladım, Kapat
                         </button>
@@ -96,7 +96,7 @@ export function AuthLanding({ setView }: { setView: (v: AuthView) => void }) {
                 animate={{ opacity: 1, y: 0 }}
                 className="flex items-center gap-3 mb-16"
             >
-                <div className="w-12 h-12 bg-white/10 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-white/20">
+                <div className="w-12 h-12 bg-white/10 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-card-border">
                     <PawPrint className="w-7 h-7 text-cyan-400" />
                 </div>
                 <h1 className="text-3xl font-black text-white tracking-widest uppercase italic italic leading-none">Moffi <span className="text-cyan-400">Core</span></h1>
@@ -114,7 +114,7 @@ export function AuthLanding({ setView }: { setView: (v: AuthView) => void }) {
                         transition={{ duration: 10, repeat: Infinity }}
                         className="absolute inset-0 bg-cyan-500/20 blur-[60px] rounded-full" 
                     />
-                    <div className="w-64 h-64 bg-white/5 border border-white/10 backdrop-blur-3xl rounded-full flex items-center justify-center relative overflow-hidden group shadow-2xl">
+                    <div className="w-64 h-64 bg-white/5 border border-card-border backdrop-blur-3xl rounded-full flex items-center justify-center relative overflow-hidden group shadow-2xl">
                         <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/10 to-purple-500/10" />
                         <Sparkles className="w-32 h-32 text-cyan-400/30 animate-pulse" />
                         <div className="absolute inset-0 flex items-center justify-center gap-4">
@@ -135,7 +135,7 @@ export function AuthLanding({ setView }: { setView: (v: AuthView) => void }) {
             <div className="w-full space-y-4 mb-10">
                 <button
                     onClick={() => setView('signup')}
-                    className="w-full py-6 bg-white text-black rounded-[2.5rem] font-black text-xs uppercase tracking-[0.2em] active:scale-95 transition-all shadow-[0_15px_30px_rgba(255,255,255,0.1)]"
+                    className="w-full py-6 bg-card text-black rounded-[2.5rem] font-black text-xs uppercase tracking-[0.2em] active:scale-95 transition-all shadow-[0_15px_30px_rgba(255,255,255,0.1)]"
                 >
                     {t('auth.landing.email_start')}
                 </button>
@@ -143,14 +143,14 @@ export function AuthLanding({ setView }: { setView: (v: AuthView) => void }) {
                 <div className="flex gap-3">
                     <button 
                         onClick={() => signInWithGoogle()}
-                        className="flex-1 py-5 bg-white/5 border border-white/5 rounded-3xl flex items-center justify-center gap-3 font-bold text-white hover:bg-white/10 transition-all active:scale-95"
+                        className="flex-1 py-5 bg-white/5 border border-card-border rounded-3xl flex items-center justify-center gap-3 font-bold text-white hover:bg-white/10 transition-all active:scale-95"
                     >
                         <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
                         <span className="text-[10px] uppercase tracking-widest font-black">{t('auth.landing.google')}</span>
                     </button>
                     <button 
                         onClick={() => signInWithApple()}
-                        className="flex-1 py-5 bg-white/5 border border-white/5 rounded-3xl flex items-center justify-center gap-3 font-bold text-white hover:bg-white/10 transition-all active:scale-95"
+                        className="flex-1 py-5 bg-white/5 border border-card-border rounded-3xl flex items-center justify-center gap-3 font-bold text-white hover:bg-white/10 transition-all active:scale-95"
                     >
                         <Apple className="w-5 h-5" />
                         <span className="text-[10px] uppercase tracking-widest font-black">{t('auth.landing.apple')}</span>
@@ -161,12 +161,12 @@ export function AuthLanding({ setView }: { setView: (v: AuthView) => void }) {
             {/* Footer Legal Links */}
             <div className="mt-auto py-8 w-full flex flex-col items-center gap-6">
                 <div className="flex gap-6">
-                    <button onClick={() => setLegalType('terms')} className="text-[9px] text-gray-700 font-black uppercase tracking-widest hover:text-white transition-colors">{t('legal.title_terms')}</button>
-                    <button onClick={() => setLegalType('privacy')} className="text-[9px] text-gray-700 font-black uppercase tracking-widest hover:text-white transition-colors">{t('legal.title_privacy')}</button>
+                    <button onClick={() => setLegalType('terms')} className="text-[9px] text-foreground font-black uppercase tracking-widest hover:text-white transition-colors">{t('legal.title_terms')}</button>
+                    <button onClick={() => setLegalType('privacy')} className="text-[9px] text-foreground font-black uppercase tracking-widest hover:text-white transition-colors">{t('legal.title_privacy')}</button>
                 </div>
                 
-                <div className="text-center border-t border-white/5 pt-6 w-full">
-                    <p className="text-[10px] text-gray-700 font-bold uppercase tracking-widest">
+                <div className="text-center border-t border-card-border pt-6 w-full">
+                    <p className="text-[10px] text-foreground font-bold uppercase tracking-widest">
                         {t('auth.landing.already_member')} <button onClick={() => setView('login')} className="text-white hover:text-cyan-400 transition-colors ml-2">{t('auth.landing.login')}</button>
                     </p>
                 </div>
@@ -222,7 +222,7 @@ export function LoginForm({ setView, onComplete }: { setView: (v: AuthView) => v
             exit="exit"
             className="flex flex-col h-full p-10 pt-12 bg-transparent overflow-y-auto"
         >
-            <button onClick={() => setView('landing')} className="mb-10 w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all group">
+            <button onClick={() => setView('landing')} className="mb-10 w-12 h-12 rounded-2xl bg-white/5 border border-card-border flex items-center justify-center hover:bg-white/10 transition-all group">
                 <ArrowLeft className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
             </button>
 
@@ -239,7 +239,7 @@ export function LoginForm({ setView, onComplete }: { setView: (v: AuthView) => v
                         <input
                             type="email"
                             placeholder="merhaba@moffi.net"
-                            className="w-full pl-16 pr-6 py-5 bg-white/5 border border-white/10 rounded-[2rem] text-sm text-white focus:border-cyan-500/50 outline-none transition-all placeholder-gray-800"
+                            className="w-full pl-16 pr-6 py-5 bg-white/5 border border-card-border rounded-[2rem] text-sm text-white focus:border-cyan-500/50 outline-none transition-all placeholder-gray-800"
                             required
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -254,7 +254,7 @@ export function LoginForm({ setView, onComplete }: { setView: (v: AuthView) => v
                         <input
                             type={showPassword ? "text" : "password"}
                             placeholder="••••••••"
-                            className="w-full pl-16 pr-16 py-5 bg-white/5 border border-white/10 rounded-[2rem] text-sm text-white focus:border-cyan-500/50 outline-none transition-all placeholder-gray-800"
+                            className="w-full pl-16 pr-16 py-5 bg-white/5 border border-card-border rounded-[2rem] text-sm text-white focus:border-cyan-500/50 outline-none transition-all placeholder-gray-800"
                             required
                             value={formData.password}
                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -385,7 +385,7 @@ export function SignupForm({ setView, onComplete, setEmail }: { setView: (v: Aut
             exit="exit"
             className="flex flex-col h-full p-10 pt-12 bg-transparent overflow-y-auto"
         >
-            <button onClick={() => setView('landing')} className="mb-10 w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all group">
+            <button onClick={() => setView('landing')} className="mb-10 w-12 h-12 rounded-2xl bg-white/5 border border-card-border flex items-center justify-center hover:bg-white/10 transition-all group">
                 <ArrowLeft className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
             </button>
 
@@ -402,7 +402,7 @@ export function SignupForm({ setView, onComplete, setEmail }: { setView: (v: Aut
                         <input
                             type="text"
                             placeholder="Adınız Soyadınız"
-                            className="w-full pl-16 pr-6 py-5 bg-white/5 border border-white/10 rounded-[2rem] text-sm text-white focus:border-cyan-500/50 outline-none transition-all placeholder-gray-800"
+                            className="w-full pl-16 pr-6 py-5 bg-white/5 border border-card-border rounded-[2rem] text-sm text-white focus:border-cyan-500/50 outline-none transition-all placeholder-gray-800"
                             required
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -417,7 +417,7 @@ export function SignupForm({ setView, onComplete, setEmail }: { setView: (v: Aut
                         <input
                             type="email"
                             placeholder="ornek@moffi.net"
-                            className="w-full pl-16 pr-6 py-5 bg-white/5 border border-white/10 rounded-[2rem] text-sm text-white focus:border-cyan-500/50 outline-none transition-all placeholder-gray-800"
+                            className="w-full pl-16 pr-6 py-5 bg-white/5 border border-card-border rounded-[2rem] text-sm text-white focus:border-cyan-500/50 outline-none transition-all placeholder-gray-800"
                             required
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -432,7 +432,7 @@ export function SignupForm({ setView, onComplete, setEmail }: { setView: (v: Aut
                         <input
                             type={showPassword ? "text" : "password"}
                             placeholder="••••••••"
-                            className="w-full pl-16 pr-16 py-5 bg-white/5 border border-white/10 rounded-[2rem] text-sm text-white focus:border-cyan-500/50 outline-none transition-all placeholder-gray-800"
+                            className="w-full pl-16 pr-16 py-5 bg-white/5 border border-card-border rounded-[2rem] text-sm text-white focus:border-cyan-500/50 outline-none transition-all placeholder-gray-800"
                             required
                             value={formData.password}
                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -450,7 +450,7 @@ export function SignupForm({ setView, onComplete, setEmail }: { setView: (v: Aut
                         <input
                             type="password"
                             placeholder="••••••••"
-                            className="w-full pl-16 pr-6 py-5 bg-white/5 border border-white/10 rounded-[2rem] text-sm text-white focus:border-cyan-500/50 outline-none transition-all placeholder-gray-800"
+                            className="w-full pl-16 pr-6 py-5 bg-white/5 border border-card-border rounded-[2rem] text-sm text-white focus:border-cyan-500/50 outline-none transition-all placeholder-gray-800"
                             required
                             value={formData.confirmPassword}
                             onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
@@ -470,7 +470,7 @@ export function SignupForm({ setView, onComplete, setEmail }: { setView: (v: Aut
                             />
                             <div className={cn(
                                 "h-5 w-5 border rounded-lg flex items-center justify-center transition-all",
-                                agreeTerms ? "bg-cyan-500 border-cyan-500" : "bg-white/5 border-white/10 group-hover:border-white/20"
+                                agreeTerms ? "bg-cyan-500 border-cyan-500" : "bg-white/5 border-card-border group-hover:border-card-border"
                             )}>
                                 {agreeTerms && <ShieldCheck className="w-3 h-3 text-black" />}
                             </div>
@@ -494,7 +494,7 @@ export function SignupForm({ setView, onComplete, setEmail }: { setView: (v: Aut
                             />
                             <div className={cn(
                                 "h-5 w-5 border rounded-lg flex items-center justify-center transition-all",
-                                marketingConsent ? "bg-purple-500 border-purple-500" : "bg-white/5 border-white/10 group-hover:border-white/20"
+                                marketingConsent ? "bg-purple-500 border-purple-500" : "bg-white/5 border-card-border group-hover:border-card-border"
                             )}>
                                 {marketingConsent && <Sparkles className="w-3 h-3 text-black" />}
                             </div>
@@ -516,7 +516,7 @@ export function SignupForm({ setView, onComplete, setEmail }: { setView: (v: Aut
                     disabled={loading || !agreeTerms}
                     className={cn(
                         "w-full py-6 rounded-[2.5rem] font-black text-xs uppercase tracking-[0.2em] active:scale-95 transition-all shadow-xl",
-                        agreeTerms ? "bg-white text-black shadow-white/10" : "bg-white/10 text-white/30 cursor-not-allowed"
+                        agreeTerms ? "bg-card text-black shadow-white/10" : "bg-white/10 text-white/30 cursor-not-allowed"
                     )}
                 >
                     {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : t('auth.signup.submit')}
@@ -524,7 +524,7 @@ export function SignupForm({ setView, onComplete, setEmail }: { setView: (v: Aut
 
                 <div className="mt-auto pt-10 text-center">
                     <div className="mt-8">
-                        <p className="text-[10px] text-gray-700 font-bold uppercase tracking-widest">
+                        <p className="text-[10px] text-foreground font-bold uppercase tracking-widest">
                             {t('auth.landing.already_member')} <button onClick={() => setView('login')} className="text-white hover:text-cyan-400 transition-colors ml-2">{t('auth.landing.login')}</button>
                         </p>
                     </div>
@@ -572,7 +572,7 @@ export function ResetForm({ setView }: { setView: (v: AuthView) => void }) {
             exit="exit"
             className="flex flex-col h-full p-10 pt-12 bg-transparent overflow-y-auto"
         >
-            <button onClick={() => setView('login')} className="mb-10 w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all group">
+            <button onClick={() => setView('login')} className="mb-10 w-12 h-12 rounded-2xl bg-white/5 border border-card-border flex items-center justify-center hover:bg-white/10 transition-all group">
                 <ArrowLeft className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
             </button>
 
@@ -590,7 +590,7 @@ export function ResetForm({ setView }: { setView: (v: AuthView) => void }) {
                             <input
                                 type="email"
                                 placeholder="merhaba@moffi.net"
-                                className="w-full pl-16 pr-6 py-5 bg-white/5 border border-white/10 rounded-[2rem] text-sm text-white focus:border-cyan-500/50 outline-none transition-all"
+                                className="w-full pl-16 pr-6 py-5 bg-white/5 border border-card-border rounded-[2rem] text-sm text-white focus:border-cyan-500/50 outline-none transition-all"
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -735,7 +735,7 @@ export function OTPForm({ setView, onComplete, email }: { setView: (v: AuthView)
             exit="exit"
             className="flex flex-col h-full p-10 pt-12 bg-transparent overflow-y-auto"
         >
-            <button onClick={() => setView('signup')} className="mb-10 w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all group">
+            <button onClick={() => setView('signup')} className="mb-10 w-12 h-12 rounded-2xl bg-white/5 border border-card-border flex items-center justify-center hover:bg-white/10 transition-all group">
                 <ArrowLeft className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
             </button>
 
@@ -773,7 +773,7 @@ export function OTPForm({ setView, onComplete, email }: { setView: (v: AuthView)
                             }}
                             className={cn(
                                 "w-12 h-16 sm:w-14 sm:h-20 bg-white/5 border rounded-2xl text-2xl font-black text-cyan-400 text-center outline-none transition-all",
-                                digit ? "border-cyan-500/50 bg-cyan-500/5 shadow-[0_0_15px_rgba(34,211,238,0.1)]" : "border-white/10 focus:border-white/30"
+                                digit ? "border-cyan-500/50 bg-cyan-500/5 shadow-[0_0_15px_rgba(34,211,238,0.1)]" : "border-card-border focus:border-white/30"
                             )}
                         />
                     ))}
@@ -818,7 +818,7 @@ export function OTPForm({ setView, onComplete, email }: { setView: (v: AuthView)
 
                     <div className="text-center">
                         {timeLeft > 0 ? (
-                            <p className="text-[10px] text-gray-700 font-bold uppercase tracking-widest">
+                            <p className="text-[10px] text-foreground font-bold uppercase tracking-widest">
                                 Yeni kod için bekle ({timeLeft}s)
                             </p>
                         ) : (

@@ -50,7 +50,7 @@ export default function FullQuestCenter() {
             {/* Header */}
             <div className="pt-safe sticky top-0 z-40 bg-[#100820]/80 backdrop-blur-xl border-b border-purple-500/10 shrink-0 px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <button onClick={() => router.back()} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10 text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                    <button onClick={() => router.back()} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-card-border text-white/70 hover:bg-white/10 hover:text-white transition-colors">
                         <ChevronLeft className="w-6 h-6" />
                     </button>
                     <div>
@@ -102,7 +102,7 @@ export default function FullQuestCenter() {
                                 { val: `+${todayEarned.pp}`, label: 'Bugün PP', color: 'text-yellow-400' },
                                 { val: String(earnedBadges.length), label: 'Rozet 🏅', color: 'text-purple-400' },
                             ].map((s, i) => (
-                                <div key={i} className="bg-white/[0.02] border border-white/5 rounded-xl p-2.5 flex flex-col items-center justify-center">
+                                <div key={i} className="bg-white/[0.02] border border-card-border rounded-xl p-2.5 flex flex-col items-center justify-center">
                                     <span className={`text-sm font-black ${s.color}`}>{s.val}</span>
                                     <span className="text-[8px] font-bold text-white/30 uppercase mt-0.5 tracking-wider">{s.label}</span>
                                 </div>

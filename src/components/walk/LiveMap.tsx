@@ -317,12 +317,12 @@ export default function LiveMap({
 
                 {/* 1. SEARCH BAR */}
                 <div className="shadow-xl relative z-[5001] pointer-events-auto">
-                    <div className={cn("bg-white dark:bg-[#1A1A1A] rounded-2xl flex items-center p-3 transition-all border border-transparent", isSearchFocused ? "ring-2 ring-[#5B4D9D] border-[#5B4D9D]" : "border-gray-200 dark:border-white/10")}>
+                    <div className={cn("bg-card dark:bg-[#1A1A1A] rounded-2xl flex items-center p-3 transition-all border border-transparent", isSearchFocused ? "ring-2 ring-[#5B4D9D] border-[#5B4D9D]" : "border-card-border dark:border-card-border")}>
                         <Search className="w-5 h-5 text-gray-400 mr-3" />
                         <input
                             type="text"
                             placeholder="Mekan veya adres ara..."
-                            className="bg-transparent flex-1 outline-none text-sm font-medium text-gray-900 dark:text-white placeholder-gray-400"
+                            className="bg-transparent flex-1 outline-none text-sm font-medium text-foreground dark:text-white placeholder-gray-400"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             onFocus={() => setIsSearchFocused(true)}
@@ -335,15 +335,15 @@ export default function LiveMap({
 
                     {/* SEARCH RESULTS DROPDOWN */}
                     {isSearchFocused && searchResults.length > 0 && (
-                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#1A1A1A] rounded-2xl shadow-2xl border border-gray-100 dark:border-white/5 overflow-hidden">
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-card dark:bg-[#1A1A1A] rounded-2xl shadow-2xl border border-card-border dark:border-card-border overflow-hidden">
                             {searchResults.map((result: any, i) => (
                                 <button
                                     key={i}
                                     onClick={() => handleSelectAddress(result.lat, result.lon, result.display_name)}
-                                    className="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-white/5 border-b last:border-0 border-gray-100 dark:border-white/5 transition-colors"
+                                    className="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-white/5 border-b last:border-0 border-card-border dark:border-card-border transition-colors"
                                 >
                                     <div className="mt-1 min-w-[16px]"><MapPin className="w-4 h-4 text-gray-400" /></div>
-                                    <div className="text-sm text-gray-700 dark:text-gray-200 line-clamp-2">
+                                    <div className="text-sm text-foreground dark:text-gray-200 line-clamp-2">
                                         {result.display_name}
                                     </div>
                                 </button>
@@ -360,7 +360,7 @@ export default function LiveMap({
                     <div className="flex gap-2 overflow-x-auto no-scrollbar pointer-events-auto pb-2 pl-1">
                         <button
                             onClick={() => setFilterType(null)}
-                            className={cn("px-4 py-2 rounded-full text-xs font-bold shadow-sm border whitespace-nowrap transition-colors", !filterType ? "bg-[#5B4D9D] text-white border-transparent" : "bg-white text-gray-600 border-gray-200")}
+                            className={cn("px-4 py-2 rounded-full text-xs font-bold shadow-sm border whitespace-nowrap transition-colors", !filterType ? "bg-[#5B4D9D] text-white border-transparent" : "bg-card text-gray-600 border-card-border")}
                         >
                             Tümü
                         </button>
@@ -368,8 +368,8 @@ export default function LiveMap({
                             <button
                                 key={f.id}
                                 onClick={() => setFilterType(filterType === f.id ? null : f.id)}
-                                className={cn("px-3 py-2 rounded-full text-xs font-bold shadow-sm border flex items-center gap-1.5 whitespace-nowrap transition-colors bg-white",
-                                    filterType === f.id ? "ring-2 ring-[#5B4D9D] border-[#5B4D9D]" : "border-gray-200"
+                                className={cn("px-3 py-2 rounded-full text-xs font-bold shadow-sm border flex items-center gap-1.5 whitespace-nowrap transition-colors bg-card",
+                                    filterType === f.id ? "ring-2 ring-[#5B4D9D] border-[#5B4D9D]" : "border-card-border"
                                 )}
                             >
                                 <f.icon className={cn("w-3.5 h-3.5", f.color.split(' ')[0])} />
@@ -436,7 +436,7 @@ export default function LiveMap({
                     >
                         <Popup className="custom-popup">
                             <div className="p-1 min-w-[120px]">
-                                <h3 className="font-bold text-xs text-gray-900">Hedef Konum</h3>
+                                <h3 className="font-bold text-xs text-foreground">Hedef Konum</h3>
                                 <p className="text-[9px] text-gray-500 font-semibold mt-0.5">
                                     {customTargetClaimed ? 'Ödül Kazanıldı! 🎉' : 'Ödülü almak için buraya ulaş! 🐾'}
                                 </p>
@@ -498,7 +498,7 @@ export default function LiveMap({
                         >
                             <Popup className="custom-popup">
                                 <div className="p-1 min-w-[180px]">
-                                    <h3 className="font-bold text-sm text-gray-900">{place.name}</h3>
+                                    <h3 className="font-bold text-sm text-foreground">{place.name}</h3>
                                     <div className="text-blue-500 text-xs font-bold mt-1 flex items-center gap-1 cursor-pointer" onClick={() => setRouteTo([place.lat, place.lng])}>
                                         <Navigation className="w-3 h-3" /> Yol Tarifi
                                     </div>
@@ -518,9 +518,9 @@ export default function LiveMap({
                         <Popup className="custom-popup">
                             <div className="p-2 min-w-[150px]">
                                 <div className="flex items-center gap-2 mb-2">
-                                    {marker.img && <img src={marker.img} className="w-8 h-8 rounded-full object-cover border border-gray-200" />}
+                                    {marker.img && <img src={marker.img} className="w-8 h-8 rounded-full object-cover border border-card-border" />}
                                     <div>
-                                        <h3 className="font-bold text-sm text-gray-900">{marker.title}</h3>
+                                        <h3 className="font-bold text-sm text-foreground">{marker.title}</h3>
                                         <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
                                             {marker.type === 'lost' ? '⚠️ KAYIP ALARMI' : '👤 MOFFI DOSTU'}
                                         </p>
@@ -557,7 +557,7 @@ export default function LiveMap({
                                 position={[sp.lat, sp.lng]}
                                 icon={L.divIcon({
                                     className: '',
-                                    html: `<div class="w-8 h-8 rounded-full bg-white border-2 border-red-500 flex items-center justify-center text-xs font-bold animate-pulse shadow-lg shadow-red-500/50">👤</div>`,
+                                    html: `<div class="w-8 h-8 rounded-full bg-card border-2 border-red-500 flex items-center justify-center text-xs font-bold animate-pulse shadow-lg shadow-red-500/50">👤</div>`,
                                     iconSize: [32, 32]
                                 })}
                             />

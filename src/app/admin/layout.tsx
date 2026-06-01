@@ -77,7 +77,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (!isAdmin) {
         return (
             <div className="min-h-screen bg-[#050508] flex items-center justify-center p-6 text-center">
-                <div className="max-w-md w-full bg-[#0A0A0E] border border-white/10 p-10 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+                <div className="max-w-md w-full bg-[#0A0A0E] border border-card-border p-10 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 blur-[50px] rounded-full" />
 
                     <div className="relative z-10">
@@ -90,7 +90,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             Moffi Command Center'a erişim yetkiniz bulunmuyor. Lütfen yönetici hesabınızla giriş yaptığınızdan emin olun.
                         </p>
 
-                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5 text-left mb-8">
+                        <div className="bg-white/5 p-4 rounded-2xl border border-card-border text-left mb-8">
                             <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">
                                 <span>Mevcut Hesap</span>
                                 <span className="text-red-400">Yetkisiz</span>
@@ -101,7 +101,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                         <button
                             onClick={() => router.push('/')}
-                            className="w-full py-4 bg-white text-black rounded-2xl font-black text-sm active:scale-95 transition-all"
+                            className="w-full py-4 bg-card text-black rounded-2xl font-black text-sm active:scale-95 transition-all"
                         >
                             Ana Sayfaya Dön
                         </button>
@@ -120,7 +120,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
             {/* Sidebar (Command Center Style) */}
             <aside className={cn(
-                "fixed top-0 left-0 h-screen bg-[#0A0A0E] border-r border-white/5 z-50 transition-all duration-300 flex flex-col overflow-hidden",
+                "fixed top-0 left-0 h-screen bg-[#0A0A0E] border-r border-card-border z-50 transition-all duration-300 flex flex-col overflow-hidden",
                 sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
                 collapsed ? "lg:w-20" : "lg:w-72",
                 "w-72" // Mobile width
@@ -158,7 +158,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                             className={cn(
                                                 "w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-all duration-300 group relative",
                                                 isActive
-                                                    ? "bg-white/5 text-white border border-white/10"
+                                                    ? "bg-white/5 text-white border border-card-border"
                                                     : "text-gray-500 hover:text-white hover:bg-white/5",
                                                 collapsed && "lg:justify-center lg:px-0"
                                             )}
@@ -171,7 +171,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                             )}
 
                                             {collapsed && (
-                                                <div className="hidden lg:block absolute left-full ml-4 bg-[#12121A] text-white text-xs px-3 py-2 rounded-xl border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none shadow-2xl">
+                                                <div className="hidden lg:block absolute left-full ml-4 bg-[#12121A] text-white text-xs px-3 py-2 rounded-xl border border-card-border opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none shadow-2xl">
                                                     {item.title}
                                                 </div>
                                             )}
@@ -184,12 +184,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </nav>
 
                 {/* User Profile */}
-                <div className={cn("p-6 border-t border-white/5 bg-black/20 backdrop-blur-md", collapsed && "lg:p-4")}>
+                <div className={cn("p-6 border-t border-card-border bg-black/20 backdrop-blur-md", collapsed && "lg:p-4")}>
                     <div className={cn(
                         "flex items-center gap-3 p-3 rounded-2xl transition-all group",
                         collapsed && "lg:justify-center lg:p-0 lg:w-12 lg:h-12 lg:mx-auto"
                     )}>
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-gray-800 to-gray-700 flex items-center justify-center overflow-hidden border border-white/10 flex-shrink-0">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-gray-800 to-gray-700 flex items-center justify-center overflow-hidden border border-card-border flex-shrink-0">
                             {user?.avatar ? <img src={user.avatar} className="w-full h-full object-cover" alt="" /> : <span className="font-bold text-white">A</span>}
                         </div>
                         <div className={cn("flex-1 overflow-hidden", collapsed && "lg:hidden")}>
@@ -208,7 +208,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 {/* Collapse Toggle */}
                 <button
                     onClick={() => setCollapsed(!collapsed)}
-                    className="hidden lg:flex absolute -right-3 top-[100px] w-6 h-12 bg-[#0A0A0E] border border-white/5 rounded-full items-center justify-center text-gray-600 hover:text-white shadow-2xl z-50 transition-all hover:scale-110"
+                    className="hidden lg:flex absolute -right-3 top-[100px] w-6 h-12 bg-[#0A0A0E] border border-card-border rounded-full items-center justify-center text-gray-600 hover:text-white shadow-2xl z-50 transition-all hover:scale-110"
                 >
                     {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
                 </button>
@@ -227,7 +227,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </div>
 
                 {/* Mobile Header */}
-                <header className="lg:hidden bg-[#0A0A0E]/80 backdrop-blur-xl h-16 border-b border-white/5 flex items-center px-6 justify-between sticky top-0 z-[100]">
+                <header className="lg:hidden bg-[#0A0A0E]/80 backdrop-blur-xl h-16 border-b border-card-border flex items-center px-6 justify-between sticky top-0 z-[100]">
                     <div className="flex items-center gap-4">
                         <button onClick={() => setSidebarOpen(true)}>
                             <Menu className="w-6 h-6 text-white" />

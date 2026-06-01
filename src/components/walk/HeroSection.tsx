@@ -21,7 +21,7 @@ export function HeroSection() {
 
                 {/* Avatar Ring */}
                 <div className="w-44 h-44 rounded-full p-1.5 bg-gradient-to-tr from-white to-indigo-50 dark:from-slate-700 dark:to-indigo-900 shadow-2xl relative transition-all duration-500">
-                    <div className="w-full h-full rounded-full border-[4px] border-white dark:border-slate-800 overflow-hidden relative bg-white dark:bg-slate-800 transition-colors">
+                    <div className="w-full h-full rounded-full border-[4px] border-white dark:border-slate-800 overflow-hidden relative bg-card dark:bg-slate-800 transition-colors">
                         <img
                             src={currentUser.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=Moffi"}
                             alt="Pet Avatar"
@@ -32,10 +32,10 @@ export function HeroSection() {
                     </div>
 
                     {/* Floating Emojis (Decoration) */}
-                    <div className="absolute -right-2 top-10 bg-white dark:bg-slate-700 p-2 rounded-full shadow-lg rotate-12 animate-[bounce_3s_infinite] transition-colors">
+                    <div className="absolute -right-2 top-10 bg-card dark:bg-slate-700 p-2 rounded-full shadow-lg rotate-12 animate-[bounce_3s_infinite] transition-colors">
                         <Heart className="w-4 h-4 text-red-500 fill-current" />
                     </div>
-                    <div className="absolute -left-2 bottom-8 bg-white dark:bg-slate-700 p-2 rounded-full shadow-lg -rotate-12 animate-[bounce_4s_infinite] transition-colors">
+                    <div className="absolute -left-2 bottom-8 bg-card dark:bg-slate-700 p-2 rounded-full shadow-lg -rotate-12 animate-[bounce_4s_infinite] transition-colors">
                         <span className="text-sm">🦴</span>
                     </div>
                 </div>
@@ -43,7 +43,7 @@ export function HeroSection() {
 
             {/* Pet Name & Status */}
             <div className="mt-4 text-center relative z-10">
-                <h1 className="text-2xl font-black text-gray-900 dark:text-white font-poppins transition-colors">{currentUser.name}</h1>
+                <h1 className="text-2xl font-black text-foreground dark:text-white font-poppins transition-colors">{currentUser.name}</h1>
                 <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1">Golden Retriever • Mutlu 😊</p>
             </div>
 

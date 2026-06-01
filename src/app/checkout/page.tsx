@@ -60,12 +60,12 @@ export default function CheckoutPage() {
     };
 
     if (isLoading) {
-        return <div className="min-h-screen bg-[#05050A] flex items-center justify-center"><Sparkles className="w-8 h-8 text-cyan-500 animate-spin" /></div>;
+        return <div className="min-h-screen bg-[#000000] flex items-center justify-center"><Sparkles className="w-8 h-8 text-cyan-500 animate-spin" /></div>;
     }
 
     if (orderComplete) {
         return (
-            <main className="min-h-screen bg-[#05050A] flex flex-col items-center justify-center text-center p-6 relative overflow-hidden">
+            <main className="min-h-screen bg-[#000000] flex flex-col items-center justify-center text-center p-6 relative overflow-hidden">
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/20 blur-[100px] rounded-full" />
                 <motion.div 
                     initial={{ scale: 0.8, opacity: 0 }}
@@ -79,7 +79,7 @@ export default function CheckoutPage() {
                 <p className="text-gray-400 max-w-sm mb-12 relative z-10 leading-relaxed font-medium">Satın aldığınız kurgusal POD tasarımları başarıyla sisteme aktarıldı. Gerçek baskı testlerini aşınca elinizde olacak.</p>
                 <button 
                     onClick={() => router.push('/studio')}
-                    className="px-10 py-5 rounded-[2rem] bg-white text-black font-black uppercase tracking-widest text-sm hover:scale-105 transition-all shadow-[0_0_30px_rgba(255,255,255,0.3)] relative z-10"
+                    className="px-10 py-5 rounded-[2rem] bg-card text-black font-black uppercase tracking-widest text-sm hover:scale-105 transition-all shadow-[0_0_30px_rgba(255,255,255,0.3)] relative z-10"
                 >
                     Yeni Tasarımlara Dön
                 </button>
@@ -89,8 +89,8 @@ export default function CheckoutPage() {
 
     if (cart.length === 0) {
         return (
-            <main className="min-h-screen bg-[#05050A] flex flex-col items-center justify-center text-center p-6">
-                <div className="w-32 h-32 bg-white/5 border border-white/10 rounded-full flex items-center justify-center mb-8">
+            <main className="min-h-screen bg-[#000000] flex flex-col items-center justify-center text-center p-6">
+                <div className="w-32 h-32 bg-white/5 border border-card-border rounded-full flex items-center justify-center mb-8">
                     <ShoppingBag className="w-12 h-12 text-white/20" />
                 </div>
                 <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase mb-4">Sepetiniz Boş</h1>
@@ -106,7 +106,7 @@ export default function CheckoutPage() {
     }
 
     return (
-        <main className="min-h-screen bg-[#05050A] text-white p-6 md:p-12 font-sans selection:bg-cyan-500/30">
+        <main className="min-h-screen bg-[#000000] text-white p-6 md:p-12 font-sans selection:bg-cyan-500/30">
             {/* Ambient Backgrounds */}
             <div className="fixed inset-0 pointer-events-none z-0">
                 <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-cyan-500/10 blur-[150px] opacity-50" />
@@ -116,7 +116,7 @@ export default function CheckoutPage() {
             <header className="relative z-10 max-w-6xl mx-auto flex items-center justify-between mb-12">
                 <button 
                     onClick={() => router.back()}
-                    className="w-12 h-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center hover:bg-white/10 transition-all group"
+                    className="w-12 h-12 bg-white/5 border border-card-border rounded-2xl flex items-center justify-center hover:bg-white/10 transition-all group"
                 >
                     <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
                 </button>
@@ -146,32 +146,32 @@ export default function CheckoutPage() {
 
                     <div className="flex flex-col gap-8">
                         {/* Teslimat Adresi */}
-                        <section className="bg-white/[0.02] border border-white/10 rounded-[2.5rem] p-8 backdrop-blur-xl">
+                        <section className="bg-white/[0.02] border border-card-border rounded-[2.5rem] p-8 backdrop-blur-xl">
                             <div className="flex items-center gap-4 mb-8 text-cyan-400">
                                 <div className="p-3 bg-cyan-500/10 rounded-xl"><MapPin className="w-6 h-6" /></div>
                                 <h2 className="text-sm font-black uppercase tracking-widest text-white">Teslimat Adresi</h2>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
-                                <input type="text" placeholder="Adınız" value={address.name} onChange={e=>setAddress({...address, name:e.target.value})} className="col-span-1 bg-black/40 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-cyan-500/50 transition-all font-medium" />
-                                <input type="text" placeholder="Soyadınız" value={address.surname} onChange={e=>setAddress({...address, surname:e.target.value})} className="col-span-1 bg-black/40 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-cyan-500/50 transition-all font-medium" />
-                                <input type="tel" placeholder="Telefon Numarası" value={address.phone} onChange={e=>setAddress({...address, phone:e.target.value})} className="col-span-2 bg-black/40 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-cyan-500/50 transition-all font-medium" />
-                                <textarea rows={3} placeholder="Açık Adres" value={address.detail} onChange={e=>setAddress({...address, detail:e.target.value})} className="col-span-2 bg-black/40 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-cyan-500/50 transition-all font-medium resize-none"></textarea>
+                                <input type="text" placeholder="Adınız" value={address.name} onChange={e=>setAddress({...address, name:e.target.value})} className="col-span-1 bg-black/40 border border-card-border rounded-2xl p-4 text-white focus:outline-none focus:border-cyan-500/50 transition-all font-medium" />
+                                <input type="text" placeholder="Soyadınız" value={address.surname} onChange={e=>setAddress({...address, surname:e.target.value})} className="col-span-1 bg-black/40 border border-card-border rounded-2xl p-4 text-white focus:outline-none focus:border-cyan-500/50 transition-all font-medium" />
+                                <input type="tel" placeholder="Telefon Numarası" value={address.phone} onChange={e=>setAddress({...address, phone:e.target.value})} className="col-span-2 bg-black/40 border border-card-border rounded-2xl p-4 text-white focus:outline-none focus:border-cyan-500/50 transition-all font-medium" />
+                                <textarea rows={3} placeholder="Açık Adres" value={address.detail} onChange={e=>setAddress({...address, detail:e.target.value})} className="col-span-2 bg-black/40 border border-card-border rounded-2xl p-4 text-white focus:outline-none focus:border-cyan-500/50 transition-all font-medium resize-none"></textarea>
                             </div>
                         </section>
 
                         {/* Ödeme Yöntemi */}
-                        <section className="bg-white/[0.02] border border-white/10 rounded-[2.5rem] p-8 backdrop-blur-xl">
+                        <section className="bg-white/[0.02] border border-card-border rounded-[2.5rem] p-8 backdrop-blur-xl">
                             <div className="flex items-center gap-4 text-cyan-400 mb-8">
                                 <div className="p-3 bg-purple-500/10 rounded-xl"><CreditCard className="w-6 h-6 text-purple-400" /></div>
                                 <h2 className="text-sm font-black uppercase tracking-widest text-white">Ödeme Bilgileri</h2>
                             </div>
                             <div className="space-y-4">
-                                <input type="text" maxLength={16} placeholder="Kart Numarası (16 Hane)" value={card.number} onChange={e=>setCard({...card, number:e.target.value.replace(/\D/g,'')})} className="w-full bg-black/40 border border-white/10 rounded-2xl p-5 text-white focus:outline-none focus:border-purple-500/50 transition-all font-mono tracking-widest text-lg" />
+                                <input type="text" maxLength={16} placeholder="Kart Numarası (16 Hane)" value={card.number} onChange={e=>setCard({...card, number:e.target.value.replace(/\D/g,'')})} className="w-full bg-black/40 border border-card-border rounded-2xl p-5 text-white focus:outline-none focus:border-purple-500/50 transition-all font-mono tracking-widest text-lg" />
                                 <div className="grid grid-cols-2 gap-4">
-                                    <input type="text" maxLength={5} placeholder="AA/YY" value={card.expiry} onChange={e=>setCard({...card, expiry:e.target.value})} className="col-span-1 bg-black/40 border border-white/10 rounded-2xl p-5 text-white focus:outline-none focus:border-purple-500/50 transition-all font-mono tracking-widest text-lg" />
-                                    <input type="text" maxLength={3} placeholder="CVC" value={card.cvc} onChange={e=>setCard({...card, cvc:e.target.value.replace(/\D/g,'')})} className="col-span-1 bg-black/40 border border-white/10 rounded-2xl p-5 text-white focus:outline-none focus:border-purple-500/50 transition-all font-mono tracking-widest text-lg" />
+                                    <input type="text" maxLength={5} placeholder="AA/YY" value={card.expiry} onChange={e=>setCard({...card, expiry:e.target.value})} className="col-span-1 bg-black/40 border border-card-border rounded-2xl p-5 text-white focus:outline-none focus:border-purple-500/50 transition-all font-mono tracking-widest text-lg" />
+                                    <input type="text" maxLength={3} placeholder="CVC" value={card.cvc} onChange={e=>setCard({...card, cvc:e.target.value.replace(/\D/g,'')})} className="col-span-1 bg-black/40 border border-card-border rounded-2xl p-5 text-white focus:outline-none focus:border-purple-500/50 transition-all font-mono tracking-widest text-lg" />
                                 </div>
-                                <input type="text" placeholder="Kart Üzerindeki İsim" value={card.holder} onChange={e=>setCard({...card, holder:e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-purple-500/50 transition-all font-medium uppercase" />
+                                <input type="text" placeholder="Kart Üzerindeki İsim" value={card.holder} onChange={e=>setCard({...card, holder:e.target.value})} className="w-full bg-black/40 border border-card-border rounded-2xl p-4 text-white focus:outline-none focus:border-purple-500/50 transition-all font-medium uppercase" />
                             </div>
                         </section>
                     </div>
@@ -179,13 +179,13 @@ export default function CheckoutPage() {
 
                 {/* Right Side - Order Summary */}
                 <div className="lg:col-span-5">
-                    <div className="sticky top-12 bg-white/[0.03] border border-white/10 rounded-[3rem] p-8 backdrop-blur-2xl">
+                    <div className="sticky top-12 bg-white/[0.03] border border-card-border rounded-[3rem] p-8 backdrop-blur-2xl">
                         <h2 className="text-xl font-black uppercase tracking-widest mb-8 flex items-center gap-3"><Terminal className="w-5 h-5 text-cyan-400" />Sipariş Özeti</h2>
                         
                         <div className="flex flex-col gap-6 mb-8 mt-4">
                             {cart.map((item, idx) => (
-                                <div key={idx} className="flex gap-4 p-4 rounded-3xl bg-black/30 border border-white/5 relative overflow-hidden group">
-                                    <div className="w-24 h-24 rounded-2xl bg-white/10 relative shrink-0 overflow-hidden border border-white/10 flex items-center justify-center p-2">
+                                <div key={idx} className="flex gap-4 p-4 rounded-3xl bg-black/30 border border-card-border relative overflow-hidden group">
+                                    <div className="w-24 h-24 rounded-2xl bg-white/10 relative shrink-0 overflow-hidden border border-card-border flex items-center justify-center p-2">
                                         {/* Fallback pattern in case image is missing */}
                                         {item.garmentImage ? (
                                             <img src={item.garmentImage} className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-50" alt="Garment" />
@@ -215,7 +215,7 @@ export default function CheckoutPage() {
                             ))}
                         </div>
 
-                        <div className="space-y-4 pt-8 border-t border-white/10 mb-8">
+                        <div className="space-y-4 pt-8 border-t border-card-border mb-8">
                             <div className="flex justify-between text-gray-400 text-sm font-semibold"><span>Ara Toplam</span><span>{cartTotal.toLocaleString('tr-TR')} ₺</span></div>
                             <div className="flex justify-between text-white text-xl font-black tracking-widest pt-4 uppercase"><span>Toplam</span><span>{cartTotal.toLocaleString('tr-TR')} ₺</span></div>
                         </div>
@@ -223,7 +223,7 @@ export default function CheckoutPage() {
                         <button 
                             disabled={isCheckingOut}
                             onClick={handleConfirmPayment}
-                            className="w-full py-6 rounded-[2rem] bg-white text-black font-black uppercase tracking-[0.2em] hover:bg-cyan-400 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                            className="w-full py-6 rounded-[2rem] bg-card text-black font-black uppercase tracking-[0.2em] hover:bg-cyan-400 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                         >
                             {isCheckingOut ? <Sparkles className="w-6 h-6 animate-spin" /> : <>Ödemeyi Tamamla <ArrowLeft className="w-5 h-5 rotate-180" /></>}
                         </button>

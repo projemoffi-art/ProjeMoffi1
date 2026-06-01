@@ -83,7 +83,7 @@ function Player({ positionRef, onMove, isMovingRef }: any) {
 
             {/* NAME TAG */}
             <Html position={[0, 1.2, 0]} center transform sprite>
-                <div className="bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full font-bold backdrop-blur-sm border border-white/20">MOFFI</div>
+                <div className="bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full font-bold backdrop-blur-sm border border-card-border">MOFFI</div>
             </Html>
 
             <mesh ref={bodyRef} position={[0, 0.5, 0]} castShadow>
@@ -367,12 +367,12 @@ export default function VetEscapeGame({ onClose, onGameOver }: any) {
 
             {/* UI LAYER (z-20) */}
             <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start pointer-events-none z-20">
-                <div className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 flex items-center gap-3">
+                <div className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-card-border flex items-center gap-3">
                     <div className="bg-purple-500/20 p-1.5 rounded-full"><Footprints className="text-purple-400 w-4 h-4" /></div>
                     <div className="flex flex-col"><span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">GÖREV</span><span className="font-bold text-sm">{hasKey ? "ÇIKIŞA GİT" : "ANAHTARI BUL"}</span></div>
                 </div>
                 <div className="flex gap-2">
-                    <button onClick={toggleCamera} className="pointer-events-auto flex items-center gap-2 bg-gray-800/80 hover:bg-gray-700 px-4 py-2 rounded-full transition border border-white/10 backdrop-blur-md">
+                    <button onClick={toggleCamera} className="pointer-events-auto flex items-center gap-2 bg-gray-800/80 hover:bg-gray-700 px-4 py-2 rounded-full transition border border-card-border backdrop-blur-md">
                         {cameraMode === 'follow' ? (
                             <>
                                 <Video className="w-5 h-5 text-green-400" />
@@ -393,7 +393,7 @@ export default function VetEscapeGame({ onClose, onGameOver }: any) {
             <AnimatePresence>
                 {messages.length > 0 && (
                     <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute top-24 left-0 right-0 flex justify-center pointer-events-none z-20">
-                        <div className="bg-black/80 text-white px-6 py-2 rounded-xl font-bold border border-white/20 shadow-2xl backdrop-blur">{messages[0]}</div>
+                        <div className="bg-black/80 text-white px-6 py-2 rounded-xl font-bold border border-card-border shadow-2xl backdrop-blur">{messages[0]}</div>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -402,7 +402,7 @@ export default function VetEscapeGame({ onClose, onGameOver }: any) {
             {gameState === 'playing' && cameraMode === 'follow' && (
                 <>
                     {/* CUSTOM JOYSTICK WITH CUTE DOG STICK */}
-                    <div className="absolute bottom-12 left-12 z-50 rounded-full bg-white/5 backdrop-blur-sm shadow-xl border border-white/10">
+                    <div className="absolute bottom-12 left-12 z-50 rounded-full bg-white/5 backdrop-blur-sm shadow-xl border border-card-border">
                         <div className="relative">
                             <NippleJoystick
                                 size={120}
@@ -452,14 +452,14 @@ export default function VetEscapeGame({ onClose, onGameOver }: any) {
                             <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="text-center">
                                 <AlertTriangle className="w-24 h-24 text-red-500 mx-auto mb-4 animate-bounce" />
                                 <h2 className="text-5xl font-black mb-8 text-white">YAKALANDIN</h2>
-                                <button onClick={onClose} className="px-10 py-4 bg-white text-red-900 rounded-full font-bold hover:scale-105 transition">ANA MENÜ</button>
+                                <button onClick={onClose} className="px-10 py-4 bg-card text-red-900 rounded-full font-bold hover:scale-105 transition">ANA MENÜ</button>
                             </motion.div>
                         )}
                         {gameState === 'level_complete' && (
                             <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="text-center">
                                 <ShieldCheck className="w-24 h-24 text-green-400 mx-auto mb-4" />
                                 <h2 className="text-4xl font-black mb-8 text-white">GÖREV TAMAM!</h2>
-                                <button onClick={onClose} className="px-10 py-4 bg-white text-green-900 rounded-full font-bold hover:scale-105 transition">DEVAM ET</button>
+                                <button onClick={onClose} className="px-10 py-4 bg-card text-green-900 rounded-full font-bold hover:scale-105 transition">DEVAM ET</button>
                             </motion.div>
                         )}
                     </div>

@@ -62,10 +62,10 @@ export default function EditProfileModal({ isOpen, onClose, currentUser, onSave 
                         initial={{ opacity: 0, y: 100, scale: 0.9 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 100, scale: 0.9 }}
-                        className="fixed inset-x-4 top-20 bottom-24 z-50 bg-white dark:bg-[#1A1A1A] border border-gray-200 dark:border-white/10 rounded-[2rem] p-6 flex flex-col shadow-2xl"
+                        className="fixed inset-x-4 top-20 bottom-24 z-50 bg-card dark:bg-[#1A1A1A] border border-card-border dark:border-card-border rounded-[2rem] p-6 flex flex-col shadow-2xl"
                     >
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Profili Düzenle</h2>
+                            <h2 className="text-xl font-bold text-foreground dark:text-white">Profili Düzenle</h2>
                             <button onClick={onClose} className="p-2 bg-gray-100 dark:bg-white/5 rounded-full hover:bg-gray-200 dark:hover:bg-white/10">
                                 <X className="w-5 h-5 text-gray-500" />
                             </button>
@@ -75,7 +75,7 @@ export default function EditProfileModal({ isOpen, onClose, currentUser, onSave 
                         <div className="flex flex-col items-center mb-6">
                             <div
                                 onClick={() => fileInputRef.current?.click()}
-                                className="relative w-28 h-28 rounded-full border-4 border-gray-100 dark:border-white/5 cursor-pointer group overflow-hidden"
+                                className="relative w-28 h-28 rounded-full border-4 border-card-border dark:border-card-border cursor-pointer group overflow-hidden"
                             >
                                 <img
                                     src={avatarPreview || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=400"}
@@ -93,25 +93,25 @@ export default function EditProfileModal({ isOpen, onClose, currentUser, onSave 
                         <div className="space-y-4 flex-1">
                             <div className="space-y-1">
                                 <label className="text-xs font-bold text-gray-400 ml-1">Kullanıcı Adı</label>
-                                <div className="flex items-center gap-2 bg-gray-50 dark:bg-white/5 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/5">
+                                <div className="flex items-center gap-2 bg-gray-50 dark:bg-white/5 px-4 py-3 rounded-xl border border-card-border dark:border-card-border">
                                     <UserIcon className="w-4 h-4 text-gray-400" />
                                     <input
                                         type="text"
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
-                                        className="bg-transparent outline-none flex-1 text-sm font-bold text-gray-900 dark:text-white"
+                                        className="bg-transparent outline-none flex-1 text-sm font-bold text-foreground dark:text-white"
                                     />
                                 </div>
                             </div>
 
                             <div className="space-y-1">
                                 <label className="text-xs font-bold text-gray-400 ml-1">Biyografi</label>
-                                <div className="flex items-start gap-2 bg-gray-50 dark:bg-white/5 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/5 h-24">
+                                <div className="flex items-start gap-2 bg-gray-50 dark:bg-white/5 px-4 py-3 rounded-xl border border-card-border dark:border-card-border h-24">
                                     <Type className="w-4 h-4 text-gray-400 mt-1" />
                                     <textarea
                                         value={bio}
                                         onChange={(e) => setBio(e.target.value)}
-                                        className="bg-transparent outline-none flex-1 text-sm text-gray-900 dark:text-white resize-none"
+                                        className="bg-transparent outline-none flex-1 text-sm text-foreground dark:text-white resize-none"
                                         placeholder="Kendinden bahset..."
                                     />
                                 </div>

@@ -58,7 +58,7 @@ export function PostViewerOverlay({ posts, initialIndex, onClose }: PostViewerOv
                     
                     <button 
                         onClick={onClose}
-                        className="p-3 bg-black/40 hover:bg-black/60 rounded-full text-white transition-all backdrop-blur-xl border border-white/10 active:scale-90 pointer-events-auto shadow-2xl"
+                        className="p-3 bg-black/40 hover:bg-black/60 rounded-full text-white transition-all backdrop-blur-xl border border-card-border active:scale-90 pointer-events-auto shadow-2xl"
                     >
                         <X className="w-6 h-6" />
                     </button>

@@ -63,7 +63,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-[#05050A] flex items-center justify-center font-sans overflow-hidden relative">
+    <main className="min-h-screen bg-[#000000] flex items-center justify-center font-sans overflow-hidden relative">
       {/* Cinematic Background Elements */}
       <div className="absolute inset-0 z-0">
           <motion.div 

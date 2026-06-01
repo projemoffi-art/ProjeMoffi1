@@ -79,7 +79,7 @@ export default function ProfileHeader({ user, isFollowingInitial, userId, onMess
                 {user.isOwnProfile && (
                     <button 
                         onClick={() => window.dispatchEvent(new CustomEvent('open-moffi-settings'))}
-                        className="absolute top-6 right-6 p-3 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/10 text-white hover:bg-white/20 transition-all active:scale-90"
+                        className="absolute top-6 right-6 p-3 bg-white/10 backdrop-blur-xl rounded-2xl border border-card-border text-white hover:bg-white/20 transition-all active:scale-90"
                     >
                         <Settings className="w-5 h-5" />
                     </button>
@@ -89,7 +89,7 @@ export default function ProfileHeader({ user, isFollowingInitial, userId, onMess
             {/* 2. Identity Info Overlap - Refined Mobile Spacing */}
             <div className="px-6 relative -mt-20 mb-8 z-10">
                 <div className="flex justify-between items-end mb-6">
-                    <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-[2.5rem] border-[6px] border-background relative bg-card overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
+                    <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-[2.5rem] border-[6px] border-background relative bg-card overflow-hidden shadow-moffi-card">
                         <img src={user.avatar} className="w-full h-full object-cover" alt={user.username} />
                         <div className="absolute bottom-2 right-2 w-8 h-8 bg-accent rounded-xl flex items-center justify-center border-4 border-background shadow-lg">
                             <Sparkles className="w-4 h-4 text-white" />
@@ -136,7 +136,7 @@ export default function ProfileHeader({ user, isFollowingInitial, userId, onMess
                             <motion.div 
                                 initial={{ scale: 0, rotate: -20 }}
                                 animate={{ scale: 1, rotate: 0 }}
-                                className="bg-gradient-to-tr from-yellow-400 via-amber-500 to-orange-600 p-1 rounded-xl shadow-[0_0_20px_rgba(245,158,11,0.4)] border border-white/20" 
+                                className="bg-gradient-to-tr from-yellow-400 via-amber-500 to-orange-600 p-1 rounded-xl shadow-[0_0_20px_rgba(245,158,11,0.4)] border border-card-border" 
                                 title="Moffi Elite Prime"
                             >
                                 <Crown className="w-5 h-5 text-white filter drop-shadow-sm" />
