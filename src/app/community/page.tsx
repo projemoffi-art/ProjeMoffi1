@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePet } from '@/context/PetContext';
@@ -370,6 +370,86 @@ export default function LegendaryLightDashboard() {
     const { pets: userPets, activePet: globalActivePet, switchPet, updatePet, addPet } = usePet();
     const { activeSession, history: walkHistory, stats: walkStats, isLoading: isWalkLoading, startWalk, endWalk } = useWalk();
 
+    // PREMIUM DIJITAL GARDROP STATE YAPISI & COIN ENTEGRASYONU
+    const [toastMsg, setToastMsg] = useState<string | null>(null);
+    const [walletBalance, setWalletBalance] = useState(2450);
+    const [expandedPanel, setExpandedPanel] = useState<'wallet' | 'passport' | 'collar' | 'dressing' | 'quests' | 'shop' | 'profile' | 'match' | 'events' | null>(null);
+    const [selectedAccessories, setSelectedAccessories] = useState<string[]>(['glasses', 'scarf']);
+    const [unlockedAccessories, setUnlockedAccessories] = useState<string[]>(['glasses', 'scarf']);
+    const [activeOutfitName, setActiveOutfitName] = useState('Havalı Gözlük 😎 & Kırmızı Boyunluk 🧣');
+    const [stylePoints, setStylePoints] = useState(120);
+
+    const activeBonus = useMemo(() => {
+        let xpBonus = 0;
+        let walkCoinBonus = 0;
+        let likeBoost = 0;
+        let vipActive = false;
+
+        if (selectedAccessories.includes('glasses')) xpBonus += 15;
+        if (selectedAccessories.includes('scarf')) walkCoinBonus += 10;
+        if (selectedAccessories.includes('hat')) likeBoost += 20;
+        if (selectedAccessories.includes('crown')) {
+            vipActive = true;
+            walkCoinBonus += 25;
+            xpBonus += 10;
+        }
+
+        return { xpBonus, walkCoinBonus, likeBoost, vipActive };
+    }, [selectedAccessories]);
+
+    const handleToggleAccessory = (id: string) => {
+        if (!unlockedAccessories.includes(id)) {
+            const costs: Record<string, number> = { hat: 150, crown: 350 };
+            const cost = costs[id] || 0;
+            if (walletBalance >= cost) {
+                setWalletBalance(prev => prev - cost);
+                setUnlockedAccessories(prev => [...prev, id]);
+                setSelectedAccessories(prev => [...prev, id]);
+                setToastMsg(`🎉 Tebrikler! Premium eşya açıldı. Cüzdandan ${cost} MoffiCoin harcandı.`);
+            } else {
+                setToastMsg(`❌ Yetersiz MoffiCoin! Bu eşya için ${cost} Coin gerekiyor.`);
+            }
+            return;
+        }
+
+        setSelectedAccessories(prev => {
+            if (prev.includes(id)) {
+                return prev.filter(a => a !== id);
+            } else {
+                return [...prev, id];
+            }
+        });
+    };
+
+    const handleSaveOutfit = () => {
+        let totalSP = 0;
+        const names: string[] = [];
+
+        if (selectedAccessories.includes('glasses')) {
+            totalSP += 50;
+            names.push('Havalı Gözlük 😎');
+        }
+        if (selectedAccessories.includes('scarf')) {
+            totalSP += 70;
+            names.push('Kırmızı Boyunluk 🧣');
+        }
+        if (selectedAccessories.includes('hat')) {
+            totalSP += 120;
+            names.push('Retro Şapka 🎩');
+        }
+        if (selectedAccessories.includes('crown')) {
+            totalSP += 200;
+            names.push('Altın Taç 👑');
+        }
+
+        setStylePoints(totalSP);
+        const joinedName = names.length > 0 ? names.join(' & ') : 'Sade Tarz 🐕';
+        setActiveOutfitName(joinedName);
+
+        setToastMsg(`✨ Kombin başarıyla kaydedildi! Tarz Puanı: ${totalSP} P. Ekstra bonuslar aktif edildi!`);
+        setExpandedPanel(null);
+    };
+
     // Map global activePet to our local state/mock templates
     const activePetObj = globalActivePet || userPets[0] || {
         id: 'mock-luna',
@@ -579,93 +659,13 @@ export default function LegendaryLightDashboard() {
         }
     };
 
-    const [expandedPanel, setExpandedPanel] = useState<'wallet' | 'passport' | 'collar' | 'dressing' | 'quests' | 'shop' | 'profile' | 'match' | 'events' | null>(null);
     const [profileOrdersTab, setProfileOrdersTab] = useState<'active' | 'past' | 'cart' | 'settings'>('active');
     const [cartQty1, setCartQty1] = useState(1);
     const [cartQty2, setCartQty2] = useState(1);
-    const [walletBalance, setWalletBalance] = useState(2450);
-
-    // PREMIUM DIJITAL GARDROP STATE YAPISI
-    const [selectedAccessories, setSelectedAccessories] = useState<string[]>(['glasses', 'scarf']);
-    const [unlockedAccessories, setUnlockedAccessories] = useState<string[]>(['glasses', 'scarf']);
-    const [activeOutfitName, setActiveOutfitName] = useState('Havalı Gözlük 😎 & Kırmızı Boyunluk 🧣');
-    const [stylePoints, setStylePoints] = useState(120);
-
-    const activeBonus = useMemo(() => {
-        let xpBonus = 0;
-        let walkCoinBonus = 0;
-        let likeBoost = 0;
-        let vipActive = false;
-
-        if (selectedAccessories.includes('glasses')) xpBonus += 15;
-        if (selectedAccessories.includes('scarf')) walkCoinBonus += 10;
-        if (selectedAccessories.includes('hat')) likeBoost += 20;
-        if (selectedAccessories.includes('crown')) {
-            vipActive = true;
-            walkCoinBonus += 25;
-            xpBonus += 10;
-        }
-
-        return { xpBonus, walkCoinBonus, likeBoost, vipActive };
-    }, [selectedAccessories]);
-
-    const handleToggleAccessory = (id: string) => {
-        if (!unlockedAccessories.includes(id)) {
-            const costs: Record<string, number> = { hat: 150, crown: 350 };
-            const cost = costs[id] || 0;
-            if (walletBalance >= cost) {
-                setWalletBalance(prev => prev - cost);
-                setUnlockedAccessories(prev => [...prev, id]);
-                setSelectedAccessories(prev => [...prev, id]);
-                setToastMsg(`🎉 Tebrikler! Premium eşya açıldı. Cüzdandan ${cost} MoffiCoin harcandı.`);
-            } else {
-                setToastMsg(`❌ Yetersiz MoffiCoin! Bu eşya için ${cost} Coin gerekiyor.`);
-            }
-            return;
-        }
-
-        setSelectedAccessories(prev => {
-            if (prev.includes(id)) {
-                return prev.filter(a => a !== id);
-            } else {
-                return [...prev, id];
-            }
-        });
-    };
-
-    const handleSaveOutfit = () => {
-        let totalSP = 0;
-        const names: string[] = [];
-
-        if (selectedAccessories.includes('glasses')) {
-            totalSP += 50;
-            names.push('Havalı Gözlük 😎');
-        }
-        if (selectedAccessories.includes('scarf')) {
-            totalSP += 70;
-            names.push('Kırmızı Boyunluk 🧣');
-        }
-        if (selectedAccessories.includes('hat')) {
-            totalSP += 120;
-            names.push('Retro Şapka 🎩');
-        }
-        if (selectedAccessories.includes('crown')) {
-            totalSP += 200;
-            names.push('Altın Taç 👑');
-        }
-
-        setStylePoints(totalSP);
-        const joinedName = names.length > 0 ? names.join(' & ') : 'Sade Tarz 🐕';
-        setActiveOutfitName(joinedName);
-
-        setToastMsg(`✨ Kombin başarıyla kaydedildi! Tarz Puanı: ${totalSP} P. Ekstra bonuslar aktif edildi!`);
-        setExpandedPanel(null);
-    };
     const [showLiveMap, setShowLiveMap] = useState(false);
     const [geofenceAlerts, setGeofenceAlerts] = useState(true);
     const [collarLowBattery, setCollarLowBattery] = useState(true);
     const [anomaliesSms, setAnomaliesSms] = useState(false);
-    const [toastMsg, setToastMsg] = useState<string | null>(null);
     const [activeOrders, setActiveOrders] = useState<Array<{id: string, name: string, desc: string, timeRemaining: string, status: string, progress: number}>>([
         { id: 'order-1', name: 'Somonlu Premium Mama (15 kg)', desc: 'Moda Dağıtım Noktası • Kurye: Walky Emre', timeRemaining: '8 dk kaldı', status: 'Kurye Yaklaşıyor', progress: 65 }
     ]);
