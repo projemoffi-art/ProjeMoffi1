@@ -59,7 +59,9 @@ import {
     Lock,
     Award,
     Coffee,
-    Info
+    Info,
+    Crown,
+    Trophy
 } from 'lucide-react';
 
 import { useStories } from '../../hooks/useStories';
@@ -428,6 +430,11 @@ export default function LegendaryLightDashboard() {
             ...baseMockTemplate.passport,
             idCode: activePetObj.microchip || activePetObj.microchip_id || baseMockTemplate.passport.idCode,
             qrcode: activePetObj.id ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=moffi-passport-${activePetObj.id}` : baseMockTemplate.passport.qrcode,
+        },
+        dressing: {
+            activeOutfit: activeOutfitName,
+            stylePoints: stylePoints,
+            avatarMock: activePetObj.image || activePetObj.avatar || baseMockTemplate.image,
         }
     };
 
@@ -577,6 +584,83 @@ export default function LegendaryLightDashboard() {
     const [cartQty1, setCartQty1] = useState(1);
     const [cartQty2, setCartQty2] = useState(1);
     const [walletBalance, setWalletBalance] = useState(2450);
+
+    // PREMIUM DIJITAL GARDROP STATE YAPISI
+    const [selectedAccessories, setSelectedAccessories] = useState<string[]>(['glasses', 'scarf']);
+    const [unlockedAccessories, setUnlockedAccessories] = useState<string[]>(['glasses', 'scarf']);
+    const [activeOutfitName, setActiveOutfitName] = useState('Havalı Gözlük 😎 & Kırmızı Boyunluk 🧣');
+    const [stylePoints, setStylePoints] = useState(120);
+
+    const activeBonus = useMemo(() => {
+        let xpBonus = 0;
+        let walkCoinBonus = 0;
+        let likeBoost = 0;
+        let vipActive = false;
+
+        if (selectedAccessories.includes('glasses')) xpBonus += 15;
+        if (selectedAccessories.includes('scarf')) walkCoinBonus += 10;
+        if (selectedAccessories.includes('hat')) likeBoost += 20;
+        if (selectedAccessories.includes('crown')) {
+            vipActive = true;
+            walkCoinBonus += 25;
+            xpBonus += 10;
+        }
+
+        return { xpBonus, walkCoinBonus, likeBoost, vipActive };
+    }, [selectedAccessories]);
+
+    const handleToggleAccessory = (id: string) => {
+        if (!unlockedAccessories.includes(id)) {
+            const costs: Record<string, number> = { hat: 150, crown: 350 };
+            const cost = costs[id] || 0;
+            if (walletBalance >= cost) {
+                setWalletBalance(prev => prev - cost);
+                setUnlockedAccessories(prev => [...prev, id]);
+                setSelectedAccessories(prev => [...prev, id]);
+                setToastMsg(`🎉 Tebrikler! Premium eşya açıldı. Cüzdandan ${cost} MoffiCoin harcandı.`);
+            } else {
+                setToastMsg(`❌ Yetersiz MoffiCoin! Bu eşya için ${cost} Coin gerekiyor.`);
+            }
+            return;
+        }
+
+        setSelectedAccessories(prev => {
+            if (prev.includes(id)) {
+                return prev.filter(a => a !== id);
+            } else {
+                return [...prev, id];
+            }
+        });
+    };
+
+    const handleSaveOutfit = () => {
+        let totalSP = 0;
+        const names: string[] = [];
+
+        if (selectedAccessories.includes('glasses')) {
+            totalSP += 50;
+            names.push('Havalı Gözlük 😎');
+        }
+        if (selectedAccessories.includes('scarf')) {
+            totalSP += 70;
+            names.push('Kırmızı Boyunluk 🧣');
+        }
+        if (selectedAccessories.includes('hat')) {
+            totalSP += 120;
+            names.push('Retro Şapka 🎩');
+        }
+        if (selectedAccessories.includes('crown')) {
+            totalSP += 200;
+            names.push('Altın Taç 👑');
+        }
+
+        setStylePoints(totalSP);
+        const joinedName = names.length > 0 ? names.join(' & ') : 'Sade Tarz 🐕';
+        setActiveOutfitName(joinedName);
+
+        setToastMsg(`✨ Kombin başarıyla kaydedildi! Tarz Puanı: ${totalSP} P. Ekstra bonuslar aktif edildi!`);
+        setExpandedPanel(null);
+    };
     const [showLiveMap, setShowLiveMap] = useState(false);
     const [geofenceAlerts, setGeofenceAlerts] = useState(true);
     const [collarLowBattery, setCollarLowBattery] = useState(true);
@@ -1688,51 +1772,200 @@ export default function LegendaryLightDashboard() {
                                     )}
 
                                     {/* 4. AI Dressing Morph Screen */}
+                                    {/* 4. AI Dressing Morph Screen */}
                                     {expandedPanel === 'dressing' && (
                                         <>
-                                            <div className="flex items-center justify-between">
+                                            <div className="flex items-center justify-between mb-4">
                                                 <div className="flex items-center gap-2">
-                                                    <Shirt className="w-6 h-6 text-purple-600" />
-                                                    <h3 className="text-lg font-black text-gray-800">Dijital Gardırop</h3>
+                                                    <Shirt className="w-6 h-6 text-purple-500" />
+                                                    <h3 className="text-lg font-black text-gray-800 dark:text-white">Pati Gardırobu</h3>
                                                 </div>
-                                                <span className="text-[9.5px] font-black text-purple-700 bg-purple-55 px-2.5 py-0.5 rounded-full border border-purple-200">
-                                                    Tarz Puanı: {pet.dressing.stylePoints} P
-                                                </span>
-                                            </div>
-
-                                            {/* Avatar mock */}
-                                            <div className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100/60 rounded-2xl flex items-center gap-3.5 shadow-sm">
-                                                <div className="w-14 h-14 rounded-xl overflow-hidden border-2 border-white shadow-sm shrink-0">
-                                                    <img src={pet.image} className="w-full h-full object-cover" alt="outfit" />
-                                                </div>
-                                                <div>
-                                                    <span className="text-[8px] font-black text-purple-700 tracking-widest block uppercase">AKTİF STİL Kombini</span>
-                                                    <h4 className="text-[11px] font-bold text-gray-800 mt-0.5">{pet.dressing.activeOutfit}</h4>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[9.5px] font-black text-purple-600 bg-purple-50 dark:bg-purple-950/30 px-2.5 py-1 rounded-full border border-purple-200/50 flex items-center gap-1 shadow-sm shadow-purple-500/5">
+                                                        <Sparkles className="w-3 h-3 text-purple-500" />
+                                                        Tarz Puanı: {stylePoints} SP
+                                                    </span>
                                                 </div>
                                             </div>
 
-                                            {/* Interactive Accessory Selection */}
-                                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2.5">Gardırop Çekmecesi</h4>
-                                            <div className="grid grid-cols-3 gap-3">
-                                                <div className="p-3 bg-purple-50 border-2 border-purple-500 rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer text-center relative shadow-sm">
-                                                    <span className="text-2xl">😎</span>
-                                                    <span className="text-[9.5px] font-black text-purple-900">Gözlük</span>
-                                                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-purple-500" />
-                                                </div>
-                                                <div className="p-3 bg-purple-50 border-2 border-purple-500 rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer text-center relative shadow-sm">
-                                                    <span className="text-2xl">🧣</span>
-                                                    <span className="text-[9.5px] font-black text-purple-900">Boyunluk</span>
-                                                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-purple-500" />
-                                                </div>
-                                                <div className="p-3 bg-gray-50 border border-gray-150 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-purple-50 hover:border-purple-200 transition-colors cursor-pointer text-center relative">
-                                                    <span className="text-2xl opacity-40">🎩</span>
-                                                    <span className="text-[9.5px] font-bold text-gray-400">Şapka</span>
-                                                    <span className="text-[7.5px] font-black text-purple-700 bg-purple-100/50 px-1 rounded border border-purple-200 mt-0.5">KİLİTLİ</span>
+                                            {/* Advanced Live Scanner Preview */}
+                                            <div className="relative w-full aspect-[16/10] rounded-[24px] border border-purple-200/40 dark:border-white/5 bg-gradient-to-br from-purple-500/5 via-transparent to-indigo-500/5 overflow-hidden shadow-inner flex items-center justify-center p-3">
+                                                <div className="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none" />
+                                                
+                                                {/* Futuristic scanner animations */}
+                                                <div className="absolute left-0 w-full h-[1.5px] bg-gradient-to-r from-transparent via-purple-500 to-transparent shadow-[0_0_8px_#a855f7] animate-pulse z-20 pointer-events-none top-1/2" />
+                                                <div className="absolute inset-0 border border-purple-500/10 rounded-[24px] pointer-events-none z-10" />
+
+                                                {/* Main Pet Image Frame */}
+                                                <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-md">
+                                                    <img src={pet.image} className="w-full h-full object-cover" alt="outfit-avatar" />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+                                                    
+                                                    {/* Scanning corner marks */}
+                                                    <div className="absolute top-3 left-3 w-3 h-3 border-t-2 border-l-2 border-purple-400" />
+                                                    <div className="absolute top-3 right-3 w-3 h-3 border-t-2 border-r-2 border-purple-400" />
+                                                    <div className="absolute bottom-3 left-3 w-3 h-3 border-b-2 border-l-2 border-purple-400" />
+                                                    <div className="absolute bottom-3 right-3 w-3 h-3 border-b-2 border-r-2 border-purple-400" />
+
+                                                    {/* Active Accessory Live Overlay Badges */}
+                                                    <div className="absolute inset-4 pointer-events-none z-20 flex flex-col justify-between">
+                                                        <div className="flex justify-between items-start">
+                                                            {selectedAccessories.includes('glasses') ? (
+                                                                <span className="bg-cyan-500/85 backdrop-blur-md text-white text-[8px] font-black px-2 py-1 rounded-lg border border-cyan-400/20 shadow-md uppercase tracking-wider flex items-center gap-1">
+                                                                    😎 Gözlük Aktif
+                                                                </span>
+                                                            ) : <div />}
+                                                            
+                                                            {selectedAccessories.includes('hat') ? (
+                                                                <span className="bg-purple-600/85 backdrop-blur-md text-white text-[8px] font-black px-2 py-1 rounded-lg border border-purple-500/20 shadow-md uppercase tracking-wider flex items-center gap-1">
+                                                                    🎩 Şapka Aktif
+                                                                </span>
+                                                            ) : <div />}
+                                                        </div>
+
+                                                        <div className="flex justify-between items-end">
+                                                            {selectedAccessories.includes('scarf') ? (
+                                                                <span className="bg-red-500/85 backdrop-blur-md text-white text-[8px] font-black px-2 py-1 rounded-lg border border-red-400/20 shadow-md uppercase tracking-wider flex items-center gap-1">
+                                                                    🧣 Boyunluk Aktif
+                                                                </span>
+                                                            ) : <div />}
+
+                                                            {selectedAccessories.includes('crown') ? (
+                                                                <span className="bg-yellow-500/90 backdrop-blur-md text-black text-[8px] font-black px-2 py-1 rounded-lg border border-yellow-400/20 shadow-md uppercase tracking-wider flex items-center gap-1.5 animate-bounce">
+                                                                    👑 KRALİYET TACİ
+                                                                </span>
+                                                            ) : <div />}
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
 
-                                            <button className="w-full bg-purple-600 hover:bg-purple-700 text-white text-[11px] font-black py-3.5 rounded-2xl cursor-pointer transition-colors shadow-md shadow-purple-900/10 mt-2">
-                                                Yeni Kombini Kaydet
+                                            {/* Dynamic Stats Bonus Board */}
+                                            <div className="p-3 bg-gray-50 dark:bg-card/5 border border-purple-100/40 dark:border-white/5 rounded-2xl">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Aktif Kombin Bonusları</span>
+                                                    {activeBonus.vipActive && (
+                                                        <span className="text-[7.5px] font-black text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1">
+                                                            <Crown className="w-2.5 h-2.5" /> VIP STATÜSÜ
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-2.5 text-center">
+                                                    <div className="bg-white/50 dark:bg-black/20 border border-white dark:border-white/5 rounded-xl p-2 flex flex-col items-center justify-center gap-0.5 shadow-sm">
+                                                        <Coins className="w-3.5 h-3.5 text-yellow-500" />
+                                                        <span className="text-[11px] font-black text-gray-800 dark:text-gray-200">
+                                                            +{activeBonus.walkCoinBonus}%
+                                                        </span>
+                                                        <span className="text-[7px] font-bold text-gray-400 uppercase tracking-wider">Yürüyüş Geliri</span>
+                                                    </div>
+                                                    <div className="bg-white/50 dark:bg-black/20 border border-white dark:border-white/5 rounded-xl p-2 flex flex-col items-center justify-center gap-0.5 shadow-sm">
+                                                        <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                                                        <span className="text-[11px] font-black text-gray-800 dark:text-gray-200">
+                                                            +{activeBonus.xpBonus}%
+                                                        </span>
+                                                        <span className="text-[7px] font-bold text-gray-400 uppercase tracking-wider">Oyun XP'si</span>
+                                                    </div>
+                                                    <div className="bg-white/50 dark:bg-black/20 border border-white dark:border-white/5 rounded-xl p-2 flex flex-col items-center justify-center gap-0.5 shadow-sm">
+                                                        <Heart className="w-3.5 h-3.5 text-red-500" />
+                                                        <span className="text-[11px] font-black text-gray-800 dark:text-gray-200">
+                                                            +{activeBonus.likeBoost}%
+                                                        </span>
+                                                        <span className="text-[7px] font-bold text-gray-400 uppercase tracking-wider">Sosyal Etki</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Interactive Wardrobe Drawer Selection */}
+                                            <div className="flex items-center justify-between mb-1.5 mt-2">
+                                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Gardırop Çekmecesi</h4>
+                                                <span className="text-[8.5px] font-bold text-gray-500">Moffi Cüzdan: 🪙 {walletBalance}</span>
+                                            </div>
+                                            
+                                            <div className="grid grid-cols-4 gap-2.5">
+                                                {/* Accessory 1: Glasses */}
+                                                <div 
+                                                    onClick={() => handleToggleAccessory('glasses')}
+                                                    className={cn(
+                                                        "p-2.5 border-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
+                                                        selectedAccessories.includes('glasses')
+                                                            ? "bg-cyan-500/10 border-cyan-500 text-cyan-400 shadow-md shadow-cyan-500/5"
+                                                            : "bg-white/40 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
+                                                    )}
+                                                >
+                                                    <span className="text-xl">😎</span>
+                                                    <span className="text-[8px] font-black text-gray-800 dark:text-gray-200 leading-none">Gözlük</span>
+                                                    <span className="text-[7px] font-bold text-cyan-500 dark:text-cyan-400 leading-none mt-0.5">+15% XP</span>
+                                                </div>
+
+                                                {/* Accessory 2: Scarf */}
+                                                <div 
+                                                    onClick={() => handleToggleAccessory('scarf')}
+                                                    className={cn(
+                                                        "p-2.5 border-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
+                                                        selectedAccessories.includes('scarf')
+                                                            ? "bg-red-500/10 border-red-500 text-red-500 shadow-md shadow-red-500/5"
+                                                            : "bg-white/40 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
+                                                    )}
+                                                >
+                                                    <span className="text-xl">🧣</span>
+                                                    <span className="text-[8px] font-black text-gray-800 dark:text-gray-200 leading-none">Boyunluk</span>
+                                                    <span className="text-[7px] font-bold text-red-500 dark:text-red-400 leading-none mt-0.5">+10% Coin</span>
+                                                </div>
+
+                                                {/* Accessory 3: Retro Hat (Premium Lock) */}
+                                                <div 
+                                                    onClick={() => handleToggleAccessory('hat')}
+                                                    className={cn(
+                                                        "p-2.5 border-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
+                                                        !unlockedAccessories.includes('hat')
+                                                            ? "bg-gray-100/50 dark:bg-black/40 border-dashed border-gray-300 dark:border-white/10"
+                                                            : selectedAccessories.includes('hat')
+                                                                ? "bg-purple-500/10 border-purple-500 text-purple-400 shadow-md shadow-purple-500/5"
+                                                                : "bg-white/40 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
+                                                    )}
+                                                >
+                                                    <span className={cn("text-xl", !unlockedAccessories.includes('hat') && "opacity-40 filter blur-[0.5px]")}>🎩</span>
+                                                    <span className="text-[8px] font-black text-gray-800 dark:text-gray-200 leading-none">Şapka</span>
+                                                    
+                                                    {!unlockedAccessories.includes('hat') ? (
+                                                        <span className="text-[7px] font-black text-purple-600 bg-purple-500/10 px-1 py-0.5 rounded border border-purple-500/20 mt-0.5 flex items-center gap-0.5 leading-none">
+                                                            <Lock className="w-2 h-2 shrink-0" /> 150
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[7px] font-bold text-purple-500 dark:text-purple-400 leading-none mt-0.5">+20% Pop</span>
+                                                    )}
+                                                </div>
+
+                                                {/* Accessory 4: Royal Crown (Premium Lock) */}
+                                                <div 
+                                                    onClick={() => handleToggleAccessory('crown')}
+                                                    className={cn(
+                                                        "p-2.5 border-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
+                                                        !unlockedAccessories.includes('crown')
+                                                            ? "bg-gray-100/50 dark:bg-black/40 border-dashed border-gray-300 dark:border-white/10"
+                                                            : selectedAccessories.includes('crown')
+                                                                ? "bg-yellow-500/10 border-yellow-500 text-yellow-400 shadow-md shadow-yellow-500/5 animate-pulse"
+                                                                : "bg-white/40 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
+                                                    )}
+                                                >
+                                                    <span className={cn("text-xl", !unlockedAccessories.includes('crown') && "opacity-40 filter blur-[0.5px]")}>👑</span>
+                                                    <span className="text-[8px] font-black text-gray-800 dark:text-gray-200 leading-none">Altın Taç</span>
+                                                    
+                                                    {!unlockedAccessories.includes('crown') ? (
+                                                        <span className="text-[7px] font-black text-yellow-600 bg-yellow-500/10 px-1 py-0.5 rounded border border-yellow-500/20 mt-0.5 flex items-center gap-0.5 leading-none">
+                                                            <Lock className="w-2 h-2 shrink-0" /> 350
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[7px] font-bold text-yellow-500 dark:text-yellow-400 leading-none mt-0.5">+25% VIP</span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <button 
+                                                onClick={handleSaveOutfit}
+                                                className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-[11px] font-black py-3.5 rounded-[18px] cursor-pointer transition-all shadow-md shadow-purple-900/15 mt-4 hover:scale-[1.01] active:scale-95"
+                                            >
+                                                Kombini & Bonusları Aktifleştir 🎭
                                             </button>
                                         </>
                                     )}
