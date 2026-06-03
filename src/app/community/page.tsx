@@ -391,6 +391,30 @@ export default function LegendaryLightDashboard() {
 
     const [particles, setParticles] = useState<Array<{ id: number, x: number, y: number, emoji: string }>>([]);
 
+    // NEW LEGENDARY DRESSING STATES
+    const [petSpeech, setPetSpeech] = useState<string | null>(null);
+    const [isChestOpening, setIsChestOpening] = useState(false);
+    const [chestResult, setChestResult] = useState<string | null>(null);
+    const [photoAlbum, setPhotoAlbum] = useState<Array<{ id: string, bg: string, accessories: string[], date: string, theme: string, sp: number }>>([
+        {
+            id: 'photo-default-1',
+            bg: 'stage',
+            accessories: ['glasses', 'scarf'],
+            date: '03.06.2026',
+            theme: 'Tanıtım Kombini ✨',
+            sp: 120
+        }
+    ]);
+
+    const speechTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const triggerSpeechBubble = useCallback((text: string) => {
+        setPetSpeech(text);
+        if (speechTimeoutRef.current) clearTimeout(speechTimeoutRef.current);
+        speechTimeoutRef.current = setTimeout(() => {
+            setPetSpeech(null);
+        }, 2500);
+    }, []);
+
     const handlePetInteraction = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
         if (dressingStep !== 'clean' && dressingStep !== 'dry') return;
 
@@ -421,10 +445,65 @@ export default function LegendaryLightDashboard() {
         setParticles(prev => [...prev.slice(-20), newParticle]);
 
         if (dressingStep === 'clean') {
-            setCleanProgress(prev => Math.min(100, prev + 1.5));
+            setCleanProgress(prev => {
+                const next = Math.min(100, prev + 1.5);
+                if (prev < 25 && next >= 25) triggerSpeechBubble("Çok gıdıklandım! 😂");
+                if (prev < 50 && next >= 50) triggerSpeechBubble("Köpükler harika! 🫧");
+                if (prev < 75 && next >= 75) triggerSpeechBubble("Her yerim bembeyaz oldu! 🛁");
+                if (prev < 100 && next >= 100) triggerSpeechBubble("Gıcır gıcır temizlendim! ✨");
+                return next;
+            });
         } else if (dressingStep === 'dry') {
-            setDryProgress(prev => Math.min(100, prev + 1.5));
+            setDryProgress(prev => {
+                const next = Math.min(100, prev + 1.5);
+                if (prev < 25 && next >= 25) triggerSpeechBubble("Fön çok sıcakmış! 💨");
+                if (prev < 50 && next >= 50) triggerSpeechBubble("Tüylerim havalanıyor! 🌬️");
+                if (prev < 75 && next >= 75) triggerSpeechBubble("Pofuduk oluyorum! ✨");
+                if (prev < 100 && next >= 100) triggerSpeechBubble("Kupkuru ve yumuşacığım! 🦁");
+                return next;
+            });
         }
+    };
+
+    const handleOpenChest = () => {
+        if (walletBalance < 100) {
+            setToastMsg("❌ Sandık açmak için 100 MoffiCoin gerekiyor! Yetersiz bakiye.");
+            return;
+        }
+
+        setWalletBalance(prev => prev - 100);
+        setIsChestOpening(true);
+        setChestResult(null);
+
+        // After 1.5 seconds shaking animation, roll reward item
+        setTimeout(() => {
+            setIsChestOpening(false);
+            const availableDrops = [];
+            if (!unlockedAccessories.includes('pirate')) availableDrops.push('pirate');
+            if (!unlockedAccessories.includes('bowtie')) availableDrops.push('bowtie');
+
+            let reward = '';
+            if (availableDrops.length > 0) {
+                reward = availableDrops[Math.floor(Math.random() * availableDrops.length)];
+            } else {
+                reward = Math.random() > 0.5 ? 'pirate' : 'bowtie';
+            }
+
+            setUnlockedAccessories(prev => {
+                if (prev.includes(reward)) return prev;
+                return [...prev, reward];
+            });
+
+            setChestResult(reward);
+            
+            if (reward === 'pirate') {
+                triggerSpeechBubble("🏴‍☠️ Ayyay Kaptan! Korsan oldum!");
+                setToastMsg("🏴‍☠️ Tebrikler! Efsanevi Korsan Göz Bandı kazandın! (+140 SP, XP/Like boost)");
+            } else {
+                triggerSpeechBubble("🎀 Çok centilmen bir beyefendi oldum!");
+                setToastMsg("🎀 Tebrikler! Centilmen Papyon kazandın! (+90 SP, Coin/XP boost)");
+            }
+        }, 1500);
     };
 
     const activeBonus = useMemo(() => {
@@ -441,6 +520,14 @@ export default function LegendaryLightDashboard() {
             walkCoinBonus += 25;
             xpBonus += 10;
         }
+        if (selectedAccessories.includes('pirate')) {
+            xpBonus += 30;
+            likeBoost += 35;
+        }
+        if (selectedAccessories.includes('bowtie')) {
+            walkCoinBonus += 20;
+            xpBonus += 25;
+        }
 
         return { xpBonus, walkCoinBonus, likeBoost, vipActive };
     }, [selectedAccessories]);
@@ -454,6 +541,7 @@ export default function LegendaryLightDashboard() {
                 setUnlockedAccessories(prev => [...prev, id]);
                 setSelectedAccessories(prev => [...prev, id]);
                 setToastMsg(`🎉 Tebrikler! Premium eşya açıldı. Cüzdandan ${cost} MoffiCoin harcandı.`);
+                triggerSpeechBubble("Yeni eşyama bayıldım! 😍");
             } else {
                 setToastMsg(`❌ Yetersiz MoffiCoin! Bu eşya için ${cost} Coin gerekiyor.`);
             }
@@ -461,11 +549,18 @@ export default function LegendaryLightDashboard() {
         }
 
         setSelectedAccessories(prev => {
-            if (prev.includes(id)) {
-                return prev.filter(a => a !== id);
-            } else {
-                return [...prev, id];
-            }
+            const isRemoving = prev.includes(id);
+            const next = isRemoving ? prev.filter(a => a !== id) : [...prev, id];
+
+            // Cute speech reactions when wearing/removing accessories
+            if (id === 'glasses') triggerSpeechBubble(isRemoving ? "Gözlerim kamaşıyordu zaten! 😎" : "Çok havalı oldum! 😎");
+            else if (id === 'scarf') triggerSpeechBubble(isRemoving ? "Boynum rahatladı! 🧣" : "Beni sıcacık tutuyor! 🧣");
+            else if (id === 'hat') triggerSpeechBubble(isRemoving ? "Şapkasız daha iyiyim 🎩" : "Retro tarzı severim! 🎩");
+            else if (id === 'crown') triggerSpeechBubble(isRemoving ? "Kraliyet bitti 👑" : "Kraliyet üyesi gibiyim! 👑");
+            else if (id === 'pirate') triggerSpeechBubble(isRemoving ? "Denizler beni bekler! 🌊" : "Ayyay kaptan! 🏴‍☠️");
+            else if (id === 'bowtie') triggerSpeechBubble(isRemoving ? "Gündelik tarza döndüm 🎀" : "Çok şık bir beyefendiyim! 🎀");
+
+            return next;
         });
     };
 
@@ -489,12 +584,45 @@ export default function LegendaryLightDashboard() {
             totalSP += 200;
             names.push('Altın Taç 👑');
         }
+        if (selectedAccessories.includes('pirate')) {
+            totalSP += 140;
+            names.push('Korsan Bandı 🏴‍☠️');
+        }
+        if (selectedAccessories.includes('bowtie')) {
+            totalSP += 90;
+            names.push('Centilmen Papyon 🎀');
+        }
 
         setStylePoints(totalSP);
         const joinedName = names.length > 0 ? names.join(' & ') : 'Sade Tarz 🐕';
         setActiveOutfitName(joinedName);
 
-        setToastMsg(`✨ Kombin başarıyla kaydedildi! Tarz Puanı: ${totalSP} P. Ekstra bonuslar aktif edildi!`);
+        // Daily Challenge Theme check: "Korsan Balosu 🏴‍☠️👑" (Requires crown OR pirate)
+        const meetsTheme = selectedAccessories.includes('crown') || selectedAccessories.includes('pirate');
+        let dailyThemeCoins = 0;
+        if (meetsTheme) {
+            dailyThemeCoins = 50;
+            setWalletBalance(prev => prev + 50);
+        }
+
+        // Add to polaroid album
+        const newPhotoId = 'photo-' + Date.now();
+        const formattedDate = new Date().toLocaleDateString('tr-TR');
+        const newPhoto = {
+            id: newPhotoId,
+            bg: activeStudioBg,
+            accessories: [...selectedAccessories],
+            date: formattedDate,
+            theme: meetsTheme ? 'Korsan Balosu 🏴‍☠️👑' : 'Serbest Tarz ✨',
+            sp: totalSP
+        };
+        setPhotoAlbum(prev => [newPhoto, ...prev]);
+
+        if (meetsTheme) {
+            setToastMsg(`✨ Kombin başarıyla kaydedildi! Tarz Puanı: ${totalSP} P. Günlük Tema "Korsan Balosu 🏴‍☠️👑" Başarıyla Tamamlandı! +50 MoffiCoin Kazanıldı! 🔥`);
+        } else {
+            setToastMsg(`✨ Kombin başarıyla kaydedildi! Tarz Puanı: ${totalSP} P. Ekstra bonuslar aktif edildi!`);
+        }
         setExpandedPanel(null);
     };
 
@@ -1934,6 +2062,86 @@ export default function LegendaryLightDashboard() {
                                                         </span>
                                                     ))}
 
+                                                    {/* Dynamic Speech Bubble Reaction */}
+                                                    <AnimatePresence>
+                                                        {petSpeech && (
+                                                            <motion.div
+                                                                initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                                                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                                exit={{ opacity: 0, scale: 0.8, y: -10 }}
+                                                                className="absolute top-[20%] left-[8%] right-[8%] bg-white/90 dark:bg-black/90 backdrop-blur-md border border-purple-250/50 dark:border-white/10 p-2.5 rounded-2xl shadow-xl z-40 text-center font-black text-[10px] text-purple-700 dark:text-purple-300 select-none flex items-center justify-center gap-1.5"
+                                                            >
+                                                                <span>💬</span>
+                                                                <span>{petSpeech}</span>
+                                                                <div className="absolute bottom-[-6px] left-1/2 -translate-x-1/2 w-3 h-3 bg-white/90 dark:bg-black/90 rotate-45 border-r border-b border-purple-250/50 dark:border-white/10" />
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
+
+                                                    {/* Shaking Mystery Chest Animation */}
+                                                    <AnimatePresence>
+                                                        {isChestOpening && (
+                                                            <motion.div 
+                                                                initial={{ opacity: 0 }}
+                                                                animate={{ opacity: 1 }}
+                                                                exit={{ opacity: 0 }}
+                                                                className="absolute inset-0 bg-black/75 backdrop-blur-sm z-45 flex flex-col items-center justify-center text-white"
+                                                            >
+                                                                <motion.div
+                                                                    animate={{
+                                                                        rotate: [0, -10, 10, -10, 10, -5, 5, -5, 5, 0],
+                                                                        scale: [1, 1.05, 0.95, 1.05, 1, 1.05, 1],
+                                                                    }}
+                                                                    transition={{
+                                                                        repeat: Infinity,
+                                                                        duration: 0.8,
+                                                                        ease: "easeInOut",
+                                                                    }}
+                                                                    className="text-7xl mb-3"
+                                                                >
+                                                                    🎁
+                                                                </motion.div>
+                                                                <span className="text-[10px] font-black tracking-wider uppercase animate-pulse text-yellow-400">Sandık Açılıyor...</span>
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
+
+                                                    {/* Chest Result Loot Box Reward Window */}
+                                                    <AnimatePresence>
+                                                        {!isChestOpening && chestResult && (
+                                                            <motion.div 
+                                                                initial={{ opacity: 0 }}
+                                                                animate={{ opacity: 1 }}
+                                                                exit={{ opacity: 0 }}
+                                                                className="absolute inset-0 bg-black/85 backdrop-blur-md z-45 flex flex-col items-center justify-center p-4 text-center"
+                                                            >
+                                                                <motion.div
+                                                                    initial={{ scale: 0, rotate: -180 }}
+                                                                    animate={{ scale: 1, rotate: 0 }}
+                                                                    transition={{ type: "spring", damping: 12 }}
+                                                                    className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-yellow-400 to-amber-500 flex items-center justify-center text-4xl shadow-[0_0_25px_rgba(234,179,8,0.5)] border-2 border-white/20 mb-3"
+                                                                >
+                                                                    {chestResult === 'pirate' ? '🏴‍☠️' : '🎀'}
+                                                                </motion.div>
+                                                                <h4 className="text-[11px] font-black text-white">
+                                                                    {chestResult === 'pirate' ? 'Efsanevi Korsan Göz Bandı' : 'Centilmen Papyon'}
+                                                                </h4>
+                                                                <p className="text-[9px] text-yellow-400 font-extrabold mt-1">
+                                                                    {chestResult === 'pirate' ? '+140 SP • XP/Beğeni Artışı' : '+90 SP • Coin/XP Artışı'}
+                                                                </p>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setChestResult(null);
+                                                                    }}
+                                                                    className="mt-4 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-[9px] font-black rounded-lg cursor-pointer transition-all active:scale-95 shadow-md shadow-purple-950/20"
+                                                                >
+                                                                    Gardıroba Ekle 🎒
+                                                                </button>
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
+
                                                     {/* Bubble Overlay for Cleaning Step */}
                                                     {dressingStep === 'clean' && (
                                                         <div className="absolute inset-0 z-20 pointer-events-none">
@@ -2006,6 +2214,28 @@ export default function LegendaryLightDashboard() {
                                                                     style={{ animationDuration: '2s', filter: 'drop-shadow(0 4px 10px rgba(234,179,8,0.4))' }}
                                                                 >
                                                                     👑
+                                                                </motion.div>
+                                                            )}
+
+                                                            {selectedAccessories.includes('pirate') && (
+                                                                <motion.div 
+                                                                    initial={{ scale: 0, y: -20 }}
+                                                                    animate={{ scale: 1, y: 0 }}
+                                                                    className="absolute top-[36%] left-[45%] w-[18%] h-[8%] text-center text-3xl select-none"
+                                                                    style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.35))' }}
+                                                                >
+                                                                    🏴‍☠️
+                                                                </motion.div>
+                                                            )}
+
+                                                            {selectedAccessories.includes('bowtie') && (
+                                                                <motion.div 
+                                                                    initial={{ scale: 0, y: 20 }}
+                                                                    animate={{ scale: 1, y: 0 }}
+                                                                    className="absolute top-[53%] left-[43%] w-[15%] h-[10%] text-center text-3xl select-none"
+                                                                    style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.25))' }}
+                                                                >
+                                                                    🎀
                                                                 </motion.div>
                                                             )}
                                                         </div>
@@ -2124,117 +2354,201 @@ export default function LegendaryLightDashboard() {
                                                     </div>
 
                                                     {dryProgress >= 100 ? (
-                                                        <button
-                                                            onClick={() => setDressingStep('accessorize')}
-                                                            className="w-full mt-1 bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-[10.5px] font-black py-2.5 rounded-xl cursor-pointer hover:shadow-lg active:scale-98 transition-all"
-                                                        >
-                                                            Aksesuar Seç 🎀
-                                                        </button>
-                                                    ) : (
-                                                        <div className="w-full text-center text-[8.5px] text-gray-400 font-bold uppercase tracking-wider py-2 border border-dashed border-gray-250 dark:border-white/5 rounded-xl bg-gray-50/50 dark:bg-black/10">
-                                                            💨 Kurulamayı bitirin
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
+                                                         <button
+                                                             onClick={() => setDressingStep('accessorize')}
+                                                             className="w-full mt-1 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-[10.5px] font-black py-2.5 rounded-xl cursor-pointer hover:shadow-lg active:scale-98 transition-all"
+                                                         >
+                                                             Kurulamayı Bitir ve Süsle 🎀
+                                                         </button>
+                                                     ) : (
+                                                         <div className="w-full text-center text-[8.5px] text-gray-400 font-bold uppercase tracking-wider py-2 border border-dashed border-gray-250 dark:border-white/5 rounded-xl bg-gray-50/50 dark:bg-black/10">
+                                                             🛁 Kurulamayı bitirin
+                                                         </div>
+                                                     )}
+                                                 </div>
+                                             )}
 
-                                            {/* STEP 3: ACCESSORIZE */}
-                                            {dressingStep === 'accessorize' && (
-                                                <div className="flex flex-col gap-2 mt-2">
-                                                    {/* Interactive Wardrobe Drawer Selection */}
-                                                    <div className="flex items-center justify-between">
-                                                        <h4 className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Gardırop Çekmecesi</h4>
-                                                        <span className="text-[8.5px] font-black text-yellow-650 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/25">Cüzdan: 🪙 {walletBalance}</span>
-                                                    </div>
-                                                    
-                                                    <div className="grid grid-cols-4 gap-2 mt-0.5">
-                                                        {/* Accessory 1: Glasses */}
-                                                        <div 
-                                                            onClick={() => handleToggleAccessory('glasses')}
-                                                            className={cn(
-                                                                "p-2 border-2 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
-                                                                selectedAccessories.includes('glasses')
-                                                                    ? "bg-cyan-500/10 border-cyan-500 text-cyan-400 shadow-md shadow-cyan-500/5"
-                                                                    : "bg-white/40 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
-                                                            )}
-                                                        >
-                                                            <span className="text-xl">😎</span>
-                                                            <span className="text-[8px] font-black text-gray-800 dark:text-gray-200 leading-none">Gözlük</span>
-                                                            <span className="text-[7px] font-bold text-cyan-500 dark:text-cyan-400 leading-none mt-0.5">+15% XP</span>
-                                                        </div>
+                                             {/* STEP 3: ACCESSORIZE */}
+                                             {dressingStep === 'accessorize' && (
+                                                 <div className="flex flex-col gap-2 mt-2">
+                                                     {/* Daily Style Challenge Banner */}
+                                                     <div className="p-2.5 rounded-2xl bg-gradient-to-r from-purple-950/40 via-indigo-950/30 to-slate-900 border border-purple-500/25 flex items-center justify-between shadow-sm select-none">
+                                                         <div className="flex flex-col gap-0.5">
+                                                             <span className="text-[7.5px] font-black text-purple-400 uppercase tracking-widest leading-none">Bugünün Tarz Teması</span>
+                                                             <h5 className="text-[10px] font-black text-white flex items-center gap-1 mt-0.5">
+                                                                 🏴‍☠️ Korsan Balosu 👑
+                                                             </h5>
+                                                             <p className="text-[7.5px] text-gray-400 font-semibold leading-none">Gereksinim: Taç veya Korsan Bandı</p>
+                                                         </div>
+                                                         <div className="flex items-center">
+                                                             <span className={cn(
+                                                                 "text-[8px] font-black px-2 py-0.5 rounded-full border leading-none transition-all",
+                                                                 (selectedAccessories.includes('crown') || selectedAccessories.includes('pirate'))
+                                                                     ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/25"
+                                                                     : "bg-amber-500/10 text-amber-400 border-amber-500/25"
+                                                             )}>
+                                                                 {(selectedAccessories.includes('crown') || selectedAccessories.includes('pirate')) ? "✓ Uygun +50🪙" : "Gereken"}
+                                                             </span>
+                                                         </div>
+                                                     </div>
 
-                                                        {/* Accessory 2: Scarf */}
-                                                        <div 
-                                                            onClick={() => handleToggleAccessory('scarf')}
-                                                            className={cn(
-                                                                "p-2 border-2 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
-                                                                selectedAccessories.includes('scarf')
-                                                                    ? "bg-red-500/10 border-red-500 text-red-500 shadow-md shadow-red-500/5"
-                                                                    : "bg-white/40 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
-                                                            )}
-                                                        >
-                                                            <span className="text-xl">🧣</span>
-                                                            <span className="text-[8px] font-black text-gray-800 dark:text-gray-200 leading-none">Boyunluk</span>
-                                                            <span className="text-[7px] font-bold text-red-500 dark:text-red-400 leading-none mt-0.5">+10% Coin</span>
-                                                        </div>
+                                                     {/* Interactive Wardrobe Drawer Selection */}
+                                                     <div className="flex items-center justify-between mt-1">
+                                                         <h4 className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Gardırop Çekmecesi</h4>
+                                                         <span className="text-[8.5px] font-black text-yellow-650 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/25">Cüzdan: 🪙 {walletBalance}</span>
+                                                     </div>
 
-                                                        {/* Accessory 3: Retro Hat (Premium Lock) */}
-                                                        <div 
-                                                            onClick={() => handleToggleAccessory('hat')}
-                                                            className={cn(
-                                                                "p-2 border-2 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
-                                                                !unlockedAccessories.includes('hat')
-                                                                    ? "bg-gray-100/50 dark:bg-black/40 border-dashed border-gray-300 dark:border-white/10"
-                                                                    : selectedAccessories.includes('hat')
-                                                                        ? "bg-purple-500/10 border-purple-500 text-purple-400 shadow-md shadow-purple-500/5"
-                                                                        : "bg-white/40 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
-                                                            )}
-                                                        >
-                                                            <span className={cn("text-xl", !unlockedAccessories.includes('hat') && "opacity-40 filter blur-[0.5px]")}>🎩</span>
-                                                            <span className="text-[8px] font-black text-gray-800 dark:text-gray-200 leading-none">Şapka</span>
-                                                            
-                                                            {!unlockedAccessories.includes('hat') ? (
-                                                                <span className="text-[6.5px] font-black text-purple-600 bg-purple-500/10 px-1 py-0.5 rounded border border-purple-500/20 mt-0.5 flex items-center gap-0.5 leading-none">
-                                                                    <Lock className="w-1.5 h-1.5 shrink-0" /> 150
-                                                                </span>
-                                                            ) : (
-                                                                <span className="text-[7px] font-bold text-purple-500 dark:text-purple-400 leading-none mt-0.5">+20% Pop</span>
-                                                            )}
-                                                        </div>
+                                                     {/* Mystery Loot Chest Button */}
+                                                     <button
+                                                         onClick={handleOpenChest}
+                                                         className="w-full bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-650 hover:from-yellow-600 hover:to-yellow-700 text-white font-black text-[9.5px] py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md active:scale-95 hover:scale-[1.01]"
+                                                     >
+                                                         <span>🎁 Gizemli Tarz Sandığı Aç</span>
+                                                         <span className="bg-yellow-950/20 px-1.5 py-0.5 rounded-md border border-white/10 text-[8.5px]">100 MoffiCoin</span>
+                                                     </button>
+                                                     
+                                                     <div className="grid grid-cols-3 gap-2 mt-0.5">
+                                                         {/* Accessory 1: Glasses */}
+                                                         <div 
+                                                             onClick={() => handleToggleAccessory('glasses')}
+                                                             className={cn(
+                                                                 "p-2 border-2 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
+                                                                 selectedAccessories.includes('glasses')
+                                                                     ? "bg-cyan-500/10 border-cyan-500 text-cyan-400 shadow-md shadow-cyan-500/5"
+                                                                     : "bg-white/40 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
+                                                             )}
+                                                         >
+                                                             <span className="text-xl">😎</span>
+                                                             <span className="text-[8px] font-black text-gray-800 dark:text-gray-200 leading-none">Gözlük</span>
+                                                             <span className="text-[7px] font-bold text-cyan-500 dark:text-cyan-400 leading-none mt-0.5">+15% XP</span>
+                                                         </div>
+ 
+                                                         {/* Accessory 2: Scarf */}
+                                                         <div 
+                                                             onClick={() => handleToggleAccessory('scarf')}
+                                                             className={cn(
+                                                                 "p-2 border-2 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
+                                                                 selectedAccessories.includes('scarf')
+                                                                     ? "bg-red-500/10 border-red-500 text-red-500 shadow-md shadow-red-500/5"
+                                                                     : "bg-white/40 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
+                                                             )}
+                                                         >
+                                                             <span className="text-xl">🧣</span>
+                                                             <span className="text-[8px] font-black text-gray-800 dark:text-gray-200 leading-none">Boyunluk</span>
+                                                             <span className="text-[7px] font-bold text-red-500 dark:text-red-400 leading-none mt-0.5">+10% Coin</span>
+                                                         </div>
+ 
+                                                         {/* Accessory 3: Retro Hat (Premium Lock) */}
+                                                         <div 
+                                                             onClick={() => handleToggleAccessory('hat')}
+                                                             className={cn(
+                                                                 "p-2 border-2 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
+                                                                 !unlockedAccessories.includes('hat')
+                                                                     ? "bg-gray-100/50 dark:bg-black/40 border-dashed border-gray-300 dark:border-white/10"
+                                                                     : selectedAccessories.includes('hat')
+                                                                         ? "bg-purple-500/10 border-purple-500 text-purple-400 shadow-md shadow-purple-500/5"
+                                                                         : "bg-white/40 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
+                                                             )}
+                                                         >
+                                                             <span className={cn("text-xl", !unlockedAccessories.includes('hat') && "opacity-40 filter blur-[0.5px]")}>🎩</span>
+                                                             <span className="text-[8px] font-black text-gray-800 dark:text-gray-200 leading-none">Şapka</span>
+                                                             
+                                                             {!unlockedAccessories.includes('hat') ? (
+                                                                 <span className="text-[6.5px] font-black text-purple-650 bg-purple-50/10 px-1 py-0.5 rounded border border-purple-500/20 mt-0.5 flex items-center gap-0.5 leading-none">
+                                                                     <Lock className="w-1.5 h-1.5 shrink-0" /> 150
+                                                                 </span>
+                                                             ) : (
+                                                                 <span className="text-[7px] font-bold text-purple-500 dark:text-purple-400 leading-none mt-0.5">+20% Pop</span>
+                                                             )}
+                                                         </div>
+ 
+                                                         {/* Accessory 4: Royal Crown (Premium Lock) */}
+                                                         <div 
+                                                             onClick={() => handleToggleAccessory('crown')}
+                                                             className={cn(
+                                                                 "p-2 border-2 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
+                                                                 !unlockedAccessories.includes('crown')
+                                                                     ? "bg-gray-100/50 dark:bg-black/40 border-dashed border-gray-300 dark:border-white/10"
+                                                                     : selectedAccessories.includes('crown')
+                                                                         ? "bg-yellow-500/10 border-yellow-500 text-yellow-400 shadow-md shadow-yellow-500/5 animate-pulse"
+                                                                         : "bg-white/40 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
+                                                             )}
+                                                         >
+                                                             <span className={cn("text-xl", !unlockedAccessories.includes('crown') && "opacity-40 filter blur-[0.5px]")}>👑</span>
+                                                             <span className="text-[8px] font-black text-gray-800 dark:text-gray-200 leading-none">Taç</span>
+                                                             
+                                                             {!unlockedAccessories.includes('crown') ? (
+                                                                 <span className="text-[6.5px] font-black text-yellow-600 bg-yellow-500/10 px-1 py-0.5 rounded border border-yellow-500/20 mt-0.5 flex items-center gap-0.5 leading-none">
+                                                                     <Lock className="w-1.5 h-1.5 shrink-0" /> 350
+                                                                 </span>
+                                                             ) : (
+                                                                 <span className="text-[7px] font-bold text-yellow-500 dark:text-yellow-400 leading-none mt-0.5">+25% VIP</span>
+                                                             )}
+                                                         </div>
 
-                                                        {/* Accessory 4: Royal Crown (Premium Lock) */}
-                                                        <div 
-                                                            onClick={() => handleToggleAccessory('crown')}
-                                                            className={cn(
-                                                                "p-2 border-2 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
-                                                                !unlockedAccessories.includes('crown')
-                                                                    ? "bg-gray-100/50 dark:bg-black/40 border-dashed border-gray-300 dark:border-white/10"
-                                                                    : selectedAccessories.includes('crown')
-                                                                        ? "bg-yellow-500/10 border-yellow-500 text-yellow-400 shadow-md shadow-yellow-500/5 animate-pulse"
-                                                                        : "bg-white/40 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
-                                                            )}
-                                                        >
-                                                            <span className={cn("text-xl", !unlockedAccessories.includes('crown') && "opacity-40 filter blur-[0.5px]")}>👑</span>
-                                                            <span className="text-[8px] font-black text-gray-800 dark:text-gray-200 leading-none">Altın Taç</span>
-                                                            
-                                                            {!unlockedAccessories.includes('crown') ? (
-                                                                <span className="text-[6.5px] font-black text-yellow-600 bg-yellow-500/10 px-1 py-0.5 rounded border border-yellow-500/20 mt-0.5 flex items-center gap-0.5 leading-none">
-                                                                    <Lock className="w-1.5 h-1.5 shrink-0" /> 350
-                                                                </span>
-                                                            ) : (
-                                                                <span className="text-[7px] font-bold text-yellow-500 dark:text-yellow-400 leading-none mt-0.5">+25% VIP</span>
-                                                            )}
-                                                        </div>
-                                                    </div>
+                                                         {/* Accessory 5: Pirate Patch (Sandık Gizli Drop) */}
+                                                         <div 
+                                                             onClick={() => {
+                                                                 if (unlockedAccessories.includes('pirate')) {
+                                                                     handleToggleAccessory('pirate');
+                                                                 } else {
+                                                                     setToastMsg("🏴‍☠️ Efsanevi Göz Bandı sadece Gizemli Sandık'tan çıkabilir! Şansını dene 🎁");
+                                                                 }
+                                                             }}
+                                                             className={cn(
+                                                                 "p-2 border-2 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
+                                                                 !unlockedAccessories.includes('pirate')
+                                                                     ? "bg-gray-100/30 dark:bg-black/40 border-dashed border-gray-250 dark:border-white/5"
+                                                                     : selectedAccessories.includes('pirate')
+                                                                         ? "bg-amber-500/10 border-amber-500 text-amber-500 shadow-md shadow-amber-500/5 animate-pulse"
+                                                                         : "bg-white/40 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
+                                                             )}
+                                                         >
+                                                             <span className={cn("text-xl", !unlockedAccessories.includes('pirate') && "opacity-40 filter blur-[0.5px]")}>🏴‍☠️</span>
+                                                             <span className="text-[8px] font-black text-gray-800 dark:text-gray-200 leading-none">Korsan</span>
+                                                             
+                                                             {!unlockedAccessories.includes('pirate') ? (
+                                                                 <span className="text-[6.5px] font-black text-amber-600 bg-amber-500/10 px-1 py-0.5 rounded border border-amber-500/20 mt-0.5 flex items-center gap-0.5 leading-none">
+                                                                     🎁 Sandık
+                                                                 </span>
+                                                             ) : (
+                                                                 <span className="text-[7px] font-bold text-amber-500 dark:text-amber-400 leading-none mt-0.5">+30% XP</span>
+                                                             )}
+                                                         </div>
 
-                                                    <button 
-                                                        onClick={() => setDressingStep('photo')}
-                                                        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-[10.5px] font-black py-2.5 rounded-xl cursor-pointer transition-all shadow-md mt-1 hover:scale-[1.01] active:scale-95"
-                                                    >
-                                                        Poz Vermeye Geç 📸
-                                                    </button>
-                                                </div>
-                                            )}
+                                                         {/* Accessory 6: Bow Tie (Sandık Gizli Drop) */}
+                                                         <div 
+                                                             onClick={() => {
+                                                                 if (unlockedAccessories.includes('bowtie')) {
+                                                                     handleToggleAccessory('bowtie');
+                                                                 } else {
+                                                                     setToastMsg("🎀 Centilmen Papyon sadece Gizemli Sandık'tan çıkabilir! Şansını dene 🎁");
+                                                                 }
+                                                             }}
+                                                             className={cn(
+                                                                 "p-2 border-2 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
+                                                                 !unlockedAccessories.includes('bowtie')
+                                                                     ? "bg-gray-100/30 dark:bg-black/40 border-dashed border-gray-250 dark:border-white/5"
+                                                                     : selectedAccessories.includes('bowtie')
+                                                                         ? "bg-pink-500/10 border-pink-500 text-pink-500 shadow-md shadow-pink-500/5 animate-pulse"
+                                                                         : "bg-white/40 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
+                                                             )}
+                                                         >
+                                                             <span className={cn("text-xl", !unlockedAccessories.includes('bowtie') && "opacity-40 filter blur-[0.5px]")}>🎀</span>
+                                                             <span className="text-[8px] font-black text-gray-800 dark:text-gray-200 leading-none">Papyon</span>
+                                                             
+                                                             {!unlockedAccessories.includes('bowtie') ? (
+                                                                 <span className="text-[6.5px] font-black text-pink-650 bg-pink-50/10 px-1 py-0.5 rounded border border-pink-500/25 mt-0.5 flex items-center gap-0.5 leading-none">
+                                                                     🎁 Sandık
+                                                                 </span>
+                                                             ) : (
+                                                                 <span className="text-[7px] font-bold text-pink-500 dark:text-pink-400 leading-none mt-0.5">+20% Coin</span>
+                                                             )}
+                                                         </div>
+                                                     </div>
+                                                 </div>
+                                             )}
+
 
                                             {/* STEP 4: PHOTOSHOOT */}
                                             {dressingStep === 'photo' && (
@@ -2336,7 +2650,69 @@ export default function LegendaryLightDashboard() {
                                                     </div>
                                                 </div>
                                             )}
-                                        </>
+                                             {/* POLAROID PHOTO ALBUM */}
+                                             <div className="mt-4 pt-4 border-t border-purple-100/25 dark:border-white/5">
+                                                 <div className="flex items-center justify-between mb-3 px-1">
+                                                     <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
+                                                         📂 Benim Albümüm ({photoAlbum.length})
+                                                     </h4>
+                                                     <span className="text-[8px] font-bold text-gray-400">Yatay Kaydırın ➔</span>
+                                                 </div>
+
+                                                 {photoAlbum.length === 0 ? (
+                                                     <div className="text-center py-6 border border-dashed border-gray-200 dark:border-white/5 rounded-2xl bg-gray-50/50 dark:bg-black/10 select-none">
+                                                         <span className="text-xl opacity-60 block">📸</span>
+                                                         <span className="text-[9px] text-gray-400 font-bold mt-1 block">Henüz kaydedilmiş kombin fotoğrafı yok!</span>
+                                                     </div>
+                                                 ) : (
+                                                     <div className="flex gap-4 overflow-x-auto pb-3 pt-1 px-1 scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent">
+                                                         {photoAlbum.map((photo) => (
+                                                             <motion.div
+                                                                 key={photo.id}
+                                                                 whileHover={{ scale: 1.03, y: -2 }}
+                                                                 className="w-[125px] shrink-0 bg-white dark:bg-zinc-900 border border-gray-200/60 dark:border-white/10 rounded-xl shadow-lg p-2 flex flex-col gap-1.5 select-none relative overflow-hidden"
+                                                                 style={{ filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.06))' }}
+                                                             >
+                                                                 {/* Mini Polaroid Photo Area */}
+                                                                 <div className={cn(
+                                                                     "w-full aspect-[1/1] rounded-lg overflow-hidden relative border border-gray-100 dark:border-white/5 bg-cover bg-center flex items-center justify-center",
+                                                                     photo.bg === 'stage' && "bg-gradient-to-b from-yellow-500/20 via-purple-900/30 to-black/50",
+                                                                     photo.bg === 'cyber' && "bg-gradient-to-br from-purple-900/40 via-indigo-900/40 to-slate-900",
+                                                                     photo.bg === 'park' && "bg-gradient-to-b from-green-500/10 via-emerald-800/20 to-slate-900",
+                                                                     photo.bg === 'space' && "bg-gradient-to-tr from-indigo-950 via-purple-950 to-slate-950"
+                                                                 )}>
+                                                                     <img src={pet.image} className="w-[85%] h-[85%] object-cover select-none pointer-events-none" />
+                                                                     {/* Accessory badges overlaid onto the mini photo */}
+                                                                     <div className="absolute bottom-1 left-1 right-1 flex flex-wrap gap-0.5 pointer-events-none">
+                                                                         {photo.accessories.map((acc) => (
+                                                                             <span key={acc} className="text-[9px] bg-black/50 backdrop-blur-[1px] rounded px-0.5">
+                                                                                 {acc === 'glasses' && '😎'}
+                                                                                 {acc === 'scarf' && '🧣'}
+                                                                                 {acc === 'hat' && '🎩'}
+                                                                                 {acc === 'crown' && '👑'}
+                                                                                 {acc === 'pirate' && '🏴‍☠️'}
+                                                                                 {acc === 'bowtie' && '🎀'}
+                                                                             </span>
+                                                                         ))}
+                                                                     </div>
+                                                                 </div>
+
+                                                                 {/* Polaroid Label Area */}
+                                                                 <div className="flex flex-col gap-0.5 text-center mt-1">
+                                                                     <span className="text-[7.5px] font-black text-gray-800 dark:text-gray-200 truncate">{photo.theme}</span>
+                                                                     <span className="text-[8px] font-extrabold text-purple-600 dark:text-purple-400">{photo.sp} Tarz P.</span>
+                                                                     <div className="flex justify-between items-center text-[6px] text-gray-400 font-bold mt-1 border-t border-gray-100 dark:border-white/5 pt-1">
+                                                                         <span>{photo.date}</span>
+                                                                         <span className="uppercase text-purple-500">{photo.bg}</span>
+                                                                     </div>
+                                                                 </div>
+                                                             </motion.div>
+                                                         ))}
+                                                     </div>
+                                                 )}
+                                             </div>
+                                         </>
+
                                     )}
 
                                     {/* 5. Quests Morph Screen */}
