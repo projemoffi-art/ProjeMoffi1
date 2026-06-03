@@ -2062,18 +2062,16 @@ export default function LegendaryLightDashboard() {
                                                         </span>
                                                     ))}
 
-                                                    {/* Dynamic Speech Bubble Reaction */}
+                                                                                                        {/* Dynamic Pet Speech Text - Top and border-less */}
                                                     <AnimatePresence>
                                                         {petSpeech && (
                                                             <motion.div
-                                                                initial={{ opacity: 0, scale: 0.8, y: 10 }}
-                                                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                                                exit={{ opacity: 0, scale: 0.8, y: -10 }}
-                                                                className="absolute top-[20%] left-[8%] right-[8%] bg-white/90 dark:bg-black/90 backdrop-blur-md border border-purple-250/50 dark:border-white/10 p-2.5 rounded-2xl shadow-xl z-40 text-center font-black text-[10px] text-purple-700 dark:text-purple-300 select-none flex items-center justify-center gap-1.5"
+                                                                initial={{ opacity: 0, y: -15 }}
+                                                                animate={{ opacity: 1, y: 0 }}
+                                                                exit={{ opacity: 0, y: -15 }}
+                                                                className="absolute top-[3%] left-4 right-4 bg-purple-950/85 backdrop-blur-md border border-purple-500/30 p-2 rounded-xl shadow-[0_0_15px_rgba(168,85,247,0.25)] z-40 text-center font-black text-[10.5px] text-purple-200 select-none flex items-center justify-center gap-2"
                                                             >
-                                                                <span>💬</span>
-                                                                <span>{petSpeech}</span>
-                                                                <div className="absolute bottom-[-6px] left-1/2 -translate-x-1/2 w-3 h-3 bg-white/90 dark:bg-black/90 rotate-45 border-r border-b border-purple-250/50 dark:border-white/10" />
+                                                                <span>🐾 {petSpeech}</span>
                                                             </motion.div>
                                                         )}
                                                     </AnimatePresence>
@@ -2142,13 +2140,18 @@ export default function LegendaryLightDashboard() {
                                                         )}
                                                     </AnimatePresence>
 
-                                                    {/* Bubble Overlay for Cleaning Step */}
+                                                                                                        {/* Bubble Overlay for Cleaning Step */}
                                                     {dressingStep === 'clean' && (
                                                         <div className="absolute inset-0 z-20 pointer-events-none">
-                                                            {cleanProgress < 30 && <span className="absolute top-1/4 left-1/3 text-3xl animate-bounce">🫧</span>}
-                                                            {cleanProgress < 60 && <span className="absolute top-1/2 left-1/4 text-2xl animate-pulse">🫧</span>}
-                                                            {cleanProgress < 85 && <span className="absolute top-1/3 right-1/4 text-4xl animate-bounce">🫧</span>}
-                                                            {cleanProgress < 100 && <span className="absolute bottom-1/3 left-1/2 text-3xl animate-pulse">🫧</span>}
+                                                            {/* Bubble count does not decrease automatically - they stay visible until rinsed/wiped */}
+                                                            {cleanProgress < 100 && (
+                                                                <>
+                                                                    <span className="absolute top-1/4 left-1/3 text-3xl animate-bounce">🫧</span>
+                                                                    <span className="absolute top-1/2 left-1/4 text-2xl animate-pulse">🫧</span>
+                                                                    <span className="absolute top-1/3 right-1/4 text-4xl animate-bounce">🫧</span>
+                                                                    <span className="absolute bottom-1/3 left-1/2 text-3xl animate-pulse">🫧</span>
+                                                                </>
+                                                            )}
                                                             {isShowerActive && (
                                                                 <div className="absolute inset-0 bg-blue-400/20 flex items-center justify-center transition-all">
                                                                     <span className="text-4xl animate-ping opacity-75">🚿💦</span>
@@ -2268,7 +2271,7 @@ export default function LegendaryLightDashboard() {
                                                         </div>
                                                     </div>
 
-                                                    <div className="grid grid-cols-2 gap-2 mt-0.5">
+                                                                                                        <div className="grid grid-cols-2 gap-2 mt-0.5">
                                                         <button
                                                             onClick={() => {
                                                                 setIsShowerActive(true);
@@ -2283,13 +2286,15 @@ export default function LegendaryLightDashboard() {
                                                         <button
                                                             onClick={() => {
                                                                 setIsShowerActive(true);
-                                                                setCleanProgress(prev => Math.min(100, prev + 20));
+                                                                setCleanProgress(100);
+                                                                setParticles([]); // clear bubbles
                                                                 setTimeout(() => setIsShowerActive(false), 600);
+                                                                triggerSpeechBubble("Bütün köpükleri sildim! 🚿");
                                                             }}
                                                             disabled={cleanProgress >= 100}
                                                             className="flex items-center justify-center gap-1.5 p-2 bg-cyan-500 hover:bg-cyan-600 active:scale-95 text-white text-[10px] font-black rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
                                                         >
-                                                            <span>🚿 Su Tut</span>
+                                                            <span>🚿 Köpükleri Sil</span>
                                                         </button>
                                                     </div>
 
@@ -2516,7 +2521,7 @@ export default function LegendaryLightDashboard() {
                                                              )}
                                                          </div>
 
-                                                         {/* Accessory 6: Bow Tie (Sandık Gizli Drop) */}
+                                                                                                                  {/* Accessory 6: Bow Tie (Sandık Gizli Drop) */}
                                                          <div 
                                                              onClick={() => {
                                                                  if (unlockedAccessories.includes('bowtie')) {
@@ -2546,6 +2551,14 @@ export default function LegendaryLightDashboard() {
                                                              )}
                                                          </div>
                                                      </div>
+
+                                                     {/* Poz Vermeye Geç Transition Button */}
+                                                     <button 
+                                                         onClick={() => setDressingStep('photo')}
+                                                         className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-[10.5px] font-black py-2.5 rounded-xl cursor-pointer transition-all shadow-md mt-2.5 hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-1.5"
+                                                     >
+                                                         Poz Vermeye Geç 📸
+                                                     </button>
                                                  </div>
                                              )}
 
@@ -4162,7 +4175,7 @@ export default function LegendaryLightDashboard() {
                 setNewPetStreak={setNewPetStreak}
             />
 
-            <style jsx global>{`
+            <style>{`
                 .no-scrollbar::-webkit-scrollbar { display: none; }
                 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
             `}</style>
