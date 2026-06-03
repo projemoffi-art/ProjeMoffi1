@@ -1865,7 +1865,7 @@ export default function LegendaryLightDashboard() {
                                             </div>
 
                                             {/* Interactive Dressing Box */}
-                                            <div className="relative w-full aspect-[16/10] rounded-[24px] border border-purple-200/40 dark:border-white/5 bg-gradient-to-br from-purple-500/5 via-transparent to-indigo-500/5 overflow-hidden shadow-inner flex items-center justify-center p-3">
+                                            <div className="relative w-full aspect-[10/12] rounded-[24px] border border-purple-200/40 dark:border-white/5 bg-gradient-to-br from-purple-500/5 via-transparent to-indigo-500/5 overflow-hidden shadow-inner flex items-center justify-center p-3">
                                                 <div className="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none" />
                                                 
                                                 {/* Futuristic scanner animations only in accessorize step */}
@@ -2018,24 +2018,19 @@ export default function LegendaryLightDashboard() {
                                                 </div>
                                             </div>
 
-                                            {/* STEP CONTENT SECTION */}
-
                                             {/* STEP 1: CLEANING */}
                                             {dressingStep === 'clean' && (
-                                                <div className="flex flex-col gap-3 mt-3">
-                                                    <div className="p-3 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-150/40 rounded-2xl">
-                                                        <span className="text-[10px] font-black text-blue-500 uppercase tracking-wider block">Adım 1: Köpüklü Pati Banyosu 🧼</span>
-                                                        <p className="text-[9.5px] text-gray-500 mt-1 font-semibold leading-normal">
-                                                            Patiniz giyinmeden önce şık bir banyoyu hak ediyor! <b>Patinin üstünde parmağını veya fareni sürükleyerek köpürt!</b> Veya aşağıdaki hızlı butonları kullan.
-                                                        </p>
-                                                    </div>
+                                                <div className="flex flex-col gap-2 mt-2">
+                                                    <p className="text-[8.5px] text-gray-500 dark:text-gray-400 font-bold leading-normal text-center bg-blue-500/5 border border-blue-500/10 p-1.5 rounded-xl select-none">
+                                                        🧼 Parmağını veya fareyi sürükleyerek köpürt!
+                                                    </p>
 
-                                                    <div className="flex flex-col gap-2">
-                                                        <div className="flex justify-between items-center text-[9px] font-bold text-gray-400">
+                                                    <div className="flex flex-col gap-1">
+                                                        <div className="flex justify-between items-center text-[8.5px] font-bold text-gray-400">
                                                             <span>Temizlik Seviyesi</span>
-                                                            <span className="text-blue-500">{cleanProgress}%</span>
+                                                            <span className="text-blue-500 font-extrabold">{cleanProgress}%</span>
                                                         </div>
-                                                        <div className="w-full h-3.5 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden p-0.5 border border-gray-200/50 dark:border-white/5 shadow-inner">
+                                                        <div className="w-full h-2 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden border border-gray-200/30 dark:border-white/5 shadow-inner">
                                                             <div 
                                                                 className="h-full bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full transition-all duration-300"
                                                                 style={{ width: `${cleanProgress}%` }}
@@ -2043,7 +2038,7 @@ export default function LegendaryLightDashboard() {
                                                         </div>
                                                     </div>
 
-                                                    <div className="grid grid-cols-2 gap-3 mt-1">
+                                                    <div className="grid grid-cols-2 gap-2 mt-0.5">
                                                         <button
                                                             onClick={() => {
                                                                 setIsShowerActive(true);
@@ -2051,9 +2046,9 @@ export default function LegendaryLightDashboard() {
                                                                 setTimeout(() => setIsShowerActive(false), 600);
                                                             }}
                                                             disabled={cleanProgress >= 100}
-                                                            className="flex items-center justify-center gap-2 p-3 bg-blue-500 hover:bg-blue-600 active:scale-95 text-white text-xs font-black rounded-2xl transition-all shadow-sm shadow-blue-500/10 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                                                            className="flex items-center justify-center gap-1.5 p-2 bg-blue-500 hover:bg-blue-600 active:scale-95 text-white text-[10px] font-black rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
                                                         >
-                                                            <span>🧼 Köpük Püskürt</span>
+                                                            <span>🧼 Köpürt</span>
                                                         </button>
                                                         <button
                                                             onClick={() => {
@@ -2062,7 +2057,7 @@ export default function LegendaryLightDashboard() {
                                                                 setTimeout(() => setIsShowerActive(false), 600);
                                                             }}
                                                             disabled={cleanProgress >= 100}
-                                                            className="flex items-center justify-center gap-2 p-3 bg-cyan-500 hover:bg-cyan-600 active:scale-95 text-white text-xs font-black rounded-2xl transition-all shadow-sm shadow-cyan-500/10 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                                                            className="flex items-center justify-center gap-1.5 p-2 bg-cyan-500 hover:bg-cyan-600 active:scale-95 text-white text-[10px] font-black rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
                                                         >
                                                             <span>🚿 Su Tut</span>
                                                         </button>
@@ -2071,13 +2066,13 @@ export default function LegendaryLightDashboard() {
                                                     {cleanProgress >= 100 ? (
                                                         <button
                                                             onClick={() => setDressingStep('dry')}
-                                                            className="w-full mt-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-xs font-black py-3.5 rounded-2xl cursor-pointer hover:shadow-lg hover:shadow-indigo-500/15 active:scale-98 transition-all"
+                                                            className="w-full mt-1 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-[10.5px] font-black py-2.5 rounded-xl cursor-pointer hover:shadow-lg active:scale-98 transition-all"
                                                         >
-                                                            Sonraki Adım: Kurulan 💨
+                                                            Kurulamaya Geç 💨
                                                         </button>
                                                     ) : (
-                                                        <div className="w-full text-center text-[9px] text-gray-400 font-black uppercase tracking-wider py-3 border border-dashed border-gray-200 dark:border-white/5 rounded-2xl">
-                                                            🛁 Devam etmek için banyoyu bitirin
+                                                        <div className="w-full text-center text-[8.5px] text-gray-400 font-bold uppercase tracking-wider py-2 border border-dashed border-gray-250 dark:border-white/5 rounded-xl bg-gray-50/50 dark:bg-black/10">
+                                                            🛁 Banyoyu bitirin
                                                         </div>
                                                     )}
                                                 </div>
@@ -2085,20 +2080,17 @@ export default function LegendaryLightDashboard() {
 
                                             {/* STEP 2: DRYING */}
                                             {dressingStep === 'dry' && (
-                                                <div className="flex flex-col gap-3 mt-3">
-                                                    <div className="p-3 bg-orange-50/50 dark:bg-orange-950/20 border border-orange-150/40 rounded-2xl">
-                                                        <span className="text-[10px] font-black text-orange-500 uppercase tracking-wider block">Adım 2: Fön Makinesi & Tarama 💨</span>
-                                                        <p className="text-[9.5px] text-gray-500 mt-1 font-semibold leading-normal">
-                                                            Harika temizlendik! Şimdi ıslak kalmamak için <b>patini sürükleyerek fönle ve kurut!</b> Ya da aşağıdaki araçları kullanarak ilerlet.
-                                                        </p>
-                                                    </div>
+                                                <div className="flex flex-col gap-2 mt-2">
+                                                    <p className="text-[8.5px] text-gray-500 dark:text-gray-400 font-bold leading-normal text-center bg-orange-500/5 border border-orange-500/10 p-1.5 rounded-xl select-none">
+                                                        💨 Parmağını veya fareyi sürükleyerek kurut!
+                                                    </p>
 
-                                                    <div className="flex flex-col gap-2">
-                                                        <div className="flex justify-between items-center text-[9px] font-bold text-gray-400">
+                                                    <div className="flex flex-col gap-1">
+                                                        <div className="flex justify-between items-center text-[8.5px] font-bold text-gray-400">
                                                             <span>Kuruluk Seviyesi</span>
-                                                            <span className="text-orange-500">{dryProgress}%</span>
+                                                            <span className="text-orange-500 font-extrabold">{dryProgress}%</span>
                                                         </div>
-                                                        <div className="w-full h-3.5 bg-gray-150 dark:bg-white/5 rounded-full overflow-hidden p-0.5 border border-gray-200/50 dark:border-white/5 shadow-inner">
+                                                        <div className="w-full h-2 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden border border-gray-200/30 dark:border-white/5 shadow-inner">
                                                             <div 
                                                                 className="h-full bg-gradient-to-r from-orange-400 to-amber-500 rounded-full transition-all duration-300"
                                                                 style={{ width: `${dryProgress}%` }}
@@ -2106,7 +2098,7 @@ export default function LegendaryLightDashboard() {
                                                         </div>
                                                     </div>
 
-                                                    <div className="grid grid-cols-2 gap-3 mt-1">
+                                                    <div className="grid grid-cols-2 gap-2 mt-0.5">
                                                         <button
                                                             onClick={() => {
                                                                 setIsDryerActive(true);
@@ -2114,9 +2106,9 @@ export default function LegendaryLightDashboard() {
                                                                 setTimeout(() => setIsDryerActive(false), 600);
                                                             }}
                                                             disabled={dryProgress >= 100}
-                                                            className="flex items-center justify-center gap-2 p-3 bg-orange-500 hover:bg-orange-600 active:scale-95 text-white text-xs font-black rounded-2xl transition-all shadow-sm shadow-orange-500/10 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                                                            className="flex items-center justify-center gap-1.5 p-2 bg-orange-500 hover:bg-orange-600 active:scale-95 text-white text-[10px] font-black rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
                                                         >
-                                                            <span>💨 Fön Makinesi</span>
+                                                            <span>💨 Fönle</span>
                                                         </button>
                                                         <button
                                                             onClick={() => {
@@ -2125,22 +2117,22 @@ export default function LegendaryLightDashboard() {
                                                                 setTimeout(() => setIsDryerActive(false), 600);
                                                             }}
                                                             disabled={dryProgress >= 100}
-                                                            className="flex items-center justify-center gap-2 p-3 bg-yellow-500 hover:bg-yellow-600 active:scale-95 text-white text-xs font-black rounded-2xl transition-all shadow-sm shadow-yellow-500/10 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                                                            className="flex items-center justify-center gap-1.5 p-2 bg-yellow-500 hover:bg-yellow-600 active:scale-95 text-white text-[10px] font-black rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
                                                         >
-                                                            <span>🪮 Pati Fırçası</span>
+                                                            <span>🪮 Tara</span>
                                                         </button>
                                                     </div>
 
                                                     {dryProgress >= 100 ? (
                                                         <button
                                                             onClick={() => setDressingStep('accessorize')}
-                                                            className="w-full mt-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-xs font-black py-3.5 rounded-2xl cursor-pointer hover:shadow-lg hover:shadow-purple-500/15 active:scale-98 transition-all"
+                                                            className="w-full mt-1 bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-[10.5px] font-black py-2.5 rounded-xl cursor-pointer hover:shadow-lg active:scale-98 transition-all"
                                                         >
-                                                            Sonraki Adım: Aksesuar Seç 🎀
+                                                            Aksesuar Seç 🎀
                                                         </button>
                                                     ) : (
-                                                        <div className="w-full text-center text-[9px] text-gray-400 font-black uppercase tracking-wider py-3 border border-dashed border-gray-200 dark:border-white/5 rounded-2xl">
-                                                            💨 Devam etmek için kurulayın
+                                                        <div className="w-full text-center text-[8.5px] text-gray-400 font-bold uppercase tracking-wider py-2 border border-dashed border-gray-250 dark:border-white/5 rounded-xl bg-gray-50/50 dark:bg-black/10">
+                                                            💨 Kurulamayı bitirin
                                                         </div>
                                                     )}
                                                 </div>
@@ -2148,49 +2140,49 @@ export default function LegendaryLightDashboard() {
 
                                             {/* STEP 3: ACCESSORIZE */}
                                             {dressingStep === 'accessorize' && (
-                                                <div className="flex flex-col gap-3 mt-3">
+                                                <div className="flex flex-col gap-2 mt-2">
                                                     {/* Interactive Wardrobe Drawer Selection */}
-                                                    <div className="flex items-center justify-between mt-1">
-                                                        <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Gardırop Çekmecesi</h4>
-                                                        <span className="text-[9px] font-black text-yellow-600 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/25">Moffi Cüzdan: 🪙 {walletBalance}</span>
+                                                    <div className="flex items-center justify-between">
+                                                        <h4 className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Gardırop Çekmecesi</h4>
+                                                        <span className="text-[8.5px] font-black text-yellow-650 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/25">Cüzdan: 🪙 {walletBalance}</span>
                                                     </div>
                                                     
-                                                    <div className="grid grid-cols-4 gap-2.5">
+                                                    <div className="grid grid-cols-4 gap-2 mt-0.5">
                                                         {/* Accessory 1: Glasses */}
                                                         <div 
                                                             onClick={() => handleToggleAccessory('glasses')}
                                                             className={cn(
-                                                                "p-2.5 border-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
+                                                                "p-2 border-2 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
                                                                 selectedAccessories.includes('glasses')
                                                                     ? "bg-cyan-500/10 border-cyan-500 text-cyan-400 shadow-md shadow-cyan-500/5"
                                                                     : "bg-white/40 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
                                                             )}
                                                         >
                                                             <span className="text-xl">😎</span>
-                                                            <span className="text-[8.5px] font-black text-gray-800 dark:text-gray-200 leading-none">Gözlük</span>
-                                                            <span className="text-[7.5px] font-bold text-cyan-500 dark:text-cyan-400 leading-none mt-0.5">+15% XP</span>
+                                                            <span className="text-[8px] font-black text-gray-800 dark:text-gray-200 leading-none">Gözlük</span>
+                                                            <span className="text-[7px] font-bold text-cyan-500 dark:text-cyan-400 leading-none mt-0.5">+15% XP</span>
                                                         </div>
 
                                                         {/* Accessory 2: Scarf */}
                                                         <div 
                                                             onClick={() => handleToggleAccessory('scarf')}
                                                             className={cn(
-                                                                "p-2.5 border-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
+                                                                "p-2 border-2 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
                                                                 selectedAccessories.includes('scarf')
                                                                     ? "bg-red-500/10 border-red-500 text-red-500 shadow-md shadow-red-500/5"
                                                                     : "bg-white/40 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
                                                             )}
                                                         >
                                                             <span className="text-xl">🧣</span>
-                                                            <span className="text-[8.5px] font-black text-gray-800 dark:text-gray-200 leading-none">Boyunluk</span>
-                                                            <span className="text-[7.5px] font-bold text-red-500 dark:text-red-400 leading-none mt-0.5">+10% Coin</span>
+                                                            <span className="text-[8px] font-black text-gray-800 dark:text-gray-200 leading-none">Boyunluk</span>
+                                                            <span className="text-[7px] font-bold text-red-500 dark:text-red-400 leading-none mt-0.5">+10% Coin</span>
                                                         </div>
 
                                                         {/* Accessory 3: Retro Hat (Premium Lock) */}
                                                         <div 
                                                             onClick={() => handleToggleAccessory('hat')}
                                                             className={cn(
-                                                                "p-2.5 border-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
+                                                                "p-2 border-2 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
                                                                 !unlockedAccessories.includes('hat')
                                                                     ? "bg-gray-100/50 dark:bg-black/40 border-dashed border-gray-300 dark:border-white/10"
                                                                     : selectedAccessories.includes('hat')
@@ -2199,14 +2191,14 @@ export default function LegendaryLightDashboard() {
                                                             )}
                                                         >
                                                             <span className={cn("text-xl", !unlockedAccessories.includes('hat') && "opacity-40 filter blur-[0.5px]")}>🎩</span>
-                                                            <span className="text-[8.5px] font-black text-gray-800 dark:text-gray-200 leading-none">Şapka</span>
+                                                            <span className="text-[8px] font-black text-gray-800 dark:text-gray-200 leading-none">Şapka</span>
                                                             
                                                             {!unlockedAccessories.includes('hat') ? (
-                                                                <span className="text-[7px] font-black text-purple-600 bg-purple-500/10 px-1 py-0.5 rounded border border-purple-500/20 mt-0.5 flex items-center gap-0.5 leading-none">
-                                                                    <Lock className="w-2 h-2 shrink-0" /> 150
+                                                                <span className="text-[6.5px] font-black text-purple-600 bg-purple-500/10 px-1 py-0.5 rounded border border-purple-500/20 mt-0.5 flex items-center gap-0.5 leading-none">
+                                                                    <Lock className="w-1.5 h-1.5 shrink-0" /> 150
                                                                 </span>
                                                             ) : (
-                                                                <span className="text-[7.5px] font-bold text-purple-500 dark:text-purple-400 leading-none mt-0.5">+20% Pop</span>
+                                                                <span className="text-[7px] font-bold text-purple-500 dark:text-purple-400 leading-none mt-0.5">+20% Pop</span>
                                                             )}
                                                         </div>
 
@@ -2214,7 +2206,7 @@ export default function LegendaryLightDashboard() {
                                                         <div 
                                                             onClick={() => handleToggleAccessory('crown')}
                                                             className={cn(
-                                                                "p-2.5 border-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
+                                                                "p-2 border-2 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
                                                                 !unlockedAccessories.includes('crown')
                                                                     ? "bg-gray-100/50 dark:bg-black/40 border-dashed border-gray-300 dark:border-white/10"
                                                                     : selectedAccessories.includes('crown')
@@ -2223,21 +2215,21 @@ export default function LegendaryLightDashboard() {
                                                             )}
                                                         >
                                                             <span className={cn("text-xl", !unlockedAccessories.includes('crown') && "opacity-40 filter blur-[0.5px]")}>👑</span>
-                                                            <span className="text-[8.5px] font-black text-gray-800 dark:text-gray-200 leading-none">Altın Taç</span>
+                                                            <span className="text-[8px] font-black text-gray-800 dark:text-gray-200 leading-none">Altın Taç</span>
                                                             
                                                             {!unlockedAccessories.includes('crown') ? (
-                                                                <span className="text-[7px] font-black text-yellow-600 bg-yellow-500/10 px-1 py-0.5 rounded border border-yellow-500/20 mt-0.5 flex items-center gap-0.5 leading-none">
-                                                                    <Lock className="w-2 h-2 shrink-0" /> 350
+                                                                <span className="text-[6.5px] font-black text-yellow-600 bg-yellow-500/10 px-1 py-0.5 rounded border border-yellow-500/20 mt-0.5 flex items-center gap-0.5 leading-none">
+                                                                    <Lock className="w-1.5 h-1.5 shrink-0" /> 350
                                                                 </span>
                                                             ) : (
-                                                                <span className="text-[7.5px] font-bold text-yellow-500 dark:text-yellow-400 leading-none mt-0.5">+25% VIP</span>
+                                                                <span className="text-[7px] font-bold text-yellow-500 dark:text-yellow-400 leading-none mt-0.5">+25% VIP</span>
                                                             )}
                                                         </div>
                                                     </div>
 
                                                     <button 
                                                         onClick={() => setDressingStep('photo')}
-                                                        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-black py-3.5 rounded-2xl cursor-pointer transition-all shadow-md shadow-purple-900/15 mt-2 hover:scale-[1.01] active:scale-95"
+                                                        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-[10.5px] font-black py-2.5 rounded-xl cursor-pointer transition-all shadow-md mt-1 hover:scale-[1.01] active:scale-95"
                                                     >
                                                         Poz Vermeye Geç 📸
                                                     </button>
@@ -2246,9 +2238,9 @@ export default function LegendaryLightDashboard() {
 
                                             {/* STEP 4: PHOTOSHOOT */}
                                             {dressingStep === 'photo' && (
-                                                <div className="flex flex-col gap-3 mt-3">
-                                                    <div className="flex flex-col gap-1.5">
-                                                        <span className="text-[9.5px] font-black text-gray-400 uppercase tracking-widest">Stüdyo Arka Planı Seç</span>
+                                                <div className="flex flex-col gap-2 mt-2">
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="text-[8.5px] font-black text-gray-400 uppercase tracking-widest">Stüdyo Arka Planı Seç</span>
                                                         <div className="grid grid-cols-4 gap-2">
                                                             {[
                                                                 { bg: 'stage', label: '🎬 Sahne' },
@@ -2260,7 +2252,7 @@ export default function LegendaryLightDashboard() {
                                                                     key={item.bg}
                                                                     onClick={() => setActiveStudioBg(item.bg as any)}
                                                                     className={cn(
-                                                                        "py-2 rounded-xl text-[9px] font-black transition-all cursor-pointer border active:scale-95",
+                                                                        "py-1.5 rounded-xl text-[8.5px] font-black transition-all cursor-pointer border active:scale-95",
                                                                         activeStudioBg === item.bg
                                                                             ? "bg-purple-600 text-white border-purple-500 shadow-sm"
                                                                             : "bg-white/40 dark:bg-black/20 text-gray-700 dark:text-gray-300 border-gray-200/50 dark:border-white/5 hover:bg-gray-100"
@@ -2281,7 +2273,7 @@ export default function LegendaryLightDashboard() {
                                                                 setDressingStep('completed');
                                                             }, 350);
                                                         }}
-                                                        className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-750 text-white text-xs font-black py-4 rounded-2xl cursor-pointer transition-all shadow-md shadow-emerald-500/10 active:scale-95 flex items-center justify-center gap-2 mt-1"
+                                                        className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-750 text-white text-[10.5px] font-black py-3 rounded-xl cursor-pointer transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5 mt-1"
                                                     >
                                                         <span>📸 FOTOĞRAF ÇEK</span>
                                                     </button>
@@ -2290,43 +2282,43 @@ export default function LegendaryLightDashboard() {
 
                                             {/* STEP 5: COMPLETED */}
                                             {dressingStep === 'completed' && (
-                                                <div className="flex flex-col gap-3 mt-3">
-                                                    <div className="p-3 bg-gradient-to-tr from-yellow-500/10 to-amber-500/5 border border-yellow-200/40 rounded-2xl text-center">
-                                                        <span className="text-[12px] font-black text-yellow-500 flex items-center justify-center gap-1.5 animate-pulse">
+                                                <div className="flex flex-col gap-2 mt-2">
+                                                    <div className="p-2 bg-gradient-to-tr from-yellow-500/10 to-amber-500/5 border border-yellow-200/30 rounded-xl text-center">
+                                                        <span className="text-[11px] font-black text-yellow-500 flex items-center justify-center gap-1.5 animate-pulse">
                                                             🏆 Moffi Fashion Card Hazır!
                                                         </span>
-                                                        <p className="text-[9.5px] text-gray-500 mt-1 font-semibold leading-normal">
-                                                            Evcil hayvanınızın son kombini ve özellikleri kaydedilmek için hazırlandı.
+                                                        <p className="text-[8.5px] text-gray-500 mt-0.5 font-semibold leading-relaxed">
+                                                            Kombin ve özellikler kaydedilmek için hazırlandı.
                                                         </p>
                                                     </div>
 
                                                     {/* Stat bonuses preview */}
-                                                    <div className="grid grid-cols-3 gap-2 text-center">
-                                                        <div className="bg-white/50 dark:bg-black/20 border border-gray-250/20 rounded-xl p-2 flex flex-col items-center justify-center gap-0.5">
+                                                    <div className="grid grid-cols-3 gap-1.5 text-center">
+                                                        <div className="bg-white/50 dark:bg-black/20 border border-gray-250/10 rounded-xl p-1.5 flex flex-col items-center justify-center gap-0.5">
                                                             <Coins className="w-3.5 h-3.5 text-yellow-500" />
-                                                            <span className="text-[10px] font-black text-gray-800 dark:text-gray-200">+{activeBonus.walkCoinBonus}%</span>
-                                                            <span className="text-[6.5px] font-bold text-gray-400 uppercase">Yürüyüş</span>
+                                                            <span className="text-[9.5px] font-black text-gray-800 dark:text-gray-200">+{activeBonus.walkCoinBonus}%</span>
+                                                            <span className="text-[6px] font-bold text-gray-400 uppercase">Yürüyüş</span>
                                                         </div>
-                                                        <div className="bg-white/50 dark:bg-black/20 border border-gray-250/20 rounded-xl p-2 flex flex-col items-center justify-center gap-0.5">
+                                                        <div className="bg-white/50 dark:bg-black/20 border border-gray-250/10 rounded-xl p-1.5 flex flex-col items-center justify-center gap-0.5">
                                                             <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                                                            <span className="text-[10px] font-black text-gray-800 dark:text-gray-200">+{activeBonus.xpBonus}%</span>
-                                                            <span className="text-[6.5px] font-bold text-gray-400 uppercase">XP Bonusu</span>
+                                                            <span className="text-[9.5px] font-black text-gray-800 dark:text-gray-200">+{activeBonus.xpBonus}%</span>
+                                                            <span className="text-[6px] font-bold text-gray-400 uppercase">XP</span>
                                                         </div>
-                                                        <div className="bg-white/50 dark:bg-black/20 border border-gray-250/20 rounded-xl p-2 flex flex-col items-center justify-center gap-0.5">
+                                                        <div className="bg-white/50 dark:bg-black/20 border border-gray-250/10 rounded-xl p-1.5 flex flex-col items-center justify-center gap-0.5">
                                                             <Heart className="w-3.5 h-3.5 text-red-500" />
-                                                            <span className="text-[10px] font-black text-gray-800 dark:text-gray-200">+{activeBonus.likeBoost}%</span>
-                                                            <span className="text-[6.5px] font-bold text-gray-400 uppercase">Popülerlik</span>
+                                                            <span className="text-[9.5px] font-black text-gray-800 dark:text-gray-200">+{activeBonus.likeBoost}%</span>
+                                                            <span className="text-[6px] font-bold text-gray-400 uppercase">Sosyal</span>
                                                         </div>
                                                     </div>
 
-                                                    <div className="grid grid-cols-2 gap-3 mt-1">
+                                                    <div className="grid grid-cols-2 gap-2 mt-1">
                                                         <button
                                                             onClick={() => {
                                                                 setCleanProgress(0);
                                                                 setDryProgress(0);
                                                                 setDressingStep('clean');
                                                             }}
-                                                            className="p-3.5 bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 text-xs font-black rounded-2xl transition-all cursor-pointer text-center"
+                                                            className="p-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 text-[10px] font-black rounded-xl transition-all cursor-pointer text-center"
                                                         >
                                                             🔄 Baştan Başla
                                                         </button>
@@ -2337,7 +2329,7 @@ export default function LegendaryLightDashboard() {
                                                                 setDryProgress(0);
                                                                 handleSaveOutfit();
                                                             }}
-                                                            className="p-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-black rounded-2xl transition-all cursor-pointer text-center shadow-md shadow-purple-900/10"
+                                                            className="p-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-[10px] font-black rounded-xl transition-all cursor-pointer text-center shadow-md shadow-purple-900/10"
                                                         >
                                                             ✨ Kombini Kaydet
                                                         </button>
