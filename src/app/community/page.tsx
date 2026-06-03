@@ -67,6 +67,7 @@ import {
 import { useStories } from '../../hooks/useStories';
 import { useWalk } from '../../hooks/useWalk';
 import { QuestBentoCard } from '@/components/quests/QuestBentoCard';
+import { cn } from '@/lib/utils';
 
 const MATCH_CANDIDATES = [
     {
