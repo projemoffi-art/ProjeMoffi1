@@ -380,6 +380,53 @@ export default function LegendaryLightDashboard() {
     const [activeOutfitName, setActiveOutfitName] = useState('Havalı Gözlük 😎 & Kırmızı Boyunluk 🧣');
     const [stylePoints, setStylePoints] = useState(120);
 
+    // TALKING TOM STYLE DRESSING GAME STATES
+    const [dressingStep, setDressingStep] = useState<'clean' | 'dry' | 'accessorize' | 'photo' | 'completed'>('clean');
+    const [cleanProgress, setCleanProgress] = useState(0);
+    const [dryProgress, setDryProgress] = useState(0);
+    const [activeStudioBg, setActiveStudioBg] = useState<'stage' | 'cyber' | 'park' | 'space'>('stage');
+    const [isFlashActive, setIsFlashActive] = useState(false);
+    const [isShowerActive, setIsShowerActive] = useState(false);
+    const [isDryerActive, setIsDryerActive] = useState(false);
+
+    const [particles, setParticles] = useState<Array<{ id: number, x: number, y: number, emoji: string }>>([]);
+
+    const handlePetInteraction = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+        if (dressingStep !== 'clean' && dressingStep !== 'dry') return;
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        let clientX = 0;
+        let clientY = 0;
+
+        if ('touches' in e) {
+            if (e.touches.length === 0) return;
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else {
+            if (e.type === 'mousemove' && e.buttons !== 1) return;
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
+
+        const x = ((clientX - rect.left) / rect.width) * 100;
+        const y = ((clientY - rect.top) / rect.height) * 100;
+
+        const newParticle = {
+            id: Date.now() + Math.random(),
+            x,
+            y,
+            emoji: dressingStep === 'clean' ? '🫧' : '💨'
+        };
+
+        setParticles(prev => [...prev.slice(-20), newParticle]);
+
+        if (dressingStep === 'clean') {
+            setCleanProgress(prev => Math.min(100, prev + 1.5));
+        } else if (dressingStep === 'dry') {
+            setDryProgress(prev => Math.min(100, prev + 1.5));
+        }
+    };
+
     const activeBonus = useMemo(() => {
         let xpBonus = 0;
         let walkCoinBonus = 0;
@@ -1772,14 +1819,13 @@ export default function LegendaryLightDashboard() {
                                         </>
                                     )}
 
-                                    {/* 4. AI Dressing Morph Screen */}
-                                    {/* 4. AI Dressing Morph Screen */}
+                                    {/* 4. AI Dressing Morph Screen (Talking Tom Interactive Dressing Studio) */}
                                     {expandedPanel === 'dressing' && (
                                         <>
                                             <div className="flex items-center justify-between mb-4">
                                                 <div className="flex items-center gap-2">
                                                     <Shirt className="w-6 h-6 text-purple-500" />
-                                                    <h3 className="text-lg font-black text-gray-800 dark:text-white">Pati Gardırobu</h3>
+                                                    <h3 className="text-lg font-black text-gray-800 dark:text-white">Pati Giydirme Stüdyosu</h3>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-[9.5px] font-black text-purple-600 bg-purple-50 dark:bg-purple-950/30 px-2.5 py-1 rounded-full border border-purple-200/50 flex items-center gap-1 shadow-sm shadow-purple-500/5">
@@ -1789,185 +1835,515 @@ export default function LegendaryLightDashboard() {
                                                 </div>
                                             </div>
 
-                                            {/* Advanced Live Scanner Preview */}
+                                            {/* Step Tracker Header */}
+                                            <div className="grid grid-cols-5 gap-1 mb-4 text-center select-none bg-gray-50/40 dark:bg-black/25 p-1 rounded-2xl border border-purple-100/20">
+                                                {[
+                                                    { step: 'clean', label: 'Banyo 🧼' },
+                                                    { step: 'dry', label: 'Kurula 💨' },
+                                                    { step: 'accessorize', label: 'Süsle 🎀' },
+                                                    { step: 'photo', label: 'Stüdyo 📸' },
+                                                    { step: 'completed', label: 'Bitti 🏆' }
+                                                ].map((item, idx) => {
+                                                    const isCurrent = dressingStep === item.step;
+                                                    const isPassed = ['clean', 'dry', 'accessorize', 'photo', 'completed'].indexOf(dressingStep) > idx;
+                                                    return (
+                                                        <div 
+                                                            key={item.step}
+                                                            className={cn(
+                                                                "py-1.5 rounded-xl text-[9px] font-black transition-all duration-300",
+                                                                isCurrent 
+                                                                    ? "bg-purple-600 text-white shadow-sm scale-105"
+                                                                    : isPassed 
+                                                                        ? "text-purple-500/80 font-bold"
+                                                                        : "text-gray-400 font-semibold"
+                                                            )}
+                                                        >
+                                                            {item.label}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            {/* Interactive Dressing Box */}
                                             <div className="relative w-full aspect-[16/10] rounded-[24px] border border-purple-200/40 dark:border-white/5 bg-gradient-to-br from-purple-500/5 via-transparent to-indigo-500/5 overflow-hidden shadow-inner flex items-center justify-center p-3">
                                                 <div className="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none" />
                                                 
-                                                {/* Futuristic scanner animations */}
-                                                <div className="absolute left-0 w-full h-[1.5px] bg-gradient-to-r from-transparent via-purple-500 to-transparent shadow-[0_0_8px_#a855f7] animate-pulse z-20 pointer-events-none top-1/2" />
+                                                {/* Futuristic scanner animations only in accessorize step */}
+                                                {dressingStep === 'accessorize' && (
+                                                    <div className="absolute left-0 w-full h-[1.5px] bg-gradient-to-r from-transparent via-purple-500 to-transparent shadow-[0_0_8px_#a855f7] animate-pulse z-20 pointer-events-none top-1/2" />
+                                                )}
+                                                
                                                 <div className="absolute inset-0 border border-purple-500/10 rounded-[24px] pointer-events-none z-10" />
 
                                                 {/* Main Pet Image Frame */}
-                                                <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-md">
-                                                    <img src={pet.image} className="w-full h-full object-cover" alt="outfit-avatar" />
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-                                                    
-                                                    {/* Scanning corner marks */}
-                                                    <div className="absolute top-3 left-3 w-3 h-3 border-t-2 border-l-2 border-purple-400" />
-                                                    <div className="absolute top-3 right-3 w-3 h-3 border-t-2 border-r-2 border-purple-400" />
-                                                    <div className="absolute bottom-3 left-3 w-3 h-3 border-b-2 border-l-2 border-purple-400" />
-                                                    <div className="absolute bottom-3 right-3 w-3 h-3 border-b-2 border-r-2 border-purple-400" />
+                                                <div 
+                                                    onMouseMove={handlePetInteraction}
+                                                    onMouseDown={handlePetInteraction}
+                                                    onTouchMove={handlePetInteraction}
+                                                    onTouchStart={handlePetInteraction}
+                                                    className={cn(
+                                                        "relative w-full h-full rounded-2xl overflow-hidden shadow-md bg-white dark:bg-black/10 select-none transition-transform duration-200 active:scale-[0.99]",
+                                                        (dressingStep === 'clean' || dressingStep === 'dry') && "cursor-crosshair active:scale-100"
+                                                    )}
+                                                >
+                                                    {/* Studio Background Backdrop */}
+                                                    {['photo', 'completed'].includes(dressingStep) && (
+                                                        <div className={cn(
+                                                            "absolute inset-0 transition-all duration-500 z-0",
+                                                            activeStudioBg === 'stage' && "bg-gradient-to-b from-yellow-500/30 via-purple-900/40 to-black/60",
+                                                            activeStudioBg === 'cyber' && "bg-gradient-to-br from-purple-900/50 via-indigo-900/50 to-slate-900",
+                                                            activeStudioBg === 'park' && "bg-gradient-to-b from-green-500/20 via-emerald-800/30 to-slate-900",
+                                                            activeStudioBg === 'space' && "bg-gradient-to-tr from-indigo-950 via-purple-950 to-slate-950"
+                                                        )}>
+                                                            {/* Background animation elements */}
+                                                            {activeStudioBg === 'stage' && (
+                                                                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-full bg-yellow-400/20 blur-xl origin-top rotate-12 animate-pulse" />
+                                                            )}
+                                                            {activeStudioBg === 'cyber' && (
+                                                                <div className="absolute inset-0 bg-grid-pattern opacity-25" />
+                                                            )}
+                                                            {activeStudioBg === 'space' && (
+                                                                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent animate-pulse" />
+                                                            )}
+                                                        </div>
+                                                    )}
 
-                                                    {/* Active Accessory Live Overlay Badges */}
-                                                    <div className="absolute inset-4 pointer-events-none z-20 flex flex-col justify-between">
-                                                        <div className="flex justify-between items-start">
-                                                            {selectedAccessories.includes('glasses') ? (
-                                                                <span className="bg-cyan-500/85 backdrop-blur-md text-white text-[8px] font-black px-2 py-1 rounded-lg border border-cyan-400/20 shadow-md uppercase tracking-wider flex items-center gap-1">
-                                                                    😎 Gözlük Aktif
-                                                                </span>
-                                                            ) : <div />}
+                                                    {/* Main Pet Image */}
+                                                    <img 
+                                                        src={pet.image} 
+                                                        className={cn(
+                                                            "w-full h-full object-cover relative z-10 transition-all duration-300 pointer-events-none",
+                                                            dressingStep === 'clean' && "brightness-95 contrast-105",
+                                                            dressingStep === 'dry' && dryProgress < 100 && "brightness-90 saturate-125 filter blur-[0.3px]"
+                                                        )} 
+                                                        alt="outfit-avatar" 
+                                                    />
+
+                                                    {/* Dynamic Particle Overlays (Soap Bubbles / Blow dryer breeze) */}
+                                                    {particles.map((p) => (
+                                                        <span
+                                                            key={p.id}
+                                                            className="absolute text-xl pointer-events-none select-none z-35 animate-bounce"
+                                                            style={{
+                                                                left: `${p.x}%`,
+                                                                top: `${p.y}%`,
+                                                                transform: 'translate(-50%, -50%)'
+                                                            }}
+                                                        >
+                                                            {p.emoji}
+                                                        </span>
+                                                    ))}
+
+                                                    {/* Bubble Overlay for Cleaning Step */}
+                                                    {dressingStep === 'clean' && (
+                                                        <div className="absolute inset-0 z-20 pointer-events-none">
+                                                            {cleanProgress < 30 && <span className="absolute top-1/4 left-1/3 text-3xl animate-bounce">🫧</span>}
+                                                            {cleanProgress < 60 && <span className="absolute top-1/2 left-1/4 text-2xl animate-pulse">🫧</span>}
+                                                            {cleanProgress < 85 && <span className="absolute top-1/3 right-1/4 text-4xl animate-bounce">🫧</span>}
+                                                            {cleanProgress < 100 && <span className="absolute bottom-1/3 left-1/2 text-3xl animate-pulse">🫧</span>}
+                                                            {isShowerActive && (
+                                                                <div className="absolute inset-0 bg-blue-400/20 flex items-center justify-center transition-all">
+                                                                    <span className="text-4xl animate-ping opacity-75">🚿💦</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Dryer Wind Overlay for Drying Step */}
+                                                    {dressingStep === 'dry' && (
+                                                        <div className="absolute inset-0 z-20 pointer-events-none">
+                                                            {dryProgress < 40 && <span className="absolute top-1/4 right-1/3 text-lg animate-bounce">💧</span>}
+                                                            {dryProgress < 80 && <span className="absolute bottom-1/3 left-1/3 text-lg animate-pulse">💧</span>}
+                                                            {isDryerActive && (
+                                                                <div className="absolute inset-0 bg-yellow-400/10 flex items-center justify-center transition-all">
+                                                                    <span className="text-4xl animate-pulse opacity-75">💨🌬️</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Absolute Positioned Accessories */}
+                                                    {['accessorize', 'photo', 'completed'].includes(dressingStep) && (
+                                                        <div className="absolute inset-0 z-20 pointer-events-none">
+                                                            {selectedAccessories.includes('glasses') && (
+                                                                <motion.div 
+                                                                    initial={{ scale: 0, y: -20 }}
+                                                                    animate={{ scale: 1, y: 0 }}
+                                                                    className="absolute top-[37%] left-[34%] w-[33%] h-[12%] text-center text-3xl select-none"
+                                                                    style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.3))' }}
+                                                                >
+                                                                    😎
+                                                                </motion.div>
+                                                            )}
+
+                                                            {selectedAccessories.includes('scarf') && (
+                                                                <motion.div 
+                                                                    initial={{ scale: 0, y: 20 }}
+                                                                    animate={{ scale: 1, y: 0 }}
+                                                                    className="absolute top-[58%] left-[28%] w-[44%] h-[16%] text-center text-4xl select-none"
+                                                                    style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.25))' }}
+                                                                >
+                                                                    🧣
+                                                                </motion.div>
+                                                            )}
+
+                                                            {selectedAccessories.includes('hat') && (
+                                                                <motion.div 
+                                                                    initial={{ scale: 0, y: -40, rotate: -15 }}
+                                                                    animate={{ scale: 1, y: 0, rotate: -5 }}
+                                                                    className="absolute top-[16%] left-[36%] w-[28%] h-[20%] text-center text-4xl select-none"
+                                                                    style={{ filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.35))' }}
+                                                                >
+                                                                    🎩
+                                                                </motion.div>
+                                                            )}
+
+                                                            {selectedAccessories.includes('crown') && (
+                                                                <motion.div 
+                                                                    initial={{ scale: 0, y: -40 }}
+                                                                    animate={{ scale: 1, y: 0 }}
+                                                                    className="absolute top-[13%] left-[35%] w-[30%] h-[20%] text-center text-4xl select-none animate-bounce"
+                                                                    style={{ animationDuration: '2s', filter: 'drop-shadow(0 4px 10px rgba(234,179,8,0.4))' }}
+                                                                >
+                                                                    👑
+                                                                </motion.div>
+                                                            )}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Camera Flash Overlay */}
+                                                    {isFlashActive && (
+                                                        <div className="absolute inset-0 bg-white z-50 opacity-100 pointer-events-none transition-opacity duration-205" />
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* STEP CONTENT SECTION */}
+
+                                            {/* STEP 1: CLEANING */}
+                                            {dressingStep === 'clean' && (
+                                                <div className="flex flex-col gap-3 mt-3">
+                                                    <div className="p-3 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-150/40 rounded-2xl">
+                                                        <span className="text-[10px] font-black text-blue-500 uppercase tracking-wider block">Adım 1: Köpüklü Pati Banyosu 🧼</span>
+                                                        <p className="text-[9.5px] text-gray-500 mt-1 font-semibold leading-normal">
+                                                            Patiniz giyinmeden önce şık bir banyoyu hak ediyor! <b>Patinin üstünde parmağını veya fareni sürükleyerek köpürt!</b> Veya aşağıdaki hızlı butonları kullan.
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="flex flex-col gap-2">
+                                                        <div className="flex justify-between items-center text-[9px] font-bold text-gray-400">
+                                                            <span>Temizlik Seviyesi</span>
+                                                            <span className="text-blue-500">{cleanProgress}%</span>
+                                                        </div>
+                                                        <div className="w-full h-3.5 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden p-0.5 border border-gray-200/50 dark:border-white/5 shadow-inner">
+                                                            <div 
+                                                                className="h-full bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full transition-all duration-300"
+                                                                style={{ width: `${cleanProgress}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-2 gap-3 mt-1">
+                                                        <button
+                                                            onClick={() => {
+                                                                setIsShowerActive(true);
+                                                                setCleanProgress(prev => Math.min(100, prev + 15));
+                                                                setTimeout(() => setIsShowerActive(false), 600);
+                                                            }}
+                                                            disabled={cleanProgress >= 100}
+                                                            className="flex items-center justify-center gap-2 p-3 bg-blue-500 hover:bg-blue-600 active:scale-95 text-white text-xs font-black rounded-2xl transition-all shadow-sm shadow-blue-500/10 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                                                        >
+                                                            <span>🧼 Köpük Püskürt</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                setIsShowerActive(true);
+                                                                setCleanProgress(prev => Math.min(100, prev + 20));
+                                                                setTimeout(() => setIsShowerActive(false), 600);
+                                                            }}
+                                                            disabled={cleanProgress >= 100}
+                                                            className="flex items-center justify-center gap-2 p-3 bg-cyan-500 hover:bg-cyan-600 active:scale-95 text-white text-xs font-black rounded-2xl transition-all shadow-sm shadow-cyan-500/10 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                                                        >
+                                                            <span>🚿 Su Tut</span>
+                                                        </button>
+                                                    </div>
+
+                                                    {cleanProgress >= 100 ? (
+                                                        <button
+                                                            onClick={() => setDressingStep('dry')}
+                                                            className="w-full mt-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-xs font-black py-3.5 rounded-2xl cursor-pointer hover:shadow-lg hover:shadow-indigo-500/15 active:scale-98 transition-all"
+                                                        >
+                                                            Sonraki Adım: Kurulan 💨
+                                                        </button>
+                                                    ) : (
+                                                        <div className="w-full text-center text-[9px] text-gray-400 font-black uppercase tracking-wider py-3 border border-dashed border-gray-200 dark:border-white/5 rounded-2xl">
+                                                            🛁 Devam etmek için banyoyu bitirin
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* STEP 2: DRYING */}
+                                            {dressingStep === 'dry' && (
+                                                <div className="flex flex-col gap-3 mt-3">
+                                                    <div className="p-3 bg-orange-50/50 dark:bg-orange-950/20 border border-orange-150/40 rounded-2xl">
+                                                        <span className="text-[10px] font-black text-orange-500 uppercase tracking-wider block">Adım 2: Fön Makinesi & Tarama 💨</span>
+                                                        <p className="text-[9.5px] text-gray-500 mt-1 font-semibold leading-normal">
+                                                            Harika temizlendik! Şimdi ıslak kalmamak için <b>patini sürükleyerek fönle ve kurut!</b> Ya da aşağıdaki araçları kullanarak ilerlet.
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="flex flex-col gap-2">
+                                                        <div className="flex justify-between items-center text-[9px] font-bold text-gray-400">
+                                                            <span>Kuruluk Seviyesi</span>
+                                                            <span className="text-orange-500">{dryProgress}%</span>
+                                                        </div>
+                                                        <div className="w-full h-3.5 bg-gray-150 dark:bg-white/5 rounded-full overflow-hidden p-0.5 border border-gray-200/50 dark:border-white/5 shadow-inner">
+                                                            <div 
+                                                                className="h-full bg-gradient-to-r from-orange-400 to-amber-500 rounded-full transition-all duration-300"
+                                                                style={{ width: `${dryProgress}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-2 gap-3 mt-1">
+                                                        <button
+                                                            onClick={() => {
+                                                                setIsDryerActive(true);
+                                                                setDryProgress(prev => Math.min(100, prev + 15));
+                                                                setTimeout(() => setIsDryerActive(false), 600);
+                                                            }}
+                                                            disabled={dryProgress >= 100}
+                                                            className="flex items-center justify-center gap-2 p-3 bg-orange-500 hover:bg-orange-600 active:scale-95 text-white text-xs font-black rounded-2xl transition-all shadow-sm shadow-orange-500/10 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                                                        >
+                                                            <span>💨 Fön Makinesi</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                setIsDryerActive(true);
+                                                                setDryProgress(prev => Math.min(100, prev + 20));
+                                                                setTimeout(() => setIsDryerActive(false), 600);
+                                                            }}
+                                                            disabled={dryProgress >= 100}
+                                                            className="flex items-center justify-center gap-2 p-3 bg-yellow-500 hover:bg-yellow-600 active:scale-95 text-white text-xs font-black rounded-2xl transition-all shadow-sm shadow-yellow-500/10 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                                                        >
+                                                            <span>🪮 Pati Fırçası</span>
+                                                        </button>
+                                                    </div>
+
+                                                    {dryProgress >= 100 ? (
+                                                        <button
+                                                            onClick={() => setDressingStep('accessorize')}
+                                                            className="w-full mt-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-xs font-black py-3.5 rounded-2xl cursor-pointer hover:shadow-lg hover:shadow-purple-500/15 active:scale-98 transition-all"
+                                                        >
+                                                            Sonraki Adım: Aksesuar Seç 🎀
+                                                        </button>
+                                                    ) : (
+                                                        <div className="w-full text-center text-[9px] text-gray-400 font-black uppercase tracking-wider py-3 border border-dashed border-gray-200 dark:border-white/5 rounded-2xl">
+                                                            💨 Devam etmek için kurulayın
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* STEP 3: ACCESSORIZE */}
+                                            {dressingStep === 'accessorize' && (
+                                                <div className="flex flex-col gap-3 mt-3">
+                                                    {/* Interactive Wardrobe Drawer Selection */}
+                                                    <div className="flex items-center justify-between mt-1">
+                                                        <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Gardırop Çekmecesi</h4>
+                                                        <span className="text-[9px] font-black text-yellow-600 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/25">Moffi Cüzdan: 🪙 {walletBalance}</span>
+                                                    </div>
+                                                    
+                                                    <div className="grid grid-cols-4 gap-2.5">
+                                                        {/* Accessory 1: Glasses */}
+                                                        <div 
+                                                            onClick={() => handleToggleAccessory('glasses')}
+                                                            className={cn(
+                                                                "p-2.5 border-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
+                                                                selectedAccessories.includes('glasses')
+                                                                    ? "bg-cyan-500/10 border-cyan-500 text-cyan-400 shadow-md shadow-cyan-500/5"
+                                                                    : "bg-white/40 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
+                                                            )}
+                                                        >
+                                                            <span className="text-xl">😎</span>
+                                                            <span className="text-[8.5px] font-black text-gray-800 dark:text-gray-200 leading-none">Gözlük</span>
+                                                            <span className="text-[7.5px] font-bold text-cyan-500 dark:text-cyan-400 leading-none mt-0.5">+15% XP</span>
+                                                        </div>
+
+                                                        {/* Accessory 2: Scarf */}
+                                                        <div 
+                                                            onClick={() => handleToggleAccessory('scarf')}
+                                                            className={cn(
+                                                                "p-2.5 border-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
+                                                                selectedAccessories.includes('scarf')
+                                                                    ? "bg-red-500/10 border-red-500 text-red-500 shadow-md shadow-red-500/5"
+                                                                    : "bg-white/40 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
+                                                            )}
+                                                        >
+                                                            <span className="text-xl">🧣</span>
+                                                            <span className="text-[8.5px] font-black text-gray-800 dark:text-gray-200 leading-none">Boyunluk</span>
+                                                            <span className="text-[7.5px] font-bold text-red-500 dark:text-red-400 leading-none mt-0.5">+10% Coin</span>
+                                                        </div>
+
+                                                        {/* Accessory 3: Retro Hat (Premium Lock) */}
+                                                        <div 
+                                                            onClick={() => handleToggleAccessory('hat')}
+                                                            className={cn(
+                                                                "p-2.5 border-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
+                                                                !unlockedAccessories.includes('hat')
+                                                                    ? "bg-gray-100/50 dark:bg-black/40 border-dashed border-gray-300 dark:border-white/10"
+                                                                    : selectedAccessories.includes('hat')
+                                                                        ? "bg-purple-500/10 border-purple-500 text-purple-400 shadow-md shadow-purple-500/5"
+                                                                        : "bg-white/40 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
+                                                            )}
+                                                        >
+                                                            <span className={cn("text-xl", !unlockedAccessories.includes('hat') && "opacity-40 filter blur-[0.5px]")}>🎩</span>
+                                                            <span className="text-[8.5px] font-black text-gray-800 dark:text-gray-200 leading-none">Şapka</span>
                                                             
-                                                            {selectedAccessories.includes('hat') ? (
-                                                                <span className="bg-purple-600/85 backdrop-blur-md text-white text-[8px] font-black px-2 py-1 rounded-lg border border-purple-500/20 shadow-md uppercase tracking-wider flex items-center gap-1">
-                                                                    🎩 Şapka Aktif
+                                                            {!unlockedAccessories.includes('hat') ? (
+                                                                <span className="text-[7px] font-black text-purple-600 bg-purple-500/10 px-1 py-0.5 rounded border border-purple-500/20 mt-0.5 flex items-center gap-0.5 leading-none">
+                                                                    <Lock className="w-2 h-2 shrink-0" /> 150
                                                                 </span>
-                                                            ) : <div />}
+                                                            ) : (
+                                                                <span className="text-[7.5px] font-bold text-purple-500 dark:text-purple-400 leading-none mt-0.5">+20% Pop</span>
+                                                            )}
                                                         </div>
 
-                                                        <div className="flex justify-between items-end">
-                                                            {selectedAccessories.includes('scarf') ? (
-                                                                <span className="bg-red-500/85 backdrop-blur-md text-white text-[8px] font-black px-2 py-1 rounded-lg border border-red-400/20 shadow-md uppercase tracking-wider flex items-center gap-1">
-                                                                    🧣 Boyunluk Aktif
+                                                        {/* Accessory 4: Royal Crown (Premium Lock) */}
+                                                        <div 
+                                                            onClick={() => handleToggleAccessory('crown')}
+                                                            className={cn(
+                                                                "p-2.5 border-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
+                                                                !unlockedAccessories.includes('crown')
+                                                                    ? "bg-gray-100/50 dark:bg-black/40 border-dashed border-gray-300 dark:border-white/10"
+                                                                    : selectedAccessories.includes('crown')
+                                                                        ? "bg-yellow-500/10 border-yellow-500 text-yellow-400 shadow-md shadow-yellow-500/5 animate-pulse"
+                                                                        : "bg-white/40 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
+                                                            )}
+                                                        >
+                                                            <span className={cn("text-xl", !unlockedAccessories.includes('crown') && "opacity-40 filter blur-[0.5px]")}>👑</span>
+                                                            <span className="text-[8.5px] font-black text-gray-800 dark:text-gray-200 leading-none">Altın Taç</span>
+                                                            
+                                                            {!unlockedAccessories.includes('crown') ? (
+                                                                <span className="text-[7px] font-black text-yellow-600 bg-yellow-500/10 px-1 py-0.5 rounded border border-yellow-500/20 mt-0.5 flex items-center gap-0.5 leading-none">
+                                                                    <Lock className="w-2 h-2 shrink-0" /> 350
                                                                 </span>
-                                                            ) : <div />}
-
-                                                            {selectedAccessories.includes('crown') ? (
-                                                                <span className="bg-yellow-500/90 backdrop-blur-md text-black text-[8px] font-black px-2 py-1 rounded-lg border border-yellow-400/20 shadow-md uppercase tracking-wider flex items-center gap-1.5 animate-bounce">
-                                                                    👑 KRALİYET TACİ
-                                                                </span>
-                                                            ) : <div />}
+                                                            ) : (
+                                                                <span className="text-[7.5px] font-bold text-yellow-500 dark:text-yellow-400 leading-none mt-0.5">+25% VIP</span>
+                                                            )}
                                                         </div>
                                                     </div>
-                                                </div>
-                                            </div>
 
-                                            {/* Dynamic Stats Bonus Board */}
-                                            <div className="p-3 bg-gray-50 dark:bg-card/5 border border-purple-100/40 dark:border-white/5 rounded-2xl">
-                                                <div className="flex justify-between items-center mb-2">
-                                                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Aktif Kombin Bonusları</span>
-                                                    {activeBonus.vipActive && (
-                                                        <span className="text-[7.5px] font-black text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1">
-                                                            <Crown className="w-2.5 h-2.5" /> VIP STATÜSÜ
-                                                        </span>
-                                                    )}
+                                                    <button 
+                                                        onClick={() => setDressingStep('photo')}
+                                                        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-black py-3.5 rounded-2xl cursor-pointer transition-all shadow-md shadow-purple-900/15 mt-2 hover:scale-[1.01] active:scale-95"
+                                                    >
+                                                        Poz Vermeye Geç 📸
+                                                    </button>
                                                 </div>
-                                                <div className="grid grid-cols-3 gap-2.5 text-center">
-                                                    <div className="bg-white/50 dark:bg-black/20 border border-white dark:border-white/5 rounded-xl p-2 flex flex-col items-center justify-center gap-0.5 shadow-sm">
-                                                        <Coins className="w-3.5 h-3.5 text-yellow-500" />
-                                                        <span className="text-[11px] font-black text-gray-800 dark:text-gray-200">
-                                                            +{activeBonus.walkCoinBonus}%
-                                                        </span>
-                                                        <span className="text-[7px] font-bold text-gray-400 uppercase tracking-wider">Yürüyüş Geliri</span>
+                                            )}
+
+                                            {/* STEP 4: PHOTOSHOOT */}
+                                            {dressingStep === 'photo' && (
+                                                <div className="flex flex-col gap-3 mt-3">
+                                                    <div className="flex flex-col gap-1.5">
+                                                        <span className="text-[9.5px] font-black text-gray-400 uppercase tracking-widest">Stüdyo Arka Planı Seç</span>
+                                                        <div className="grid grid-cols-4 gap-2">
+                                                            {[
+                                                                { bg: 'stage', label: '🎬 Sahne' },
+                                                                { bg: 'cyber', label: '🌆 Neon' },
+                                                                { bg: 'park', label: '🌳 Doğa' },
+                                                                { bg: 'space', label: '🚀 Uzay' }
+                                                            ].map((item) => (
+                                                                <button
+                                                                    key={item.bg}
+                                                                    onClick={() => setActiveStudioBg(item.bg as any)}
+                                                                    className={cn(
+                                                                        "py-2 rounded-xl text-[9px] font-black transition-all cursor-pointer border active:scale-95",
+                                                                        activeStudioBg === item.bg
+                                                                            ? "bg-purple-600 text-white border-purple-500 shadow-sm"
+                                                                            : "bg-white/40 dark:bg-black/20 text-gray-700 dark:text-gray-300 border-gray-200/50 dark:border-white/5 hover:bg-gray-100"
+                                                                    )}
+                                                                >
+                                                                    {item.label}
+                                                                </button>
+                                                            ))}
+                                                        </div>
                                                     </div>
-                                                    <div className="bg-white/50 dark:bg-black/20 border border-white dark:border-white/5 rounded-xl p-2 flex flex-col items-center justify-center gap-0.5 shadow-sm">
-                                                        <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                                                        <span className="text-[11px] font-black text-gray-800 dark:text-gray-200">
-                                                            +{activeBonus.xpBonus}%
+
+                                                    <button
+                                                        onClick={() => {
+                                                            setIsFlashActive(true);
+                                                            setToastMsg("📸 Muhteşem bir an yakalandı!");
+                                                            setTimeout(() => {
+                                                                setIsFlashActive(false);
+                                                                setDressingStep('completed');
+                                                            }, 350);
+                                                        }}
+                                                        className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-750 text-white text-xs font-black py-4 rounded-2xl cursor-pointer transition-all shadow-md shadow-emerald-500/10 active:scale-95 flex items-center justify-center gap-2 mt-1"
+                                                    >
+                                                        <span>📸 FOTOĞRAF ÇEK</span>
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {/* STEP 5: COMPLETED */}
+                                            {dressingStep === 'completed' && (
+                                                <div className="flex flex-col gap-3 mt-3">
+                                                    <div className="p-3 bg-gradient-to-tr from-yellow-500/10 to-amber-500/5 border border-yellow-200/40 rounded-2xl text-center">
+                                                        <span className="text-[12px] font-black text-yellow-500 flex items-center justify-center gap-1.5 animate-pulse">
+                                                            🏆 Moffi Fashion Card Hazır!
                                                         </span>
-                                                        <span className="text-[7px] font-bold text-gray-400 uppercase tracking-wider">Oyun XP'si</span>
+                                                        <p className="text-[9.5px] text-gray-500 mt-1 font-semibold leading-normal">
+                                                            Evcil hayvanınızın son kombini ve özellikleri kaydedilmek için hazırlandı.
+                                                        </p>
                                                     </div>
-                                                    <div className="bg-white/50 dark:bg-black/20 border border-white dark:border-white/5 rounded-xl p-2 flex flex-col items-center justify-center gap-0.5 shadow-sm">
-                                                        <Heart className="w-3.5 h-3.5 text-red-500" />
-                                                        <span className="text-[11px] font-black text-gray-800 dark:text-gray-200">
-                                                            +{activeBonus.likeBoost}%
-                                                        </span>
-                                                        <span className="text-[7px] font-bold text-gray-400 uppercase tracking-wider">Sosyal Etki</span>
+
+                                                    {/* Stat bonuses preview */}
+                                                    <div className="grid grid-cols-3 gap-2 text-center">
+                                                        <div className="bg-white/50 dark:bg-black/20 border border-gray-250/20 rounded-xl p-2 flex flex-col items-center justify-center gap-0.5">
+                                                            <Coins className="w-3.5 h-3.5 text-yellow-500" />
+                                                            <span className="text-[10px] font-black text-gray-800 dark:text-gray-200">+{activeBonus.walkCoinBonus}%</span>
+                                                            <span className="text-[6.5px] font-bold text-gray-400 uppercase">Yürüyüş</span>
+                                                        </div>
+                                                        <div className="bg-white/50 dark:bg-black/20 border border-gray-250/20 rounded-xl p-2 flex flex-col items-center justify-center gap-0.5">
+                                                            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                                                            <span className="text-[10px] font-black text-gray-800 dark:text-gray-200">+{activeBonus.xpBonus}%</span>
+                                                            <span className="text-[6.5px] font-bold text-gray-400 uppercase">XP Bonusu</span>
+                                                        </div>
+                                                        <div className="bg-white/50 dark:bg-black/20 border border-gray-250/20 rounded-xl p-2 flex flex-col items-center justify-center gap-0.5">
+                                                            <Heart className="w-3.5 h-3.5 text-red-500" />
+                                                            <span className="text-[10px] font-black text-gray-800 dark:text-gray-200">+{activeBonus.likeBoost}%</span>
+                                                            <span className="text-[6.5px] font-bold text-gray-400 uppercase">Popülerlik</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-2 gap-3 mt-1">
+                                                        <button
+                                                            onClick={() => {
+                                                                setCleanProgress(0);
+                                                                setDryProgress(0);
+                                                                setDressingStep('clean');
+                                                            }}
+                                                            className="p-3.5 bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 text-xs font-black rounded-2xl transition-all cursor-pointer text-center"
+                                                        >
+                                                            🔄 Baştan Başla
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                setDressingStep('clean');
+                                                                setCleanProgress(0);
+                                                                setDryProgress(0);
+                                                                handleSaveOutfit();
+                                                            }}
+                                                            className="p-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-black rounded-2xl transition-all cursor-pointer text-center shadow-md shadow-purple-900/10"
+                                                        >
+                                                            ✨ Kombini Kaydet
+                                                        </button>
                                                     </div>
                                                 </div>
-                                            </div>
-
-                                            {/* Interactive Wardrobe Drawer Selection */}
-                                            <div className="flex items-center justify-between mb-1.5 mt-2">
-                                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Gardırop Çekmecesi</h4>
-                                                <span className="text-[8.5px] font-bold text-gray-500">Moffi Cüzdan: 🪙 {walletBalance}</span>
-                                            </div>
-                                            
-                                            <div className="grid grid-cols-4 gap-2.5">
-                                                {/* Accessory 1: Glasses */}
-                                                <div 
-                                                    onClick={() => handleToggleAccessory('glasses')}
-                                                    className={cn(
-                                                        "p-2.5 border-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
-                                                        selectedAccessories.includes('glasses')
-                                                            ? "bg-cyan-500/10 border-cyan-500 text-cyan-400 shadow-md shadow-cyan-500/5"
-                                                            : "bg-white/40 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
-                                                    )}
-                                                >
-                                                    <span className="text-xl">😎</span>
-                                                    <span className="text-[8px] font-black text-gray-800 dark:text-gray-200 leading-none">Gözlük</span>
-                                                    <span className="text-[7px] font-bold text-cyan-500 dark:text-cyan-400 leading-none mt-0.5">+15% XP</span>
-                                                </div>
-
-                                                {/* Accessory 2: Scarf */}
-                                                <div 
-                                                    onClick={() => handleToggleAccessory('scarf')}
-                                                    className={cn(
-                                                        "p-2.5 border-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
-                                                        selectedAccessories.includes('scarf')
-                                                            ? "bg-red-500/10 border-red-500 text-red-500 shadow-md shadow-red-500/5"
-                                                            : "bg-white/40 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
-                                                    )}
-                                                >
-                                                    <span className="text-xl">🧣</span>
-                                                    <span className="text-[8px] font-black text-gray-800 dark:text-gray-200 leading-none">Boyunluk</span>
-                                                    <span className="text-[7px] font-bold text-red-500 dark:text-red-400 leading-none mt-0.5">+10% Coin</span>
-                                                </div>
-
-                                                {/* Accessory 3: Retro Hat (Premium Lock) */}
-                                                <div 
-                                                    onClick={() => handleToggleAccessory('hat')}
-                                                    className={cn(
-                                                        "p-2.5 border-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
-                                                        !unlockedAccessories.includes('hat')
-                                                            ? "bg-gray-100/50 dark:bg-black/40 border-dashed border-gray-300 dark:border-white/10"
-                                                            : selectedAccessories.includes('hat')
-                                                                ? "bg-purple-500/10 border-purple-500 text-purple-400 shadow-md shadow-purple-500/5"
-                                                                : "bg-white/40 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
-                                                    )}
-                                                >
-                                                    <span className={cn("text-xl", !unlockedAccessories.includes('hat') && "opacity-40 filter blur-[0.5px]")}>🎩</span>
-                                                    <span className="text-[8px] font-black text-gray-800 dark:text-gray-200 leading-none">Şapka</span>
-                                                    
-                                                    {!unlockedAccessories.includes('hat') ? (
-                                                        <span className="text-[7px] font-black text-purple-600 bg-purple-500/10 px-1 py-0.5 rounded border border-purple-500/20 mt-0.5 flex items-center gap-0.5 leading-none">
-                                                            <Lock className="w-2 h-2 shrink-0" /> 150
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-[7px] font-bold text-purple-500 dark:text-purple-400 leading-none mt-0.5">+20% Pop</span>
-                                                    )}
-                                                </div>
-
-                                                {/* Accessory 4: Royal Crown (Premium Lock) */}
-                                                <div 
-                                                    onClick={() => handleToggleAccessory('crown')}
-                                                    className={cn(
-                                                        "p-2.5 border-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 cursor-pointer text-center relative shadow-sm transition-all active:scale-95 select-none",
-                                                        !unlockedAccessories.includes('crown')
-                                                            ? "bg-gray-100/50 dark:bg-black/40 border-dashed border-gray-300 dark:border-white/10"
-                                                            : selectedAccessories.includes('crown')
-                                                                ? "bg-yellow-500/10 border-yellow-500 text-yellow-400 shadow-md shadow-yellow-500/5 animate-pulse"
-                                                                : "bg-white/40 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
-                                                    )}
-                                                >
-                                                    <span className={cn("text-xl", !unlockedAccessories.includes('crown') && "opacity-40 filter blur-[0.5px]")}>👑</span>
-                                                    <span className="text-[8px] font-black text-gray-800 dark:text-gray-200 leading-none">Altın Taç</span>
-                                                    
-                                                    {!unlockedAccessories.includes('crown') ? (
-                                                        <span className="text-[7px] font-black text-yellow-600 bg-yellow-500/10 px-1 py-0.5 rounded border border-yellow-500/20 mt-0.5 flex items-center gap-0.5 leading-none">
-                                                            <Lock className="w-2 h-2 shrink-0" /> 350
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-[7px] font-bold text-yellow-500 dark:text-yellow-400 leading-none mt-0.5">+25% VIP</span>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            <button 
-                                                onClick={handleSaveOutfit}
-                                                className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-[11px] font-black py-3.5 rounded-[18px] cursor-pointer transition-all shadow-md shadow-purple-900/15 mt-4 hover:scale-[1.01] active:scale-95"
-                                            >
-                                                Kombini & Bonusları Aktifleştir 🎭
-                                            </button>
+                                            )}
                                         </>
                                     )}
 
