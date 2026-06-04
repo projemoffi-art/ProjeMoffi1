@@ -229,8 +229,8 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
     const petsWithMascot = React.useMemo(() => {
         return pets.map(p => ({
             ...p,
-            image: '/purple_mascot.png',
-            avatar: '/purple_mascot.png'
+            image: '/purple_mascot_base.png',
+            avatar: '/purple_mascot_base.png'
         }));
     }, [pets]);
 
@@ -239,8 +239,8 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
         if (found) {
             return {
                 ...found,
-                image: '/purple_mascot.png',
-                avatar: '/purple_mascot.png'
+                image: '/purple_mascot_base.png',
+                avatar: '/purple_mascot_base.png'
             };
         }
         return null;

@@ -366,6 +366,38 @@ const QuickAccessBtn = ({
     </motion.button>
 );
 
+const APPAREL_ITEMS = {
+    body: [
+        { id: 'sweatshirt', label: 'Sweatshirt 🧡', icon: '🧥', cost: 0, sp: 80, desc: 'Turuncu Sweatshirt' },
+        { id: 'singlet', label: 'Spor Atlet 🎽', icon: '🎽', cost: 0, sp: 60, desc: 'Hafif ve Esnek' },
+        { id: 'pajamas', label: 'Pijama 💤', icon: '👕', cost: 0, sp: 70, desc: 'Yeşil Çizgili' },
+        { id: null, label: 'Doğal Hali 🐾', icon: '❌', cost: 0, sp: 0, desc: 'Kıyafetsiz' }
+    ],
+    head: [
+        { id: 'beanie', label: 'Örme Bere 🧶', icon: '🧶', cost: 0, sp: 50, desc: 'Mavi Bere' },
+        { id: 'top_hat', label: 'Şapka 🎩', icon: '🎩', cost: 150, sp: 120, desc: 'Retro Silindir' },
+        { id: 'crown', label: 'Altın Taç 👑', icon: '👑', cost: 350, sp: 200, desc: 'Premium Taç' },
+        { id: 'pirate_hat', label: 'Korsan 🏴‍☠️', icon: '🏴‍☠️', cost: 200, sp: 140, desc: 'Kaptan Şapkası' },
+        { id: null, label: 'Şapkasız 👤', icon: '❌', cost: 0, sp: 0, desc: 'Şapkayı Çıkar' }
+    ],
+    eyes: [
+        { id: 'glasses', label: 'Gözlük 🤓', icon: '🤓', cost: 0, sp: 30, desc: 'Optik Gözlük' },
+        { id: 'sunglasses', label: 'Güneş Göz. 😎', icon: '😎', cost: 0, sp: 50, desc: 'Havalı Gözlük' },
+        { id: 'eyepatch', label: 'Göz Bandı 👁️', icon: '👁️', cost: 150, sp: 110, desc: 'Korsan Bandı' },
+        { id: null, label: 'Gözlüksüz 👁️', icon: '❌', cost: 0, sp: 0, desc: 'Gözlüğü Çıkar' }
+    ],
+    hands: [
+        { id: 'gloves', label: 'Eldiven 🧤', icon: '🧤', cost: 0, sp: 40, desc: 'Yeşil Kışlık' },
+        { id: 'boxing', label: 'Boks Eld. 🥊', icon: '🥊', cost: 150, sp: 90, desc: 'Kırmızı Boks' },
+        { id: null, label: 'Eldivensiz 🐾', icon: '❌', cost: 0, sp: 0, desc: 'Eldiveni Çıkar' }
+    ],
+    feet: [
+        { id: 'sneakers', label: 'Spor Ayak. 👟', icon: '👟', cost: 0, sp: 50, desc: 'Sarı Ayakkabı' },
+        { id: 'boots', label: 'Kışlık Bot 🥾', icon: '🥾', cost: 120, sp: 80, desc: 'Kahverengi Bot' },
+        { id: null, label: 'Yalın Ayak 🐾', icon: '❌', cost: 0, sp: 0, desc: 'Ayakkabıyı Çıkar' }
+    ]
+};
+
 export default function LegendaryLightDashboard() {
     const router = useRouter();
     const { pets: userPets, activePet: globalActivePet, switchPet, updatePet, addPet } = usePet();
@@ -377,6 +409,27 @@ export default function LegendaryLightDashboard() {
     const [expandedPanel, setExpandedPanel] = useState<'wallet' | 'passport' | 'collar' | 'dressing' | 'quests' | 'shop' | 'profile' | 'match' | 'events' | null>(null);
     const [selectedAccessories, setSelectedAccessories] = useState<string[]>(['glasses', 'scarf']);
     const [unlockedAccessories, setUnlockedAccessories] = useState<string[]>(['glasses', 'scarf']);
+    const [selectedApparel, setSelectedApparel] = useState<{
+        body: 'sweatshirt' | 'singlet' | 'pajamas' | null;
+        head: 'crown' | 'pirate_hat' | 'top_hat' | 'beanie' | null;
+        eyes: 'sunglasses' | 'glasses' | 'eyepatch' | null;
+        hands: 'gloves' | 'boxing' | null;
+        feet: 'sneakers' | 'boots' | null;
+    }>({
+        body: 'sweatshirt',
+        head: null,
+        eyes: 'glasses',
+        hands: null,
+        feet: null
+    });
+    const [unlockedApparel, setUnlockedApparel] = useState<string[]>([
+        'sweatshirt', 'singlet', 'pajamas',
+        'beanie',
+        'glasses', 'sunglasses',
+        'gloves',
+        'sneakers'
+    ]);
+    const [activeApparelTab, setActiveApparelTab] = useState<'body' | 'head' | 'eyes' | 'hands' | 'feet'>('body');
     const [activeOutfitName, setActiveOutfitName] = useState('Havalı Gözlük 😎 & Kırmızı Boyunluk 🧣');
     const [stylePoints, setStylePoints] = useState(120);
 
@@ -469,6 +522,82 @@ export default function LegendaryLightDashboard() {
         }
     };
 
+    const handleSelectApparel = (category: keyof typeof selectedApparel, item: any) => {
+        const itemId = item?.id;
+        const cost = item?.cost || 0;
+
+        if (itemId && !unlockedApparel.includes(itemId)) {
+            if (walletBalance >= cost) {
+                setWalletBalance(prev => prev - cost);
+                setUnlockedApparel(prev => [...prev, itemId]);
+                setToastMsg(`🎉 Tebrikler! "${item.label}" açıldı. Cüzdandan ${cost} MoffiCoin harcandı.`);
+                triggerSpeechBubble("Yeni kıyafetime bayıldım! 😍");
+            } else {
+                setToastMsg(`❌ Yetersiz MoffiCoin! Bu kıyafet için ${cost} Coin gerekiyor.`);
+                return;
+            }
+        }
+
+        setSelectedApparel(prev => {
+            const next = { ...prev, [category]: itemId };
+
+            // Synchronize with selectedAccessories so that bonuses, daily theme, and polaroid details work!
+            const newAccs: string[] = [];
+            
+            // Map body items
+            if (next.body === 'sweatshirt') newAccs.push('scarf');
+            if (next.body === 'pajamas') newAccs.push('bowtie');
+            
+            // Map head items
+            if (next.head === 'crown') newAccs.push('crown');
+            if (next.head === 'pirate_hat') newAccs.push('hat');
+            if (next.head === 'top_hat') newAccs.push('hat');
+            if (next.head === 'beanie') newAccs.push('hat');
+            
+            // Map eye items
+            if (next.eyes === 'glasses') newAccs.push('glasses');
+            if (next.eyes === 'sunglasses') newAccs.push('glasses');
+            if (next.eyes === 'eyepatch') newAccs.push('pirate');
+            
+            // Map hands
+            if (next.hands === 'gloves') newAccs.push('bowtie');
+            if (next.hands === 'boxing') newAccs.push('pirate');
+            
+            // Map feet
+            if (next.feet === 'sneakers') newAccs.push('glasses');
+            if (next.feet === 'boots') newAccs.push('hat');
+
+            const uniqueAccs = Array.from(new Set(newAccs));
+            setSelectedAccessories(uniqueAccs);
+
+            // Speech reactions
+            if (category === 'body') {
+                if (itemId === 'sweatshirt') triggerSpeechBubble("Turuncu sweatshirtüm harika! 🧡");
+                else if (itemId === 'singlet') triggerSpeechBubble("Atletle çok rahatım! 🎽");
+                else if (itemId === 'pajamas') triggerSpeechBubble("Pijama partisi başlasın! 💤");
+                else triggerSpeechBubble("Biraz serinledim sanki! 🥶");
+            } else if (category === 'head') {
+                if (itemId === 'crown') triggerSpeechBubble("Taçsız kral olur mu hiç! 👑");
+                else if (itemId === 'pirate_hat') triggerSpeechBubble("Korsan şapkam hazır! 🏴‍☠️");
+                else if (itemId === 'top_hat') triggerSpeechBubble("Sihirli bir numara ister misin? 🎩");
+                else if (itemId === 'beanie') triggerSpeechBubble("Sıcacık tutuyor! 🧶");
+                else triggerSpeechBubble("Şapkamı çıkardım.");
+            } else if (category === 'eyes') {
+                if (itemId === 'sunglasses') triggerSpeechBubble("Geleceğim çok parlak! 😎");
+                else if (itemId === 'eyepatch') triggerSpeechBubble("Kaptan Moffi denizlerde! 🏴‍☠️");
+                else if (itemId === 'glasses') triggerSpeechBubble("Şimdi daha net görüyorum! 🤓");
+            } else if (category === 'hands') {
+                if (itemId === 'boxing') triggerSpeechBubble("Hazır ol, sol kroşe geliyor! 🥊");
+                else if (itemId === 'gloves') triggerSpeechBubble("Kışa hazırım! 🧤");
+            } else if (category === 'feet') {
+                if (itemId === 'sneakers') triggerSpeechBubble("Koşuya hazırız! 👟");
+                else if (itemId === 'boots') triggerSpeechBubble("Çamurlara basabilirim! 🥾");
+            }
+
+            return next;
+        });
+    };
+
     const handleOpenChest = () => {
         if (walletBalance < 100) {
             setToastMsg("❌ Sandık açmak için 100 MoffiCoin gerekiyor! Yetersiz bakiye.");
@@ -503,9 +632,11 @@ export default function LegendaryLightDashboard() {
             if (reward === 'pirate') {
                 triggerSpeechBubble("🏴‍☠️ Ayyay Kaptan! Korsan oldum!");
                 setToastMsg("🏴‍☠️ Tebrikler! Efsanevi Korsan Göz Bandı kazandın! (+140 SP, XP/Like boost)");
+                setUnlockedApparel(prev => [...prev, 'eyepatch', 'pirate_hat']);
             } else {
                 triggerSpeechBubble("🎀 Çok centilmen bir beyefendi oldum!");
                 setToastMsg("🎀 Tebrikler! Centilmen Papyon kazandın! (+90 SP, Coin/XP boost)");
+                setUnlockedApparel(prev => [...prev, 'bowtie']);
             }
         }, 1500);
     };
@@ -568,41 +699,40 @@ export default function LegendaryLightDashboard() {
         });
     };
 
-    const handleSaveOutfit = () => {
+        const handleSaveOutfit = () => {
         let totalSP = 0;
         const names: string[] = [];
 
-        if (selectedAccessories.includes('glasses')) {
-            totalSP += 50;
-            names.push('Havalı Gözlük 😎');
-        }
-        if (selectedAccessories.includes('scarf')) {
-            totalSP += 70;
-            names.push('Kırmızı Boyunluk 🧣');
-        }
-        if (selectedAccessories.includes('hat')) {
-            totalSP += 120;
-            names.push('Retro Şapka 🎩');
-        }
-        if (selectedAccessories.includes('crown')) {
-            totalSP += 200;
-            names.push('Altın Taç 👑');
-        }
-        if (selectedAccessories.includes('pirate')) {
-            totalSP += 140;
-            names.push('Korsan Bandı 🏴‍☠️');
-        }
-        if (selectedAccessories.includes('bowtie')) {
-            totalSP += 90;
-            names.push('Centilmen Papyon 🎀');
-        }
+        // Body
+        if (selectedApparel.body === 'sweatshirt') { totalSP += 80; names.push('Turuncu Sweatshirt 🧡'); }
+        else if (selectedApparel.body === 'singlet') { totalSP += 60; names.push('Spor Atlet 🎽'); }
+        else if (selectedApparel.body === 'pajamas') { totalSP += 70; names.push('Çizgili Pijama 💤'); }
+
+        // Head
+        if (selectedApparel.head === 'beanie') { totalSP += 50; names.push('Örme Bere 🧶'); }
+        else if (selectedApparel.head === 'top_hat') { totalSP += 120; names.push('Silindir Şapka 🎩'); }
+        else if (selectedApparel.head === 'crown') { totalSP += 200; names.push('Altın Taç 👑'); }
+        else if (selectedApparel.head === 'pirate_hat') { totalSP += 140; names.push('Korsan Şapkası 🏴‍☠️'); }
+
+        // Eyes
+        if (selectedApparel.eyes === 'glasses') { totalSP += 30; names.push('Optik Gözlük 🤓'); }
+        else if (selectedApparel.eyes === 'sunglasses') { totalSP += 50; names.push('Güneş Gözlüğü 😎'); }
+        else if (selectedApparel.eyes === 'eyepatch') { totalSP += 110; names.push('Göz Bandı 👁️'); }
+
+        // Hands
+        if (selectedApparel.hands === 'gloves') { totalSP += 40; names.push('Sıcak Eldiven 🧤'); }
+        else if (selectedApparel.hands === 'boxing') { totalSP += 90; names.push('Boks Eldiveni 🥊'); }
+
+        // Feet
+        if (selectedApparel.feet === 'sneakers') { totalSP += 50; names.push('Spor Ayakkabı 👟'); }
+        else if (selectedApparel.feet === 'boots') { totalSP += 80; names.push('Kışlık Bot 🥾'); }
 
         setStylePoints(totalSP);
-        const joinedName = names.length > 0 ? names.join(' & ') : 'Sade Tarz 🐕';
+        const joinedName = names.length > 0 ? names.join(' & ') : 'Sade Tarz 🐾';
         setActiveOutfitName(joinedName);
 
-        // Daily Challenge Theme check: "Korsan Balosu 🏴‍☠️👑" (Requires crown OR pirate)
-        const meetsTheme = selectedAccessories.includes('crown') || selectedAccessories.includes('pirate');
+        // Daily Challenge Theme check: "Korsan Balosu 🏴‍☠️👑" (Requires crown OR pirate_hat OR eyepatch)
+        const meetsTheme = selectedApparel.head === 'crown' || selectedApparel.head === 'pirate_hat' || selectedApparel.eyes === 'eyepatch';
         let dailyThemeCoins = 0;
         if (meetsTheme) {
             dailyThemeCoins = 50;
@@ -615,7 +745,7 @@ export default function LegendaryLightDashboard() {
         const newPhoto = {
             id: newPhotoId,
             bg: activeStudioBg,
-            accessories: [...selectedAccessories],
+            accessories: [...names],
             date: formattedDate,
             theme: meetsTheme ? 'Korsan Balosu 🏴‍☠️👑' : 'Serbest Tarz ✨',
             sp: totalSP
@@ -2040,7 +2170,7 @@ export default function LegendaryLightDashboard() {
                                                         </div>
                                                     )}
 
-                                                    {/* Main Pet Image */}
+                                                                                                        {/* Main Pet Image */}
                                                     <img 
                                                         src={pet.image} 
                                                         className={cn(
@@ -2049,7 +2179,223 @@ export default function LegendaryLightDashboard() {
                                                             dressingStep === 'dry' && dryProgress < 100 && "brightness-90 saturate-125 filter blur-[0.3px]"
                                                         )} 
                                                         alt="outfit-avatar" 
-                                                    />
+                                                     />
+
+                                                    {/* Dynamic SVG Apparel Overlays */}
+                                                    {['accessorize', 'photo', 'completed'].includes(dressingStep) && (
+                                                        <div className="absolute inset-0 z-15 pointer-events-none select-none">
+                                                            {/* Torso Layer */}
+                                                            {selectedApparel.body === 'sweatshirt' && (
+                                                                <div className="absolute left-[20%] top-[42%] w-[60%] h-[32%] z-15">
+                                                                    <svg viewBox="0 0 120 100" className="w-full h-full">
+                                                                        <defs>
+                                                                            <linearGradient id="sweatshirtGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                                                                <stop offset="0%" stopColor="#ff7e40" />
+                                                                                <stop offset="100%" stopColor="#ea580c" />
+                                                                            </linearGradient>
+                                                                        </defs>
+                                                                        <path d="M 20,20 Q 60,10 100,20 L 95,85 Q 60,95 25,85 Z" fill="url(#sweatshirtGrad)" filter="drop-shadow(0px 4px 6px rgba(0,0,0,0.2))" />
+                                                                        <path d="M 40,17 Q 60,25 80,17 Q 60,12 40,17 Z" fill="#c2410c" />
+                                                                        <line x1="53" y1="23" x2="53" y2="45" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" />
+                                                                        <line x1="67" y1="23" x2="67" y2="45" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" />
+                                                                        <circle cx="53" cy="46" r="2.5" fill="#f87171" />
+                                                                        <circle cx="67" cy="46" r="2.5" fill="#f87171" />
+                                                                        <path d="M 35,55 L 85,55 L 75,80 L 45,80 Z" fill="#c2410c" opacity="0.8" />
+                                                                    </svg>
+                                                                </div>
+                                                            )}
+                                                            
+                                                            {selectedApparel.body === 'singlet' && (
+                                                                <div className="absolute left-[21%] top-[42%] w-[58%] h-[32%] z-15">
+                                                                    <svg viewBox="0 0 120 100" className="w-full h-full">
+                                                                        <defs>
+                                                                            <linearGradient id="singletGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                                                                <stop offset="0%" stopColor="#06b6d4" />
+                                                                                <stop offset="100%" stopColor="#0891b2" />
+                                                                            </linearGradient>
+                                                                        </defs>
+                                                                        <path d="M 30,25 C 30,25 40,32 60,32 C 80,32 90,25 90,25 L 88,85 Q 60,92 32,85 Z" fill="url(#singletGrad)" filter="drop-shadow(0px 4px 6px rgba(0,0,0,0.2))" />
+                                                                        <path d="M 30,25 L 38,10 L 48,12 L 42,28 Z" fill="url(#singletGrad)" />
+                                                                        <path d="M 90,25 L 82,10 L 72,12 L 78,28 Z" fill="url(#singletGrad)" />
+                                                                        <polygon points="60,42 63,49 70,49 65,54 67,61 60,57 53,61 55,54 50,49 57,49" fill="#eab308" />
+                                                                    </svg>
+                                                                </div>
+                                                            )}
+
+                                                            {selectedApparel.body === 'pajamas' && (
+                                                                <div className="absolute left-[20%] top-[42%] w-[60%] h-[32%] z-15">
+                                                                    <svg viewBox="0 0 120 100" className="w-full h-full">
+                                                                        <path d="M 20,20 Q 60,10 100,20 L 95,85 Q 60,95 25,85 Z" fill="#10b981" filter="drop-shadow(0px 4px 6px rgba(0,0,0,0.2))" />
+                                                                        <path d="M 22,35 Q 60,25 98,35 L 97,45 Q 60,35 23,45 Z" fill="#a7f3d0" />
+                                                                        <path d="M 24,55 Q 60,45 96,55 L 95,65 Q 60,55 25,65 Z" fill="#a7f3d0" />
+                                                                        <path d="M 25,75 Q 60,65 95,75 L 94,83 Q 60,73 26,83 Z" fill="#a7f3d0" />
+                                                                        <path d="M 40,17 L 60,32 L 80,17 Z" fill="#047857" />
+                                                                        <circle cx="60" cy="42" r="2" fill="#ffffff" />
+                                                                        <circle cx="60" cy="58" r="2" fill="#ffffff" />
+                                                                    </svg>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Head Layer */}
+                                                            {selectedApparel.head === 'crown' && (
+                                                                <div className="absolute left-[33%] top-[10%] w-[34%] h-[20%] z-20 animate-bounce" style={{ animationDuration: '2s' }}>
+                                                                    <svg viewBox="0 0 100 80" className="w-full h-full">
+                                                                        <defs>
+                                                                            <linearGradient id="crownGold" x1="0%" y1="0%" x2="100%" y2="100%">
+                                                                                <stop offset="0%" stopColor="#fef08a" />
+                                                                                <stop offset="50%" stopColor="#eab308" />
+                                                                                <stop offset="100%" stopColor="#ca8a04" />
+                                                                            </linearGradient>
+                                                                        </defs>
+                                                                        <path d="M 15,65 L 85,65 L 80,45 L 68,58 L 50,30 L 32,58 L 20,45 Z" fill="url(#crownGold)" filter="drop-shadow(0px 4px 6px rgba(0,0,0,0.2))" />
+                                                                        <circle cx="50" cy="28" r="4.5" fill="#ef4444" />
+                                                                        <circle cx="20" cy="43" r="3.5" fill="#3b82f6" />
+                                                                        <circle cx="80" cy="43" r="3.5" fill="#3b82f6" />
+                                                                        <rect x="25" y="60" width="50" height="3" fill="#ffffff" opacity="0.6" rx="1.5" />
+                                                                    </svg>
+                                                                </div>
+                                                            )}
+
+                                                            {selectedApparel.head === 'pirate_hat' && (
+                                                                <div className="absolute left-[25%] top-[8%] w-[50%] h-[22%] z-20">
+                                                                    <svg viewBox="0 0 120 80" className="w-full h-full">
+                                                                        <path d="M 10,50 Q 60,10 110,50 Q 60,35 10,50 Z" fill="#1e293b" filter="drop-shadow(0px 4px 6px rgba(0,0,0,0.3))" />
+                                                                        <path d="M 25,44 Q 60,25 95,44 Q 60,28 25,44 Z" fill="#ef4444" />
+                                                                        <circle cx="60" cy="36" r="5" fill="#ffffff" />
+                                                                        <path d="M 54,36 L 66,36 M 60,30 L 60,42" stroke="#ffffff" strokeWidth="1.5" />
+                                                                    </svg>
+                                                                </div>
+                                                            )}
+
+                                                            {selectedApparel.head === 'top_hat' && (
+                                                                <div className="absolute left-[30%] top-[7%] w-[40%] h-[24%] z-20">
+                                                                    <svg viewBox="0 0 100 80" className="w-full h-full">
+                                                                        <ellipse cx="50" cy="65" rx="40" ry="8" fill="#111827" filter="drop-shadow(0px 3px 3px rgba(0,0,0,0.25))" />
+                                                                        <path d="M 22,63 L 26,20 L 74,20 L 78,63 Z" fill="#1f2937" />
+                                                                        <path d="M 22,63 L 23,53 L 77,53 L 78,63 Z" fill="#dc2626" />
+                                                                    </svg>
+                                                                </div>
+                                                            )}
+
+                                                            {selectedApparel.head === 'beanie' && (
+                                                                <div className="absolute left-[31%] top-[9%] w-[38%] h-[22%] z-20">
+                                                                    <svg viewBox="0 0 100 80" className="w-full h-full">
+                                                                        <path d="M 20,65 Q 20,20 50,18 Q 80,20 80,65 Z" fill="#3b82f6" filter="drop-shadow(0px 4px 5px rgba(0,0,0,0.2))" />
+                                                                        <circle cx="50" cy="15" r="8" fill="#ffffff" />
+                                                                        <rect x="16" y="55" width="68" height="12" fill="#1d4ed8" rx="6" />
+                                                                    </svg>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Eyes Layer */}
+                                                            {selectedApparel.eyes === 'glasses' && (
+                                                                <div className="absolute left-[32%] top-[31%] w-[36%] h-[12%] z-20">
+                                                                    <svg viewBox="0 0 100 40" className="w-full h-full" stroke="#4b5563" strokeWidth="2.5" fill="none">
+                                                                        <circle cx="30" cy="20" r="14" stroke="#4b5563" fill="rgba(255,255,255,0.2)" />
+                                                                        <circle cx="70" cy="20" r="14" stroke="#4b5563" fill="rgba(255,255,255,0.2)" />
+                                                                        <path d="M 44,20 Q 50,14 56,20" stroke="#4b5563" />
+                                                                    </svg>
+                                                                </div>
+                                                            )}
+
+                                                            {selectedApparel.eyes === 'sunglasses' && (
+                                                                <div className="absolute left-[32%] top-[31%] w-[36%] h-[12%] z-20">
+                                                                    <svg viewBox="0 0 100 40" className="w-full h-full" stroke="#111827" strokeWidth="2.5" fill="#111827">
+                                                                        <circle cx="30" cy="20" r="14" fill="#111827" filter="drop-shadow(0 2px 3px rgba(0,0,0,0.3))" />
+                                                                        <circle cx="70" cy="20" r="14" fill="#111827" filter="drop-shadow(0 2px 3px rgba(0,0,0,0.3))" />
+                                                                        <path d="M 44,20 L 56,20" stroke="#111827" strokeWidth="3" />
+                                                                        <path d="M 22,12 L 32,24" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" opacity="0.4" />
+                                                                        <path d="M 62,12 L 72,24" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" opacity="0.4" />
+                                                                    </svg>
+                                                                </div>
+                                                            )}
+
+                                                            {selectedApparel.eyes === 'eyepatch' && (
+                                                                <div className="absolute left-[33%] top-[31%] w-[34%] h-[12%] z-20">
+                                                                    <svg viewBox="0 0 100 40" className="w-full h-full" fill="#1e293b">
+                                                                        <line x1="5" y1="5" x2="95" y2="28" stroke="#000000" strokeWidth="3" />
+                                                                        <ellipse cx="65" cy="22" rx="16" ry="12" fill="#0f172a" stroke="#000000" strokeWidth="1" />
+                                                                    </svg>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Hands Layer */}
+                                                            {selectedApparel.hands === 'gloves' && (
+                                                                <>
+                                                                    <div className="absolute left-[13%] top-[54%] w-[13%] h-[13%] z-15">
+                                                                        <svg viewBox="0 0 50 50" className="w-full h-full">
+                                                                            <circle cx="25" cy="25" r="16" fill="#10b981" filter="drop-shadow(0px 2px 3px rgba(0,0,0,0.2))" />
+                                                                            <rect x="17" y="30" width="16" height="8" fill="#047857" rx="2" />
+                                                                        </svg>
+                                                                    </div>
+                                                                    <div className="absolute left-[74%] top-[54%] w-[13%] h-[13%] z-15">
+                                                                        <svg viewBox="0 0 50 50" className="w-full h-full">
+                                                                            <circle cx="25" cy="25" r="16" fill="#10b981" filter="drop-shadow(0px 2px 3px rgba(0,0,0,0.2))" />
+                                                                            <rect x="17" y="30" width="16" height="8" fill="#047857" rx="2" />
+                                                                        </svg>
+                                                                    </div>
+                                                                </>
+                                                            )}
+
+                                                            {selectedApparel.hands === 'boxing' && (
+                                                                <>
+                                                                    <div className="absolute left-[11%] top-[52%] w-[16%] h-[16%] z-15">
+                                                                        <svg viewBox="0 0 50 50" className="w-full h-full">
+                                                                            <circle cx="25" cy="25" r="18" fill="#ef4444" filter="drop-shadow(0px 3px 3px rgba(0,0,0,0.2))" />
+                                                                            <rect x="17" y="32" width="16" height="10" fill="#dc2626" rx="2" />
+                                                                        </svg>
+                                                                    </div>
+                                                                    <div className="absolute left-[73%] top-[52%] w-[16%] h-[16%] z-15">
+                                                                        <svg viewBox="0 0 50 50" className="w-full h-full">
+                                                                            <circle cx="25" cy="25" r="18" fill="#ef4444" filter="drop-shadow(0px 3px 3px rgba(0,0,0,0.2))" />
+                                                                            <rect x="17" y="32" width="16" height="10" fill="#dc2626" rx="2" />
+                                                                        </svg>
+                                                                    </div>
+                                                                </>
+                                                            )}
+
+                                                            {/* Feet Layer */}
+                                                            {selectedApparel.feet === 'sneakers' && (
+                                                                <>
+                                                                    <div className="absolute left-[24%] top-[79%] w-[24%] h-[12%] z-15">
+                                                                        <svg viewBox="0 0 60 40" className="w-full h-full">
+                                                                            <path d="M 5,30 L 12,12 L 40,15 L 55,30 L 52,35 L 5,35 Z" fill="#eab308" filter="drop-shadow(0px 3px 3px rgba(0,0,0,0.15))" />
+                                                                            <path d="M 3,34 L 57,34 L 55,37 L 5,37 Z" fill="#ffffff" />
+                                                                            <line x1="22" y1="18" x2="32" y2="18" stroke="#ffffff" strokeWidth="2" />
+                                                                            <line x1="24" y1="24" x2="34" y2="24" stroke="#ffffff" strokeWidth="2" />
+                                                                        </svg>
+                                                                    </div>
+                                                                    <div className="absolute left-[52%] top-[79%] w-[24%] h-[12%] z-15">
+                                                                        <svg viewBox="0 0 60 40" className="w-full h-full" style={{ transform: 'scaleX(-1)' }}>
+                                                                            <path d="M 5,30 L 12,12 L 40,15 L 55,30 L 52,35 L 5,35 Z" fill="#eab308" filter="drop-shadow(0px 3px 3px rgba(0,0,0,0.15))" />
+                                                                            <path d="M 3,34 L 57,34 L 55,37 L 5,37 Z" fill="#ffffff" />
+                                                                            <line x1="22" y1="18" x2="32" y2="18" stroke="#ffffff" strokeWidth="2" />
+                                                                            <line x1="24" y1="24" x2="34" y2="24" stroke="#ffffff" strokeWidth="2" />
+                                                                        </svg>
+                                                                    </div>
+                                                                </>
+                                                            )}
+
+                                                            {selectedApparel.feet === 'boots' && (
+                                                                <>
+                                                                    <div className="absolute left-[24%] top-[78%] w-[24%] h-[13%] z-15">
+                                                                        <svg viewBox="0 0 60 40" className="w-full h-full">
+                                                                            <path d="M 12,28 L 22,5 L 42,8 L 44,28 Z" fill="#b45309" />
+                                                                            <path d="M 10,25 L 55,25 L 52,35 L 5,35 Z" fill="#78350f" filter="drop-shadow(0px 3px 3px rgba(0,0,0,0.2))" />
+                                                                            <path d="M 3,33 L 55,33 L 53,37 L 5,37 Z" fill="#451a03" />
+                                                                        </svg>
+                                                                    </div>
+                                                                    <div className="absolute left-[52%] top-[78%] w-[24%] h-[13%] z-15">
+                                                                        <svg viewBox="0 0 60 40" className="w-full h-full" style={{ transform: 'scaleX(-1)' }}>
+                                                                            <path d="M 12,28 L 22,5 L 42,8 L 44,28 Z" fill="#b45309" />
+                                                                            <path d="M 10,25 L 55,25 L 52,35 L 5,35 Z" fill="#78350f" filter="drop-shadow(0px 3px 3px rgba(0,0,0,0.2))" />
+                                                                            <path d="M 3,33 L 55,33 L 53,37 L 5,37 Z" fill="#451a03" />
+                                                                        </svg>
+                                                                    </div>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    )}
 
                                                     {/* Dynamic Particle Overlays (Soap Bubbles / Blow dryer breeze) */}
                                                     {particles.map((p) => (
@@ -2426,8 +2772,77 @@ export default function LegendaryLightDashboard() {
                                                          <span>🎁 Gizemli Tarz Sandığı Aç</span>
                                                          <span className="bg-yellow-950/20 px-1.5 py-0.5 rounded-md border border-white/10 text-[8.5px]">100 MoffiCoin</span>
                                                      </button>
+
+                                                     {/* Category Tabs */}
+                                                     <div className="flex gap-1.5 overflow-x-auto pb-1 mt-1 scrollbar-none select-none">
+                                                         {[
+                                                             { id: 'body', label: '👕 Vücut' },
+                                                             { id: 'head', label: '👒 Baş' },
+                                                             { id: 'eyes', label: '🕶️ Gözler' },
+                                                             { id: 'hands', label: '🧤 Eller' },
+                                                             { id: 'feet', label: '👟 Ayaklar' }
+                                                         ].map(tab => (
+                                                             <button
+                                                                 key={tab.id}
+                                                                 onClick={() => setActiveApparelTab(tab.id as any)}
+                                                                 className={cn(
+                                                                     "px-2.5 py-1 text-[8.5px] font-black rounded-lg cursor-pointer whitespace-nowrap border transition-all active:scale-95 shrink-0",
+                                                                     activeApparelTab === tab.id
+                                                                         ? "bg-purple-600 text-white border-purple-600 shadow-sm"
+                                                                         : "bg-white/40 dark:bg-black/10 text-gray-600 dark:text-gray-400 border-gray-200/50 dark:border-white/5 hover:bg-white/60"
+                                                                 )}
+                                                             >
+                                                                 {tab.label}
+                                                             </button>
+                                                         ))}
+                                                     </div>
+
+                                                     {/* Wardrobe Items Grid */}
+                                                     <div className="grid grid-cols-2 gap-2 mt-1 max-h-[140px] overflow-y-auto pr-1">
+                                                         {APPAREL_ITEMS[activeApparelTab].map((item) => {
+                                                             const isSelected = selectedApparel[activeApparelTab] === item.id;
+                                                             const isUnlocked = !item.id || unlockedApparel.includes(item.id) || (item.id === 'bowtie' && unlockedAccessories.includes('bowtie'));
+                                                             
+                                                             return (
+                                                                 <div
+                                                                     key={item.id || 'none'}
+                                                                     onClick={() => handleSelectApparel(activeApparelTab, item)}
+                                                                     className={cn(
+                                                                         "p-2 border-2 rounded-xl flex items-center gap-2 cursor-pointer relative shadow-sm transition-all active:scale-95 select-none",
+                                                                         isSelected
+                                                                             ? "bg-purple-500/10 border-purple-500 text-purple-600 dark:text-purple-400 shadow-md shadow-purple-500/5"
+                                                                             : "bg-white/40 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
+                                                                     )}
+                                                                 >
+                                                                     <span className="text-xl shrink-0">{item.icon}</span>
+                                                                     <div className="flex flex-col text-left">
+                                                                         <span className="text-[8px] font-black text-gray-800 dark:text-gray-200 leading-none">{item.label}</span>
+                                                                         <span className="text-[6.5px] font-bold text-gray-400 leading-none mt-0.5">{item.desc}</span>
+                                                                         {item.sp > 0 && (
+                                                                             <span className="text-[6.5px] font-bold text-purple-500 mt-0.5">+{item.sp} SP</span>
+                                                                         )}
+                                                                     </div>
+                                                                     
+                                                                     {/* Locked Overlay */}
+                                                                     {!isUnlocked && (
+                                                                         <div className="absolute inset-0 bg-gray-50/70 dark:bg-black/70 rounded-xl flex items-center justify-center z-10 backdrop-blur-[0.5px]">
+                                                                             {item.id === 'eyepatch' || item.id === 'pirate_hat' || item.id === 'bowtie' ? (
+                                                                                 <span className="text-[7.5px] font-black text-amber-700 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                                                                                     🎁 Sandık
+                                                                                 </span>
+                                                                             ) : (
+                                                                                 <span className="text-[7.5px] font-black text-purple-700 bg-purple-500/10 border border-purple-500/20 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                                                                                     <Lock className="w-1.5 h-1.5" /> 🪙 {item.cost}
+                                                                                 </span>
+                                                                             )}
+                                                                         </div>
+                                                                     )}
+                                                                 </div>
+                                                             );
+                                                         })}
+                                                     </div>
                                                      
-                                                     <div className="grid grid-cols-3 gap-2 mt-0.5">
+                                                     <div className="hidden grid grid-cols-3 gap-2 mt-0.5">
                                                          {/* Accessory 1: Glasses */}
                                                          <div 
                                                              onClick={() => handleToggleAccessory('glasses')}
