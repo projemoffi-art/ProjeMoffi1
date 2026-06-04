@@ -226,7 +226,25 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
         setActivePetId(String(id));
     }, []);
 
-    const activePet = pets.find(p => String(p.id) === String(activePetId)) || null;
+    const petsWithMascot = React.useMemo(() => {
+        return pets.map(p => ({
+            ...p,
+            image: '/purple_mascot.png',
+            avatar: '/purple_mascot.png'
+        }));
+    }, [pets]);
+
+    const activePet = React.useMemo(() => {
+        const found = pets.find(p => String(p.id) === String(activePetId)) || null;
+        if (found) {
+            return {
+                ...found,
+                image: '/purple_mascot.png',
+                avatar: '/purple_mascot.png'
+            };
+        }
+        return null;
+    }, [pets, activePetId]);
 
     const [customRecords, setCustomRecordsInternal] = useState<Record<string, any[]>>({});
     const [recordDocuments, setRecordDocumentsInternal] = useState<Record<string, Record<string, string[]>>>({});
@@ -290,11 +308,11 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
     }, [walkRoutes]);
 
     const petValue = React.useMemo(() => ({
-        pets, activePet, isLoading, addPet, updatePet, deletePet, switchPet,
+        pets: petsWithMascot, activePet, isLoading, addPet, updatePet, deletePet, switchPet,
         customRecords, setCustomRecords, recordDocuments, setRecordDocuments,
         orders, setOrders, appointments, setAppointments, walkRoutes, setWalkRoutes
     }), [
-        pets, activePet, isLoading, addPet, updatePet, deletePet, switchPet,
+        petsWithMascot, activePet, isLoading, addPet, updatePet, deletePet, switchPet,
         customRecords, setCustomRecords, recordDocuments, setRecordDocuments,
         orders, setOrders, appointments, setAppointments, walkRoutes, setWalkRoutes
     ]);

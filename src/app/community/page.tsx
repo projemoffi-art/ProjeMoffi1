@@ -105,7 +105,7 @@ const MATCH_CANDIDATES = [
 const PETS_DATA = {
     luna: {
         name: 'Luna',
-        image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300',
+        image: '/purple_mascot.png',
         breed: 'Golden Retriever • 2 yaşında • Dişi',
         health: 'İyi',
         activity: '68%',
@@ -146,7 +146,7 @@ const PETS_DATA = {
         dressing: {
             activeOutfit: 'Havalı Gözlük 😎 & Kırmızı Boyunluk 🧣',
             stylePoints: 120,
-            avatarMock: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300'
+            avatarMock: '/purple_mascot.png'
         },
         quests: [
             { id: 1, text: 'Luna ile Yürüyüşü Tamamla (3.5 KM)', done: true },
@@ -163,7 +163,7 @@ const PETS_DATA = {
     },
     max: {
         name: 'Max',
-        image: 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?q=80&w=300',
+        image: '/purple_mascot.png',
         breed: 'Beagle • 1 yaşında • Erkek',
         health: 'Mükemmel',
         activity: '92%',
@@ -204,7 +204,7 @@ const PETS_DATA = {
         dressing: {
             activeOutfit: 'Yeşil Yağmurluk 🧥 & Deri Tasma 🐕‍Gl',
             stylePoints: 240,
-            avatarMock: 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?q=80&w=300'
+            avatarMock: '/purple_mascot.png'
         },
         quests: [
             { id: 1, text: 'Yürüyüşte 5.0 KM sınırını aş', done: true },
@@ -221,7 +221,7 @@ const PETS_DATA = {
     },
     mila: {
         name: 'Mila',
-        image: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=300',
+        image: '/purple_mascot.png',
         breed: 'Scottish Fold • 3 yaşında • Dişi',
         health: 'Hassas',
         activity: '40%',
@@ -260,7 +260,7 @@ const PETS_DATA = {
         dressing: {
             activeOutfit: 'Pembe Papyon 🎀 & Simli Kolye 💎',
             stylePoints: 310,
-            avatarMock: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=300'
+            avatarMock: '/purple_mascot.png'
         },
         quests: [
             { id: 1, text: 'Mila için tüy bakım seansı kaydet', done: false },
@@ -442,7 +442,11 @@ export default function LegendaryLightDashboard() {
             emoji: dressingStep === 'clean' ? '🫧' : '💨'
         };
 
-        setParticles(prev => [...prev.slice(-20), newParticle]);
+        if (dressingStep === 'clean') {
+            setParticles(prev => [...prev, newParticle]);
+        } else {
+            setParticles(prev => [...prev.slice(-20), newParticle]);
+        }
 
         if (dressingStep === 'clean') {
             setCleanProgress(prev => {
@@ -2276,6 +2280,14 @@ export default function LegendaryLightDashboard() {
                                                             onClick={() => {
                                                                 setIsShowerActive(true);
                                                                 setCleanProgress(prev => Math.min(100, prev + 15));
+                                                                // Add random foam particles programmatically
+                                                                const newBubbles = Array.from({ length: 8 }).map(() => ({
+                                                                    id: Date.now() + Math.random(),
+                                                                    x: 20 + Math.random() * 60,
+                                                                    y: 20 + Math.random() * 60,
+                                                                    emoji: '🫧'
+                                                                }));
+                                                                setParticles(prev => [...prev, ...newBubbles]);
                                                                 setTimeout(() => setIsShowerActive(false), 600);
                                                             }}
                                                             disabled={cleanProgress >= 100}
@@ -2289,18 +2301,21 @@ export default function LegendaryLightDashboard() {
                                                                 setCleanProgress(100);
                                                                 setParticles([]); // clear bubbles
                                                                 setTimeout(() => setIsShowerActive(false), 600);
-                                                                triggerSpeechBubble("Bütün köpükleri sildim! 🚿");
+                                                                triggerSpeechBubble("Bütün köpükleri temizledim! 🚿");
                                                             }}
                                                             disabled={cleanProgress >= 100}
                                                             className="flex items-center justify-center gap-1.5 p-2 bg-cyan-500 hover:bg-cyan-600 active:scale-95 text-white text-[10px] font-black rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
                                                         >
-                                                            <span>🚿 Köpükleri Sil</span>
+                                                            <span>🚿 Köpükleri Temizle</span>
                                                         </button>
                                                     </div>
 
                                                     {cleanProgress >= 100 ? (
                                                         <button
-                                                            onClick={() => setDressingStep('dry')}
+                                                            onClick={() => {
+                                                                setDressingStep('dry');
+                                                                setParticles([]); // clear bubbles when transitioning
+                                                            }}
                                                             className="w-full mt-1 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-[10.5px] font-black py-2.5 rounded-xl cursor-pointer hover:shadow-lg active:scale-98 transition-all"
                                                         >
                                                             Kurulamaya Geç 💨
@@ -2643,6 +2658,7 @@ export default function LegendaryLightDashboard() {
                                                             onClick={() => {
                                                                 setCleanProgress(0);
                                                                 setDryProgress(0);
+                                                                setParticles([]);
                                                                 setDressingStep('clean');
                                                             }}
                                                             className="p-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 text-[10px] font-black rounded-xl transition-all cursor-pointer text-center"
@@ -2654,6 +2670,7 @@ export default function LegendaryLightDashboard() {
                                                                 setDressingStep('clean');
                                                                 setCleanProgress(0);
                                                                 setDryProgress(0);
+                                                                setParticles([]);
                                                                 handleSaveOutfit();
                                                             }}
                                                             className="p-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-[10px] font-black rounded-xl transition-all cursor-pointer text-center shadow-md shadow-purple-900/10"
