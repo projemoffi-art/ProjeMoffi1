@@ -434,7 +434,7 @@ export default function LegendaryLightDashboard() {
     const [stylePoints, setStylePoints] = useState(120);
 
     // TALKING TOM STYLE DRESSING GAME STATES
-    const [dressingStep, setDressingStep] = useState<'clean' | 'dry' | 'accessorize' | 'photo' | 'completed'>('clean');
+    const [dressingStep, setDressingStep] = useState<'clean' | 'dry' | 'accessorize' | 'photo' | 'completed'>('accessorize');
     const [cleanProgress, setCleanProgress] = useState(0);
     const [dryProgress, setDryProgress] = useState(0);
     const [activeStudioBg, setActiveStudioBg] = useState<'stage' | 'cyber' | 'park' | 'space'>('stage');
@@ -2098,16 +2098,14 @@ export default function LegendaryLightDashboard() {
                                             </div>
 
                                             {/* Step Tracker Header */}
-                                            <div className="grid grid-cols-5 gap-1 mb-4 text-center select-none bg-gray-50/40 dark:bg-black/25 p-1 rounded-2xl border border-purple-100/20">
+                                            <div className="grid grid-cols-3 gap-1 mb-4 text-center select-none bg-gray-50/40 dark:bg-black/25 p-1 rounded-2xl border border-purple-100/20">
                                                 {[
-                                                    { step: 'clean', label: 'Banyo 🧼' },
-                                                    { step: 'dry', label: 'Kurula 💨' },
-                                                    { step: 'accessorize', label: 'Süsle 🎀' },
+                                                    { step: 'accessorize', label: 'Kombin 🎀' },
                                                     { step: 'photo', label: 'Stüdyo 📸' },
-                                                    { step: 'completed', label: 'Bitti 🏆' }
+                                                    { step: 'completed', label: 'Albüm 🏆' }
                                                 ].map((item, idx) => {
                                                     const isCurrent = dressingStep === item.step;
-                                                    const isPassed = ['clean', 'dry', 'accessorize', 'photo', 'completed'].indexOf(dressingStep) > idx;
+                                                    const isPassed = ['accessorize', 'photo', 'completed'].indexOf(dressingStep) > idx;
                                                     return (
                                                         <div 
                                                             key={item.step}
@@ -3370,7 +3368,7 @@ export default function LegendaryLightDashboard() {
                                                                 setCleanProgress(0);
                                                                 setDryProgress(0);
                                                                 setParticles([]);
-                                                                setDressingStep('clean');
+                                                                setDressingStep('accessorize');
                                                             }}
                                                             className="p-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 text-[10px] font-black rounded-xl transition-all cursor-pointer text-center"
                                                         >
@@ -3378,7 +3376,7 @@ export default function LegendaryLightDashboard() {
                                                         </button>
                                                         <button
                                                             onClick={() => {
-                                                                setDressingStep('clean');
+                                                                setDressingStep('accessorize');
                                                                 setCleanProgress(0);
                                                                 setDryProgress(0);
                                                                 setParticles([]);
