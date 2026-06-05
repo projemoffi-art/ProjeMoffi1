@@ -227,23 +227,11 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const petsWithMascot = React.useMemo(() => {
-        return pets.map(p => ({
-            ...p,
-            image: '/purple_mascot_base.png',
-            avatar: '/purple_mascot_base.png'
-        }));
+        return pets;
     }, [pets]);
 
     const activePet = React.useMemo(() => {
-        const found = pets.find(p => String(p.id) === String(activePetId)) || null;
-        if (found) {
-            return {
-                ...found,
-                image: '/purple_mascot_base.png',
-                avatar: '/purple_mascot_base.png'
-            };
-        }
-        return null;
+        return pets.find(p => String(p.id) === String(activePetId)) || null;
     }, [pets, activePetId]);
 
     const [customRecords, setCustomRecordsInternal] = useState<Record<string, any[]>>({});

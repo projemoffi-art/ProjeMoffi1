@@ -68,6 +68,7 @@ import { useStories } from '../../hooks/useStories';
 import { useWalk } from '../../hooks/useWalk';
 import { QuestBentoCard } from '@/components/quests/QuestBentoCard';
 import { cn } from '@/lib/utils';
+import Mascot3DCanvas from '@/components/dressing/Mascot3DCanvas';
 
 const MATCH_CANDIDATES = [
     {
@@ -438,9 +439,11 @@ export default function LegendaryLightDashboard() {
     const [cleanProgress, setCleanProgress] = useState(0);
     const [dryProgress, setDryProgress] = useState(0);
     const [activeStudioBg, setActiveStudioBg] = useState<'stage' | 'cyber' | 'park' | 'space'>('stage');
+    const [isBlinking, setIsBlinking] = useState(false);
     const [isFlashActive, setIsFlashActive] = useState(false);
     const [isShowerActive, setIsShowerActive] = useState(false);
     const [isDryerActive, setIsDryerActive] = useState(false);
+    const [activeTool, setActiveTool] = useState<'styling' | 'comb' | 'scissors' | 'grow' | 'walk'>('styling');
 
     const [particles, setParticles] = useState<Array<{ id: number, x: number, y: number, emoji: string }>>([]);
 
@@ -1012,6 +1015,17 @@ export default function LegendaryLightDashboard() {
         }
         return () => { if (walkTimerRef.current) clearInterval(walkTimerRef.current); };
     }, [activeSession?.id]);
+
+    // Maskot göz kırpma efekti (Blinking effect)
+    useEffect(() => {
+        const blinkInterval = setInterval(() => {
+            setIsBlinking(true);
+            setTimeout(() => {
+                setIsBlinking(false);
+            }, 180);
+        }, 3500 + Math.random() * 2500); // 3.5 - 6 saniyede bir göz kırpar
+        return () => clearInterval(blinkInterval);
+    }, []);
 
     const formatWalkTime = (totalSeconds: number) => {
         const h = Math.floor(totalSeconds / 3600);
@@ -2167,527 +2181,50 @@ export default function LegendaryLightDashboard() {
                                                             )}
                                                         </div>
                                                     )}
+                                                    {/* 3D Skeletal Rigged Groomable Mascot Canvas */}
+                                                    <Mascot3DCanvas 
+                                                        selectedApparel={selectedApparel} 
+                                                        activeTool={activeTool} 
+                                                        isBlinking={isBlinking} 
+                                                    />
 
-                                                                                                        {/* Main Pet Image */}
-                                                    <img 
-                                                        src={pet.image} 
-                                                        className={cn(
-                                                            "w-full h-full object-cover relative z-10 transition-all duration-300 pointer-events-none",
-                                                            dressingStep === 'clean' && "brightness-95 contrast-105",
-                                                            dressingStep === 'dry' && dryProgress < 100 && "brightness-90 saturate-125 filter blur-[0.3px]"
-                                                        )} 
-                                                        alt="outfit-avatar" 
-                                                     />
-
-                                                    {/* Dynamic SVG Apparel Overlays */}
+                                                    {/* Floating 3D Control Bar - only visible when styling/accessorizing/photos */}
                                                     {['accessorize', 'photo', 'completed'].includes(dressingStep) && (
-                                                        <div className="absolute inset-0 z-15 pointer-events-none select-none">
-                                                            {/* Torso Layer */}
-                                                            {selectedApparel.body === 'sweatshirt' && (
-                                                                <div className="absolute left-[20%] top-[42%] w-[60%] h-[32%] z-15">
-                                                                    <svg viewBox="0 0 120 100" className="w-full h-full">
-                                                                        <defs>
-                                                                            <linearGradient id="sweatshirtGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                                                                <stop offset="0%" stopColor="#ff7e40" />
-                                                                                <stop offset="50%" stopColor="#f97316" />
-                                                                                <stop offset="100%" stopColor="#ea580c" />
-                                                                            </linearGradient>
-                                                                            <linearGradient id="sleeveLeftGrad" x1="100%" y1="0%" x2="0%" y2="50%">
-                                                                                <stop offset="0%" stopColor="#ff7e40" />
-                                                                                <stop offset="100%" stopColor="#c2410c" />
-                                                                            </linearGradient>
-                                                                            <linearGradient id="sleeveRightGrad" x1="0%" y1="0%" x2="100%" y2="50%">
-                                                                                <stop offset="0%" stopColor="#ff7e40" />
-                                                                                <stop offset="100%" stopColor="#c2410c" />
-                                                                            </linearGradient>
-                                                                            <radialGradient id="bellyShine" cx="50%" cy="50%" r="50%">
-                                                                                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.25" />
-                                                                                <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-                                                                            </radialGradient>
-                                                                            <linearGradient id="shadowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                                                                                <stop offset="0%" stopColor="#000000" stopOpacity="0" />
-                                                                                <stop offset="100%" stopColor="#000000" stopOpacity="0.3" />
-                                                                            </linearGradient>
-                                                                        </defs>
-                                                                        
-                                                                        {/* Left Sleeve */}
-                                                                        <path d="M 22,25 C 10,28 3,42 6,58 C 8,62 13,64 16,58 C 13,46 18,34 22,25 Z" fill="url(#sleeveLeftGrad)" filter="drop-shadow(0px 2px 3px rgba(0,0,0,0.15))" />
-                                                                        <path d="M 6,58 Q 11,61 16,58 L 15,62 Q 10,65 5,62 Z" fill="#c2410c" />
-
-                                                                        {/* Right Sleeve */}
-                                                                        <path d="M 98,25 C 110,28 117,42 114,58 C 112,62 107,64 104,58 C 107,46 102,34 98,25 Z" fill="url(#sleeveRightGrad)" filter="drop-shadow(0px 2px 3px rgba(0,0,0,0.15))" />
-                                                                        <path d="M 114,58 Q 109,61 104,58 L 105,62 Q 110,65 115,62 Z" fill="#c2410c" />
-
-                                                                        {/* Back Collar */}
-                                                                        <path d="M 40,17 Q 60,10 80,17 Q 80,24 60,24 Q 40,24 40,17 Z" fill="#7c2d12" />
-
-                                                                        {/* Main Body */}
-                                                                        <path d="M 20,20 Q 60,10 100,20 L 96,82 Q 60,92 24,82 Z" fill="url(#sweatshirtGrad)" filter="drop-shadow(0px 4px 8px rgba(0,0,0,0.25))" />
-
-                                                                        {/* 3D Belly Shading / Highlight */}
-                                                                        <ellipse cx="60" cy="50" rx="35" ry="25" fill="url(#bellyShine)" />
-
-                                                                        {/* Front Collar Rim */}
-                                                                        <path d="M 38,18 Q 60,26 82,18 Q 80,21 60,21 Q 40,21 38,18 Z" fill="#c2410c" stroke="#ff7e40" strokeWidth="1" />
-
-                                                                        {/* Hood Drawstrings */}
-                                                                        <path d="M 50,22 Q 48,35 44,45" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" fill="none" filter="drop-shadow(0px 2px 2px rgba(0,0,0,0.15))" />
-                                                                        <path d="M 70,22 Q 72,35 76,45" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" fill="none" filter="drop-shadow(0px 2px 2px rgba(0,0,0,0.15))" />
-                                                                        <circle cx="44" cy="46" r="3" fill="#f87171" />
-                                                                        <circle cx="76" cy="46" r="3" fill="#f87171" />
-
-                                                                        {/* Kangaroo Pocket */}
-                                                                        <path d="M 36,54 Q 60,50 84,54 L 78,76 Q 60,78 42,76 Z" fill="#ea580c" stroke="#c2410c" strokeWidth="1.5" />
-                                                                        <path d="M 36,54 Q 42,62 42,76" fill="none" stroke="#ff7e40" strokeWidth="1" opacity="0.5" />
-                                                                        <path d="M 84,54 Q 78,62 78,76" fill="none" stroke="#ff7e40" strokeWidth="1" opacity="0.5" />
-                                                                        
-                                                                        {/* Bottom Ribbed Band */}
-                                                                        <path d="M 24,81 Q 60,91 96,81 L 95,86 Q 60,96 25,86 Z" fill="#c2410c" />
-                                                                        <path d="M 24,84 Q 60,94 96,84 L 95,88 Q 60,98 25,88 Z" fill="url(#shadowGrad)" />
-                                                                    </svg>
-                                                                </div>
-                                                            )}
-                                                            
-                                                            {selectedApparel.body === 'singlet' && (
-                                                                <div className="absolute left-[21%] top-[42%] w-[58%] h-[32%] z-15">
-                                                                    <svg viewBox="0 0 120 100" className="w-full h-full">
-                                                                        <defs>
-                                                                            <linearGradient id="singletGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                                                                                <stop offset="0%" stopColor="#06b6d4" />
-                                                                                <stop offset="50%" stopColor="#0891b2" />
-                                                                                <stop offset="100%" stopColor="#0e7490" />
-                                                                            </linearGradient>
-                                                                            <radialGradient id="singletBellyShine" cx="50%" cy="50%" r="50%">
-                                                                                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.2" />
-                                                                                <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-                                                                            </radialGradient>
-                                                                            <linearGradient id="atletRib" x1="0%" y1="0%" x2="100%" y2="0%">
-                                                                                <stop offset="0%" stopColor="#ffffff" stopOpacity="0" />
-                                                                                <stop offset="50%" stopColor="#ffffff" stopOpacity="0.1" />
-                                                                                <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-                                                                            </linearGradient>
-                                                                        </defs>
-                                                                        
-                                                                        {/* Base Singlet Body */}
-                                                                        <path d="M 32,25 C 42,32 50,32 60,32 C 70,32 78,32 88,25 L 86,83 Q 60,91 34,83 Z" fill="url(#singletGrad)" filter="drop-shadow(0px 3px 5px rgba(0,0,0,0.25))" />
-                                                                        
-                                                                        {/* Left Strap */}
-                                                                        <path d="M 32,25 C 30,22 32,10 36,8 C 40,8 43,14 42,25 Z" fill="url(#singletGrad)" />
-                                                                        {/* Right Strap */}
-                                                                        <path d="M 88,25 C 90,22 88,10 84,8 C 80,8 77,14 78,25 Z" fill="url(#singletGrad)" />
-                                                                        
-                                                                        {/* Shading */}
-                                                                        <ellipse cx="60" cy="55" rx="26" ry="22" fill="url(#singletBellyShine)" />
-                                                                        
-                                                                        {/* Rib Lines */}
-                                                                        <path d="M 38,28 L 38,82 M 46,30 L 46,84 M 54,32 L 54,85 M 62,32 L 62,85 M 70,32 L 70,85 M 78,30 L 78,84 M 82,28 L 82,82" stroke="url(#atletRib)" strokeWidth="1.5" fill="none" />
-                                                                        
-                                                                        {/* Gold Star Crest */}
-                                                                        <polygon points="60,40 63,48 71,48 65,53 67,61 60,56 53,61 55,53 49,48 57,48" fill="#facc15" filter="drop-shadow(0px 1px 2px rgba(0,0,0,0.2))" />
-                                                                        <polygon points="60,40 63,48 71,48 65,53 67,61 60,56" fill="#eab308" />
-                                                                    </svg>
-                                                                </div>
-                                                            )}
-
-                                                            {selectedApparel.body === 'pajamas' && (
-                                                                <div className="absolute left-[20%] top-[42%] w-[60%] h-[32%] z-15">
-                                                                    <svg viewBox="0 0 120 100" className="w-full h-full">
-                                                                        <defs>
-                                                                            <linearGradient id="pajamaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                                                                <stop offset="0%" stopColor="#10b981" />
-                                                                                <stop offset="100%" stopColor="#047857" />
-                                                                            </linearGradient>
-                                                                            <linearGradient id="pajamaSleeveLeft" x1="100%" y1="0%" x2="0%" y2="100%">
-                                                                                <stop offset="0%" stopColor="#10b981" />
-                                                                                <stop offset="100%" stopColor="#065f46" />
-                                                                            </linearGradient>
-                                                                            <linearGradient id="pajamaSleeveRight" x1="0%" y1="0%" x2="100%" y2="100%">
-                                                                                <stop offset="0%" stopColor="#10b981" />
-                                                                                <stop offset="100%" stopColor="#065f46" />
-                                                                            </linearGradient>
-                                                                        </defs>
-                                                                        
-                                                                        {/* Left Sleeve */}
-                                                                        <path d="M 22,25 C 10,28 3,42 6,58 C 8,62 13,64 16,58 C 13,46 18,34 22,25 Z" fill="url(#pajamaSleeveLeft)" filter="drop-shadow(0px 2px 3px rgba(0,0,0,0.15))" />
-                                                                        <path d="M 12,38 L 5,44 L 6,48 L 13,42 Z" fill="#a7f3d0" />
-                                                                        <path d="M 15,50 L 9,56 L 10,60 L 16,54 Z" fill="#a7f3d0" />
-
-                                                                        {/* Right Sleeve */}
-                                                                        <path d="M 98,25 C 110,28 117,42 114,58 C 112,62 107,64 104,58 C 107,46 102,34 98,25 Z" fill="url(#pajamaSleeveRight)" filter="drop-shadow(0px 2px 3px rgba(0,0,0,0.15))" />
-                                                                        <path d="M 108,38 L 115,44 L 114,48 L 107,42 Z" fill="#a7f3d0" />
-                                                                        <path d="M 105,50 L 111,56 L 110,60 L 104,54 Z" fill="#a7f3d0" />
-
-                                                                        {/* Back Collar */}
-                                                                        <path d="M 40,17 Q 60,10 80,17 Q 80,24 60,24 Q 40,24 40,17 Z" fill="#064e3b" />
-
-                                                                        {/* Main Body */}
-                                                                        <path d="M 20,20 Q 60,10 100,20 L 95,84 Q 60,94 25,84 Z" fill="url(#pajamaGrad)" filter="drop-shadow(0px 4px 8px rgba(0,0,0,0.25))" />
-                                                                        
-                                                                        {/* Body Stripes */}
-                                                                        <path d="M 22,33 Q 60,23 98,33 L 97,41 Q 60,31 23,41 Z" fill="#a7f3d0" />
-                                                                        <path d="M 24,53 Q 60,43 96,53 L 95,61 Q 60,51 25,61 Z" fill="#a7f3d0" />
-                                                                        <path d="M 25,73 Q 60,63 95,73 L 94,81 Q 60,71 26,81 Z" fill="#a7f3d0" />
-
-                                                                        {/* Lapels */}
-                                                                        <path d="M 40,18 L 60,34 L 50,19 Z" fill="#065f46" />
-                                                                        <path d="M 80,18 L 60,34 L 70,19 Z" fill="#065f46" />
-
-                                                                        {/* Buttons */}
-                                                                        <circle cx="60" cy="42" r="3.5" fill="#ffffff" filter="drop-shadow(0px 1px 2px rgba(0,0,0,0.2))" />
-                                                                        <circle cx="60" cy="42" r="1.5" fill="#9ca3af" />
-                                                                        <circle cx="60" cy="62" r="3.5" fill="#ffffff" filter="drop-shadow(0px 1px 2px rgba(0,0,0,0.2))" />
-                                                                        <circle cx="60" cy="62" r="1.5" fill="#9ca3af" />
-                                                                    </svg>
-                                                                </div>
-                                                            )}
-
-                                                            {/* Head Layer */}
-                                                            {selectedApparel.head === 'crown' && (
-                                                                <div className="absolute left-[33%] top-[10%] w-[34%] h-[20%] z-20 animate-bounce" style={{ animationDuration: '2s' }}>
-                                                                    <svg viewBox="0 0 100 80" className="w-full h-full">
-                                                                        <defs>
-                                                                            <linearGradient id="crownGold" x1="0%" y1="0%" x2="100%" y2="100%">
-                                                                                <stop offset="0%" stopColor="#fef08a" />
-                                                                                <stop offset="50%" stopColor="#eab308" />
-                                                                                <stop offset="100%" stopColor="#ca8a04" />
-                                                                            </linearGradient>
-                                                                            <radialGradient id="gemRed" cx="30%" cy="30%" r="70%">
-                                                                                <stop offset="0%" stopColor="#fca5a5" />
-                                                                                <stop offset="40%" stopColor="#ef4444" />
-                                                                                <stop offset="100%" stopColor="#991b1b" />
-                                                                            </radialGradient>
-                                                                            <radialGradient id="gemBlue" cx="30%" cy="30%" r="70%">
-                                                                                <stop offset="0%" stopColor="#93c5fd" />
-                                                                                <stop offset="40%" stopColor="#3b82f6" />
-                                                                                <stop offset="100%" stopColor="#1e3a8a" />
-                                                                            </radialGradient>
-                                                                            <linearGradient id="crownShadow" x1="0%" y1="0%" x2="0%" y2="100%">
-                                                                                <stop offset="0%" stopColor="#000000" stopOpacity="0.45" />
-                                                                                <stop offset="100%" stopColor="#000000" stopOpacity="0" />
-                                                                            </linearGradient>
-                                                                        </defs>
-                                                                        {/* Shadow on forehead */}
-                                                                        <path d="M 12,65 Q 50,73 88,65 Q 50,82 12,65 Z" fill="url(#crownShadow)" opacity="0.8" />
-                                                                        
-                                                                        {/* Crown Base Back */}
-                                                                        <path d="M 16,65 Q 50,72 84,65 L 82,58 Q 50,65 18,58 Z" fill="#854d0e" />
-
-                                                                        {/* Crown Body */}
-                                                                        <path d="M 15,65 Q 50,72 85,65 L 80,45 L 68,58 L 50,30 L 32,58 L 20,45 Z" fill="url(#crownGold)" filter="drop-shadow(0px 3px 5px rgba(0,0,0,0.25))" />
-                                                                        
-                                                                        {/* Gems */}
-                                                                        <circle cx="50" cy="28" r="5" fill="url(#gemRed)" filter="drop-shadow(0px 1px 2px rgba(0,0,0,0.3))" />
-                                                                        <circle cx="20" cy="43" r="4" fill="url(#gemBlue)" filter="drop-shadow(0px 1px 2px rgba(0,0,0,0.3))" />
-                                                                        <circle cx="80" cy="43" r="4" fill="url(#gemBlue)" filter="drop-shadow(0px 1px 2px rgba(0,0,0,0.3))" />
-                                                                        <path d="M 15,65 Q 50,72 85,65" fill="none" stroke="#fef08a" strokeWidth="2" opacity="0.6" />
-                                                                    </svg>
-                                                                </div>
-                                                            )}
-
-                                                            {selectedApparel.head === 'pirate_hat' && (
-                                                                <div className="absolute left-[25%] top-[8%] w-[50%] h-[22%] z-20">
-                                                                    <svg viewBox="0 0 120 80" className="w-full h-full">
-                                                                        <defs>
-                                                                            <linearGradient id="pirateHatGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                                                                                <stop offset="0%" stopColor="#334155" />
-                                                                                <stop offset="70%" stopColor="#1e293b" />
-                                                                                <stop offset="100%" stopColor="#0f172a" />
-                                                                            </linearGradient>
-                                                                            <linearGradient id="pirateShadow" x1="0%" y1="0%" x2="0%" y2="100%">
-                                                                                <stop offset="0%" stopColor="#000000" stopOpacity="0.5" />
-                                                                                <stop offset="100%" stopColor="#000000" stopOpacity="0" />
-                                                                            </linearGradient>
-                                                                        </defs>
-                                                                        <path d="M 22,46 Q 60,54 98,46 Q 60,65 22,46 Z" fill="url(#pirateShadow)" opacity="0.8" />
-                                                                        <path d="M 10,50 Q 60,10 110,50 Q 60,33 10,50 Z" fill="url(#pirateHatGrad)" filter="drop-shadow(0px 4px 6px rgba(0,0,0,0.35))" />
-                                                                        <path d="M 24,44 Q 60,25 96,44 Q 60,28 24,44 Z" fill="#ef4444" />
-                                                                        <path d="M 10,50 Q 60,33 110,50 Q 60,36 10,50" fill="#eab308" opacity="0.8" />
-                                                                        <circle cx="60" cy="35" r="4.5" fill="#ffffff" filter="drop-shadow(0px 1px 2px rgba(0,0,0,0.2))" />
-                                                                        <rect x="58" y="38" width="4" height="3" fill="#ffffff" />
-                                                                        <line x1="59.5" y1="39.5" x2="59.5" y2="41" stroke="#000000" strokeWidth="0.5" />
-                                                                        <line x1="60.5" y1="39.5" x2="60.5" y2="41" stroke="#000000" strokeWidth="0.5" />
-                                                                        <circle cx="58.5" cy="34.5" r="1" fill="#000000" />
-                                                                        <circle cx="61.5" cy="34.5" r="1" fill="#000000" />
-                                                                        <path d="M 52,31 L 68,39 M 52,39 L 68,31" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" />
-                                                                    </svg>
-                                                                </div>
-                                                            )}
-
-                                                            {selectedApparel.head === 'top_hat' && (
-                                                                <div className="absolute left-[30%] top-[7%] w-[40%] h-[24%] z-20">
-                                                                    <svg viewBox="0 0 100 80" className="w-full h-full">
-                                                                        <defs>
-                                                                            <linearGradient id="topHatGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                                                                                <stop offset="0%" stopColor="#111827" />
-                                                                                <stop offset="25%" stopColor="#374151" />
-                                                                                <stop offset="50%" stopColor="#1f2937" />
-                                                                                <stop offset="100%" stopColor="#0f172a" />
-                                                                            </linearGradient>
-                                                                            <linearGradient id="hatShadow" x1="0%" y1="0%" x2="0%" y2="100%">
-                                                                                <stop offset="0%" stopColor="#000000" stopOpacity="0.5" />
-                                                                                <stop offset="100%" stopColor="#000000" stopOpacity="0" />
-                                                                            </linearGradient>
-                                                                        </defs>
-                                                                        <ellipse cx="50" cy="68" rx="28" ry="6" fill="url(#hatShadow)" opacity="0.8" />
-                                                                        <ellipse cx="50" cy="65" rx="38" ry="7" fill="#111827" filter="drop-shadow(0px 2px 4px rgba(0,0,0,0.3))" />
-                                                                        <ellipse cx="50" cy="64" rx="36" ry="6" fill="#1f2937" />
-                                                                        <path d="M 24,63 L 28,20 L 72,20 L 76,63 Z" fill="url(#topHatGrad)" />
-                                                                        <ellipse cx="50" cy="20" rx="22" ry="4" fill="#374151" />
-                                                                        <path d="M 24.3,60 Q 50,64 75.7,60 L 75,50 Q 50,54 25,50 Z" fill="#ef4444" />
-                                                                    </svg>
-                                                                </div>
-                                                            )}
-
-                                                            {selectedApparel.head === 'beanie' && (
-                                                                <div className="absolute left-[31%] top-[9%] w-[38%] h-[22%] z-20">
-                                                                    <svg viewBox="0 0 100 80" className="w-full h-full">
-                                                                        <defs>
-                                                                            <linearGradient id="beanieGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                                                                <stop offset="0%" stopColor="#60a5fa" />
-                                                                                <stop offset="50%" stopColor="#3b82f6" />
-                                                                                <stop offset="100%" stopColor="#1d4ed8" />
-                                                                            </linearGradient>
-                                                                            <linearGradient id="beanieRibGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                                                                                <stop offset="0%" stopColor="#1d4ed8" />
-                                                                                <stop offset="30%" stopColor="#2563eb" />
-                                                                                <stop offset="70%" stopColor="#1d4ed8" />
-                                                                                <stop offset="100%" stopColor="#172554" />
-                                                                            </linearGradient>
-                                                                            <linearGradient id="beanieShadow" x1="0%" y1="0%" x2="0%" y2="100%">
-                                                                                <stop offset="0%" stopColor="#000000" stopOpacity="0.45" />
-                                                                                <stop offset="100%" stopColor="#000000" stopOpacity="0" />
-                                                                            </linearGradient>
-                                                                        </defs>
-                                                                        <path d="M 16,65 Q 50,73 84,65 Q 50,80 16,65 Z" fill="url(#beanieShadow)" opacity="0.8" />
-                                                                        <path d="M 20,65 Q 16,30 50,18 Q 84,30 80,65 Z" fill="url(#beanieGrad)" filter="drop-shadow(0px 3px 5px rgba(0,0,0,0.25))" />
-                                                                        <circle cx="50" cy="15" r="9" fill="#ffffff" filter="drop-shadow(0px 2px 3px rgba(0,0,0,0.15))" />
-                                                                        <rect x="15" y="55" width="70" height="12" fill="url(#beanieRibGrad)" rx="6" filter="drop-shadow(0px 2px 3px rgba(0,0,0,0.2))" />
-                                                                        <line x1="22" y1="55" x2="22" y2="67" stroke="#1e40af" strokeWidth="1" />
-                                                                        <line x1="28" y1="55" x2="28" y2="67" stroke="#1e40af" strokeWidth="1" />
-                                                                        <line x1="34" y1="55" x2="34" y2="67" stroke="#1e40af" strokeWidth="1" />
-                                                                        <line x1="40" y1="55" x2="40" y2="67" stroke="#1e40af" strokeWidth="1" />
-                                                                        <line x1="46" y1="55" x2="46" y2="67" stroke="#1e40af" strokeWidth="1" />
-                                                                        <line x1="52" y1="55" x2="52" y2="67" stroke="#1e40af" strokeWidth="1" />
-                                                                        <line x1="58" y1="55" x2="58" y2="67" stroke="#1e40af" strokeWidth="1" />
-                                                                        <line x1="64" y1="55" x2="64" y2="67" stroke="#1e40af" strokeWidth="1" />
-                                                                        <line x1="70" y1="55" x2="70" y2="67" stroke="#1e40af" strokeWidth="1" />
-                                                                        <line x1="76" y1="55" x2="76" y2="67" stroke="#1e40af" strokeWidth="1" />
-                                                                    </svg>
-                                                                </div>
-                                                            )}
-
-                                                            {/* Eyes Layer */}
-                                                            {selectedApparel.eyes === 'glasses' && (
-                                                                <div className="absolute left-[32%] top-[31%] w-[36%] h-[12%] z-20">
-                                                                    <svg viewBox="0 0 100 40" className="w-full h-full">
-                                                                        <path d="M 5,20 L 16,18 M 95,20 L 84,18" stroke="#374151" strokeWidth="3" strokeLinecap="round" />
-                                                                        <circle cx="30" cy="20" r="15" stroke="#1f2937" strokeWidth="3" fill="rgba(255,255,255,0.15)" filter="drop-shadow(0px 2px 3px rgba(0,0,0,0.15))" />
-                                                                        <circle cx="70" cy="20" r="15" stroke="#1f2937" strokeWidth="3" fill="rgba(255,255,255,0.15)" filter="drop-shadow(0px 2px 3px rgba(0,0,0,0.15))" />
-                                                                        <path d="M 20,12 L 32,24" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" opacity="0.5" />
-                                                                        <path d="M 60,12 L 72,24" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" opacity="0.5" />
-                                                                        <path d="M 45,20 Q 50,14 55,20" stroke="#1f2937" strokeWidth="3.5" fill="none" />
-                                                                    </svg>
-                                                                </div>
-                                                            )}
-
-                                                            {selectedApparel.eyes === 'sunglasses' && (
-                                                                <div className="absolute left-[32%] top-[31%] w-[36%] h-[12%] z-20">
-                                                                    <svg viewBox="0 0 100 40" className="w-full h-full">
-                                                                        <defs>
-                                                                            <linearGradient id="lensGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                                                                                <stop offset="0%" stopColor="#1e293b" stopOpacity="0.85" />
-                                                                                <stop offset="100%" stopColor="#0f172a" stopOpacity="0.9" />
-                                                                            </linearGradient>
-                                                                        </defs>
-                                                                        <path d="M 5,20 L 16,18 M 95,20 L 84,18" stroke="#000000" strokeWidth="3.5" strokeLinecap="round" />
-                                                                        <circle cx="30" cy="20" r="15" stroke="#000000" strokeWidth="3" fill="url(#lensGrad)" filter="drop-shadow(0px 2px 3px rgba(0,0,0,0.2))" />
-                                                                        <circle cx="70" cy="20" r="15" stroke="#000000" strokeWidth="3" fill="url(#lensGrad)" filter="drop-shadow(0px 2px 3px rgba(0,0,0,0.2))" />
-                                                                        <path d="M 20,12 L 34,26" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" opacity="0.6" />
-                                                                        <path d="M 60,12 L 74,26" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" opacity="0.6" />
-                                                                        <path d="M 45,20 L 55,20" stroke="#000000" strokeWidth="4" />
-                                                                    </svg>
-                                                                </div>
-                                                            )}
-
-                                                            {selectedApparel.eyes === 'eyepatch' && (
-                                                                <div className="absolute left-[33%] top-[31%] w-[34%] h-[12%] z-20">
-                                                                    <svg viewBox="0 0 100 40" className="w-full h-full">
-                                                                        <line x1="2" y1="2" x2="98" y2="30" stroke="#0f172a" strokeWidth="3.5" />
-                                                                        <ellipse cx="65" cy="22" rx="17" ry="13" fill="#0f172a" stroke="#1e293b" strokeWidth="1.5" filter="drop-shadow(0px 2px 4px rgba(0,0,0,0.35))" />
-                                                                        <path d="M 61,22 L 69,22 M 65,18 L 65,26" stroke="#ef4444" strokeWidth="1" opacity="0.8" />
-                                                                    </svg>
-                                                                </div>
-                                                            )}
-
-                                                            {/* Hands Layer */}
-                                                            {selectedApparel.hands === 'gloves' && (
-                                                                <>
-                                                                    <div className="absolute left-[13%] top-[54%] w-[13%] h-[13%] z-15">
-                                                                        <svg viewBox="0 0 50 50" className="w-full h-full">
-                                                                            <defs>
-                                                                                <linearGradient id="gloveGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                                                                    <stop offset="0%" stopColor="#34d399" />
-                                                                                    <stop offset="100%" stopColor="#059669" />
-                                                                                </linearGradient>
-                                                                            </defs>
-                                                                            <circle cx="25" cy="23" r="15" fill="rgba(0,0,0,0.15)" filter="blur(2px)" />
-                                                                            <circle cx="25" cy="23" r="15" fill="url(#gloveGrad)" filter="drop-shadow(0px 2px 3px rgba(0,0,0,0.2))" />
-                                                                            <path d="M 12,23 Q 6,26 8,30 Q 12,32 16,26 Z" fill="url(#gloveGrad)" />
-                                                                            <rect x="15" y="30" width="20" height="9" fill="#047857" rx="2" stroke="#10b981" strokeWidth="1" />
-                                                                        </svg>
-                                                                    </div>
-                                                                    <div className="absolute left-[74%] top-[54%] w-[13%] h-[13%] z-15">
-                                                                        <svg viewBox="0 0 50 50" className="w-full h-full" style={{ transform: 'scaleX(-1)' }}>
-                                                                            <defs>
-                                                                                <linearGradient id="gloveGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                                                                    <stop offset="0%" stopColor="#34d399" />
-                                                                                    <stop offset="100%" stopColor="#059669" />
-                                                                                </linearGradient>
-                                                                            </defs>
-                                                                            <circle cx="25" cy="23" r="15" fill="rgba(0,0,0,0.15)" filter="blur(2px)" />
-                                                                            <circle cx="25" cy="23" r="15" fill="url(#gloveGrad)" filter="drop-shadow(0px 2px 3px rgba(0,0,0,0.2))" />
-                                                                            <path d="M 12,23 Q 6,26 8,30 Q 12,32 16,26 Z" fill="url(#gloveGrad)" />
-                                                                            <rect x="15" y="30" width="20" height="9" fill="#047857" rx="2" stroke="#10b981" strokeWidth="1" />
-                                                                        </svg>
-                                                                    </div>
-                                                                </>
-                                                            )}
-
-                                                            {selectedApparel.hands === 'boxing' && (
-                                                                <>
-                                                                    <div className="absolute left-[11%] top-[52%] w-[16%] h-[16%] z-15">
-                                                                        <svg viewBox="0 0 60 60" className="w-full h-full">
-                                                                            <defs>
-                                                                                <radialGradient id="boxingGloss" cx="35%" cy="35%" r="65%">
-                                                                                    <stop offset="0%" stopColor="#fca5a5" />
-                                                                                    <stop offset="40%" stopColor="#ef4444" />
-                                                                                    <stop offset="100%" stopColor="#991b1b" />
-                                                                                </radialGradient>
-                                                                            </defs>
-                                                                            <path d="M 12,28 C 12,14 44,14 44,28 C 44,42 28,48 18,44 Z" fill="rgba(0,0,0,0.15)" filter="blur(2px)" />
-                                                                            <path d="M 15,30 C 15,16 45,16 45,30 C 45,44 32,48 20,44 Z" fill="url(#boxingGloss)" filter="drop-shadow(0px 3px 4px rgba(0,0,0,0.25))" />
-                                                                            <path d="M 15,30 C 10,32 10,40 18,44 C 20,40 18,34 15,30 Z" fill="#b91c1c" />
-                                                                            <rect x="22" y="38" width="22" height="12" fill="#ffffff" rx="3" stroke="#d1d5db" strokeWidth="1" style={{ transform: 'rotate(-25deg)', transformOrigin: '33px 44px' }} />
-                                                                            <line x1="28" y1="41" x2="38" y2="44" stroke="#000000" strokeWidth="1.5" />
-                                                                            <line x1="29" y1="45" x2="39" y2="48" stroke="#000000" strokeWidth="1.5" />
-                                                                        </svg>
-                                                                    </div>
-                                                                    <div className="absolute left-[73%] top-[52%] w-[16%] h-[16%] z-15">
-                                                                        <svg viewBox="0 0 60 60" className="w-full h-full" style={{ transform: 'scaleX(-1)' }}>
-                                                                            <defs>
-                                                                                <radialGradient id="boxingGloss" cx="35%" cy="35%" r="65%">
-                                                                                    <stop offset="0%" stopColor="#fca5a5" />
-                                                                                    <stop offset="40%" stopColor="#ef4444" />
-                                                                                    <stop offset="100%" stopColor="#991b1b" />
-                                                                                </radialGradient>
-                                                                            </defs>
-                                                                            <path d="M 12,28 C 12,14 44,14 44,28 C 44,42 28,48 18,44 Z" fill="rgba(0,0,0,0.15)" filter="blur(2px)" />
-                                                                            <path d="M 15,30 C 15,16 45,16 45,30 C 45,44 32,48 20,44 Z" fill="url(#boxingGloss)" filter="drop-shadow(0px 3px 4px rgba(0,0,0,0.25))" />
-                                                                            <path d="M 15,30 C 10,32 10,40 18,44 C 20,40 18,34 15,30 Z" fill="#b91c1c" />
-                                                                            <rect x="22" y="38" width="22" height="12" fill="#ffffff" rx="3" stroke="#d1d5db" strokeWidth="1" style={{ transform: 'rotate(-25deg)', transformOrigin: '33px 44px' }} />
-                                                                            <line x1="28" y1="41" x2="38" y2="44" stroke="#000000" strokeWidth="1.5" />
-                                                                            <line x1="29" y1="45" x2="39" y2="48" stroke="#000000" strokeWidth="1.5" />
-                                                                        </svg>
-                                                                    </div>
-                                                                </>
-                                                            )}
-
-                                                            {/* Feet Layer */}
-                                                            {selectedApparel.feet === 'sneakers' && (
-                                                                <>
-                                                                    <div className="absolute left-[24%] top-[79%] w-[24%] h-[12%] z-15">
-                                                                        <svg viewBox="0 0 60 40" className="w-full h-full">
-                                                                            <defs>
-                                                                                <linearGradient id="sneakerGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                                                                                    <stop offset="0%" stopColor="#fde047" />
-                                                                                    <stop offset="100%" stopColor="#eab308" />
-                                                                                </linearGradient>
-                                                                                <radialGradient id="contactShadow" cx="50%" cy="50%" r="50%">
-                                                                                    <stop offset="0%" stopColor="#000000" stopOpacity="0.4" />
-                                                                                    <stop offset="100%" stopColor="#000000" stopOpacity="0" />
-                                                                                </radialGradient>
-                                                                            </defs>
-                                                                            <ellipse cx="28" cy="37" rx="26" ry="3" fill="url(#contactShadow)" />
-                                                                            <path d="M 5,28 L 12,12 L 40,15 L 55,28 L 52,34 L 5,34 Z" fill="url(#sneakerGrad)" filter="drop-shadow(0px 2px 3px rgba(0,0,0,0.15))" />
-                                                                            <path d="M 52,26 C 54,28 55,30 52,34 L 45,34 C 47,30 47,27 45,26 Z" fill="#ffffff" stroke="#d1d5db" strokeWidth="0.5" />
-                                                                            <path d="M 3,33 Q 30,35 57,33 L 55,36 Q 30,38 5,36 Z" fill="#ffffff" filter="drop-shadow(0px 1px 2px rgba(0,0,0,0.1))" />
-                                                                            <circle cx="20" cy="16" r="1.5" fill="#ffffff" />
-                                                                            <circle cx="26" cy="18" r="1.5" fill="#ffffff" />
-                                                                            <circle cx="32" cy="20" r="1.5" fill="#ffffff" />
-                                                                            <line x1="18" y1="16" x2="28" y2="18" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" />
-                                                                            <line x1="24" y1="18" x2="34" y2="20" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" />
-                                                                        </svg>
-                                                                    </div>
-                                                                    <div className="absolute left-[52%] top-[79%] w-[24%] h-[12%] z-15">
-                                                                        <svg viewBox="0 0 60 40" className="w-full h-full" style={{ transform: 'scaleX(-1)' }}>
-                                                                            <defs>
-                                                                                <linearGradient id="sneakerGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                                                                                    <stop offset="0%" stopColor="#fde047" />
-                                                                                    <stop offset="100%" stopColor="#eab308" />
-                                                                                </linearGradient>
-                                                                                <radialGradient id="contactShadow" cx="50%" cy="50%" r="50%">
-                                                                                    <stop offset="0%" stopColor="#000000" stopOpacity="0.4" />
-                                                                                    <stop offset="100%" stopColor="#000000" stopOpacity="0" />
-                                                                                </radialGradient>
-                                                                            </defs>
-                                                                            <ellipse cx="28" cy="37" rx="26" ry="3" fill="url(#contactShadow)" />
-                                                                            <path d="M 5,28 L 12,12 L 40,15 L 55,28 L 52,34 L 5,34 Z" fill="url(#sneakerGrad)" filter="drop-shadow(0px 2px 3px rgba(0,0,0,0.15))" />
-                                                                            <path d="M 52,26 C 54,28 55,30 52,34 L 45,34 C 47,30 47,27 45,26 Z" fill="#ffffff" stroke="#d1d5db" strokeWidth="0.5" />
-                                                                            <path d="M 3,33 Q 30,35 57,33 L 55,36 Q 30,38 5,36 Z" fill="#ffffff" filter="drop-shadow(0px 1px 2px rgba(0,0,0,0.1))" />
-                                                                            <circle cx="20" cy="16" r="1.5" fill="#ffffff" />
-                                                                            <circle cx="26" cy="18" r="1.5" fill="#ffffff" />
-                                                                            <circle cx="32" cy="20" r="1.5" fill="#ffffff" />
-                                                                            <line x1="18" y1="16" x2="28" y2="18" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" />
-                                                                            <line x1="24" y1="18" x2="34" y2="20" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" />
-                                                                        </svg>
-                                                                    </div>
-                                                                </>
-                                                            )}
-
-                                                            {selectedApparel.feet === 'boots' && (
-                                                                <>
-                                                                    <div className="absolute left-[24%] top-[78%] w-[24%] h-[13%] z-15">
-                                                                        <svg viewBox="0 0 60 40" className="w-full h-full">
-                                                                            <defs>
-                                                                                <linearGradient id="bootGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                                                                                    <stop offset="0%" stopColor="#d97706" />
-                                                                                    <stop offset="100%" stopColor="#b45309" />
-                                                                                </linearGradient>
-                                                                                <radialGradient id="bootContactShadow" cx="50%" cy="50%" r="50%">
-                                                                                    <stop offset="0%" stopColor="#000000" stopOpacity="0.45" />
-                                                                                    <stop offset="100%" stopColor="#000000" stopOpacity="0" />
-                                                                                </radialGradient>
-                                                                            </defs>
-                                                                            <ellipse cx="28" cy="37" rx="26" ry="3.5" fill="url(#bootContactShadow)" />
-                                                                            <ellipse cx="27" cy="10" rx="10" ry="4" fill="#451a03" />
-                                                                            <path d="M 12,28 L 17,9 L 37,12 L 44,28 Z" fill="url(#bootGrad)" filter="drop-shadow(0px 2px 4px rgba(0,0,0,0.2))" />
-                                                                            <path d="M 10,25 Q 32,27 55,25 L 52,34 Q 32,36 5,34 Z" fill="#78350f" filter="drop-shadow(0px 2px 2px rgba(0,0,0,0.15))" />
-                                                                            <path d="M 3,33 Q 30,35 55,33 L 53,36 Q 30,38 5,36 Z" fill="#451a03" />
-                                                                            <path d="M 19,15 Q 26,17 32,18" fill="none" stroke="#f59e0b" strokeWidth="1" strokeDasharray="2,2" opacity="0.8" />
-                                                                        </svg>
-                                                                    </div>
-                                                                    <div className="absolute left-[52%] top-[78%] w-[24%] h-[13%] z-15">
-                                                                        <svg viewBox="0 0 60 40" className="w-full h-full" style={{ transform: 'scaleX(-1)' }}>
-                                                                            <defs>
-                                                                                <linearGradient id="bootGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                                                                                    <stop offset="0%" stopColor="#d97706" />
-                                                                                    <stop offset="100%" stopColor="#b45309" />
-                                                                                </linearGradient>
-                                                                                <radialGradient id="bootContactShadow" cx="50%" cy="50%" r="50%">
-                                                                                    <stop offset="0%" stopColor="#000000" stopOpacity="0.45" />
-                                                                                    <stop offset="100%" stopColor="#000000" stopOpacity="0" />
-                                                                                </radialGradient>
-                                                                            </defs>
-                                                                            <ellipse cx="28" cy="37" rx="26" ry="3.5" fill="url(#bootContactShadow)" />
-                                                                            <ellipse cx="27" cy="10" rx="10" ry="4" fill="#451a03" />
-                                                                            <path d="M 12,28 L 17,9 L 37,12 L 44,28 Z" fill="url(#bootGrad)" filter="drop-shadow(0px 2px 4px rgba(0,0,0,0.2))" />
-                                                                            <path d="M 10,25 Q 32,27 55,25 L 52,34 Q 32,36 5,34 Z" fill="#78350f" filter="drop-shadow(0px 2px 2px rgba(0,0,0,0.15))" />
-                                                                            <path d="M 3,33 Q 30,35 55,33 L 53,36 Q 30,38 5,36 Z" fill="#451a03" />
-                                                                            <path d="M 19,15 Q 26,17 32,18" fill="none" stroke="#f59e0b" strokeWidth="1" strokeDasharray="2,2" opacity="0.8" />
-                                                                        </svg>
-                                                                    </div>
-                                                                </>
-                                                            )}
+                                                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-black/55 backdrop-blur-md px-2 py-1.5 rounded-xl border border-white/10 shadow-xl transition-all duration-300">
+                                                            {[
+                                                                { id: 'styling', label: 'Süsle', icon: '👕' },
+                                                                { id: 'comb', label: 'Tara', icon: '🪮' },
+                                                                { id: 'scissors', label: 'Kes', icon: '✂️' },
+                                                                { id: 'grow', label: 'Uzat', icon: '🧪' },
+                                                                { id: 'walk', label: 'Yürüt', icon: '🏃‍♂️' }
+                                                            ].map((tool) => (
+                                                                <button
+                                                                    key={tool.id}
+                                                                    onClick={() => {
+                                                                        setActiveTool(tool.id as any);
+                                                                        if (tool.id === 'walk') {
+                                                                            triggerSpeechBubble("Yürüyüşe çıkalım mı? 🏃‍♂️💨");
+                                                                        } else if (tool.id === 'comb') {
+                                                                            triggerSpeechBubble("Tüylerimi tarayalım! 🪮✨");
+                                                                        } else if (tool.id === 'scissors') {
+                                                                            triggerSpeechBubble("Biraz kısaltalım mı? ✂️🦁");
+                                                                        } else if (tool.id === 'grow') {
+                                                                            triggerSpeechBubble("İksirle tüylerimi uzatalım! 🧪🌟");
+                                                                        } else {
+                                                                            triggerSpeechBubble("Beni süsle! 👕👒");
+                                                                        }
+                                                                    }}
+                                                                    className={cn(
+                                                                        "flex items-center gap-1 px-2 py-1 rounded-lg text-[8px] font-black tracking-wide transition-all duration-200 active:scale-95 border cursor-pointer whitespace-nowrap",
+                                                                        activeTool === tool.id
+                                                                            ? "bg-purple-650 text-white border-purple-500 shadow-md shadow-purple-950/20"
+                                                                            : "bg-white/10 hover:bg-white/15 text-white/90 border-transparent hover:border-white/5"
+                                                                    )}
+                                                                >
+                                                                    <span>{tool.icon}</span>
+                                                                    <span>{tool.label}</span>
+                                                                </button>
+                                                            ))}
                                                         </div>
                                                     )}
 

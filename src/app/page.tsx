@@ -29,14 +29,16 @@ export default function Home() {
       const hasUsername = !!user.username && user.username !== 'moffi_user';
       
       if (!hasUsername) {
-         if (step !== 'setup') setStep('setup');
+         if (step !== 'setup') {
+           setTimeout(() => setStep('setup'), 0);
+         }
 
       } else {
          router.replace('/community');
       }
     } else if (step === 'loading') {
-      // Giriş yapmamış kullanıcıyı direkt Giriş/Kayıt (landing) ekranına gönder
-      setStep('landing');
+      // Giriş yapmamış kullanıcıyı direkt Kayıt (signup) ekranına gönder
+      setTimeout(() => setStep('signup'), 0);
     }
 
   }, [user, isLoading, router, step]);
@@ -44,10 +46,10 @@ export default function Home() {
   const handleSplashComplete = () => setStep('onboarding');
   const handleOnboardingComplete = () => {
     localStorage.setItem('moffipet_onboarding_seen', 'true');
-    setStep('landing');
+    setStep('setup');
   };
   const handleLoginComplete = () => router.replace('/community');
-  const handleSignupComplete = () => setStep('setup');
+  const handleSignupComplete = () => setStep('onboarding');
   const handleSetupComplete = () => router.replace('/community');
 
   if (step === 'loading') {
