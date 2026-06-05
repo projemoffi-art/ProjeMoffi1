@@ -3,39 +3,22 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { SplashScreen } from "@/components/auth/SplashScreen";
-import { Onboarding } from "@/components/auth/Onboarding";
-import { AuthLanding, LoginForm, SignupForm, ResetForm, OTPForm } from "@/components/auth/AuthForms";
-import { SetupWizard } from "@/components/auth/SetupWizard";
+import { LoginForm, SignupForm, ResetForm } from "@/components/auth/AuthForms";
 import { motion, AnimatePresence } from "framer-motion";
 
-type FlowStep = 'loading' | 'splash' | 'onboarding' | 'landing' | 'login' | 'signup' | 'reset' | 'setup' | 'otp';
+type FlowStep = 'loading' | 'login' | 'signup' | 'reset';
 
 export default function Home() {
   const router = useRouter();
   const { user, isLoading } = useAuth();
   const [step, setStep] = useState<FlowStep>('loading');
-  const [authEmail, setAuthEmail] = useState('');
 
   // Session check — skip auth flow if already logged in
   useEffect(() => {
     if (isLoading) return;
 
-    // Eğer şu an kayıt doğrulama (otp) veya kurulum (setup) aşamasındaysak, 
-    // kullanıcı giriş yapmış olsa bile otomatik olarak community sayfasına yönlendirme yapma.
-    if (step === 'otp' || step === 'setup') return;
-
     if (user) {
-      const hasUsername = !!user.username && user.username !== 'moffi_user';
-      
-      if (!hasUsername) {
-         if (step !== 'setup') {
-           setTimeout(() => setStep('setup'), 0);
-         }
-
-      } else {
-         router.replace('/community');
-      }
+      router.replace('/community');
     } else if (step === 'loading') {
       // Giriş yapmamış kullanıcıyı direkt Kayıt (signup) ekranına gönder
       setTimeout(() => setStep('signup'), 0);
@@ -43,14 +26,8 @@ export default function Home() {
 
   }, [user, isLoading, router, step]);
 
-  const handleSplashComplete = () => setStep('onboarding');
-  const handleOnboardingComplete = () => {
-    localStorage.setItem('moffipet_onboarding_seen', 'true');
-    setStep('setup');
-  };
   const handleLoginComplete = () => router.replace('/community');
-  const handleSignupComplete = () => setStep('onboarding');
-  const handleSetupComplete = () => router.replace('/community');
+  const handleSignupComplete = () => router.replace('/community');
 
   if (step === 'loading') {
     return (
@@ -100,22 +77,10 @@ export default function Home() {
                 transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                 className="h-full w-full"
             >
-                {step === 'splash' && <SplashScreen onComplete={handleSplashComplete} />}
-
-                {step === 'onboarding' && <Onboarding onComplete={handleOnboardingComplete} />}
-
                 {/* Auth Stack */}
-                {step === 'landing' && <AuthLanding setView={(v) => setStep(v as FlowStep)} />}
                 {step === 'login' && <LoginForm setView={(v) => setStep(v as FlowStep)} onComplete={handleLoginComplete} />}
-                {step === 'signup' && <SignupForm setView={(v) => {
-                    if (v === 'otp') setStep('otp');
-                    else setStep(v as FlowStep);
-                }} onComplete={handleSignupComplete} setEmail={setAuthEmail} />}
-                {step === 'otp' && <OTPForm setView={(v) => setStep(v as FlowStep)} onComplete={handleSignupComplete} email={authEmail} />}
+                {step === 'signup' && <SignupForm setView={(v) => setStep(v as FlowStep)} onComplete={handleSignupComplete} />}
                 {step === 'reset' && <ResetForm setView={(v) => setStep(v as FlowStep)} />}
-
-                {/* Setup Stack */}
-                {step === 'setup' && <SetupWizard onComplete={handleSetupComplete} />}
             </motion.div>
         </AnimatePresence>
       </div>
