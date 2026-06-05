@@ -185,7 +185,7 @@ export function AuthLanding({ setView }: { setView: (v: AuthView) => void }) {
 export function LoginForm({ setView, onComplete }: { setView: (v: AuthView) => void, onComplete: () => void }) {
     const { t } = useTranslation();
     const [showPassword, setShowPassword] = useState(false);
-    const { login } = useAuth();
+    const { login, signInWithGoogle, signInWithApple } = useAuth();
     const [formData, setFormData] = useState({ email: '', password: '' });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -286,6 +286,31 @@ export function LoginForm({ setView, onComplete }: { setView: (v: AuthView) => v
                 >
                     {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Sisteme Bağlan'}
                 </button>
+
+                <div className="relative flex py-2 items-center">
+                    <div className="flex-grow border-t border-white/10"></div>
+                    <span className="flex-shrink mx-4 text-gray-600 text-[9px] font-black uppercase tracking-widest">veya</span>
+                    <div className="flex-grow border-t border-white/10"></div>
+                </div>
+
+                <div className="flex gap-3">
+                    <button 
+                        type="button"
+                        onClick={() => signInWithGoogle()}
+                        className="flex-1 py-5 bg-white/5 border border-card-border rounded-3xl flex items-center justify-center gap-3 font-bold text-white hover:bg-white/10 transition-all active:scale-95"
+                    >
+                        <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
+                        <span className="text-[10px] uppercase tracking-widest font-black">{t('auth.landing.google')}</span>
+                    </button>
+                    <button 
+                        type="button"
+                        onClick={() => signInWithApple()}
+                        className="flex-1 py-5 bg-white/5 border border-card-border rounded-3xl flex items-center justify-center gap-3 font-bold text-white hover:bg-white/10 transition-all active:scale-95"
+                    >
+                        <Apple className="w-5 h-5" />
+                        <span className="text-[10px] uppercase tracking-widest font-black">{t('auth.landing.apple')}</span>
+                    </button>
+                </div>
             </form>
 
             <div className="mt-auto text-center pt-8">
@@ -301,7 +326,7 @@ export function LoginForm({ setView, onComplete }: { setView: (v: AuthView) => v
 export function SignupForm({ setView, onComplete, setEmail }: { setView: (v: AuthView) => void, onComplete: () => void, setEmail?: (email: string) => void }) {
     const { t } = useTranslation();
     const [showPassword, setShowPassword] = useState(false);
-    const { signup } = useAuth();
+    const { signup, signInWithGoogle, signInWithApple } = useAuth();
     const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -516,6 +541,31 @@ export function SignupForm({ setView, onComplete, setEmail }: { setView: (v: Aut
                 >
                     {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : t('auth.signup.submit')}
                 </button>
+
+                <div className="relative flex py-2 items-center">
+                    <div className="flex-grow border-t border-white/10"></div>
+                    <span className="flex-shrink mx-4 text-gray-600 text-[9px] font-black uppercase tracking-widest">veya</span>
+                    <div className="flex-grow border-t border-white/10"></div>
+                </div>
+
+                <div className="flex gap-3">
+                    <button 
+                        type="button"
+                        onClick={() => signInWithGoogle()}
+                        className="flex-1 py-5 bg-white/5 border border-card-border rounded-3xl flex items-center justify-center gap-3 font-bold text-white hover:bg-white/10 transition-all active:scale-95"
+                    >
+                        <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
+                        <span className="text-[10px] uppercase tracking-widest font-black">{t('auth.landing.google')}</span>
+                    </button>
+                    <button 
+                        type="button"
+                        onClick={() => signInWithApple()}
+                        className="flex-1 py-5 bg-white/5 border border-card-border rounded-3xl flex items-center justify-center gap-3 font-bold text-white hover:bg-white/10 transition-all active:scale-95"
+                    >
+                        <Apple className="w-5 h-5" />
+                        <span className="text-[10px] uppercase tracking-widest font-black">{t('auth.landing.apple')}</span>
+                    </button>
+                </div>
 
                 <div className="mt-auto pt-10 text-center">
                     <div className="mt-8">
