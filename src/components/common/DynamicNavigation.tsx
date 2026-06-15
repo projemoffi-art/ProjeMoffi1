@@ -176,7 +176,16 @@ export function DynamicNavigation() {
 
             const profileViews = ['wallet', 'passport', 'family', 'orders', 'appointments', 'routes', 'bookmarks', 'identity'];
 
-            if (id === 'feed' || id === 'radar') {
+            if (id === 'carehub' || id === 'nutrition') {
+                if (pathname !== '/community') {
+                    router.push('/community');
+                    setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: id === 'nutrition' ? 'nutrition' : 'health' } }));
+                    }, 500);
+                } else {
+                    window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: id === 'nutrition' ? 'nutrition' : 'health' } }));
+                }
+            } else if (id === 'feed' || id === 'radar') {
                 router.push(`/topluluk?tab=${id}`);
             } else if (id === 'profile') {
                 if (user?.id) router.push(`/profile/${user.id}`);

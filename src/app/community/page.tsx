@@ -7,7 +7,7 @@ import { usePet } from '@/context/PetContext';
 import { useQuestEngine } from '@/context/QuestEngineContext';
 import { PetSettingsModal } from '@/components/profile/PetSettingsModal';
 import { AddPetModal } from '@/components/community/modals/AddPetModal';
-import { DailyGoalsModal } from '@/components/community/modals/DailyGoalsModal';
+import { CareHubModal } from '@/components/community/modals/CareHubModal';
 import { apiService } from '@/services/apiService';
 import { 
     Bell, 
@@ -434,7 +434,8 @@ export default function LegendaryLightDashboard() {
 
 
     const [toastMsg, setToastMsg] = useState<string | null>(null);
-    const [isDailyGoalsOpen, setIsDailyGoalsOpen] = useState(false);
+    const [isCareHubOpen, setIsCareHubOpen] = useState(false);
+    const [activeCareHubTab, setActiveCareHubTab] = useState<'nutrition' | 'health' | 'vet'>('nutrition');
     const [walletBalance, setWalletBalance] = useState(0);
     const [transactions, setTransactions] = useState<any[]>([]);
     const [vaccines, setVaccines] = useState<any[]>([]);
@@ -445,9 +446,16 @@ export default function LegendaryLightDashboard() {
         const handleGoalsUpdate = () => {
             setGoalsTrigger(prev => prev + 1);
         };
+        const handleOpenCareHub = (e: any) => {
+            const tab = e.detail?.tab || 'nutrition';
+            setActiveCareHubTab(tab);
+            setIsCareHubOpen(true);
+        };
         window.addEventListener('moffi-daily-goals-update', handleGoalsUpdate);
+        window.addEventListener('open-care-hub', handleOpenCareHub);
         return () => {
             window.removeEventListener('moffi-daily-goals-update', handleGoalsUpdate);
+            window.removeEventListener('open-care-hub', handleOpenCareHub);
         };
     }, []);
 
@@ -1706,7 +1714,7 @@ export default function LegendaryLightDashboard() {
 
                     {/* Integrated Rings & Quick Stats */}
                     <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-100">
-                        <div onClick={() => setIsDailyGoalsOpen(true)} className="flex items-center gap-3 cursor-pointer hover:opacity-85 transition-opacity duration-200">
+                        <div onClick={() => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'nutrition' } }))} className="flex items-center gap-3 cursor-pointer hover:opacity-85 transition-opacity duration-200">
                             <div className="relative w-12 h-12 flex items-center justify-center">
                                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                                     <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#F0FDF4" strokeWidth="3" />
@@ -2048,6 +2056,7 @@ export default function LegendaryLightDashboard() {
                             initial={{ opacity: 0, x: 25 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.2, duration: 0.5 }}
+                            onClick={() => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'health' } }))}
                             className="w-[160px] h-[140px] shrink-0 snap-start bg-white shadow-[0_4px_12px_rgba(0,0,0,0.015),0_1px_2px_rgba(0,0,0,0.01)] border border-gray-100/80 rounded-[22px] p-4 flex flex-col justify-between cursor-pointer transition-all duration-300 hover:shadow-[0_8px_20px_rgba(0,0,0,0.03)] hover:scale-[1.02]"
                         >
                             <div className="flex justify-between items-start">
@@ -2132,7 +2141,7 @@ export default function LegendaryLightDashboard() {
                         <QuickAccessBtn icon={Flame} title="Eşleştir" subtitle={`${pet.name} için Flört Bul`} color="text-rose-500" delay={0.3} onClick={() => setExpandedPanel('match')} />
                         <QuickAccessBtn icon={Activity} title="Veteriner" subtitle="Sağlık ve Aşılama" color="text-emerald-600" delay={0.4} onClick={() => router.push('/vet')} />
                         <QuickAccessBtn icon={ShoppingBag} title="Market" subtitle="Mama ve Ekipman" color="text-amber-500" delay={0.5} onClick={() => router.push('/petshop')} />
-                        <QuickAccessBtn icon={Scissors} title="Bakım" subtitle="Tıraş ve Pet Kuaför" color="text-teal-600" delay={0.6} />
+                        <QuickAccessBtn icon={Scissors} title="Bakım Merkezi" subtitle="Mama, Su ve Sağlık Hub" color="text-teal-600" delay={0.6} onClick={() => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'nutrition' } }))} />
                         <QuickAccessBtn icon={HeartHandshake} title="Sahiplendirme" subtitle="Ömürlük Yuva Bul" color="text-pink-500" delay={0.7} onClick={() => router.push('/topluluk?tab=radar&mode=adopt')} />
                         <QuickAccessBtn icon={Sparkles} title="AI Asistan" subtitle="Veteriner Destek" color="text-purple-500" delay={0.8} />
                     </div>
@@ -4911,9 +4920,10 @@ export default function LegendaryLightDashboard() {
                 setNewPetFoodTarget={setNewPetFoodTarget}
             />
 
-            <DailyGoalsModal 
-                isOpen={isDailyGoalsOpen}
-                onClose={() => setIsDailyGoalsOpen(false)}
+            <CareHubModal 
+                isOpen={isCareHubOpen}
+                onClose={() => setIsCareHubOpen(false)}
+                defaultTab={activeCareHubTab}
                 petName={activePetObj?.name || 'Petin'}
                 activityPercent={activityPercent}
                 activityCurrent={walkedDistanceToday}
@@ -4924,7 +4934,6 @@ export default function LegendaryLightDashboard() {
                 foodPercent={foodPercent}
                 foodCurrent={foodCurrent}
                 foodTarget={foodTarget}
-                onNavigateToFood={() => router.push('/food')}
             />
 
             <style>{`
