@@ -191,23 +191,7 @@ export default function VetPage() {
                     </div>
                 )}
 
-                {/* Primary Actions Grid: SOS and 7/24 Vet-line */}
-                {/* Vet-Line Video Support Button */}
-                <button 
-                    onClick={() => alert("Canlı VetLine desteği başlatılıyor...")}
-                    className="w-full bg-[#121215] hover:bg-[#18181b] border border-[#27272a] p-4.5 rounded-2xl flex items-center justify-between transition-all group"
-                >
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 text-indigo-400">
-                            <PhoneCall className="w-4.5 h-4.5" />
-                        </div>
-                        <div className="text-left">
-                            <h3 className="text-xs font-black text-indigo-400 tracking-wider uppercase leading-none">Vet-Line 7/24 Canlı Hekim</h3>
-                            <p className="text-[9.5px] text-[#fafafa]/40 font-bold uppercase tracking-wider mt-1.5">Anında Görüntülü Canlı Veteriner Desteği</p>
-                        </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-[#fafafa]/40 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all" />
-                </button>
+
 
                 {/* Solid Map Box */}
                 <section className="relative w-full h-52 rounded-2xl overflow-hidden border border-[#27272a] shadow-xl bg-[#121215]">
@@ -511,6 +495,17 @@ export default function VetPage() {
                     onClose={() => setActiveNutritionModal(false)} 
                     petId={activePet?.id || ''} 
                 />
+
+                {/* Floating Vet-Line Support Button */}
+                <motion.button 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => alert("Canlı VetLine desteği başlatılıyor...")}
+                    className="fixed bottom-24 right-6 z-40 w-14 h-14 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-indigo-600/30 border border-indigo-400/20 active:scale-95 transition-all cursor-pointer"
+                    title="7/24 Canlı Veteriner Desteği"
+                >
+                    <PhoneCall className="w-5 h-5 animate-pulse" />
+                </motion.button>
             </AnimatePresence>
         </div>
     );
