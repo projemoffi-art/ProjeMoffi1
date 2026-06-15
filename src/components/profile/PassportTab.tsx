@@ -9,7 +9,8 @@ import {
     Fingerprint, Info, X, User, Phone,
     Stethoscope, Zap, Scissors, Barcode,
     Loader2, CheckCircle2, FileText, Share2,
-    Smartphone, Radio, AlertOctagon, ShieldAlert
+    Smartphone, Radio, AlertOctagon, ShieldAlert,
+    Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { QRCodeSVG } from "qrcode.react";
@@ -17,6 +18,7 @@ import { useVaccineSchedule } from "@/hooks/useVaccineSchedule";
 import { TagPairingModal } from "@/components/community/modals/TagPairingModal";
 import { usePet } from "@/context/PetContext";
 import { PetSwitcher } from "../common/PetSwitcher";
+import { PetSettingsModal } from "./PetSettingsModal";
 
 interface PassportTabProps {
     pet?: any;
@@ -26,7 +28,7 @@ interface PassportTabProps {
 }
 
 export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }: PassportTabProps) {
-    const { activePet, isLoading: isPetLoading, updatePet } = usePet();
+    const { activePet, isLoading: isPetLoading, updatePet, deletePet } = usePet();
     const currentPet = propPet || activePet;
     const { schedule, isLoading } = useVaccineSchedule(currentPet?.id || 'pet-1');
     const [isHovered, setIsHovered] = useState(false);
@@ -35,6 +37,7 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
     const [generationStep, setGenerationStep] = useState(0);
     const [showPreview, setShowPreview] = useState(false);
     const [isTagModalOpen, setIsTagModalOpen] = useState(false);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const cardRef = useRef<HTMLDivElement>(null);
 
     const handleGenerate = async () => {
@@ -56,12 +59,20 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
     // Robust Pet Data with Official Fields
     const petData = {
         ...((currentPet && typeof currentPet === 'object') ? currentPet : {}),
-        avatar: currentPet?.image || currentPet?.avatar, // Handle field naming diffs
+        avatar: currentPet?.image || currentPet?.avatar,
+        microchip: currentPet?.microchip || currentPet?.microchip_id || currentPet?.microchip_no || "Kayıtlı Değil",
+        birthday: currentPet?.birthday || currentPet?.birth_date || currentPet?.sos_settings?.birthday || "Belirtilmedi",
+        // Yeni alanlar
+        type: currentPet?.type || "",
+        size: currentPet?.size || currentPet?.sos_settings?.size || "",
+        character: currentPet?.character || currentPet?.sos_settings?.character || "",
+        features: currentPet?.features || currentPet?.sos_settings?.features || "",
+        healthStatus: currentPet?.health || currentPet?.sos_settings?.health || "",
+        healthNotes: currentPet?.health_notes || "",
         owner: {
-            name: isPublic ? "Gizli Bilgi" : "Bilinmiyor",
-            phone: isPublic ? "+90 *** *** ** **" : "+90 --- --- -- --",
-            address: isPublic ? "Bölge Gizli (Sadece Sahibi Görebilir)" : "Adres Kaydı Bulunamadı",
-            ...(isPublic ? {} : (currentPet?.owner || {}))
+            name: isPublic ? "Gizli Bilgi" : (currentPet?.owner?.name || currentPet?.ownerName || currentPet?.sos_settings?.owner?.name || "Bilinmiyor"),
+            phone: isPublic ? "+90 *** *** ** **" : (currentPet?.owner?.phone || currentPet?.ownerPhone || currentPet?.sos_settings?.owner?.phone || "+90 --- --- -- --"),
+            address: isPublic ? "Bölge Gizli (Sadece Sahibi Görebilir)" : (currentPet?.owner?.address || currentPet?.ownerAddress || currentPet?.sos_settings?.owner?.address || "Adres Kayıtı Bulunamadı"),
         }
     };
 
@@ -121,7 +132,15 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 sm:mb-12 relative z-10 pt-4 sm:pt-6 gap-6 sm:gap-0">
                         <div className="flex gap-4 sm:gap-6 items-center">
                             <div className="relative shrink-0">
-                                <img src={petData.avatar} className="w-20 h-20 sm:w-28 sm:h-28 rounded-2xl sm:rounded-[2.5rem] object-cover border-4 border-[#0A0A0E] shadow-2xl relative z-10 scale-105 sm:scale-110 rotate-[-2deg]" />
+                                {petData.avatar ? (
+                                    <img src={petData.avatar} className="w-20 h-20 sm:w-28 sm:h-28 rounded-2xl sm:rounded-[2.5rem] object-cover border-4 border-[#0A0A0E] shadow-2xl relative z-10 scale-105 sm:scale-110 rotate-[-2deg]" />
+                                ) : (
+                                    <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-2xl sm:rounded-[2.5rem] bg-gradient-to-tr from-zinc-800 to-zinc-900 border-4 border-[#0A0A0E] shadow-2xl relative z-10 scale-105 sm:scale-110 rotate-[-2deg] flex items-center justify-center">
+                                        <span className="text-gray-400 text-3xl font-black select-none uppercase font-sans">
+                                            {petData.name ? petData.name[0] : '🐾'}
+                                        </span>
+                                    </div>
+                                )}
                                 <div className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 bg-emerald-500 text-white p-1.5 sm:p-2 rounded-xl sm:rounded-2xl border-2 sm:border-4 border-[#0A0A0E] z-20 shadow-xl">
                                     <ShieldCheck className="w-4 h-4 sm:w-6 sm:h-6" />
                                 </div>
@@ -143,12 +162,14 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                                 <div className="absolute inset-0 bg-cyan-500/10 opacity-0 group-hover/qr:opacity-100 transition-opacity" />
                                 <QRCodeSVG value={`moffi://id/${petData.id}`} size={64} fgColor="#000000" bgColor="#FFFFFF" level="H" />
                             </div>
-                            {onEdit && !isPublic && (
+                            {!isPublic && (
                                 <button 
-                                    onClick={onEdit}
-                                    className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-card-border text-white hover:bg-white/20 transition-all active:scale-90 shadow-xl ml-auto sm:ml-0"
+                                    onClick={() => onEdit ? onEdit(currentPet) : setIsSettingsOpen(true)}
+                                    className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-card-border text-white hover:bg-white/20 transition-all active:scale-90 shadow-xl ml-auto sm:ml-0 flex items-center justify-center gap-2"
+                                    title="Pasaport Ayarları"
                                 >
-                                    <Zap className="w-5 h-5 text-yellow-400" />
+                                    <Settings className="w-5 h-5 text-cyan-400 animate-[spin_20s_infinite_linear]" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest sm:hidden">Düzenle</span>
                                 </button>
                             )}
                         </div>
@@ -212,18 +233,41 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                 <div className="bg-white/5 border border-card-border rounded-[2.5rem] p-6 space-y-4">
                     <h4 className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em]">Biyometrik</h4>
                     <div className="space-y-3">
+                        {petData.type && (
+                            <div className="flex justify-between items-center text-xs">
+                                <span className="text-gray-500 font-bold uppercase tracking-tighter">Tür</span>
+                                <span className="text-white font-black text-base">{petData.type}</span>
+                            </div>
+                        )}
                         <div className="flex justify-between items-center text-xs">
                             <span className="text-gray-500 font-bold uppercase tracking-tighter">Cinsiyet</span>
                             <span className="text-white font-black">{petData.gender}</span>
                         </div>
+                        {petData.size && (
+                            <div className="flex justify-between items-center text-xs">
+                                <span className="text-gray-500 font-bold uppercase tracking-tighter">Boyut</span>
+                                <span className="text-white font-black">{petData.size}</span>
+                            </div>
+                        )}
                         <div className="flex justify-between items-center text-xs">
                             <span className="text-gray-500 font-bold uppercase tracking-tighter">Renk</span>
-                            <span className="text-white font-black">{petData.color}</span>
+                            <span className="text-white font-black">{petData.color || "-"}</span>
                         </div>
                         <div className="flex justify-between items-center text-xs">
                             <span className="text-gray-500 font-bold uppercase tracking-tighter">Kilo</span>
-                            <span className="text-white font-black">{petData.weight}</span>
+                            <span className="text-white font-black">{petData.weight || "-"}</span>
                         </div>
+                        {petData.healthStatus && (
+                            <div className="flex justify-between items-center text-xs">
+                                <span className="text-gray-500 font-bold uppercase tracking-tighter">Sağlık</span>
+                                <span className={`font-black text-xs px-2 py-0.5 rounded-full ${
+                                    petData.healthStatus === 'Mükemmel' ? 'text-emerald-400 bg-emerald-500/10' :
+                                    petData.healthStatus === 'Tedavide' ? 'text-red-400 bg-red-500/10' :
+                                    petData.healthStatus === 'Hassas' ? 'text-orange-400 bg-orange-500/10' :
+                                    'text-blue-400 bg-blue-500/10'
+                                }`}>{petData.healthStatus}</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -241,8 +285,32 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                         <p className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest mt-0.5">{petData.neutered ? 'EVET' : 'HAYIR'}</p>
                     </div>
                 </div>
-                
-                {/* Moffi Hybrid Tag Activation */}
+
+                {/* Karakter & Ayırt Edici - Gizli profillerde gösterme */}
+                {!isPublic && (petData.character || petData.features) && (
+                    <div className="col-span-2 bg-white/5 border border-card-border rounded-[2.5rem] p-6 space-y-4">
+                        <h4 className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em]">Karakter & Tanımlayıcı Bilgiler</h4>
+                        {petData.character && (
+                            <div>
+                                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-1">Karakter</p>
+                                <p className="text-sm font-bold text-white/80 leading-relaxed">{petData.character}</p>
+                            </div>
+                        )}
+                        {petData.features && (
+                            <div className="border-t border-card-border pt-4">
+                                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-1">Ayırt Edici Özellikler</p>
+                                <p className="text-sm font-bold text-orange-300/80 leading-relaxed">{petData.features}</p>
+                            </div>
+                        )}
+                        {petData.healthNotes && (
+                            <div className="border-t border-card-border pt-4">
+                                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-1">Sağlık Notları</p>
+                                <p className="text-sm font-bold text-rose-300/80 leading-relaxed">{petData.healthNotes}</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 <div 
                     onClick={() => setIsTagModalOpen(true)}
                     className="col-span-2 bg-[#12121A] border border-cyan-500/20 rounded-[2.5rem] p-6 sm:p-8 flex flex-col gap-4 sm:gap-6 relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all"
@@ -270,28 +338,58 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                 </div>
 
                 {/* Parazit Uygulamaları (Smart Widget) - Hide for Public */}
-                {!isPublic && (
-                    <div className="col-span-2 bg-[#12121A] border border-card-border rounded-[2.5rem] p-8 space-y-6">
-                        <div className="flex items-center justify-between">
-                            <h4 className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em]">Parazit Kontrol Takibi</h4>
-                            <Stethoscope className="w-4 h-4 text-emerald-400 opacity-40" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-white/5 p-5 rounded-3xl border border-card-border flex flex-col items-center gap-2 group">
-                                <Zap className="w-5 h-5 text-yellow-400 mb-1 group-hover:scale-110 transition-transform" />
-                                <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">İç Parazit</span>
-                                <span className="text-xs font-black text-white">12 Ara 2024</span>
-                                <div className="text-[8px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full mt-1">GÜNCEL</div>
+                {!isPublic && (() => {
+                    const formatParasiteDate = (raw?: string) => {
+                        if (!raw) return null;
+                        const d = new Date(raw);
+                        if (isNaN(d.getTime())) return raw; // zaten okunabilir format
+                        return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' });
+                    };
+                    const isOutdated = (raw?: string) => {
+                        if (!raw) return false;
+                        const d = new Date(raw);
+                        if (isNaN(d.getTime())) return false;
+                        return (Date.now() - d.getTime()) > 1000 * 60 * 60 * 24 * 180; // 6 ay
+                    };
+                    const internalDate = formatParasiteDate(petData.parasiteInternal || currentPet?.parasiteInternal || currentPet?.sos_settings?.parasiteInternal);
+                    const externalDate = formatParasiteDate(petData.parasiteExternal || currentPet?.parasiteExternal || currentPet?.sos_settings?.parasiteExternal);
+                    const internalOutdated = isOutdated(petData.parasiteInternal || currentPet?.parasiteInternal || currentPet?.sos_settings?.parasiteInternal);
+                    const externalOutdated = isOutdated(petData.parasiteExternal || currentPet?.parasiteExternal || currentPet?.sos_settings?.parasiteExternal);
+                    return (
+                        <div className="col-span-2 bg-[#12121A] border border-card-border rounded-[2.5rem] p-8 space-y-6">
+                            <div className="flex items-center justify-between">
+                                <h4 className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em]">Parazit Kontrol Takibi</h4>
+                                <Stethoscope className="w-4 h-4 text-emerald-400 opacity-40" />
                             </div>
-                            <div className="bg-white/5 p-5 rounded-3xl border border-card-border flex flex-col items-center gap-2 group">
-                                <Zap className="w-5 h-5 text-orange-400 mb-1 group-hover:scale-110 transition-transform" />
-                                <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">Dış Parazit</span>
-                                <span className="text-xs font-black text-white">15 Ara 2024</span>
-                                <div className="text-[8px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full mt-1">GÜNCEL</div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-white/5 p-5 rounded-3xl border border-card-border flex flex-col items-center gap-2 group">
+                                    <Zap className="w-5 h-5 text-yellow-400 mb-1 group-hover:scale-110 transition-transform" />
+                                    <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">İç Parazit</span>
+                                    <span className="text-xs font-black text-white">{internalDate || 'Kayıt Yok'}</span>
+                                    {internalDate ? (
+                                        <div className={`text-[8px] font-bold px-2 py-0.5 rounded-full mt-1 ${internalOutdated ? 'text-red-400 bg-red-500/10' : 'text-emerald-400 bg-emerald-500/10'}`}>
+                                            {internalOutdated ? 'SÜRE DOLMUŞ' : 'GÜNCEL'}
+                                        </div>
+                                    ) : (
+                                        <div className="text-[8px] font-bold text-gray-500 bg-white/5 px-2 py-0.5 rounded-full mt-1">GIRILMEDI</div>
+                                    )}
+                                </div>
+                                <div className="bg-white/5 p-5 rounded-3xl border border-card-border flex flex-col items-center gap-2 group">
+                                    <Zap className="w-5 h-5 text-orange-400 mb-1 group-hover:scale-110 transition-transform" />
+                                    <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">Dış Parazit</span>
+                                    <span className="text-xs font-black text-white">{externalDate || 'Kayıt Yok'}</span>
+                                    {externalDate ? (
+                                        <div className={`text-[8px] font-bold px-2 py-0.5 rounded-full mt-1 ${externalOutdated ? 'text-red-400 bg-red-500/10' : 'text-emerald-400 bg-emerald-500/10'}`}>
+                                            {externalOutdated ? 'SÜRE DOLMUŞ' : 'GÜNCEL'}
+                                        </div>
+                                    ) : (
+                                        <div className="text-[8px] font-bold text-gray-500 bg-white/5 px-2 py-0.5 rounded-full mt-1">GIRILMEDI</div>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    );
+                })()}
             </div>
 
 
@@ -473,7 +571,15 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
 
                             {/* Preview Content Area */}
                             <div className="flex gap-4 mb-6">
-                                <img src={petData.avatar} className="w-20 h-20 rounded-2xl object-cover grayscale-[0.5] contrast-125 shadow-lg" />
+                                {petData.avatar ? (
+                                    <img src={petData.avatar} className="w-20 h-20 rounded-2xl object-cover grayscale-[0.5] contrast-125 shadow-lg" />
+                                ) : (
+                                    <div className="w-20 h-20 rounded-2xl bg-gray-200 border border-card-border flex items-center justify-center shadow-lg">
+                                        <span className="text-gray-400 text-2xl font-black select-none uppercase font-sans">
+                                            {petData.name ? petData.name[0] : '🐾'}
+                                        </span>
+                                    </div>
+                                )}
                                 <div className="space-y-3 flex-1">
                                     <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                                         <div>
@@ -546,9 +652,21 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                 pet={{
                     id: petData.id,
                     name: petData.name,
-                    avatar: petData.avatar_url || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=800"
+                    avatar: petData.avatar || ""
                 }}
             />
+
+            {!isPublic && (
+                <PetSettingsModal
+                    isOpen={isSettingsOpen}
+                    onClose={() => setIsSettingsOpen(false)}
+                    pet={currentPet}
+                    onSave={(updatedFields) => {
+                        updatePet(currentPet.id, updatedFields);
+                    }}
+                    onDelete={deletePet}
+                />
+            )}
         </motion.div>
     );
 }

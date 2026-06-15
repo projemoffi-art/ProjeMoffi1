@@ -31,7 +31,7 @@ function getDistKm(lat1: number, lon1: number, lat2: number, lon2: number) {
 
 import { MOCK_MARKS } from "@/data/mockMarks";
 
-const LiveMap = dynamic(() => import('@/components/walk/GoogleLiveMap'), { ssr: false, loading: () => <div className="bg-[#1A1A1A] w-full h-full flex items-center justify-center text-white font-bold">Harita Yükleniyor...</div> });
+const LiveMap = dynamic(() => import('@/components/walk/LiveMap'), { ssr: false, loading: () => <div className="bg-[#1A1A1A] w-full h-full flex items-center justify-center text-white font-bold">Harita Yükleniyor...</div> });
 
 function TrackingContent() {
     const router = useRouter();
@@ -186,6 +186,38 @@ function TrackingContent() {
             >
                 <ChevronLeft className="w-6 h-6" />
             </button>
+
+            {/* Segmented Tab Switcher */}
+            <div className="absolute top-4 left-16 right-4 z-[60]">
+                <div className="bg-black/40 backdrop-blur-md p-1 rounded-2xl flex gap-1 border border-white/10 overflow-hidden">
+                    {(['controls', 'stats', 'map'] as const).map((tab) => {
+                        const label = {
+                            controls: 'Yürüyüş',
+                            stats: 'İstatistikler',
+                            map: 'Harita'
+                        }[tab];
+                        const isActive = tab === 'map';
+                        return (
+                            <button
+                                key={tab}
+                                onClick={() => {
+                                    if (tab === 'controls') {
+                                        router.push('/community?openWalk=true');
+                                    } else if (tab === 'stats') {
+                                        router.push('/walk');
+                                    }
+                                }}
+                                className={cn(
+                                    "flex-1 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-xl transition-all relative cursor-pointer border-0 z-10",
+                                    isActive ? "text-slate-800 bg-white shadow-sm" : "text-white/60 hover:text-white bg-transparent"
+                                )}
+                            >
+                                {label}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
 
             {/* TOP STATS (Premium Glass Overlay) */}
             <div className="absolute top-0 left-0 right-0 z-[50] p-5 pt-12 bg-gradient-to-b from-black/90 via-black/40 to-transparent pointer-events-none">
@@ -493,14 +525,21 @@ function TrackingContent() {
 
                         {/* Camera Viewfinder Borders & Background Pet Image */}
                         <div className="flex-1 border border-card-border rounded-[2.5rem] my-4 relative overflow-hidden flex items-center justify-center bg-zinc-950">
-                            <img
-                                src={activePet?.avatar || activePet?.image || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=600'}
-                                className={cn(
-                                    "absolute inset-0 w-full h-full object-cover transition-all duration-300", 
-                                    capturedPhoto ? "filter brightness-100 scale-100" : "filter brightness-90 scale-[1.02]"
-                                )}
-                                alt="Camera view"
-                            />
+                            {activePet?.avatar || activePet?.image ? (
+                                <img
+                                    src={activePet?.avatar || activePet?.image}
+                                    className={cn(
+                                        "absolute inset-0 w-full h-full object-cover transition-all duration-300", 
+                                        capturedPhoto ? "filter brightness-100 scale-100" : "filter brightness-90 scale-[1.02]"
+                                    )}
+                                    alt="Camera view"
+                                />
+                            ) : (
+                                <div className="absolute inset-0 w-full h-full bg-gradient-to-tr from-gray-850 to-gray-950 flex flex-col items-center justify-center gap-2">
+                                    <span className="text-gray-500 text-5xl select-none">🐾</span>
+                                    <span className="text-gray-400 text-xs font-black uppercase tracking-widest font-sans">{activePet?.name || 'Moffi'}</span>
+                                </div>
+                            )}
 
                             {!capturedPhoto && (
                                 <div className="absolute inset-0 pointer-events-none">

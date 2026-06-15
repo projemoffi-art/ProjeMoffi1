@@ -67,6 +67,21 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
     return R * c;
 }
 
+function safeParseDateStr(dateVal: any): string {
+    if (!dateVal) {
+        return new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    }
+    try {
+        const parsed = new Date(dateVal);
+        if (isNaN(parsed.getTime())) {
+            return new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+        }
+        return parsed.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+        return new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    }
+}
+
 export function ActivityProvider({ children }: { children: React.ReactNode }) {
     const { user } = useAuth();
     const { activePet } = usePet();
@@ -127,8 +142,8 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
         const durationMins = session.duration_minutes || session.durationMinutes || Math.round((session.time || 0) / 60) || 0;
         const pathCoords = session.route || session.path || [];
         const dateStr = session.ended_at || session.endTime
-            ? new Date(session.ended_at || session.endTime).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-            : new Date(session.started_at || session.startTime || Date.now()).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+            ? safeParseDateStr(session.ended_at || session.endTime)
+            : safeParseDateStr(session.started_at || session.startTime);
         
         return {
             id: session.id || String(Date.now()),
@@ -388,7 +403,12 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
                             return { ...prev, path: newPath, distance: newDistance, speed: currentSpeed };
                         });
                     },
-                    (err) => console.error("GPS Watch Position Error:", err),
+                    (err) => {
+                        console.error("GPS Watch Position Error:", err);
+                        import('@/lib/utils').then(({ showToast }) => {
+                            showToast("GPS Bağlantısı Sağlanamadı! Konum iznini veya HTTP bağlantı sınırlarını kontrol edin. Test için Simülasyon modunu açabilirsiniz.", "X", "text-red-500");
+                        });
+                    },
                     { enableHighAccuracy: true }
                 );
             }

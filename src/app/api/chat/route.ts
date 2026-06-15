@@ -35,7 +35,7 @@ export async function POST(req: Request) {
             try {
                 // FALLBACK ATTEMPT 1: Gemini Pro
                 const genResult = await generateText({
-                    model: google('gemini-pro') as any,
+                    model: google('gemini-2.5-flash-lite') as any,
                     prompt: 'Say "Hello"',
                 });
 
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
         }
 
         const result = streamText({
-            model: google('gemini-pro') as any,
+            model: google('gemini-2.5-flash-lite') as any,
             messages,
             system: systemPrompt,
             temperature: creativity,

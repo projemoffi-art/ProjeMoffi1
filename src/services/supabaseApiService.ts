@@ -65,8 +65,8 @@ export class SupabaseApiService implements IApiService {
             id: data.id,
             name: data.full_name || 'Moffi Kullanıcısı',
             username: data.username || data.full_name || 'moffi_user',
-            avatar: data.avatar_url || 'https://i.pravatar.cc/150?u=' + data.id,
-            cover_photo: data.cover_url || "https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=1200",
+            avatar: data.avatar_url || undefined,
+            cover_photo: data.aura_settings?.cover_photo || undefined,
             petName: data.pet_name,
             role: data.role || 'user',
             bio: data.bio,
@@ -98,10 +98,22 @@ export class SupabaseApiService implements IApiService {
             upsertPayload.full_name = updates.name || updates.username;
         }
         if (updates.username !== undefined) upsertPayload.username = updates.username;
-        if (updates.avatar !== undefined) upsertPayload.avatar_url = updates.avatar;
-        if (updates.petName !== undefined) upsertPayload.pet_name = updates.petName;
+        if (updates.avatar !== undefined) upsertPayload.avatar_url = updates.avatar ?? null;
+        if ((updates as any).cover_photo !== undefined) {
+            const { data: profileData } = await supabase
+                .from('profiles')
+                .select('aura_settings')
+                .eq('id', user.id)
+                .single();
+            
+            const currentAura = profileData?.aura_settings || {};
+            upsertPayload.aura_settings = {
+                ...currentAura,
+                cover_photo: (updates as any).cover_photo ?? null
+            };
+        }
+        if ((updates as any).petName !== undefined) upsertPayload.pet_name = (updates as any).petName;
         if (updates.bio !== undefined) upsertPayload.bio = updates.bio;
-        if ((updates as any).subscription_status !== undefined) upsertPayload.subscription_status = (updates as any).subscription_status;
 
         if (updates.default_allow_comments !== undefined) upsertPayload.default_allow_comments = updates.default_allow_comments;
         if (updates.default_comment_privacy !== undefined) upsertPayload.default_comment_privacy = updates.default_comment_privacy;
@@ -125,6 +137,7 @@ export class SupabaseApiService implements IApiService {
             id: data.id,
             name: data.full_name,
             avatar: data.avatar_url,
+            cover_photo: data.aura_settings?.cover_photo || undefined,
             petName: data.pet_name,
             bio: data.bio,
             default_allow_comments: data.default_allow_comments ?? true,
@@ -199,7 +212,7 @@ export class SupabaseApiService implements IApiService {
                     time: '2 saat önce',
                     isLiked: isLiked,
                     isSaved: false,
-                    category: p.category || 'all',
+                    category: (p as any).category || 'all',
                     allow_comments: true
                 };
             });
@@ -244,7 +257,7 @@ export class SupabaseApiService implements IApiService {
                 id: item.id,
                 user_id: item.user_id,
                 author: authorProfile?.full_name || authorProfile?.username || 'Moffi Kullanıcısı',
-                avatar: authorProfile?.avatar_url || 'https://i.pravatar.cc/150?u=' + item.user_id,
+                avatar: authorProfile?.avatar_url || undefined,
                 image: item.media_url,
                 media: item.media_url,
                 media_url: item.media_url,
@@ -838,23 +851,36 @@ export class SupabaseApiService implements IApiService {
             breed: item.breed,
             age: item.age,
             gender: item.gender,
-            image: item.avatar_url || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=400",
+            image: item.avatar_url || '',
             avatar: item.avatar_url,
             cover_photo: item.cover_url,
             is_neutered: item.is_neutered,
+            neutered: item.is_neutered, // Alias for UI compatibility
             size: item.size,
             microchip_id: item.microchip_no,
+            microchip: item.microchip_no, // Alias for UI compatibility
             health_notes: item.health_notes,
             personality: item.character,
             is_lost: item.is_lost,
             sos_settings: item.sos_settings,
+            // Birthday & color — direkt DB kolonu yoksa sos_settings'ten oku
+            birthday: item.birth_date || item.sos_settings?.birthday || '',
+            color: item.color || item.sos_settings?.color || '',
+            // Owner bilgileri — sos_settings.owner JSON'undan oku
+            owner: item.sos_settings?.owner || null,
+            ownerName: item.sos_settings?.owner?.name || '',
+            ownerPhone: item.sos_settings?.owner?.phone || '',
+            ownerAddress: item.sos_settings?.owner?.address || '',
+            // Parazit tarihleri — sos_settings'ten oku
+            parasiteInternal: item.sos_settings?.parasiteInternal || '',
+            parasiteExternal: item.sos_settings?.parasiteExternal || '',
             // Hub-preview dashboard alanları — önce direkt kolon, yoksa sos_settings'den oku
-            weight: item.weight || item.sos_settings?.weight || '',
+            weight: item.weight ? (String(item.weight).includes('kg') ? String(item.weight) : `${item.weight} kg`) : (item.sos_settings?.weight || ''),
             health: item.health || item.sos_settings?.health || '',
             streak: typeof item.streak === 'number' ? item.streak : (item.sos_settings?.streak ?? 0),
             activity_target: typeof item.activity_target === 'number' ? item.activity_target : (item.sos_settings?.activity_target ?? 70),
-            water_target: typeof item.water_target === 'number' ? item.water_target : (item.sos_settings?.water_target ?? 80),
-            food_target: typeof item.food_target === 'number' ? item.food_target : (item.sos_settings?.food_target ?? 60),
+            water_target: typeof item.water_target === 'number' ? item.water_target : (item.sos_settings?.water_target ?? 1200),
+            food_target: typeof item.food_target === 'number' ? item.food_target : (item.sos_settings?.food_target ?? 1600),
         })) as Pet[];
     }
 
@@ -891,6 +917,15 @@ export class SupabaseApiService implements IApiService {
         const user = await this.getSessionUser();
         if (!user) throw new Error("Giriş gerekli");
 
+        let numericWeight: number | null = null;
+        const rawWeight = pet.weight || (pet as any).sos_settings?.weight;
+        if (rawWeight) {
+            const match = String(rawWeight).match(/[\d.]+/);
+            if (match) {
+                numericWeight = parseFloat(match[0]);
+            }
+        }
+
         // Temel kolon seti — tüm pets tablolarında mevcut
         const basePayload: any = {
             owner_id: user.id,
@@ -905,7 +940,7 @@ export class SupabaseApiService implements IApiService {
             health_notes: (pet as any).health_notes,
             character: (pet as any).character || (pet as any).personality,
             microchip_no: (pet as any).microchip_id,
-            weight: pet.weight || (pet as any).sos_settings?.weight || '',
+            weight: numericWeight,
         };
 
         // sos_settings JSON kolonu varsa ekle — tüm izleme verileri burada
@@ -966,22 +1001,39 @@ export class SupabaseApiService implements IApiService {
 
 
     async updatePet(id: string, updates: Partial<Pet>): Promise<Pet> {
+        let numericWeight: number | null | undefined = undefined;
+        const rawWeight = updates.weight || updates.sos_settings?.weight;
+        if (rawWeight !== undefined) {
+            if (rawWeight === null || rawWeight === '') {
+                numericWeight = null;
+            } else {
+                const match = String(rawWeight).match(/[\d.]+/);
+                numericWeight = match ? parseFloat(match[0]) : null;
+            }
+        }
+
         const dbUpdates: any = {
             name: updates.name,
-            type: updates.type,
+            type: (updates as any).type,
             breed: updates.breed,
             age: updates.age,
             gender: updates.gender,
             avatar_url: updates.image || updates.avatar,
             cover_url: updates.cover_photo,
-            is_neutered: updates.is_neutered,
-            size: updates.size,
-            microchip_no: updates.microchip_id,
-            health_notes: updates.health_notes,
-            character: updates.personality,
+            // Key normalization: UI'dan her iki formda gelebilir
+            is_neutered: (updates as any).is_neutered ?? (updates as any).neutered,
+            size: (updates as any).size,
+            // Key normalization: microchip her iki formda gelebilir
+            microchip_no: (updates as any).microchip_id || (updates as any).microchip,
+            health_notes: (updates as any).health_notes || (updates as any).healthNotes,
+            character: (updates as any).character || (updates as any).personality,
             is_lost: updates.is_lost,
             sos_settings: updates.sos_settings,
-            weight: updates.weight || updates.sos_settings?.weight
+            weight: numericWeight,
+            // target alanları — camelCase formdan snake_case'e normalize et
+            activity_target: (updates as any).activity_target ?? (updates as any).activityTarget,
+            water_target: (updates as any).water_target ?? (updates as any).waterTarget,
+            food_target: (updates as any).food_target ?? (updates as any).foodTarget,
         };
 
         // Remove undefined keys
@@ -996,6 +1048,17 @@ export class SupabaseApiService implements IApiService {
 
         if (error) throw error;
         return updates as Pet; // For simplicity in UI update
+    }
+
+    async deletePet(id: string): Promise<void> {
+        const user = await this.getSessionUser();
+        if (!user) throw new Error("Giriş gerekli");
+        const { error } = await supabase
+            .from('pets')
+            .delete()
+            .eq('id', id)
+            .eq('owner_id', user.id);
+        if (error) throw error;
     }
 
     // --- TEMPORARY MOCK FALLBACKS (Until next phases) ---
@@ -1116,7 +1179,7 @@ export class SupabaseApiService implements IApiService {
     // --- MARKETPLACE & COMMERCE ---
     async getProducts(category?: ShopCategory): Promise<ShopProduct[]> {
         let query = supabase.from('products').select('*');
-        if (category && category !== 'Hepsi') {
+        if (category && (category as string) !== 'Hepsi') {
             query = query.eq('category', category.toLowerCase());
         }
 
@@ -1128,13 +1191,16 @@ export class SupabaseApiService implements IApiService {
             name: p.name,
             description: p.description,
             price: Number(p.price),
+            oldPrice: p.old_price ? Number(p.old_price) : undefined,
             image: p.image_url,
             category: p.category as ShopCategory,
             isPrimeOnly: p.is_prime_only,
             inStock: p.stock > 0,
             stockCount: p.stock,
             rating: Number(p.rating) || 4.5,
-            reviews: Number(p.review_count) || 0
+            reviews: Number(p.review_count) || 0,
+            isVetApproved: p.is_vet_approved || false,
+            tag: p.tag || undefined
         }));
     }
 
@@ -1223,7 +1289,19 @@ export class SupabaseApiService implements IApiService {
             return { product: product!, quantity: item.quantity };
         });
 
-        const totalAmount = cartWithProducts.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+        const saved = typeof window !== 'undefined' ? localStorage.getItem('moffi_product_subscriptions') : null;
+        let localIds: string[] = [];
+        if (saved) {
+            try { localIds = JSON.parse(saved); } catch (e) {}
+        }
+
+        const totalAmount = orderData.totalPrice !== undefined 
+            ? orderData.totalPrice 
+            : cartWithProducts.reduce((sum, item) => {
+                const isSubscribed = localIds.includes(item.product.id);
+                const price = isSubscribed ? item.product.price * 0.90 : item.product.price;
+                return sum + (price * item.quantity);
+            }, 0);
 
         // 1. Create Order
         const { data: order, error: orderErr } = await supabase
@@ -1240,12 +1318,16 @@ export class SupabaseApiService implements IApiService {
         if (orderErr) throw orderErr;
 
         // 2. Create Order Items
-        const orderItems = cartWithProducts.map(item => ({
-            order_id: order.id,
-            product_id: item.product.id,
-            quantity: item.quantity,
-            price_at_purchase: item.product.price
-        }));
+        const orderItems = cartWithProducts.map(item => {
+            const isSubscribed = localIds.includes(item.product.id);
+            const price = isSubscribed ? item.product.price * 0.90 : item.product.price;
+            return {
+                order_id: order.id,
+                product_id: item.product.id,
+                quantity: item.quantity,
+                price_at_purchase: price
+            };
+        });
 
         const { error: itemsErr } = await supabase.from('order_items').insert(orderItems);
         if (itemsErr) throw itemsErr;
@@ -1290,6 +1372,7 @@ export class SupabaseApiService implements IApiService {
             totalPrice: Number(o.total_amount),
             status: o.status,
             createdAt: o.created_at,
+            updatedAt: o.updated_at || o.created_at,
             shippingAddress: o.shipping_address,
             items: o.items.map((item: any) => ({
                 quantity: item.quantity,
@@ -1299,7 +1382,10 @@ export class SupabaseApiService implements IApiService {
                     price: Number(item.price_at_purchase),
                     image: item.product.image_url,
                     category: item.product.category,
-                    isPrimeOnly: item.product.is_prime_only
+                    isPrimeOnly: item.product.is_prime_only,
+                    inStock: true,
+                    rating: Number(item.product.rating) || 4.5,
+                    reviews: Number(item.product.review_count) || 0
                 }
             }))
         }));
@@ -1343,7 +1429,9 @@ export class SupabaseApiService implements IApiService {
             image: '',
             category: 'subscription' as ShopCategory,
             isPrimeOnly: true,
-            inStock: true
+            inStock: true,
+            rating: 5.0,
+            reviews: 0
         }));
     }
 
@@ -1867,13 +1955,38 @@ export class SupabaseApiService implements IApiService {
         const totalCalories = data.reduce((s, w) => s + (w.calories_burned || 0), 0);
         const totalSteps = data.reduce((s, w) => s + (w.steps || 0), 0);
 
+        // Calculate streak (consecutive days) from completed walk sessions
+        let currentStreak = 0;
+        let bestStreak = 0;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        for (let d = 0; d < 365; d++) {
+            const checkDate = new Date(today.getTime() - d * 86400000);
+            const year = checkDate.getFullYear();
+            const month = String(checkDate.getMonth() + 1).padStart(2, '0');
+            const day = String(checkDate.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
+
+            const hasWalk = data.some(w => w.ended_at && w.ended_at.startsWith(dateStr));
+
+            if (hasWalk) {
+                currentStreak++;
+                bestStreak = Math.max(bestStreak, currentStreak);
+            } else if (d > 0) {
+                break; // Streak broken
+            }
+        }
+
         return {
             totalWalks: data.length,
             totalDistanceKm: Math.round(totalDistance / 100) / 10,
             totalDurationMinutes: Math.round(totalDuration / 60),
             totalCalories: Math.round(totalCalories),
             totalSteps,
-            avgDistanceKm: data.length ? Math.round(totalDistance / data.length / 100) / 10 : 0
+            avgDistanceKm: data.length ? Math.round(totalDistance / data.length / 100) / 10 : 0,
+            currentStreak,
+            bestStreak
         };
     }
 
@@ -2230,6 +2343,146 @@ export class SupabaseApiService implements IApiService {
     }
     async loadData<T>(key: string): Promise<T | null> {
         return this.mockApi.loadData<T>(key);
+    }
+
+    async addProduct(product: Partial<ShopProduct>): Promise<ShopProduct> {
+        const { data, error } = await supabase
+            .from('products')
+            .insert({
+                name: product.name,
+                description: product.description || '',
+                price: product.price,
+                old_price: product.oldPrice || null,
+                image_url: product.image || '🦴',
+                category: product.category || 'food',
+                is_prime_only: product.isPrimeOnly || false,
+                stock: product.stockCount || 10,
+                is_vet_approved: product.isVetApproved || false,
+                tag: product.tag || null
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        
+        return {
+            id: data.id,
+            name: data.name,
+            description: data.description,
+            price: Number(data.price),
+            oldPrice: data.old_price ? Number(data.old_price) : undefined,
+            image: data.image_url,
+            category: data.category as ShopCategory,
+            isPrimeOnly: data.is_prime_only,
+            inStock: data.stock > 0,
+            stockCount: data.stock,
+            rating: Number(data.rating) || 5.0,
+            reviews: Number(data.review_count) || 0,
+            isVetApproved: data.is_vet_approved || false,
+            tag: data.tag || undefined
+        };
+    }
+
+    async updateProduct(id: string, product: Partial<ShopProduct>): Promise<ShopProduct> {
+        const updatePayload: any = {};
+        if (product.name !== undefined) updatePayload.name = product.name;
+        if (product.description !== undefined) updatePayload.description = product.description;
+        if (product.price !== undefined) updatePayload.price = product.price;
+        if (product.oldPrice !== undefined) updatePayload.old_price = product.oldPrice;
+        if (product.image !== undefined) updatePayload.image_url = product.image;
+        if (product.category !== undefined) updatePayload.category = product.category;
+        if (product.isPrimeOnly !== undefined) updatePayload.is_prime_only = product.isPrimeOnly;
+        if (product.stockCount !== undefined) updatePayload.stock = product.stockCount;
+        if (product.isVetApproved !== undefined) updatePayload.is_vet_approved = product.isVetApproved;
+        if (product.tag !== undefined) updatePayload.tag = product.tag;
+
+        const { data, error } = await supabase
+            .from('products')
+            .update(updatePayload)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        return {
+            id: data.id,
+            name: data.name,
+            description: data.description,
+            price: Number(data.price),
+            oldPrice: data.old_price ? Number(data.old_price) : undefined,
+            image: data.image_url,
+            category: data.category as ShopCategory,
+            isPrimeOnly: data.is_prime_only,
+            inStock: data.stock > 0,
+            stockCount: data.stock,
+            rating: Number(data.rating) || 5.0,
+            reviews: Number(data.review_count) || 0,
+            isVetApproved: data.is_vet_approved || false,
+            tag: data.tag || undefined
+        };
+    }
+
+    async deleteProduct(id: string): Promise<void> {
+        const { error } = await supabase
+            .from('products')
+            .delete()
+            .eq('id', id);
+        if (error) throw error;
+    }
+
+    async updateOrderStatus(orderId: string, status: any): Promise<void> {
+        const { error } = await supabase
+            .from('orders')
+            .update({ status })
+            .eq('id', orderId);
+        if (error) throw error;
+    }
+
+    async getAllOrders(): Promise<ShopOrder[]> {
+        const { data, error } = await supabase
+            .from('orders')
+            .select(`
+                *,
+                items:order_items(
+                    quantity,
+                    price_at_purchase,
+                    product:products(*)
+                )
+            `)
+            .order('created_at', { ascending: false });
+
+        if (error) return [];
+
+        return data.map((o: any) => ({
+            id: o.id,
+            userId: o.user_id,
+            totalPrice: Number(o.total_amount),
+            status: o.status,
+            createdAt: o.created_at,
+            updatedAt: o.updated_at || o.created_at,
+            shippingAddress: o.shipping_address,
+            items: (o.items || []).map((item: any) => ({
+                quantity: item.quantity,
+                product: item.product ? {
+                    id: item.product.id,
+                    name: item.product.name,
+                    price: Number(item.price_at_purchase),
+                    image: item.product.image_url,
+                    category: item.product.category,
+                    isPrimeOnly: item.product.is_prime_only,
+                    inStock: item.product.stock > 0
+                } : {
+                    id: '',
+                    name: 'Silinmiş Ürün',
+                    price: Number(item.price_at_purchase),
+                    image: '❓',
+                    category: 'food',
+                    isPrimeOnly: false,
+                    inStock: false
+                }
+            }))
+        }));
     }
 
     private formatTimeAgo(dateString: string): string {

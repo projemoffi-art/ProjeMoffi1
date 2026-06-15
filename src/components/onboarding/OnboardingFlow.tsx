@@ -8,7 +8,6 @@ import {
     PawPrint, Check, ArrowRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { CheckoutModal } from '@/components/shop/CheckoutModal';
 
 interface OnboardingFlowProps {
     onComplete: (data: any) => void;
@@ -32,48 +31,12 @@ const STEPS = [
         subtitle: "Dostunun bir fotoğrafını ekleyerek profilini canlandır.",
     },
     {
-        id: 'aura',
-        title: "Ruhunu Keşfet",
-        subtitle: "Dostunun karakteri onun aurasıdır.",
-    },
-    {
         id: 'safety',
         title: "Her Zaman Güvende",
         subtitle: "Akıllı SOS ve Künye sistemiyle o asla yalnız değil.",
-    },
-    {
-        id: 'subscription',
-        title: "Moffi Planınızı Seçin",
-        subtitle: "Premium ayrıcalıklarla ekosistemin tüm gücünü hissedin.",
     }
 ];
 
-const PLANS = [
-    {
-        id: 'free',
-        name: 'Moffi Standart',
-        price: 'Ücretsiz',
-        features: ['Dijital Pasaport', 'Sosyal Medya Akışı', 'Temel SOS Hizmeti'],
-        color: 'bg-white/5',
-        button: 'DEVAM ET'
-    },
-    {
-        id: 'elite',
-        name: 'Moffi Elite',
-        price: '₺199',
-        features: ['Yapay Zeka Analizi', 'Sınırsız SOS Radarı', 'Özel Tasarım Aura', 'Market İndirimleri'],
-        color: 'bg-gradient-to-tr from-cyan-400 to-blue-600',
-        button: 'EVRENİ BAŞLAT',
-        popular: true
-    }
-];
-
-const AURAS = [
-    { id: 'brave', label: 'Cesur', color: 'bg-orange-500', glow: 'shadow-orange-500/50', icon: ShieldCheck },
-    { id: 'playful', label: 'Oyuncu', color: 'bg-yellow-400', glow: 'shadow-yellow-400/50', icon: Sparkles },
-    { id: 'calm', label: 'Sakin', color: 'bg-cyan-400', glow: 'shadow-cyan-400/50', icon: Heart },
-    { id: 'loyal', label: 'Sadık', color: 'bg-purple-500', glow: 'shadow-purple-500/50', icon: Star }
-];
 
 export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     const [currentStep, setCurrentStep] = useState(0);
@@ -82,20 +45,15 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         type: 'dog',
         aura: 'calm',
         image: null as string | null,
-        plan: 'elite'
+        plan: 'free'
     });
-    const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     const isLastStep = currentStep === STEPS.length - 1;
 
     const handleNext = () => {
         if (isLastStep) {
-            if (petData.plan === 'elite') {
-                setIsCheckoutOpen(true);
-            } else {
-                onComplete(petData);
-            }
+            onComplete(petData);
         } else {
             setCurrentStep(prev => prev + 1);
         }
@@ -238,42 +196,8 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                         </div>
                     )}
 
-                    {/* STEP 4: AURA */}
+                    {/* STEP 4: SAFETY */}
                     {currentStep === 3 && (
-                        <div className="space-y-10 w-full max-w-md">
-                            <div className="space-y-4">
-                                <h2 className="text-3xl font-black uppercase italic tracking-tight">Dostunun Ruhu</h2>
-                                <p className="text-white/40 text-sm font-medium">Bu seçim onun profil rengini ve aurasını belirleyecek.</p>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                {AURAS.map(aura => (
-                                    <button
-                                        key={aura.id}
-                                        onClick={() => setPetData({...petData, aura: aura.id})}
-                                        className={cn(
-                                            "p-6 rounded-[2rem] border transition-all flex flex-col items-center gap-4 relative overflow-hidden group",
-                                            petData.aura === aura.id ? `bg-white/10 border-card-border ${aura.glow} shadow-lg` : "bg-white/5 border-card-border"
-                                        )}
-                                    >
-                                        <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center", aura.color)}>
-                                            <aura.icon className="w-6 h-6 text-black" />
-                                        </div>
-                                        <span className="text-xs font-black uppercase tracking-widest">{aura.label}</span>
-                                        {petData.aura === aura.id && (
-                                            <motion.div layoutId="aura-check" className="absolute top-4 right-4">
-                                                <div className="w-5 h-5 bg-card rounded-full flex items-center justify-center">
-                                                    <Check className="w-3 h-3 text-black stroke-[4px]" />
-                                                </div>
-                                            </motion.div>
-                                        )}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* STEP 5: SAFETY */}
-                    {currentStep === 4 && (
                         <div className="space-y-10 max-w-md">
                             <div className="relative w-72 h-72 mx-auto">
                                 <div className="absolute inset-0 bg-red-500/20 blur-[100px] rounded-full animate-pulse" />
@@ -290,70 +214,8 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                             </div>
                         </div>
                     )}
-
-                    {/* STEP 6: SUBSCRIPTION */}
-                    {currentStep === 5 && (
-                        <div className="space-y-10 w-full max-w-4xl px-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {PLANS.map(plan => (
-                                    <button
-                                        key={plan.id}
-                                        onClick={() => setPetData({...petData, plan: plan.id})}
-                                        className={cn(
-                                            "relative p-8 rounded-[3rem] border transition-all text-left flex flex-col justify-between group",
-                                            petData.plan === plan.id ? "border-white/40 ring-4 ring-white/5" : "border-card-border opacity-60",
-                                            plan.color
-                                        )}
-                                    >
-                                        {plan.popular && (
-                                            <div className="absolute -top-4 right-8 px-4 py-1.5 bg-card text-black text-[9px] font-black rounded-full uppercase tracking-widest shadow-xl">
-                                                En Çok Tercih Edilen
-                                            </div>
-                                        )}
-                                        
-                                        <div>
-                                            <div className="flex justify-between items-start mb-6">
-                                                <div>
-                                                    <h3 className="text-2xl font-black uppercase italic tracking-tighter">{plan.name}</h3>
-                                                    <div className="flex items-baseline gap-1 mt-1">
-                                                        <span className="text-3xl font-black tracking-tighter">{plan.price}</span>
-                                                        {plan.price !== 'Ücretsiz' && <span className="text-[10px] font-bold text-white/40 uppercase">/ AY</span>}
-                                                    </div>
-                                                </div>
-                                                {petData.plan === plan.id && (
-                                                    <div className="w-8 h-8 bg-card rounded-full flex items-center justify-center">
-                                                        <Check className="w-5 h-5 text-black stroke-[4px]" />
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <div className="space-y-3">
-                                                {plan.features.map((feature, idx) => (
-                                                    <div key={idx} className="flex items-center gap-3">
-                                                        <div className="w-1.5 h-1.5 rounded-full bg-white/40" />
-                                                        <span className="text-xs font-medium text-white/80">{feature}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-12 w-full py-4 rounded-2xl bg-white/10 border border-card-border text-center text-[10px] font-black uppercase tracking-widest group-hover:bg-white/20 transition-all">
-                                            {plan.button}
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
                 </motion.div>
             </AnimatePresence>
-
-            <CheckoutModal 
-                isOpen={isCheckoutOpen}
-                onClose={() => setIsCheckoutOpen(false)}
-                onSuccess={() => onComplete(petData)}
-                plan={PLANS.find(p => p.id === 'elite') as any}
-            />
 
             {/* FOOTER ACTIONS */}
             <div className="p-12 flex flex-col items-center">

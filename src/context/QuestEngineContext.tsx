@@ -739,7 +739,7 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
         if (shieldStr) {
             try {
                 const parsed = JSON.parse(shieldStr);
-                if (parsed.weekStart === getWeekStart()) {
+                if (parsed && parsed.weekStart === getWeekStart()) {
                     setStreakShieldAvailable(parsed.available);
                 }
             } catch { /* ignore */ }
@@ -750,7 +750,7 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
         if (stampsStr) {
             try {
                 const parsed = JSON.parse(stampsStr);
-                if (parsed.weekStart === getWeekStart()) {
+                if (parsed && parsed.weekStart === getWeekStart()) {
                     setWeeklyStamps(parsed.count || 0);
                 }
             } catch { /* ignore */ }
@@ -764,7 +764,7 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
         if (storedQuests) {
             try {
                 const parsed = JSON.parse(storedQuests);
-                if (parsed.date === todayStr) {
+                if (parsed && parsed.date === todayStr) {
                     setDailyQuests(parsed.quests || []);
                     setTodayEarned(parsed.todayEarned || { pp: 0, xp: 0 });
                     socialCountsRef.current = parsed.socialCounts || { posts: 0, comments: 0, likes: 0 };
@@ -781,18 +781,19 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
         }
 
         // Aylık araştırma yükle / oluştur
+        let loadedResearch = false;
         const storedResearch = localStorage.getItem(RESEARCH_KEY);
         if (storedResearch) {
             try {
                 const parsed = JSON.parse(storedResearch);
-                if (parsed.id === `research_${monthKey}`) {
+                if (parsed && parsed.id === `research_${monthKey}`) {
                     setMonthlyResearch(parsed);
-                    loaded = true;
+                    loadedResearch = true;
                 }
             } catch { /* ignore */ }
         }
 
-        if (!monthlyResearch) {
+        if (!loadedResearch) {
             const newResearch = getMonthlyResearch(monthKey);
             setMonthlyResearch(newResearch);
             localStorage.setItem(RESEARCH_KEY, JSON.stringify(newResearch));

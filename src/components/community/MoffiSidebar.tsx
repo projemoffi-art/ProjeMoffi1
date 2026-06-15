@@ -181,7 +181,6 @@ export function MoffiSidebar() {
         { id: 'qr', label: t('sidebar.passport'), icon: QrCode, color: 'from-amber-400 to-orange-600', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'passport' })) },
         { id: 'mood', label: t('sidebar.mood'), icon: Zap, color: 'from-pink-400 to-rose-600', action: () => window.dispatchEvent(new CustomEvent('open-moffi-navigate', { detail: 'mood-selector' })) },
         { id: 'sos', label: t('sidebar.sos'), icon: ShieldAlert, color: 'from-red-500 to-red-700', action: () => window.dispatchEvent(new CustomEvent('open-sos-center')) },
-        { id: 'studio', label: t('sidebar.aura'), icon: Palette, color: 'from-cyan-400 to-blue-600', action: () => window.dispatchEvent(new CustomEvent('open-aura-studio')) },
         { id: 'voice', label: t('sidebar.voice_note'), icon: Mic, color: 'from-orange-400 to-red-500', action: () => { triggerHaptic(30); setActiveMode('voice'); setIsOpen(true); } },
         { id: 'steps', label: t('sidebar.walk'), icon: Footprints, color: 'from-blue-400 to-indigo-500', value: '4.2k', action: () => { triggerHaptic(30); window.dispatchEvent(new CustomEvent('open-walk-panel')); } },
         { 

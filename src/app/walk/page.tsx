@@ -17,15 +17,15 @@ import { useWeather } from "@/context/WeatherContext";
 import { useQuestEngine } from "@/context/QuestEngineContext";
 import { QuestBentoCard } from "@/components/quests/QuestBentoCard";
 
-// Dynamic Import for Google Map
-const GoogleLiveMap = dynamic(() => import('@/components/walk/GoogleLiveMap'), {
+// Dynamic Import for Leaflet Map
+const GoogleLiveMap = dynamic(() => import('@/components/walk/LiveMap'), {
     ssr: false,
     loading: () => <div className="w-full h-full bg-[#242f3e] animate-pulse rounded-[2rem] flex items-center justify-center text-white/20 font-bold">Harita Yükleniyor...</div>
 });
 
 export default function WalkPage() {
     const router = useRouter();
-    const { walkData, walkStats, walkHistory, startWalk, stopWalk } = useActivity();
+    const { walkData, walkStats, walkHistory, startWalk, stopWalk, isWalkSimulation, setIsWalkSimulation } = useActivity();
     const { activePet } = usePet();
     const { weather, isLoading: weatherLoading } = useWeather();
     const { dailyGoal, progressPercent, durationPercent } = useQuestEngine();
@@ -79,6 +79,38 @@ export default function WalkPage() {
                 </div>
             </header>
 
+            {/* Segmented Tab Switcher */}
+            <div className="px-5 mt-4">
+                <div className="bg-slate-200/50 dark:bg-white/5 p-1 rounded-2xl flex gap-1 relative overflow-hidden">
+                    {(['controls', 'stats', 'map'] as const).map((tab) => {
+                        const label = {
+                            controls: 'Yürüyüş',
+                            stats: 'İstatistikler',
+                            map: 'Harita'
+                        }[tab];
+                        const isActive = tab === 'stats';
+                        return (
+                            <button
+                                key={tab}
+                                onClick={() => {
+                                    if (tab === 'controls') {
+                                        router.push('/community?openWalk=true');
+                                    } else if (tab === 'map') {
+                                        router.push('/walk/tracking');
+                                    }
+                                }}
+                                className={cn(
+                                    "flex-1 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all relative cursor-pointer border-0 z-10",
+                                    isActive ? "text-slate-800 dark:text-white bg-white dark:bg-white/10 shadow-sm" : "text-slate-400 dark:text-slate-400 hover:text-slate-700 bg-transparent"
+                                )}
+                            >
+                                {label}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
             <main className="px-5 mt-4 space-y-5">
 
                 {/* 2. WEATHER WIDGET - GERÇEK VERİ */}
@@ -129,12 +161,18 @@ export default function WalkPage() {
 
                 {/* 3. DOSTUM BENTO DURUM KARTI (NEW!) */}
                 <div className="bg-white/80 dark:bg-[#1A1A1A]/80 border border-card-border dark:border-card-border rounded-2xl p-4 flex gap-4 items-center shadow-sm backdrop-blur-md animate-in fade-in slide-in-from-top-4 duration-400">
-                    <div className="w-14 h-14 rounded-2xl border border-card-border dark:border-card-border overflow-hidden relative shrink-0 bg-gray-50 dark:bg-black/20">
-                        <img 
-                            src={activePet?.avatar || activePet?.image || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300'} 
-                            className="w-full h-full object-cover"
-                            alt={activePet?.name || 'Moffi'}
-                        />
+                    <div className="w-14 h-14 rounded-2xl border border-card-border dark:border-card-border overflow-hidden relative shrink-0 bg-gray-50 dark:bg-black/20 flex items-center justify-center">
+                        {activePet?.avatar || activePet?.image ? (
+                            <img 
+                                src={activePet?.avatar || activePet?.image} 
+                                className="w-full h-full object-cover"
+                                alt={activePet?.name || 'Moffi'}
+                            />
+                        ) : (
+                            <span className="text-gray-400 dark:text-zinc-500 text-xl font-black select-none uppercase font-sans">
+                                {activePet?.name ? activePet.name[0] : '🐾'}
+                            </span>
+                        )}
                     </div>
                     <div className="flex-1 min-w-0">
                         <h4 className="text-foreground dark:text-white font-black text-sm uppercase tracking-tight truncate leading-none">
@@ -306,15 +344,22 @@ export default function WalkPage() {
                             <div className="bg-white/10 px-2 py-0.5 rounded text-[8px] text-white font-bold h-min whitespace-nowrap mb-1">
                                 Gümüş Lig
                             </div>
-                            <div className="w-7 h-7 rounded-full bg-card flex items-center justify-center group-hover:bg-yellow-400 transition-colors">
-                                <ChevronRight className="w-4 h-4 text-black" />
-                            </div>
                         </div>
                     </div>
                 </div>
 
                 {/* 8. DISCOVERY MAP (Interactive Preview) */}
-                <div className="relative w-full h-[230px] rounded-2xl overflow-hidden shadow-lg border border-card-border/50 dark:border-card-border group">
+                <div 
+                    onClick={() => {
+                        if (walkData.isActive) {
+                            router.push('/walk/tracking');
+                        }
+                    }}
+                    className={cn(
+                        "relative w-full h-[230px] rounded-2xl overflow-hidden shadow-lg border border-card-border/50 dark:border-card-border group transition-all",
+                        walkData.isActive ? "cursor-pointer hover:border-purple-500/50 hover:shadow-purple-500/5" : ""
+                    )}
+                >
                     <GoogleLiveMap
                         userPos={userPos}
                         path={[]}
@@ -327,24 +372,20 @@ export default function WalkPage() {
                     {/* Overlay Gradient */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
 
-                    {/* Floating Elements on Map */}
-                    <div className="absolute top-4 left-4 right-4 flex justify-between pointer-events-none">
-                        <div className="bg-white/95 dark:bg-[#0A0A0E]/95 backdrop-blur-xl px-3 py-1.5 rounded-xl text-[9px] font-black text-foreground dark:text-white shadow-md flex items-center gap-1.5 border border-card-border">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> 12 Moffi Arkadaşı Yakınında
-                        </div>
-                    </div>
-
                     <div className="absolute bottom-4 left-4 right-4 z-10 flex flex-col gap-3">
-                        <div className="bg-black/20 backdrop-blur-sm p-3 rounded-2xl border border-card-border">
-                            <h2 className="text-white font-black text-base mb-0.5 tracking-tight uppercase italic leading-none">
-                                {walkData.isActive ? 'Yürüyüş Takibi' : 'Keşfe Çık'}
-                            </h2>
-                            <p className="text-white/70 text-[9px] font-bold uppercase tracking-widest leading-normal mt-1">
-                                {walkData.isActive ? 'Yürüyüşün canlı olarak kaydediliyor...' : 'Çevredeki parkları, kafeleri keşfet ve ödülleri topla.'}
-                            </p>
+                        <div className="bg-black/25 backdrop-blur-md p-3.5 rounded-2xl border border-card-border/50 flex items-center justify-between gap-4">
+                            <div>
+                                <h2 className="text-white font-black text-base mb-0.5 tracking-tight uppercase italic leading-none">
+                                    {walkData.isActive ? 'Yürüyüş Aktif' : 'Keşfe Çık'}
+                                </h2>
+                                <p className="text-white/70 text-[9px] font-bold uppercase tracking-widest leading-normal mt-1.5">
+                                    {walkData.isActive ? 'Haritayı görmek için tıklayın...' : 'Çevredeki parkları, kafeleri keşfet ve ödülleri topla.'}
+                                </p>
+                            </div>
                         </div>
                         <button
-                            onClick={() => {
+                            onClick={(e) => {
+                                e.stopPropagation();
                                 if (walkData.isActive) {
                                     stopWalk();
                                 } else {

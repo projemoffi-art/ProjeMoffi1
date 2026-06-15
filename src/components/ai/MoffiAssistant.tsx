@@ -95,38 +95,63 @@ export function MoffiAssistant() {
         if (!input.trim() || isTyping) return;
 
         const userMsg: Message = { id: Date.now().toString(), role: 'user', content: input };
-        setMessages(prev => [...prev, userMsg]);
+        const updatedMessages = [...messages, userMsg];
+        setMessages(updatedMessages);
         setInput("");
         setIsTyping(true);
 
-        // Simulation logic that ACTUALLY respects settings
-        setTimeout(() => {
-            let response = "";
+        try {
+            const response = await fetch('/api/ai/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: updatedMessages.map(m => ({
+                        role: m.role,
+                        content: m.content
+                    })),
+                    context: `AI Settings: personality=${aiSettings.personality}, detail=${aiSettings.detailLevel}`
+                })
+            });
+            const data = await response.json();
             
-            // 1. Personalization Logic
-            if (aiSettings.personality === 'technical') {
-                response = "Veri girişi algılandı. Biyometrik değerler ve aktivite logları inceleniyor. Optimizasyon önerisi: Su tüketimi %12 artırılmalı.";
-            } else if (aiSettings.personality === 'professional') {
-                response = "İsteğiniz kaydedilmiştir. Veri analizlerimiz sonucunda patili dostunuzun sağlık parametrelerinin ideal seviyede olduğu gözlemlenmiştir.";
+            if (data.success && data.message) {
+                const aiMsg: Message = {
+                    id: Date.now().toString(),
+                    role: 'assistant',
+                    content: data.message
+                };
+                setMessages(prev => [...prev, aiMsg]);
             } else {
-                response = "Harika bir soru! Patili dostun için en iyisini düşündüğünden eminim. Bence bugün biraz daha fazla oyun oynamalısınız! 🐾❤️";
+                throw new Error(data.error || "Yanıt alınamadı");
+            }
+        } catch (apiError) {
+            console.warn("Moffi AI API Failed, falling back to simulated response:", apiError);
+
+            // Simulation logic fallback
+            let simulatedResponse = "";
+            if (aiSettings.personality === 'technical') {
+                simulatedResponse = "Veri girişi algılandı. Biyometrik değerler ve aktivite logları inceleniyor. Optimizasyon önerisi: Su tüketimi %12 artırılmalı.";
+            } else if (aiSettings.personality === 'professional') {
+                simulatedResponse = "İsteğiniz kaydedilmiştir. Veri analizlerimiz sonucunda patili dostunuzun sağlık parametrelerinin ideal seviyede olduğu gözlemlenmiştir.";
+            } else {
+                simulatedResponse = "Harika bir soru! Patili dostun için en iyisini düşündüğünden eminim. Bence bugün biraz daha fazla oyun oynamalısınız! 🐾❤️";
             }
 
-            // 2. Detail Level Logic (Trim or Expand)
             if (aiSettings.detailLevel === 'short') {
-                response = response.split('.')[0] + ". ✅";
+                simulatedResponse = simulatedResponse.split('.')[0] + ". ✅";
             } else if (aiSettings.detailLevel === 'long') {
-                response += " Ayrıca, son yürüyüş verilerine göre dostunun kondisyonu mükemmel ilerliyor. Moffi ekosistemi olarak her adımda yanınızdayız.";
+                simulatedResponse += " Ayrıca, son yürüyüş verilerine göre dostunun kondisyonu mükemmel ilerliyor. Moffi ekosistemi olarak her adımda yanınızdayız.";
             }
 
             const aiMsg: Message = { 
                 id: (Date.now() + 1).toString(), 
                 role: 'assistant', 
-                content: response
+                content: simulatedResponse
             };
             setMessages(prev => [...prev, aiMsg]);
+        } finally {
             setIsTyping(false);
-        }, 1000 + (aiSettings.creativity * 1000)); // Creativity affects response time simulation
+        }
     };
 
     const clearChat = () => {

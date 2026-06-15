@@ -17,13 +17,19 @@ import { SmartMealCard, SmartMealProps } from "@/components/food/SmartMealCard";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { PetSwitcher } from "@/components/common/PetSwitcher";
+import { usePet } from "@/context/PetContext";
 
 export default function FoodPage() {
     const router = useRouter();
+    const { activePet } = usePet();
 
     // CONTEXT (MOCK)
     const dailyActivity = { distance: 6.2, goal: 5.0 }; // km
     const isHighActivity = dailyActivity.distance > dailyActivity.goal;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const petId = activePet?.id || 'default-pet';
+    const calorieKey = `moffi_calories_${petId}_${todayStr}`;
 
     // STATE
     const [plan, setPlan] = useState<NutritionPlan | null>(null);
@@ -64,6 +70,28 @@ export default function FoodPage() {
 
     const [calories, setCalories] = useState(540);
 
+    // Load persistent calories once activePet is loaded
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const savedCal = localStorage.getItem(calorieKey);
+            if (savedCal !== null) {
+                setCalories(Number(savedCal));
+            } else {
+                setCalories(540);
+                localStorage.setItem(calorieKey, '540');
+            }
+        }
+    }, [calorieKey]);
+
+    const updateCalories = (nextCalories: number | ((prev: number) => number)) => {
+        setCalories(prev => {
+            const next = typeof nextCalories === 'function' ? nextCalories(prev) : nextCalories;
+            localStorage.setItem(calorieKey, String(next));
+            window.dispatchEvent(new CustomEvent('moffi-daily-goals-update'));
+            return next;
+        });
+    };
+
     // PERSISTENCE CHECK
     useEffect(() => {
         const savedPlan = localStorage.getItem('moffi_nutrition_plan');
@@ -87,7 +115,7 @@ export default function FoodPage() {
             if (m.id === id) {
                 if (action === 'complete') {
                     if (m.status !== 'done') {
-                        setCalories(c => c + m.suggestion.calories);
+                        updateCalories(c => c + m.suggestion.calories);
                     }
                     return { ...m, status: 'done' };
                 }
@@ -98,7 +126,7 @@ export default function FoodPage() {
     };
 
     const handleManualAdd = (kcal: number, type: string) => {
-        setCalories(prev => prev + kcal);
+        updateCalories(prev => prev + kcal);
     };
     const [isMealModalOpen, setIsMealModalOpen] = useState(false);
 

@@ -195,7 +195,7 @@ YANIT FORMAT (sadece JSON):
 
         const newStatus = isSafe ? "active" : "removed";
         await supabaseAdmin
-            .from("adoption_ads")
+            .from("adoption_pets")
             .update({
                 status: newStatus,
                 moderation_result: isSafe ? "✅ İçerik güvenli" : `❌ ${violationReason}`,

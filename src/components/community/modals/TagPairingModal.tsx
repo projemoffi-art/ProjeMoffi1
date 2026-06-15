@@ -146,8 +146,14 @@ export function TagPairingModal({ isOpen, onClose, pet }: TagPairingModalProps) 
                                     </p>
 
                                     <div className="bg-white/5 border border-card-border rounded-3xl p-4 mb-8 flex items-center gap-4 text-left">
-                                        <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 shadow-lg">
-                                            <img src={pet.avatar} className="w-full h-full object-cover" />
+                                        <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 shadow-lg bg-gray-900 flex items-center justify-center border border-card-border">
+                                            {pet.avatar ? (
+                                                <img src={pet.avatar} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <span className="text-gray-400 text-lg font-black select-none uppercase font-sans">
+                                                    {pet.name ? pet.name[0] : '🐾'}
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="flex-1">
                                             <div className="flex items-center gap-1.5">

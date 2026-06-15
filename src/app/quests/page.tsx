@@ -7,6 +7,8 @@ import { ChevronLeft, Star } from "lucide-react";
 import { useQuestEngine } from "@/context/QuestEngineContext";
 import { usePet } from "@/context/PetContext";
 import { useLiveEvents } from "@/context/LiveEventsContext";
+import { useTheme } from "@/context/ThemeContext";
+import { cn } from "@/lib/utils";
 import { 
     ConstellationBg, 
     QuestOrbitalRing, 
@@ -29,12 +31,13 @@ export default function FullQuestCenter() {
     } = useQuestEngine();
     const { activePet } = usePet();
     const { liveWalkerCount } = useLiveEvents();
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
 
     const [activeTab, setActiveTab] = useState<TabType>('daily');
 
     const questPct = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
     const xpPct = levelXpRequired > 0 ? Math.min(100, (levelXpCurrent / levelXpRequired) * 100) : 0;
-
 
     const tabs: { id: TabType; label: string; icon: string }[] = [
         { id: 'daily',    label: 'Günlük',   icon: '⚡' },
@@ -44,27 +47,63 @@ export default function FullQuestCenter() {
     ];
 
     return (
-        <div className="min-h-screen pb-24 relative overflow-hidden" style={{ background: 'linear-gradient(180deg, #100820 0%, #080d18 50%, #060810 100%)' }}>
+        <div className={cn(
+            "min-h-screen pb-24 relative overflow-hidden transition-all duration-500",
+            isDark 
+                ? "bg-gradient-to-b from-[#0e0a16] via-[#080d18] to-[#04060b]" 
+                : "bg-gradient-to-b from-[#f9f6ef] via-[#f3edd9] to-[#e8dec4]"
+        )}>
+            {/* Dark mode magic stars */}
             <ConstellationBg />
             
-            {/* Header */}
-            <div className="pt-safe sticky top-0 z-40 bg-[#100820]/80 backdrop-blur-xl border-b border-purple-500/10 shrink-0 px-4 py-3 flex items-center justify-between">
+            {/* Header: Designed like a wooden Guild Hall deck in light, obsidian frame in dark */}
+            <div className={cn(
+                "pt-safe sticky top-0 z-40 backdrop-blur-xl border-b transition-all duration-300 px-4 py-3.5 flex items-center justify-between shadow-md",
+                isDark 
+                    ? "bg-[#140c24]/80 border-purple-500/10 shadow-black/20" 
+                    : "bg-[#624730] border-[#4c3522] text-[#faf6eb] shadow-[#332115]/15"
+            )}>
                 <div className="flex items-center gap-3">
-                    <button onClick={() => router.back()} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-card-border text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                    <button 
+                        onClick={() => router.back()} 
+                        className={cn(
+                            "w-10 h-10 rounded-full flex items-center justify-center border transition-all duration-200 active:scale-90",
+                            isDark 
+                                ? "bg-white/5 border-card-border text-white/70 hover:bg-white/10 hover:text-white" 
+                                : "bg-[#faf6eb] border-[#c0a684] text-[#624730] hover:bg-[#e7dec4]"
+                        )}
+                    >
                         <ChevronLeft className="w-6 h-6" />
                     </button>
                     <div>
-                        <p className="text-[10px] font-black text-purple-400/50 uppercase tracking-[0.3em]">Tam Görev Merkezi</p>
-                        <h2 className="text-lg font-black text-white leading-tight">{levelTitle} · Lv.{level}</h2>
+                        <p className={cn(
+                            "text-[9px] font-black uppercase tracking-[0.25em] transition-colors duration-300",
+                            isDark ? "text-purple-400/50" : "text-[#d97706]/80"
+                        )}>
+                            Tam Görev Merkezi
+                        </p>
+                        <h2 className={cn(
+                            "text-base font-black leading-tight transition-colors duration-300",
+                            isDark ? "text-white" : "text-[#faf6eb]"
+                        )}>
+                            {levelTitle} · Lv.{level}
+                        </h2>
                     </div>
                 </div>
-                <div className="flex items-center gap-1.5 bg-yellow-500/10 border border-yellow-500/20 rounded-full px-3 py-1.5">
-                    <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                    <span className="text-[11px] font-black text-yellow-400">{totalPatiPuan.toLocaleString()} PP</span>
+                
+                {/* Gold Coin Pouch badge */}
+                <div className={cn(
+                    "flex items-center gap-1.5 border rounded-full px-3 py-1.5 transition-all duration-300 shadow-sm",
+                    isDark 
+                        ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-400" 
+                        : "bg-[#faf6eb] border-[#c0a684] text-[#b45309]"
+                )}>
+                    <Star className="w-4 h-4 text-yellow-500 fill-current animate-spin" style={{ animationDuration: '6s' }} />
+                    <span className="text-[11px] font-black tracking-tight">{totalPatiPuan.toLocaleString()} PP</span>
                 </div>
             </div>
 
-            {/* Orbital + Stats (Header Area) */}
+            {/* RPG Character HUD Area */}
             <div className="px-5 py-6">
                 <div className="flex items-center gap-6">
                     <QuestOrbitalRing
@@ -78,83 +117,168 @@ export default function FullQuestCenter() {
                         totalCount={totalCount}
                     />
                     
-                    <div className="flex-1 space-y-3">
+                    {/* Mana/XP Bar & Status Cards */}
+                    <div className="flex-1 space-y-4">
                         <div>
                             <div className="flex justify-between mb-1">
-                                <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Gelişim Seviyesi (XP)</span>
-                                <span className="text-[9px] font-black text-indigo-400 font-mono">{levelXpCurrent}/{levelXpRequired}</span>
+                                <span className={cn(
+                                    "text-[9px] font-black uppercase tracking-widest transition-colors duration-300",
+                                    isDark ? "text-white/30" : "text-[#624730]/60"
+                                )}>
+                                    Mana Seviyesi (XP)
+                                </span>
+                                <span className={cn(
+                                    "text-[9px] font-black font-mono transition-colors duration-300",
+                                    isDark ? "text-indigo-400" : "text-indigo-650"
+                                )}>
+                                    {levelXpCurrent}/{levelXpRequired}
+                                </span>
                             </div>
-                            <div className="h-2.5 bg-white/5 rounded-full overflow-hidden border border-white/[0.04]">
+                            
+                            {/* Glowing Mana Bar */}
+                            <div className={cn(
+                                "h-2.5 rounded-full overflow-hidden border transition-all duration-300",
+                                isDark ? "bg-white/5 border-white/[0.04]" : "bg-[#e7dec4] border-[#c0a684]/50 shadow-inner"
+                            )}>
                                 <motion.div
-                                    className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full"
+                                    className={cn(
+                                        "h-full rounded-full",
+                                        isDark ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-fuchsia-500" : "bg-gradient-to-r from-emerald-500 to-teal-400"
+                                    )}
                                     initial={{ width: 0 }}
                                     animate={{ width: `${xpPct}%` }}
                                     transition={{ duration: 1.2, ease: 'easeOut' }}
-                                    style={{ boxShadow: '0 0 8px rgba(139,92,246,0.6)' }}
+                                    style={{ 
+                                        boxShadow: isDark 
+                                            ? '0 0 10px rgba(168,85,247,0.7)' 
+                                            : '0 0 6px rgba(16,185,129,0.4)' 
+                                    }}
                                 />
                             </div>
                         </div>
 
+                        {/* RPG Stat Box Grid */}
                         <div className="grid grid-cols-2 gap-2">
                             {[
-                                { val: `${currentStreak}🔥`, label: 'Seri', color: 'text-orange-400' },
-                                { val: `${completedCount}/${totalCount}`, label: 'Görev', color: 'text-emerald-400' },
-                                { val: `+${todayEarned.pp}`, label: 'Bugün PP', color: 'text-yellow-400' },
-                                { val: String(earnedBadges.length), label: 'Rozet 🏅', color: 'text-purple-400' },
+                                { val: `${currentStreak}🔥`, label: 'Seri', color: isDark ? 'text-orange-400' : 'text-orange-600' },
+                                { val: `${completedCount}/${totalCount}`, label: 'Görev', color: isDark ? 'text-emerald-400' : 'text-emerald-600' },
+                                { val: `+${todayEarned.pp}`, label: 'Bugün PP', color: isDark ? 'text-yellow-400' : 'text-amber-600' },
+                                { val: String(earnedBadges.length), label: 'Rozet 🏅', color: isDark ? 'text-purple-400' : 'text-purple-650' },
                             ].map((s, i) => (
-                                <div key={i} className="bg-white/[0.02] border border-card-border rounded-xl p-2.5 flex flex-col items-center justify-center">
-                                    <span className={`text-sm font-black ${s.color}`}>{s.val}</span>
-                                    <span className="text-[8px] font-bold text-white/30 uppercase mt-0.5 tracking-wider">{s.label}</span>
+                                <div 
+                                    key={i} 
+                                    className={cn(
+                                        "border rounded-xl p-2.5 flex flex-col items-center justify-center transition-all duration-300",
+                                        isDark 
+                                            ? "bg-white/[0.02] border-card-border" 
+                                            : "bg-[#faf6eb] border-[#c0a684]/45 shadow-sm shadow-[#9c8b74]/5"
+                                    )}
+                                >
+                                    <span className={cn("text-xs font-black", s.color)}>{s.val}</span>
+                                    <span className={cn(
+                                        "text-[8px] font-bold uppercase mt-0.5 tracking-wider transition-colors duration-300",
+                                        isDark ? "text-white/30" : "text-[#624730]/50"
+                                    )}>
+                                        {s.label}
+                                    </span>
                                 </div>
                             ))}
                         </div>
                     </div>
                 </div>
 
+                {/* Curved Treasure Trail Map */}
                 <div className="mt-6">
                     <NumberedRoadMap weeklyStamps={weeklyStamps} maxStamps={maxWeeklyStamps} />
                 </div>
             </div>
 
-            {/* TABS */}
-            <div className="px-4 sticky top-[80px] z-30 bg-[#100820]/80 backdrop-blur-md pt-2 pb-3 flex gap-1.5 border-b border-purple-500/10">
+            {/* RPG Navigation Tabs (Stone / Ancient Folder Deck) */}
+            <div className={cn(
+                "px-4 sticky top-[72px] z-30 backdrop-blur-md pt-2.5 pb-3.5 flex gap-1.5 border-b transition-all duration-355 shadow-sm",
+                isDark 
+                    ? "bg-[#0e0a16]/90 border-purple-500/10 shadow-black/5" 
+                    : "bg-[#f3edd9]/90 border-[#c0a684]/35 shadow-amber-900/5"
+            )}>
                 {tabs.map(tab => (
-                    <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                        className={`flex-1 py-3 rounded-2xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all ${
+                    <button 
+                        key={tab.id} 
+                        onClick={() => setActiveTab(tab.id)}
+                        className={cn(
+                            "flex-1 py-3 rounded-2xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all duration-300 border cursor-pointer active:scale-95",
                             activeTab === tab.id
-                                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.2)]'
-                                : 'text-white/25 hover:text-white/50 hover:bg-white/5'
-                        }`}
+                                ? isDark
+                                    ? 'bg-purple-500/20 text-purple-300 border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.25)]'
+                                    : 'bg-[#faf6eb] text-[#624730] border-[#c0a684] shadow-md shadow-[#9c8b74]/8'
+                                : isDark
+                                    ? 'border-transparent text-white/35 hover:text-white/60 hover:bg-white/5'
+                                    : 'border-transparent text-[#9c8b74] hover:text-[#624730] hover:bg-[#faf6eb]/50'
+                        )}
                     >
-                        <span className="text-sm">{tab.icon}</span>{tab.label}
+                        <span className="text-sm shrink-0">{tab.icon}</span>
+                        {tab.label}
                     </button>
                 ))}
             </div>
 
-            {/* CONTENT */}
+            {/* Tab content area */}
             <div className="px-5 py-6">
                 <AnimatePresence mode="wait">
                     {activeTab === 'daily' && (
-                        <motion.div key="daily" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-3 flex justify-center w-full">
+                        <motion.div 
+                            key="daily" 
+                            initial={{ opacity: 0, y: 12 }} 
+                            animate={{ opacity: 1, y: 0 }} 
+                            exit={{ opacity: 0, y: -12 }} 
+                            className="space-y-3 flex justify-center w-full"
+                        >
                             <QuestCarousel quests={dailyQuests} onManualComplete={completeManualQuest} />
                         </motion.div>
                     )}
 
                     {activeTab === 'league' && (
-                        <motion.div key="league" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-5">
-                            <div className="bg-gradient-to-br from-yellow-500/10 to-amber-500/5 border border-yellow-500/20 rounded-3xl p-5 flex items-center justify-between shadow-[0_0_20px_rgba(234,179,8,0.05)]">
+                        <motion.div 
+                            key="league" 
+                            initial={{ opacity: 0, y: 12 }} 
+                            animate={{ opacity: 1, y: 0 }} 
+                            exit={{ opacity: 0, y: -12 }} 
+                            className="space-y-5"
+                        >
+                            {/* League ranking board */}
+                            <div className={cn(
+                                "border rounded-3xl p-5 flex items-center justify-between transition-all duration-300 shadow-sm",
+                                isDark 
+                                    ? "bg-gradient-to-br from-yellow-500/10 to-amber-500/5 border-yellow-500/20 shadow-[0_0_20px_rgba(234,179,8,0.05)]" 
+                                    : "bg-gradient-to-br from-[#faf6eb] to-[#f5ebd6] border-[#c0a684] shadow-[#9c8b74]/5"
+                            )}>
                                 <div className="flex items-center gap-3">
-                                    <div className="text-3xl filter drop-shadow-lg">🛡️</div>
+                                    <div className="text-3xl filter drop-shadow-md">🛡️</div>
                                     <div>
-                                        <h4 className="text-sm font-black text-white uppercase tracking-wider">Gümüş Lig</h4>
-                                        <p className="text-[10px] font-bold text-yellow-400 mt-1">Kademe 2 • Yükselmeye %15 kaldı</p>
+                                        <h4 className={cn(
+                                            "text-sm font-black uppercase tracking-wider transition-colors duration-300",
+                                            isDark ? "text-white" : "text-[#624730]"
+                                        )}>
+                                            Gümüş Lig
+                                        </h4>
+                                        <p className={cn(
+                                            "text-[10px] font-bold mt-1 transition-colors duration-300",
+                                            isDark ? "text-yellow-400" : "text-[#b45309]"
+                                        )}>
+                                            Kademe 2 • Yükselmeye %15 kaldı
+                                        </p>
                                     </div>
                                 </div>
                                 <div className="flex flex-col items-end gap-1.5">
-                                    <div className="bg-white/10 px-2.5 py-1.5 rounded-lg text-[9px] font-black text-white/70 uppercase tracking-widest shadow-inner">
+                                    <div className={cn(
+                                        "px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-inner transition-colors duration-300",
+                                        isDark ? "bg-white/10 text-white/70" : "bg-[#e7dec4] text-[#624730]"
+                                    )}>
                                         ⏳ Kapanış: 3g 12s
                                     </div>
-                                    <div className="text-[8px] font-black text-yellow-400/80 uppercase tracking-wider">
+                                    <div className={cn(
+                                        "text-[8px] font-black uppercase tracking-wider transition-colors duration-300",
+                                        isDark ? "text-yellow-400/80" : "text-[#b45309]/80"
+                                    )}>
                                         İlk 3'e 500 PP Ödül
                                     </div>
                                 </div>
@@ -162,7 +286,13 @@ export default function FullQuestCenter() {
 
                             <MiniLeaderboard />
 
-                            <div className="bg-indigo-500/5 border border-indigo-500/10 rounded-3xl p-5 flex items-center justify-between">
+                            {/* Arena live event banner */}
+                            <div className={cn(
+                                "border rounded-3xl p-5 flex items-center justify-between transition-colors duration-300 shadow-sm",
+                                isDark 
+                                    ? "bg-indigo-500/5 border-indigo-500/10" 
+                                    : "bg-[#e7dec4]/40 border-[#c0a684]/50"
+                            )}>
                                 <div className="flex items-center gap-4">
                                     <div className="relative">
                                         <div className="w-10 h-10 bg-indigo-500/20 rounded-full flex items-center justify-center">
@@ -171,11 +301,26 @@ export default function FullQuestCenter() {
                                         <div className="absolute inset-0 bg-indigo-500/20 rounded-full animate-ping" />
                                     </div>
                                     <div>
-                                        <h4 className="text-[11px] font-black text-white/70 uppercase tracking-widest">Canlı Etkinlik</h4>
-                                        <p className="text-[11px] font-bold text-indigo-300 mt-1">Şu an {liveWalkerCount} kişi yürüyor</p>
+                                        <h4 className={cn(
+                                            "text-[11px] font-black uppercase tracking-widest transition-colors duration-300",
+                                            isDark ? "text-white/70" : "text-[#624730]/70"
+                                        )}>
+                                            Canlı Etkinlik
+                                        </h4>
+                                        <p className={cn(
+                                            "text-[11px] font-bold mt-1 transition-colors duration-300",
+                                            isDark ? "text-indigo-300" : "text-[#6366f1]"
+                                        )}>
+                                            Şu an {liveWalkerCount} kişi yürüyor
+                                        </p>
                                     </div>
                                 </div>
-                                <button className="px-4 py-2 bg-indigo-500/20 text-indigo-300 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-indigo-500/30 transition-colors">
+                                <button className={cn(
+                                    "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 active:scale-95 cursor-pointer",
+                                    isDark 
+                                        ? "bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30" 
+                                        : "bg-[#faf6eb] border border-[#c0a684] text-[#624730] hover:bg-[#e7dec4]"
+                                )}>
                                     Radar
                                 </button>
                             </div>
@@ -183,19 +328,42 @@ export default function FullQuestCenter() {
                     )}
 
                     {activeTab === 'research' && (
-                        <motion.div key="research" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                        <motion.div 
+                            key="research" 
+                            initial={{ opacity: 0, y: 12 }} 
+                            animate={{ opacity: 1, y: 0 }} 
+                            exit={{ opacity: 0, y: -12 }}
+                        >
                             {monthlyResearch
                                 ? <ResearchPanel research={monthlyResearch} />
-                                : <div className="text-center py-10 text-white/20 text-xs">Araştırma yükleniyor...</div>
+                                : <div className={cn("text-center py-10 text-xs transition-colors", isDark ? "text-white/20" : "text-[#624730]/40")}>Araştırma yükleniyor...</div>
                             }
                         </motion.div>
                     )}
 
                     {activeTab === 'badges' && (
-                        <motion.div key="badges" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
+                        <motion.div 
+                            key="badges" 
+                            initial={{ opacity: 0, y: 12 }} 
+                            animate={{ opacity: 1, y: 0 }} 
+                            exit={{ opacity: 0, y: -12 }} 
+                            className="space-y-4"
+                        >
                             <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">Rozet Koleksiyonu</span>
-                                <span className="text-[10px] font-black text-yellow-400 bg-yellow-500/10 px-2.5 py-1 rounded-lg border border-yellow-500/20">{earnedBadges.length}/{badges.length}</span>
+                                <span className={cn(
+                                    "text-[10px] font-black uppercase tracking-widest transition-colors",
+                                    isDark ? "text-white/30" : "text-[#624730]/65"
+                                )}>
+                                    Rozet Koleksiyonu
+                                </span>
+                                <span className={cn(
+                                    "text-[10px] font-black px-2.5 py-1 rounded-lg border transition-all duration-300",
+                                    isDark 
+                                        ? "text-yellow-400 bg-yellow-500/10 border-yellow-500/20" 
+                                        : "bg-[#faf6eb] border-[#c0a684] text-[#b45309]"
+                                )}>
+                                    {earnedBadges.length}/{badges.length}
+                                </span>
                             </div>
                             <BadgePanel badges={badges} earnedBadges={earnedBadges} />
                         </motion.div>

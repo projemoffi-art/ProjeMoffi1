@@ -36,7 +36,8 @@ export class FamilyMockService implements IFamilyService {
     private simulationInterval: NodeJS.Timeout | null = null;
 
     constructor() {
-        this.startSimulation();
+        // Disable simulation to prevent periodic in-app notification bubbles
+        // this.startSimulation();
     }
 
     async getMembers(): Promise<FamilyMember[]> {

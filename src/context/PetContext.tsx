@@ -16,10 +16,17 @@ export interface Pet {
     themeColor: string;
     microchip?: string;
     microchip_id?: string;
+    microchip_no?: string;
     neutered?: boolean;
     birthday?: string;
     city?: string;
     color?: string;
+    // Yeni kimlik alanları
+    type?: string;          // Hayvan türü emoji: 🐶 🐱 🐰 vb.
+    size?: string;          // Mini / Küçük / Orta / Büyük / Dev
+    character?: string;     // Karakter & kişilik açıklaması
+    features?: string;      // Ayırt edici özellikler
+    health_notes?: string;  // Sağlık notları
     owner?: {
         name: string;
         phone: string;
@@ -54,6 +61,15 @@ export interface Pet {
         activity_target?: number;
         water_target?: number;
         food_target?: number;
+        // Yeni alanlar
+        birthday?: string;
+        color?: string;
+        size?: string;
+        character?: string;
+        features?: string;
+        parasiteInternal?: string;
+        parasiteExternal?: string;
+        owner?: { name: string; phone: string; address: string };
     };
 }
 
@@ -79,53 +95,8 @@ interface PetContextType {
 
 const PetContext = createContext<PetContextType | undefined>(undefined);
 
-const INITIAL_PETS: Pet[] = [
-    {
-        id: 'pet-1',
-        name: "Milo",
-        breed: "Golden Retriever",
-        image: "https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=200",
-        microchip: "985-000-111-222",
-        birthday: "15 Nisan 2021",
-        city: "İSTANBUL / TR",
-        gender: "Erkek",
-        color: "Bal Sarısı",
-        weight: "28.5 kg",
-        neutered: true,
-        themeColor: '#EAB308',
-        owner: { name: "Uveys Moffi", phone: "+90 532 000 00 00", address: "Kadıköy, İstanbul" },
-        sos_settings: {
-            auto_post_sos: true, sos_radius: '5km', secure_proxy_only: false,
-            location_precision: 'exact', emergency_sms_number: "", reward_amount: 0,
-            reward_currency: "TL", critical_health_note: "",
-            finder_message: "Lütfen bahçeye kapatıp beni arayın.",
-            quiet_hours: { enabled: false, from: "23:00", to: "08:00" },
-            emergency_bypass: true, header_sos_alert_enabled: true
-        }
-    },
-    {
-        id: 'pet-2',
-        name: "Luna",
-        breed: "British Shorthair",
-        image: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=200",
-        microchip: "985-000-333-444",
-        birthday: "10 Mart 2022",
-        city: "İSTANBUL / TR",
-        gender: "Dişi",
-        color: "Gri Duman",
-        weight: "4.2 kg",
-        neutered: true,
-        themeColor: '#8B5CF6',
-        owner: { name: "Uveys Moffi", phone: "+90 532 000 00 00", address: "Kadıköy, İstanbul" },
-        sos_settings: {
-            auto_post_sos: true, sos_radius: '5km', secure_proxy_only: false,
-            location_precision: 'exact', emergency_sms_number: "", reward_amount: 0,
-            reward_currency: "TL", critical_health_note: "",
-            finder_message: "Lütfen bahçeye kapatıp beni arayın.",
-            header_sos_alert_enabled: true
-        }
-    }
-];
+const INITIAL_PETS: Pet[] = [];
+
 
 export function PetProvider({ children }: { children: React.ReactNode }) {
     const [pets, setPets] = useState<Pet[]>([]);
@@ -209,17 +180,25 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
 
     const updatePet = React.useCallback((id: string, updates: Partial<Pet>) => {
         setPets(prev => prev.map(pet => pet.id === id ? { ...pet, ...updates } : pet));
+        apiService.updatePet(id, updates).catch(err => {
+            console.error("Pet veri tabanı güncelleme hatası:", err);
+        });
     }, []);
 
-    const deletePet = React.useCallback((id: string) => {
-        setPets(prev => {
-            const newPets = prev.filter(p => p.id !== id);
-            setActivePetId(curr => {
-                if (curr === id) return newPets[0]?.id || null;
-                return curr;
+    const deletePet = React.useCallback(async (id: string) => {
+        try {
+            await apiService.deletePet(id);
+            setPets(prev => {
+                const newPets = prev.filter(p => p.id !== id);
+                setActivePetId(curr => {
+                    if (curr === id) return newPets[0]?.id || null;
+                    return curr;
+                });
+                return newPets;
             });
-            return newPets;
-        });
+        } catch (err) {
+            console.error("Pet silme hatası:", err);
+        }
     }, []);
 
     const switchPet = React.useCallback((id: string) => {

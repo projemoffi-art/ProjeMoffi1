@@ -25,7 +25,7 @@ import { Pet } from "@/context/PetContext";
 import { apiService } from "@/services/apiService";
 
 // Dynamic imports to prevent SSR issues
-const MapboxLiveMap = dynamic(() => import('@/components/maps/MapboxLiveMap'), { 
+const MapboxLiveMap = dynamic(() => import('@/components/walk/LiveMap'), { 
     ssr: false,
     loading: () => <div className="w-full h-full bg-black/20 animate-pulse rounded-3xl" />
 });

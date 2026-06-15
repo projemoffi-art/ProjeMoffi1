@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import dynamic from 'next/dynamic';
 import { FloatingControls } from "@/components/common/FloatingControls";
@@ -41,7 +41,33 @@ export function DynamicNavigation() {
     const [isAuthOpen, setIsAuthOpen] = useState(false);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const [isNavVisible, setIsNavVisible] = useState(true);
+    const [isNavAllowedByExternalOverlays, setIsNavAllowedByExternalOverlays] = useState(true);
     const [sosActivePet, setSosActivePet] = useState<any>(null);
+
+    const isAnyLocalOverlayOpen = 
+        isActionHubOpen || 
+        isWalkOpen || 
+        isSettingsOpen || 
+        isMapsOpen || 
+        isActionHubOverlayOpen || 
+        isSOSOpen || 
+        isSpotlightOpen || 
+        isAuthOpen || 
+        isNotificationOpen;
+
+    const overlayOpenRef = useRef(false);
+    overlayOpenRef.current = isAnyLocalOverlayOpen;
+    
+    const allowedByExternalRef = useRef(true);
+    allowedByExternalRef.current = isNavAllowedByExternalOverlays;
+
+    useEffect(() => {
+        if (isAnyLocalOverlayOpen) {
+            setIsNavVisible(false);
+        } else if (isNavAllowedByExternalOverlays) {
+            setIsNavVisible(true);
+        }
+    }, [isAnyLocalOverlayOpen, isNavAllowedByExternalOverlays]);
 
     useEffect(() => {
         if (activePet) {
@@ -177,27 +203,52 @@ export function DynamicNavigation() {
         };
 
         // Scroll hide/show nav
-        let lastGlobalScrollY = window.scrollY;
+        // Scroll hide/show nav (Capturing globally)
         let ticking = false;
-        const handleGlobalScroll = () => {
+        const handleGlobalScroll = (e: Event) => {
+            // If any overlay is open, bypass scroll hide/show to keep nav hidden
+            if (overlayOpenRef.current || !allowedByExternalRef.current) return;
+
+            const target = e.target as HTMLElement;
+            if (!target) return;
+
+            // Get current scroll position of the specific target
+            const isWindowScroll = target === document || (target as any) === window || target === document.body || target === document.documentElement;
+            const current = isWindowScroll ? window.scrollY : target.scrollTop;
+
             if (!ticking) {
                 window.requestAnimationFrame(() => {
-                    const current = window.scrollY;
-                    const diff = current - lastGlobalScrollY;
-                    if (current > 60) {
+                    const latestCurrent = isWindowScroll ? window.scrollY : target.scrollTop;
+                    const last = (target as any)._moffiLastScrollY !== undefined ? (target as any)._moffiLastScrollY : latestCurrent;
+                    const diff = latestCurrent - last;
+
+                    if (latestCurrent > 60) {
                         if (diff > 5) setIsNavVisible(false);
                         else if (diff < -10) setIsNavVisible(true);
                     } else {
                         setIsNavVisible(true);
                     }
-                    lastGlobalScrollY = current;
+
+                    (target as any)._moffiLastScrollY = latestCurrent;
                     ticking = false;
                 });
                 ticking = true;
             }
         };
 
-        const handleToggleNav = (e: any) => setIsNavVisible(e.detail);
+        const handleOpenPostGlobal = () => {
+            if (pathname === '/topluluk') {
+                window.dispatchEvent(new CustomEvent('moffi-open-upload-modal'));
+            } else {
+                router.push('/topluluk?openUpload=true');
+            }
+        };
+
+        const handleToggleNav = (e: any) => {
+            const allowed = e.detail;
+            setIsNavAllowedByExternalOverlays(allowed);
+            setIsNavVisible(allowed);
+        };
 
         window.addEventListener('popstate', handlePopState);
         window.addEventListener('open-moffi-hub', handleOpenActionHub);
@@ -210,8 +261,9 @@ export function DynamicNavigation() {
         window.addEventListener('open-auth-modal', handleOpenAuth);
         window.addEventListener('open-notification-drawer', handleOpenNotifications);
         window.addEventListener('moffi-navigate', handleGlobalNavigate);
-        window.addEventListener('scroll', handleGlobalScroll, { passive: true });
+        window.addEventListener('scroll', handleGlobalScroll, { capture: true, passive: true });
         window.addEventListener('moffi-toggle-nav', handleToggleNav);
+        window.addEventListener('open-add-post', handleOpenPostGlobal);
 
         return () => {
             window.removeEventListener('open-moffi-hub', handleOpenActionHub);
@@ -226,7 +278,8 @@ export function DynamicNavigation() {
             window.removeEventListener('moffi-navigate', handleGlobalNavigate);
             window.removeEventListener('moffi-toggle-nav', handleToggleNav);
             window.removeEventListener('popstate', handlePopState);
-            window.removeEventListener('scroll', handleGlobalScroll);
+            window.removeEventListener('scroll', handleGlobalScroll, { capture: true });
+            window.removeEventListener('open-add-post', handleOpenPostGlobal);
         };
     }, [pathname, user]);
 
@@ -339,7 +392,7 @@ export function DynamicNavigation() {
                         pathname === '/topluluk' ? (searchParams?.get('tab') || 'feed') :
                         'home'
                     }
-                    isVisible={true}
+                    isVisible={isNavVisible}
                     onTabChange={(tab) => {
                         if (tab === 'home') {
                             router.push('/community');

@@ -385,16 +385,25 @@ export function ProfileTab({
                 {activeSubView === 'main' ? (
                     <motion.div key="main" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                     <div className="w-full h-48 bg-card relative overflow-hidden">
-                        <img src={user?.cover_photo || "https://images.unsplash.com/photo-1550439062-609e1531270e?q=80&w=1200"} className="w-full h-full object-cover opacity-40" />
+                        {user?.cover_photo ? (
+                            <img src={user.cover_photo} className="w-full h-full object-cover opacity-50" />
+                        ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-[#0f2027] via-[#203a43] to-[#2c5364]" />
+                        )}
                         <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
                     </div>
 
                         <div className="px-6 relative -mt-16 mb-6">
                             <div className="flex justify-between items-center mb-6">
                                 <div className="relative">
-                                    <div className="w-28 h-28 rounded-[2.5rem] border-4 border-background relative bg-card overflow-hidden shadow-2xl group/avatar z-10">
-                                        <img src={user?.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} className="w-full h-full object-cover group-hover/avatar:scale-110 transition-transform duration-700" />
-                                        
+                                    <div className="w-28 h-28 rounded-[2.5rem] border-4 border-background relative bg-card overflow-hidden shadow-2xl z-10">
+                                        {user?.avatar && user.avatar !== "" && user.avatar !== "placeholder" && user.avatar !== "null" ? (
+                                            <img src={user.avatar} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full bg-gradient-to-tr from-[#527958] to-emerald-500 flex items-center justify-center text-white text-4xl font-black select-none">
+                                                {((user?.display_name || user?.name || user?.username || 'M').split(' ').map((w: string) => w[0]).join('').substring(0,2)).toUpperCase()}
+                                            </div>
+                                        )}
                                         <div className="absolute bottom-1 left-1 w-7 h-7 bg-accent rounded-full flex items-center justify-center border-4 border-background">
                                             <Check className="w-3 h-3 text-background" />
                                         </div>
@@ -402,8 +411,8 @@ export function ProfileTab({
                                 </div>
                                 <div className="flex gap-4 sm:gap-6 pr-0 sm:pr-4">
                                     <StatItem value={posts.length} label="Gönderi" />
-                                    <StatItem value="1.2k" label="Takipçi" />
-                                    <StatItem value="840" label="Takip" />
+                                    <StatItem value={user?.stats?.followers ?? user?.stats?.pack ?? 0} label="Takipçi" />
+                                    <StatItem value={user?.stats?.following ?? 0} label="Takip" />
                                 </div>
                             </div>
 
@@ -547,7 +556,15 @@ function PetDashboardView({ pets, activePet, switchPet, onAddPet, posts, safeAct
             <div className="flex gap-4 overflow-x-auto no-scrollbar pb-6">
                 {pets.map((pet: any) => (
                     <button key={pet.id} onClick={() => switchPet(pet.id)} className={cn("min-w-[130px] bg-card border border-card-border rounded-[2.2rem] p-5 flex flex-col items-center gap-4", activePet?.id === pet.id ? "border-accent/40 bg-accent/5" : "")}>
-                        <img src={pet.image || pet.avatar} className="w-16 h-16 rounded-2xl object-cover" />
+                        {pet.image || pet.avatar ? (
+                            <img src={pet.image || pet.avatar} className="w-16 h-16 rounded-2xl object-cover" />
+                        ) : (
+                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-gray-150 to-gray-250 dark:from-zinc-800 dark:to-zinc-700 flex items-center justify-center border border-card-border shadow-inner">
+                                <span className="text-gray-400 dark:text-zinc-500 text-2xl font-black select-none uppercase font-sans">
+                                    {pet.name ? pet.name[0] : '🐾'}
+                                </span>
+                            </div>
+                        )}
                         <span className="font-black text-foreground text-[11px] uppercase">{pet.name}</span>
                     </button>
                 ))}
@@ -567,7 +584,15 @@ function PetDashboardView({ pets, activePet, switchPet, onAddPet, posts, safeAct
                                     activePet?.id === p.id ? "ring-2 ring-cyan-500 ring-offset-2 ring-offset-[#1A1A2E] scale-110 shadow-lg shadow-cyan-500/20" : "opacity-30 grayscale hover:opacity-100 hover:grayscale-0"
                                 )}
                             >
-                                <img src={p.image || p.avatar || p.cover_photo} className="w-full h-full object-cover" />
+                                {p.image || p.avatar || p.cover_photo ? (
+                                    <img src={p.image || p.avatar || p.cover_photo} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full bg-gradient-to-tr from-gray-150 to-gray-250 dark:from-zinc-800 dark:to-zinc-700 flex items-center justify-center">
+                                        <span className="text-gray-400 dark:text-zinc-500 text-sm font-black select-none uppercase font-sans">
+                                            {p.name ? p.name[0] : '🐾'}
+                                        </span>
+                                    </div>
+                                )}
                             </button>
                         ))}
                     </div>

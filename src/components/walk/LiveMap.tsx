@@ -169,6 +169,52 @@ export default function LiveMap({
     const [routePath, setRoutePath] = useState<[number, number][]>([]);
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+    // Dynamic Places List (Real OSM Data with local mock fallback)
+    const [placesList, setPlacesList] = useState<Place[]>(PLACES);
+
+    useEffect(() => {
+        let isMounted = true;
+        
+        const fetchRealPlaces = async () => {
+            try {
+                // Query Overpass API for veterinary, park, cafe, pet_shop within 5000m (5km) of userPos
+                const query = `[out:json][timeout:25];(node["amenity"="veterinary"](around:5000,${userPos[0]},${userPos[1]});node["leisure"="park"](around:5000,${userPos[0]},${userPos[1]});node["amenity"="cafe"](around:5000,${userPos[0]},${userPos[1]});node["shop"="pet"](around:5000,${userPos[0]},${userPos[1]}););out body;`;
+                const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
+                if (!response.ok) throw new Error("Overpass query failed");
+                const data = await response.json();
+                
+                if (isMounted && data.elements && data.elements.length > 0) {
+                    const mapped = data.elements.map((el: any) => {
+                        let type = 'cafe';
+                        if (el.tags.amenity === 'veterinary') type = 'vet';
+                        else if (el.tags.leisure === 'park') type = 'park';
+                        else if (el.tags.shop === 'pet' || el.tags.amenity === 'pet_shop') type = 'shop';
+                        
+                        return {
+                            id: String(el.id),
+                            name: el.tags.name || (type === 'vet' ? 'Veteriner' : type === 'park' ? 'Park' : type === 'shop' ? 'Pet Shop' : 'Kafe'),
+                            lat: el.lat,
+                            lng: el.lon,
+                            type: type as any,
+                            isPremium: Math.random() > 0.85,
+                            coinReward: Math.floor(Math.random() * 20) + 10
+                        };
+                    });
+                    setPlacesList(mapped);
+                }
+            } catch (err) {
+                console.error("OSM Places fetch error, falling back to mock:", err);
+                if (isMounted) setPlacesList(PLACES);
+            }
+        };
+
+        fetchRealPlaces();
+        
+        return () => {
+            isMounted = false;
+        };
+    }, [userPos]);
+
     // Sync with external controls
     useEffect(() => {
         if (externalSearchQuery !== undefined) setSearchQuery(externalSearchQuery);
@@ -277,13 +323,11 @@ export default function LiveMap({
         { id: 'shop', label: 'Market', icon: ShoppingBag, color: 'text-purple-500 bg-purple-50' },
     ];
 
-    // Filtered Places (Local Mock Data)
-    const displayedPlaces = PLACES.filter(p => {
+    // Filtered Places (Real OSM Data with local mock fallback)
+    const displayedPlaces = placesList.filter(p => {
         if (filterType && p.type !== filterType) return false;
-        // Local search continues to work on Mock Data too!
-        if (searchQuery && p.name.toLowerCase().includes(searchQuery.toLowerCase()) && searchResults.length === 0) return true;
-        if (searchQuery && searchResults.length > 0) return true; // Show all if searching real web
-        if (searchQuery) return false; // Hide if searching and not matching local
+        if (searchQuery && p.name.toLowerCase().includes(searchQuery.toLowerCase())) return true;
+        if (searchQuery) return false;
         return true;
     });
 

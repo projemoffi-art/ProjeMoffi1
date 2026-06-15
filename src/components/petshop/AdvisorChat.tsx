@@ -50,10 +50,50 @@ export default function AdvisorChat({ isOpen, onClose, isSmartEnabled = true }: 
         setInput("");
         setIsTyping(true);
 
-        // Simulated AI logic
-        setTimeout(() => {
-            let aiResponse = "";
+        try {
+            // Build rich context based on activePet
+            let petInfo = "";
+            if (isSmartEnabled && activePet) {
+                petInfo = `Aktif Evcil Hayvan Bilgileri:\n` +
+                          `- İsim: ${activePet.name}\n` +
+                          `- Tür: ${activePet.type || "Evcil Hayvan"}\n` +
+                          `- Irk: ${activePet.breed || "Bilinmiyor"}\n` +
+                          `- Yaş: ${activePet.age || "Bilinmiyor"} yaşında\n` +
+                          `- Kilo: ${activePet.weight || "Bilinmiyor"} kg\n` +
+                          `- Cinsiyet: ${activePet.gender || "Bilinmiyor"}\n` +
+                          `Analiz: Bugün aktif bir yürüyüş yaptı ve oldukça hareketliydi.`;
+            } else {
+                petInfo = `Kullanıcı gizlilik nedeniyle akıllı mağaza entegrasyonunu kapattı veya pet kaydı yok. Evcil hayvanın özel sağlık verilerine erişimin yok. Sadece genel beslenme ve sağlık önerileri yapmalısın.`;
+            }
+
+            const contextString = `Rolün: Moffi PetShop Beslenme ve Sağlık Danışmanısın.\n` +
+                                  `${petInfo}\n` +
+                                  `Lütfen kullanıcının sorusuna samimi, uzman bir dille, kısa ve öz cevap ver. Cevabında uygun ürün gruplarını (kuru mama, yaş mama, ödül maması, tüy fırçası vb.) öner. Türkçe konuş ve emojiler kullan.`;
+
+            const response = await fetch('/api/ai/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: newMessages.map(m => ({
+                        role: m.role === 'ai' ? 'model' : 'user',
+                        content: m.content
+                    })),
+                    context: contextString
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success && data.message) {
+                setMessages(prev => [...prev, { role: "ai", content: data.message }]);
+            } else {
+                throw new Error(data.error || "Yanıt alınamadı");
+            }
+        } catch (apiError) {
+            console.error("Advisor AI Failed, switching to fallback:", apiError);
             
+            // Safe Fallback simulation logic
+            let aiResponse = "";
             if (!isSmartEnabled) {
                 aiResponse = `${petName}'nun özel verilerine erişemediğim için genel bir öneri yapabilirim: 'Pro Plan' serisi çoğu evcil hayvan için dengeli bir başlangıçtır. Daha spesifik bir öneri istersen ayarlardan akıllı mağazayı açabilirsin!`;
             } else {
@@ -64,10 +104,10 @@ export default function AdvisorChat({ isOpen, onClose, isSmartEnabled = true }: 
                     aiResponse = "Mevsim geçişlerinde tüy dökülmesi normaldir, ancak 'Furminator' bakım fırçası ve somon yağlı mamalar bu süreci çok daha konforlu hale getirir.";
                 }
             }
-            
-            setMessages([...newMessages, { role: "ai", content: aiResponse }]);
+            setMessages(prev => [...prev, { role: "ai", content: aiResponse + " (Offline Mod)" }]);
+        } finally {
             setIsTyping(false);
-        }, 1500);
+        }
     };
 
     return (

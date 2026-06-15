@@ -55,8 +55,9 @@ export function usePetShop() {
         try {
             await apiService.addToCart(productId, quantity);
             await fetchCart();
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Sepete eklenemedi');
+        } catch (err: any) {
+            console.error("addToCart error details:", err);
+            setError(err?.message || 'Sepete eklenemedi');
         }
     }, [fetchCart]);
 
@@ -65,8 +66,9 @@ export function usePetShop() {
         try {
             await apiService.updateCartItem(productId, quantity);
             await fetchCart();
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Güncellenemedi');
+        } catch (err: any) {
+            console.error("updateCartItem error details:", err);
+            setError(err?.message || 'Güncellenemedi');
         }
     }, [fetchCart]);
 
@@ -101,12 +103,21 @@ export function usePetShop() {
                 return { product: product!, quantity: item.quantity };
             });
 
-            let totalPrice = productDetails.reduce((s, i) => s + i.product.price * i.quantity, 0);
+            // Calculate base total with active product subscription discounts (10%)
+            let totalPrice = productDetails.reduce((s, i) => {
+                const isSubscribed = subscriptions.some(sub => sub.id === i.product.id);
+                const price = isSubscribed ? i.product.price * 0.90 : i.product.price;
+                return s + (price * i.quantity);
+            }, 0);
+            
             let discountAmount = 0;
 
             // Simple mock discount logic moved here for now
             if (discountCode === 'MOFFI20') {
                discountAmount = Math.round(totalPrice * 0.20);
+               totalPrice -= discountAmount;
+            } else if (discountCode === 'WELCOME10') {
+               discountAmount = Math.round(totalPrice * 0.10);
                totalPrice -= discountAmount;
             }
 
@@ -124,13 +135,23 @@ export function usePetShop() {
             setError(err instanceof Error ? err.message : 'Sipariş oluşturulamadı');
             return null;
         }
-    }, []);
+    }, [subscriptions]);
 
-    // Subscriptions
+    // Subscriptions (Product Auto-Ship integration synced with localStorage and backend)
     const fetchSubscriptions = useCallback(async () => {
         try {
-            const subs = await apiService.getSubscriptions();
-            setSubscriptions(subs);
+            // Triggers Prime check on backend if needed
+            await apiService.getSubscriptions();
+            
+            const saved = localStorage.getItem('moffi_product_subscriptions');
+            let localIds: string[] = [];
+            if (saved) {
+                try { localIds = JSON.parse(saved); } catch (e) {}
+            }
+            
+            const all = await apiService.getProducts();
+            const subscribedProducts = all.filter(p => localIds.includes(p.id));
+            setSubscriptions(subscribedProducts);
         } catch (err) {
             console.error('Subscriptions fetch error:', err);
         }
@@ -140,6 +161,18 @@ export function usePetShop() {
         setError(null);
         try {
             await apiService.subscribeToProduct(productId);
+            
+            const saved = localStorage.getItem('moffi_product_subscriptions');
+            let localIds: string[] = [];
+            if (saved) {
+                try { localIds = JSON.parse(saved); } catch (e) {}
+            }
+            
+            const nextIds = localIds.includes(productId)
+                ? localIds.filter(id => id !== productId)
+                : [...localIds, productId];
+            localStorage.setItem('moffi_product_subscriptions', JSON.stringify(nextIds));
+            
             await fetchSubscriptions();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Abone olunamadı');
@@ -165,9 +198,12 @@ export function usePetShop() {
     const getCartTotal = useCallback(() => {
         return cart.reduce((total, item) => {
             const product = products.find(p => p.id === item.productId);
-            return total + (product ? product.price * item.quantity : 0);
+            if (!product) return total;
+            const isSubscribed = subscriptions.some(s => s.id === product.id);
+            const price = isSubscribed ? product.price * 0.90 : product.price;
+            return total + (price * item.quantity);
         }, 0);
-    }, [cart, products]);
+    }, [cart, products, subscriptions]);
 
     return {
         products,

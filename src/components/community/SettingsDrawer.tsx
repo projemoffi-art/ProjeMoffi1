@@ -26,7 +26,7 @@ interface SettingsDrawerProps {
     onClose: () => void;
 }
 
-type DrawerView = 'main' | 'activity' | 'blocked' | 'words' | 'stories' | 'wellbeing' | 'accessibility' | 'password' | 'privacy' | 'notifications' | 'sos_config' | 'appearance_detail' | 'sidebar_config' | 'ai_assistant' | 'account_settings';
+type DrawerView = 'main' | 'activity' | 'blocked' | 'words' | 'stories' | 'wellbeing' | 'accessibility' | 'password' | 'privacy' | 'notifications' | 'sos_config' | 'sidebar_config' | 'ai_assistant' | 'account_settings';
 
 // --- Shared Interfaces ---
 interface SectionProps {
@@ -231,7 +231,6 @@ const MainView = ({ user, setView, handleToggle, handleExport, isExporting, expo
         </Section>
 
         <Section title="Erişilebilirlik ve Görünüm">
-            <ActionRow icon={Palette} label="Görünüm Ayarları" desc="Yazı tipi ve görsel efekt ayarları." onClick={() => setView('appearance_detail')} />
             <ActionRow icon={Layers} label="Kenar Paneli Ayarları" desc="Paneldeki hızlı erişim butonlarını seç." onClick={() => setView('sidebar_config')} />
             <ActionRow icon={Type} label="Metin ve Renk Ayarları" desc="Yazı boyutu ve görme desteği." onClick={() => setView('accessibility')} />
         </Section>
@@ -305,74 +304,7 @@ const MainView = ({ user, setView, handleToggle, handleExport, isExporting, expo
             />
         </Section>
 
-        <Section title="Görünüm ve Aura">
-            <div className="space-y-4">
-                <ActionRow icon={Palette} label="Aura Stüdyosu'nu Aç" desc="Profesyonel kimlik özelleştirme." onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('open-aura-studio')); }} />
-                
-                {/* Accent Color Picker */}
-                <div className="py-2 px-2">
-                    <p className="text-[10px] font-black text-foreground/20 uppercase tracking-[0.2em] mb-3 px-1">Vurgu Rengi (Accent)</p>
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                        {[
-                            { id: 'cyan', color: '#06b6d4' },
-                            { id: 'purple', color: '#a855f7' },
-                            { id: 'rose', color: '#fb7185' },
-                            { id: 'emerald', color: '#10b981' },
-                            { id: 'orange', color: '#f97316' },
-                            { id: 'violet', color: '#8b5cf6' }
-                        ].map((c) => (
-                            <button 
-                                key={c.id} 
-                                onClick={() => updateSettings('appearance', { accentColor: c.id })}
-                                className={cn(
-                                    "w-7 h-7 rounded-full border-2 transition-all shrink-0",
-                                    user?.settings?.appearance?.accentColor === c.id ? "border-foreground scale-110 shadow-lg" : "border-transparent"
-                                )}
-                                style={{ backgroundColor: c.color }}
-                            />
-                        ))}
-                    </div>
-                </div>
 
-                {/* Aura Style Selection */}
-                <div className="py-2 px-2">
-                    <p className="text-[8px] font-black text-foreground/20 uppercase tracking-[0.2em] mb-3 px-1">Aura Efekt Stili</p>
-                    <div className="grid grid-cols-2 gap-2">
-                        {[
-                            { id: 'minimal', label: 'Pure Minimal', icon: Moon },
-                            { id: 'glass', label: 'Buzlu Cam', icon: Layers },
-                            { id: 'neon', label: 'Cyber Neon', icon: Zap },
-                            { id: 'metal', label: 'Elite Metal', icon: Shield }
-                        ].map((style) => (
-                            <button 
-                                key={style.id} 
-                                onClick={() => updateSettings('appearance', { auraStyle: style.id })} 
-                                className={cn(
-                                    "flex flex-col items-center justify-center p-4 rounded-2xl transition-all border group",
-                                    user?.settings?.appearance?.auraStyle === style.id 
-                                        ? "bg-foreground text-background border-transparent shadow-xl" 
-                                        : "bg-foreground/[0.03] border-foreground/5 text-foreground/40 hover:bg-foreground/10"
-                                )}
-                            >
-                                <style.icon className={cn("w-4 h-4 mb-2 group-hover:scale-110 transition-transform", user?.settings?.appearance?.auraStyle === style.id ? "text-background" : "text-foreground/40")} />
-                                <span className="text-[10px] font-black uppercase tracking-widest">{style.label}</span>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <SliderRow 
-                    label="Aura Animasyon Şiddeti" 
-                    category="appearance" 
-                    field="auraIntensity" 
-                    value={user?.settings?.appearance?.auraIntensity || 100} 
-                    unit="%"
-                    min={0} 
-                    max={100} 
-                    onChange={updateSettings} 
-                />
-            </div>
-        </Section>
 
 
 
@@ -420,47 +352,7 @@ const MainView = ({ user, setView, handleToggle, handleExport, isExporting, expo
     </motion.div>
 );
 
-const AppearanceDetailView = ({ user, setView, updateSettings }: ViewProps) => {
-    return (
-        <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(94vh - 180px)' }}>
-            <div className="space-y-8 pb-10 px-2">
-                <div className="space-y-3">
-                    <p className="text-[9px] font-black text-secondary uppercase tracking-[0.2em] px-1">Gelişmiş Görsel Özellikler</p>
-                    <div className="space-y-1 bg-foreground/[0.02] rounded-[2.5rem] p-2 border border-card-border">
-                        <ToggleRow user={user} onToggle={(c, i) => updateSettings('appearance', { auraVisible: !user?.settings?.appearance?.auraVisible })} category="appearance" id="auraVisible" icon={Sparkles} label="Global Aura Görünürlüğü" desc="Profil aura efektini her yerde aktif eder." />
-                        <div className="py-2 px-3">
-                             <p className="text-[10px] font-black text-secondary uppercase mb-2">Varsayılan Yazı Tipi</p>
-                             <div className="grid grid-cols-3 gap-2">
-                                 {[
-                                     { id: 'font-sans', label: 'Standart' },
-                                     { id: 'font-serif', label: 'Zarif' },
-                                     { id: 'font-mono', label: 'Teknik' },
-                                     { id: 'font-pacifico', label: 'Retro' },
-                                     { id: 'font-satisfy', label: 'El Yazısı' },
-                                     { id: 'font-playfair', label: 'Klasik' }
-                                 ].map(f => (
-                                     <button 
-                                       key={f.id} 
-                                       onClick={() => updateSettings('appearance', { font: f.id })} 
-                                       className={cn(
-                                         "py-3 rounded-2xl text-[9px] font-black uppercase transition-all border", 
-                                         (user?.settings?.appearance?.font || 'font-sans') === f.id 
-                                           ? "bg-foreground text-background border-transparent shadow-lg" 
-                                           : "bg-foreground/[0.05] text-secondary border-card-border hover:bg-foreground/[0.08]"
-                                       )}
-                                     >
-                                       {f.label}
-                                     </button>
-                                 ))}
-                             </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <button onClick={() => setView('main')} className="mt-4 w-full py-5 rounded-[2.5rem] bg-foreground/[0.05] text-foreground font-black text-[12px] uppercase tracking-[0.2em] hover:bg-foreground/10 transition-all flex items-center justify-center gap-3"><ArrowLeft className="w-4 h-4" /> Geri Dön</button>
-        </motion.div>
-    );
-};
+
 
 const SOSConfigView = ({ user, setView, updateSettings }: ViewProps) => {
     const sos = user?.settings?.sos || { radius: 5, emergencyBypass: true, soundAlerts: true };
@@ -1083,7 +975,15 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
 
     const handleResetSystem = () => {
         if (confirm("Tüm sistem verileri ve ayarların sıfırlanacak. Bu işlem geri alınamaz. Emin misin?")) {
-            localStorage.clear();
+            // Clear all localStorage keys except Supabase authentication tokens (to keep user logged in)
+            const keysToRemove: string[] = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && !key.startsWith('sb-')) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(k => localStorage.removeItem(k));
             window.location.reload();
         }
     };
@@ -1165,8 +1065,6 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
                                     <NotificationsView key="notifications" {...viewProps} />
                                 ) : view === 'sos_config' ? (
                                     <SOSConfigView key="sos" {...viewProps} />
-                                ) : view === 'appearance_detail' ? (
-                                    <AppearanceDetailView key="appearance" {...viewProps} />
                                 ) : view === 'sidebar_config' ? (
                                     <SidebarConfigView key="sidebar" {...viewProps} />
                                 ) : view === 'ai_assistant' ? (

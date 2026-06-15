@@ -14,14 +14,21 @@ export class MockApiService implements IApiService {
     // Auth & Profile
     async getCurrentUser(): Promise<UserProfile | null> {
         const saved = await this.loadData<UserProfile>('current_user');
-        if (saved) return saved;
+        if (saved) {
+            // Eski kayıtta Unsplash mock URL varsa temizle
+            if (saved.avatar && saved.avatar.includes('unsplash.com')) {
+                saved.avatar = undefined;
+                await this.saveData('current_user', saved);
+            }
+            return saved;
+        }
         
-        // Initial setup for mock
+        // Mock mod için yeni kullanıcı — avatar YOK (baş harf gösterilecek)
         const newUser: UserProfile = {
             id: `user-mock-${Date.now()}`,
             name: 'Moffi Guest',
             username: 'moffi_guest',
-            avatar: "https://images.unsplash.com/photo-1628157588553-5eeea00af15c?q=80&w=400",
+            avatar: undefined,
             is_verified: false,
             subscription_status: 'free',
             wallet_balance: 0,
@@ -101,6 +108,12 @@ export class MockApiService implements IApiService {
         pets[index] = updated;
         await this.saveData('pets', pets);
         return updated;
+    }
+
+    async deletePet(id: string): Promise<void> {
+        const pets = await this.getPets();
+        const filtered = pets.filter(p => p.id !== id);
+        await this.saveData('pets', filtered);
     }
 
     // Community
@@ -884,7 +897,14 @@ export class MockApiService implements IApiService {
             }
         }
 
-        // Simulation Fallback: Use a guaranteed high-quality pet image for mock persistence
+        // Simulation Fallback: Use a local Object URL if window is available, otherwise default image
+        if (typeof window !== 'undefined' && file) {
+            try {
+                return URL.createObjectURL(file);
+            } catch (e) {
+                console.error("Failed to create object URL for local preview:", e);
+            }
+        }
         return "https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&q=80&w=800";
     }
 
@@ -908,6 +928,66 @@ export class MockApiService implements IApiService {
         } catch {
             return null;
         }
+    }
+
+    async addProduct(product: Partial<ShopProduct>): Promise<ShopProduct> {
+        const products = await this.getProducts();
+        const newProduct: ShopProduct = {
+            id: `prod-${Date.now()}`,
+            name: product.name || 'Yeni Ürün',
+            description: product.description || '',
+            price: product.price || 0,
+            oldPrice: product.oldPrice,
+            image: product.image || '🦴',
+            category: product.category || 'food',
+            isPrimeOnly: product.isPrimeOnly || false,
+            inStock: (product.stockCount || 10) > 0,
+            stockCount: product.stockCount || 10,
+            rating: 5.0,
+            reviews: 0,
+            isVetApproved: product.isVetApproved || false,
+            tag: product.tag
+        };
+        await this.saveData('products', [...products, newProduct]);
+        return newProduct;
+    }
+
+    async updateProduct(id: string, product: Partial<ShopProduct>): Promise<ShopProduct> {
+        const products = await this.getProducts();
+        let updated: ShopProduct | null = null;
+        const next = products.map(p => {
+            if (p.id === id) {
+                updated = {
+                    ...p,
+                    ...product,
+                    price: product.price !== undefined ? product.price : p.price,
+                    oldPrice: product.oldPrice !== undefined ? product.oldPrice : p.oldPrice,
+                    stockCount: product.stockCount !== undefined ? product.stockCount : p.stockCount,
+                    inStock: (product.stockCount !== undefined ? product.stockCount : (p.stockCount || 0)) > 0
+                };
+                return updated;
+            }
+            return p;
+        });
+        if (!updated) throw new Error("Product not found");
+        await this.saveData('products', next);
+        return updated;
+    }
+
+    async deleteProduct(id: string): Promise<void> {
+        const products = await this.getProducts();
+        const next = products.filter(p => p.id !== id);
+        await this.saveData('products', next);
+    }
+
+    async updateOrderStatus(orderId: string, status: any): Promise<void> {
+        const orders = await this.getOrders();
+        const next = orders.map(o => o.id === orderId ? { ...o, status } : o);
+        await this.saveData('orders', next);
+    }
+
+    async getAllOrders(): Promise<ShopOrder[]> {
+        return this.getOrders();
     }
 }
 // Singleton instance for components that haven't migrated to the central services/apiService.ts yet

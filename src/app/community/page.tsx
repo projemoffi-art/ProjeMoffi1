@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePet } from '@/context/PetContext';
+import { useQuestEngine } from '@/context/QuestEngineContext';
 import { PetSettingsModal } from '@/components/profile/PetSettingsModal';
 import { AddPetModal } from '@/components/community/modals/AddPetModal';
+import { DailyGoalsModal } from '@/components/community/modals/DailyGoalsModal';
 import { apiService } from '@/services/apiService';
 import { 
     Bell, 
@@ -61,11 +63,16 @@ import {
     Coffee,
     Info,
     Crown,
-    Trophy
+    Trophy,
+    SunMoon,
+    Sun,
+    Moon
 } from 'lucide-react';
 
 import { useStories } from '../../hooks/useStories';
 import { useWalk } from '../../hooks/useWalk';
+import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import { QuestBentoCard } from '@/components/quests/QuestBentoCard';
 import { cn } from '@/lib/utils';
 import Mascot3DCanvas from '@/components/dressing/Mascot3DCanvas';
@@ -103,182 +110,56 @@ const MATCH_CANDIDATES = [
     }
 ];
 
-const PETS_DATA = {
-    luna: {
-        name: 'Luna',
-        image: '/purple_mascot.png',
-        breed: 'Golden Retriever • 2 yaşında • Dişi',
-        health: 'İyi',
-        activity: '68%',
-        weight: '24.5 kg',
-        ringProgress: { activity: 68, water: 80, food: 55 },
-        status: 'GÜVENDE',
-        statusColor: 'text-green-600 bg-green-100 border-green-200',
-        streak: 4,
-        weeklyData: [60, 45, 55, 75, 90, 80, 85],
-        collar: {
-            connected: true,
-            battery: 84,
-            signal: 'Mükemmel',
-            lastSync: '1 dk önce',
-            rssi: '-45 dBm (Çok Yakın)',
-            firmware: 'v3.1.2-MoffiLink'
-        },
-        wallet: {
-            patipuan: '2,450',
-            currency: 'PATI',
-            cardNumber: '•••• •••• •••• 4892',
-            transactions: [
-                { id: 1, type: 'gider', title: 'Yaş Mama Alımı', amount: '-180 PATI', date: 'Bugün, 10:20' },
-                { id: 2, type: 'gelir', title: 'Sabah Yürüyüşü Ödülü 🔥', amount: '+50 PATI', date: 'Bugün, 08:15' },
-                { id: 3, type: 'gelir', title: 'AI Tarz Paylaşım Bonusu', amount: '+20 PATI', date: 'Dün, 19:40' }
-            ]
-        },
-        passport: {
-            idCode: 'MF-892-LNA',
-            nfcStatus: 'Aktif Sinyal',
-            qrcode: 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=moffi-passport-luna',
-            vaccines: [
-                { name: 'Kuduz Aşısı', date: '04.02.2026', status: 'Aşılı', color: 'text-green-600' },
-                { name: 'Karma Aşı', date: '18.03.2026', status: 'Aşılı', color: 'text-green-600' },
-                { name: 'Parazit Tedavisi', date: 'Ömrü bitiyor', status: '3 gün kaldı', color: 'text-red-500 font-bold' }
-            ]
-        },
-        dressing: {
-            activeOutfit: 'Havalı Gözlük 😎 & Kırmızı Boyunluk 🧣',
-            stylePoints: 120,
-            avatarMock: '/purple_mascot.png'
-        },
-        quests: [
-            { id: 1, text: 'Luna ile Yürüyüşü Tamamla (3.5 KM)', done: true },
-            { id: 2, text: 'Akşam Yemeği Mama Kabını Doldur', done: false },
-            { id: 3, text: 'Gardıropta yeni bir tarz dene', done: true }
-        ],
-        specialOffer: {
-            title: 'Maması Azalıyor! 📉',
-            desc: 'Luna için en çok satılan Somonlu Premium Yetişkin Maması (12kg)',
-            oldPrice: '1.200 TL',
-            newPrice: '960 TL',
-            discount: '%20 İNDİRİM'
-        }
+const cleanDefaultTemplate = {
+    name: 'Moffi',
+    image: '',
+    breed: 'Bilinmeyen Cins',
+    health: 'İyi',
+    activity: '0%',
+    weight: '0 kg',
+    ringProgress: { activity: 0, water: 0, food: 0 },
+    status: 'GÜVENDE',
+    statusColor: 'text-green-600 bg-green-100 border-green-200',
+    streak: 0,
+    weeklyData: [0, 0, 0, 0, 0, 0, 0],
+    collar: {
+        connected: false,
+        battery: 0,
+        signal: 'Bağlantı Yok',
+        lastSync: 'Hiçbir zaman',
+        rssi: 'Bağlantı Yok',
+        firmware: 'v1.0.0-Moffi'
     },
-    max: {
-        name: 'Max',
-        image: '/purple_mascot.png',
-        breed: 'Beagle • 1 yaşında • Erkek',
-        health: 'Mükemmel',
-        activity: '92%',
-        weight: '12.2 kg',
-        ringProgress: { activity: 92, water: 95, food: 90 },
-        status: 'YÜRÜYÜŞTE',
-        statusColor: 'text-blue-600 bg-blue-100 border-blue-200',
-        streak: 6,
-        weeklyData: [80, 85, 90, 95, 100, 92, 95],
-        collar: {
-            connected: true,
-            battery: 48,
-            signal: 'Güçlü',
-            lastSync: 'Şimdi',
-            rssi: '-62 dBm (Orta Mesafe)',
-            firmware: 'v3.1.2-MoffiLink'
-        },
-        wallet: {
-            patipuan: '4,120',
-            currency: 'PATI',
-            cardNumber: '•••• •••• •••• 9921',
-            transactions: [
-                { id: 1, type: 'gelir', title: '5 KM Koşu Görevi Ödülü ⚡', amount: '+100 PATI', date: 'Bugün, 09:12' },
-                { id: 2, type: 'gelir', title: 'Haftalık Seri Bonusu 🔥', amount: '+150 PATI', date: 'Dün, 18:00' },
-                { id: 3, type: 'gider', title: 'Tasma Aksesuar Satın Alımı', amount: '-200 PATI', date: '15 Mayıs' }
-            ]
-        },
-        passport: {
-            idCode: 'MF-121-MAX',
-            nfcStatus: 'Aktif Sinyal',
-            qrcode: 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=moffi-passport-max',
-            vaccines: [
-                { name: 'Kuduz Aşısı', date: '12.01.2026', status: 'Aşılı', color: 'text-green-600' },
-                { name: 'Karma Aşı', date: '05.02.2026', status: 'Aşılı', color: 'text-green-600' },
-                { name: 'Corona Aşısı', date: '10.03.2026', status: 'Aşılı', color: 'text-green-600' }
-            ]
-        },
-        dressing: {
-            activeOutfit: 'Yeşil Yağmurluk 🧥 & Deri Tasma 🐕‍Gl',
-            stylePoints: 240,
-            avatarMock: '/purple_mascot.png'
-        },
-        quests: [
-            { id: 1, text: 'Yürüyüşte 5.0 KM sınırını aş', done: true },
-            { id: 2, text: 'Max için günlük su takibini gir', done: true },
-            { id: 3, text: 'Yeni Gezi Arkadaşı Bul', done: false }
-        ],
-        specialOffer: {
-            title: 'Enerjisi Çok Yüksek! ⚡',
-            desc: 'Max için Ekstra Mukavemetli Deri Yürüyüş Tasması (Beagle Özel)',
-            oldPrice: '450 TL',
-            newPrice: '380 TL',
-            discount: '%15 İNDİRİM'
-        }
+    wallet: {
+        patipuan: '0',
+        currency: 'PATI',
+        cardNumber: '•••• •••• •••• 0000',
+        transactions: []
     },
-    mila: {
-        name: 'Mila',
-        image: '/purple_mascot.png',
-        breed: 'Scottish Fold • 3 yaşında • Dişi',
-        health: 'Hassas',
-        activity: '40%',
-        weight: '4.8 kg',
-        ringProgress: { activity: 40, water: 50, food: 75 },
-        status: 'EVDE',
-        statusColor: 'text-amber-600 bg-amber-100 border-amber-200',
-        streak: 2,
-        weeklyData: [30, 40, 35, 45, 50, 40, 42],
-        collar: {
-            connected: false,
-            battery: 0,
-            signal: 'Bağlantı Yok',
-            lastSync: '2 saat önce',
-            rssi: 'Sinyal Yok',
-            firmware: 'Bilinmiyor'
-        },
-        wallet: {
-            patipuan: '850',
-            currency: 'PATI',
-            cardNumber: '•••• •••• •••• 1056',
-            transactions: [
-                { id: 1, type: 'gelir', title: 'Tüy Macunu Alım Bonusu', amount: '+50 PATI', date: '16 Mayıs' },
-                { id: 2, type: 'gider', title: 'Oyuncak Lazer Fare Alımı', amount: '-120 PATI', date: '12 Mayıs' }
-            ]
-        },
-        passport: {
-            idCode: 'MF-056-MLA',
-            nfcStatus: 'Pasif',
-            qrcode: 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=moffi-passport-mila',
-            vaccines: [
-                { name: 'Kuduz Aşısı', date: '01.03.2026', status: 'Aşılı', color: 'text-green-600' },
-                { name: 'Lösemi Aşısı', date: 'Aşılama bekliyor', status: 'Randevu Al', color: 'text-amber-500 font-bold' }
-            ]
-        },
-        dressing: {
-            activeOutfit: 'Pembe Papyon 🎀 & Simli Kolye 💎',
-            stylePoints: 310,
-            avatarMock: '/purple_mascot.png'
-        },
-        quests: [
-            { id: 1, text: 'Mila için tüy bakım seansı kaydet', done: false },
-            { id: 2, text: '150 ml yaş mama servisini onayla', done: true },
-            { id: 3, text: 'Mila ile interaktif lazer oyunu oyna', done: false }
-        ],
-        specialOffer: {
-            title: 'Hassas Sindirim Desteği 🐱',
-            desc: 'Mila için Premium Tüy Yumağı Önleyici Malt Macun (100g)',
-            oldPrice: '280 TL',
-            newPrice: '210 TL',
-            discount: '%25 İNDİRİM'
-        }
+    passport: {
+        idCode: 'MF-000-NEW',
+        nfcStatus: 'NFC Yok',
+        qrcode: '',
+        vaccines: []
+    },
+    dressing: {
+        activeOutfit: 'Standart Kıyafet 👕',
+        stylePoints: 0,
+        avatarMock: ''
+    },
+    quests: [
+        { id: 1, text: 'Sabah Yürüyüşü Tamamla', done: false },
+        { id: 2, text: 'Günlük Su İhtiyacını Karşıla', done: false },
+        { id: 3, text: 'Bugünkü Beslenme Öğünlerini Bitir', done: false }
+    ],
+    specialOffer: {
+        title: 'Özel Fırsat 🎁',
+        desc: 'Evcil hayvanınız için en kaliteli besinler ve ürünler Moffi Market\'te!',
+        oldPrice: '1.200 TL',
+        newPrice: '960 TL',
+        discount: '%20 İNDİRİM'
     }
 };
-
-type PetKey = 'luna' | 'max' | 'mila';
 
 // Story Circle
 const StoryCircle = ({ image, title, type = 'normal', delay = 0 }: { image: string, title: string, type?: 'normal' | 'add' | 'sos' | 'ai' | 'featured', delay?: number }) => (
@@ -399,14 +280,270 @@ const APPAREL_ITEMS = {
     ]
 };
 
+// ─── Profesyonel Kullanıcı Avatar Bileşeni ─────────────────────────────────
+// Foto varsa gösterir, yoksa isimden deterministik renkli baş harf avatarı
+const USER_AVATAR_COLORS = [
+    'from-violet-500 to-purple-600',
+    'from-blue-500 to-indigo-600',
+    'from-emerald-500 to-teal-600',
+    'from-orange-500 to-amber-600',
+    'from-rose-500 to-pink-600',
+    'from-cyan-500 to-sky-600',
+    'from-[#527958] to-emerald-600',
+];
+
+function getAvatarColor(seed: string): string {
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) hash = seed.charCodeAt(i) + ((hash << 5) - hash);
+    return USER_AVATAR_COLORS[Math.abs(hash) % USER_AVATAR_COLORS.length];
+}
+
+function getInitials(name?: string, username?: string, email?: string): string {
+    const source = name || username || email || '';
+    const parts = source.split(/[\s@_.-]+/).filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return source.charAt(0).toUpperCase() || 'M';
+}
+
+function UserAvatar({ 
+    avatar, 
+    name, 
+    username, 
+    email, 
+    size = 'sm',
+    className = ''
+}: { 
+    avatar?: string | null; 
+    name?: string; 
+    username?: string; 
+    email?: string;
+    size?: 'sm' | 'md' | 'lg';
+    className?: string;
+}) {
+    const seed = username || name || email || 'moffi';
+    const colorClass = getAvatarColor(seed);
+    const initials = getInitials(name, username, email);
+    const textSize = size === 'sm' ? 'text-[11px]' : size === 'md' ? 'text-sm' : 'text-xl';
+
+    // Mock/placeholder URL'leri reddet — başharf avatarı tercih et
+    const PLACEHOLDER_DOMAINS = ['pravatar.cc', 'dicebear.com', 'ui-avatars.com', 'robohash.org'];
+    const isPlaceholder = avatar && PLACEHOLDER_DOMAINS.some(d => avatar.includes(d));
+
+    if (avatar && !isPlaceholder) {
+        return (
+            <img 
+                src={avatar} 
+                className={`w-full h-full object-cover ${className}`}
+                alt="Profil"
+                onError={(e) => {
+                    // Foto yüklenemezse baş harf göster
+                    const parent = e.currentTarget.parentElement;
+                    if (parent) {
+                        e.currentTarget.style.display = 'none';
+                        const div = document.createElement('div');
+                        div.className = `w-full h-full bg-gradient-to-tr ${colorClass} flex items-center justify-center text-white ${textSize} font-black`;
+                        div.textContent = initials;
+                        parent.appendChild(div);
+                    }
+                }}
+            />
+        );
+    }
+    return (
+        <div className={`w-full h-full bg-gradient-to-tr ${colorClass} flex items-center justify-center text-white ${textSize} font-black select-none ${className}`}>
+            {initials}
+        </div>
+    );
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Tema Toggle Butonu — community header'ında kullanılır (Sade, çerçevesiz ve klas tasarım)
+function ThemeToggleButton() {
+    const { theme, setTheme } = useTheme();
+    const isDark = theme === 'dark';
+    return (
+        <motion.button
+            whileTap={{ scale: 0.9 }}
+            whileHover={{ scale: 1.05 }}
+            onClick={() => setTheme(isDark ? 'light' : 'dark')}
+            className="relative w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:text-amber-500 dark:text-gray-400 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+            title={isDark ? 'Gündüz moduna geç' : 'Gece moduna geç'}
+        >
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={isDark ? 'dark' : 'light'}
+                    initial={{ y: 5, opacity: 0, scale: 0.8 }}
+                    animate={{ y: 0, opacity: 1, scale: 1 }}
+                    exit={{ y: -5, opacity: 0, scale: 0.8 }}
+                    transition={{ duration: 0.15 }}
+                    className="flex items-center justify-center"
+                >
+                    {isDark ? (
+                        <Sun className="w-5 h-5" />
+                    ) : (
+                        <Moon className="w-5 h-5" />
+                    )}
+                </motion.div>
+            </AnimatePresence>
+        </motion.button>
+    );
+}
+
 export default function LegendaryLightDashboard() {
     const router = useRouter();
-    const { pets: userPets, activePet: globalActivePet, switchPet, updatePet, addPet } = usePet();
+    const searchParams = useSearchParams();
+    const { user: authUser, updateProfile } = useAuth();
+    const { pets: userPets, activePet: globalActivePet, switchPet, updatePet, addPet, deletePet, isLoading: isPetLoading } = usePet();
     const { activeSession, history: walkHistory, stats: walkStats, isLoading: isWalkLoading, startWalk, endWalk } = useWalk();
+    const { currentStreak, weeklyStamps } = useQuestEngine();
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
+
+    const todayIdx = useMemo(() => {
+        const day = new Date().getDay();
+        return day === 0 ? 6 : day - 1; // Mon=0, Tue=1, ... Sun=6
+    }, []);
+
+    // Kullanıcının aktif peti: önce globalActivePet, sonra ilk pet, son olarak null
+    const activePetObj = globalActivePet || userPets[0] || null;
+
+    const hasNoPets = !isPetLoading && userPets.length === 0;
+
+    const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+    const walkedDistanceToday = useMemo(() => {
+        const historyToday = walkHistory
+            .filter(w => w.created_at && w.created_at.startsWith(todayStr))
+            .reduce((sum, w) => sum + (w.distance_meters || 0), 0);
+        const activeMeters = activeSession ? (activeSession.distance_meters || 0) : 0;
+        return (historyToday + activeMeters) / 1000; // in km
+    }, [activeSession, walkHistory, todayStr]);
+
+    const targetActivityKm = useMemo(() => {
+        const target = typeof activePetObj?.activity_target === 'number' 
+            ? activePetObj.activity_target 
+            : (activePetObj?.sos_settings?.activity_target ?? 70); // default target 70
+        return target > 0 ? (target / 20) : 3.5;
+    }, [activePetObj?.activity_target, activePetObj?.sos_settings?.activity_target]);
+
+    const activityPercent = useMemo(() => {
+        return targetActivityKm > 0 ? Math.min(100, Math.round((walkedDistanceToday / targetActivityKm) * 100)) : 0;
+    }, [walkedDistanceToday, targetActivityKm]);
 
     // PREMIUM DIJITAL GARDROP STATE YAPISI & COIN ENTEGRASYONU
+
+
     const [toastMsg, setToastMsg] = useState<string | null>(null);
-    const [walletBalance, setWalletBalance] = useState(2450);
+    const [isDailyGoalsOpen, setIsDailyGoalsOpen] = useState(false);
+    const [walletBalance, setWalletBalance] = useState(0);
+    const [transactions, setTransactions] = useState<any[]>([]);
+    const [vaccines, setVaccines] = useState<any[]>([]);
+
+    const [goalsTrigger, setGoalsTrigger] = useState(0);
+
+    useEffect(() => {
+        const handleGoalsUpdate = () => {
+            setGoalsTrigger(prev => prev + 1);
+        };
+        window.addEventListener('moffi-daily-goals-update', handleGoalsUpdate);
+        return () => {
+            window.removeEventListener('moffi-daily-goals-update', handleGoalsUpdate);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (searchParams.get('openWalk') === 'true') {
+            window.dispatchEvent(new CustomEvent('open-walk-panel'));
+        }
+    }, [searchParams]);
+
+    const waterCurrent = useMemo(() => {
+        if (!activePetObj?.id) return 0;
+        return Number(localStorage.getItem(`moffi_water_${activePetObj.id}_${todayStr}`) || '0');
+    }, [activePetObj?.id, todayStr, goalsTrigger]);
+
+    const waterTarget = useMemo(() => {
+        if (!activePetObj?.id) return 1200;
+        return typeof activePetObj?.water_target === 'number'
+            ? activePetObj.water_target
+            : (activePetObj?.sos_settings?.water_target ?? 1200);
+    }, [activePetObj?.water_target, activePetObj?.sos_settings?.water_target, activePetObj?.id]);
+
+    const waterPercent = useMemo(() => {
+        return waterTarget > 0 ? Math.min(100, Math.round((waterCurrent / waterTarget) * 100)) : 0;
+    }, [waterCurrent, waterTarget]);
+
+    const foodCurrent = useMemo(() => {
+        if (!activePetObj?.id) return 0;
+        return Number(localStorage.getItem(`moffi_calories_${activePetObj.id}_${todayStr}`) || '0');
+    }, [activePetObj?.id, todayStr, goalsTrigger]);
+
+    const foodTarget = useMemo(() => {
+        if (!activePetObj?.id) return 1600;
+        return typeof activePetObj?.food_target === 'number'
+            ? activePetObj.food_target
+            : (activePetObj?.sos_settings?.food_target ?? 1600);
+    }, [activePetObj?.food_target, activePetObj?.sos_settings?.food_target, activePetObj?.id]);
+
+    const foodPercent = useMemo(() => {
+        return foodTarget > 0 ? Math.min(100, Math.round((foodCurrent / foodTarget) * 100)) : 0;
+    }, [foodCurrent, foodTarget]);
+
+
+    useEffect(() => {
+        if (!activePetObj?.id) return;
+        
+        // 1. Balance
+        const savedCoins = localStorage.getItem(`moffi_coins_${activePetObj.id}`);
+        if (savedCoins !== null) {
+            setWalletBalance(Number(savedCoins));
+        } else {
+            setWalletBalance(0);
+            localStorage.setItem(`moffi_coins_${activePetObj.id}`, '0');
+        }
+
+        // 2. Transactions
+        const savedTx = localStorage.getItem(`moffi_transactions_${activePetObj.id}`);
+        if (savedTx) {
+            setTransactions(JSON.parse(savedTx));
+        } else {
+            setTransactions([]);
+            localStorage.setItem(`moffi_transactions_${activePetObj.id}`, JSON.stringify([]));
+        }
+
+        // 3. Vaccines
+        const savedVaccines = localStorage.getItem(`moffi_vaccines_${activePetObj.id}`);
+        if (savedVaccines) {
+            setVaccines(JSON.parse(savedVaccines));
+        } else {
+            setVaccines([]);
+            localStorage.setItem(`moffi_vaccines_${activePetObj.id}`, JSON.stringify([]));
+        }
+    }, [activePetObj?.id, goalsTrigger]);
+
+    // Save balance on changes
+    useEffect(() => {
+        if (activePetObj?.id) {
+            localStorage.setItem(`moffi_coins_${activePetObj.id}`, String(walletBalance));
+        }
+    }, [walletBalance, activePetObj?.id]);
+
+    const addTransaction = useCallback((type: 'gelir' | 'gider', title: string, amount: number) => {
+        if (!activePetObj?.id) return;
+        const newTx = {
+            id: Date.now(),
+            type,
+            title,
+            amount: `${type === 'gelir' ? '+' : '-'}${amount} PATI`,
+            date: 'Şimdi'
+        };
+        setTransactions(prev => {
+            const next = [newTx, ...prev];
+            localStorage.setItem(`moffi_transactions_${activePetObj.id}`, JSON.stringify(next));
+            return next;
+        });
+    }, [activePetObj?.id]);
+
     const [expandedPanel, setExpandedPanel] = useState<'wallet' | 'passport' | 'collar' | 'dressing' | 'quests' | 'shop' | 'profile' | 'match' | 'events' | null>(null);
     const [selectedAccessories, setSelectedAccessories] = useState<string[]>(['glasses', 'scarf']);
     const [unlockedAccessories, setUnlockedAccessories] = useState<string[]>(['glasses', 'scarf']);
@@ -763,71 +900,58 @@ export default function LegendaryLightDashboard() {
         setExpandedPanel(null);
     };
 
-    // Map global activePet to our local state/mock templates
-    const activePetObj = globalActivePet || userPets[0] || {
-        id: 'mock-luna',
-        name: 'Luna',
-        image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300',
-        breed: 'Golden Retriever • 2 yaşında • Dişi',
-        gender: 'Dişi',
-        weight: '24.5',
-        microchip: 'MF-892-LNA'
-    };
 
-    const baseMockTemplate = PETS_DATA[activePetObj.name.toLowerCase() as PetKey] || PETS_DATA.luna;
 
-    const resolvedStreak = typeof activePetObj.streak === 'number' 
+    const baseMockTemplate = cleanDefaultTemplate;
+
+    const resolvedStreak = typeof activePetObj?.streak === 'number' 
         ? activePetObj.streak 
-        : (activePetObj.sos_settings?.streak ?? baseMockTemplate.streak);
+        : (activePetObj?.sos_settings?.streak ?? baseMockTemplate.streak);
     
-    const resolvedActivityTarget = typeof activePetObj.activity_target === 'number' 
+    const resolvedActivityTarget = typeof activePetObj?.activity_target === 'number' 
         ? activePetObj.activity_target 
-        : (activePetObj.sos_settings?.activity_target ?? baseMockTemplate.ringProgress.activity);
+        : (activePetObj?.sos_settings?.activity_target ?? baseMockTemplate.ringProgress.activity);
 
-    // Streak değerine göre haftalık aktivite grafiği üret
-    // Tamamlanmış günler yüksek aktivite, diğerleri düşük aktivite gösterir
-    const generateWeeklyData = (streak: number, activityTarget: number) => {
+    // Streak değerine göre haftalık aktivite grafiği üret — Math.random yerine deterministik seed
+    const weeklyData = useMemo(() => {
+        const seed = (activePetObj?.id || 'default').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
         return Array.from({ length: 7 }, (_, i) => {
-            if (i < streak) {
-                // Tamamlanmış günler: hedef etrafında varyasyon
-                return Math.min(100, activityTarget + Math.round((Math.random() * 20) - 5));
+            const pseudoRand = ((seed * (i + 1) * 9301 + 49297) % 233280) / 233280;
+            if (i < resolvedStreak) {
+                // Tamamlanmış günler: hedef etrafında stabil varyasyon
+                return Math.min(100, Math.round(resolvedActivityTarget + (pseudoRand * 20) - 5));
             }
             // Tamamlanmamış günler: düşük aktivite
-            return Math.round(activityTarget * 0.3 + Math.random() * 20);
+            return Math.round(resolvedActivityTarget * 0.3 + pseudoRand * 15);
         });
-    };
+    }, [activePetObj?.id, resolvedStreak, resolvedActivityTarget]);
 
-    // Eğer mock şablonda eşleşen bir template varsa onu kullan, yoksa streak'ten türet
-    const hasMockTemplate = !!(PETS_DATA[activePetObj.name.toLowerCase() as PetKey]);
-    const weeklyData = hasMockTemplate 
-        ? baseMockTemplate.weeklyData 
-        : generateWeeklyData(resolvedStreak, resolvedActivityTarget);
 
     const pet = {
         ...baseMockTemplate,
-        id: activePetObj.id,
-        name: activePetObj.name,
-        image: activePetObj.image || activePetObj.avatar || baseMockTemplate.image,
-        breed: activePetObj.breed || baseMockTemplate.breed,
-        weight: activePetObj.weight || activePetObj.sos_settings?.weight || baseMockTemplate.weight,
-        gender: activePetObj.gender || '',
-        health: activePetObj.health || activePetObj.sos_settings?.health || baseMockTemplate.health,
+        id: activePetObj?.id,
+        name: activePetObj?.name || baseMockTemplate.name,
+        image: activePetObj?.image || activePetObj?.avatar || '',
+        breed: activePetObj?.breed || baseMockTemplate.breed,
+        weight: activePetObj?.weight || activePetObj?.sos_settings?.weight || baseMockTemplate.weight,
+        gender: activePetObj?.gender || '',
+        health: activePetObj?.health || activePetObj?.sos_settings?.health || baseMockTemplate.health,
         streak: resolvedStreak,
         weeklyData,
         ringProgress: {
             activity: resolvedActivityTarget,
-            water: typeof activePetObj.water_target === 'number' ? activePetObj.water_target : (activePetObj.sos_settings?.water_target ?? baseMockTemplate.ringProgress.water),
-            food: typeof activePetObj.food_target === 'number' ? activePetObj.food_target : (activePetObj.sos_settings?.food_target ?? baseMockTemplate.ringProgress.food),
+            water: typeof activePetObj?.water_target === 'number' ? activePetObj.water_target : (activePetObj?.sos_settings?.water_target ?? baseMockTemplate.ringProgress.water),
+            food: typeof activePetObj?.food_target === 'number' ? activePetObj.food_target : (activePetObj?.sos_settings?.food_target ?? baseMockTemplate.ringProgress.food),
         },
         passport: {
             ...baseMockTemplate.passport,
-            idCode: activePetObj.microchip || activePetObj.microchip_id || baseMockTemplate.passport.idCode,
-            qrcode: activePetObj.id ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=moffi-passport-${activePetObj.id}` : baseMockTemplate.passport.qrcode,
+            idCode: activePetObj?.microchip || activePetObj?.microchip_id || baseMockTemplate.passport.idCode,
+            qrcode: activePetObj?.id ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=moffi-passport-${activePetObj.id}` : baseMockTemplate.passport.qrcode,
         },
         dressing: {
             activeOutfit: activeOutfitName,
             stylePoints: stylePoints,
-            avatarMock: activePetObj.image || activePetObj.avatar || baseMockTemplate.image,
+            avatarMock: activePetObj?.image || activePetObj?.avatar || '',
         }
     };
 
@@ -852,27 +976,57 @@ export default function LegendaryLightDashboard() {
     const [newPetWeight, setNewPetWeight] = useState("");
     const [newPetHealthStatus, setNewPetHealthStatus] = useState("İyi");
     const [newPetActivityTarget, setNewPetActivityTarget] = useState("70");
-    const [newPetWaterTarget, setNewPetWaterTarget] = useState("80");
-    const [newPetFoodTarget, setNewPetFoodTarget] = useState("60");
-    const [newPetStreak, setNewPetStreak] = useState("0");
+    const [newPetWaterTarget, setNewPetWaterTarget] = useState("1200");
+    const [newPetFoodTarget, setNewPetFoodTarget] = useState("1600");
 
     const handleSavePetSettings = async (updatedFields: any) => {
         try {
             if (activePetObj && activePetObj.id) {
-                // Mevcut sos_settings ile birleştir, weight ve sağlık verilerini ekle
+                // Mevcut sos_settings ile birleştir, weight, sağlık, renk, veli bilgisi ve hedefleri ekle
                 const mergedSosSettings = {
                     ...(activePetObj.sos_settings || {}),
                     weight: updatedFields.weight ? `${updatedFields.weight} kg` : (activePetObj.sos_settings?.weight || ''),
-                    health: updatedFields.health || (activePetObj.sos_settings?.health || 'İyi'),
-                    streak: activePetObj.sos_settings?.streak ?? 0,
-                    activity_target: activePetObj.sos_settings?.activity_target ?? 70,
-                    water_target: activePetObj.sos_settings?.water_target ?? 80,
-                    food_target: activePetObj.sos_settings?.food_target ?? 60,
+                    health: updatedFields.healthStatus || updatedFields.health || (activePetObj.sos_settings?.health || 'İyi'),
+                    color: updatedFields.color || (activePetObj.sos_settings?.color || ''),
+                    activity_target: typeof updatedFields.activityTarget !== 'undefined' ? Number(updatedFields.activityTarget) : (activePetObj.sos_settings?.activity_target ?? 70),
+                    water_target: typeof updatedFields.waterTarget !== 'undefined' ? Number(updatedFields.waterTarget) : (activePetObj.sos_settings?.water_target ?? 1200),
+                    food_target: typeof updatedFields.foodTarget !== 'undefined' ? Number(updatedFields.foodTarget) : (activePetObj.sos_settings?.food_target ?? 1600),
+                    // Parazit tarihleri sos_settings JSON'unda saklanıyor
+                    parasiteInternal: updatedFields.parasiteInternal || (activePetObj.sos_settings?.parasiteInternal || ''),
+                    parasiteExternal: updatedFields.parasiteExternal || (activePetObj.sos_settings?.parasiteExternal || ''),
+                    // Doğum tarihi
+                    birthday: updatedFields.birthday || (activePetObj.sos_settings?.birthday || ''),
+                    // Yeni alanlar
+                    size: updatedFields.size || (activePetObj.sos_settings?.size || ''),
+                    character: updatedFields.character || (activePetObj.sos_settings?.character || ''),
+                    features: updatedFields.features || (activePetObj.sos_settings?.features || ''),
+                    owner: {
+                        name: updatedFields.ownerName || '',
+                        phone: updatedFields.ownerPhone || '',
+                        address: updatedFields.ownerAddress || '',
+                    }
                 };
 
                 const petUpdates = {
                     ...updatedFields,
-                    microchip_id: updatedFields.microchip,
+                    // Fotoğraf güncellemesi
+                    image: updatedFields.image || activePetObj.image || activePetObj.avatar || '',
+                    avatar: updatedFields.avatar || updatedFields.image || activePetObj.avatar || '',
+                    // Alan normalizasyonları
+                    microchip_id: updatedFields.microchip || updatedFields.microchip_id,
+                    microchip: updatedFields.microchip || updatedFields.microchip_id,
+                    is_neutered: updatedFields.neutered,
+                    // Yeni alanlar direkt yazılıyor
+                    type: updatedFields.type || activePetObj.type || '',
+                    size: updatedFields.size || '',
+                    health: mergedSosSettings.health,
+                    health_notes: updatedFields.healthNotes || '',
+                    character: updatedFields.character || '',
+                    color: mergedSosSettings.color,
+                    owner: mergedSosSettings.owner,
+                    activity_target: mergedSosSettings.activity_target,
+                    water_target: mergedSosSettings.water_target,
+                    food_target: mergedSosSettings.food_target,
                     sos_settings: mergedSosSettings,
                 };
 
@@ -896,7 +1050,14 @@ export default function LegendaryLightDashboard() {
         try {
             let imageUrl = "";
             if (newPetPhotos.length > 0) {
-                imageUrl = await apiService.uploadMedia(newPetPhotos[0].file, 'posts');
+                try {
+                    // 'avatars' bucket: pet profil fotoğrafları için doğru bucket
+                    imageUrl = await apiService.uploadMedia(newPetPhotos[0].file, 'avatars');
+                } catch (uploadErr) {
+                    console.warn('Fotoğraf yüklenemedi, pet fotoğrafsız kaydedilecek:', uploadErr);
+                    // Upload başarısız olsa bile devam et
+                    imageUrl = "";
+                }
             }
 
             const newPetData = {
@@ -911,15 +1072,17 @@ export default function LegendaryLightDashboard() {
                 character: newPetCharacter,
                 microchip_id: newPetMicrochip,
                 show_phone: newPetShowPhone,
-                image: imageUrl || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=400",
-                themeColor: '#EAB308',
+                // Fotoğraf: kullanıcı yüklemediyse boş bırak (avatar_url boş olur, UI placeholder gösterir)
+                image: imageUrl || '',
+                // Pet tipine göre tema rengi
+                themeColor: newPetType === '🐱' ? '#A78BFA' : newPetType === '🦜' ? '#34D399' : newPetType === '🐰' ? '#F472B6' : '#FBBF24',
                 
-                weight: newPetWeight ? `${newPetWeight} kg` : "10 kg",
+                weight: newPetWeight ? `${newPetWeight} kg` : '',
                 health: newPetHealthStatus,
-                streak: Number(newPetStreak) || 0,
+                streak: 0,
                 activity_target: Number(newPetActivityTarget) || 70,
-                water_target: Number(newPetWaterTarget) || 80,
-                food_target: Number(newPetFoodTarget) || 60,
+                water_target: Number(newPetWaterTarget) || 1200,
+                food_target: Number(newPetFoodTarget) || 1600,
                 
                 sos_settings: {
                     auto_post_sos: true,
@@ -930,25 +1093,39 @@ export default function LegendaryLightDashboard() {
                     reward_amount: 0,
                     reward_currency: "TL",
                     critical_health_note: newPetHealth,
-                    finder_message: "Lütfen bahçeye kapatıp beni arayın.",
+                    finder_message: "",
                     reward_enabled: false,
                     header_sos_alert_enabled: true,
                     
-                    weight: newPetWeight ? `${newPetWeight} kg` : "10 kg",
+                    weight: newPetWeight ? `${newPetWeight} kg` : '',
                     health: newPetHealthStatus,
-                    streak: Number(newPetStreak) || 0,
+                    streak: 0,
                     activity_target: Number(newPetActivityTarget) || 70,
-                    water_target: Number(newPetWaterTarget) || 80,
-                    food_target: Number(newPetFoodTarget) || 60,
+                    water_target: Number(newPetWaterTarget) || 1200,
+                    food_target: Number(newPetFoodTarget) || 1600,
                 }
             };
 
             const savedPet = await apiService.addPet(newPetData as any);
             
+            // savedPet.image: DB'den gelen avatar_url. Yoksa imageUrl (upload URL) kullan.
+            // Her iki durumda da doğru fotoğraf context'te geri kazanılır.
+            const finalImage = savedPet.image || imageUrl || '';
+            
+            // Eğer DB'de avatar_url boş kaldıysa ve elimizde bir imageUrl varsa, DB'ye yaz
+            if (imageUrl && !savedPet.image && savedPet.id) {
+                try {
+                    await apiService.updatePet(savedPet.id, { image: imageUrl, avatar: imageUrl });
+                } catch (updateErr) {
+                    console.warn('Pet avatar_url güncellenemedi:', updateErr);
+                }
+            }
+            
             addPet({
                 ...newPetData,
                 id: savedPet.id,
-                image: savedPet.image || newPetData.image
+                image: finalImage,
+                avatar: finalImage,
             } as any);
 
             setIsAddPetOpen(false);
@@ -960,9 +1137,8 @@ export default function LegendaryLightDashboard() {
             setNewPetWeight("");
             setNewPetHealthStatus("İyi");
             setNewPetActivityTarget("70");
-            setNewPetWaterTarget("80");
-            setNewPetFoodTarget("60");
-            setNewPetStreak("0");
+            setNewPetWaterTarget("1200");
+            setNewPetFoodTarget("1600");
         } catch (err: any) {
             console.error('Pet kayıt hatası:', err);
             const msg = err?.message || err?.details || 'Bilinmeyen hata';
@@ -993,6 +1169,12 @@ export default function LegendaryLightDashboard() {
             setLostPetMode(!!activePetObj.is_lost);
         }
     }, [activePetObj?.is_lost, activePetObj?.id]);
+
+    useEffect(() => {
+        if (!isPetLoading && userPets.length === 0) {
+            setIsAddPetOpen(true);
+        }
+    }, [isPetLoading, userPets.length]);
 
     const [matchIndex, setMatchIndex] = useState(0);
 
@@ -1047,9 +1229,14 @@ export default function LegendaryLightDashboard() {
             const distM = result.distance_meters || 0;
             const distKm = (distM / 1000).toFixed(2);
             const patiEarned = Math.round(distM * 0.05); // ~50 PATI/km
+            if (patiEarned > 0) {
+                setWalletBalance(prev => prev + patiEarned);
+                addTransaction('gelir', 'Yürüyüş Ödülü 🐾', patiEarned);
+            }
             setToastMsg(`🎉 Yürüyüş tamamlandı! ${distKm} KM • +${patiEarned} PATI kazanıldı 🔥`);
         }
-    }, [endWalk]);
+    }, [endWalk, addTransaction]);
+
     const [isMatched, setIsMatched] = useState(false);
 
     // Dynamic Stories Hook & States
@@ -1133,10 +1320,7 @@ export default function LegendaryLightDashboard() {
         return `${Math.floor(diffInHours / 24)}g`;
     };
 
-    useEffect(() => {
-        const val = parseInt(pet.wallet.patipuan.replace(/[^0-9]/g, ''));
-        setWalletBalance(val);
-    }, [activePetObj.id]);
+
 
     useEffect(() => {
         if (toastMsg) {
@@ -1146,6 +1330,20 @@ export default function LegendaryLightDashboard() {
             return () => clearTimeout(timer);
         }
     }, [toastMsg]);
+
+    if (isPetLoading) {
+        return (
+            <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
+                <div className="relative w-16 h-16 mb-4 flex items-center justify-center">
+                    <div className="absolute inset-0 rounded-full border-4 border-green-100 animate-pulse" />
+                    <div className="absolute inset-0 rounded-full border-4 border-t-[#527958] animate-spin" />
+                    <span className="text-xl">🐾</span>
+                </div>
+                <h3 className="text-sm font-black text-gray-805 animate-pulse">Moffi Dünyası Yükleniyor...</h3>
+                <p className="text-[10px] text-gray-400 font-semibold mt-1">Evcil hayvan verileri güvenli şekilde çekiliyor</p>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-background text-foreground font-sans selection:bg-green-500/30 overflow-x-hidden pb-32">
@@ -1187,57 +1385,163 @@ export default function LegendaryLightDashboard() {
                 
                 {/* 1. Header */}
                 <header className="flex justify-between items-center mb-6">
-                    <motion.div 
-                        layoutId="collar-card-container"
-                        onClick={() => setExpandedPanel('collar')}
-                        className="flex items-center gap-2.5 cursor-pointer group"
-                    >
-                        <div className="relative">
-                            <div className="w-9 h-9 rounded-2xl bg-gray-900 flex items-center justify-center shadow-lg shadow-gray-900/10 text-green-400">
-                                <Radio className="w-5 h-5" />
+                    {hasNoPets ? (
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-[#527958] to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/20 text-white">
+                                <Sparkles className="w-5 h-5" />
                             </div>
-                            {pet.collar.connected && (
-                                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white animate-pulse" />
-                            )}
+                            <div className="flex flex-col text-left">
+                                <span className="text-[14px] font-black text-gray-905 tracking-tight leading-none">Moffi</span>
+                                <span className="text-[9px] font-bold text-gray-400 mt-0.5 leading-none">Süper App</span>
+                            </div>
                         </div>
-                        <div className="flex flex-col text-left">
-                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest leading-none">TASMA DURUMU</span>
-                            <span className="text-[10px] font-bold text-gray-700 mt-0.5 flex items-center gap-1.5 leading-none">
-                                {pet.collar.connected ? `Bağlı (%${pet.collar.battery})` : 'Bağlantı Yok'}
-                            </span>
-                        </div>
-                    </motion.div>
+                    ) : (
+                        <motion.div 
+                            layoutId="collar-card-container"
+                            onClick={() => setExpandedPanel('collar')}
+                            className="flex items-center gap-2.5 cursor-pointer group"
+                        >
+                            <div className="relative">
+                                <div className="w-9 h-9 rounded-2xl bg-gray-900 flex items-center justify-center shadow-lg shadow-gray-900/10 text-green-400">
+                                    <Radio className="w-5 h-5" />
+                                </div>
+                                {pet.collar.connected && (
+                                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white animate-pulse" />
+                                )}
+                            </div>
+                            <div className="flex flex-col text-left">
+                                <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest leading-none">TASMA DURUMU</span>
+                                <span className="text-[10px] font-bold text-gray-700 mt-0.5 flex items-center gap-1.5 leading-none">
+                                    {pet.collar.connected ? `Bağlı (%${pet.collar.battery})` : 'Bağlantı Yok'}
+                                </span>
+                            </div>
+                        </motion.div>
+                    )}
                     
                     <div className="flex items-center gap-3">
-                        <motion.button 
-                            whileTap={{ scale: 0.9 }}
-                            onClick={() => window.dispatchEvent(new CustomEvent('open-sos-center'))}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full shadow-sm relative overflow-hidden group cursor-pointer border ${
-                                lostPetMode 
-                                    ? 'bg-red-600 border-red-500 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]' 
-                                    : 'bg-red-50 border-red-200/60 text-red-600 hover:bg-red-100/50'
-                             }`}
-                        >
-                            <span className="absolute inset-0 bg-red-500/10 animate-pulse rounded-full" />
-                            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping absolute left-3" />
-                            <span className="w-2 h-2 rounded-full bg-red-500" />
-                            <span className={`text-[10px] font-black tracking-wider uppercase ml-1 ${lostPetMode ? 'text-white' : 'text-red-600'}`}>SOS</span>
-                        </motion.button>
+                        {!hasNoPets && (
+                            <motion.button 
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => window.dispatchEvent(new CustomEvent('open-sos-center'))}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full shadow-sm relative overflow-hidden group cursor-pointer border ${
+                                    lostPetMode 
+                                        ? 'bg-red-600 border-red-500 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]' 
+                                        : 'bg-red-50 border-red-200/60 text-red-600 hover:bg-red-100/50'
+                                 }`}
+                            >
+                                <span className="absolute inset-0 bg-red-500/10 animate-pulse rounded-full" />
+                                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping absolute left-3" />
+                                <span className="w-2 h-2 rounded-full bg-red-500" />
+                                <span className={`text-[10px] font-black tracking-wider uppercase ml-1 ${lostPetMode ? 'text-white' : 'text-red-600'}`}>SOS</span>
+                            </motion.button>
+                        )}
 
                         <button className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
                             <Bell className="w-5 h-5" />
                             <div className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-white" />
                         </button>
 
+                        {/* Tema Toggle — sadece community'de */}
+                        <ThemeToggleButton />
+
                         <motion.button 
                             whileTap={{ scale: 0.9 }}
                             onClick={() => setExpandedPanel('profile')}
                             className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 shadow-sm cursor-pointer hover:border-gray-400 transition-colors"
                         >
-                            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100" className="w-full h-full object-cover" alt="User" />
+                            <UserAvatar
+                                avatar={authUser?.avatar}
+                                name={authUser?.name}
+                                username={authUser?.username}
+                                email={authUser?.email}
+                                size="sm"
+                            />
                         </motion.button>
                     </div>
                 </header>
+
+                {hasNoPets ? (
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, type: 'spring' }}
+                        className="bg-gradient-to-br from-white/95 to-gray-50/90 backdrop-blur-xl rounded-[40px] p-8 shadow-[0_24px_70px_rgba(0,0,0,0.04)] border border-gray-100/80 mb-6 text-center relative overflow-hidden"
+                    >
+                        {/* Glow effects */}
+                        <div className="absolute -right-10 -top-10 w-40 h-40 bg-green-500/10 rounded-full blur-3xl pointer-events-none animate-pulse" />
+                        <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none animate-pulse" />
+
+                        <div className="relative z-10 flex flex-col items-center">
+                            {/* Animated Paw Icon Container */}
+                            <motion.div 
+                                animate={{ 
+                                    scale: [1, 1.05, 1],
+                                    rotate: [0, 2, -2, 0]
+                                }}
+                                transition={{ 
+                                    repeat: Infinity,
+                                    duration: 4,
+                                    ease: "easeInOut"
+                                }}
+                                className="w-24 h-24 rounded-[32px] bg-gradient-to-tr from-[#EAF5EC] to-emerald-50 border border-green-100 flex items-center justify-center shadow-lg shadow-green-100/40 mb-6"
+                            >
+                                <span className="text-4xl filter drop-shadow-md">🐾</span>
+                            </motion.div>
+
+                            <h2 className="text-2xl font-black text-gray-805 tracking-tight leading-tight">
+                                Moffi Dünyasına<br />Hoş Geldiniz!
+                            </h2>
+
+                            <p className="text-xs font-semibold text-gray-450 mt-4 max-w-[280px] leading-relaxed">
+                                Evcil hayvanınızın pasaport kaydını oluşturarak aşı takvimi, akıllı tasma özellikleri, beslenme hedefleri ve topluluk aktivitelerini hemen yönetmeye başlayın.
+                            </p>
+
+                            {/* Benefit badges */}
+                            <div className="grid grid-cols-2 gap-2 w-full my-6">
+                                <div className="bg-white/60 border border-gray-100/50 p-2.5 rounded-2xl flex items-center gap-2">
+                                    <span className="text-base">📍</span>
+                                    <div className="text-left">
+                                        <span className="text-[9px] font-black text-gray-800 block leading-tight">Canlı Takip</span>
+                                        <span className="text-[7.5px] text-gray-400 font-semibold block leading-none mt-0.5">GPS & Konum</span>
+                                    </div>
+                                </div>
+                                <div className="bg-white/60 border border-gray-100/50 p-2.5 rounded-2xl flex items-center gap-2">
+                                    <span className="text-base">📅</span>
+                                    <div className="text-left">
+                                        <span className="text-[9px] font-black text-gray-800 block leading-tight">Sağlık Takibi</span>
+                                        <span className="text-[7.5px] text-gray-400 font-semibold block leading-none mt-0.5">Aşı & Randevu</span>
+                                    </div>
+                                </div>
+                                <div className="bg-white/60 border border-gray-100/50 p-2.5 rounded-2xl flex items-center gap-2">
+                                    <span className="text-base">🥣</span>
+                                    <div className="text-left">
+                                        <span className="text-[9px] font-black text-gray-800 block leading-tight">Beslenme</span>
+                                        <span className="text-[7.5px] text-gray-400 font-semibold block leading-none mt-0.5">Kalori & Su</span>
+                                    </div>
+                                </div>
+                                <div className="bg-white/60 border border-gray-100/50 p-2.5 rounded-2xl flex items-center gap-2">
+                                    <span className="text-base">👗</span>
+                                    <div className="text-left">
+                                        <span className="text-[9px] font-black text-gray-800 block leading-tight">Gardırop</span>
+                                        <span className="text-[7.5px] text-gray-400 font-semibold block leading-none mt-0.5">AI Stil & Kombin</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Large Premium Add Pet Button */}
+                            <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => setIsAddPetOpen(true)}
+                                className="w-full bg-[#527958] hover:bg-[#436448] text-white text-[13px] font-black py-4 rounded-3xl shadow-lg shadow-green-900/10 transition-colors flex items-center justify-center gap-2 cursor-pointer mt-2"
+                            >
+                                <Plus className="w-4.5 h-4.5 stroke-[3]" />
+                                <span>Evcil Hayvan Ekle</span>
+                            </motion.button>
+                        </div>
+                    </motion.div>
+                ) : (
+                    <>
 
                 {/* 2. Hikayeler (Stories) - Dynamic from useStories */}
                 <section className="mb-6">
@@ -1288,12 +1592,20 @@ export default function LegendaryLightDashboard() {
                                     whileTap={{ scale: 0.9 }}
                                     onClick={() => switchPet(p.id)}
                                     className={`relative w-8 h-8 rounded-full overflow-hidden border-2 transition-all shrink-0 ${
-                                        activePetObj.id === p.id 
+                                        activePetObj?.id === p.id 
                                             ? 'border-green-600 scale-105 shadow-sm' 
                                             : 'border-transparent opacity-60'
                                     }`}
                                 >
-                                    <img src={p.image || p.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200"} className="w-full h-full object-cover" alt={p.name} />
+                                    {p.image || p.avatar ? (
+                                        <img src={p.image || p.avatar} className="w-full h-full object-cover" alt={p.name} />
+                                    ) : (
+                                        <div className="w-full h-full bg-gradient-to-tr from-gray-150 to-gray-250 dark:from-zinc-800 dark:to-zinc-700 flex items-center justify-center">
+                                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-tighter">
+                                                {p.name ? p.name[0] : '🐾'}
+                                            </span>
+                                        </div>
+                                    )}
                                 </motion.button>
                             ))}
                             <motion.button
@@ -1321,16 +1633,22 @@ export default function LegendaryLightDashboard() {
 
                     <div className="flex items-center gap-5">
                         <div className="relative">
-                            <div className="w-20 h-20 rounded-[28px] overflow-hidden shadow-md border-2 border-white relative group">
-                                <motion.img 
-                                    key={pet.image}
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ duration: 0.3 }}
-                                    src={pet.image} 
-                                    className="w-full h-full object-cover" 
-                                    alt={pet.name} 
-                                />
+                            <div className="w-20 h-20 rounded-[28px] overflow-hidden shadow-md border-2 border-white relative group bg-gradient-to-tr from-gray-100 to-gray-250 dark:from-zinc-800 dark:to-zinc-900 flex items-center justify-center">
+                                {pet.image ? (
+                                    <motion.img 
+                                        key={pet.image}
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ duration: 0.3 }}
+                                        src={pet.image} 
+                                        className="w-full h-full object-cover animate-fade-in" 
+                                        alt={pet.name} 
+                                    />
+                                ) : (
+                                    <span className="text-gray-400 dark:text-zinc-500 text-3xl font-black select-none uppercase">
+                                        {pet.name ? pet.name[0] : '🐾'}
+                                    </span>
+                                )}
                                 <div className="absolute inset-0 bg-black/15 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-[28px] cursor-pointer">
                                     <Shirt className="w-5 h-5 text-white" />
                                 </div>
@@ -1388,17 +1706,17 @@ export default function LegendaryLightDashboard() {
 
                     {/* Integrated Rings & Quick Stats */}
                     <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-100">
-                        <div className="flex items-center gap-3">
+                        <div onClick={() => setIsDailyGoalsOpen(true)} className="flex items-center gap-3 cursor-pointer hover:opacity-85 transition-opacity duration-200">
                             <div className="relative w-12 h-12 flex items-center justify-center">
                                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                                     <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#F0FDF4" strokeWidth="3" />
-                                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#22C55E" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${pet.ringProgress.activity}, 100`} />
+                                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#22C55E" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${activityPercent}, 100`} />
                                     
                                     <path d="M18 6.0845 a 11.9155 11.9155 0 0 1 0 23.831 a 11.9155 11.9155 0 0 1 0 -23.831" fill="none" stroke="#EFF6FF" strokeWidth="3" />
-                                    <path d="M18 6.0845 a 11.9155 11.9155 0 0 1 0 23.831 a 11.9155 11.9155 0 0 1 0 -23.831" fill="none" stroke="#3B82F6" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${pet.ringProgress.water}, 100`} />
+                                    <path d="M18 6.0845 a 11.9155 11.9155 0 0 1 0 23.831 a 11.9155 11.9155 0 0 1 0 -23.831" fill="none" stroke="#3B82F6" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${waterPercent}, 100`} />
                                     
                                     <path d="M18 10.0845 a 7.9155 7.9155 0 0 1 0 15.831 a 7.9155 7.9155 0 0 1 0 -15.831" fill="none" stroke="#FFF7ED" strokeWidth="3" />
-                                    <path d="M18 10.0845 a 7.9155 7.9155 0 0 1 0 15.831 a 7.9155 7.9155 0 0 1 0 -15.831" fill="none" stroke="#F97316" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${pet.ringProgress.food}, 100`} />
+                                    <path d="M18 10.0845 a 7.9155 7.9155 0 0 1 0 15.831 a 7.9155 7.9155 0 0 1 0 -15.831" fill="none" stroke="#F97316" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${foodPercent}, 100`} />
                                 </svg>
                             </div>
                             <div className="flex flex-col">
@@ -1441,13 +1759,16 @@ export default function LegendaryLightDashboard() {
                         </div>
                         <div className="flex gap-1.5">
                             {['P', 'S', 'Ç', 'P', 'C', 'C', 'P'].map((day, idx) => {
-                                const isCompleted = idx < pet.streak;
+                                const isCompleted = idx < weeklyStamps;
+                                const isCurrentDay = idx === todayIdx;
                                 return (
                                     <div key={idx} className="flex flex-col items-center">
                                         <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black border transition-all ${
                                             isCompleted 
                                                 ? 'bg-[#EAF5EC] border-green-200 text-green-700 shadow-sm shadow-green-100' 
-                                                : 'bg-gray-50 border-gray-100 text-gray-300'
+                                                : isCurrentDay
+                                                    ? 'bg-purple-500/10 border-purple-500/30 text-purple-600 animate-pulse shadow-[0_0_8px_rgba(168,85,247,0.2)]'
+                                                    : 'bg-gray-50 border-gray-100 text-gray-300'
                                         }`}>
                                             {isCompleted ? '✓' : day}
                                         </div>
@@ -1456,19 +1777,76 @@ export default function LegendaryLightDashboard() {
                             })}
                         </div>
                         <div className="flex items-center gap-1 bg-orange-50 px-2.5 py-1 rounded-full border border-orange-100 shrink-0">
-                            <span className="text-[9px] font-black text-orange-600 uppercase tracking-wider">{pet.streak} GÜN 🔥</span>
+                            <span className="text-[9px] font-black text-orange-600 uppercase tracking-wider">{currentStreak} GÜN 🔥</span>
                         </div>
                     </div>
                 </motion.div>
 
                 {/* ⚡ QUEST ENGINE - Günlük Görevler Bento */}
                 <section className="mb-6 px-0">
-                    <QuestBentoCard />
+                    <motion.button
+                        whileHover={{ scale: 1.015, y: -1.5, boxShadow: isDark ? '0 12px 30px rgba(139, 92, 246, 0.12)' : '0 12px 30px rgba(99, 102, 241, 0.08)' }}
+                        whileTap={{ scale: 0.985 }}
+                        onClick={() => router.push('/quests')}
+                        className={cn(
+                            "w-full flex items-center justify-between p-4 rounded-[24px] relative overflow-hidden transition-all duration-300 border cursor-pointer",
+                            isDark 
+                                ? "bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-indigo-500/20 text-white shadow-lg shadow-black/20" 
+                                : "bg-gradient-to-r from-indigo-50/70 via-purple-50/70 to-indigo-50/70 border-indigo-200/60 text-slate-800 shadow-[0_12px_32px_rgba(99,102,241,0.04)]"
+                        )}
+                    >
+                        {/* Background glow effects */}
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-all duration-500" />
+                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-orange-500/5 rounded-full blur-xl" />
+                        
+                        {/* Left Content (Icon + Texts) */}
+                        <div className="flex items-center gap-4 relative z-10">
+                            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center shadow-md shadow-orange-500/20 group-hover:scale-105 transition-transform duration-300">
+                                <Trophy className="w-6 h-6 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)] animate-pulse" />
+                            </div>
+                            <div className="flex flex-col text-left">
+                                <div className="flex items-center gap-1.5">
+                                    <span className={cn(
+                                        "text-[13px] font-black tracking-tight transition-colors duration-300",
+                                        isDark ? "text-white group-hover:text-amber-300" : "text-slate-800 group-hover:text-indigo-650"
+                                    )}>
+                                        Görev Merkezi
+                                    </span>
+                                    <span className={cn(
+                                        "text-[8px] font-black px-1.5 py-0.5 rounded-full border transition-colors duration-300",
+                                        isDark 
+                                            ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
+                                            : "bg-emerald-50 text-emerald-600 border-emerald-200"
+                                    )}>
+                                        AKTİF GÖREVLER
+                                    </span>
+                                </div>
+                                <span className={cn(
+                                    "text-[9.5px] font-medium mt-1 leading-normal transition-colors duration-300",
+                                    isDark ? "text-slate-400" : "text-slate-500"
+                                )}>
+                                    Günlük hedefleri tamamla, ekstra PatiPuan ve ödüller kazan!
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Right Content (Chevron/Arrow) */}
+                        <div className="flex items-center gap-1.5 relative z-10">
+                            <div className={cn(
+                                "w-8 h-8 rounded-full border flex items-center justify-center transition-all duration-300",
+                                isDark 
+                                    ? "bg-white/5 border-white/10 group-hover:bg-white/10 group-hover:border-white/20 text-slate-300 group-hover:text-white" 
+                                    : "bg-slate-200/50 border-slate-200/80 group-hover:bg-slate-200/80 group-hover:border-slate-300 text-slate-500 group-hover:text-slate-700"
+                            )}>
+                                <ChevronRight className="w-5 h-5 transition-colors" />
+                            </div>
+                        </div>
+                    </motion.button>
                 </section>
 
                 {/* 3. Live Walk Tracking Widget - useWalk hook ile canlı */}
                 <section className="mb-6">
-                    <BentoCard onClick={() => window.dispatchEvent(new CustomEvent('open-walk-panel'))} className="bg-white !p-4 flex flex-col gap-4 relative overflow-hidden cursor-pointer hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all">
+                    <BentoCard className="bg-white !p-4 flex flex-col gap-4 relative overflow-hidden border border-gray-100/50 shadow-sm transition-all">
                         <div className="absolute right-[-20px] top-[-20px] w-48 h-48 bg-green-500/[0.03] rounded-full pointer-events-none" />
                         
                         <div className="flex justify-between items-start relative z-10">
@@ -1488,11 +1866,11 @@ export default function LegendaryLightDashboard() {
                                         : `${pet.name}'in günlük gezi hedefini tamamlayın`}
                                 </p>
                             </div>
-                            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm border transition-colors ${
-                                activeSession ? 'bg-green-500 text-white border-green-400' : 'bg-green-50 text-green-600 border-green-100/30'
-                            }`}>
-                                <Navigation className="w-5 h-5" />
-                            </div>
+                            {activeSession && (
+                                <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm border bg-green-500 text-white border-green-400">
+                                    <Navigation className="w-5 h-5" />
+                                </div>
+                            )}
                         </div>
 
                         {/* Rota Haritası */}
@@ -1572,10 +1950,10 @@ export default function LegendaryLightDashboard() {
                             ) : (
                                 <button 
                                     onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-walk-panel')); }}
-                                    className="flex items-center gap-1.5 bg-[#527958] hover:bg-[#436448] text-white text-[11px] font-bold px-4 py-2.5 rounded-2xl shadow-md shadow-green-900/10 transition-colors cursor-pointer"
+                                    className="flex items-center gap-2 bg-[#527958] hover:bg-[#436448] text-white text-[11px] font-black px-4.5 py-2.5 rounded-2xl shadow-md shadow-green-900/10 transition-all hover:scale-[1.02] cursor-pointer"
                                 >
-                                    <Play className="w-3.5 h-3.5 fill-current" />
-                                    <span>Şimdi Çık</span>
+                                    <Compass className="w-3.5 h-3.5" />
+                                    <span>Yürüyüşe Başla</span>
                                 </button>
                             )}
                         </div>
@@ -1593,7 +1971,15 @@ export default function LegendaryLightDashboard() {
                                                 {((w.distance_meters || 0) / 1000).toFixed(2)} KM
                                             </span>
                                             <span className="text-[8px] font-semibold text-gray-400">
-                                                {w.ended_at ? new Date(w.ended_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }) : 'Tamamlandı'}
+                                                {w.ended_at ? (() => {
+                                                    try {
+                                                        const d = new Date(w.ended_at);
+                                                        if (isNaN(d.getTime())) return 'Tamamlandı';
+                                                        return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+                                                    } catch {
+                                                        return 'Tamamlandı';
+                                                    }
+                                                })() : 'Tamamlandı'}
                                             </span>
                                         </div>
                                     </div>
@@ -1832,36 +2218,11 @@ export default function LegendaryLightDashboard() {
                         </p>
                     </div>
                 </motion.div>
+                    </>
+                )}
 
             </motion.div>
 
-            {/* Dynamic Live Activity Card */}
-            <div className="fixed bottom-24 inset-x-0 flex justify-center z-40 px-5 pointer-events-none">
-                <motion.div 
-                    initial={{ y: 80, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.5, type: 'spring', stiffness: 100 }}
-                    className="w-full max-w-md bg-white/80 backdrop-blur-2xl border border-white/20 p-4 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.06)] flex items-center justify-between pointer-events-auto"
-                >
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600 border border-orange-100/30">
-                            <ShoppingBag className="w-5 h-5 animate-bounce" />
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-1.5">
-                                <span className="text-[9px] font-black tracking-widest text-orange-600 uppercase">SİPARİŞ YOLDA</span>
-                                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
-                            </div>
-                            <h5 className="text-[11px] font-black text-gray-800 mt-0.5">Somonlu Premium Mama</h5>
-                            <p className="text-[10px] text-gray-400 font-semibold">Kurye yaklaşıyor • 8 dk içinde kapıda</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2 pr-1 shrink-0">
-                        <span className="text-[11px] font-black text-gray-800 bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-md">8 dk</span>
-                        <ChevronRight className="w-4 h-4 text-gray-400" />
-                    </div>
-                </motion.div>
-            </div>
 
 
             {/* 3D FLUID CARD MORPHING OVERLAYS */}
@@ -1949,7 +2310,7 @@ export default function LegendaryLightDashboard() {
                                                 <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-green-500/10 rounded-full blur-2xl" />
                                                 <span className="text-[8px] font-black tracking-widest text-gray-400 block">CARDMEMBERSHIP</span>
                                                 <h4 className="text-2xl font-black mt-4 tracking-tight flex items-baseline gap-1">
-                                                    {pet.wallet.patipuan} <span className="text-xs text-yellow-400 font-bold">{pet.wallet.currency}</span>
+                                                    {walletBalance.toLocaleString('tr-TR')} <span className="text-xs text-yellow-400 font-bold">{pet.wallet.currency}</span>
                                                 </h4>
                                                 <div className="flex justify-between items-end mt-6">
                                                     <span className="text-[10px] text-gray-400 font-mono tracking-wider">{pet.wallet.cardNumber}</span>
@@ -2001,7 +2362,7 @@ export default function LegendaryLightDashboard() {
                                         <>
                                             <div className="flex items-center gap-2">
                                                 <QrCode className="w-6 h-6 text-orange-600" />
-                                                <h3 className="text-lg font-black text-gray-800">Mila'nın Sağlık Pasaportu</h3>
+                                                <h3 className="text-lg font-black text-gray-800">{pet.name}'in Sağlık Pasaportu</h3>
                                             </div>
 
                                             {/* NFC Interactive Tag Card */}
@@ -2957,7 +3318,15 @@ export default function LegendaryLightDashboard() {
                                                                      photo.bg === 'park' && "bg-gradient-to-b from-green-500/10 via-emerald-800/20 to-slate-900",
                                                                      photo.bg === 'space' && "bg-gradient-to-tr from-indigo-950 via-purple-950 to-slate-950"
                                                                  )}>
-                                                                     <img src={pet.image} className="w-[85%] h-[85%] object-cover select-none pointer-events-none" />
+                                                                     {pet.image ? (
+                                                                         <img src={pet.image} className="w-[85%] h-[85%] object-cover select-none pointer-events-none" />
+                                                                     ) : (
+                                                                         <div className="w-[85%] h-[85%] bg-gradient-to-tr from-gray-150 to-gray-250 dark:from-zinc-800 dark:to-zinc-700 flex items-center justify-center rounded">
+                                                                             <span className="text-gray-400 dark:text-zinc-500 text-xl font-black select-none uppercase font-sans">
+                                                                                 {pet.name ? pet.name[0] : '🐾'}
+                                                                             </span>
+                                                                         </div>
+                                                                     )}
                                                                      {/* Accessory badges overlaid onto the mini photo */}
                                                                      <div className="absolute bottom-1 left-1 right-1 flex flex-wrap gap-0.5 pointer-events-none">
                                                                          {photo.accessories.map((acc) => (
@@ -3088,8 +3457,14 @@ export default function LegendaryLightDashboard() {
                                                     className="flex-1 flex flex-col items-center justify-center text-center p-4 bg-gradient-to-b from-rose-50 to-white rounded-[28px] border border-rose-100"
                                                 >
                                                     <div className="flex items-center justify-center gap-4 mb-4">
-                                                        <div className="w-16 h-16 rounded-full overflow-hidden border-4 border-white shadow-md relative">
-                                                            <img src={pet.image} className="w-full h-full object-cover" alt={pet.name} />
+                                                        <div className="w-16 h-16 rounded-full overflow-hidden border-4 border-white shadow-md relative flex items-center justify-center bg-gray-100">
+                                                            {pet.image ? (
+                                                                <img src={pet.image} className="w-full h-full object-cover" alt={pet.name} />
+                                                            ) : (
+                                                                <span className="text-gray-400 text-xl font-black select-none uppercase font-sans">
+                                                                    {pet.name ? pet.name[0] : '🐾'}
+                                                                </span>
+                                                            )}
                                                         </div>
                                                         <span className="text-3xl animate-bounce">💖</span>
                                                         <div className="w-16 h-16 rounded-full overflow-hidden border-4 border-white shadow-md">
@@ -3288,28 +3663,125 @@ export default function LegendaryLightDashboard() {
                                             {/* 1. Header: User Greeting & VIP Status */}
                                             <div className="flex items-center gap-4 p-4.5 bg-gradient-to-tr from-gray-900 to-gray-800 rounded-3xl border border-gray-700/30 text-white shadow-lg relative overflow-hidden shrink-0">
                                                 <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-green-500/10 rounded-full blur-2xl" />
-                                                <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-green-400 shadow-md shrink-0 relative">
-                                                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150" className="w-full h-full object-cover" alt="User Avatar" />
+                                                <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-green-400 shadow-md shrink-0 relative group cursor-pointer"
+                                                    onClick={() => {
+                                                        const input = document.createElement('input');
+                                                        input.type = 'file';
+                                                        input.accept = 'image/*';
+                                                        input.onchange = async (e: any) => {
+                                                            const file = e.target.files?.[0];
+                                                            if (!file) return;
+                                                            try {
+                                                                const { apiService: api } = await import('@/services/apiService');
+                                                                const url = await api.uploadMedia(file, 'avatars');
+                                                                await updateProfile({ avatar: url });
+                                                                setToastMsg('✅ Profil fotoğrafı güncellendi!');
+                                                            } catch {
+                                                                setToastMsg('❌ Fotoğraf yüklenemedi.');
+                                                            }
+                                                        };
+                                                        input.click();
+                                                    }}
+                                                >
+                                                    <UserAvatar
+                                                        avatar={authUser?.avatar}
+                                                        name={authUser?.name}
+                                                        username={authUser?.username}
+                                                        email={authUser?.email}
+                                                        size="lg"
+                                                    />
+                                                    {/* Hover overlay — fotoğraf yükle */}
+                                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-full">
+                                                        <span className="text-white text-[9px] font-black text-center leading-tight px-1">Değiştir</span>
+                                                    </div>
                                                     <div className="absolute bottom-0 right-0 bg-green-500 w-3.5 h-3.5 rounded-full border-2 border-white flex items-center justify-center">
                                                         <div className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
                                                     </div>
                                                 </div>
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-2">
-                                                        <h3 className="text-base font-black tracking-tight leading-tight">Merhaba, Üveys! 👋</h3>
+                                                        <h3 className="text-base font-black tracking-tight leading-tight">
+                                                            Merhaba, {authUser?.username || authUser?.name || authUser?.email?.split('@')[0] || 'Moffi Kullanıcısı'}! 👋
+                                                        </h3>
                                                         <span className="text-[8px] font-black text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded border border-yellow-400/20 uppercase tracking-widest flex items-center gap-0.5">
-                                                            <Award className="w-2.5 h-2.5" /> GOLD
+                                                            <Award className="w-2.5 h-2.5" /> {authUser?.is_prime ? 'PRIME' : authUser?.subscription_status || 'FREE'}
                                                         </span>
                                                     </div>
-                                                    <p className="text-[10px] text-gray-300 font-semibold mt-1">uv***@gmail.com • Premium Üye</p>
-                                                    <div className="mt-2 text-[9px] text-green-300 font-bold bg-green-500/15 border border-green-500/25 px-2 py-0.5 rounded-md inline-block">
-                                                        🧬 {pet.name}: F1 Pedigree • Safkan {pet.breed.split(' • ')[0]}
-                                                    </div>
+                                                    <p className="text-[10px] text-gray-300 font-semibold mt-1">
+                                                        {authUser?.email ? authUser.email.replace(/(.{2}).*(@.*)/, '$1***$2') : ''} • {authUser?.is_prime ? 'Prime Üye' : authUser?.subscription_status === 'premium' ? 'Premium' : 'Üye'}
+                                                    </p>
+                                                    {!hasNoPets && (
+                                                        <div className="mt-2 text-[9px] text-green-300 font-bold bg-green-500/15 border border-green-500/25 px-2 py-0.5 rounded-md inline-block">
+                                                            🐾 {pet.name} • {pet.breed || 'Kayıtlı Pet'}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
 
+                                            {/* Profil Fotoğrafı Yönetimi */}
+                                            <div className="flex items-center gap-2 px-1">
+                                                <button
+                                                    onClick={() => {
+                                                        const input = document.createElement('input');
+                                                        input.type = 'file';
+                                                        input.accept = 'image/*';
+                                                        input.onchange = async (e: any) => {
+                                                            const file = e.target.files?.[0];
+                                                            if (!file) return;
+                                                            try {
+                                                                const { apiService: api } = await import('@/services/apiService');
+                                                                const url = await api.uploadMedia(file, 'avatars');
+                                                                await updateProfile({ avatar: url });
+                                                                setToastMsg('✅ Profil fotoğrafı güncellendi!');
+                                                            } catch {
+                                                                setToastMsg('❌ Fotoğraf yüklenemedi.');
+                                                            }
+                                                        };
+                                                        input.click();
+                                                    }}
+                                                    className="text-[9px] text-gray-400 font-bold bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer flex items-center gap-1"
+                                                >
+                                                    📷 Fotoğraf Değiştir
+                                                </button>
+                                                {authUser?.avatar && (
+                                                    <button
+                                                        onClick={async () => {
+                                                            try {
+                                                                await updateProfile({ avatar: undefined });
+                                                                setToastMsg('✅ Fotoğraf kaldırıldı.');
+                                                            } catch {
+                                                                setToastMsg('❌ İşlem başarısız.');
+                                                            }
+                                                        }}
+                                                        className="text-[9px] text-red-400 font-bold bg-red-500/5 border border-red-500/20 px-2.5 py-1 rounded-lg hover:bg-red-500/10 transition-colors cursor-pointer"
+                                                    >
+                                                        🗑 Kaldır
+                                                    </button>
+                                                )}
+                                            </div>
 
 
+                                            {hasNoPets ? (
+                                                <div className="p-6 bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent border border-green-500/10 rounded-[2rem] text-center flex flex-col items-center gap-4 my-2 shadow-[0_12px_40px_rgba(0,0,0,0.02)]">
+                                                    <div className="w-16 h-16 rounded-[1.8rem] bg-gradient-to-tr from-emerald-450 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 text-white text-3xl">
+                                                        🐾
+                                                    </div>
+                                                    <h4 className="text-base font-black text-gray-805 tracking-tight leading-tight">Henüz Evcil Hayvanınız Yok</h4>
+                                                    <p className="text-xs font-semibold text-gray-450 leading-relaxed max-w-[280px]">
+                                                        Moffi'nin akıllı tasma, pasaport, dijital kimlik ve cüzdan özelliklerini kullanabilmek için ilk dostunuzu kaydetmeniz gerekir.
+                                                    </p>
+                                                    <button 
+                                                        onClick={() => {
+                                                            setExpandedPanel(null);
+                                                            setIsAddPetOpen(true);
+                                                        }}
+                                                        className="w-full py-4.5 bg-[#527958] hover:bg-[#436448] text-white rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all shadow-md shadow-green-900/10 cursor-pointer"
+                                                    >
+                                                        Evcil Hayvan Ekle
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <>
                                             {/* 2. Moffi Pay & Contactless Collar Card (Pati-Kart) */}
                                             <div className="flex flex-col gap-3">
                                                 <span className="text-[10px] font-black tracking-widest text-gray-400 uppercase px-1">FINANSAL PORTFÖY & TEMASSIZ PATİ-KART</span>
@@ -3968,7 +4440,7 @@ export default function LegendaryLightDashboard() {
                                                             <div className="p-8 bg-white border border-gray-100 rounded-3xl text-center flex flex-col items-center justify-center gap-2">
                                                                 <span className="text-3xl">🛒</span>
                                                                 <h5 className="text-xs font-black text-gray-800">Sepetiniz Boş</h5>
-                                                                <p className="text-[10px] text-gray-400 font-semibold max-w-[200px]">Luna için eklediğiniz ürünler burada görünür.</p>
+                                                                <p className="text-[10px] text-gray-400 font-semibold max-w-[200px]">{pet.name || 'Petiniz'} için eklediğiniz ürünler burada görünür.</p>
                                                                 <button 
                                                                     onClick={() => setProfileOrdersTab('active')}
                                                                     className="mt-2 bg-[#527958] text-white text-[10px] font-black px-4 py-2 rounded-xl"
@@ -4227,6 +4699,8 @@ export default function LegendaryLightDashboard() {
                                                     </div>
                                                 )}
                                             </div>
+                                                </>
+                                            )}
 
                                             {/* 8. Menu: Account Safety, OTP, and Support */}
                                             <div className="flex flex-col gap-3">
@@ -4389,6 +4863,7 @@ export default function LegendaryLightDashboard() {
                 onClose={() => setIsPetSettingsOpen(false)}
                 pet={activePetObj}
                 onSave={handleSavePetSettings}
+                onDelete={deletePet}
             />
 
             <AddPetModal 
@@ -4434,8 +4909,22 @@ export default function LegendaryLightDashboard() {
                 setNewPetWaterTarget={setNewPetWaterTarget}
                 newPetFoodTarget={newPetFoodTarget}
                 setNewPetFoodTarget={setNewPetFoodTarget}
-                newPetStreak={newPetStreak}
-                setNewPetStreak={setNewPetStreak}
+            />
+
+            <DailyGoalsModal 
+                isOpen={isDailyGoalsOpen}
+                onClose={() => setIsDailyGoalsOpen(false)}
+                petName={activePetObj?.name || 'Petin'}
+                activityPercent={activityPercent}
+                activityCurrent={walkedDistanceToday}
+                activityTarget={targetActivityKm}
+                waterPercent={waterPercent}
+                waterCurrent={waterCurrent}
+                waterTarget={waterTarget}
+                foodPercent={foodPercent}
+                foodCurrent={foodCurrent}
+                foodTarget={foodTarget}
+                onNavigateToFood={() => router.push('/food')}
             />
 
             <style>{`

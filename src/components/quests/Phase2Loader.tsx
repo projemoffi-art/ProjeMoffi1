@@ -13,10 +13,5 @@ const RareDropSystem = dynamic(
 );
 
 export function Phase2Loader() {
-    return (
-        <>
-            <LiveEventsHUD />
-            <RareDropSystem />
-        </>
-    );
+    return null;
 }

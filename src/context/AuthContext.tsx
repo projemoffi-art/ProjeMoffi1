@@ -55,7 +55,7 @@ const MOCK_USER_BASE = (email: string, name?: string): User => ({
     username: name || email.split('@')[0] || 'moffi_user',
     email: email,
     role: email.includes('admin') ? 'admin' : 'user',
-    avatar: "https://images.unsplash.com/photo-1628157588553-5eeea00af15c?q=80&w=400",
+    avatar: undefined,
     bio: "Moffi Dünyasına yeni katıldı! 🐾",
     is_prime: false,
     joinedAt: new Date().toISOString(),
@@ -97,8 +97,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                             name: profile.name,
                             display_name: profile.name,
                             email: profile.email || session.user.email,
-                            role: profile.role || 'user',
+                            role: (profile.role === 'admin' || 
+                                   (profile.email || session.user.email || '').toLowerCase() === 'projemoffi@gmail.com') 
+                                   ? 'admin' : (profile.role || 'user'),
                             avatar: profile.avatar,
+                            cover_photo: profile.cover_photo,
                             bio: profile.bio,
                             is_prime: profile.subscription_status === 'plus' || profile.subscription_status === 'pro' || profile.is_prime === true,
                             joinedAt: profile.created_at || new Date().toISOString(),
@@ -121,8 +124,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                                 name: newProfile.name,
                                 display_name: newProfile.name,
                                 email: newProfile.email,
-                                role: 'user',
+                                role: ((newProfile.email || '').toLowerCase() === 'projemoffi@gmail.com') 
+                                       ? 'admin' : 'user',
                                 avatar: newProfile.avatar,
+                                cover_photo: newProfile.cover_photo,
                                 bio: newProfile.bio,
                                 is_prime: newProfile.subscription_status === 'plus' || newProfile.subscription_status === 'pro',
                                 joinedAt: new Date().toISOString(),
@@ -246,12 +251,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 username: data.username,
                 avatar: data.avatar,
                 bio: data.bio,
+                cover_photo: (data as any).cover_photo,
                 subscription_status: (data as any).subscription_status,
-                is_setup_completed: (data as any).is_setup_completed
+                is_setup_completed: (data as any).is_setup_completed,
+                default_allow_comments: (data as any).default_allow_comments,
+                default_comment_privacy: (data as any).default_comment_privacy,
+                comment_filter_words: (data as any).comment_filter_words
             } as any);
             
             setUser(prev => {
-                if (prev) return { ...prev, ...data, name: data.name || data.username, display_name: data.name || data.username };
+                if (prev) {
+                    return {
+                        ...prev,
+                        name: profile.name || prev.name,
+                        display_name: profile.name || prev.display_name,
+                        username: profile.username || prev.username,
+                        avatar: profile.avatar !== undefined ? profile.avatar : prev.avatar,
+                        cover_photo: profile.cover_photo !== undefined ? profile.cover_photo : prev.cover_photo,
+                        bio: profile.bio !== undefined ? profile.bio : prev.bio,
+                        subscription_status: profile.subscription_status || prev.subscription_status,
+                        settings: {
+                            ...prev.settings,
+                            default_allow_comments: (profile as any).default_allow_comments !== undefined ? (profile as any).default_allow_comments : prev.settings?.default_allow_comments,
+                            default_comment_privacy: (profile as any).default_comment_privacy || prev.settings?.default_comment_privacy,
+                            comment_filter_words: (profile as any).comment_filter_words || prev.settings?.comment_filter_words
+                        }
+                    };
+                }
                 return {
                     id: profile.id,
                     username: profile.username || profile.name || data.username || "user",
@@ -259,10 +285,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     display_name: profile.name || data.name || data.username,
                     email: profile.email || "user@moffi.com",
                     role: 'user',
-                    avatar: profile.avatar || data.avatar,
-                    bio: profile.bio || data.bio,
+                    avatar: profile.avatar,
+                    cover_photo: profile.cover_photo,
+                    bio: profile.bio,
                     joinedAt: new Date().toISOString(),
-                    stats: { posts: 0, followers: 0, following: 0 }
+                    stats: { posts: 0, followers: 0, following: 0 },
+                    settings: {
+                        default_allow_comments: (profile as any).default_allow_comments,
+                        default_comment_privacy: (profile as any).default_comment_privacy,
+                        comment_filter_words: (profile as any).comment_filter_words
+                    }
                 };
             });
         } else {

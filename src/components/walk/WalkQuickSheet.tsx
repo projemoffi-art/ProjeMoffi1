@@ -1055,6 +1055,7 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
     const activeWeather = weatherOverride || weather;
     const [isWeatherDetailOpen, setIsWeatherDetailOpen] = React.useState(false);
     const { dailyQuests, dailyGoal, todayEarned, level } = useQuestEngine();
+    const [activeTab, setActiveTab] = React.useState<'controls' | 'stats' | 'map'>('controls');
 
     // Gerçek Zamanlı GPS Telemetrisi ve Hesaplamaları
     const paceMinKm = React.useMemo(() => {
@@ -1192,31 +1193,16 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
             <AnimatePresence>
                 {isOpen && (
                     <>
-                        {/* Backdrop */}
+                        {/* Full-Screen Container */}
                         <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={onClose}
-                            className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm"
-                        />
-
-                        {/* Sheet Container */}
-                        <motion.div
-                            initial={{ y: "100%", opacity: 0, scale: 0.95 }}
-                            animate={{ y: 0, opacity: 1, scale: 1 }}
-                            exit={{ y: "100%", opacity: 0, scale: 0.95 }}
-                            transition={{ type: "spring", damping: 28, stiffness: 300 }}
-                            className="fixed bottom-4 left-4 right-4 z-50 bg-slate-100 rounded-[2.5rem] shadow-[0_-20px_80px_rgba(0,0,0,0.15)] border border-white/60 overflow-hidden flex flex-col"
-                            style={{ height: '85vh', maxHeight: '700px' }}
+                            initial={{ y: "100%", opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: "100%", opacity: 0 }}
+                            transition={{ type: "spring", damping: 30, stiffness: 250 }}
+                            className="fixed inset-0 z-50 bg-slate-100 flex flex-col overflow-hidden"
                         >
-                            {/* Grab handle */}
-                            <div className="w-full flex justify-center pt-4 pb-2 z-20 relative shrink-0">
-                                <div className="w-12 h-1.5 bg-slate-300 rounded-full" />
-                            </div>
-
                             {/* Header Area */}
-                            <div className="px-6 flex items-center justify-between pb-2 z-20 relative shrink-0">
+                            <div className="px-6 pt-6 flex items-center justify-between pb-2 z-20 relative shrink-0">
                                 <div>
                                     <h2 className="text-xl font-black text-slate-800 tracking-tight leading-none mb-1">Moffi ile Yürüyüş</h2>
                                     <span className={cn(
@@ -1237,6 +1223,49 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                                 >
                                     <X className="w-5 h-5 text-slate-450" />
                                 </button>
+                            </div>
+
+                            {/* Segmented Tab Switcher */}
+                            <div className="px-6 pb-2.5 shrink-0 z-20">
+                                <div className="bg-slate-200/50 p-1 rounded-2xl flex gap-1 relative overflow-hidden">
+                                    {(['controls', 'stats', 'map'] as const).map((tab) => {
+                                        const label = {
+                                            controls: 'Yürüyüş',
+                                            stats: 'İstatistikler',
+                                            map: 'Harita'
+                                        }[tab];
+                                        const isActive = activeTab === tab;
+                                        return (
+                                            <button
+                                                key={tab}
+                                                onClick={() => {
+                                                    if (tab === 'map') {
+                                                        router.push('/walk/tracking');
+                                                        onClose();
+                                                    } else if (tab === 'stats') {
+                                                        router.push('/walk');
+                                                        onClose();
+                                                    } else {
+                                                        setActiveTab(tab);
+                                                    }
+                                                }}
+                                                className={cn(
+                                                    "flex-1 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all relative cursor-pointer border-0 z-10",
+                                                    isActive ? "text-slate-800" : "text-slate-400 hover:text-slate-700 bg-transparent"
+                                                )}
+                                            >
+                                                {isActive && (
+                                                    <motion.div
+                                                        layoutId="activeTabIndicator"
+                                                        className="absolute inset-0 bg-white rounded-xl shadow-sm -z-10"
+                                                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                                    />
+                                                )}
+                                                {label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
 
                             {/* ── SCROLLABLE CONTENT ── */}

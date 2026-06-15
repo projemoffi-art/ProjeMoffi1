@@ -9,7 +9,7 @@ import {
 import dynamic from 'next/dynamic';
 
 // Mapbox dynamic import
-const MapboxLiveMap = dynamic(() => import('@/components/maps/MapboxLiveMap'), { 
+const MapboxLiveMap = dynamic(() => import('@/components/walk/LiveMap'), { 
   ssr: false, 
   loading: () => <div className="h-full w-full bg-[#111] animate-pulse rounded-3xl" /> 
 });

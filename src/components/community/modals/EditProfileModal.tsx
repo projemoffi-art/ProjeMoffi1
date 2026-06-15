@@ -25,7 +25,6 @@ interface EditProfileModalProps {
     setEditCoverFile: (val: File | null) => void;
     isSavingProfile: boolean;
     onSave: () => Promise<void>;
-    coverInputRef: React.RefObject<HTMLInputElement>;
     editAllowComments?: boolean;
     setEditAllowComments?: (val: boolean) => void;
     editCommentPrivacy?: string;
@@ -54,7 +53,6 @@ export function EditProfileModal({
     setEditCoverFile,
     isSavingProfile,
     onSave,
-    coverInputRef,
     editAllowComments = true,
     setEditAllowComments,
     editCommentPrivacy = "everyone",
@@ -62,6 +60,9 @@ export function EditProfileModal({
     editFilterWords = "",
     setEditFilterWords
 }: EditProfileModalProps) {
+    const coverInputRef = React.useRef<HTMLInputElement>(null);
+    const profileInputRef = React.useRef<HTMLInputElement>(null);
+
     return (
         <AnimatePresence>
             {isOpen && (
@@ -99,56 +100,51 @@ export function EditProfileModal({
 
                         {/* COVER & AVATAR EDIT SECTION */}
                         <div 
-                            className="relative h-40 sm:h-48 w-full rounded-3xl overflow-hidden mb-16 group cursor-pointer border border-card-border" 
-                            onClick={() => coverInputRef.current?.click()}
+                            className="relative h-40 sm:h-48 w-full rounded-3xl mb-16 border border-card-border" 
                         >
-                            {editCoverPreview ? (
-                                <img src={editCoverPreview} className="w-full h-full object-cover" alt="Cover Preview" />
-                            ) : (
-                                <div className="w-full h-full bg-gradient-to-tr from-cyan-900/20 to-purple-900/20 opacity-40" />
-                            )}
-                            <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Camera className="w-6 h-6 text-white mb-2" />
-                                <span className="text-[10px] text-white font-black uppercase tracking-widest">Kapağı Değiştir</span>
+                            <div className="absolute inset-0 w-full h-full rounded-3xl overflow-hidden group cursor-pointer block">
+                                {editCoverPreview ? (
+                                    <img src={editCoverPreview} className="w-full h-full object-cover" alt="Cover Preview" />
+                                ) : (
+                                    <div className="w-full h-full bg-gradient-to-tr from-cyan-900/20 to-purple-900/20 opacity-40" />
+                                )}
+                                <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                    <Camera className="w-6 h-6 text-white mb-2" />
+                                    <span className="text-[10px] text-white font-black uppercase tracking-widest">Kapağı Değiştir</span>
+                                </div>
+                                <input
+                                    type="file"
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            setEditCoverFile(file);
+                                            setEditCoverPreview(URL.createObjectURL(file));
+                                        }
+                                    }}
+                                />
                             </div>
-                            <input
-                                type="file"
-                                ref={coverInputRef}
-                                className="hidden"
-                                accept="image/*"
-                                onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                        setEditCoverFile(file);
-                                        setEditCoverPreview(URL.createObjectURL(file));
-                                    }
-                                }}
-                            />
 
                             {/* AVATAR OVERLAP */}
                             <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 flex justify-center z-20">
-                                <label 
-                                    htmlFor="edit-profile-upload" 
-                                    className="w-24 h-24 rounded-full border-4 border-background flex flex-col items-center justify-center cursor-pointer hover:border-accent transition-colors bg-foreground/10 overflow-hidden group shadow-2xl"
-                                    onClick={(e) => e.stopPropagation()}
-                                >
+                                <div className="w-24 h-24 rounded-full border-4 border-background flex flex-col items-center justify-center cursor-pointer hover:border-accent transition-colors bg-foreground/10 overflow-hidden group shadow-2xl relative">
                                     {editAvatarPreview ? (
                                         <div className="w-full h-full relative">
                                             <img src={editAvatarPreview} className="w-full h-full object-cover" alt="Avatar Preview" />
-                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                                                 <Camera className="w-5 h-5 text-white" />
                                             </div>
                                         </div>
                                     ) : (
                                         <>
-                                            <Camera className="w-6 h-6 text-secondary mb-1" />
-                                            <span className="text-[8px] text-secondary font-black uppercase tracking-widest">Profil</span>
+                                            <Camera className="w-6 h-6 text-secondary mb-1 pointer-events-none" />
+                                            <span className="text-[8px] text-secondary font-black uppercase tracking-widest pointer-events-none">Profil</span>
                                         </>
                                     )}
                                     <input
                                         type="file"
-                                        id="edit-profile-upload"
-                                        className="hidden"
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"
                                         accept="image/*"
                                         onChange={(e) => {
                                             const file = e.target.files?.[0];
@@ -158,7 +154,7 @@ export function EditProfileModal({
                                             }
                                         }}
                                     />
-                                </label>
+                                </div>
                             </div>
                         </div>
 

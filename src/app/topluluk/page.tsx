@@ -242,6 +242,17 @@ export default function MoffiSocialMasterpiece() {
         }
     }, [showFilterName, activeFilterIndex]);
 
+    useEffect(() => {
+        const openWalk = searchParams.get('openWalk');
+        const tabParam = searchParams.get('tab');
+        if (tabParam) {
+            setActiveTab(tabParam);
+        }
+        if (openWalk === 'true') {
+            setIsWalkQuickSheetOpen(true);
+        }
+    }, [searchParams]);
+
     const handleSwipeFilter = (direction: 'left' | 'right') => {
         let newIndex = activeFilterIndex;
         if (direction === 'left') {
@@ -577,13 +588,10 @@ export default function MoffiSocialMasterpiece() {
     // Global Navigation & Hub Controller (Restored)
     useEffect(() => {
         const handleOpenPost = () => {
-            window.dispatchEvent(new CustomEvent('moffi-toast', { 
-                detail: { 
-                    message: 'Yeni gönderi oluşturma merkezi hazırlanıyor... 📸', 
-                    icon: 'Sparkles', 
-                    color: 'text-cyan-400' 
-                } 
-            }));
+            setIsUploadModalOpen(true);
+            setTimeout(() => {
+                cameraInputRef.current?.click();
+            }, 300);
         };
         const handleOpenSOS = () => {
             // Toggle SOS view or state
@@ -599,6 +607,7 @@ export default function MoffiSocialMasterpiece() {
         const handleOpenNotif = () => setIsNotificationsOpen(true);
 
         window.addEventListener('open-add-post', handleOpenPost);
+        window.addEventListener('moffi-open-upload-modal', handleOpenPost);
         window.addEventListener('open-sos-center', handleOpenSOS);
         window.addEventListener('open-moffi-spotlight', handleOpenSpotlight);
         window.addEventListener('open-moffi-diary', handleOpenDiary);
@@ -615,6 +624,7 @@ export default function MoffiSocialMasterpiece() {
 
         return () => {
             window.removeEventListener('open-add-post', handleOpenPost);
+            window.removeEventListener('moffi-open-upload-modal', handleOpenPost);
             window.removeEventListener('open-sos-center', handleOpenSOS);
             window.removeEventListener('open-moffi-spotlight', handleOpenSpotlight);
             window.removeEventListener('open-moffi-diary', handleOpenDiary);
@@ -626,6 +636,15 @@ export default function MoffiSocialMasterpiece() {
             window.removeEventListener('moffi-change-tab', handleChangeTab);
         };
     }, [router]);
+
+    useEffect(() => {
+        if (searchParams.get('openUpload') === 'true') {
+            setIsUploadModalOpen(true);
+            setTimeout(() => {
+                cameraInputRef.current?.click();
+            }, 300);
+        }
+    }, [searchParams]);
 
     // Unified Header Scroll Logic (Works for all tabs)
 
@@ -1678,13 +1697,20 @@ export default function MoffiSocialMasterpiece() {
             >
                 <div className="flex justify-between items-center w-full">
                     <div className="flex items-center gap-2">
-                        <motion.button
-                            style={{ scale: iconScale }}
-                            onClick={() => setIsUploadModalOpen(true)}
-                            className="w-10 h-10 flex items-center justify-center hover:bg-white/5 rounded-full transition-all active:scale-90"
-                        >
-                            <Camera className="w-5 h-5 text-white/80" />
-                        </motion.button>
+                        <div className="relative w-10 h-10">
+                            <motion.button
+                                style={{ scale: iconScale }}
+                                className="w-full h-full flex items-center justify-center hover:bg-white/5 rounded-full transition-all active:scale-90"
+                            >
+                                <Camera className="w-5 h-5 text-white/80" />
+                            </motion.button>
+                            <input 
+                                type="file" 
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50" 
+                                accept="image/*,video/*" 
+                                onChange={handleCameraUpload} 
+                            />
+                        </div>
 
                         {/* VIEW MODE TOGGLE - PURE MINIMALIST */}
                         <div className="flex items-center gap-1 ml-1">
@@ -2218,7 +2244,7 @@ export default function MoffiSocialMasterpiece() {
                 </AnimatePresence>
             </main >
 
-            <input type="file" ref={cameraInputRef} className="hidden" accept="image/*,video/*" onChange={handleCameraUpload} />
+            <input type="file" ref={cameraInputRef} className="absolute opacity-0 w-0 h-0 pointer-events-none" accept="image/*,video/*" onChange={handleCameraUpload} />
 
             {/* MODALS AND DRAWERS */}
 
@@ -2801,14 +2827,21 @@ export default function MoffiSocialMasterpiece() {
                                     
                                     {/* Streamlined Action Sidebar */}
                                     <div className="absolute top-6 right-6 flex flex-col gap-5 opacity-0 group-hover:opacity-100 transition-all duration-300 z-30">
-                                        <button 
-                                            type="button"
-                                            onClick={() => cameraInputRef.current?.click()}
-                                            className="text-white/60 hover:text-white transition-all active:scale-90"
-                                            title="Medyayı Değiştir"
-                                        >
-                                            <Camera className="w-5 h-5" />
-                                        </button>
+                                        <div className="relative w-5 h-5">
+                                            <button 
+                                                type="button"
+                                                className="text-white/60 hover:text-white transition-all active:scale-90"
+                                                title="Medyayı Değiştir"
+                                            >
+                                                <Camera className="w-5 h-5" />
+                                            </button>
+                                            <input 
+                                                type="file" 
+                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50" 
+                                                accept="image/*,video/*" 
+                                                onChange={handleCameraUpload} 
+                                            />
+                                        </div>
                                         
                                         <button 
                                             type="button"
@@ -2854,7 +2887,6 @@ export default function MoffiSocialMasterpiece() {
                                 <motion.div 
                                     initial={{ y: 20, opacity: 0 }}
                                     animate={{ y: 0, opacity: 1 }}
-                                    onClick={() => cameraInputRef.current?.click()}
                                     className="w-full h-[60vh] min-h-[350px] max-h-[500px] rounded-[2rem] border-2 border-dashed border-white/10 bg-white/[0.02] flex flex-col items-center justify-center gap-6 cursor-pointer hover:bg-white/[0.05] hover:border-cyan-500/40 transition-all duration-700 group relative overflow-hidden"
                                 >
                                     {/* Background Glow */}
@@ -2875,6 +2907,14 @@ export default function MoffiSocialMasterpiece() {
                                             En sevdiğin fotoğrafı veya videoyu seç, Moffi topluluğuyla paylaş!
                                         </p>
                                     </div>
+
+                                    {/* Direct transparent file input overlay. Fully native & synchronous. */}
+                                    <input 
+                                        type="file" 
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-[60]" 
+                                        accept="image/*,video/*" 
+                                        onChange={handleCameraUpload} 
+                                    />
                                 </motion.div>
                             )}
                         </div>

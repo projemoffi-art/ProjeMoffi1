@@ -33,7 +33,15 @@ export function PetSwitcher({ className, onAddPet }: PetSwitcherProps) {
                                 "relative w-10 h-10 rounded-full border-2 transition-all duration-500 overflow-hidden",
                                 isActive ? "border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)] scale-110 z-10" : "border-transparent opacity-40 group-hover:opacity-100"
                             )}>
-                                <img src={pet.image} alt={pet.name} className="w-full h-full object-cover" />
+                                {pet.image ? (
+                                    <img src={pet.image} alt={pet.name} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full bg-gradient-to-tr from-gray-100 to-gray-250 dark:from-zinc-800 dark:to-zinc-900 flex items-center justify-center">
+                                        <span className="text-gray-400 dark:text-zinc-500 text-xs font-black select-none uppercase font-sans">
+                                            {pet.name ? pet.name[0] : '🐾'}
+                                        </span>
+                                    </div>
+                                )}
                                 {isActive && (
                                     <motion.div 
                                         layoutId="active-glow"

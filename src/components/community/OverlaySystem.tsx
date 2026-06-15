@@ -23,6 +23,7 @@ interface OverlaySystemProps {
     activePet: any;
     switchPet: (id: string) => void;
     updatePet: (id: string, updates: any) => void;
+    deletePet?: (id: string) => void;
     
     // UI States
     isProfileMenuOpen: boolean;
@@ -58,7 +59,7 @@ interface OverlaySystemProps {
 }
 
 export const OverlaySystem: React.FC<OverlaySystemProps> = ({
-    user, userPets, activePet, switchPet, updatePet,
+    user, userPets, activePet, switchPet, updatePet, deletePet,
     isProfileMenuOpen, setIsProfileMenuOpen, profileViewMode, setProfileViewMode,
     qrModalPet, setQrModalPet, isFullScreenQR, setIsFullScreenQR,
     selectedSharePost, setSelectedSharePost,
@@ -290,6 +291,7 @@ export const OverlaySystem: React.FC<OverlaySystemProps> = ({
                     }
                     showToast("Kaydedildi", "Pasaport bilgileri Moffi Cloud'a mühürlendi! 🛡️", "info");
                 }}
+                onDelete={deletePet}
             />
 
 

@@ -165,6 +165,7 @@ export interface ShopProduct {
     isRecentlyBought?: boolean;
     isVetApproved?: boolean;
     description?: string;
+    specs?: Record<string, string>;
 }
 
 export interface ShopCartItem {

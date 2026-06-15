@@ -204,6 +204,7 @@ export interface IApiService {
     setActivePet(id: string): Promise<void>;
     addPet(pet: Partial<Pet>): Promise<Pet>;
     updatePet(id: string, updates: Partial<Pet>): Promise<Pet>;
+    deletePet(id: string): Promise<void>;
     
     // Community
     getFeedContent(): Promise<Post[]>;
@@ -300,4 +301,11 @@ export interface IApiService {
     // Persistence
     saveData<T>(key: string, data: T): Promise<void>;
     loadData<T>(key: string): Promise<T | null>;
+
+    // Admin Shop operations
+    addProduct(product: Partial<ShopProduct>): Promise<ShopProduct>;
+    updateProduct(id: string, product: Partial<ShopProduct>): Promise<ShopProduct>;
+    deleteProduct(id: string): Promise<void>;
+    updateOrderStatus(orderId: string, status: OrderStatus): Promise<void>;
+    getAllOrders(): Promise<ShopOrder[]>;
 }

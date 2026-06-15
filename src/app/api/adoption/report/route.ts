@@ -49,7 +49,7 @@ export async function POST(req: Request) {
         // Auto-remove if reported 3+ times
         if (count && count >= 3) {
             await supabaseAdmin
-                .from("adoption_ads")
+                .from("adoption_pets")
                 .update({ status: "removed", moderation_result: "Birden fazla kullanıcı tarafından bildirildi" })
                 .eq("id", adId);
         }

@@ -5,7 +5,7 @@ import Map, { Marker, Source, Layer, NavigationControl, FullscreenControl, Geolo
 import "mapbox-gl/dist/mapbox-gl.css";
 import { PLACES, Place } from "@/data/mockPlaces";
 import { MOCK_MARKS, MapMark } from "@/data/mockMarks";
-import { Navigation, AlertCircle, MapPin, Compass, ShieldAlert, Zap } from "lucide-react";
+import { Navigation, AlertCircle, MapPin, Compass, ShieldAlert, Zap, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // --- PRO TYPES ---

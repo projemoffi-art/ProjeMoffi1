@@ -15,8 +15,8 @@ export async function POST(req: Request) {
             );
         }
 
-        // Upgraded to Gemini 2.0 Flash based on diagnostic check
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        // Upgraded to Gemini 2.5 Flash Lite for stable quota and high availability
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
         // Construct history/prompt
         // If we have context (e.g., current page), we inject it.
