@@ -58,6 +58,16 @@ export default function VetPage() {
             setActivePet(pet as any);
         };
         loadActivePet();
+
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const openModal = params.get('open');
+            if (openModal === 'vaccine') {
+                setActiveModal('vaccine');
+            } else if (openModal === 'appointment') {
+                setActiveModal('clinicList');
+            }
+        }
     }, []);
 
     // APPOINTMENT FORM STATE
@@ -210,111 +220,7 @@ export default function VetPage() {
                     <ChevronRight className="w-4 h-4 text-red-400 group-hover:translate-x-1 transition-transform relative z-10" />
                 </motion.button>
 
-                {/* HEALTH STATUS WIDGET */}
-                <div className="bg-[#0D0D12]/60 backdrop-blur-3xl border border-card-border rounded-[2.5rem] p-6 flex flex-col gap-4">
-                    <div className="flex justify-between items-center px-1">
-                        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">{activePet?.name || 'Dostunuz'} Sağlık Durumu</span>
-                        <span className="bg-emerald-500/10 text-emerald-400 text-[8px] font-black px-2.5 py-1 rounded-full border border-emerald-500/20 uppercase tracking-wider">Aktif</span>
-                    </div>
 
-                    <div className="grid grid-cols-2 gap-3.5">
-                        <div className="bg-white/5 border border-card-border rounded-2xl p-4.5">
-                            <span className="text-[9px] font-black text-white/30 uppercase tracking-wider block mb-1">Aşı Durumu</span>
-                            <span className="text-xs font-black text-white block">Karma Aşı Vakti</span>
-                            <span className="text-[10px] text-emerald-400 font-bold mt-0.5 block">3 Gün Kaldı</span>
-                        </div>
-                        <div className="bg-white/5 border border-card-border rounded-2xl p-4.5">
-                            <span className="text-[9px] font-black text-white/30 uppercase tracking-wider block mb-1">İlaç Durumu</span>
-                            <span className="text-xs font-black text-white block">1 Aktif Tedavi</span>
-                            <span className="text-[10px] text-blue-400 font-bold mt-0.5 block">Günde 2 Doz</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* SERVICES GRID */}
-                <section className="grid grid-cols-2 gap-3.5">
-                    {/* Randevu Al Card */}
-                    <motion.button
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => handleServiceClick('appointment')}
-                        className="col-span-2 bg-gradient-to-br from-cyan-950/30 via-blue-950/15 to-purple-950/20 border border-card-border rounded-[2.5rem] p-6 text-left flex flex-col justify-between relative overflow-hidden group shadow-2xl h-[170px]"
-                    >
-                        <div className="absolute top-[-20%] right-[-10%] w-48 h-48 bg-cyan-500/10 blur-[60px] rounded-full group-hover:bg-cyan-500/20 transition-colors duration-500" />
-                        <div className="w-12 h-12 rounded-2xl bg-white/5 backdrop-blur-2xl flex items-center justify-center border border-card-border shadow-xl">
-                            <Calendar className="w-6 h-6 text-cyan-400" />
-                        </div>
-                        <div>
-                            <p className="text-cyan-400 text-[9px] font-black uppercase tracking-[0.3em] mb-0.5">Hızlı Randevu</p>
-                            <h3 className="text-2xl font-black text-white tracking-tighter uppercase italic leading-none">Randevu Al</h3>
-                            <p className="text-white/40 text-[9px] font-bold mt-1 uppercase tracking-widest">Çevrendeki Kliniklerden Randevu Al</p>
-                        </div>
-                    </motion.button>
-
-                    {/* Aşılar Card */}
-                    <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => handleServiceClick('vaccine')}
-                        className="bg-[#0D0D12]/60 backdrop-blur-3xl border border-card-border rounded-[2.2rem] p-5 flex flex-col items-start justify-between h-[120px] group hover:bg-white/5 transition-all text-left"
-                    >
-                        <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 group-hover:scale-110 transition-transform">
-                            <Syringe className="w-5 h-5 text-emerald-400" />
-                        </div>
-                        <div>
-                            <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest block mb-0.5">Takvim</span>
-                            <span className="text-base font-black text-white tracking-tighter uppercase italic leading-none">Aşılar</span>
-                        </div>
-                    </motion.button>
-
-                    {/* İlaçlarım Card */}
-                    <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => handleServiceClick('pharma')}
-                        className="bg-[#0D0D12]/60 backdrop-blur-3xl border border-card-border rounded-[2.2rem] p-5 flex flex-col items-start justify-between h-[120px] group hover:bg-white/5 transition-all text-left"
-                    >
-                        <div className="w-10 h-10 rounded-2xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20 group-hover:scale-110 transition-transform">
-                            <Pill className="w-5 h-5 text-orange-400" />
-                        </div>
-                        <div>
-                            <span className="text-[9px] font-black text-orange-400 uppercase tracking-widest block mb-0.5">Takip</span>
-                            <span className="text-base font-black text-white tracking-tighter uppercase italic leading-none">İlaçlarım</span>
-                        </div>
-                    </motion.button>
-
-                    {/* Diyet Planı Card */}
-                    <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => handleServiceClick('nutri')}
-                        className="bg-[#0D0D12]/60 backdrop-blur-3xl border border-card-border rounded-[2.2rem] p-5 flex flex-col items-start justify-between h-[120px] group hover:bg-white/5 transition-all text-left"
-                    >
-                        <div className="w-10 h-10 rounded-2xl bg-lime-500/10 flex items-center justify-center border border-lime-500/20 group-hover:scale-110 transition-transform">
-                            <Utensils className="w-5 h-5 text-lime-400" />
-                        </div>
-                        <div>
-                            <span className="text-[9px] font-black text-lime-400 uppercase tracking-widest block mb-0.5">Beslenme</span>
-                            <span className="text-base font-black text-white tracking-tighter uppercase italic leading-none">Diyet Planı</span>
-                        </div>
-                    </motion.button>
-
-                    {/* İlaç Takibi Card */}
-                    <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => handleServiceClick('meds')}
-                        className="bg-[#0D0D12]/60 backdrop-blur-3xl border border-card-border rounded-[2.2rem] p-5 flex flex-col items-start justify-between h-[120px] group hover:bg-white/5 transition-all text-left"
-                    >
-                        <div className="w-10 h-10 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 group-hover:scale-110 transition-transform">
-                            <Clock className="w-5 h-5 text-blue-400" />
-                        </div>
-                        <div>
-                            <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest block mb-0.5">Zamanlayıcı</span>
-                            <span className="text-base font-black text-white tracking-tighter uppercase italic leading-none">İlaç Takibi</span>
-                        </div>
-                    </motion.button>
-                </section>
 
                 {/* MAP PREVIEW - SLEEK CRYSTAL VERSION */}
                 <section className="relative w-full h-56 rounded-[2.5rem] overflow-hidden border border-card-border shadow-2xl">

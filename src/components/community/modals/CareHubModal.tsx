@@ -609,7 +609,7 @@ export function CareHubModal({
                                         )}
 
                                         <button 
-                                            onClick={() => { onClose(); router.push('/vet'); }}
+                                            onClick={() => { onClose(); router.push('/vet?open=vaccine'); }}
                                             className="w-full bg-[#121215] hover:bg-white/5 border border-white/5 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-1.5 transition-all active:scale-98"
                                         >
                                             <span>Tüm Aşı Takvimini Aç</span> <ChevronRight size={14} />
@@ -686,7 +686,7 @@ export function CareHubModal({
 
                                     {/* Link to clinic appointment page */}
                                     <button 
-                                        onClick={() => { onClose(); router.push('/vet'); }}
+                                        onClick={() => { onClose(); router.push('/vet?open=appointment'); }}
                                         className="w-full bg-[#121215] hover:bg-white/5 border border-white/5 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-1.5 transition-all active:scale-98 mt-2"
                                     >
                                         <span>Yeni Randevu Al & Yönet</span> <ChevronRight size={14} />
