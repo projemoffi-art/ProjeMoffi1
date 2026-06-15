@@ -472,6 +472,14 @@ export function CareHubModal({
                                             </div>
                                         </div>
                                     )}
+
+                                    {/* Link to advanced food and diet plans */}
+                                    <button 
+                                        onClick={() => { onClose(); router.push('/food'); }}
+                                        className="w-full bg-[#121215] hover:bg-white/5 border border-white/5 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-1.5 transition-all active:scale-98 mt-2"
+                                    >
+                                        <span>Gelişmiş Diyet Planı & Makroları Aç</span> <ChevronRight size={14} />
+                                    </button>
                                 </div>
                             )}
 
@@ -675,6 +683,14 @@ export function CareHubModal({
                                             Bağlan
                                         </button>
                                     </div>
+
+                                    {/* Link to clinic appointment page */}
+                                    <button 
+                                        onClick={() => { onClose(); router.push('/vet'); }}
+                                        className="w-full bg-[#121215] hover:bg-white/5 border border-white/5 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-1.5 transition-all active:scale-98 mt-2"
+                                    >
+                                        <span>Yeni Randevu Al & Yönet</span> <ChevronRight size={14} />
+                                    </button>
                                 </div>
                             )}
 
