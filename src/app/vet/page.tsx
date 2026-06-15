@@ -192,35 +192,22 @@ export default function VetPage() {
                 )}
 
                 {/* Primary Actions Grid: SOS and 7/24 Vet-line */}
-                <div className="grid grid-cols-2 gap-4">
-                    {/* SOS Emergency Clinic */}
-                    <button 
-                        onClick={() => setActiveModal('sos')}
-                        className="bg-[#1c0f0f] hover:bg-[#2c1515] border border-red-500/20 p-5 rounded-2xl text-left flex flex-col justify-between h-[130px] transition-all group"
-                    >
-                        <div className="w-9 h-9 rounded-lg bg-red-500/10 flex items-center justify-center border border-red-500/20 text-red-400">
-                            <ShieldAlert className="w-4 h-4" />
+                {/* Vet-Line Video Support Button */}
+                <button 
+                    onClick={() => alert("Canlı VetLine desteği başlatılıyor...")}
+                    className="w-full bg-[#121215] hover:bg-[#18181b] border border-[#27272a] p-4.5 rounded-2xl flex items-center justify-between transition-all group"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 text-indigo-400">
+                            <PhoneCall className="w-4.5 h-4.5" />
                         </div>
-                        <div>
-                            <h3 className="text-xs font-black text-red-400 tracking-wider uppercase leading-none mb-1 flex items-center gap-1">SOS ACİL <ChevronRight size={10} /></h3>
-                            <p className="text-[9px] text-[#fafafa]/40 font-bold uppercase tracking-wide">7/24 Nöbetçi Hekimler</p>
+                        <div className="text-left">
+                            <h3 className="text-xs font-black text-indigo-400 tracking-wider uppercase leading-none">Vet-Line 7/24 Canlı Hekim</h3>
+                            <p className="text-[9.5px] text-[#fafafa]/40 font-bold uppercase tracking-wider mt-1.5">Anında Görüntülü Canlı Veteriner Desteği</p>
                         </div>
-                    </button>
-
-                    {/* 7/24 Live VetLine */}
-                    <button 
-                        onClick={() => alert("Canlı VetLine desteği başlatılıyor...")}
-                        className="bg-[#0f0e1a] hover:bg-[#15132a] border border-indigo-500/20 p-5 rounded-2xl text-left flex flex-col justify-between h-[130px] transition-all group"
-                    >
-                        <div className="w-9 h-9 rounded-lg bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 text-indigo-400">
-                            <PhoneCall className="w-4 h-4" />
-                        </div>
-                        <div>
-                            <h3 className="text-xs font-black text-indigo-400 tracking-wider uppercase leading-none mb-1 flex items-center gap-1">VET-LINE <ChevronRight size={10} /></h3>
-                            <p className="text-[9px] text-[#fafafa]/40 font-bold uppercase tracking-wide">Acil Görüntülü Hekim</p>
-                        </div>
-                    </button>
-                </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-[#fafafa]/40 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all" />
+                </button>
 
                 {/* Solid Map Box */}
                 <section className="relative w-full h-52 rounded-2xl overflow-hidden border border-[#27272a] shadow-xl bg-[#121215]">
