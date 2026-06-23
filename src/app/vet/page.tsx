@@ -24,6 +24,7 @@ import { Pet, usePet } from "@/context/PetContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { useDragScroll } from "@/hooks/useDragScroll";
+import { apiService, isSupabaseEnabled } from "@/services/apiService";
 
 // Dynamic map import
 const MapboxLiveMap = dynamic(() => import('@/components/walk/LiveMap'), { 
@@ -126,6 +127,51 @@ export default function VetPage() {
     const [isLogModalOpen, setIsLogModalOpen] = useState(false);
     const [transparencyLogs, setTransparencyLogs] = useState<any[]>([]);
 
+    const [dbAppointments, setDbAppointments] = useState<any[]>([]);
+    const [clinicSettings, setClinicSettings] = useState<any>(null);
+
+    useEffect(() => {
+        if (!isSupabaseEnabled) return;
+        
+        const loadDbAppointments = async () => {
+            try {
+                const list = await apiService.getClinicAppointments('biz_vet1');
+                setDbAppointments(list);
+            } catch (e) {
+                console.error("Failed to load DB appointments for slot filtering:", e);
+            }
+        };
+
+        const loadClinicSettings = async () => {
+            try {
+                const settings = await apiService.getClinicSettings('biz_vet1');
+                if (settings) {
+                    setClinicSettings(settings);
+                }
+            } catch (e) {
+                console.error("Failed to load clinic settings from database:", e);
+            }
+        };
+
+        loadDbAppointments();
+        loadClinicSettings();
+        
+        // Listen for new appointments to refresh slots in real-time
+        const channel = new BroadcastChannel('moffi_appointments_channel');
+        const handleMessage = (event: MessageEvent) => {
+            const { type } = event.data;
+            if (type === 'APPOINTMENT_CREATED' || type === 'APPOINTMENT_ACTION') {
+                loadDbAppointments();
+            }
+        };
+        channel.addEventListener('message', handleMessage);
+
+        return () => {
+            channel.removeEventListener('message', handleMessage);
+            channel.close();
+        };
+    }, []);
+
     // Load sharing preferences from localStorage on mount
     useEffect(() => {
         try {
@@ -210,8 +256,11 @@ export default function VetPage() {
     const getDynamicSlots = (dateStr: string) => {
         if (typeof window === 'undefined') return [];
         try {
-            const saved = localStorage.getItem('moffi_clinic_settings');
-            const settings = saved ? JSON.parse(saved) : null;
+            let settings = clinicSettings;
+            if (!settings) {
+                const saved = localStorage.getItem('moffi_clinic_settings');
+                settings = saved ? JSON.parse(saved) : null;
+            }
 
             const defaultDays = { Monday: true, Tuesday: true, Wednesday: true, Thursday: true, Friday: true, Saturday: false, Sunday: false };
             const workingDays = settings?.workingDays || defaultDays;
@@ -250,24 +299,43 @@ export default function VetPage() {
                 slots.push(timeStr);
             }
 
-            const pendingSaved = localStorage.getItem('moffi_pending_appointments');
-            const confirmedSaved = localStorage.getItem('moffi_confirmed_appointments');
-            
-            const pendingList = pendingSaved ? JSON.parse(pendingSaved) : [];
-            const confirmedList = confirmedSaved ? JSON.parse(confirmedSaved) : [];
-            
             const bookedTimes = new Set<string>();
-            
-            pendingList.forEach((apt: any) => {
-                if (apt.date === dateStr && apt.status !== 'rejected') {
-                    bookedTimes.add(apt.time);
-                }
-            });
-            confirmedList.forEach((apt: any) => {
-                if (apt.date === dateStr && apt.status !== 'rejected' && apt.status !== 'cancelled') {
-                    bookedTimes.add(apt.time);
-                }
-            });
+
+            if (isSupabaseEnabled) {
+                dbAppointments.forEach((apt: any) => {
+                    if (apt.appointment_date && apt.status !== 'rejected' && apt.status !== 'cancelled') {
+                        try {
+                            const d = new Date(apt.appointment_date);
+                            const year = d.getFullYear();
+                            const month = String(d.getMonth() + 1).padStart(2, '0');
+                            const day = String(d.getDate()).padStart(2, '0');
+                            const aptDateStr = `${year}-${month}-${day}`;
+                            
+                            if (aptDateStr === dateStr) {
+                                const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+                                bookedTimes.add(timeStr);
+                            }
+                        } catch (e) {}
+                    }
+                });
+            } else {
+                const pendingSaved = localStorage.getItem('moffi_pending_appointments');
+                const confirmedSaved = localStorage.getItem('moffi_confirmed_appointments');
+                
+                const pendingList = pendingSaved ? JSON.parse(pendingSaved) : [];
+                const confirmedList = confirmedSaved ? JSON.parse(confirmedSaved) : [];
+                
+                pendingList.forEach((apt: any) => {
+                    if (apt.date === dateStr && apt.status !== 'rejected') {
+                        bookedTimes.add(apt.time);
+                    }
+                });
+                confirmedList.forEach((apt: any) => {
+                    if (apt.date === dateStr && apt.status !== 'rejected' && apt.status !== 'cancelled') {
+                        bookedTimes.add(apt.time);
+                    }
+                });
+            }
 
             return slots.filter(time => !bookedTimes.has(time));
         } catch (e) {

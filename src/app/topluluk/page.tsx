@@ -155,6 +155,8 @@ export default function MoffiSocialMasterpiece() {
     const [filterPetType, setFilterPetType] = useState<'all' | 'dog' | 'cat'>('all');
     const [filterDistance, setFilterDistance] = useState<'all' | number>('all');
 
+    const [lostPets, setLostPets] = useState<any[]>([]);
+
     const filteredLostPets = useMemo(() => {
         return lostPets.filter(pet => {
             if (filterPetType !== 'all') {
@@ -185,7 +187,6 @@ export default function MoffiSocialMasterpiece() {
     const [lostPetPhotos, setLostPetPhotos] = useState<{ file: File, preview: string }[]>([]);
     const [isSubmittingSOS, setIsSubmittingSOS] = useState(false);
     const [isReportingLocation, setIsReportingLocation] = useState(false);
-    const [lostPets, setLostPets] = useState<any[]>([]);
     const [selectedAdoptionPet, setSelectedAdoptionPet] = useState<any | null>(null);
     const [isAddAdoptionModalOpen, setIsAddAdoptionModalOpen] = useState(false);
     const [adoptionAds, setAdoptionAds] = useState<any[]>([]);
@@ -1443,10 +1444,13 @@ export default function MoffiSocialMasterpiece() {
     const handleDeleteLostPet = async (petId: string) => {
         if (!window.confirm("Kayıp ilanını sistemden kaldırmak/silmek istediğinize emin misiniz?")) return;
         try {
-            // Mock delete logic
+            if (isSupabaseEnabled) {
+                await apiService.deleteLostPet(petId);
+            }
             setSosAlerts(prev => prev.filter(p => p.id !== petId));
             showToast("İlan Kaldırıldı", "İlanınız başarıyla sistemden kaldırıldı.", "success");
         } catch (err: any) {
+            console.error("Failed to delete lost pet:", err);
             showToast("Hata", "İlan silinemedi.", "error");
         }
     };

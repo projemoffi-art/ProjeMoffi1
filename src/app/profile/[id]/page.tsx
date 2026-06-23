@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Camera, Edit3, Check, X, Loader2, AlertCircle, ArrowLeft,
@@ -51,6 +51,7 @@ function isPlaceholderUrl(url?: string | null): boolean {
 export default function ProfilePage() {
     const params = useParams();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const id = params.id as string;
     const { user: currentUser, updateProfile } = useAuth();
     const { pets, activePet, switchPet } = usePet();
@@ -63,6 +64,28 @@ export default function ProfilePage() {
     const [isSaving, setIsSaving] = useState(false);
     const [activeTab, setActiveTab] = useState<'posts' | 'pets'>('posts');
     const [activeSubView, setActiveSubView] = useState<any>('main');
+
+    // Sync activeSubView with URL query parameter
+    useEffect(() => {
+        const view = searchParams.get('view');
+        if (view) {
+            setActiveSubView(view);
+        } else {
+            setActiveSubView('main');
+        }
+    }, [searchParams]);
+
+    // Listen to global moffi-navigate events for instant feedback
+    useEffect(() => {
+        const handleNavigate = (e: any) => {
+            const dest = e.detail;
+            if (isOwnProfile && dest) {
+                setActiveSubView(dest);
+            }
+        };
+        window.addEventListener('moffi-navigate', handleNavigate);
+        return () => window.removeEventListener('moffi-navigate', handleNavigate);
+    }, [isOwnProfile]);
 
     // Edit form state
     const [editName, setEditName] = useState('');
@@ -282,7 +305,7 @@ export default function ProfilePage() {
     }
 
     // ── Own Profile → ProfileTab ─────────────────────────────
-    if (isOwnProfile && activeSubView !== 'main') {
+    if (isOwnProfile) {
         return (
             <main className="min-h-screen bg-background pb-32 overflow-x-hidden">
                 <ProfileTab

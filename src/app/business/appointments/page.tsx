@@ -11,6 +11,7 @@ import { BusinessSidebar as Sidebar } from "@/components/business/Sidebar";
 import { usePet } from "@/context/PetContext";
 import { useAuth } from "@/context/AuthContext";
 import { showToast } from "@/lib/utils";
+import { apiService, isSupabaseEnabled } from "@/services/apiService";
 
 // MOCK APPOINTMENTS (Initial State)
 const INITIAL_APPOINTMENTS = [
@@ -91,28 +92,124 @@ export default function BusinessAppointmentsPage() {
     const [lunchEnd, setLunchEnd] = useState("13:00");
     const [slotDuration, setSlotDuration] = useState<number>(30);
 
+    const fetchAppointmentsFromDb = async () => {
+        try {
+            const list = await apiService.getClinicAppointments('biz_vet1');
+            const mapped = list.map((item: any) => {
+                let time = "00:00";
+                let dateStr = "Bugün";
+                try {
+                    if (item.appointment_date) {
+                        const d = new Date(item.appointment_date);
+                        time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+                        
+                        const year = d.getFullYear();
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const day = String(d.getDate()).padStart(2, '0');
+                        dateStr = `${year}-${month}-${day}`;
+                        
+                        const today = new Date();
+                        if (d.toDateString() === today.toDateString()) {
+                            dateStr = "Bugün";
+                        } else {
+                            const tomorrow = new Date();
+                            tomorrow.setDate(today.getDate() + 1);
+                            if (d.toDateString() === tomorrow.toDateString()) {
+                                dateStr = "Yarın";
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error parsing date:", e);
+                }
+
+                return {
+                    id: item.id,
+                    petName: item.pet?.name || "Milo",
+                    ownerName: item.user?.full_name || item.user?.username || "Pati Sahibi",
+                    time: time,
+                    date: dateStr,
+                    type: item.reason || "Rutin Kontrol",
+                    status: item.status,
+                    image: item.pet?.avatar_url || item.pet?.photo_url || item.pet?.image || "https://images.unsplash.com/photo-1573865526739-10659fec78a5?q=80&w=100",
+                    petId: item.pet_id,
+                    sharedPassport: item.shared_passport || {
+                        basic: {
+                            breed: item.pet?.breed || "Bilinmiyor",
+                            weight: item.pet?.weight || "10kg",
+                            age: item.pet?.age || "2.1"
+                        },
+                        ownerInfo: {
+                            name: item.user?.full_name || item.user?.username || "Pati Sahibi",
+                            phone: item.user?.phone || ""
+                        }
+                    },
+                    paymentId: item.payment_id,
+                    paymentAmount: item.payment_amount,
+                    paymentStatus: item.payment_status,
+                    clinicId: item.clinic_id,
+                    clinicName: item.clinic_name
+                };
+            });
+
+            const confirmed = mapped.filter((a: any) => a.status === 'confirmed' || a.status === 'completed');
+            const pending = mapped.filter((a: any) => a.status === 'pending');
+
+            setAppointments(confirmed);
+            setPendingRequests(pending);
+        } catch (e) {
+            console.error("Failed to fetch appointments from database:", e);
+        }
+    };
+
     // Load Clinic Shift Settings
     useEffect(() => {
         if (typeof window === 'undefined') return;
-        try {
-            const saved = localStorage.getItem('moffi_clinic_settings');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                if (parsed.workingDays) setWorkingDays(parsed.workingDays);
-                if (parsed.startTime) setStartTime(parsed.startTime);
-                if (parsed.endTime) setEndTime(parsed.endTime);
-                if (parsed.lunchStart) setLunchStart(parsed.lunchStart);
-                if (parsed.lunchEnd) setLunchEnd(parsed.lunchEnd);
-                if (parsed.slotDuration) setSlotDuration(Number(parsed.slotDuration));
+        
+        const loadSettings = async () => {
+            if (isSupabaseEnabled) {
+                try {
+                    const settings = await apiService.getClinicSettings('biz_vet1');
+                    if (settings) {
+                        if (settings.workingDays) setWorkingDays(settings.workingDays);
+                        if (settings.startTime) setStartTime(settings.startTime);
+                        if (settings.endTime) setEndTime(settings.endTime);
+                        if (settings.lunchStart) setLunchStart(settings.lunchStart);
+                        if (settings.lunchEnd) setLunchEnd(settings.lunchEnd);
+                        if (settings.slotDuration) setSlotDuration(Number(settings.slotDuration));
+                        return;
+                    }
+                } catch (e) {
+                    console.error("Failed to load clinic settings from Supabase:", e);
+                }
             }
-        } catch (e) {
-            console.error("Failed to load clinic settings:", e);
-        }
+
+            try {
+                const saved = localStorage.getItem('moffi_clinic_settings');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.workingDays) setWorkingDays(parsed.workingDays);
+                    if (parsed.startTime) setStartTime(parsed.startTime);
+                    if (parsed.endTime) setEndTime(parsed.endTime);
+                    if (parsed.lunchStart) setLunchStart(parsed.lunchStart);
+                    if (parsed.lunchEnd) setLunchEnd(parsed.lunchEnd);
+                    if (parsed.slotDuration) setSlotDuration(Number(parsed.slotDuration));
+                }
+            } catch (e) {
+                console.error("Failed to load clinic settings:", e);
+            }
+        };
+
+        loadSettings();
     }, []);
 
-    // Load confirmed appointments from Local Storage
+    // Load confirmed appointments
     useEffect(() => {
         if (typeof window === 'undefined') return;
+        if (isSupabaseEnabled) {
+            fetchAppointmentsFromDb();
+            return;
+        }
         try {
             const stored = localStorage.getItem('moffi_confirmed_appointments');
             if (stored) {
@@ -126,11 +223,15 @@ export default function BusinessAppointmentsPage() {
         }
     }, []);
 
-    // Simulate fetching new appointments from "Server" (Local Storage for Demo)
+    // Fetch new appointments from Server (realtime / polling)
     useEffect(() => {
         if (typeof window === 'undefined') return;
 
         const checkNew = () => {
+            if (isSupabaseEnabled) {
+                fetchAppointmentsFromDb();
+                return;
+            }
             try {
                 const stored = localStorage.getItem('moffi_pending_appointments');
                 if (stored) {
@@ -142,8 +243,8 @@ export default function BusinessAppointmentsPage() {
             }
         };
 
-        // Poll every 2 seconds as a fallback
-        const interval = setInterval(checkNew, 2000);
+        // Poll every 3 seconds as a fallback
+        const interval = setInterval(checkNew, 3000);
         checkNew(); // Initial check
 
         // Listen for real-time created notifications via BroadcastChannel
@@ -171,9 +272,34 @@ export default function BusinessAppointmentsPage() {
         }
     };
 
-    const handleAction = (id: number, action: 'accept' | 'reject') => {
+    const handleAction = async (id: number | string, action: 'accept' | 'reject') => {
         const target = pendingRequests.find(r => r.id === id);
         if (!target) return;
+
+        if (isSupabaseEnabled) {
+            try {
+                await apiService.updateAppointmentStatus(id.toString(), action === 'accept' ? 'confirmed' : 'rejected');
+                showToast(
+                    action === 'accept' 
+                        ? `Randevu Onaylandı! ${target.petName} için bildirim gönderildi. ✨`
+                        : `Randevu Reddedildi! Ücret cüzdana iade edildi. ❌`, 
+                    action === 'accept' ? "CheckCircle2" : "XCircle", 
+                    action === 'accept' ? "text-emerald-400 font-bold" : "text-red-400 font-bold"
+                );
+                
+                // Broadcast event to pati sahibi
+                const channel = new BroadcastChannel('moffi_appointments_channel');
+                channel.postMessage({ type: 'APPOINTMENT_ACTION', appointmentId: id, action: action, petName: target.petName });
+                channel.close();
+
+                await fetchAppointmentsFromDb();
+                return;
+            } catch (e) {
+                console.error("Failed to update appointment status in Supabase:", e);
+                showToast("Randevu durumu güncellenemedi. ❌", "AlertTriangle", "text-red-400 font-bold");
+                return;
+            }
+        }
 
         if (action === 'accept') {
             const updatedAppt = {
@@ -347,7 +473,7 @@ export default function BusinessAppointmentsPage() {
         setMedDuration("");
     };
 
-    const handleCompleteConsultation = () => {
+    const handleCompleteConsultation = async () => {
         if (!selectedApt) return;
         if (!diagnosis) {
             showToast("Lütfen tanı alanını doldurun.", "AlertTriangle", "text-amber-500 font-bold");
@@ -373,6 +499,37 @@ export default function BusinessAppointmentsPage() {
         const idsToSync = [targetPetId];
         if (targetPetId === 'pet-milo' || targetPetId === 'pet-1' || targetPetId === '349b89f8-c5e5-46e8-abf7-b2e41b29d39a') {
             idsToSync.push('pet-milo', 'pet-1', '349b89f8-c5e5-46e8-abf7-b2e41b29d39a');
+        }
+
+        // Live Supabase Integration (Item 4)
+        if (isSupabaseEnabled()) {
+            try {
+                // 1. Save vaccines
+                for (const v of addedVaccines) {
+                    await apiService.addPetVaccine(targetPetId, {
+                        name: v.name,
+                        status: 'completed',
+                        dueDate: v.nextDate || new Date().toISOString(),
+                        dateAdministered: v.date || new Date().toISOString(),
+                        vetName: 'Dr. Moffi (VetLife Clinic)'
+                    });
+                }
+                
+                // 2. Save medications
+                for (const m of addedMeds) {
+                    await apiService.addPetMedication(targetPetId, {
+                        name: m.name,
+                        dosage: m.dose,
+                        instructions: `${m.duration} gün boyunca kullanılacak.`,
+                        startDate: new Date().toISOString()
+                    });
+                }
+
+                // 3. Update appointment status in Supabase database
+                await apiService.updateAppointmentStatus(selectedApt.id.toString(), 'completed');
+            } catch (e) {
+                console.error("Failed to sync consultation details with Supabase:", e);
+            }
         }
 
         if (typeof window !== 'undefined') {
@@ -440,7 +597,7 @@ export default function BusinessAppointmentsPage() {
         closeConsultation();
     };
 
-    const handleSaveSettings = () => {
+    const handleSaveSettings = async () => {
         const settings = {
             workingDays,
             startTime,
@@ -449,6 +606,17 @@ export default function BusinessAppointmentsPage() {
             lunchEnd,
             slotDuration
         };
+
+        if (isSupabaseEnabled) {
+            try {
+                await apiService.saveClinicSettings('biz_vet1', settings);
+            } catch (e) {
+                console.error("Failed to save clinic settings to Supabase:", e);
+                showToast("Ayarlar veritabanına kaydedilemedi! ❌", "AlertTriangle", "text-red-500 font-bold");
+                return;
+            }
+        }
+
         if (typeof window !== 'undefined') {
             localStorage.setItem('moffi_clinic_settings', JSON.stringify(settings));
         }

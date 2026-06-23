@@ -1936,16 +1936,17 @@ export class SupabaseApiService implements IApiService {
         }));
     }
 
-    async addPetMedication(med: any): Promise<any> {
+    async addPetMedication(petIdOrMed: any, med?: any): Promise<any> {
+        const finalMed = med ? { ...med, petId: petIdOrMed } : petIdOrMed;
         const { data, error } = await supabase
             .from('medications')
             .insert({
-                pet_id: med.petId,
-                name: med.name,
-                dosage: med.dosage,
-                frequency: med.frequency,
-                instructions: med.instructions,
-                start_date: med.startDate
+                pet_id: finalMed.petId || finalMed.pet_id,
+                name: finalMed.name,
+                dosage: finalMed.dosage,
+                frequency: finalMed.frequency,
+                instructions: finalMed.instructions,
+                start_date: finalMed.startDate || finalMed.start_date || new Date().toISOString()
             })
             .select()
             .single();
@@ -1961,6 +1962,37 @@ export class SupabaseApiService implements IApiService {
             startDate: data.start_date,
             lastLog: data.last_log,
             isActive: data.is_active
+        };
+    }
+
+    async addPetVaccine(petIdOrRecord: any, record?: any): Promise<any> {
+        const finalRecord = record ? { ...record, petId: petIdOrRecord } : petIdOrRecord;
+        const dbPayload = {
+            pet_id: finalRecord.petId || finalRecord.pet_id,
+            name: finalRecord.name || finalRecord.vaccineId || finalRecord.vaccine_id,
+            status: finalRecord.status || 'completed',
+            next_due_date: finalRecord.dueDate || finalRecord.next_due_date || finalRecord.nextDueDate || new Date().toISOString(),
+            date_administered: finalRecord.dateAdministered || finalRecord.date_administered || new Date().toISOString(),
+            vet_name: finalRecord.vetName || finalRecord.vet_name || ''
+        };
+
+        const { data, error } = await supabase
+            .from('vaccines')
+            .insert(dbPayload)
+            .select()
+            .single();
+
+        if (error) throw error;
+        
+        return {
+            id: data.id,
+            petId: data.pet_id,
+            vaccineId: data.name,
+            status: data.status,
+            dueDate: data.next_due_date,
+            dateAdministered: data.date_administered,
+            vetName: data.vet_name,
+            batchNumber: 'TR-' + Math.random().toString(36).substring(2, 8).toUpperCase()
         };
     }
 
@@ -2076,9 +2108,13 @@ export class SupabaseApiService implements IApiService {
                 clinic_id: dto.clinicId || null,
                 clinic_name: dto.clinicName || '',
                 doctor_name: dto.doctorName || '',
-                appointment_date: dto.date,
-                reason: dto.reason || '',
-                status: 'scheduled'
+                appointment_date: dto.appointmentDate || dto.date,
+                reason: dto.notes || dto.reason || '',
+                status: dto.status || 'pending',
+                payment_id: dto.paymentId || null,
+                payment_amount: dto.paymentAmount || null,
+                payment_status: dto.paymentStatus || null,
+                shared_passport: dto.sharedPassport || null
             })
             .select()
             .single();
@@ -2096,12 +2132,15 @@ export class SupabaseApiService implements IApiService {
             .select(`
                 *,
                 clinic:clinics(name, image_url, address, phone),
-                pet:pets(name, species, photo_url)
+                pet:pets(*)
             `)
             .eq('user_id', user.id)
             .order('appointment_date', { ascending: true });
 
-        if (error) return [];
+        if (error) {
+            console.error("Error in getAppointments:", error);
+            return [];
+        }
         return data;
     }
 
@@ -2114,6 +2153,80 @@ export class SupabaseApiService implements IApiService {
             .update({ status: 'cancelled' })
             .eq('id', appointmentId)
             .eq('user_id', user.id);
+
+        if (error) throw error;
+    }
+
+    async getClinicAppointments(clinicId: string): Promise<any[]> {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clinicId);
+        
+        let query = supabase
+            .from('appointments')
+            .select(`
+                *,
+                pet:pets(*),
+                user:profiles(full_name, username, avatar_url, phone)
+            `);
+            
+        if (isUuid) {
+            query = query.eq('clinic_id', clinicId);
+        }
+        
+        const { data, error } = await query.order('appointment_date', { ascending: false });
+
+        if (error) {
+            console.error("Error in getClinicAppointments:", error);
+            return [];
+        }
+        if (!data) return [];
+        return data;
+    }
+
+    async updateAppointmentStatus(appointmentId: string, status: string): Promise<void> {
+        const { error } = await supabase
+            .from('appointments')
+            .update({ status: status })
+            .eq('id', appointmentId);
+
+        if (error) throw error;
+    }
+
+    async getClinicSettings(clinicId: string): Promise<any> {
+        const { data, error } = await supabase
+            .from('clinic_settings')
+            .select('*')
+            .eq('clinic_id', clinicId)
+            .maybeSingle();
+
+        if (error) {
+            console.error("Error fetching clinic settings:", error);
+            return null;
+        }
+        if (!data) return null;
+
+        return {
+            workingDays: data.working_days,
+            startTime: data.start_time,
+            endTime: data.end_time,
+            lunchStart: data.lunch_start,
+            lunchEnd: data.lunch_end,
+            slotDuration: data.slot_duration
+        };
+    }
+
+    async saveClinicSettings(clinicId: string, settings: any): Promise<void> {
+        const { error } = await supabase
+            .from('clinic_settings')
+            .upsert({
+                clinic_id: clinicId,
+                working_days: settings.workingDays,
+                start_time: settings.startTime,
+                end_time: settings.endTime,
+                lunch_start: settings.lunchStart,
+                lunch_end: settings.lunchEnd,
+                slot_duration: settings.slotDuration,
+                updated_at: new Date().toISOString()
+            });
 
         if (error) throw error;
     }

@@ -52,6 +52,13 @@ interface ProfileTabProps {
     posts?: any[];
     isSmartShopEnabled?: boolean;
     onSubViewChange?: (view: any) => void;
+    showAuraBadge?: boolean;
+    onOpenActionHub?: () => void;
+    activeSubView?: any;
+    isAuraStudioOpen?: boolean;
+    setIsAuraStudioOpen?: (open: boolean) => void;
+    auraSettings?: any;
+    setAuraSettings?: (settings: any) => void;
 }
 
 function StatItem({ value, label }: { value: any, label: string }) {

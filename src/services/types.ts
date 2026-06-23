@@ -268,10 +268,15 @@ export interface IApiService {
     createAppointment(dto: any): Promise<any>;
     getAppointments(userId: string): Promise<any[]>;
     cancelAppointment(id: string): Promise<void>;
+    getClinicAppointments(clinicId: string): Promise<any[]>;
+    updateAppointmentStatus(appointmentId: string, status: string): Promise<void>;
+    getClinicSettings(clinicId: string): Promise<any>;
+    saveClinicSettings(clinicId: string, settings: any): Promise<void>;
 
     // Health Extension (New)
     getPetMedications(petId: string): Promise<any[]>;
-    addPetMedication(med: any): Promise<any>;
+    addPetMedication(petIdOrMed: any, med?: any): Promise<any>;
+    addPetVaccine(petIdOrRecord: any, record?: any): Promise<any>;
     recordMedicationDose(medId: string): Promise<void>;
     getNutritionPlan(petId: string): Promise<any | null>;
     updateNutritionPlan(petId: string, plan: any): Promise<void>;

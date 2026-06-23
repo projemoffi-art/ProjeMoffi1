@@ -113,11 +113,15 @@ export function useVet() {
         try {
             const appointmentPayload = {
                 clinicId: clinic.id,
+                clinicName: clinic.name,
                 petId: '349b89f8-c5e5-46e8-abf7-b2e41b29d39a', // Milo
                 appointmentDate: `${date}T${time}:00Z`,
-                notes: `Randevu tipi: ${type}`,
+                notes: `Randevu tipi: ${type === 'general' ? 'Genel Muayene' : type}`,
                 status: 'pending',
-                sharedPassport: sharedPassport
+                sharedPassport: sharedPassport,
+                paymentId: paymentDetails?.paymentId || null,
+                paymentAmount: paymentDetails?.paymentAmount || null,
+                paymentStatus: paymentDetails?.paymentStatus || null
             };
 
             await apiService.createAppointment(appointmentPayload);

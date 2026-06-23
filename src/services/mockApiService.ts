@@ -632,17 +632,38 @@ export class MockApiService implements IApiService {
     async createAppointment(dto: any): Promise<any> { return {}; }
     async getAppointments(userId: string): Promise<any[]> { return []; }
     async cancelAppointment(id: string): Promise<void> { }
+    async getClinicAppointments(clinicId: string): Promise<any[]> { return []; }
+    async updateAppointmentStatus(appointmentId: string, status: string): Promise<void> { }
+    async getClinicSettings(clinicId: string): Promise<any> { return null; }
+    async saveClinicSettings(clinicId: string, settings: any): Promise<void> { }
 
     // Health Extension
     async getPetMedications(petId: string): Promise<any[]> {
         return await this.loadData<any[]>(`medications_${petId}`) || [];
     }
 
-    async addPetMedication(med: any): Promise<any> {
-        const meds = await this.getPetMedications(med.pet_id);
-        const newMed = { id: `med-${Date.now()}`, ...med };
-        await this.saveData(`medications_${med.pet_id}`, [...meds, newMed]);
+    async addPetMedication(petIdOrMed: any, med?: any): Promise<any> {
+        const finalMed = med ? { ...med, petId: petIdOrMed } : petIdOrMed;
+        const petId = finalMed.petId || finalMed.pet_id || 'pet-1';
+        const meds = await this.getPetMedications(petId);
+        const newMed = { id: `med-${Date.now()}`, ...finalMed, pet_id: petId };
+        await this.saveData(`medications_${petId}`, [...meds, newMed]);
         return newMed;
+    }
+
+    async addPetVaccine(petIdOrRecord: any, record?: any): Promise<any> {
+        const finalRecord = record ? { ...record, petId: petIdOrRecord } : petIdOrRecord;
+        const petId = finalRecord.petId || finalRecord.pet_id || 'pet-1';
+        const newRecord = {
+            id: `vac-${Date.now()}`,
+            vaccineId: finalRecord.name || finalRecord.vaccineId || 'PUPPY-1',
+            status: finalRecord.status || 'completed',
+            dueDate: finalRecord.dueDate || finalRecord.next_due_date || new Date().toISOString(),
+            dateAdministered: finalRecord.dateAdministered || finalRecord.date_administered || new Date().toISOString(),
+            vetName: finalRecord.vetName || finalRecord.vet_name || 'Uzman Hekim',
+            batchNumber: 'TR-' + Math.random().toString(36).substring(2, 8).toUpperCase()
+        };
+        return newRecord;
     }
 
     async recordMedicationDose(medId: string): Promise<void> {}
