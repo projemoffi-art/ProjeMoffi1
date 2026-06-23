@@ -43,6 +43,9 @@ test('Pet Care Hub Modal should switch pets, award PatiPuan on goal completion, 
     console.error('BROWSER ERROR:', err);
     errors.push(err.message + '\n' + err.stack);
   });
+  page.on('console', (msg) => {
+    console.log('PAGE LOG:', msg.text());
+  });
 
   // 1. Go to community page
   console.log('Navigating to /community...');
@@ -77,9 +80,9 @@ test('Pet Care Hub Modal should switch pets, award PatiPuan on goal completion, 
 
   // 5. Test Pet Switching: Switch to Luna inside the Care Hub
   console.log('Switching to Luna inside Care Hub...');
-  const lunaBtn = page.locator('button:has-text("Luna")').first();
+  const lunaBtn = page.getByTestId("pet-switcher-btn-pet-2").first();
   await expect(lunaBtn).toBeVisible();
-  await lunaBtn.click({ force: true });
+  await lunaBtn.dispatchEvent('click');
   await page.waitForTimeout(1500);
 
   // Verify that the title updates to "Luna Bakım Merkezi"
@@ -88,9 +91,9 @@ test('Pet Care Hub Modal should switch pets, award PatiPuan on goal completion, 
 
   // Switch back to Milo
   console.log('Switching back to Milo...');
-  const miloBtn = page.locator('button:has-text("Milo")').first();
+  const miloBtn = page.getByTestId("pet-switcher-btn-pet-1").first();
   await expect(miloBtn).toBeVisible();
-  await miloBtn.click({ force: true });
+  await miloBtn.dispatchEvent('click');
   await page.waitForTimeout(1500);
   await expect(careHubTitle.first()).toBeVisible();
 

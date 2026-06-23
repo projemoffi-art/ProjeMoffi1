@@ -156,5 +156,40 @@
     "name": "Moffi Dijital Hizmetler Ltd. Şti.",
     "email": "privacy@moffi.net",
     "address": "Dijital Evren, İstanbul/Türkiye"
+  },
+  "business": {
+    "sidebar": {
+      "dashboard": "Kontrol Paneli",
+      "appointments": "Randevular",
+      "finance": "Finansal Analiz",
+      "orders": "Sipariş Takibi",
+      "products": "Ürün Yönetimi",
+      "quests": "Görev & Kampanya",
+      "client_mode": "Müşteri Moduna Geç",
+      "logout": "Çıkış Yap"
+    },
+    "dashboard": {
+      "title": "Kontrol Paneli",
+      "welcome": "Hoşgeldin",
+      "balance": "Bakiye",
+      "new_campaign": "+ Yeni Kampanya",
+      "total_views": "Toplam Gösterim",
+      "total_users": "Toplam Kullanıcı",
+      "page_clicks": "Sayfa Tıklaması",
+      "active_campaigns": "Aktif Kampanya",
+      "weekly_traffic": "Haftalık Ziyaretçi Trafiği",
+      "weekly_traffic_sub": "Mağazanızın önünden geçen MoffiWalk kullanıcıları",
+      "weekly": "Haftalık",
+      "monthly": "Aylık",
+      "proximity_title": "Yakınlık Bildirimi",
+      "proximity_desc_1": "Şu an mağazanızın 100m yakınında ",
+      "proximity_desc_2": " potansiyel müşteri yürüyor.",
+      "send_notification": "Bildirim Gönder (₺50)",
+      "live": "CANLI",
+      "recent_activities": "Son Aktiviteler (Yeni Üyeler)",
+      "joined_moffi": "MoffiPet'e katıldı",
+      "new": "Yeni",
+      "no_new_members": "Henüz yeni üye yok."
+    }
   }
 }

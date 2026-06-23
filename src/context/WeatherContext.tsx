@@ -167,20 +167,38 @@ export function WeatherProvider({ children }: { children: React.ReactNode }) {
             } catch (gpsErr) {
                 console.warn('GPS geolocation failed/denied, trying IP geolocation...', gpsErr);
                 
-                // 2. Fallback to IP Geolocation
+                // 2. Fallback to IP Geolocation (Try FreeIPAPI with CORS support first, then ipapi.co)
                 try {
-                    const ipRes = await fetch('https://ipapi.co/json/');
-                    if (ipRes.ok) {
-                        const ipData = await ipRes.json();
+                    const freeIpRes = await fetch('https://freeipapi.com/api/json');
+                    if (freeIpRes.ok) {
+                        const ipData = await freeIpRes.json();
                         if (ipData && ipData.latitude && ipData.longitude) {
                             lat = ipData.latitude;
                             lon = ipData.longitude;
-                            city = ipData.city || ipData.region || 'İstanbul';
+                            city = ipData.cityName || 'İstanbul';
                             locationSource = 'ip';
+                        } else {
+                            throw new Error('Invalid data from FreeIPAPI');
                         }
+                    } else {
+                        throw new Error(`FreeIPAPI returned status: ${freeIpRes.status}`);
                     }
                 } catch (ipErr) {
-                    console.warn('IP geolocation failed, using default Istanbul coordinates:', ipErr);
+                    console.warn('FreeIPAPI failed, trying ipapi.co...', ipErr);
+                    try {
+                        const ipRes = await fetch('https://ipapi.co/json/');
+                        if (ipRes.ok) {
+                            const ipData = await ipRes.json();
+                            if (ipData && ipData.latitude && ipData.longitude) {
+                                lat = ipData.latitude;
+                                lon = ipData.longitude;
+                                city = ipData.city || ipData.region || 'İstanbul';
+                                locationSource = 'ip';
+                            }
+                        }
+                    } catch (fallbackErr) {
+                        console.warn('IP geolocation failed, using default Istanbul coordinates:', fallbackErr);
+                    }
                 }
             }
 

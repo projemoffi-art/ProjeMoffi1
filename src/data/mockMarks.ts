@@ -17,8 +17,8 @@ export const MOCK_MARKS: MapMark[] = [
         type: 'info',
         emoji: '💧',
         message: 'Burada temiz su kabı var!',
-        lat: 41.0085,
-        lng: 28.9790,
+        lat: 40.9855,
+        lng: 29.0310,
         user: '@Baran',
         timestamp: '10 dk önce',
         likes: 5
@@ -28,8 +28,8 @@ export const MOCK_MARKS: MapMark[] = [
         type: 'warning',
         emoji: '⚠️',
         message: 'Kırık camlar var, patiye dikkat.',
-        lat: 41.0090,
-        lng: 28.9775,
+        lat: 40.9860,
+        lng: 29.0295,
         user: '@Selin',
         timestamp: '1 saat önce',
         likes: 12
@@ -39,8 +39,8 @@ export const MOCK_MARKS: MapMark[] = [
         type: 'social',
         emoji: '🐕',
         message: 'Max ile parktayız, bekleriz!',
-        lat: 41.0078,
-        lng: 28.9780,
+        lat: 40.9848,
+        lng: 29.0300,
         user: '@Can',
         timestamp: 'Şimdi',
         likes: 3
@@ -50,8 +50,8 @@ export const MOCK_MARKS: MapMark[] = [
         type: 'love',
         emoji: '❤️',
         message: 'Moffi burayı çok sevdi.',
-        lat: 41.0081,
-        lng: 28.9795,
+        lat: 40.9851,
+        lng: 29.0315,
         user: '@Zeynep',
         timestamp: '2 gün önce',
         likes: 8

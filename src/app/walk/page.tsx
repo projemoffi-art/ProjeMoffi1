@@ -29,7 +29,7 @@ export default function WalkPage() {
     const { activePet } = usePet();
     const { weather, isLoading: weatherLoading } = useWeather();
     const { dailyGoal, progressPercent, durationPercent } = useQuestEngine();
-    const [userPos, setUserPos] = useState<[number, number]>([41.0082, 28.9784]);
+    const [userPos, setUserPos] = useState<[number, number]>([40.9850, 29.0300]);
 
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);

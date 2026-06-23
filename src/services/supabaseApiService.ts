@@ -1,10 +1,11 @@
 import { 
-    Pet, Post, UserProfile, LostPet, AdoptionPet,
+    Pet, Post, UserProfile, LostPet, AdoptionPet, LostPetSighting,
     ShopCategory, ShopProduct, ShopCartItem, ShopOrder, IApiService
 } from './types';
 import { supabase } from '@/lib/supabase';
 import { MockApiService } from './mockApiService';
 import { MOCK_POSTS } from '@/lib/mockData';
+import { UserVaccineRecord } from '@/types/domain';
 
 export class SupabaseApiService implements IApiService {
     // Session is managed internally by Supabase client very efficiently.
@@ -723,20 +724,79 @@ export class SupabaseApiService implements IApiService {
             return [];
         }
 
-        return data.map(item => ({
-            id: item.id,
-            pet_id: undefined, // Not enforced right now
-            name: item.pet_name,
-            img: item.img_url || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=400",
-            image_url: item.img_url,
-            location: item.location_text || 'Moffi Radar',
-            last_seen_location: item.location_text,
-            reward_enabled: item.reward_enabled,
-            dist: '0 km', // Distance calc requires user location, doing dummy for now
-            time: this.formatTimeAgo(item.created_at),
-            description: item.description || '',
-            type: item.pet_type || 'dog'
-        }));
+        // Get unique user IDs and pet IDs
+        const userIds = Array.from(new Set(data.map(item => item.user_id).filter(Boolean)));
+        const petIds = Array.from(new Set(data.map(item => item.pet_id).filter(Boolean)));
+
+        let profilesMap: Record<string, any> = {};
+        let petsMap: Record<string, any> = {};
+
+        if (userIds.length > 0) {
+            const { data: profiles } = await supabase
+                .from('profiles')
+                .select('id, username, avatar_url')
+                .in('id', userIds);
+            if (profiles) {
+                profiles.forEach(p => {
+                    profilesMap[p.id] = p;
+                });
+            }
+        }
+
+        if (petIds.length > 0) {
+            const { data: pets } = await supabase
+                .from('pets')
+                .select('id, breed, age, gender, size, health_notes, character, sos_settings')
+                .in('id', petIds);
+            if (pets) {
+                pets.forEach(p => {
+                    petsMap[p.id] = p;
+                });
+            }
+        }
+
+        return data.map(item => {
+            const petInfo = item.pet_id ? petsMap[item.pet_id] : null;
+            const profileInfo = item.user_id ? profilesMap[item.user_id] : null;
+            
+            // Extract reward info
+            const hasReward = item.reward_enabled || petInfo?.sos_settings?.reward_enabled || false;
+            let rewardText = undefined;
+            if (hasReward) {
+                const amount = item.reward_amount || petInfo?.sos_settings?.reward_amount;
+                if (amount) {
+                    rewardText = `${amount} TL`;
+                }
+            }
+
+            return {
+                id: item.id,
+                pet_id: item.pet_id || undefined,
+                name: item.pet_name,
+                img: item.img_url || petInfo?.avatar_url || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=400",
+                image_url: item.img_url || petInfo?.avatar_url,
+                location: item.location_text || 'Moffi Radar',
+                last_seen_location: item.location_text,
+                reward_enabled: hasReward,
+                reward: rewardText,
+                dist: '0 km',
+                time: this.formatTimeAgo(item.created_at),
+                description: item.description || petInfo?.sos_settings?.finder_message || '',
+                type: item.pet_type || petInfo?.type || 'dog',
+                user_id: item.user_id,
+                latitude: item.latitude,
+                longitude: item.longitude,
+                author_name: profileInfo?.username || 'Moffi Kullanıcısı',
+                author_avatar: profileInfo?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.user_id || 'system'}`,
+                breed: petInfo?.breed || item.pet_type || 'dog',
+                age: petInfo?.age,
+                gender: petInfo?.gender,
+                size: petInfo?.size,
+                health_notes: petInfo?.health_notes,
+                personality: petInfo?.character,
+                critical_health_note: petInfo?.sos_settings?.critical_health_note || petInfo?.health_notes || ''
+            } as any;
+        });
     }
 
     async addLostPet(data: Partial<LostPet>): Promise<LostPet> {
@@ -751,7 +811,10 @@ export class SupabaseApiService implements IApiService {
                 img_url: data.img,
                 location_text: data.location,
                 description: data.description,
-                pet_type: data.type
+                pet_type: data.type,
+                latitude: data.latitude,
+                longitude: data.longitude,
+                pet_id: data.pet_id || null
             })
             .select()
             .single();
@@ -765,8 +828,117 @@ export class SupabaseApiService implements IApiService {
             description: inserted.description,
             type: inserted.pet_type,
             dist: '0 km',
-            time: 'Şimdi'
+            time: 'Şimdi',
+            user_id: inserted.user_id,
+            latitude: inserted.latitude,
+            longitude: inserted.longitude
         } as LostPet;
+    }
+
+    async addLostPetSighting(data: { lost_pet_id: string; description: string; latitude: number; longitude: number; img_url?: string }): Promise<LostPetSighting> {
+        const user = await this.getSessionUser();
+        if (!user) throw new Error("Giriş gerekli");
+
+        const { data: inserted, error } = await supabase
+            .from('pet_sightings')
+            .insert({
+                lost_pet_id: data.lost_pet_id,
+                reporter_id: user.id,
+                description: data.description,
+                latitude: data.latitude,
+                longitude: data.longitude,
+                img_url: data.img_url
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        // Fetch user profile info to attach to output
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('username, avatar_url')
+            .eq('id', user.id)
+            .single();
+
+        return {
+            id: inserted.id,
+            lost_pet_id: inserted.lost_pet_id,
+            reporter_id: inserted.reporter_id,
+            reporter_name: profile?.username || 'Moffi Kullanıcısı',
+            reporter_avatar: profile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
+            description: inserted.description,
+            latitude: inserted.latitude,
+            longitude: inserted.longitude,
+            img_url: inserted.img_url,
+            created_at: inserted.created_at
+        };
+    }
+
+    async getLostPetSightings(lostPetId: string): Promise<LostPetSighting[]> {
+        const { data, error } = await supabase
+            .from('pet_sightings')
+            .select('*')
+            .eq('lost_pet_id', lostPetId)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching sightings:', error);
+            return [];
+        }
+
+        // Fetch profiles for the reporters in parallel
+        const results = await Promise.all(data.map(async (item) => {
+            let username = 'Moffi Kullanıcısı';
+            let avatarUrl = '';
+
+            if (item.reporter_id) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('username, avatar_url')
+                    .eq('id', item.reporter_id)
+                    .single();
+                if (profile) {
+                    username = profile.username || username;
+                    avatarUrl = profile.avatar_url || avatarUrl;
+                }
+            }
+
+            return {
+                id: item.id,
+                lost_pet_id: item.lost_pet_id,
+                reporter_id: item.reporter_id,
+                reporter_name: username,
+                reporter_avatar: avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.reporter_id || item.id}`,
+                description: item.description,
+                latitude: item.latitude,
+                longitude: item.longitude,
+                img_url: item.img_url,
+                created_at: this.formatTimeAgo(item.created_at)
+            } as LostPetSighting;
+        }));
+
+        return results;
+    }
+
+    async deleteLostPet(id: string | number): Promise<void> {
+        const user = await this.getSessionUser();
+        if (!user) throw new Error("Giriş gerekli");
+        
+        // 1. Delete associated conversations (will cascade-delete messages in DB)
+        await supabase
+            .from('conversations')
+            .delete()
+            .eq('associated_ad_id', id);
+
+        // 2. Delete the lost pet record itself
+        const { error } = await supabase
+            .from('lost_pets')
+            .delete()
+            .eq('id', id)
+            .eq('user_id', user.id);
+            
+        if (error) throw error;
     }
 
     async getAdoptions(): Promise<AdoptionPet[]> {
@@ -792,7 +964,8 @@ export class SupabaseApiService implements IApiService {
             description: item.description || '',
             type: item.pet_type || 'cat',
             owner: item.owner_name || 'Moffi Üyesi',
-            phone: item.phone || ''
+            phone: item.phone || '',
+            user_id: item.user_id
         }));
     }
 
@@ -824,8 +997,22 @@ export class SupabaseApiService implements IApiService {
             dist: '0 km',
             time: 'Şimdi',
             owner: inserted.owner_name,
-            phone: ''
+            phone: '',
+            user_id: inserted.user_id
         } as AdoptionPet;
+    }
+
+    async deleteAdoption(id: string | number): Promise<void> {
+        const user = await this.getSessionUser();
+        if (!user) throw new Error("Giriş gerekli");
+        
+        const { error } = await supabase
+            .from('adoption_pets')
+            .delete()
+            .eq('id', id)
+            .eq('user_id', user.id);
+            
+        if (error) throw error;
     }
 
     // --- DIGITAL PASSPORT (Pets) ---
@@ -1438,23 +1625,134 @@ export class SupabaseApiService implements IApiService {
     async togglePetSosStatus(petId: string, status: 'safe' | 'lost'): Promise<void> {
         const user = await this.getSessionUser();
         if (!user) throw new Error('Giriş gerekli');
+        
+        // 1. Update pets table status
         const { error } = await supabase
             .from('pets')
             .update({ is_lost: status === 'lost' })
             .eq('id', petId)
             .eq('owner_id', user.id);
         if (error) throw error;
+
+        // 2. Synchronize with lost_pets table (Community Alerts)
+        if (status === 'lost') {
+            const { data: pet, error: petError } = await supabase
+                .from('pets')
+                .select('*')
+                .eq('id', petId)
+                .single();
+            
+            if (petError || !pet) return;
+
+            const shouldPost = pet.sos_settings?.auto_post_sos ?? true;
+            if (shouldPost) {
+                const { data: existing } = await supabase
+                    .from('lost_pets')
+                    .select('id')
+                    .eq('pet_id', petId)
+                    .maybeSingle();
+
+                const payload = {
+                    user_id: user.id,
+                    pet_id: petId,
+                    pet_name: pet.name,
+                    img_url: pet.avatar_url || '',
+                    location_text: pet.sos_settings?.last_seen_location || 'Moffi Güvenli Bölge',
+                    description: pet.sos_settings?.finder_message || 'Moffi SOS Sistemi tarafından otomatik oluşturulmuş acil durum ilanı.',
+                    pet_type: pet.type?.includes('🐶') || pet.type?.toLowerCase().includes('dog') || pet.type?.toLowerCase().includes('köpek') ? 'dog' : 'cat',
+                    reward_enabled: pet.sos_settings?.reward_enabled || false,
+                    reward_amount: pet.sos_settings?.reward_amount ? String(pet.sos_settings.reward_amount) : null,
+                    status: 'lost',
+                    latitude: pet.sos_settings?.latitude || 40.9850,
+                    longitude: pet.sos_settings?.longitude || 29.0300
+                };
+
+                if (existing) {
+                    await supabase
+                        .from('lost_pets')
+                        .update(payload)
+                        .eq('id', existing.id);
+                } else {
+                    await supabase
+                        .from('lost_pets')
+                        .insert(payload);
+                }
+            }
+        } else {
+            // Delete from lost_pets table if marked safe, and clean up temporary conversations
+            const { data: existingLostPet } = await supabase
+                .from('lost_pets')
+                .select('id')
+                .eq('pet_id', petId)
+                .maybeSingle();
+
+            if (existingLostPet) {
+                // Delete associated conversations (will cascade-delete messages in DB)
+                await supabase
+                    .from('conversations')
+                    .delete()
+                    .eq('associated_ad_id', existingLostPet.id);
+            }
+
+            await supabase
+                .from('lost_pets')
+                .delete()
+                .eq('pet_id', petId);
+        }
     }
 
     async updatePetSosSettings(petId: string, settings: any): Promise<void> {
         const user = await this.getSessionUser();
         if (!user) throw new Error('Giriş gerekli');
+        
+        // 1. Update pets table settings
         const { error } = await supabase
             .from('pets')
             .update({ sos_settings: settings })
             .eq('id', petId)
             .eq('owner_id', user.id);
         if (error) throw error;
+
+        // 2. Sync with lost_pets if pet is currently marked as lost
+        const { data: pet } = await supabase
+            .from('pets')
+            .select('is_lost, name, avatar_url, type')
+            .eq('id', petId)
+            .single();
+
+        if (pet && pet.is_lost) {
+            const { data: existing } = await supabase
+                .from('lost_pets')
+                .select('id')
+                .eq('pet_id', petId)
+                .maybeSingle();
+
+            const payload = {
+                user_id: user.id,
+                pet_id: petId,
+                pet_name: pet.name,
+                img_url: pet.avatar_url || '',
+                location_text: settings.last_seen_location || 'Moffi Güvenli Bölge',
+                description: settings.finder_message || 'Moffi SOS Sistemi tarafından otomatik oluşturulmuş acil durum ilanı.',
+                pet_type: pet.type?.includes('🐶') || pet.type?.toLowerCase().includes('dog') || pet.type?.toLowerCase().includes('köpek') ? 'dog' : 'cat',
+                reward_enabled: settings.reward_enabled || false,
+                reward_amount: settings.reward_amount ? String(settings.reward_amount) : null,
+                status: 'lost',
+                latitude: settings.latitude || 40.9850,
+                longitude: settings.longitude || 29.0300
+            };
+
+            if (existing) {
+                await supabase
+                    .from('lost_pets')
+                    .update(payload)
+                    .eq('id', existing.id);
+            } else {
+                await supabase
+                    .from('lost_pets')
+                    .insert(payload);
+            }
+        }
     }
 
     async upgradeSubscription(planType: 'free' | 'plus' | 'pro'): Promise<void> {
@@ -1675,9 +1973,40 @@ export class SupabaseApiService implements IApiService {
         if (error) throw error;
     }
 
-    // --- VETERİNER & KLİNİKLER ---
     async getNearbyClinics(lat: number, lng: number, radiusKm: number = 10): Promise<any[]> {
-        // Fetch from DB; PostGIS-style distance filter via JS for now (can be upgraded to RPC)
+        // 1. Try to fetch optimized results via database-side Haversine RPC
+        try {
+            const { data: rpcData, error: rpcError } = await supabase
+                .rpc('get_nearby_clinics', {
+                    user_lat: lat,
+                    user_lng: lng,
+                    radius_km: radiusKm
+                });
+
+            if (!rpcError && rpcData && rpcData.length > 0) {
+                return rpcData.map((c: any) => ({
+                    id: c.id,
+                    name: c.name,
+                    imageUrl: c.image_url,
+                    rating: c.rating,
+                    reviewCount: c.review_count,
+                    address: c.address,
+                    location: { lat: c.lat, lng: c.lng },
+                    is_premium: c.is_premium,
+                    isOpenNow: c.is_open_now,
+                    features: c.features || [],
+                    phone: c.phone,
+                    distance: c.distance_km ? `${c.distance_km.toFixed(1)} km` : '1.0 km'
+                }));
+            }
+            if (rpcError) {
+                console.warn('get_nearby_clinics RPC not found or failed, falling back to client-side filter:', rpcError);
+            }
+        } catch (e) {
+            console.warn('Failed to execute clinic distance RPC, using client fallback:', e);
+        }
+
+        // 2. Client-side fallback: Fetch all clinics and filter using Haversine approximation
         const { data, error } = await supabase
             .from('clinics')
             .select('*')
@@ -1685,15 +2014,15 @@ export class SupabaseApiService implements IApiService {
 
         if (error || !data) return this.mockApi.getNearbyClinics(lat, lng, radiusKm);
 
-        // Client-side distance filter (Haversine approximation)
-        return data.filter(clinic => {
-            if (!clinic.lat || !clinic.lng) return true;
+        return data.map(clinic => {
+            if (!clinic.lat || !clinic.lng) return { ...clinic, calculated_distance: 1.0 };
             const dLat = (clinic.lat - lat) * (Math.PI / 180);
             const dLng = (clinic.lng - lng) * (Math.PI / 180);
             const a = Math.sin(dLat/2)**2 + Math.cos(lat * Math.PI/180) * Math.cos(clinic.lat * Math.PI/180) * Math.sin(dLng/2)**2;
             const distKm = 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return distKm <= radiusKm;
-        }).map(c => ({
+            return { ...clinic, calculated_distance: distKm };
+        }).filter(c => c.calculated_distance <= radiusKm)
+        .map(c => ({
             id: c.id,
             name: c.name,
             imageUrl: c.image_url,
@@ -1704,7 +2033,8 @@ export class SupabaseApiService implements IApiService {
             is_premium: c.is_premium,
             isOpenNow: c.is_open_now,
             features: c.features || [],
-            phone: c.phone
+            phone: c.phone,
+            distance: `${c.calculated_distance.toFixed(1)} km`
         }));
     }
 
@@ -2192,7 +2522,7 @@ export class SupabaseApiService implements IApiService {
         }));
     }
 
-    async sendChatMessage(otherUserId: string, content: string): Promise<void> {
+    async sendChatMessage(otherUserId: string, content: string, associatedAdId?: string): Promise<void> {
         const user = await this.getSessionUser();
         if (!user) throw new Error("Giriş gerekli");
 
@@ -2201,21 +2531,29 @@ export class SupabaseApiService implements IApiService {
 
         const { data: existing } = await supabase
             .from('conversations')
-            .select('id')
+            .select('id, associated_ad_id')
             .or(
                 `and(participant_1.eq.${user.id},participant_2.eq.${otherUserId}),and(participant_1.eq.${otherUserId},participant_2.eq.${user.id})`
             )
-            .single();
+            .maybeSingle();
 
         if (existing) {
             conversationId = existing.id;
+            // Update association if not set yet
+            if (associatedAdId && !existing.associated_ad_id) {
+                await supabase
+                    .from('conversations')
+                    .update({ associated_ad_id: associatedAdId })
+                    .eq('id', conversationId);
+            }
         } else {
             // Create new conversation
             const { data: newConv, error: convErr } = await supabase
                 .from('conversations')
                 .insert({
                     participant_1: user.id,
-                    participant_2: otherUserId
+                    participant_2: otherUserId,
+                    associated_ad_id: associatedAdId || null
                 })
                 .select('id')
                 .single();

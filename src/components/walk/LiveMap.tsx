@@ -10,6 +10,7 @@ import { Star, Gift, Coins, Search, Coffee, Stethoscope, Trees, ShoppingBag, Ale
 import { cn } from "@/lib/utils";
 import { MarkCreationModal } from "./MarkCreationModal";
 import { GuardianStatusOverlay } from "@/components/guardian/GuardianStatusOverlay";
+import { useTheme } from "@/context/ThemeContext";
 
 // --- TYPES ---
 interface LiveMapProps {
@@ -160,6 +161,9 @@ export default function LiveMap({
     hideInternalUI, markers: externalMarkers,
     onMapLongPress, customTargetPos, customTargetClaimed
 }: LiveMapProps) {
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
+
     // UI State
     const [searchQuery, setSearchQuery] = useState(externalSearchQuery || "");
     const [searchResults, setSearchResults] = useState<any[]>([]); // Real Address Results
@@ -451,7 +455,8 @@ export default function LiveMap({
             >
                 {guardianMode && <GuardianStatusOverlay />}
                 <TileLayer
-                    url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                    key={isDark ? 'dark-map' : 'light-map'}
+                    url={isDark ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"}
                     attribution='&copy; OpenStreetMap &copy; CARTO'
                 />
 

@@ -1,5 +1,5 @@
 import { 
-    Pet, Post, UserProfile, LostPet, AdoptionPet,
+    Pet, Post, UserProfile, LostPet, AdoptionPet, LostPetSighting,
     ShopCategory, ShopProduct, ShopCartItem, ShopOrder, IApiService
 } from './types';
 import { 
@@ -156,25 +156,122 @@ export class MockApiService implements IApiService {
     }
 
     async getLostPets(): Promise<LostPet[]> {
-        return await this.loadData<LostPet[]>('lost_pets') || (MOCK_LOST_PETS as any);
+        const data = await this.loadData<any[]>('lost_pets') || MOCK_LOST_PETS;
+        const current = await this.getCurrentUser();
+        return data.map(item => {
+            const hasReward = item.reward_enabled || false;
+            return {
+                id: item.id,
+                pet_id: item.pet_id,
+                name: item.name || item.pet_name,
+                img: item.img || (item.photos && item.photos[0]) || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=400",
+                location: item.location || item.last_seen_location || 'Moffi Radar',
+                last_seen_location: item.last_seen_location || item.location,
+                reward_enabled: hasReward,
+                reward: item.reward || (hasReward ? "500 TL" : undefined),
+                dist: item.dist || '0 km',
+                time: item.time || 'Şimdi',
+                type: item.type || 'dog',
+                description: item.description || 'Lütfen görünce acil dönüş yapın.',
+                user_id: item.user_id || (item.id === '1' || item.id === '2' ? 'system' : current?.id),
+                latitude: item.latitude,
+                longitude: item.longitude,
+                author_name: item.user_id === 'system' ? 'Moffi Ekibi' : (current?.username || 'Moffi Kullanıcısı'),
+                author_avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.user_id || 'system'}`,
+                breed: item.breed || (item.type === 'dog' ? 'Golden Retriever' : 'Tekir'),
+                age: '2 Yaşında',
+                gender: 'Erkek',
+                size: 'medium',
+                health_notes: 'Kritik bir durum yok.',
+                personality: 'Uysal ve sevecen.',
+                critical_health_note: 'Herhangi bir alerji veya kronik rahatsızlığı yoktur.'
+            } as any;
+        });
     }
 
     async addLostPet(data: Partial<LostPet>): Promise<LostPet> {
+        const current = await this.getCurrentUser();
         const pets = await this.getLostPets();
-        const newPet = { id: `lost-${Date.now()}`, ...data } as LostPet;
+        const newPet = { 
+            id: `lost-${Date.now()}`, 
+            user_id: current?.id,
+            ...data 
+        } as LostPet;
         await this.saveData('lost_pets', [...pets, newPet]);
         return newPet;
     }
 
+    async deleteLostPet(id: string | number): Promise<void> {
+        const pets = await this.getLostPets();
+        const filtered = pets.filter(p => String(p.id) !== String(id));
+        await this.saveData('lost_pets', filtered);
+    }
+
+    async addLostPetSighting(data: { lost_pet_id: string; description: string; latitude: number; longitude: number; img_url?: string }): Promise<LostPetSighting> {
+        const current = await this.getCurrentUser();
+        const sightings = await this.loadData<any[]>('lost_pet_sightings') || [];
+        const newSighting: LostPetSighting = {
+            id: `sighting-${Date.now()}`,
+            lost_pet_id: data.lost_pet_id,
+            reporter_id: current?.id || 'anonymous',
+            reporter_name: current?.username || 'Moffi Kullanıcısı',
+            reporter_avatar: current?.avatar || 'https://i.pravatar.cc/150?u=anonymous',
+            description: data.description,
+            latitude: data.latitude,
+            longitude: data.longitude,
+            img_url: data.img_url,
+            created_at: new Date().toISOString()
+        };
+        await this.saveData('lost_pet_sightings', [...sightings, newSighting]);
+        return newSighting;
+    }
+
+    async getLostPetSightings(lostPetId: string): Promise<LostPetSighting[]> {
+        const sightings = await this.loadData<any[]>('lost_pet_sightings') || [];
+        return sightings
+            .filter(s => String(s.lost_pet_id) === String(lostPetId))
+            .map(s => ({
+                ...s,
+                created_at: 'Şimdi'
+            }));
+    }
+
     async getAdoptions(): Promise<AdoptionPet[]> {
-        return await this.loadData<AdoptionPet[]>('adoptions') || (MOCK_ADOPTIONS as any);
+        const data = await this.loadData<any[]>('adoptions') || MOCK_ADOPTIONS;
+        const current = await this.getCurrentUser();
+        return data.map(item => ({
+            id: item.id,
+            name: item.name || item.pet_name,
+            img: item.img || item.image_url || (item.photos && item.photos[0]) || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=400",
+            image_url: item.img || item.image_url || (item.photos && item.photos[0]),
+            location: item.location || 'Moffi Radar',
+            reward_enabled: item.reward_enabled || false,
+            dist: item.dist || '0 km',
+            time: item.time || 'Şimdi',
+            type: item.type || 'cat',
+            description: item.description || '',
+            owner: item.owner || item.owner_name || 'Moffi Üyesi',
+            phone: item.phone || '',
+            user_id: item.user_id || (item.id === '1' || item.id === '2' ? 'system' : current?.id)
+        }));
     }
 
     async addAdoption(data: Partial<AdoptionPet>): Promise<AdoptionPet> {
+        const current = await this.getCurrentUser();
         const pets = await this.getAdoptions();
-        const newPet = { id: `adopt-${Date.now()}`, ...data } as AdoptionPet;
+        const newPet = { 
+            id: `adopt-${Date.now()}`, 
+            user_id: current?.id,
+            ...data 
+        } as AdoptionPet;
         await this.saveData('adoptions', [...pets, newPet]);
         return newPet;
+    }
+
+    async deleteAdoption(id: string | number): Promise<void> {
+        const pets = await this.getAdoptions();
+        const filtered = pets.filter(p => String(p.id) !== String(id));
+        await this.saveData('adoptions', filtered);
     }
 
     async getInboxMessages(): Promise<any[]> {
@@ -593,7 +690,7 @@ export class MockApiService implements IApiService {
     // Direct Messaging (Chat)
     async getChatConversations(): Promise<any[]> { return []; }
     async getChatMessages(conversationId: string): Promise<any[]> { return []; }
-    async sendChatMessage(receiverId: string, content: string): Promise<any> { return { id: Date.now(), content }; }
+    async sendChatMessage(receiverId: string, content: string, associatedAdId?: string): Promise<any> { return { id: Date.now(), content }; }
     async markChatAsRead(conversationId: string): Promise<void> {}
 
     async reactToPost(postId: string | number, reaction: string): Promise<void> {

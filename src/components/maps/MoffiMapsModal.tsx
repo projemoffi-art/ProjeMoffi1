@@ -31,7 +31,7 @@ export function MoffiMapsModal({ isOpen, onClose }: MoffiMapsModalProps) {
     const [searchQuery, setSearchQuery] = useState("");
     const [activeFilter, setActiveFilter] = useState<string | null>(null);
     const [isSOSActive, setIsSOSActive] = useState(false);
-    const [userPos, setUserPos] = useState<[number, number]>([41.0082, 28.9784]); // Fallback
+    const [userPos, setUserPos] = useState<[number, number]>([40.9850, 29.0300]); // Fallback
 
     // SYNC USER LOCATION
     useEffect(() => {

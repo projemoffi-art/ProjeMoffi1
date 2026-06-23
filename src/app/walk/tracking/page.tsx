@@ -40,7 +40,7 @@ function TrackingContent() {
     const { walkData, startWalk, pauseWalk, resumeWalk, stopWalk, setWalkData } = useActivity();
     const { activePet } = usePet();
     
-    const [userPos, setUserPos] = useState<[number, number]>([41.0082, 28.9784]);
+    const [userPos, setUserPos] = useState<[number, number]>([40.9850, 29.0300]);
     const [path, setPath] = useState<[number, number][]>([]);
     const [showStopConfirm, setShowStopConfirm] = useState(false);
     const [visitedPlaceIds, setVisitedPlaceIds] = useState<string[]>([]);

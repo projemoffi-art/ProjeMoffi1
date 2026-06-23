@@ -31,6 +31,13 @@ export interface User {
     businessApproved?: boolean;
     settings?: any; // Simplified for dynamic migration
     subscription_status?: string;
+    kybStatus?: 'pending' | 'approved' | 'rejected';
+    kybRejectionReason?: string;
+    taxId?: string;
+    iban?: string;
+    address?: string;
+    ownerName?: string;
+    phone?: string;
 }
 
 interface AuthContextType {
@@ -46,6 +53,11 @@ interface AuthContextType {
     resendOtp: (email: string) => Promise<{ success: boolean; error?: string }>;
     signInWithGoogle: () => Promise<void>;
     signInWithApple: () => Promise<void>;
+    getAllUsers: () => User[];
+    deleteUser: (id: string) => Promise<void>;
+    registerBusiness: (data: any) => Promise<{ success: boolean; error?: string }>;
+    approveBusiness: (id: string) => Promise<void>;
+    rejectBusiness: (id: string, reason: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -69,6 +81,17 @@ const MOCK_USER_BASE = (email: string, name?: string): User => ({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+
+    // Sync user role to cookies for Next.js Middleware route protection
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            if (user) {
+                document.cookie = `moffi_mock_user_role=${user.role}; path=/; max-age=86400; SameSite=Lax`;
+            } else {
+                document.cookie = "moffi_mock_user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+            }
+        }
+    }, [user]);
 
     // --- INITIALIZATION ---
     useEffect(() => {
@@ -178,6 +201,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             handleAuthChange('MOCK_MODE', null);
             return () => { isMounted = false; };
         }
+    }, []);
+
+    // Listen to real-time auth / KYB updates
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const authChannel = new BroadcastChannel('moffi_auth_channel');
+        
+        const handleMessage = (event: MessageEvent) => {
+            const { type, userId, status, reason } = event.data;
+            
+            if (type === 'KYB_STATUS_UPDATED') {
+                // Check if currently logged in user is the target
+                const storedUserStr = localStorage.getItem('moffi_mock_user');
+                if (storedUserStr) {
+                    const currentUser = JSON.parse(storedUserStr);
+                    if (currentUser && currentUser.id === userId) {
+                        // Reload user details from users list
+                        const storedList = localStorage.getItem('moffi_mock_users_list');
+                        if (storedList) {
+                            const list = JSON.parse(storedList);
+                            const updatedUser = list.find((u: any) => u.id === userId);
+                            if (updatedUser) {
+                                setUser(updatedUser);
+                                localStorage.setItem('moffi_mock_user', JSON.stringify(updatedUser));
+                                document.cookie = `moffi_mock_user_role=${updatedUser.role}; path=/; max-age=86400; SameSite=Lax`;
+                                
+                                // Show premium toast notification
+                                const label = status === 'approved' ? 'Tebrikler! 🎉' : 'KYB Başvurusu Reddedildi. ❌';
+                                const details = status === 'approved'
+                                    ? 'İşletme/Hekim kaydınız platform yöneticisi tarafından onaylandı! Panel özellikleriniz aktif edildi.'
+                                    : `Başvurunuz reddedildi. Gerekçe: ${reason || 'Belirtilmedi'}`;
+                                
+                                window.dispatchEvent(new CustomEvent('moffi-toast', {
+                                    detail: {
+                                        message: `Kurumsal Doğrulama: ${label} ${details}`,
+                                        icon: status === 'approved' ? 'ShieldCheck' : 'ShieldAlert',
+                                        color: status === 'approved' ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'
+                                    }
+                                }));
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        authChannel.addEventListener('message', handleMessage);
+        return () => {
+            authChannel.removeEventListener('message', handleMessage);
+            authChannel.close();
+        };
     }, []);
 
     const login = async (email: string, password: string) => {
@@ -359,11 +434,128 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: true };
     };
 
+    const getAllUsers = (): User[] => {
+        if (typeof window !== 'undefined') {
+            const stored = localStorage.getItem('moffi_mock_users_list');
+            if (stored) {
+                return JSON.parse(stored);
+            }
+        }
+        const defaultList: User[] = [
+            {
+                id: 'user-admin',
+                username: 'admin',
+                email: 'admin@moffipet.com',
+                role: 'admin',
+                bio: 'Moffi Platform Yöneticisi',
+                joinedAt: '2025-01-01T12:00:00Z',
+                is_prime: true,
+                stats: { posts: 0, followers: 0, following: 0 }
+            },
+            {
+                id: 'user-uveys',
+                username: 'uveys',
+                email: 'uveys@moffi.com',
+                role: 'user',
+                bio: 'Pati Dostu',
+                joinedAt: '2025-02-15T12:00:00Z',
+                is_prime: false,
+                stats: { posts: 0, followers: 0, following: 0 }
+            },
+            {
+                id: 'user-hekim',
+                username: 'Dr. Moffi',
+                email: 'doctor@moffipet.com',
+                role: 'business',
+                businessType: 'vet',
+                businessName: 'Moffi Veteriner Kliniği',
+                businessApproved: false,
+                kybStatus: 'pending',
+                taxId: '8765432109',
+                iban: 'TR98 7654 3210 9876 5432 1098 76',
+                address: 'Moda Caddesi No:42 Kadıköy / İstanbul',
+                ownerName: 'Dr. Ahmet Yılmaz',
+                phone: '0532 123 45 67',
+                bio: 'VetLife Uzman Hekim',
+                joinedAt: '2025-03-01T12:00:00Z',
+                is_prime: true,
+                stats: { posts: 0, followers: 0, following: 0 }
+            }
+        ];
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('moffi_mock_users_list', JSON.stringify(defaultList));
+        }
+        return defaultList;
+    };
+
+    const deleteUser = async (id: string) => {
+        if (typeof window !== 'undefined') {
+            const list = getAllUsers();
+            const updated = list.filter(u => u.id !== id);
+            localStorage.setItem('moffi_mock_users_list', JSON.stringify(updated));
+        }
+    };
+
+    const registerBusiness = async (data: any) => {
+        if (typeof window !== 'undefined') {
+            const newUser: User = {
+                id: `business-${Date.now()}`,
+                username: data.businessName,
+                email: data.email,
+                role: 'business',
+                businessType: data.businessType,
+                businessName: data.businessName,
+                businessApproved: false,
+                kybStatus: 'pending',
+                taxId: data.taxId || '8765432109',
+                iban: data.iban || 'TR98 7654 3210 9876 5432 1098 76',
+                address: data.address || 'Moda Caddesi No:42 Kadıköy / İstanbul',
+                ownerName: data.ownerName || 'Dr. Ahmet Yılmaz',
+                phone: data.phone || '0532 123 45 67',
+                joinedAt: new Date().toISOString(),
+                stats: { posts: 0, followers: 0, following: 0 }
+            };
+            const stored = localStorage.getItem('moffi_mock_users_list');
+            let list = stored ? JSON.parse(stored) : [];
+            list.push(newUser);
+            localStorage.setItem('moffi_mock_users_list', JSON.stringify(list));
+            setUser(newUser);
+            localStorage.setItem('moffi_mock_user', JSON.stringify(newUser));
+        }
+        return { success: true };
+    };
+
+    const approveBusiness = async (id: string) => {
+        if (typeof window !== 'undefined') {
+            const list = getAllUsers();
+            const updated = list.map(u => u.id === id ? { ...u, businessApproved: true, kybStatus: 'approved' as const } : u);
+            localStorage.setItem('moffi_mock_users_list', JSON.stringify(updated));
+
+            // Broadcast approval to other active tabs
+            const authChannel = new BroadcastChannel('moffi_auth_channel');
+            authChannel.postMessage({ type: 'KYB_STATUS_UPDATED', userId: id, status: 'approved' });
+            authChannel.close();
+        }
+    };
+
+    const rejectBusiness = async (id: string, reason: string) => {
+        if (typeof window !== 'undefined') {
+            const list = getAllUsers();
+            const updated = list.map(u => u.id === id ? { ...u, businessApproved: false, kybStatus: 'rejected' as const, kybRejectionReason: reason } : u);
+            localStorage.setItem('moffi_mock_users_list', JSON.stringify(updated));
+
+            // Broadcast rejection to other active tabs
+            const authChannel = new BroadcastChannel('moffi_auth_channel');
+            authChannel.postMessage({ type: 'KYB_STATUS_UPDATED', userId: id, status: 'rejected', reason });
+            authChannel.close();
+        }
+    };
+
     return (
         <AuthContext.Provider value={{
             user, isLoading, login, signup, logout, 
             updateProfile, updateSettings, forgotPassword, verifyOtp, resendOtp,
-            signInWithGoogle, signInWithApple
+            signInWithGoogle, signInWithApple, getAllUsers, deleteUser, registerBusiness, approveBusiness, rejectBusiness
         }}>
             {children}
         </AuthContext.Provider>

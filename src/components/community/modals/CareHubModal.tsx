@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     X, Trophy, Navigation, Droplets, Flame, Plus, RotateCcw, 
     Calendar, ChevronRight, Activity, Scale, Sparkles, PhoneCall, 
-    MapPin, Heart, ShieldCheck, CheckCircle2, Trash2, Edit2, AlertCircle, Syringe
+    MapPin, Heart, ShieldCheck, CheckCircle2, XCircle, Trash2, Edit2, AlertCircle, Syringe
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePet } from '@/context/PetContext';
@@ -62,8 +62,11 @@ export function CareHubModal({
     // Food logging list (stored locally for instant feed rendering)
     const [foodLog, setFoodLog] = useState<{ id: string; name: string; kcal: number; time: string }[]>([]);
 
+    // Local dynamic appointments list
+    const [localAppointments, setLocalAppointments] = useState<any[]>([]);
+
     // Load vaccine schedule
-    const { schedule, ruleset, isLoading: isVaccinesLoading, markAsDone } = useVaccineSchedule(petId);
+    const { schedule, ruleset, isLoading: isVaccinesLoading, markAsDone, refresh: refreshVaccines } = useVaccineSchedule(petId);
 
     // Sync default tab when it changes externally
     useEffect(() => {
@@ -71,6 +74,88 @@ export function CareHubModal({
             setActiveTab(defaultTab);
         }
     }, [defaultTab, isOpen]);
+
+    // Refresh function for appointments
+    const refreshAppointments = useCallback(() => {
+        try {
+            const pending = JSON.parse(localStorage.getItem('moffi_pending_appointments') || '[]');
+            const confirmed = JSON.parse(localStorage.getItem('moffi_confirmed_appointments') || '[]');
+            
+            let combined = [...pending, ...confirmed];
+            if (combined.length === 0 && activePet?.name?.toLowerCase() === 'milo') {
+                combined = [{
+                    id: 'seed-apt-1',
+                    petName: 'Milo',
+                    type: 'Yıllık Genel Kontrol',
+                    clinicName: 'Moda Veteriner Polikliniği',
+                    date: '2026-06-19',
+                    time: '14:30',
+                    status: 'confirmed'
+                }];
+            }
+
+            const filtered = combined.filter((apt: any) => 
+                apt.petName?.toLowerCase() === activePet?.name?.toLowerCase()
+            );
+            setLocalAppointments(filtered);
+        } catch (e) {
+            console.error("Failed to load local appointments for CareHubModal:", e);
+        }
+    }, [activePet]);
+
+    // Listen to real-time appointment updates from BroadcastChannel
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const channel = new BroadcastChannel('moffi_appointments_channel');
+        
+        const handleMessage = (event: MessageEvent) => {
+            const { type, action, petName, petId: eventPetId } = event.data;
+            
+            if (type === 'APPOINTMENT_ACTION') {
+                if (petName?.toLowerCase() === activePet?.name?.toLowerCase()) {
+                    refreshAppointments();
+                    
+                    const actionLabel = action === 'accept' ? 'Onaylandı! 🎉' : 'Reddedildi. ❌';
+                    const actionDetails = action === 'accept' 
+                        ? 'Veteriner hekiminiz randevuyu onayladı.' 
+                        : 'Ücret cüzdanınıza iade edildi.';
+                    
+                    // Trigger premium toast
+                    window.dispatchEvent(new CustomEvent('moffi-toast', {
+                        detail: {
+                            message: `${activePet?.name || 'Evcil hayvanınız'} için randevu ${actionLabel} ${actionDetails}`,
+                            icon: action === 'accept' ? 'CheckCircle2' : 'XCircle',
+                            color: action === 'accept' ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'
+                        }
+                    }));
+                }
+            } else if (type === 'CONSULTATION_COMPLETED') {
+                const isMatch = eventPetId === petId || 
+                                petName?.toLowerCase() === activePet?.name?.toLowerCase() ||
+                                (eventPetId === 'pet-milo' && petId === '349b89f8-c5e5-46e8-abf7-b2e41b29d39a');
+                                
+                if (isMatch) {
+                    refreshVaccines();
+                    refreshAppointments();
+                    
+                    window.dispatchEvent(new CustomEvent('moffi-toast', {
+                        detail: {
+                            message: `Muayene Tamamlandı! ${activePet?.name || 'Evcil hayvanınız'} için yeni tıbbi kayıtlar işlendi. 💉✨`,
+                            icon: 'Sparkles',
+                            color: 'text-indigo-400 font-bold'
+                        }
+                    }));
+                }
+            }
+        };
+
+        channel.addEventListener('message', handleMessage);
+        return () => {
+            channel.removeEventListener('message', handleMessage);
+            channel.close();
+        };
+    }, [activePet, petId, refreshAppointments, refreshVaccines]);
 
     // Load initial calories & water from localStorage
     useEffect(() => {
@@ -85,10 +170,13 @@ export function CareHubModal({
             const savedLog = localStorage.getItem(`moffi_food_log_${petId}_${todayStr}`);
             setFoodLog(savedLog ? JSON.parse(savedLog) : []);
 
+            // Initial load of appointments
+            refreshAppointments();
+
             setIsEditingWeight(false);
             setWeightInput("");
         }
-    }, [isOpen, petId, todayStr]);
+    }, [isOpen, petId, todayStr, refreshAppointments]);
 
     // Derived variables for water
     const targetWater = activePet && typeof activePet.water_target === 'number'
@@ -630,13 +718,42 @@ export function CareHubModal({
                                             <h4 className="text-xs font-black uppercase tracking-wider">Randevularım</h4>
                                         </div>
 
-                                        <div className="bg-white/[0.01] border border-white/5 p-4 rounded-2xl flex justify-between items-center">
-                                            <div>
-                                                <h5 className="text-xs font-black text-white uppercase italic">Yıllık Genel Kontrol</h5>
-                                                <p className="text-[9px] text-gray-500 font-bold mt-1 uppercase">Moda Veteriner Polikliniği</p>
-                                                <p className="text-[9px] text-indigo-400 font-black mt-0.5 uppercase tracking-wide">19 Haziran 2026 • Cuma, 14:30</p>
-                                            </div>
-                                            <span className="text-[8px] font-black text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-full uppercase tracking-wider">Onaylandı</span>
+                                        <div className="space-y-3">
+                                            {localAppointments.length === 0 ? (
+                                                <div className="bg-white/[0.01] border border-white/5 p-4 rounded-2xl text-center text-xs text-gray-500 font-bold uppercase tracking-wider">
+                                                    Kayıtlı randevu bulunamadı.
+                                                </div>
+                                            ) : (
+                                                localAppointments.map((apt: any) => {
+                                                    const statusLabel = 
+                                                        apt.status === 'confirmed' ? 'Onaylandı' :
+                                                        apt.status === 'pending' ? 'Onay Bekliyor' :
+                                                        apt.status === 'completed' ? 'Tamamlandı' :
+                                                        apt.status === 'rejected' ? 'Reddedildi' :
+                                                        apt.status === 'cancelled' ? 'İptal Edildi' : apt.status;
+                                                    
+                                                    const statusColor = 
+                                                        apt.status === 'confirmed' ? 'text-indigo-400 bg-indigo-500/10' :
+                                                        apt.status === 'pending' ? 'text-amber-400 bg-amber-500/10' :
+                                                        apt.status === 'completed' ? 'text-emerald-400 bg-emerald-500/10' :
+                                                        'text-red-400 bg-red-500/10';
+
+                                                    return (
+                                                        <div key={apt.id || Math.random()} className="bg-white/[0.01] border border-white/5 p-4 rounded-2xl flex justify-between items-center text-left">
+                                                            <div>
+                                                                <h5 className="text-xs font-black text-white uppercase italic">{apt.type === 'general' ? 'Genel Muayene' : (apt.type || 'Genel Muayene')}</h5>
+                                                                <p className="text-[9px] text-gray-500 font-bold mt-1 uppercase">{apt.clinicName || 'Moda Veteriner Polikliniği'}</p>
+                                                                <p className="text-[9px] text-indigo-400 font-black mt-0.5 uppercase tracking-wide">
+                                                                    {apt.date} • {apt.time}
+                                                                </p>
+                                                            </div>
+                                                            <span className={cn("text-[8px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider", statusColor)}>
+                                                                {statusLabel}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
                                         </div>
                                     </div>
 

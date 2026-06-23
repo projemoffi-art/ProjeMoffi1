@@ -37,8 +37,8 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ isOpen, 
   }, [status]);
 
   // Simulated courier position for the hybrid map
-  const courierPos: [number, number] = [41.0082, 28.9784]; // Istanbul center for demo
-  const userPos: [number, number] = [41.0422, 29.0084]; // Slightly away
+  const courierPos: [number, number] = [40.9850, 29.0300]; // Kadikoy/Moda center for demo
+  const userPos: [number, number] = [40.9950, 29.0400]; // Slightly away
 
   if (!isOpen) return null;
 

@@ -16,6 +16,7 @@ import AdvisorChat from "@/components/petshop/AdvisorChat";
 import { usePet } from "@/context/PetContext";
 import { useAuth } from "@/context/AuthContext";
 import { loadStripe } from '@stripe/stripe-js';
+import { useDragScroll } from "@/hooks/useDragScroll";
 import { Elements } from '@stripe/react-stripe-js';
 import { CheckoutForm } from '@/components/shop/CheckoutForm';
 import { OrderTrackingModal } from '@/components/shop/OrderTrackingModal';
@@ -143,6 +144,8 @@ const getFrequentlyBoughtWith = (currentProduct: ShopProduct, allProducts: ShopP
 // ==========================================
 export default function PetShopPage() {
     const router = useRouter();
+    const quickBuyScroll = useDragScroll();
+    const categoryScroll = useDragScroll();
     const { activePet } = usePet();
     const { user } = useAuth();
     const {
@@ -505,7 +508,14 @@ export default function PetShopPage() {
                     </h2>
                     <span className="text-[10px] font-bold text-orange-500 uppercase tracking-widest">Hızlı Al</span>
                 </div>
-                <div className="flex gap-3 overflow-x-auto no-scrollbar scroll-smooth pb-2">
+                <div 
+                    ref={quickBuyScroll.ref}
+                    onMouseDown={quickBuyScroll.onMouseDown}
+                    onMouseLeave={quickBuyScroll.onMouseLeave}
+                    onMouseUp={quickBuyScroll.onMouseUp}
+                    onMouseMove={quickBuyScroll.onMouseMove}
+                    className="flex gap-3 overflow-x-auto no-scrollbar pb-2 cursor-grab active:cursor-grabbing select-none"
+                >
                     {quickBuyProducts.map(product => (
                         <motion.button
                             key={`quick-${product.id}`}
@@ -558,7 +568,14 @@ export default function PetShopPage() {
 
             {/* CATEGORIES */}
             <div className="px-5 pt-4 pb-2">
-                <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth">
+                <div 
+                    ref={categoryScroll.ref}
+                    onMouseDown={categoryScroll.onMouseDown}
+                    onMouseLeave={categoryScroll.onMouseLeave}
+                    onMouseUp={categoryScroll.onMouseUp}
+                    onMouseMove={categoryScroll.onMouseMove}
+                    className="flex gap-2 overflow-x-auto no-scrollbar cursor-grab active:cursor-grabbing select-none"
+                >
                     {CATEGORIES.map(cat => (
                         <button
                             key={cat.id}

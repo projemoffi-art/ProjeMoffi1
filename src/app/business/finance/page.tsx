@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { BusinessSidebar } from "@/components/business/Sidebar";
 import { MOCK_TRANSACTIONS, MOCK_ORDERS } from "@/data/mockBusinessRegistry";
 import { useAuth } from "@/context/AuthContext";
@@ -12,6 +12,7 @@ import {
     Download, Calendar, Loader2, Banknote, PiggyBank, Receipt
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useDragScroll } from "@/hooks/useDragScroll";
 
 const TYPE_CONFIG: Record<TransactionType, { label: string; color: string; icon: typeof DollarSign }> = {
     sale: { label: 'Satış', color: 'text-green-600', icon: TrendingUp },
@@ -22,32 +23,64 @@ const TYPE_CONFIG: Record<TransactionType, { label: string; color: string; icon:
 
 export default function BusinessFinancePage() {
     const { user } = useAuth();
+    const filterScroll = useDragScroll();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [typeFilter, setTypeFilter] = useState<TransactionType | 'all'>('all');
     const [showPayoutModal, setShowPayoutModal] = useState(false);
+    const [transactions, setTransactions] = useState<any[]>([]);
 
-    const businessId = user?.businessId || 'biz_paws1';
-    const transactions = MOCK_TRANSACTIONS.filter(t => t.businessId === businessId);
+    const businessId = user?.businessId || (user?.email === 'doctor@moffipet.com' ? 'biz_vet1' : 'biz_paws1');
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const stored = localStorage.getItem('moffi_business_transactions');
+                let parsed = stored ? JSON.parse(stored) : [...MOCK_TRANSACTIONS];
+                
+                // If it doesn't have the mock seed transactions, seed some
+                const hasSeed = parsed.some((t: any) => t.id === 'tx_seed_1');
+                if (!hasSeed) {
+                    const seedTxs = [
+                        { id: 'tx_seed_1', businessId: 'biz_vet1', type: 'sale', amount: 650, description: 'Randevu Onayı #101 (Luna)', date: '2026-02-20T10:00:00Z', status: 'completed' },
+                        { id: 'tx_seed_2', businessId: 'biz_vet1', type: 'commission', amount: -65, description: 'Sistem komisyon kesintisi (%10)', date: '2026-02-20T10:00:00Z', status: 'completed' },
+                        { id: 'tx_seed_3', businessId: 'biz_vet1', type: 'sale', amount: 650, description: 'Randevu Onayı #102 (Baron)', date: '2026-02-21T08:00:00Z', status: 'completed' },
+                        { id: 'tx_seed_4', businessId: 'biz_vet1', type: 'commission', amount: -65, description: 'Sistem komisyon kesintisi (%10)', date: '2026-02-21T08:00:00Z', status: 'completed' }
+                    ];
+                    parsed = [...parsed, ...seedTxs];
+                    localStorage.setItem('moffi_business_transactions', JSON.stringify(parsed));
+                }
+                setTransactions(parsed);
+            } catch (e) {
+                console.error("Failed to load business transactions:", e);
+                setTransactions(MOCK_TRANSACTIONS);
+            }
+        }
+    }, []);
+
+    const filteredTransactions = useMemo(() => {
+        return transactions.filter(t => t.businessId === businessId || (businessId === 'biz_vet1' && t.businessId === 'vet-1'));
+    }, [transactions, businessId]);
+
     const orders = MOCK_ORDERS.filter(o => o.businessId === businessId);
 
     const filtered = useMemo(() => {
-        let result = [...transactions];
+        let result = [...filteredTransactions];
         if (typeFilter !== 'all') result = result.filter(t => t.type === typeFilter);
         return result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [transactions, typeFilter]);
+    }, [filteredTransactions, typeFilter]);
 
     // Financial calculations
     const summary = useMemo(() => {
-        const totalSales = transactions.filter(t => t.type === 'sale' && t.status === 'completed').reduce((s, t) => s + t.amount, 0);
-        const totalCommission = Math.abs(transactions.filter(t => t.type === 'commission').reduce((s, t) => s + t.amount, 0));
-        const totalPayouts = Math.abs(transactions.filter(t => t.type === 'payout' && t.status === 'completed').reduce((s, t) => s + t.amount, 0));
-        const totalRefunds = Math.abs(transactions.filter(t => t.type === 'refund').reduce((s, t) => s + t.amount, 0));
-        const pendingRevenue = transactions.filter(t => t.type === 'sale' && t.status === 'pending').reduce((s, t) => s + t.amount, 0);
+        const totalSales = filteredTransactions.filter(t => t.type === 'sale' && t.status === 'completed').reduce((s, t) => s + t.amount, 0);
+        const totalCommission = Math.abs(filteredTransactions.filter(t => t.type === 'commission').reduce((s, t) => s + t.amount, 0));
+        const totalPayouts = Math.abs(filteredTransactions.filter(t => t.type === 'payout' && t.status === 'completed').reduce((s, t) => s + t.amount, 0));
+        const totalRefunds = Math.abs(filteredTransactions.filter(t => t.type === 'refund').reduce((s, t) => s + t.amount, 0));
+        const pendingRevenue = filteredTransactions.filter(t => t.type === 'sale' && t.status === 'pending').reduce((s, t) => s + t.amount, 0);
         const netEarnings = totalSales - totalCommission - totalRefunds;
         const availableBalance = netEarnings - totalPayouts;
 
         return { totalSales, totalCommission, totalPayouts, totalRefunds, pendingRevenue, netEarnings, availableBalance };
-    }, [transactions]);
+    }, [filteredTransactions]);
 
     // Monthly revenue chart data (simple bar chart)
     const monthlyData = [
@@ -151,7 +184,14 @@ export default function BusinessFinancePage() {
                 <div className="bg-card rounded-2xl border border-card-border shadow-moffi-card">
                     <div className="p-5 border-b border-card-border flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                         <h3 className="font-bold text-foreground">İşlem Geçmişi</h3>
-                        <div className="flex gap-2 overflow-x-auto pb-1">
+                        <div 
+                            ref={filterScroll.ref}
+                            onMouseDown={filterScroll.onMouseDown}
+                            onMouseLeave={filterScroll.onMouseLeave}
+                            onMouseUp={filterScroll.onMouseUp}
+                            onMouseMove={filterScroll.onMouseMove}
+                            className="flex gap-2 overflow-x-auto pb-1 cursor-grab active:cursor-grabbing select-none"
+                        >
                             {(['all', 'sale', 'commission', 'payout', 'refund'] as const).map(t => (
                                 <button
                                     key={t}

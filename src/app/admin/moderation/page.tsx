@@ -33,6 +33,7 @@ export default function ModerationMatrix() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isLoading, setIsLoading] = useState(true);
     const [selectedAd, setSelectedAd] = useState<any | null>(null);
+    const [selectedReport, setSelectedReport] = useState<any | null>(null);
     const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
     const showToast = (msg: string, type: "success" | "error" = "success") => {
@@ -49,12 +50,74 @@ export default function ModerationMatrix() {
                 { id: "ad-2", name: "Milo", breed: "Tekir", status: "active", author_name: "Ayşe", created_at: new Date().toISOString(), location: "İzmir", desc: "Sokakta bulduğumuz Milo'yu sahiplendirmek istiyoruz." },
                 { id: "ad-3", name: "Zeytin", breed: "Siyam", status: "removed", author_name: "Can", created_at: new Date().toISOString(), location: "Ankara", desc: "Siyam kedisi Zeytin için ilan." }
             ];
-            const mockReports = [
-                { id: "rep-1", ad_id: "ad-2", reason: "fee_request", author: "Mehmet", status: "pending", created_at: new Date().toISOString(), details: "Sahiplendirme için para istendi." }
-            ];
+            
+            // Read from local storage
+            let storedReports = [];
+            if (typeof window !== 'undefined') {
+                const stored = localStorage.getItem('moffi_reports');
+                if (stored) {
+                    storedReports = JSON.parse(stored);
+                } else {
+                    // Seed initial reports
+                    const defaultReports = [
+                        {
+                            id: "rep-post-1",
+                            targetType: "post",
+                            targetId: "post-mock-1",
+                            content: "Cocker Spaniel cinsi köpeğimi aşı masrafları karşılığında 5000 TL'ye sahiplendiriyorum. İlgilenenler acil ulaşsın.",
+                            authorName: "Kemal34",
+                            reportedBy: "Mehmet",
+                            reason: "fee_request",
+                            details: "Açıkça para talep ediliyor, platform kurallarına aykırı.",
+                            status: "pending",
+                            created_at: new Date().toISOString()
+                        },
+                        {
+                            id: "rep-comment-1",
+                            targetType: "comment",
+                            targetId: 102,
+                            postId: "post-mock-2",
+                            content: "Sizin yapacağınız işi s...yim, rezil herifler!",
+                            authorName: "ÖfkeliPati",
+                            reportedBy: "Selin",
+                            reason: "toxic",
+                            details: "Küfür ve hakaret içeriyor.",
+                            status: "pending",
+                            created_at: new Date().toISOString()
+                        },
+                        {
+                            id: "rep-post-2",
+                            targetType: "post",
+                            targetId: "post-mock-3",
+                            content: "KOLAY YOLDAN PARA KAZANMAK İSTER MİSİNİZ? AŞAĞIDAKİ WHATSAPP LİNKİNE TIKLAYIN wa.me/905320000000 HEDİYELERİ KAÇIRMAYIN!!!",
+                            authorName: "SpamBot",
+                            reportedBy: "Ali",
+                            reason: "spam",
+                            details: "Tamamen spam reklam içeriyor.",
+                            status: "pending",
+                            created_at: new Date().toISOString()
+                        }
+                    ];
+                    localStorage.setItem('moffi_reports', JSON.stringify(defaultReports));
+                    storedReports = defaultReports;
+                }
+            }
+            
             setAds(mockAds);
-            setReports(mockReports);
-            setStats({ pending: 1, active: 1, removed: 1, reports: 1 });
+            setReports(storedReports);
+            
+            // Recalculate stats
+            const pendingAdsCount = mockAds.filter(a => a.status === 'pending').length;
+            const activeAdsCount = mockAds.filter(a => a.status === 'active').length;
+            const removedAdsCount = mockAds.filter(a => a.status === 'removed').length;
+            const pendingReportsCount = storedReports.filter(r => r.status === 'pending').length;
+            
+            setStats({
+                pending: pendingAdsCount,
+                active: activeAdsCount,
+                removed: removedAdsCount,
+                reports: pendingReportsCount
+            });
             setIsLoading(false);
         }, 800);
     }, []);
@@ -71,6 +134,60 @@ export default function ModerationMatrix() {
         }));
         showToast(newStatus === "active" ? "Protocol Synced: Ad Approved" : "Protocol Synced: Ad Removed");
         setSelectedAd(null);
+    };
+
+    const handleReportAction = async (reportId: string, action: 'removed' | 'dismissed') => {
+        let reportToProcess = reports.find(r => r.id === reportId);
+        if (!reportToProcess) return;
+
+        // If 'removed', remove the content from the platform
+        if (action === 'removed') {
+            if (reportToProcess.targetType === 'post') {
+                try {
+                    const { apiService } = await import("@/services/apiService");
+                    await apiService.deletePost(reportToProcess.targetId);
+                } catch (err) {
+                    console.error("Failed to delete post via apiService, trying fallback", err);
+                    try {
+                        const savedPosts = JSON.parse(localStorage.getItem('feed_posts') || '[]');
+                        const updatedPosts = savedPosts.filter((p: any) => String(p.id) !== String(reportToProcess.targetId));
+                        localStorage.setItem('feed_posts', JSON.stringify(updatedPosts));
+                        window.dispatchEvent(new Event('moffi_posts_changed'));
+                    } catch {}
+                }
+            } else if (reportToProcess.targetType === 'comment') {
+                try {
+                    const savedPosts = JSON.parse(localStorage.getItem('feed_posts') || '[]');
+                    const updatedPosts = savedPosts.map((p: any) => {
+                        if (String(p.id) === String(reportToProcess.postId)) {
+                            const updatedComments = (p.commentsList || []).filter((c: any) => Number(c.id) !== Number(reportToProcess.targetId));
+                            return { ...p, commentsList: updatedComments };
+                        }
+                        return p;
+                    });
+                    localStorage.setItem('feed_posts', JSON.stringify(updatedPosts));
+                    window.dispatchEvent(new Event('moffi_posts_changed'));
+                } catch (err) {
+                    console.error("Failed to delete comment from local posts", err);
+                }
+            }
+        }
+
+        // Update the report status
+        const updatedReports = reports.map(r => r.id === reportId ? { ...r, status: action } : r);
+        setReports(updatedReports);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('moffi_reports', JSON.stringify(updatedReports));
+        }
+
+        // Recalculate stats
+        setStats(prev => ({
+            ...prev,
+            reports: Math.max(0, prev.reports - (reportToProcess.status === 'pending' ? 1 : 0))
+        }));
+
+        showToast(action === 'removed' ? "İçerik Yayından Kaldırıldı" : "Rapor Yoksayıldı");
+        setSelectedReport(null);
     };
 
     const filteredAds = ads.filter(ad => {
@@ -235,9 +352,62 @@ export default function ModerationMatrix() {
                                 ))}
                             </div>
                         ) : (
-                            <div className="p-20 text-center space-y-4">
-                                <Flag className="w-12 h-12 text-white/10 mx-auto" />
-                                <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">No High-Priority Signals Detected</p>
+                            <div className="divide-y divide-white/5">
+                                {reports.length === 0 ? (
+                                    <div className="p-20 text-center space-y-4">
+                                        <Flag className="w-12 h-12 text-white/10 mx-auto" />
+                                        <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">No High-Priority Signals Detected</p>
+                                    </div>
+                                ) : (
+                                    reports.map((report, i) => (
+                                        <motion.div 
+                                            key={report.id}
+                                            initial={{ opacity: 0, x: -10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: i * 0.05 }}
+                                            onClick={() => setSelectedReport(report)}
+                                            className="p-6 hover:bg-white/[0.03] flex items-center justify-between cursor-pointer group transition-colors"
+                                        >
+                                            <div className="flex items-center gap-6">
+                                                <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center border border-card-border group-hover:scale-110 transition-transform">
+                                                    <span className="text-2xl">{report.targetType === 'post' ? '📝' : '💬'}</span>
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-3 mb-1">
+                                                        <span className="text-sm font-black text-white">
+                                                            {report.targetType === 'post' ? 'Gönderi İhlali' : 'Yorum İhlali'}
+                                                        </span>
+                                                        <span className={cn(
+                                                            "text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider",
+                                                            report.status === 'pending' ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" :
+                                                            report.status === 'removed' ? "bg-red-500/10 text-red-500 border border-red-500/20" :
+                                                            "bg-gray-500/10 text-gray-400 border border-gray-500/20"
+                                                        )}>
+                                                            {report.status}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 text-white/30 text-[10px] font-bold uppercase tracking-wider">
+                                                        <span>Sebep: <strong className="text-amber-400/70">{report.reason}</strong></span>
+                                                        <div className="w-1 h-1 rounded-full bg-white/10" />
+                                                        <span>Yazar: <strong className="text-cyan-400/50">{report.authorName}</strong></span>
+                                                        <div className="w-1 h-1 rounded-full bg-white/10" />
+                                                        <span>Bildiren: <strong className="text-white/60">{report.reportedBy}</strong></span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="flex items-center gap-8">
+                                                <div className="hidden md:flex flex-col items-end">
+                                                    <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Tarih</span>
+                                                    <span className="text-[11px] font-bold text-white/60">
+                                                        {new Date(report.created_at).toLocaleDateString()}
+                                                    </span>
+                                                </div>
+                                                <ChevronRight className="w-5 h-5 text-white/10 group-hover:text-white transition-colors group-hover:translate-x-1" />
+                                            </div>
+                                        </motion.div>
+                                    ))
+                                )}
                             </div>
                         )}
                     </AnimatePresence>
@@ -316,6 +486,105 @@ export default function ModerationMatrix() {
                                             Decommission Node
                                         </button>
                                     </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* --- REPORT DETAIL OVERLAY (DRAWER) --- */}
+            <AnimatePresence>
+                {selectedReport && (
+                    <>
+                        <motion.div 
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100]"
+                            onClick={() => setSelectedReport(null)}
+                        />
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="fixed inset-x-0 bottom-0 z-[110] bg-[#0A0A0F] border-t border-card-border rounded-t-[3rem] p-10 max-h-[85vh] overflow-y-auto no-scrollbar"
+                        >
+                            <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-10" />
+                            
+                            <div className="max-w-4xl mx-auto space-y-12">
+                                <div className="flex items-start justify-between">
+                                    <div className="flex gap-8">
+                                        <div className="w-32 h-32 bg-white/5 rounded-[2rem] border border-card-border flex items-center justify-center text-5xl">
+                                            {selectedReport.targetType === 'post' ? '📝' : '💬'}
+                                        </div>
+                                        <div>
+                                            <h2 className="text-5xl font-black text-white tracking-tighter uppercase mb-2">
+                                                {selectedReport.targetType === 'post' ? 'Gönderi Raporu' : 'Yorum Raporu'}
+                                            </h2>
+                                            <div className="flex gap-4">
+                                                <span className="text-red-500 font-bold uppercase tracking-widest text-xs">
+                                                    İhlal Nedeni: {selectedReport.reason}
+                                                </span>
+                                                <span className="text-white/20 font-bold uppercase tracking-widest text-xs">•</span>
+                                                <span className="text-white/40 font-bold uppercase tracking-widest text-xs">
+                                                    Durum: {selectedReport.status}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setSelectedReport(null)} className="p-4 bg-white/5 rounded-2xl hover:bg-white/10 transition-colors">
+                                        <XCircle className="w-6 h-6 text-white/40" />
+                                    </button>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-6">
+                                        <div>
+                                            <h4 className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-3">Raporlanan İçerik</h4>
+                                            <div className="p-6 bg-white/[0.02] border border-card-border rounded-3xl leading-relaxed text-white/80 text-sm font-medium italic">
+                                                &quot;{selectedReport.content}&quot;
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h4 className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-3">Rapor Detayı & Gerekçe</h4>
+                                            <div className="p-5 bg-white/5 rounded-3xl border border-card-border space-y-2">
+                                                <div className="text-xs text-white/60">
+                                                    <span className="font-bold text-white">Yazar:</span> {selectedReport.authorName}
+                                                </div>
+                                                <div className="text-xs text-white/60">
+                                                    <span className="font-bold text-white">Bildiren:</span> {selectedReport.reportedBy}
+                                                </div>
+                                                <div className="text-xs text-white/60">
+                                                    <span className="font-bold text-white">Gerekçe:</span> {selectedReport.details || 'Açıklama girilmedi.'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {selectedReport.status === 'pending' ? (
+                                        <div className="flex flex-col justify-end gap-4 pb-4">
+                                            <button 
+                                                onClick={() => handleReportAction(selectedReport.id, "removed")}
+                                                className="w-full py-6 bg-red-600 text-white rounded-3xl font-black text-sm uppercase tracking-[0.2em] shadow-[0_20px_40px_rgba(220,38,38,0.2)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                                            >
+                                                <ShieldX className="w-5 h-5" />
+                                                Yayından Kaldır (Sil)
+                                            </button>
+                                            <button 
+                                                onClick={() => handleReportAction(selectedReport.id, "dismissed")}
+                                                className="w-full py-6 bg-white/5 border border-white/20 text-white rounded-3xl font-black text-sm uppercase tracking-[0.2em] hover:bg-white/10 transition-all flex items-center justify-center gap-3"
+                                            >
+                                                <CheckCircle className="w-5 h-5" />
+                                                Raporu Yoksay (Güvenli)
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col justify-end pb-4">
+                                            <div className="p-6 bg-white/5 border border-card-border rounded-3xl text-center text-xs text-white/40">
+                                                Bu rapor için zaten karar verilmiştir: <strong className="text-white uppercase">{selectedReport.status}</strong>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </motion.div>

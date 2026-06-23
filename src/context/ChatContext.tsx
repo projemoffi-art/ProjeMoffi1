@@ -50,6 +50,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => { userRef.current = user; }, [user]);
     useEffect(() => { activeChatUserIdRef.current = activeChatUserId; }, [activeChatUserId]);
 
+    // Reset active chat and messages when user changes (login/logout)
+    useEffect(() => {
+        setActiveChatUserId(null);
+        setActiveMessages([]);
+        setInboxMessages([]);
+        setUnreadCount(0);
+        setReplyMessage('');
+    }, [user?.id]);
+
     // STABLE fetch functions that use refs - never change identity
     const fetchInbox = useCallback(async () => {
         if (!userRef.current) return;
@@ -111,6 +120,24 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                             }]);
                         }
                     }
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: 'DELETE', schema: 'public', table: 'conversations' },
+                async (payload) => {
+                    const deletedId = payload.old?.id;
+                    if (!deletedId) return;
+
+                    setInboxMessages(currentInbox => {
+                        const matched = currentInbox.find(m => m.conversationId === deletedId);
+                        if (matched && activeChatUserIdRef.current === matched.userId) {
+                            setActiveChatUserId(null);
+                        }
+                        return currentInbox.filter(m => m.conversationId !== deletedId);
+                    });
+
+                    fetchInbox();
                 }
             )
             .subscribe();

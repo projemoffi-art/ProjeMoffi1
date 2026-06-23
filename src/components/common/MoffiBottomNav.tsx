@@ -3,13 +3,13 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-    Home, Compass, Plus, Trophy, User
+    Home, Compass, Plus, MessageCircle, User
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useTranslation } from '@/context/LanguageContext';
-import { useQuestEngine } from '@/context/QuestEngineContext';
+import { useChat } from '@/context/ChatContext';
 
 interface MoffiBottomNavProps {
     activeTab?: string;
@@ -22,14 +22,12 @@ export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisibl
     const router = useRouter();
     const pathname = usePathname();
     const { user } = useAuth();
-    const { completedCount, totalCount } = useQuestEngine();
+    const { unreadCount, isInboxOpen, setIsInboxOpen } = useChat();
     
     const [isHubLongPressing, setIsHubLongPressing] = useState(false);
     const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
-    const activeTab = propActiveTab || (pathname === '/community' ? 'home' : pathname?.startsWith('/profile') ? 'profile' : pathname === '/quests' ? 'quests' : 'feed');
-    const questPct = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
-    const allQuestsDone = completedCount === totalCount && totalCount > 0;
+    const activeTab = propActiveTab || (pathname === '/community' ? 'home' : pathname?.startsWith('/profile') ? 'profile' : 'feed');
 
     const handleTabClick = (tab: string) => {
         if (onTabChange) {
@@ -45,10 +43,6 @@ export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisibl
 
     const handleHubClick = () => {
         window.dispatchEvent(new CustomEvent('open-moffi-action-hub'));
-    };
-
-    const handleQuestClick = () => {
-        router.push('/quests');
     };
 
     const handleProfileClick = () => {
@@ -115,33 +109,27 @@ export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisibl
                         <div className="h-10" />
                     </div>
 
-                    {/* 4. GÖREVLER */}
+                    {/* 4. MESAJLAR */}
                     <button
-                        onClick={handleQuestClick}
+                        onClick={() => setIsInboxOpen(true)}
                         className={cn(
                             "flex-1 flex flex-col items-center gap-1 transition-all active:scale-90 relative",
-                            activeTab === 'quests' ? "text-orange-400" : "text-white/40 hover:text-white/60"
+                            isInboxOpen ? "text-cyan-400" : "text-white/40 hover:text-white/60"
                         )}
                     >
                         <div className="relative">
-                            <Trophy className={cn("w-6 h-6", allQuestsDone && 'text-yellow-400')} />
-                            {/* Progress arc indicator */}
-                            {questPct > 0 && questPct < 100 && (
+                            <MessageCircle className={cn("w-6 h-6", isInboxOpen && "text-cyan-400")} />
+                            {unreadCount > 0 && (
                                 <motion.div
-                                    animate={{ opacity: [0.6, 1, 0.6] }}
+                                    animate={{ scale: [1, 1.15, 1] }}
                                     transition={{ duration: 1.5, repeat: Infinity }}
-                                    className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-orange-400 rounded-full border border-[#0c0c0c]"
-                                />
-                            )}
-                            {allQuestsDone && (
-                                <motion.div
-                                    animate={{ scale: [1, 1.3, 1] }}
-                                    transition={{ duration: 1.5, repeat: Infinity }}
-                                    className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full border border-[#0c0c0c]"
-                                />
+                                    className="absolute -top-1 -right-1 w-4 h-4 bg-cyan-400 rounded-full border border-[#0c0c0c] flex items-center justify-center shadow-[0_0_8px_rgba(34,211,238,0.6)]"
+                                >
+                                    <span className="text-[8px] font-black text-black">{unreadCount}</span>
+                                </motion.div>
                             )}
                         </div>
-                        <span className="text-[8px] font-black uppercase tracking-widest">Görevler</span>
+                        <span className="text-[8px] font-black uppercase tracking-widest">Mesajlar</span>
                     </button>
 
                     {/* 5. PROFİL */}

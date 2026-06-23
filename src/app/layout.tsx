@@ -19,6 +19,7 @@ import { QuestEngineProvider } from "@/context/QuestEngineContext";
 import { LiveEventsProvider } from "@/context/LiveEventsContext";
 import { QuestRewardEngineLoader } from "@/components/quests/QuestRewardEngineLoader";
 import { Phase2Loader } from "@/components/quests/Phase2Loader";
+import { GlobalToast } from "@/components/common/GlobalToast";
 
 const poppins = Poppins({
   weight: ['400', '600', '700', '900'],
@@ -117,6 +118,7 @@ export default function RootLayout({
                                     <QuestRewardEngineLoader />
                                     <Phase2Loader />
                                     <AIWidgetLoader />
+                                    <GlobalToast />
                                   </RootOnboardingWrapper>
                                 </ClientAuthWrapper>
                               </ShopProvider>

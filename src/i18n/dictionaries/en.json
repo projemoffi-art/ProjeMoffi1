@@ -156,5 +156,40 @@
     "name": "Moffi Digital Services Ltd.",
     "email": "privacy@moffi.net",
     "address": "Digital Universe, Istanbul/Turkey"
+  },
+  "business": {
+    "sidebar": {
+      "dashboard": "Dashboard",
+      "appointments": "Appointments",
+      "finance": "Financial Analysis",
+      "orders": "Order Tracking",
+      "products": "Product Management",
+      "quests": "Campaigns",
+      "client_mode": "Switch to Client Mode",
+      "logout": "Logout"
+    },
+    "dashboard": {
+      "title": "Control Panel",
+      "welcome": "Welcome back",
+      "balance": "Balance",
+      "new_campaign": "+ New Campaign",
+      "total_views": "Total Views",
+      "total_users": "Total Users",
+      "page_clicks": "Page Clicks",
+      "active_campaigns": "Active Campaigns",
+      "weekly_traffic": "Weekly Visitor Traffic",
+      "weekly_traffic_sub": "MoffiWalk users passing by your store",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "proximity_title": "Proximity Alert",
+      "proximity_desc_1": "Right now, ",
+      "proximity_desc_2": " potential customers are walking within 100m of your store.",
+      "send_notification": "Send Notification (50 TL)",
+      "live": "LIVE",
+      "recent_activities": "Recent Activities (New Members)",
+      "joined_moffi": "joined MoffiPet",
+      "new": "NEW",
+      "no_new_members": "No new members yet."
+    }
   }
 }

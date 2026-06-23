@@ -1,16 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, Plus, MoreHorizontal, Wallet, CreditCard, TrendingUp, TrendingDown, ShoppingBag, Coins, Gift, ChevronRight, Clock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { MoffiAssistantCard } from "@/components/wallet/MoffiAssistantCard";
 import { ExpenseChart } from "@/components/wallet/ExpenseChart";
 import { MOCK_TRANSACTIONS, BUDGET_STATUS, COIN_STATS, COIN_HISTORY, CoinTransaction } from "@/data/mockWallet";
 import { cn } from "@/lib/utils";
+import { useDragScroll } from "@/hooks/useDragScroll";
 
 export default function WalletPage() {
     const router = useRouter();
     const [activeWallet, setActiveWallet] = useState<'fiat' | 'coin'>('fiat');
+    const [balance, setBalance] = useState<number>(12450.00);
+    const [transactions, setTransactions] = useState<any[]>([]);
+
+    // Drag scroll hook
+    const walletScroll = useDragScroll();
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const storedBalance = localStorage.getItem('moffi_fiat_balance');
+                const storedTransactions = localStorage.getItem('moffi_fiat_transactions');
+                
+                if (storedBalance !== null) {
+                    setBalance(Number(storedBalance));
+                } else {
+                    localStorage.setItem('moffi_fiat_balance', '12450.00');
+                }
+                
+                if (storedTransactions !== null) {
+                    setTransactions(JSON.parse(storedTransactions));
+                } else {
+                    localStorage.setItem('moffi_fiat_transactions', JSON.stringify(MOCK_TRANSACTIONS));
+                    setTransactions(MOCK_TRANSACTIONS);
+                }
+            } catch (e) {
+                console.error("Failed to load wallet data:", e);
+            }
+        }
+    }, []);
 
     return (
         <div className="min-h-screen bg-background dark:bg-[background] font-sans pb-24">
@@ -33,7 +63,14 @@ export default function WalletPage() {
 
                 {/* 2. Wallet Selector (Horizontal Scroll / Toggle) */}
                 <div>
-                    <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 snap-x">
+                    <div 
+                        ref={walletScroll.ref}
+                        onMouseDown={walletScroll.onMouseDown}
+                        onMouseLeave={walletScroll.onMouseLeave}
+                        onMouseUp={walletScroll.onMouseUp}
+                        onMouseMove={walletScroll.onMouseMove}
+                        className="flex gap-4 overflow-x-auto no-scrollbar pb-2 snap-x momentum-scroll overscroll-contain cursor-grab active:cursor-grabbing select-none"
+                    >
                         {/* FIAT CARD */}
                         <div
                             onClick={() => setActiveWallet('fiat')}
@@ -56,7 +93,7 @@ export default function WalletPage() {
                                 </div>
                                 <div>
                                     <div className="text-xs font-medium opacity-60 mb-1">TR Bakiye</div>
-                                    <div className="text-3xl font-black tracking-tight">₺12,450.00</div>
+                                    <div className="text-3xl font-black tracking-tight">₺{balance.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                                 </div>
                                 <div className="flex justify-between items-end">
                                     <div className="text-xs font-medium tracking-widest font-mono opacity-60">**** 4291</div>
@@ -147,19 +184,29 @@ export default function WalletPage() {
                                 <button className="text-xs font-bold text-gray-400">Tümünü Gör</button>
                             </div>
                             <div className="space-y-4">
-                                {MOCK_TRANSACTIONS.map((t) => (
+                                {transactions.map((t) => (
                                     <div key={t.id} className="flex items-center justify-between p-4 bg-card dark:bg-[card] rounded-2xl border border-card-border dark:border-card-border">
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 rounded-xl bg-background dark:bg-card/5 flex items-center justify-center text-2xl">
                                                 {t.icon}
                                             </div>
                                             <div>
-                                                <h3 className="font-bold text-foreground dark:text-white text-sm">{t.title}</h3>
+                                                <h3 className="font-bold text-foreground dark:text-white text-sm">
+                                                    {t.title}
+                                                    {t.status === 'blocked' && (
+                                                        <span className="ml-2 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-500 rounded border border-amber-500/20">Bloke</span>
+                                                    )}
+                                                    {t.status === 'refunded' && (
+                                                        <span className="ml-2 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-green-500/10 text-green-500 rounded border border-green-500/20">İade Edildi</span>
+                                                    )}
+                                                </h3>
                                                 <p className="text-xs text-gray-400 font-medium">{t.merchant} • {new Date(t.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <div className="font-black text-foreground dark:text-white">-₺{t.amount}</div>
+                                            <div className={cn("font-black text-sm", t.status === 'refunded' ? "text-green-500" : "text-foreground dark:text-white")}>
+                                                {t.status === 'refunded' ? '+₺' : '-₺'}{t.amount}
+                                            </div>
                                             <div className="text-[10px] font-bold text-gray-400 uppercase">{t.category}</div>
                                         </div>
                                     </div>

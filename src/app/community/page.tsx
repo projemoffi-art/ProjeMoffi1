@@ -76,6 +76,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { QuestBentoCard } from '@/components/quests/QuestBentoCard';
 import { cn } from '@/lib/utils';
 import Mascot3DCanvas from '@/components/dressing/Mascot3DCanvas';
+import { useDragScroll } from '@/hooks/useDragScroll';
 
 const MATCH_CANDIDATES = [
     {
@@ -391,6 +392,9 @@ function ThemeToggleButton() {
 
 export default function LegendaryLightDashboard() {
     const router = useRouter();
+    const communityCardScroll = useDragScroll();
+    const storiesScroll = useDragScroll();
+    const petSwitcherScroll = useDragScroll();
     const searchParams = useSearchParams();
     const { user: authUser, updateProfile } = useAuth();
     const { pets: userPets, activePet: globalActivePet, switchPet, updatePet, addPet, deletePet, isLoading: isPetLoading } = usePet();
@@ -1554,7 +1558,14 @@ export default function LegendaryLightDashboard() {
                 {/* 2. Hikayeler (Stories) - Dynamic from useStories */}
                 <section className="mb-6">
                     {/* Hikayeler başlığı kaldırıldı */}
-                    <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 pt-1 -mx-5 px-5 items-center">
+                    <div 
+                        ref={storiesScroll.ref}
+                        onMouseDown={storiesScroll.onMouseDown}
+                        onMouseLeave={storiesScroll.onMouseLeave}
+                        onMouseUp={storiesScroll.onMouseUp}
+                        onMouseMove={storiesScroll.onMouseMove}
+                        className="flex gap-4 overflow-x-auto no-scrollbar pb-2 pt-1 -mx-5 px-5 items-center cursor-grab active:cursor-grabbing select-none"
+                    >
                         {storyGroups.map((group, index) => {
                             let customType: 'normal' | 'sos' | 'ai' | 'featured' = 'normal';
                             if (group.user_id === 'system_sos') customType = 'sos';
@@ -1593,7 +1604,14 @@ export default function LegendaryLightDashboard() {
                 >
                     {/* Switcher & Badges */}
                     <div className="flex justify-between items-start mb-4">
-                        <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-full border border-gray-100 shadow-inner max-w-[240px] overflow-x-auto no-scrollbar shrink-0">
+                        <div 
+                            ref={petSwitcherScroll.ref}
+                            onMouseDown={petSwitcherScroll.onMouseDown}
+                            onMouseLeave={petSwitcherScroll.onMouseLeave}
+                            onMouseUp={petSwitcherScroll.onMouseUp}
+                            onMouseMove={petSwitcherScroll.onMouseMove}
+                            className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-full border border-gray-100 shadow-inner max-w-[240px] overflow-x-auto no-scrollbar shrink-0 cursor-grab active:cursor-grabbing select-none"
+                        >
                             {userPets.map((p) => (
                                 <motion.button
                                     key={p.id}
@@ -2049,7 +2067,14 @@ export default function LegendaryLightDashboard() {
 
                 <section className="mb-6">
                     <h3 className="text-[15px] font-bold text-gray-800 tracking-tight mb-3 px-1">Bugün senin için</h3>
-                    <div className="flex gap-3.5 overflow-x-auto pb-4 pt-1 snap-x scrollbar-none px-1">
+                    <div 
+                        ref={communityCardScroll.ref}
+                        onMouseDown={communityCardScroll.onMouseDown}
+                        onMouseLeave={communityCardScroll.onMouseLeave}
+                        onMouseUp={communityCardScroll.onMouseUp}
+                        onMouseMove={communityCardScroll.onMouseMove}
+                        className="flex gap-3.5 overflow-x-auto pb-4 pt-1 snap-x scrollbar-none px-1 cursor-grab active:cursor-grabbing select-none"
+                    >
                         
                         {/* Aşı Kartı */}
                         <motion.div 

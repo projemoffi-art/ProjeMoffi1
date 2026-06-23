@@ -100,16 +100,62 @@ export function useVet() {
         }
     };
 
-    const bookAppointment = async (clinic: any, date: string, time: string, type: string) => {
+    const bookAppointment = async (
+        clinic: any, 
+        date: string, 
+        time: string, 
+        type: string, 
+        sharedPassport?: any, 
+        petInfo?: { name: string; image: string },
+        paymentDetails?: { paymentId: string; paymentAmount: number; paymentStatus: string }
+    ) => {
         setIsLoading(true);
         try {
-            await apiService.createAppointment({
+            const appointmentPayload = {
                 clinicId: clinic.id,
                 petId: '349b89f8-c5e5-46e8-abf7-b2e41b29d39a', // Milo
                 appointmentDate: `${date}T${time}:00Z`,
                 notes: `Randevu tipi: ${type}`,
-                status: 'pending'
-            });
+                status: 'pending',
+                sharedPassport: sharedPassport
+            };
+
+            await apiService.createAppointment(appointmentPayload);
+
+            // Sync with local storage for business panel dashboard live view
+            if (typeof window !== 'undefined') {
+                try {
+                    const stored = localStorage.getItem('moffi_pending_appointments');
+                    const pendingList = stored ? JSON.parse(stored) : [];
+
+                    const newRequest = {
+                        id: Date.now(),
+                        petName: petInfo?.name || "Milo",
+                        ownerName: "Uveys",
+                        time: time,
+                        date: date,
+                        type: type === 'general' ? 'Genel Muayene' : type,
+                        status: 'pending',
+                        image: petInfo?.image || "https://images.unsplash.com/photo-1573865526739-10659fec78a5?q=80&w=100",
+                        sharedPassport: sharedPassport,
+                        paymentId: paymentDetails?.paymentId,
+                        paymentAmount: paymentDetails?.paymentAmount || clinic.price || 350,
+                        paymentStatus: paymentDetails?.paymentStatus || 'pre_authorized',
+                        clinicId: clinic.id,
+                        clinicName: clinic.name
+                    };
+
+                    pendingList.push(newRequest);
+                    localStorage.setItem('moffi_pending_appointments', JSON.stringify(pendingList));
+
+                    // Broadcast event for B2B Panel
+                    const channel = new BroadcastChannel('moffi_appointments_channel');
+                    channel.postMessage({ type: 'APPOINTMENT_CREATED', clinicId: clinic.id });
+                    channel.close();
+                } catch (e) {
+                    console.error("Failed to store pending appointment for business dashboard:", e);
+                }
+            }
         } catch (error) {
             console.error("Appointment booking failed:", error);
         } finally {

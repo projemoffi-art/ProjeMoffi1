@@ -104,6 +104,22 @@ export interface LostPet {
     reward?: string;
     type?: string;
     description?: string;
+    user_id?: string;
+    latitude?: number;
+    longitude?: number;
+}
+
+export interface LostPetSighting {
+    id: string;
+    lost_pet_id: string;
+    reporter_id: string;
+    reporter_name?: string;
+    reporter_avatar?: string;
+    description: string;
+    latitude: number;
+    longitude: number;
+    img_url?: string;
+    created_at: string;
 }
 
 export interface AdoptionPet extends LostPet {
@@ -210,8 +226,12 @@ export interface IApiService {
     getFeedContent(): Promise<Post[]>;
     getLostPets(): Promise<LostPet[]>;
     addLostPet(data: Partial<LostPet>): Promise<LostPet>;
+    deleteLostPet(id: string | number): Promise<void>;
+    addLostPetSighting(data: { lost_pet_id: string; description: string; latitude: number; longitude: number; img_url?: string }): Promise<LostPetSighting>;
+    getLostPetSightings(lostPetId: string): Promise<LostPetSighting[]>;
     getAdoptions(): Promise<AdoptionPet[]>;
     addAdoption(data: Partial<AdoptionPet>): Promise<AdoptionPet>;
+    deleteAdoption(id: string | number): Promise<void>;
     getInboxMessages(): Promise<any[]>;
     addInboxMessage(message: any): Promise<void>;
     addPost(post: Partial<Post>): Promise<Post>;
@@ -285,7 +305,7 @@ export interface IApiService {
     // Direct Messaging (Chat)
     getChatConversations(): Promise<any[]>;
     getChatMessages(conversationId: string): Promise<any[]>;
-    sendChatMessage(receiverId: string, content: string): Promise<any>;
+    sendChatMessage(receiverId: string, content: string, associatedAdId?: string): Promise<any>;
     markChatAsRead(conversationId: string): Promise<void>;
     
     // Media & Storage

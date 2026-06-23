@@ -22,6 +22,7 @@ export function PetSwitcher({ className, onAddPet }: PetSwitcherProps) {
                     return (
                         <motion.button
                             key={pet.id}
+                            data-testid={`pet-switcher-btn-${pet.id}`}
                             onClick={(e) => {
                                 e.stopPropagation();
                                 switchPet(String(pet.id));

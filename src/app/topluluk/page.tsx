@@ -14,6 +14,25 @@ import {
 import { compressImageToFile } from '@/lib/imageUtils';
 import { cn } from '@/lib/utils';
 import { useRouter, useSearchParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
+
+const RadarMap = dynamic(() => import('@/components/community/RadarMap'), {
+    ssr: false,
+    loading: () => (
+        <div className="w-full h-[380px] rounded-[2.5rem] bg-[var(--card-bg)] border border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)]">
+            <Activity className="w-8 h-8 mb-2 animate-spin text-cyan-400" />
+            <p className="text-xs font-bold uppercase tracking-wider">Harita Yükleniyor...</p>
+        </div>
+    )
+});
+
+const SightingMapSelector = dynamic(() => import('@/components/community/SightingMapSelector'), {
+    ssr: false,
+    loading: () => (
+        <div className="w-full h-full bg-[#1A1A1A] animate-pulse rounded-2xl flex items-center justify-center text-white/20 font-bold">Harita Yükleniyor...</div>
+    )
+});
+
 import AuthModal from '../../components/auth/AuthModal';
 import { useAuth } from '../../context/AuthContext';
 import { useStories } from '../../hooks/useStories';
@@ -129,6 +148,36 @@ export default function MoffiSocialMasterpiece() {
     const [isSosFromHub, setIsSosFromHub] = useState(false);
     const [isLostAdModalOpen, setIsLostAdModalOpen] = useState(false);
     const [selectedLostPet, setSelectedLostPet] = useState<any | null>(null);
+    const [userCoords, setUserCoords] = useState<[number, number] | undefined>(undefined);
+    const [petSightings, setPetSightings] = useState<any[]>([]);
+    const [isLoadingSightings, setIsLoadingSightings] = useState(false);
+    const [radarViewMode, setRadarViewMode] = useState<'list' | 'map'>('list');
+    const [filterPetType, setFilterPetType] = useState<'all' | 'dog' | 'cat'>('all');
+    const [filterDistance, setFilterDistance] = useState<'all' | number>('all');
+
+    const filteredLostPets = useMemo(() => {
+        return lostPets.filter(pet => {
+            if (filterPetType !== 'all') {
+                const isDog = pet.type?.toLowerCase().includes('dog') || pet.type?.toLowerCase().includes('köpek') || pet.type === '🐶';
+                const isCat = pet.type?.toLowerCase().includes('cat') || pet.type?.toLowerCase().includes('kedi') || pet.type === '🐱';
+                if (filterPetType === 'dog' && !isDog) return false;
+                if (filterPetType === 'cat' && !isCat) return false;
+            }
+            if (filterDistance !== 'all' && userCoords && pet.latitude && pet.longitude) {
+                const R = 6371; // Earth radius in km
+                const dLat = (pet.latitude - userCoords[0]) * Math.PI / 180;
+                const dLon = (pet.longitude - userCoords[1]) * Math.PI / 180;
+                const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                          Math.cos(userCoords[0] * Math.PI / 180) * Math.cos(pet.latitude * Math.PI / 180) *
+                          Math.sin(dLon/2) * Math.sin(dLon/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                const d = R * c;
+                if (d > filterDistance) return false;
+            }
+            return true;
+        });
+    }, [lostPets, filterPetType, filterDistance, userCoords]);
+
     const [lostPetName, setLostPetName] = useState("");
     const [lostPetBreed, setLostPetBreed] = useState("");
     const [lostPetLocation, setLostPetLocation] = useState("");
@@ -252,6 +301,40 @@ export default function MoffiSocialMasterpiece() {
             setIsWalkQuickSheetOpen(true);
         }
     }, [searchParams]);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined' && navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    setUserCoords([pos.coords.latitude, pos.coords.longitude]);
+                },
+                (err) => {
+                    console.log("Radar Geolocation error:", err);
+                    setUserCoords([40.9850, 29.0300]); // Fallback Kadikoy/Moda on land
+                }
+            );
+        }
+    }, []);
+
+    useEffect(() => {
+        const loadSightings = async () => {
+            if (!selectedLostPet) {
+                setPetSightings([]);
+                return;
+            }
+            setIsLoadingSightings(true);
+            try {
+                const data = await apiService.getLostPetSightings(selectedLostPet.id);
+                setPetSightings(data || []);
+            } catch (err) {
+                console.error("Error loading sightings:", err);
+                setPetSightings([]);
+            } finally {
+                setIsLoadingSightings(false);
+            }
+        };
+        loadSightings();
+    }, [selectedLostPet]);
 
     const handleSwipeFilter = (direction: 'left' | 'right') => {
         let newIndex = activeFilterIndex;
@@ -1201,7 +1284,7 @@ export default function MoffiSocialMasterpiece() {
     const publishPost = async () => {
         if (!uploadImageURL || !selectedFile) return;
         if (!user) {
-            showToast("Giriş Gerekli", "Paylaşım yapmak için giriş yapmalısınız.", "Zap");
+            showToast("Giriş Gerekli", "Paylaşım yapmak için giriş yapmalısınız.", "error");
             window.dispatchEvent(new CustomEvent('open-auth-modal'));
             return;
         }
@@ -1315,7 +1398,7 @@ export default function MoffiSocialMasterpiece() {
             return;
         }
         if (!user) {
-            showToast("Giriş Gerekli", "Kayıp ilanı verebilmek için üye girişi yapmalısınız!", "Zap");
+            showToast("Giriş Gerekli", "Kayıp ilanı verebilmek için üye girişi yapmalısınız!", "error");
             window.dispatchEvent(new CustomEvent('open-auth-modal'));
             return;
         }
@@ -2047,79 +2130,166 @@ export default function MoffiSocialMasterpiece() {
                                         animate={{ opacity: 1, x: 0 }}
                                         className="w-full"
                                     >
-                                        {/* 1. SOS / KAYIP İLANLARI (Vertical List) */}
-                                        <div className="w-full pt-6 pb-2 relative">
-                                            <div className="px-6 mb-6 flex items-center justify-between">
-                                                <h3 className="text-red-500 font-bold text-sm tracking-wide uppercase flex items-center gap-2"><ShieldAlert className="w-4 h-4" /> Aktif İhbarlar</h3>
-                                                <button onClick={() => setIsLostAdModalOpen(true)} className="px-3 py-1.5 rounded-full bg-red-500/10 text-red-500 text-[10px] font-black uppercase tracking-wider hover:bg-red-500/20 active:scale-95 transition-all border border-red-500/20">
-                                                    + İlan Ekle
-                                                </button>
+                                        <div className="px-6 pt-4 flex flex-col sm:flex-row gap-4 items-center justify-between">
+                                            {/* Advanced Filters */}
+                                            <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 shrink-0">
+                                                <select 
+                                                    value={filterPetType}
+                                                    onChange={(e) => setFilterPetType(e.target.value as any)}
+                                                    className="px-3 py-1.5 rounded-full bg-[var(--card-bg)] border border-white/10 text-[10px] font-black uppercase tracking-wider text-[var(--foreground)] outline-none focus:border-cyan-500 transition-colors"
+                                                >
+                                                    <option value="all">🐾 Tüm Türler</option>
+                                                    <option value="dog">🐶 Köpek</option>
+                                                    <option value="cat">🐱 Kedi</option>
+                                                </select>
+
+                                                <select 
+                                                    value={filterDistance}
+                                                    onChange={(e) => setFilterDistance(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                                                    className="px-3 py-1.5 rounded-full bg-[var(--card-bg)] border border-white/10 text-[10px] font-black uppercase tracking-wider text-[var(--foreground)] outline-none focus:border-cyan-500 transition-colors"
+                                                >
+                                                    <option value="all">📍 Tüm Mesafeler</option>
+                                                    <option value="1">1 km Yakınında</option>
+                                                    <option value="5">5 km Yakınında</option>
+                                                    <option value="10">10 km Yakınında</option>
+                                                </select>
                                             </div>
 
-                                            {lostPets.length > 0 ? (
-                                                <div className="space-y-4 px-6 pb-10">
-                                                    {lostPets.map((pet) => (
-                                                        <div key={pet.id} className="w-full bg-red-500/5 border border-red-500/20 rounded-3xl p-4 flex flex-col gap-3 cursor-pointer hover:bg-red-500/10 transition-all active:scale-[0.98] relative group overflow-hidden" onClick={() => setSelectedLostPet(pet)}>
-                                                            {/* Apple style blur background for red accent */}
-                                                            <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 blur-[40px] -mr-10 -mt-10 rounded-full pointer-events-none" />
-                                                            
-                                                            {user?.id === pet.user_id && (
-                                                                <button onClick={(e) => { e.stopPropagation(); handleDeleteLostPet(pet.id); }} className="absolute right-3 top-3 px-3 py-1.5 rounded-full bg-[var(--card-bg)] border border-red-500/30 text-red-400 text-[10px] font-bold uppercase transition-transform hover:scale-105 active:scale-95 flex items-center gap-1 z-10 shadow-lg">
-                                                                    <Trash2 className="w-3 h-3" /> Sil
-                                                                </button>
-                                                            )}
+                                            {/* View Mode Toggle */}
+                                            <div className="flex bg-[var(--card-bg)] p-0.5 rounded-2xl border border-white/5 shadow-md self-end sm:self-auto shrink-0">
+                                                <button 
+                                                    onClick={() => setRadarViewMode('list')}
+                                                    className={cn(
+                                                        "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all",
+                                                        radarViewMode === 'list' ? "bg-white text-black shadow-lg" : "text-[var(--secondary-text)] hover:text-[var(--foreground)]"
+                                                    )}
+                                                >
+                                                    📋 Liste
+                                                </button>
+                                                <button 
+                                                    onClick={() => setRadarViewMode('map')}
+                                                    className={cn(
+                                                        "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all",
+                                                        radarViewMode === 'map' ? "bg-white text-black shadow-lg" : "text-[var(--secondary-text)] hover:text-[var(--foreground)]"
+                                                    )}
+                                                >
+                                                    🗺️ Harita
+                                                </button>
+                                            </div>
+                                        </div>
 
-                                                            <div className="flex gap-4 items-center">
-                                                                <div className="w-16 h-16 rounded-2xl bg-red-500/20 flex items-center justify-center shrink-0 border border-red-500/30 shadow-inner overflow-hidden">
-                                                                    {pet.img ? (
-                                                                        <img src={pet.img} className="w-full h-full object-cover" />
-                                                                    ) : (
-                                                                        <div className="flex flex-col items-center">
-                                                                            <ShieldAlert className="w-6 h-6 text-red-500" />
-                                                                            <span className="text-[8px] font-black text-red-500 mt-1">SOS</span>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                                <div className="flex-1 overflow-hidden">
-                                                                    <div className="flex items-center justify-between">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <p className="text-red-500 font-black text-lg tracking-tight truncate">{pet.name}</p>
-                                                                            <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-500 text-[10px] font-bold border border-red-500/30">Kayıp</span>
-                                                                        </div>
-                                                                        {pet.reward_enabled && pet.reward && (
-                                                                            <span className="px-2 py-0.5 rounded-lg bg-orange-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg -mt-1">ÖDÜL</span>
+                                        {radarViewMode === 'map' ? (
+                                            <div className="w-full pt-6 px-6 pb-10 relative">
+                                                <div className="mb-6 flex items-center justify-between">
+                                                    <h3 className="text-red-500 font-bold text-sm tracking-wide uppercase flex items-center gap-2"><ShieldAlert className="w-4 h-4" /> Yakınımdaki İhbarlar</h3>
+                                                    <button onClick={() => setIsLostAdModalOpen(true)} className="px-3 py-1.5 rounded-full bg-red-500/10 text-red-500 text-[10px] font-black uppercase tracking-wider hover:bg-red-500/20 active:scale-95 transition-all border border-red-500/20">
+                                                        + İlan Ekle
+                                                    </button>
+                                                </div>
+                                                <div className="w-full rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl relative" style={{ height: "380px" }}>
+                                                    <RadarMap 
+                                                        lostPets={filteredLostPets} 
+                                                        onPetClick={(pet) => setSelectedLostPet(pet)} 
+                                                        userPos={userCoords}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            /* 1. SOS / KAYIP İLANLARI (Vertical List) */
+                                            <div className="w-full pt-6 pb-2 relative">
+                                                <div className="px-6 mb-6 flex items-center justify-between">
+                                                    <h3 className="text-red-500 font-bold text-sm tracking-wide uppercase flex items-center gap-2"><ShieldAlert className="w-4 h-4" /> Aktif İhbarlar</h3>
+                                                    <button onClick={() => setIsLostAdModalOpen(true)} className="px-3 py-1.5 rounded-full bg-red-500/10 text-red-500 text-[10px] font-black uppercase tracking-wider hover:bg-red-500/20 active:scale-95 transition-all border border-red-500/20">
+                                                        + İlan Ekle
+                                                    </button>
+                                                </div>
+
+                                                {filteredLostPets.length > 0 ? (
+                                                    <div className="space-y-4 px-6 pb-10">
+                                                        {filteredLostPets.map((pet) => (
+                                                            <div 
+                                                                key={pet.id} 
+                                                                className={cn(
+                                                                    "w-full rounded-3xl p-4 flex flex-col gap-3 cursor-pointer transition-all active:scale-[0.98] relative group overflow-hidden border",
+                                                                    pet.reward_enabled 
+                                                                        ? "bg-amber-500/5 border-amber-500/30 hover:bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.15)]" 
+                                                                        : "bg-red-500/5 border-red-500/20 hover:bg-red-500/10"
+                                                                )}
+                                                                onClick={() => setSelectedLostPet(pet)}
+                                                            >
+                                                                {/* Apple style blur background for red/gold accent */}
+                                                                <div className={cn(
+                                                                    "absolute top-0 right-0 w-32 h-32 blur-[40px] -mr-10 -mt-10 rounded-full pointer-events-none",
+                                                                    pet.reward_enabled ? "bg-amber-500/10" : "bg-red-500/10"
+                                                                )} />
+
+                                                                {user?.id === pet.user_id && (
+                                                                    <button 
+                                                                        onClick={(e) => { e.stopPropagation(); handleDeleteLostPet(pet.id); }} 
+                                                                        className={cn(
+                                                                            "absolute right-3 top-3 px-3 py-1.5 rounded-full bg-[var(--card-bg)] text-[10px] font-bold uppercase transition-transform hover:scale-105 active:scale-95 flex items-center gap-1 z-10 shadow-lg",
+                                                                            pet.reward_enabled ? "border-amber-500/30 text-amber-400" : "border-red-500/30 text-red-400"
+                                                                        )}
+                                                                    >
+                                                                        <Trash2 className="w-3 h-3" /> Sil
+                                                                    </button>
+                                                                )}
+
+                                                                <div className="flex gap-4 items-center">
+                                                                    <div className={cn(
+                                                                        "w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 border shadow-inner overflow-hidden",
+                                                                        pet.reward_enabled ? "bg-amber-500/20 border-amber-500/30" : "bg-red-500/20 border-red-500/30"
+                                                                    )}>
+                                                                        {pet.img ? (
+                                                                            <img src={pet.img} className="w-full h-full object-cover" />
+                                                                        ) : (
+                                                                            <div className="flex flex-col items-center">
+                                                                                <ShieldAlert className={cn("w-6 h-6", pet.reward_enabled ? "text-amber-500" : "text-red-500")} />
+                                                                                <span className={cn("text-[8px] font-black mt-1", pet.reward_enabled ? "text-amber-500" : "text-red-500")}>SOS</span>
+                                                                            </div>
                                                                         )}
                                                                     </div>
-                                                                    <p className="text-[var(--secondary-text)] text-xs font-medium truncate">{pet.type || "Bilinmiyor"}</p>
-                                                                    <p className="text-[10px] text-red-400/80 mt-1.5 flex items-center gap-1 font-black"><MapPin className="w-3 h-3 text-cyan-400" /> {pet.last_seen_location || pet.location}</p>
+                                                                    <div className="flex-1 overflow-hidden">
+                                                                        <div className="flex items-center justify-between">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <p className={cn("font-black text-lg tracking-tight truncate", pet.reward_enabled ? "text-amber-500" : "text-red-500")}>{pet.name}</p>
+                                                                                <span className={cn("px-1.5 py-0.5 rounded-full text-[10px] font-bold border", pet.reward_enabled ? "bg-amber-500/20 border-amber-500/30 text-amber-500" : "bg-red-500/20 border-red-500/30 text-red-500")}>Kayıp</span>
+                                                                            </div>
+                                                                            {pet.reward_enabled && pet.reward && (
+                                                                                <span className="px-2 py-0.5 rounded-lg bg-orange-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg -mt-1">ÖDÜL</span>
+                                                                            )}
+                                                                        </div>
+                                                                        <p className="text-[var(--secondary-text)] text-xs font-medium truncate">{pet.type || "Bilinmiyor"}</p>
+                                                                        <p className={cn("text-[10px] mt-1.5 flex items-center gap-1 font-black", pet.reward_enabled ? "text-amber-400/80" : "text-red-400/80")}><MapPin className="w-3 h-3 text-cyan-400" /> {pet.last_seen_location || pet.location}</p>
+                                                                    </div>
+                                                                    <ChevronRight className={cn("w-5 h-5", pet.reward_enabled ? "text-amber-500/50" : "text-red-500/50")} />
                                                                 </div>
-                                                                <ChevronRight className="w-5 h-5 text-red-500/50" />
+                                                                <p className="text-[var(--foreground)]/70 text-[11px] mt-1 leading-snug line-clamp-2 px-1 font-medium italic">"{pet.description || "Lütfen görünce acil dönüş yapın."}"</p>
+                                                                
+                                                                <div className="mt-2 flex gap-2">
+                                                                    <button 
+                                                                        onClick={(e) => { e.stopPropagation(); /* Logic to open chat */ }}
+                                                                        className="flex-1 py-3 rounded-2xl bg-white text-black text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg"
+                                                                    >
+                                                                        İletişime Geç
+                                                                    </button>
+                                                                    <button 
+                                                                        className="px-4 py-3 rounded-2xl bg-white/10 text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all border border-white/5"
+                                                                    >
+                                                                        Konum Paylaş
+                                                                    </button>
+                                                                </div>
                                                             </div>
-                                                            <p className="text-[var(--foreground)]/70 text-[11px] mt-1 leading-snug line-clamp-2 px-1 font-medium italic">"{pet.description || "Lütfen görünce acil dönüş yapın."}"</p>
-                                                            
-                                                            <div className="mt-2 flex gap-2">
-                                                                <button 
-                                                                    onClick={(e) => { e.stopPropagation(); /* Logic to open chat */ }}
-                                                                    className="flex-1 py-3 rounded-2xl bg-white text-black text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg"
-                                                                >
-                                                                    İletişime Geç
-                                                                </button>
-                                                                <button 
-                                                                    className="px-4 py-3 rounded-2xl bg-white/10 text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all border border-white/5"
-                                                                >
-                                                                    Konum Paylaş
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <div className="text-center py-12 mx-6 mb-4 bg-red-500/5 rounded-3xl border border-red-500/10">
-                                                    <ShieldAlert className="w-10 h-10 text-red-500/20 mx-auto mb-3" />
-                                                    <p className="text-xs text-red-500/40 font-bold tracking-wide">Aktif İhbar Bulunmuyor</p>
-                                                </div>
-                                            )}
-                                        </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-center py-12 mx-6 mb-4 bg-red-500/5 rounded-3xl border border-red-500/10">
+                                                        <ShieldAlert className="w-10 h-10 text-red-500/20 mx-auto mb-3" />
+                                                        <p className="text-xs text-red-500/40 font-bold tracking-wide">Aktif İhbar Bulunmuyor</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </motion.div>
                                 ) : (
                                     <motion.div 
@@ -2644,7 +2814,7 @@ export default function MoffiSocialMasterpiece() {
                                             disabled={isSavingPet || !user}
                                             onClick={async () => {
                                                 if (!user) {
-                                                    showToast("Giriş Gerekli", "Lütfen önce giriş yapın.", "Zap");
+                                                    showToast("Giriş Gerekli", "Lütfen önce giriş yapın.", "error");
                                                     window.dispatchEvent(new CustomEvent('open-auth-modal'));
                                                     return;
                                                 }
@@ -3503,7 +3673,7 @@ export default function MoffiSocialMasterpiece() {
                                     <ChevronLeft className="w-6 h-6 text-[var(--foreground)]" />
                                 </button>
                                 <div className="flex gap-3">
-                                    <button className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors active:scale-95" onClick={() => showToast("SOS Modu Aktif", "İlanınız hazırlanıyor...", "Zap")}>
+                                    <button className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors active:scale-95" onClick={() => showToast("SOS Modu Aktif", "İlanınız hazırlanıyor...", "info")}>
                                         <Share2 className="w-5 h-5 text-[var(--foreground)]" />
                                     </button>
                                 </div>
@@ -4314,20 +4484,20 @@ export default function MoffiSocialMasterpiece() {
                                 <div className="absolute inset-x-0 bottom-0 p-4 z-30 flex items-center gap-3">
                                     {storyGroups[viewerStoryGroupIndex].user_id === user?.id ? (
                                         <div className="flex items-center justify-between w-full text-[var(--foreground)]">
-                                            <button className="flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); showToast("İstatistikler", "Luna, Felix ve 12 diğer kişi gördü.", "Users"); }}>
+                                            <button className="flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); showToast("İstatistikler", "Luna, Felix ve 12 diğer kişi gördü.", "info"); }}>
                                                 <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
                                                     <Activity className="w-4 h-4 text-white" />
                                                 </div>
                                                 <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Görüntüleme</span>
                                             </button>
                                             <div className="flex gap-4">
-                                                <button className="flex flex-col items-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); showToast("Öne Çıkarılıyor", "Hikayeniz vitrine taşınıyor...", "Sparkles"); }}>
+                                                <button className="flex flex-col items-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); showToast("Öne Çıkarılıyor", "Hikayeniz vitrine taşınıyor...", "success"); }}>
                                                     <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
                                                         <Heart className="w-4 h-4 text-white" />
                                                     </div>
                                                     <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Öne Çıkar</span>
                                                 </button>
-                                                <button className="flex flex-col items-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); showToast("Seçenekler", "İşlem menüsü açılıyor...", "List"); }}>
+                                                <button className="flex flex-col items-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); showToast("Seçenekler", "İşlem menüsü açılıyor...", "info"); }}>
                                                     <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
                                                         <MoreHorizontal className="w-4 h-4 text-white" />
                                                     </div>

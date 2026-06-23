@@ -11,6 +11,7 @@ import {
     RotateCcw, Clock, Eye, ChevronRight, MapPin, User, ArrowRightLeft, Loader2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useDragScroll } from "@/hooks/useDragScroll";
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; bg: string; icon: typeof Clock }> = {
     pending: { label: 'Bekliyor', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200', icon: Clock },
@@ -25,6 +26,7 @@ const STATUS_FLOW: OrderStatus[] = ['pending', 'preparing', 'shipped', 'delivere
 
 export default function BusinessOrdersPage() {
     const { user } = useAuth();
+    const statusScroll = useDragScroll();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
     const [search, setSearch] = useState('');
@@ -66,7 +68,14 @@ export default function BusinessOrdersPage() {
                 </header>
 
                 {/* Status Tabs */}
-                <div className="flex gap-2 mb-6 overflow-x-auto pb-2 no-scrollbar">
+                <div 
+                    ref={statusScroll.ref}
+                    onMouseDown={statusScroll.onMouseDown}
+                    onMouseLeave={statusScroll.onMouseLeave}
+                    onMouseUp={statusScroll.onMouseUp}
+                    onMouseMove={statusScroll.onMouseMove}
+                    className="flex gap-2 mb-6 overflow-x-auto pb-2 no-scrollbar cursor-grab active:cursor-grabbing select-none"
+                >
                     {(['all', 'pending', 'preparing', 'shipped', 'delivered', 'cancelled', 'returned'] as const).map(s => (
                         <button
                             key={s}
