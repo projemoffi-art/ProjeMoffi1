@@ -557,6 +557,16 @@ export default function LegendaryLightDashboard() {
     }, [activePetObj?.id]);
 
     const [expandedPanel, setExpandedPanel] = useState<'wallet' | 'passport' | 'collar' | 'dressing' | 'quests' | 'shop' | 'profile' | 'match' | 'events' | null>(null);
+    const [isNfcScanning, setIsNfcScanning] = useState(false);
+
+    const handleNfcScan = () => {
+        setExpandedPanel(null); // Profile çekmecesini kapat
+        setIsNfcScanning(true);
+        setTimeout(() => {
+            setIsNfcScanning(false);
+            setExpandedPanel('passport');
+        }, 1500);
+    };
     const [selectedAccessories, setSelectedAccessories] = useState<string[]>(['glasses', 'scarf']);
     const [unlockedAccessories, setUnlockedAccessories] = useState<string[]>(['glasses', 'scarf']);
     const [selectedApparel, setSelectedApparel] = useState<{
@@ -4752,7 +4762,7 @@ export default function LegendaryLightDashboard() {
                                                         <ChevronRight className="w-4 h-4 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
                                                     </button>
 
-                                                    <button className="flex items-center justify-between p-4.5 rounded-3xl bg-white border border-gray-100 hover:bg-gray-50/80 transition-all text-left group cursor-pointer shadow-[0_2px_8px_rgba(0,0,0,0.005)]">
+                                                    <button onClick={handleNfcScan} className="flex items-center justify-between p-4.5 rounded-3xl bg-white border border-gray-100 hover:bg-gray-50/80 transition-all text-left group cursor-pointer shadow-[0_2px_8px_rgba(0,0,0,0.005)]">
                                                         <div className="flex items-center gap-3">
                                                             <Fingerprint className="w-5 h-5 text-gray-500" />
                                                             <div>
@@ -4960,6 +4970,68 @@ export default function LegendaryLightDashboard() {
                 foodCurrent={foodCurrent}
                 foodTarget={foodTarget}
             />
+
+            {/* NFC Smart Chip Reading / Data Sync Premium Animation Overlay */}
+            <AnimatePresence>
+                {isNfcScanning && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[8000] bg-black/90 backdrop-blur-2xl flex flex-col items-center justify-center text-white"
+                    >
+                        <div className="relative w-56 h-56 flex flex-col items-center justify-center bg-gray-900/50 rounded-[3rem] border border-gray-800 shadow-2xl p-6 overflow-hidden animate-none">
+                            {/* Scanning Laser Line */}
+                            <motion.div 
+                                animate={{ y: [-70, 70, -70] }}
+                                transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+                                className="absolute left-4 right-4 h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_12px_#0EA5E9] animate-none"
+                            />
+
+                            {/* Concentric Expanding NFC Waves */}
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <motion.div 
+                                    animate={{ scale: [1, 1.8], opacity: [0.6, 0] }}
+                                    transition={{ repeat: Infinity, duration: 2, ease: 'easeOut' }}
+                                    className="absolute w-24 h-24 rounded-full border border-cyan-500/25 animate-none"
+                                />
+                                <motion.div 
+                                    animate={{ scale: [1, 1.8], opacity: [0.6, 0] }}
+                                    transition={{ repeat: Infinity, duration: 2, ease: 'easeOut', delay: 0.6 }}
+                                    className="absolute w-24 h-24 rounded-full border border-cyan-500/20 animate-none"
+                                />
+                                <motion.div 
+                                    animate={{ scale: [1, 1.8], opacity: [0.6, 0] }}
+                                    transition={{ repeat: Infinity, duration: 2, ease: 'easeOut', delay: 1.2 }}
+                                    className="absolute w-24 h-24 rounded-full border border-cyan-500/15 animate-none"
+                                />
+                            </div>
+
+                            {/* Center Icon: QrCode / NFC Chip */}
+                            <motion.div 
+                                animate={{ scale: [1, 1.05, 1] }}
+                                transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
+                                className="z-10 w-20 h-20 rounded-3xl bg-gradient-to-tr from-cyan-500/20 to-teal-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-lg shadow-cyan-500/10 animate-none"
+                            >
+                                <Fingerprint size={38} className="animate-pulse" />
+                            </motion.div>
+                        </div>
+                        
+                        <h3 className="mt-8 text-base font-black tracking-wider uppercase italic text-cyan-400 animate-pulse">NFC Akıllı Çip Okunuyor</h3>
+                        <p className="text-[9px] font-bold text-gray-500 tracking-[0.25em] uppercase mt-2">Moffi Cloud Akıllı Eşleşme</p>
+
+                        {/* Progress Bar */}
+                        <div className="w-48 h-1 bg-gray-800 rounded-full mt-6 overflow-hidden">
+                            <motion.div 
+                                initial={{ width: 0 }}
+                                animate={{ width: "100%" }}
+                                transition={{ duration: 1.5, ease: "easeInOut" }}
+                                className="h-full bg-gradient-to-r from-cyan-500 to-teal-400 shadow-[0_0_8px_#0EA5E9]"
+                            />
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <style>{`
                 .no-scrollbar::-webkit-scrollbar { display: none; }
