@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { usePet } from '@/context/PetContext';
 import { useVaccineSchedule } from '@/hooks/useVaccineSchedule';
 import { useRouter } from 'next/navigation';
+import { apiService } from '@/services/apiService';
 import { PetSwitcher } from '@/components/common/PetSwitcher';
 import confetti from 'canvas-confetti';
 
@@ -157,7 +158,7 @@ export function CareHubModal({
         };
     }, [activePet, petId, refreshAppointments, refreshVaccines]);
 
-    // Load initial calories & water from localStorage
+    // Load initial calories & water from localStorage & Supabase
     useEffect(() => {
         if (isOpen && typeof window !== 'undefined') {
             const savedWater = localStorage.getItem(`moffi_water_${petId}_${todayStr}`);
@@ -175,6 +176,24 @@ export function CareHubModal({
 
             setIsEditingWeight(false);
             setWeightInput("");
+
+            // Background sync from Supabase if petId is UUID
+            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(petId);
+            if (isUuid) {
+                apiService.getPetDailyStats(petId, todayStr).then((dbStats) => {
+                    if (dbStats) {
+                        setWater(dbStats.waterIntake);
+                        setCalories(dbStats.caloriesIntake);
+                        setFoodLog(dbStats.foodLog);
+
+                        localStorage.setItem(`moffi_water_${petId}_${todayStr}`, String(dbStats.waterIntake));
+                        localStorage.setItem(`moffi_calories_${petId}_${todayStr}`, String(dbStats.caloriesIntake));
+                        localStorage.setItem(`moffi_food_log_${petId}_${todayStr}`, JSON.stringify(dbStats.foodLog));
+
+                        window.dispatchEvent(new CustomEvent('moffi-daily-goals-update'));
+                    }
+                }).catch(err => console.error("Error syncing daily stats from Supabase:", err));
+            }
         }
     }, [isOpen, petId, todayStr, refreshAppointments]);
 
@@ -248,6 +267,21 @@ export function CareHubModal({
         }
     };
 
+    const syncToSupabase = (waterIntake: number, caloriesIntake: number, log: any[]) => {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(petId);
+        if (isUuid) {
+            apiService.savePetDailyStats(petId, todayStr, {
+                waterIntake,
+                waterTarget: targetWater,
+                caloriesIntake,
+                caloriesTarget: targetFood,
+                foodLog: log
+            }).catch((err) => {
+                console.error("Failed to sync daily stats to Supabase:", err);
+            });
+        }
+    };
+
     // WATER LOGGING HANDLERS
     const handleAddWater = (amount: number) => {
         const next = water + amount;
@@ -255,6 +289,7 @@ export function CareHubModal({
         localStorage.setItem(`moffi_water_${petId}_${todayStr}`, String(next));
         window.dispatchEvent(new CustomEvent('moffi-daily-goals-update'));
         checkReward('water', next, targetWater);
+        syncToSupabase(next, calories, foodLog);
     };
 
     const handleResetWater = () => {
@@ -263,6 +298,7 @@ export function CareHubModal({
             localStorage.setItem(`moffi_water_${petId}_${todayStr}`, '0');
             localStorage.removeItem(`moffi_reward_water_${petId}_${todayStr}`);
             window.dispatchEvent(new CustomEvent('moffi-daily-goals-update'));
+            syncToSupabase(0, calories, foodLog);
         }
     };
 
@@ -279,6 +315,7 @@ export function CareHubModal({
 
         window.dispatchEvent(new CustomEvent('moffi-daily-goals-update'));
         checkReward('food', next, targetFood);
+        syncToSupabase(water, next, newLog);
     };
 
     const handleDeleteMeal = (id: string, kcal: number) => {
@@ -297,6 +334,7 @@ export function CareHubModal({
             }
 
             window.dispatchEvent(new CustomEvent('moffi-daily-goals-update'));
+            syncToSupabase(water, nextCalories, nextLog);
         }
     };
 
@@ -307,6 +345,7 @@ export function CareHubModal({
             setFoodLog([]);
             localStorage.removeItem(`moffi_food_log_${petId}_${todayStr}`);
             window.dispatchEvent(new CustomEvent('moffi-daily-goals-update'));
+            syncToSupabase(water, 0, []);
         }
     };
 

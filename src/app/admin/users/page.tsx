@@ -17,8 +17,9 @@ export default function AdminUsersPage() {
     const [rejectReason, setRejectReason] = useState("");
     const [showRejectInput, setShowRejectInput] = useState(false);
 
-    const refreshUsers = () => {
-        setUsers(getAllUsers());
+    const refreshUsers = async () => {
+        const data = await getAllUsers();
+        setUsers(data);
     };
 
     useEffect(() => {
@@ -57,13 +58,13 @@ export default function AdminUsersPage() {
         }
     };
 
-    const handleDelete = (id: string, email: string) => {
+    const handleDelete = async (id: string, email: string) => {
         if (email === 'admin@moffipet.com') {
             showToast('Ana admin hesabı silinemez! 🛑', 'ShieldAlert', 'text-red-500 font-bold');
             return;
         }
         if (confirm('Bu kullanıcıyı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
-            deleteUser(id);
+            await deleteUser(id);
             refreshUsers();
         }
     };

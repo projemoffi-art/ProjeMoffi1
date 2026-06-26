@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('Stripe/PayTR Escrow, Capture, and Refund E2E Financial Lifecycle', async ({ page }) => {
-  test.setTimeout(120000);
+  test.setTimeout(180000);
 
   page.on('console', msg => console.log('BROWSER LOG:', msg.text()));
   page.on('pageerror', err => console.log('BROWSER ERROR:', err.message));
@@ -108,6 +108,13 @@ test('Stripe/PayTR Escrow, Capture, and Refund E2E Financial Lifecycle', async (
   await page.waitForTimeout(500);
   await submitPayBtn.evaluate(el => (el as HTMLButtonElement).click());
   
+  // Handle OTP verification modal
+  console.log('Filling PayTR OTP verification code...');
+  const otpInput = page.locator('input[placeholder="******"]');
+  await expect(otpInput).toBeVisible({ timeout: 15000 });
+  await otpInput.fill('123456');
+  await otpInput.press('Enter');
+
   // Wait for success toast & modal close
   await expect(page.locator('text=Ödeme Başarılı')).toBeVisible({ timeout: 15000 });
   await page.waitForTimeout(4000);
@@ -267,6 +274,14 @@ test('Stripe/PayTR Escrow, Capture, and Refund E2E Financial Lifecycle', async (
   await secondSubmitPay.scrollIntoViewIfNeeded();
   await page.waitForTimeout(500);
   await secondSubmitPay.evaluate(el => (el as HTMLButtonElement).click());
+  
+  // Handle OTP verification modal
+  console.log('Filling second PayTR OTP verification code...');
+  const secondOtpInput = page.locator('input[placeholder="******"]');
+  await expect(secondOtpInput).toBeVisible({ timeout: 15000 });
+  await secondOtpInput.fill('123456');
+  await secondOtpInput.press('Enter');
+
   await expect(page.locator('text=Ödeme Başarılı')).toBeVisible({ timeout: 15000 });
   await page.waitForTimeout(4000);
 

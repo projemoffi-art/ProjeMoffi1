@@ -3,7 +3,7 @@
 import { X, Wallet, TrendingUp, History, Sparkles, Hexagon, Crown } from "lucide-react";
 import { useSocial } from "@/context/SocialContext";
 import { cn } from "@/lib/utils";
-import { apiService } from "@/services/mockApiService";
+import { apiService } from "@/services/apiService";
 import { useState, useEffect } from "react";
 
 interface MoffiWalletProps {

@@ -12,10 +12,14 @@ interface ExploreGridProps {
 export function ExploreGrid({ posts, onPostClick, isLoading }: ExploreGridProps) {
     const [previewPost, setPreviewPost] = useState<any>(null);
     const holdTimer = useRef<any>(null);
+    const hasHeld = useRef(false);
+    const lastHoldEnd = useRef<number>(0);
 
     const handleStartHold = (post: any) => {
+        hasHeld.current = false;
         holdTimer.current = setTimeout(() => {
             setPreviewPost(post);
+            hasHeld.current = true;
             if (window.navigator.vibrate) window.navigator.vibrate(50);
         }, 300); // 300ms hold for Peek
     };
@@ -30,8 +34,14 @@ export function ExploreGrid({ posts, onPostClick, isLoading }: ExploreGridProps)
     // Close preview on mouse up anywhere
     useEffect(() => {
         const handleGlobalUp = () => {
+            if (hasHeld.current) {
+                lastHoldEnd.current = Date.now();
+            }
             setPreviewPost(null);
             handleEndHold();
+            setTimeout(() => {
+                hasHeld.current = false;
+            }, 400);
         };
         window.addEventListener('mouseup', handleGlobalUp);
         window.addEventListener('touchend', handleGlobalUp);
@@ -70,8 +80,15 @@ export function ExploreGrid({ posts, onPostClick, isLoading }: ExploreGridProps)
                             transition={{ delay: index * 0.01 }}
                             onMouseDown={() => handleStartHold(post)}
                             onTouchStart={() => handleStartHold(post)}
-                            onClick={() => {
-                                if (!previewPost) onPostClick(post);
+                            onClick={(e) => {
+                                const timeSinceHold = Date.now() - lastHoldEnd.current;
+                                if (hasHeld.current || timeSinceHold < 400) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    hasHeld.current = false;
+                                } else {
+                                    onPostClick(post);
+                                }
                             }}
                             className="relative aspect-square cursor-pointer group overflow-hidden bg-zinc-900"
                         >
@@ -79,6 +96,9 @@ export function ExploreGrid({ posts, onPostClick, isLoading }: ExploreGridProps)
                             <img 
                                 src={post.image || post.media_url} 
                                 alt={post.desc}
+                                onError={(e) => {
+                                    e.currentTarget.src = "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=800";
+                                }}
                                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                             />
 

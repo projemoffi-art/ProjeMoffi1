@@ -2,8 +2,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const API_KEY = process.env.GEMINI_API_KEY || "AIzaSyBnUBpO38MhK4lImGdzk0xVcus73JXGoTQ";
-const genAI = new GoogleGenerativeAI(API_KEY);
+const API_KEY = process.env.GEMINI_API_KEY || "";
+const genAI = API_KEY ? new GoogleGenerativeAI(API_KEY) : null;
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -128,7 +128,7 @@ export async function POST(req: Request) {
         }
 
         // ─── ADIM 3: Gemini AI Derin Analiz (ancak önceki adımlar geçildiyse) ─
-        if (isSafe) {
+        if (isSafe && genAI) {
             try {
                 const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
                 const prompt = `
@@ -178,6 +178,8 @@ YANIT FORMAT (sadece JSON):
                 console.error("Gemini AI analysis skipped (fallback to rules only):", aiErr);
                 // Regex + keyword zaten geçildi, devam et
             }
+        } else if (isSafe) {
+            console.warn("[Adoption Moderate] Gemini API Key is not set. Skipping deep AI moderation check.");
         }
 
         // ─── ADIM 4: Supabase Güncelleme ────────────────────────────────────

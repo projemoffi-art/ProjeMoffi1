@@ -7,12 +7,12 @@ import {
     Calendar, MapPin, ChevronRight, Hash, 
     Download, AlertCircle, Clock, Heart,
     Fingerprint, Info, X, User, Phone,
-    Stethoscope, Zap, Scissors, Barcode,
+    Stethoscope, Zap, Scissors,
     Loader2, CheckCircle2, FileText, Share2,
     Smartphone, Radio, AlertOctagon, ShieldAlert,
     Settings
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, showToast } from "@/lib/utils";
 import { QRCodeSVG } from "qrcode.react";
 import { useVaccineSchedule } from "@/hooks/useVaccineSchedule";
 import { TagPairingModal } from "@/components/community/modals/TagPairingModal";
@@ -27,6 +27,29 @@ interface PassportTabProps {
     isPublic?: boolean;
 }
 
+function MicrochipBarcode({ value }: { value: string }) {
+    const chars = String(value || "Kayıtlı Değil");
+    const bars: number[] = [];
+    for (let i = 0; i < chars.length; i++) {
+        const code = chars.charCodeAt(i);
+        bars.push((code & 1) ? 3 : 1);
+        bars.push((code & 2) ? 4 : 2);
+        bars.push((code & 4) ? 2 : 3);
+        bars.push(1); // space
+    }
+    return (
+        <div className="flex items-stretch justify-center h-6 w-full max-w-[200px] opacity-40">
+            {bars.map((w, idx) => (
+                <div 
+                    key={idx} 
+                    className={idx % 2 === 0 ? "bg-white" : "bg-transparent"} 
+                    style={{ width: `${w}px` }} 
+                />
+            ))}
+        </div>
+    );
+}
+
 export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }: PassportTabProps) {
     const { activePet, isLoading: isPetLoading, updatePet, deletePet } = usePet();
     const currentPet = propPet || activePet;
@@ -39,6 +62,35 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
     const [isTagModalOpen, setIsTagModalOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const cardRef = useRef<HTMLDivElement>(null);
+
+    // Robust Pet Data with Official Fields
+    const petData = {
+        ...((currentPet && typeof currentPet === 'object') ? currentPet : {}),
+        avatar: currentPet?.image || currentPet?.avatar,
+        microchip: currentPet?.microchip || currentPet?.microchip_id || currentPet?.microchip_no || "Kayıtlı Değil",
+        petvet: currentPet?.petvet || currentPet?.petvet_no || "Kayıtlı Değil",
+        birthday: currentPet?.birthday || currentPet?.birth_date || currentPet?.sos_settings?.birthday || "Belirtilmedi",
+        // Yeni alanlar
+        type: currentPet?.type || "",
+        size: currentPet?.size || currentPet?.sos_settings?.size || "",
+        character: currentPet?.character || currentPet?.sos_settings?.character || "",
+        features: currentPet?.features || currentPet?.sos_settings?.features || "",
+        healthStatus: currentPet?.health || currentPet?.sos_settings?.health || "",
+        healthNotes: currentPet?.health_notes || "",
+        owner: {
+            name: isPublic ? "Gizli Bilgi" : (currentPet?.owner?.name || currentPet?.ownerName || currentPet?.sos_settings?.owner?.name || "Bilinmiyor"),
+            phone: isPublic ? "+90 *** *** ** **" : (currentPet?.owner?.phone || currentPet?.ownerPhone || currentPet?.sos_settings?.owner?.phone || "+90 --- --- -- --"),
+            address: isPublic ? "Bölge Gizli (Sadece Sahibi Görebilir)" : (currentPet?.owner?.address || currentPet?.ownerAddress || currentPet?.sos_settings?.owner?.address || "Adres Kayıtı Bulunamadı"),
+        }
+    };
+
+    const hasMicrochip = petData.microchip && petData.microchip !== "Kayıtlı Değil" && petData.microchip.trim() !== "";
+    const hasRabiesVaccine = schedule.some((v: any) => {
+        const nameLower = (v.definition?.name || "").toLowerCase();
+        const codeLower = (v.definition?.code || "").toLowerCase();
+        return (nameLower.includes("kuduz") || nameLower.includes("rabies") || codeLower.includes("rabies") || codeLower.includes("kuduz")) && !!v.dateAdministered;
+    });
+    const isTravelReady = hasMicrochip && hasRabiesVaccine;
 
     const handleGenerate = async () => {
         setIsGenerating(true);
@@ -56,30 +108,146 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
         setShowPreview(true);
     };
 
-    // Robust Pet Data with Official Fields
-    const petData = {
-        ...((currentPet && typeof currentPet === 'object') ? currentPet : {}),
-        avatar: currentPet?.image || currentPet?.avatar,
-        microchip: currentPet?.microchip || currentPet?.microchip_id || currentPet?.microchip_no || "Kayıtlı Değil",
-        birthday: currentPet?.birthday || currentPet?.birth_date || currentPet?.sos_settings?.birthday || "Belirtilmedi",
-        // Yeni alanlar
-        type: currentPet?.type || "",
-        size: currentPet?.size || currentPet?.sos_settings?.size || "",
-        character: currentPet?.character || currentPet?.sos_settings?.character || "",
-        features: currentPet?.features || currentPet?.sos_settings?.features || "",
-        healthStatus: currentPet?.health || currentPet?.sos_settings?.health || "",
-        healthNotes: currentPet?.health_notes || "",
-        owner: {
-            name: isPublic ? "Gizli Bilgi" : (currentPet?.owner?.name || currentPet?.ownerName || currentPet?.sos_settings?.owner?.name || "Bilinmiyor"),
-            phone: isPublic ? "+90 *** *** ** **" : (currentPet?.owner?.phone || currentPet?.ownerPhone || currentPet?.sos_settings?.owner?.phone || "+90 --- --- -- --"),
-            address: isPublic ? "Bölge Gizli (Sadece Sahibi Görebilir)" : (currentPet?.owner?.address || currentPet?.ownerAddress || currentPet?.sos_settings?.owner?.address || "Adres Kayıtı Bulunamadı"),
+    const handleShareProfile = () => {
+        try {
+            const shareUrl = `${window.location.origin}/share/pet/${petData.id}`;
+            navigator.clipboard.writeText(shareUrl);
+            showToast("Paylaşım Linki Kopyalandı! 🔗", "Sparkles", "text-emerald-400 font-bold");
+        } catch (error) {
+            console.error("Link copy error:", error);
+            alert("Paylaşım linki kopyalanamadı.");
+        }
+    };
+
+    const downloadPDF = async () => {
+        try {
+            const { jsPDF } = await import("jspdf");
+            const doc = new jsPDF({
+                orientation: "portrait",
+                unit: "mm",
+                format: "a4"
+            });
+
+            // Set background color
+            doc.setFillColor(248, 249, 250); // Light gray
+            doc.rect(0, 0, 210, 297, "F");
+
+            // Header banner
+            doc.setFillColor(11, 11, 14); // Dark header
+            doc.rect(0, 0, 210, 45, "F");
+
+            // Brand
+            doc.setTextColor(16, 185, 129); // Emerald
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10);
+            doc.text("MOFFI DIGITAL PASSPORT SUMMARY (UNOFFICIAL)", 15, 15);
+
+            // Title
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(24);
+            doc.text("PASAPORT OZET BELGESI", 15, 26);
+
+            doc.setTextColor(156, 163, 175);
+            doc.setFontSize(8);
+            doc.text("PERSONAL HEALTH & IDENTIFICATION RECORD", 15, 34);
+
+            // Decorative lines
+            doc.setFillColor(16, 185, 129);
+            doc.rect(0, 45, 210, 2, "F");
+
+            // Body
+            // Section 1: Pet Details
+            doc.setTextColor(31, 41, 55);
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(14);
+            doc.text("1. KIMLIK BILGILERI / PET IDENTIFICATION", 15, 60);
+
+            // Draw line
+            doc.setDrawColor(209, 213, 219);
+            doc.setLineWidth(0.5);
+            doc.line(15, 63, 195, 63);
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
+            doc.setTextColor(75, 85, 99);
+
+            const detailsY = 70;
+            doc.text(`Adi (Name): ${petData.name || "-"}`, 15, detailsY);
+            doc.text(`Turu (Type): ${petData.type || "-"}`, 15, detailsY + 8);
+            doc.text(`Irki (Breed): ${petData.breed || "-"}`, 15, detailsY + 16);
+            doc.text(`Cinsiyet (Gender): ${petData.gender || "-"}`, 15, detailsY + 24);
+            doc.text(`Dogum Tarihi (Birth): ${petData.birthday || "-"}`, 15, detailsY + 32);
+
+            doc.text(`Mikrocip ID (Chip): ${petData.microchip || "Kayitli Degil"}`, 110, detailsY);
+            doc.text(`PETVET Kayit No: ${petData.petvet || "Kayitli Degil"}`, 110, detailsY + 8);
+            doc.text(`Boyut (Size): ${petData.size || "-"}`, 110, detailsY + 16);
+            doc.text(`Kilo (Weight): ${petData.weight || "-"}`, 110, detailsY + 24);
+            doc.text(`Renk (Color): ${petData.color || "-"}`, 110, detailsY + 32);
+            doc.text(`Kisirlastirma (Neutered): ${petData.neutered ? "Evet (Yes)" : "Hayir (No)"}`, 110, detailsY + 40);
+
+            // Section 2: Owner Details
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(14);
+            doc.setTextColor(31, 41, 55);
+            doc.text("2. VELI / SAHIP BILGILERI (OWNER INFORMATION)", 15, 120);
+            doc.line(15, 123, 195, 123);
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
+            doc.setTextColor(75, 85, 99);
+            doc.text(`Sahip (Owner): ${petData.owner?.name || "-"}`, 15, 130);
+            doc.text(`Telefon (Phone): ${petData.owner?.phone || "-"}`, 15, 138);
+            doc.text(`Adres (Address): ${petData.owner?.address || "-"}`, 15, 146);
+
+            // Section 3: Vaccine Records
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(14);
+            doc.setTextColor(31, 41, 55);
+            doc.text("3. ASI VE TIBBI KAYITLAR (VACCINE RECORDS)", 15, 170);
+            doc.line(15, 173, 195, 173);
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
+            doc.setTextColor(75, 85, 99);
+            
+            let vaccineY = 180;
+            if (schedule.length > 0) {
+                schedule.slice(0, 6).forEach((v: any, index: number) => {
+                    const status = v.dateAdministered ? "Uygulandi (Administered)" : "Planlandi (Scheduled)";
+                    const date = v.dateAdministered || v.dateScheduled || "-";
+                    doc.text(`${index + 1}. ${v.definition?.name || "Asi"} (${v.definition?.code || "Code"}) - Tarih: ${date} [${status}]`, 15, vaccineY);
+                    vaccineY += 8;
+                });
+            } else {
+                doc.text("Kayitli tibbi asi gecmisi bulunmamaktadir.", 15, vaccineY);
+            }
+
+            // Blockchain & Verification info
+            doc.setFillColor(229, 231, 235);
+            doc.rect(15, 245, 180, 25, "F");
+
+            doc.setTextColor(107, 114, 128);
+            doc.setFontSize(8);
+            doc.text(`Dijital Muhur Kod (Hash): 0x${Math.random().toString(16).slice(2, 10).toUpperCase()}FD9E3924B`, 20, 253);
+            doc.text(`Dogrulama Linki (URL): https://moffi.co/verify/${petData.id}`, 20, 259);
+            doc.text("Bu belge resmi bir kimlik olmayip sadece kisisel bilgilendirme ve asi takip amaclidir.", 20, 265);
+
+            // Footer
+            doc.setFontSize(8);
+            doc.setTextColor(156, 163, 175);
+            doc.text(`Olusturulma Tarihi: ${new Date().toLocaleDateString('tr-TR')} - Moffi Cloud Digital Registry`, 15, 285);
+
+            doc.save(`${petData.name}_Pasaport_${petData.id}.pdf`);
+        } catch (error) {
+            console.error("PDF generation error:", error);
+            alert("PDF oluşturulurken bir hata oluştu.");
         }
     };
 
     if (isLoading) return (
         <div className="flex flex-col items-center justify-center p-20 gap-4">
             <div className="w-10 h-10 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
-            <p className="text-sm font-black text-gray-500 uppercase tracking-widest animate-pulse">Resmi Veriler Doğrulanıyor...</p>
+            <p className="text-sm font-black text-gray-500 uppercase tracking-widest animate-pulse">Sağlık Günlüğü Notları Yükleniyor...</p>
         </div>
     );
 
@@ -115,10 +283,17 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
 
                     {/* Travel Readiness Badge */}
                     <div className="absolute top-6 sm:top-8 left-1/2 -translate-x-1/2 z-30">
-                        <div className="flex items-center gap-2 bg-black/40 backdrop-blur-2xl px-4 sm:px-5 py-1.5 sm:py-2 rounded-full border border-card-border shadow-2xl whitespace-nowrap">
-                            <Plane className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-400" />
-                            <span className="text-[9px] sm:text-[10px] font-black text-white uppercase tracking-[0.2em]">Seyahate Uygun (AB)</span>
-                        </div>
+                        {isTravelReady ? (
+                            <div className="flex items-center gap-2 bg-emerald-950/80 backdrop-blur-2xl px-4 sm:px-5 py-1.5 sm:py-2 rounded-full border border-emerald-500/30 shadow-2xl whitespace-nowrap">
+                                <Plane className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-400" />
+                                <span className="text-[9px] sm:text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em]">Seyahate Uygun (AB)</span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2 bg-red-950/80 backdrop-blur-2xl px-4 sm:px-5 py-1.5 sm:py-2 rounded-full border border-red-500/30 shadow-2xl whitespace-nowrap" title="AB seyahat kuralları gereği çip ve kuduz aşısı zorunludur.">
+                                <AlertCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-red-400" />
+                                <span className="text-[9px] sm:text-[10px] font-black text-red-400 uppercase tracking-[0.2em]">Seyahate Uygun Değil</span>
+                            </div>
+                        )}
                     </div>
 
                     {/* Shimmer Effect */}
@@ -196,10 +371,41 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                     </div>
 
                     {/* Microchip Barcode Visual */}
-                    <div className="mt-4 pt-4 border-t border-card-border opacity-30 flex justify-center">
-                        <Barcode className="w-full h-8 text-white" />
+                    <div className="mt-4 pt-4 border-t border-card-border flex flex-col items-center gap-1.5 justify-center">
+                        <MicrochipBarcode value={petData.microchip} />
+                        <span className="text-[8px] font-mono text-white/30 tracking-widest uppercase">{petData.microchip}</span>
                     </div>
                 </motion.div>
+            </div>
+
+            {/* PDF Belgesi Oluştur Butonu */}
+            <div 
+                onClick={handleGenerate}
+                className="bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 hover:from-emerald-500/20 hover:to-cyan-500/20 border border-emerald-500/30 rounded-[2.5rem] p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 cursor-pointer active:scale-[0.99] transition-all"
+            >
+                <div className="flex items-center gap-4 text-left">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-400 to-cyan-500 flex items-center justify-center text-black font-black">
+                        <FileText className="w-6 h-6 animate-pulse" />
+                    </div>
+                    <div>
+                        <h4 className="text-base font-black text-white uppercase tracking-tight italic">Dijital Pasaport Özeti (PDF)</h4>
+                        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Kişisel aşı takibi ve kolay erişim amacıyla bilgilendirici PDF belgesi üret.</p>
+                    </div>
+                </div>
+                <button className="bg-emerald-500 text-black px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-500/20 whitespace-nowrap">
+                    BELGE OLUŞTUR
+                </button>
+            </div>
+
+            {/* Bilgilendirme Not Defteri Uyarısı */}
+            <div className="mx-2 p-5 bg-amber-500/5 border border-amber-500/20 rounded-[2rem] flex items-start gap-4">
+                <Info className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                <div className="text-left">
+                    <h5 className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Dijital Sağlık Günlüğü & Not Defteri</h5>
+                    <p className="text-xs text-gray-400 font-bold leading-relaxed mt-1">
+                        Bu panel, evcil hayvanınızın aşı, çip ve biyometrik bilgilerini düzenli tutabilmeniz için tasarlanmış <strong className="text-amber-500">kişisel bir not defteridir</strong>. Resmi veterinerlik pasaportu yerine geçmez ve resmi kurumlarda yasal/hukuki bir geçerliliği yoktur.
+                    </p>
+                </div>
             </div>
 
             {/* 2. OFFICIAL SECTIONS BENTO GRID */}
@@ -268,6 +474,10 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                                 }`}>{petData.healthStatus}</span>
                             </div>
                         )}
+                        <div className="flex justify-between items-center text-xs border-t border-white/5 pt-2.5 mt-2.5">
+                            <span className="text-gray-500 font-bold uppercase tracking-tighter">PETVET No</span>
+                            <span className="text-amber-400 font-black font-mono">{petData.petvet}</span>
+                        </div>
                     </div>
                 </div>
 
@@ -497,9 +707,9 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
 
                         <div className="space-y-4 max-w-xs">
                             <h3 className="text-2xl font-black text-white tracking-tight italic uppercase">
-                                {generationStep === 1 && "Tıbbi Veriler Analiz Ediliyor..."}
-                                {generationStep === 2 && "Dijital Mühür Doğrulanıyor..."}
-                                {generationStep === 3 && "Resmi PDF Hazırlanıyor..."}
+                                {generationStep === 1 && "Sağlık Verileri Günlüğe İşleniyor..."}
+                                {generationStep === 2 && "Kişisel Notlar Düzenleniyor..."}
+                                {generationStep === 3 && "Özet Belge Hazırlanıyor..."}
                             </h3>
                             <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
                                 <motion.div 
@@ -509,7 +719,7 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                                 />
                             </div>
                             <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.3em] font-mono">
-                                Securing Blockchain Hash: 0x{Math.random().toString(16).slice(2, 10).toUpperCase()}...
+                                Not Defteri Eşleştirme Kodu: 0x{Math.random().toString(16).slice(2, 10).toUpperCase()}...
                             </p>
                         </div>
                     </motion.div>
@@ -552,20 +762,20 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                                             </div>
                                             <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Moffi Passport System</span>
                                         </div>
-                                        <h2 className="text-3xl font-black tracking-tighter uppercase italic leading-none">EVCİL HAYVAN PASAPORTU</h2>
-                                        <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mt-1">Hızlı Doğrulama ve Seyahat Belgesi</p>
+                                        <h2 className="text-3xl font-black tracking-tighter uppercase italic leading-none">DİJİTAL PASAPORT ÖZETİ</h2>
+                                        <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mt-1">Kişisel Sağlık & Kimlik Takip Kartı</p>
                                         <div className="flex items-center gap-1.5 mt-2 text-[8px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-50 rounded-lg px-2 py-1 w-fit">
-                                            <ShieldCheck className="w-3 h-3" /> Dijital Mühür Uygulandı
+                                            <ShieldCheck className="w-3 h-3" /> Bilgi Kartı Aktif
                                         </div>
                                     </div>
                                     <div className="p-2 border-2 border-card-border rounded-2xl scale-90">
                                         <QRCodeSVG value={`moffi://verify/${petData.id}`} size={48} />
                                     </div>
                                 </div>
-                            {/* Official Disclaimer Note */}
-                            <div className="mb-6 px-4 py-3 bg-gray-50 rounded-2xl border border-card-border">
-                                <p className="text-[7px] font-bold text-gray-400 uppercase leading-relaxed">
-                                    ⓘ Bu belge, evcil hayvanın fiziksel pasaportunun doğrulanmış bir dijital ikizidir. Resmi kurumlarda fiziksel pasaportun ibraz edilmesi gerekebilir. 
+                            {/* Kişisel Takip Bilgilendirme Notu */}
+                            <div className="mb-6 px-4 py-3 bg-amber-500/5 rounded-2xl border border-amber-500/20">
+                                <p className="text-[8px] font-bold text-amber-600 dark:text-amber-500 uppercase leading-relaxed">
+                                    ⓘ Bu belge resmi bir kimlik veya pasaport değildir. Sadece kişisel takip ve bilgilendirme amaçlıdır. Resmi seyahat ve gümrük kontrollerinde veteriner hekim onaylı fiziksel pasaportun gösterilmesi zorunludur.
                                 </p>
                             </div>
 
@@ -595,7 +805,7 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                                             <p className="text-xs font-bold uppercase tracking-tight leading-none truncate">{petData.breed}</p>
                                         </div>
                                         <div>
-                                            <p className="text-[7px] font-black text-gray-400 uppercase tracking-tighter">Resmi Veli</p>
+                                            <p className="text-[7px] font-black text-gray-400 uppercase tracking-tighter">Pet Sahibi</p>
                                             <p className="text-xs font-bold uppercase tracking-tight leading-none truncate">{petData.owner?.name?.split(' ')[0] || "Bilinmiyor"}</p>
                                         </div>
                                     </div>
@@ -616,14 +826,15 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                             {/* Action Buttons */}
                             <div className="flex gap-3 relative z-10">
                                 <button 
-                                    onClick={() => alert("Resmi Pasaport PDF olarak başarıyla oluşturuldu ve indiriliyor... 📥")}
+                                    onClick={downloadPDF}
                                     className="flex-1 bg-black text-white py-4 rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 hover:bg-gray-900 transition-colors active:scale-95"
                                 >
                                     <FileText className="w-4 h-4" /> PDF İndir
                                 </button>
                                 <button 
-                                    onClick={() => alert("Paylaşım menüsü açılıyor... 📲")}
+                                    onClick={handleShareProfile}
                                     className="w-14 h-14 bg-gray-100 text-black rounded-3xl flex items-center justify-center hover:bg-gray-200 transition-colors active:scale-95 shadow-inner"
+                                    title="Paylaşım Linki Kopyala"
                                 >
                                     <Share2 className="w-4 h-4" />
                                 </button>

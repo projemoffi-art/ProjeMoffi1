@@ -53,7 +53,7 @@ interface AuthContextType {
     resendOtp: (email: string) => Promise<{ success: boolean; error?: string }>;
     signInWithGoogle: () => Promise<void>;
     signInWithApple: () => Promise<void>;
-    getAllUsers: () => User[];
+    getAllUsers: () => Promise<User[]>;
     deleteUser: (id: string) => Promise<void>;
     registerBusiness: (data: any) => Promise<{ success: boolean; error?: string }>;
     approveBusiness: (id: string) => Promise<void>;
@@ -82,15 +82,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Sync user role to cookies for Next.js Middleware route protection
+    // Sync user role to cookies for Next.js Middleware route protection (Server-signed httpOnly cookie)
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            if (user) {
-                document.cookie = `moffi_mock_user_role=${user.role}; path=/; max-age=86400; SameSite=Lax`;
-            } else {
-                document.cookie = "moffi_mock_user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+        const syncSessionCookie = async () => {
+            if (typeof window !== 'undefined') {
+                if (user) {
+                    // Set legacy mock cookie for backwards compatibility in client-side code
+                    document.cookie = `moffi_mock_user_role=${user.role}; path=/; max-age=86400; SameSite=Lax`;
+                    
+                    try {
+                        let token = "";
+                        if (isSupabaseEnabled) {
+                            const { data: { session } } = await supabase.auth.getSession();
+                            token = session?.access_token || "";
+                        } else {
+                            token = `mock-token-${user.role}`;
+                        }
+
+                        if (token) {
+                            await fetch("/api/auth/session", {
+                                method: "POST",
+                                headers: {
+                                    "Authorization": `Bearer ${token}`,
+                                    "Content-Type": "application/json"
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        console.error("[AuthContext] Error setting secure server session cookie:", e);
+                    }
+                } else {
+                    document.cookie = "moffi_mock_user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+                    try {
+                        await fetch("/api/auth/session", {
+                            method: "DELETE"
+                        });
+                    } catch (e) {
+                        console.error("[AuthContext] Error clearing secure server session cookie:", e);
+                    }
+                }
             }
-        }
+        };
+
+        syncSessionCookie();
     }, [user]);
 
     // --- INITIALIZATION ---
@@ -120,16 +154,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                             name: profile.name,
                             display_name: profile.name,
                             email: profile.email || session.user.email,
-                            role: (profile.role === 'admin' || 
-                                   (profile.email || session.user.email || '').toLowerCase() === 'projemoffi@gmail.com') 
-                                   ? 'admin' : (profile.role || 'user'),
+                            role: profile.role || 'user',
                             avatar: profile.avatar,
                             cover_photo: profile.cover_photo,
                             bio: profile.bio,
                             is_prime: profile.subscription_status === 'plus' || profile.subscription_status === 'pro' || profile.is_prime === true,
                             joinedAt: profile.created_at || new Date().toISOString(),
                             stats: profile.stats || { posts: 0, followers: 0, following: 0 },
-                            subscription_status: profile.subscription_status
+                            subscription_status: profile.subscription_status,
+                            businessType: (profile as any).businessType,
+                            businessName: (profile as any).businessName,
+                            businessApproved: (profile as any).businessApproved,
+                            kybStatus: (profile as any).kybStatus,
+                            taxId: (profile as any).taxId,
+                            iban: (profile as any).iban,
+                            address: (profile as any).address,
+                            ownerName: (profile as any).ownerName,
+                            phone: profile.phone,
+                            settings: (profile as any).settings || {
+                                appearance: { auraStyle: 'minimal', accentColor: 'cyan', font: 'font-sans', auraVisible: true, auraIntensity: 100 },
+                                privacy: { smartShopEnabled: true }
+                            }
                         });
                     } else {
                         // Create missing profile for new users globally
@@ -147,15 +192,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                                 name: newProfile.name,
                                 display_name: newProfile.name,
                                 email: newProfile.email,
-                                role: ((newProfile.email || '').toLowerCase() === 'projemoffi@gmail.com') 
-                                       ? 'admin' : 'user',
+                                role: newProfile.role || 'user',
                                 avatar: newProfile.avatar,
                                 cover_photo: newProfile.cover_photo,
                                 bio: newProfile.bio,
                                 is_prime: newProfile.subscription_status === 'plus' || newProfile.subscription_status === 'pro',
                                 joinedAt: new Date().toISOString(),
                                 stats: { posts: 0, followers: 0, following: 0 },
-                                subscription_status: newProfile.subscription_status
+                                subscription_status: newProfile.subscription_status,
+                                settings: {
+                                    appearance: { auraStyle: 'minimal', accentColor: 'cyan', font: 'font-sans', auraVisible: true, auraIntensity: 100 },
+                                    privacy: { smartShopEnabled: true }
+                                }
                             });
                         }
                     }
@@ -209,38 +257,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const authChannel = new BroadcastChannel('moffi_auth_channel');
         
-        const handleMessage = (event: MessageEvent) => {
+        const handleMessage = async (event: MessageEvent) => {
             const { type, userId, status, reason } = event.data;
             
             if (type === 'KYB_STATUS_UPDATED') {
-                // Check if currently logged in user is the target
-                const storedUserStr = localStorage.getItem('moffi_mock_user');
-                if (storedUserStr) {
-                    const currentUser = JSON.parse(storedUserStr);
-                    if (currentUser && currentUser.id === userId) {
-                        // Reload user details from users list
-                        const storedList = localStorage.getItem('moffi_mock_users_list');
-                        if (storedList) {
-                            const list = JSON.parse(storedList);
-                            const updatedUser = list.find((u: any) => u.id === userId);
-                            if (updatedUser) {
-                                setUser(updatedUser);
-                                localStorage.setItem('moffi_mock_user', JSON.stringify(updatedUser));
-                                document.cookie = `moffi_mock_user_role=${updatedUser.role}; path=/; max-age=86400; SameSite=Lax`;
-                                
-                                // Show premium toast notification
-                                const label = status === 'approved' ? 'Tebrikler! 🎉' : 'KYB Başvurusu Reddedildi. ❌';
-                                const details = status === 'approved'
-                                    ? 'İşletme/Hekim kaydınız platform yöneticisi tarafından onaylandı! Panel özellikleriniz aktif edildi.'
-                                    : `Başvurunuz reddedildi. Gerekçe: ${reason || 'Belirtilmedi'}`;
-                                
-                                window.dispatchEvent(new CustomEvent('moffi-toast', {
-                                    detail: {
-                                        message: `Kurumsal Doğrulama: ${label} ${details}`,
-                                        icon: status === 'approved' ? 'ShieldCheck' : 'ShieldAlert',
-                                        color: status === 'approved' ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'
-                                    }
-                                }));
+                if (isSupabaseEnabled) {
+                    // Fetch verified user profile directly from DB to prevent spoofing
+                    const profile = await apiService.getCurrentUser();
+                    if (profile && profile.id === userId) {
+                        setUser(prev => prev ? {
+                            ...prev,
+                            role: profile.role || 'user',
+                            businessApproved: (profile as any).businessApproved,
+                            kybStatus: (profile as any).kybStatus,
+                            kybRejectionReason: (profile as any).kybRejectionReason
+                        } : null);
+                        
+                        const label = (profile as any).kybStatus === 'approved' ? 'Tebrikler! 🎉' : 'KYB Başvurusu Reddedildi. ❌';
+                        const details = (profile as any).kybStatus === 'approved'
+                            ? 'İşletme/Hekim kaydınız platform yöneticisi tarafından onaylandı! Panel özellikleriniz aktif edildi.'
+                            : `Başvurunuz reddedildi. Gerekçe: ${(profile as any).kybRejectionReason || 'Belirtilmedi'}`;
+
+                        window.dispatchEvent(new CustomEvent('moffi-toast', {
+                            detail: {
+                                message: `Kurumsal Doğrulama: ${label} ${details}`,
+                                icon: (profile as any).kybStatus === 'approved' ? 'ShieldCheck' : 'ShieldAlert',
+                                color: (profile as any).kybStatus === 'approved' ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'
+                            }
+                        }));
+                    }
+                } else {
+                    // Check if currently logged in user is the target
+                    const storedUserStr = localStorage.getItem('moffi_mock_user');
+                    if (storedUserStr) {
+                        const currentUser = JSON.parse(storedUserStr);
+                        if (currentUser && currentUser.id === userId) {
+                            // Reload user details from users list
+                            const storedList = localStorage.getItem('moffi_mock_users_list');
+                            if (storedList) {
+                                const list = JSON.parse(storedList);
+                                const updatedUser = list.find((u: any) => u.id === userId);
+                                if (updatedUser) {
+                                    setUser(updatedUser);
+                                    localStorage.setItem('moffi_mock_user', JSON.stringify(updatedUser));
+                                    document.cookie = `moffi_mock_user_role=${updatedUser.role}; path=/; max-age=86400; SameSite=Lax`;
+                                    
+                                    // Show premium toast notification
+                                    const label = status === 'approved' ? 'Tebrikler! 🎉' : 'KYB Başvurusu Reddedildi. ❌';
+                                    const details = status === 'approved'
+                                        ? 'İşletme/Hekim kaydınız platform yöneticisi tarafından onaylandı! Panel özellikleriniz aktif edildi.'
+                                        : `Başvurunuz reddedildi. Gerekçe: ${reason || 'Belirtilmedi'}`;
+                                    
+                                    window.dispatchEvent(new CustomEvent('moffi-toast', {
+                                        detail: {
+                                            message: `Kurumsal Doğrulama: ${label} ${details}`,
+                                            icon: status === 'approved' ? 'ShieldCheck' : 'ShieldAlert',
+                                            color: status === 'approved' ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'
+                                        }
+                                    }));
+                                }
                             }
                         }
                     }
@@ -380,12 +455,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const updateSettings = async (category: any, data: any) => {
         setUser(prev => {
             if (!prev) return null;
+            const updatedSettings = {
+                ...prev.settings,
+                [category]: { ...prev.settings?.[category], ...data }
+            };
             const updatedUser = {
                 ...prev,
-                settings: { ...prev.settings, [category]: { ...prev.settings?.[category], ...data } }
+                settings: updatedSettings
             };
-            if (typeof window !== 'undefined' && !isSupabaseEnabled) {
-                localStorage.setItem('moffi_mock_user', JSON.stringify(updatedUser));
+            
+            if (typeof window !== 'undefined') {
+                if (isSupabaseEnabled) {
+                    supabase.from('profiles').update({ settings: updatedSettings }).eq('id', prev.id)
+                        .then(({ error }) => {
+                            if (error) console.error("Error saving settings to database:", error);
+                        });
+                } else {
+                    localStorage.setItem('moffi_mock_user', JSON.stringify(updatedUser));
+                }
             }
             return updatedUser;
         });
@@ -421,7 +508,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const verifyOtp = async (email: string, token: string, type: any) => {
         if (isSupabaseEnabled) {
-            // 'email' is the correct type for signup OTP verification in Supabase
             const otpType = type === 'signup' ? 'email' : type;
             const { error } = await supabase.auth.verifyOtp({
                 email,
@@ -434,120 +520,254 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: true };
     };
 
-    const getAllUsers = (): User[] => {
-        if (typeof window !== 'undefined') {
-            const stored = localStorage.getItem('moffi_mock_users_list');
-            if (stored) {
-                return JSON.parse(stored);
+    const getAllUsers = async (): Promise<User[]> => {
+        if (isSupabaseEnabled) {
+            const { data, error } = await supabase.from('profiles').select('*');
+            if (error) {
+                console.error("Error fetching users from database:", error);
+                return [];
             }
-        }
-        const defaultList: User[] = [
-            {
-                id: 'user-admin',
-                username: 'admin',
-                email: 'admin@moffipet.com',
-                role: 'admin',
-                bio: 'Moffi Platform Yöneticisi',
-                joinedAt: '2025-01-01T12:00:00Z',
-                is_prime: true,
-                stats: { posts: 0, followers: 0, following: 0 }
-            },
-            {
-                id: 'user-uveys',
-                username: 'uveys',
-                email: 'uveys@moffi.com',
-                role: 'user',
-                bio: 'Pati Dostu',
-                joinedAt: '2025-02-15T12:00:00Z',
-                is_prime: false,
-                stats: { posts: 0, followers: 0, following: 0 }
-            },
-            {
-                id: 'user-hekim',
-                username: 'Dr. Moffi',
-                email: 'doctor@moffipet.com',
-                role: 'business',
-                businessType: 'vet',
-                businessName: 'Moffi Veteriner Kliniği',
-                businessApproved: false,
-                kybStatus: 'pending',
-                taxId: '8765432109',
-                iban: 'TR98 7654 3210 9876 5432 1098 76',
-                address: 'Moda Caddesi No:42 Kadıköy / İstanbul',
-                ownerName: 'Dr. Ahmet Yılmaz',
-                phone: '0532 123 45 67',
-                bio: 'VetLife Uzman Hekim',
-                joinedAt: '2025-03-01T12:00:00Z',
-                is_prime: true,
-                stats: { posts: 0, followers: 0, following: 0 }
+            return data.map((profile: any) => ({
+                id: profile.id,
+                username: profile.username || profile.full_name || 'user',
+                name: profile.full_name,
+                email: profile.email || '',
+                role: profile.role || 'user',
+                avatar: profile.avatar_url,
+                bio: profile.bio,
+                joinedAt: profile.created_at || new Date().toISOString(),
+                stats: { posts: 0, followers: 0, following: 0 },
+                businessType: profile.business_type,
+                businessName: profile.business_name,
+                businessApproved: profile.business_approved,
+                kybStatus: profile.kyb_status,
+                taxId: profile.tax_id,
+                iban: profile.iban,
+                address: profile.address,
+                ownerName: profile.owner_name,
+                phone: profile.phone,
+                settings: profile.settings || {}
+            }));
+        } else {
+            if (typeof window !== 'undefined') {
+                const stored = localStorage.getItem('moffi_mock_users_list');
+                if (stored) {
+                    return JSON.parse(stored);
+                }
             }
-        ];
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('moffi_mock_users_list', JSON.stringify(defaultList));
+            const defaultList: User[] = [
+                {
+                    id: 'user-admin',
+                    username: 'admin',
+                    email: 'admin@moffipet.com',
+                    role: 'admin',
+                    bio: 'Moffi Platform Yöneticisi',
+                    joinedAt: '2025-01-01T12:00:00Z',
+                    is_prime: true,
+                    stats: { posts: 0, followers: 0, following: 0 },
+                    settings: {
+                        appearance: { auraStyle: 'minimal', accentColor: 'cyan', font: 'font-sans', auraVisible: true, auraIntensity: 100 },
+                        privacy: { smartShopEnabled: true }
+                    }
+                },
+                {
+                    id: 'user-uveys',
+                    username: 'uveys',
+                    email: 'uveys@moffi.com',
+                    role: 'user',
+                    bio: 'Pati Dostu',
+                    joinedAt: '2025-02-15T12:00:00Z',
+                    is_prime: false,
+                    stats: { posts: 0, followers: 0, following: 0 },
+                    settings: {
+                        appearance: { auraStyle: 'minimal', accentColor: 'cyan', font: 'font-sans', auraVisible: true, auraIntensity: 100 },
+                        privacy: { smartShopEnabled: true }
+                    }
+                },
+                {
+                    id: 'user-hekim',
+                    username: 'Dr. Moffi',
+                    email: 'doctor@moffipet.com',
+                    role: 'business',
+                    businessType: 'vet',
+                    businessName: 'Moffi Veteriner Kliniği',
+                    businessApproved: false,
+                    kybStatus: 'pending',
+                    taxId: '8765432109',
+                    iban: 'TR98 7654 3210 9876 5432 1098 76',
+                    address: 'Moda Caddesi No:42 Kadıköy / İstanbul',
+                    ownerName: 'Dr. Ahmet Yılmaz',
+                    phone: '0532 123 45 67',
+                    bio: 'VetLife Uzman Hekim',
+                    joinedAt: '2025-03-01T12:00:00Z',
+                    is_prime: true,
+                    stats: { posts: 0, followers: 0, following: 0 },
+                    settings: {
+                        appearance: { auraStyle: 'minimal', accentColor: 'cyan', font: 'font-sans', auraVisible: true, auraIntensity: 100 },
+                        privacy: { smartShopEnabled: true }
+                    }
+                }
+            ];
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('moffi_mock_users_list', JSON.stringify(defaultList));
+            }
+            return defaultList;
         }
-        return defaultList;
     };
 
     const deleteUser = async (id: string) => {
-        if (typeof window !== 'undefined') {
-            const list = getAllUsers();
-            const updated = list.filter(u => u.id !== id);
-            localStorage.setItem('moffi_mock_users_list', JSON.stringify(updated));
+        if (isSupabaseEnabled) {
+            const { error } = await supabase.from('profiles').delete().eq('id', id);
+            if (error) {
+                console.error("Error deleting user from database:", error);
+            }
+        } else {
+            if (typeof window !== 'undefined') {
+                const list = await getAllUsers();
+                const updated = list.filter(u => u.id !== id);
+                localStorage.setItem('moffi_mock_users_list', JSON.stringify(updated));
+            }
         }
     };
 
     const registerBusiness = async (data: any) => {
-        if (typeof window !== 'undefined') {
-            const newUser: User = {
-                id: `business-${Date.now()}`,
-                username: data.businessName,
-                email: data.email,
+        if (isSupabaseEnabled) {
+            const userSession = await supabase.auth.getUser();
+            if (!userSession.data.user) return { success: false, error: 'Unauthorized' };
+            
+            const { error } = await supabase.from('profiles').update({
                 role: 'business',
-                businessType: data.businessType,
-                businessName: data.businessName,
-                businessApproved: false,
-                kybStatus: 'pending',
-                taxId: data.taxId || '8765432109',
-                iban: data.iban || 'TR98 7654 3210 9876 5432 1098 76',
-                address: data.address || 'Moda Caddesi No:42 Kadıköy / İstanbul',
-                ownerName: data.ownerName || 'Dr. Ahmet Yılmaz',
-                phone: data.phone || '0532 123 45 67',
-                joinedAt: new Date().toISOString(),
-                stats: { posts: 0, followers: 0, following: 0 }
-            };
-            const stored = localStorage.getItem('moffi_mock_users_list');
-            let list = stored ? JSON.parse(stored) : [];
-            list.push(newUser);
-            localStorage.setItem('moffi_mock_users_list', JSON.stringify(list));
-            setUser(newUser);
-            localStorage.setItem('moffi_mock_user', JSON.stringify(newUser));
+                business_type: data.businessType,
+                business_name: data.businessName,
+                business_approved: false,
+                kyb_status: 'pending',
+                tax_id: data.taxId,
+                iban: data.iban,
+                address: data.address,
+                owner_name: data.ownerName,
+                phone: data.phone
+            }).eq('id', userSession.data.user.id);
+
+            if (error) return { success: false, error: error.message };
+
+            const profile = await apiService.getCurrentUser();
+            if (profile) {
+                setUser({
+                    id: profile.id,
+                    username: profile.username || profile.name || "user",
+                    name: profile.name,
+                    display_name: profile.name,
+                    email: profile.email || userSession.data.user.email || '',
+                    role: profile.role || 'user',
+                    avatar: profile.avatar,
+                    cover_photo: profile.cover_photo,
+                    bio: profile.bio,
+                    is_prime: profile.subscription_status === 'plus' || profile.subscription_status === 'pro' || (profile as any).is_prime === true,
+                    joinedAt: (profile as any).created_at || new Date().toISOString(),
+                    stats: (profile as any).stats || { posts: 0, followers: 0, following: 0 },
+                    subscription_status: profile.subscription_status,
+                    businessType: (profile as any).businessType,
+                    businessName: (profile as any).businessName,
+                    businessApproved: (profile as any).businessApproved,
+                    kybStatus: (profile as any).kybStatus,
+                    taxId: (profile as any).taxId,
+                    iban: (profile as any).iban,
+                    address: (profile as any).address,
+                    ownerName: (profile as any).ownerName,
+                    phone: profile.phone,
+                    settings: (profile as any).settings || {}
+                });
+            }
+            return { success: true };
+        } else {
+            if (typeof window !== 'undefined') {
+                const newUser: User = {
+                    id: `business-${Date.now()}`,
+                    username: data.businessName,
+                    email: data.email,
+                    role: 'business',
+                    businessType: data.businessType,
+                    businessName: data.businessName,
+                    businessApproved: false,
+                    kybStatus: 'pending',
+                    taxId: data.taxId || '8765432109',
+                    iban: data.iban || 'TR98 7654 3210 9876 5432 1098 76',
+                    address: data.address || 'Moda Caddesi No:42 Kadıköy / İstanbul',
+                    ownerName: data.ownerName || 'Dr. Ahmet Yılmaz',
+                    phone: data.phone || '0532 123 45 67',
+                    joinedAt: new Date().toISOString(),
+                    stats: { posts: 0, followers: 0, following: 0 },
+                    settings: {
+                        appearance: { auraStyle: 'minimal', accentColor: 'cyan', font: 'font-sans', auraVisible: true, auraIntensity: 100 },
+                        privacy: { smartShopEnabled: true }
+                    }
+                };
+                const stored = localStorage.getItem('moffi_mock_users_list');
+                let list = stored ? JSON.parse(stored) : [];
+                list.push(newUser);
+                localStorage.setItem('moffi_mock_users_list', JSON.stringify(list));
+                setUser(newUser);
+                localStorage.setItem('moffi_mock_user', JSON.stringify(newUser));
+            }
+            return { success: true };
         }
-        return { success: true };
     };
 
     const approveBusiness = async (id: string) => {
-        if (typeof window !== 'undefined') {
-            const list = getAllUsers();
-            const updated = list.map(u => u.id === id ? { ...u, businessApproved: true, kybStatus: 'approved' as const } : u);
-            localStorage.setItem('moffi_mock_users_list', JSON.stringify(updated));
+        if (isSupabaseEnabled) {
+            const { error } = await supabase.from('profiles').update({
+                business_approved: true,
+                kyb_status: 'approved',
+                role: 'business'
+            }).eq('id', id);
 
-            // Broadcast approval to other active tabs
+            if (error) {
+                console.error("Error approving business:", error);
+                return;
+            }
+
             const authChannel = new BroadcastChannel('moffi_auth_channel');
             authChannel.postMessage({ type: 'KYB_STATUS_UPDATED', userId: id, status: 'approved' });
             authChannel.close();
+        } else {
+            if (typeof window !== 'undefined') {
+                const list = await getAllUsers();
+                const updated = list.map(u => u.id === id ? { ...u, businessApproved: true, kybStatus: 'approved' as const } : u);
+                localStorage.setItem('moffi_mock_users_list', JSON.stringify(updated));
+
+                const authChannel = new BroadcastChannel('moffi_auth_channel');
+                authChannel.postMessage({ type: 'KYB_STATUS_UPDATED', userId: id, status: 'approved' });
+                authChannel.close();
+            }
         }
     };
 
     const rejectBusiness = async (id: string, reason: string) => {
-        if (typeof window !== 'undefined') {
-            const list = getAllUsers();
-            const updated = list.map(u => u.id === id ? { ...u, businessApproved: false, kybStatus: 'rejected' as const, kybRejectionReason: reason } : u);
-            localStorage.setItem('moffi_mock_users_list', JSON.stringify(updated));
+        if (isSupabaseEnabled) {
+            const { error } = await supabase.from('profiles').update({
+                business_approved: false,
+                kyb_status: 'rejected',
+                kyb_rejection_reason: reason
+            }).eq('id', id);
 
-            // Broadcast rejection to other active tabs
+            if (error) {
+                console.error("Error rejecting business:", error);
+                return;
+            }
+
             const authChannel = new BroadcastChannel('moffi_auth_channel');
             authChannel.postMessage({ type: 'KYB_STATUS_UPDATED', userId: id, status: 'rejected', reason });
             authChannel.close();
+        } else {
+            if (typeof window !== 'undefined') {
+                const list = await getAllUsers();
+                const updated = list.map(u => u.id === id ? { ...u, businessApproved: false, kybStatus: 'rejected' as const, kybRejectionReason: reason } : u);
+                localStorage.setItem('moffi_mock_users_list', JSON.stringify(updated));
+
+                const authChannel = new BroadcastChannel('moffi_auth_channel');
+                authChannel.postMessage({ type: 'KYB_STATUS_UPDATED', userId: id, status: 'rejected', reason });
+                authChannel.close();
+            }
         }
     };
 

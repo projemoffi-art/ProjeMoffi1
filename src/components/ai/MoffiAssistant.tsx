@@ -10,6 +10,7 @@ import {
     Heart, Shield
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { usePet } from '@/context/PetContext';
 import { cn } from '@/lib/utils';
 
 interface Message {
@@ -29,6 +30,7 @@ let globalAssistantMounted = false;
 
 export function MoffiAssistant() {
     const { user } = useAuth();
+    const { pets: userPets, activePet } = usePet();
     const [isOpen, setIsOpen] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
     const [input, setInput] = useState("");
@@ -94,6 +96,43 @@ export function MoffiAssistant() {
         if (e) e.preventDefault();
         if (!input.trim() || isTyping) return;
 
+        // Collect pet data payload
+        const activePetObj = activePet || userPets?.[0] || null;
+        let petDataPayload: any = null;
+
+        if (activePetObj) {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const waterCurrent = Number(localStorage.getItem(`moffi_water_${activePetObj.id}_${todayStr}`) || '0');
+            const foodCurrent = Number(localStorage.getItem(`moffi_calories_${activePetObj.id}_${todayStr}`) || '0');
+            
+            const waterTarget = typeof activePetObj.water_target === 'number' ? activePetObj.water_target : 1200;
+            const foodTarget = typeof activePetObj.food_target === 'number' ? activePetObj.food_target : 800;
+
+            let vaccinesList: any[] = [];
+            try {
+                const savedVaccines = localStorage.getItem(`moffi_vaccines_${activePetObj.id}`);
+                if (savedVaccines) {
+                    vaccinesList = JSON.parse(savedVaccines);
+                }
+            } catch (e) {}
+
+            petDataPayload = {
+                name: activePetObj.name,
+                breed: activePetObj.breed || activePetObj.species || 'Bilinmeyen Cins',
+                weight: activePetObj.weight || '0 kg',
+                gender: activePetObj.gender || 'Bilinmiyor',
+                waterCurrent,
+                waterTarget,
+                foodCurrent,
+                foodTarget,
+                vaccines: vaccinesList.map(v => ({
+                    name: v.definition?.name || v.name,
+                    dueDate: v.dueDate,
+                    status: v.status
+                }))
+            };
+        }
+
         const userMsg: Message = { id: Date.now().toString(), role: 'user', content: input };
         const updatedMessages = [...messages, userMsg];
         setMessages(updatedMessages);
@@ -109,7 +148,8 @@ export function MoffiAssistant() {
                         role: m.role,
                         content: m.content
                     })),
-                    context: `AI Settings: personality=${aiSettings.personality}, detail=${aiSettings.detailLevel}`
+                    context: `AI Settings: personality=${aiSettings.personality}, detail=${aiSettings.detailLevel}`,
+                    petData: petDataPayload
                 })
             });
             const data = await response.json();
@@ -129,12 +169,13 @@ export function MoffiAssistant() {
 
             // Simulation logic fallback
             let simulatedResponse = "";
+            const petName = petDataPayload?.name || "dostun";
             if (aiSettings.personality === 'technical') {
-                simulatedResponse = "Veri girişi algılandı. Biyometrik değerler ve aktivite logları inceleniyor. Optimizasyon önerisi: Su tüketimi %12 artırılmalı.";
+                simulatedResponse = `Veri girişi algılandı. ${petName} biyometrik değerler ve aktivite logları inceleniyor. Optimizasyon önerisi: Su tüketimi %12 artırılmalı.`;
             } else if (aiSettings.personality === 'professional') {
-                simulatedResponse = "İsteğiniz kaydedilmiştir. Veri analizlerimiz sonucunda patili dostunuzun sağlık parametrelerinin ideal seviyede olduğu gözlemlenmiştir.";
+                simulatedResponse = `İsteğiniz kaydedilmiştir. Veri analizlerimiz sonucunda ${petName} sağlık parametrelerinin ideal seviyede olduğu gözlemlenmiştir.`;
             } else {
-                simulatedResponse = "Harika bir soru! Patili dostun için en iyisini düşündüğünden eminim. Bence bugün biraz daha fazla oyun oynamalısınız! 🐾❤️";
+                simulatedResponse = `Harika bir soru! ${petName} için en iyisini düşündüğünden eminim. Bence bugün biraz daha fazla oyun oynamalısınız! 🐾❤️`;
             }
 
             if (aiSettings.detailLevel === 'short') {

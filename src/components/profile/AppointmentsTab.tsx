@@ -105,7 +105,7 @@ export function AppointmentsTab({
 
             {/* MEDICAL RECORDS LIST */}
             <div className="mt-12 space-y-6">
-                <h4 className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em] px-2 mb-6">Resmi Sağlık Karnesi</h4>
+                <h4 className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em] px-2 mb-6">Kişisel Sağlık Günlüğü (Not Defteri)</h4>
                 
                 {isScheduleLoading ? (
                     <div className="p-20 text-center text-gray-500 font-black text-xs uppercase tracking-[0.2em] animate-pulse">Takvim Yükleniyor...</div>
@@ -192,14 +192,14 @@ export function AppointmentsTab({
             <button onClick={handleGenerate} className="w-full bg-[#12121A] border-2 border-card-border py-10 rounded-[3rem] group hover:bg-white/5 transition-all relative overflow-hidden shadow-2xl mt-12">
                 <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-transparent to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                 <div className="w-16 h-16 rounded-[1.5rem] bg-white/5 flex items-center justify-center mx-auto mb-4 group-hover:scale-110"><FileText className="w-7 h-7 text-white" /></div>
-                <h4 className="text-lg font-black text-white uppercase italic tracking-tighter leading-none">Resmi Karne Oluştur (PDF)</h4>
-                <p className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em] mt-1 px-4 text-center">Veteriner Hekim Onaylı Dijital Mühür Dahildir</p>
+                <h4 className="text-lg font-black text-white uppercase italic tracking-tighter leading-none">Sağlık Günlüğü Özeti (PDF)</h4>
+                <p className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em] mt-1 px-4 text-center">Kişisel Takip ve Kolay Paylaşım Amaçlı Bilgi Kartı</p>
             </button>
 
-            <div className="p-6 rounded-[2rem] bg-white/[0.02] border border-card-border flex gap-4 mt-6">
-                <AlertCircle className="w-6 h-6 text-yellow-500/50 shrink-0" />
-                <p className="text-[10px] text-gray-600 leading-relaxed italic">
-                    Tüm kayıtlar kullanıcı beyanı esasına dayanmaktadır. Moffi, girilen verilerin doğruluğunu resmi makamlarca onaylamaz.
+            <div className="p-6 rounded-[2rem] bg-amber-500/5 border border-amber-500/20 flex gap-4 mt-6">
+                <AlertCircle className="w-6 h-6 text-amber-500 shrink-0" />
+                <p className="text-[10px] text-gray-400 leading-relaxed font-bold">
+                    Bu panel, evcil hayvanınızın sağlık bilgilerini düzenli tutabilmeniz için tasarlanmış <strong className="text-amber-500">kişisel bir not defteridir</strong>. Resmi veterinerlik pasaportu yerine geçmez ve resmi kurumlarda yasal/hukuki bir geçerliliği yoktur.
                 </p>
             </div>
 
@@ -238,9 +238,9 @@ export function AppointmentsTab({
 
                         <div className="space-y-4 max-w-xs">
                             <h3 className="text-2xl font-black text-white tracking-tight italic uppercase">
-                                {generationStep === 1 && "Tıbbi Veriler Analiz Ediliyor..."}
-                                {generationStep === 2 && "Dijital Mühür Doğrulanıyor..."}
-                                {generationStep === 3 && "Resmi PDF Hazırlanıyor..."}
+                                {generationStep === 1 && "Sağlık Verileri Düzenleniyor..."}
+                                {generationStep === 2 && "Kişisel Notlar Alınıyor..."}
+                                {generationStep === 3 && "Özet PDF Belgesi Hazırlanıyor..."}
                             </h3>
                             <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
                                 <motion.div 
@@ -250,7 +250,7 @@ export function AppointmentsTab({
                                 />
                             </div>
                             <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.3em] font-mono">
-                                Securing Health Hash: 0x{Math.random().toString(16).slice(2, 10).toUpperCase()}...
+                                Not Defteri Eşleştirme Kodu: 0x{Math.random().toString(16).slice(2, 10).toUpperCase()}...
                             </p>
                         </div>
                     </motion.div>
@@ -335,7 +335,7 @@ export function AppointmentsTab({
 
                                 <div className="flex gap-3 relative z-10">
                                     <button 
-                                        onClick={() => alert("Resmi Sağlık Karnesi PDF olarak başarıyla oluşturuldu ve indiriliyor... 📥")}
+                                        onClick={() => alert("Sağlık günlüğü özeti PDF olarak başarıyla oluşturuldu ve indiriliyor... 📥")}
                                         className="flex-1 bg-black text-white py-4 rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 hover:bg-gray-900 transition-colors active:scale-95"
                                     >
                                         <FileText className="w-4 h-4" /> PDF İndir

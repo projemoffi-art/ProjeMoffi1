@@ -9,7 +9,8 @@ import {
     Settings, Grid3X3, List, Edit3, Bookmark, Edit2, Trash2, ImagePlus,
     LogOut, ChevronRight, ChevronLeft, User, Bell, Lock, HelpCircle, Check, HeartHandshake, CheckCheck, ShieldAlert, ChevronDown,
     AlertTriangle, PhoneCall, BadgeCheck, Radar, Palette, ShoppingBag, Gamepad2, Globe, Filter,
-    Coins, Package, Calendar, Plane, ShieldCheck, Route, TrendingUp, Timer, Footprints, Play, Download, Clock, Syringe, Moon
+    Coins, Package, Calendar, Plane, ShieldCheck, Route, TrendingUp, Timer, Footprints, Play, Download, Clock, Syringe, Moon, Flame,
+    Sun, Contrast, Droplet
 } from 'lucide-react';
 import { compressImageToFile } from '@/lib/imageUtils';
 import { cn } from '@/lib/utils';
@@ -65,13 +66,12 @@ import { supabase } from '@/lib/supabase';
 import { HubOverlay } from '../../components/community/HubOverlay';
 import { MoffiBottomNav } from '@/components/common/MoffiBottomNav';
 import { OverlaySystem } from '@/components/community/OverlaySystem';
-import { ExploreGrid } from '@/components/community/ExploreGrid';
+import { FeedTab } from '@/components/community/FeedTab';
+import { RadarTab } from '@/components/community/RadarTab';
+import { AdoptionTab } from '@/components/community/AdoptionTab';
 
 
-import { 
-    MOCK_PETS, MOCK_ADOPTIONS, 
-    MOCK_NOTIFICATIONS, ORDERS, APPOINTMENTS, MOCK_POSTS 
-} from '@/lib/mockData';
+import { MOCK_ADOPTIONS } from '@/lib/mockData';
 import Image from 'next/image';
 
 import { useChat } from '@/context/ChatContext';
@@ -259,6 +259,10 @@ export default function MoffiSocialMasterpiece() {
     const [brightness, setBrightness] = useState(100);
     const [contrast, setContrast] = useState(100);
     const [saturation, setSaturation] = useState(100);
+    const [activeAdjustSubTool, setActiveAdjustSubTool] = useState<'brightness' | 'contrast' | 'saturation'>('brightness');
+    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+    const uploadImageRef = useRef<HTMLImageElement>(null);
+    const uploadVideoRef = useRef<HTMLVideoElement>(null);
     
     // Scheduling States
     const [scheduledDate, setScheduledDate] = useState<string | null>(null);
@@ -427,13 +431,77 @@ export default function MoffiSocialMasterpiece() {
     
     // VIDEO TRIMMER STATES
     const [videoDuration, setVideoDuration] = useState(0);
-    const [videoTrimRange, setVideoTrimRange] = useState<[number, number]>([0, 20]);
+    const [videoTrimRange, setVideoTrimRange] = useState<[number, number]>([0, 10]);
+    const [videoCurrentTime, setVideoCurrentTime] = useState(0);
+    const [draggingHandle, setDraggingHandle] = useState<'start' | 'end' | 'window' | null>(null);
     const [uploadProgress, setUploadProgress] = useState(0);
+    
+    const trimmerRef = useRef<HTMLDivElement>(null);
+    const uploadAudioRef = useRef<HTMLAudioElement>(null);
+    const isDraggingRef = useRef<boolean>(false);
     
     // AUDIO SHARING STATES
     const [audioFile, setAudioFile] = useState<File | null>(null);
     const [audioURL, setAudioURL] = useState<string | null>(null);
     const audioInputRef = useRef<HTMLInputElement>(null);
+
+    // Synchronize preview video and audio play/pause states
+    useEffect(() => {
+        const video = uploadVideoRef.current;
+        const audio = uploadAudioRef.current;
+        if (!video || !audio) return;
+
+        const handlePlay = () => {
+            audio.currentTime = Math.max(0, video.currentTime - videoTrimRange[0]);
+            audio.play().catch(() => {});
+        };
+        const handlePause = () => {
+            audio.pause();
+        };
+
+        video.addEventListener('play', handlePlay);
+        video.addEventListener('pause', handlePause);
+        
+        if (!video.paused) {
+            audio.play().catch(() => {});
+        } else {
+            audio.pause();
+        }
+
+        return () => {
+            video.removeEventListener('play', handlePlay);
+            video.removeEventListener('pause', handlePause);
+        };
+    }, [audioURL, videoTrimRange[0]]);
+
+    // Synchronize preview video and audio play/pause states
+    useEffect(() => {
+        const video = uploadVideoRef.current;
+        const audio = uploadAudioRef.current;
+        if (!video || !audio) return;
+
+        const handlePlay = () => {
+            audio.currentTime = Math.max(0, video.currentTime - videoTrimRange[0]);
+            audio.play().catch(() => {});
+        };
+        const handlePause = () => {
+            audio.pause();
+        };
+
+        video.addEventListener('play', handlePlay);
+        video.addEventListener('pause', handlePause);
+        
+        if (!video.paused) {
+            audio.play().catch(() => {});
+        } else {
+            audio.pause();
+        }
+
+        return () => {
+            video.removeEventListener('play', handlePlay);
+            video.removeEventListener('pause', handlePause);
+        };
+    }, [audioURL, videoTrimRange[0]]);
     
     // DERIVED STATES
     const isAnyPetLost = useMemo(() => userPets.some(p => p.is_lost), [userPets]);
@@ -573,7 +641,7 @@ export default function MoffiSocialMasterpiece() {
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = (event) => {
-                const img = new Image();
+                                 const img = new window.Image();
                 img.src = event.target?.result as string;
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
@@ -656,8 +724,9 @@ export default function MoffiSocialMasterpiece() {
     const sosInputRef = useRef<HTMLInputElement>(null);
     const adoptionPhotoRef = useRef<HTMLInputElement>(null);
     const coverInputRef = useRef<HTMLInputElement>(null);
-    const globalScrollRef = useRef<HTMLDivElement>(null);
-    const scrollY = useMotionValue(0);
+         const globalScrollRef = useRef<HTMLDivElement>(null);
+     const uploadScrollRef = useRef<HTMLDivElement>(null);
+     const scrollY = useMotionValue(0);
     const longPressTimer = useRef<NodeJS.Timeout | null>(null);
     const longPressHubTimer = useRef<NodeJS.Timeout | null>(null);
     const storyTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -721,7 +790,7 @@ export default function MoffiSocialMasterpiece() {
         };
     }, [router]);
 
-    useEffect(() => {
+             useEffect(() => {
         if (searchParams.get('openUpload') === 'true') {
             setIsUploadModalOpen(true);
             setTimeout(() => {
@@ -729,6 +798,36 @@ export default function MoffiSocialMasterpiece() {
             }, 300);
         }
     }, [searchParams]);
+
+    useEffect(() => {
+        if (activeTool && uploadScrollRef.current) {
+            setTimeout(() => {
+                const drawerElement = document.getElementById('upload-tool-drawer');
+                if (drawerElement) {
+                    drawerElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'nearest'
+                    });
+                } else {
+                    uploadScrollRef.current?.scrollTo({
+                        top: uploadScrollRef.current.scrollHeight,
+                        behavior: 'smooth'
+                    });
+                }
+            }, 150);
+        }
+    }, [activeTool]);
+
+     useEffect(() => {
+         if (activeTool && uploadScrollRef.current) {
+             setTimeout(() => {
+                 uploadScrollRef.current?.scrollTo({
+                     top: uploadScrollRef.current.scrollHeight,
+                     behavior: 'smooth'
+                 });
+             }, 100);
+         }
+     }, [activeTool]);
 
     // Unified Header Scroll Logic (Works for all tabs)
 
@@ -1226,7 +1325,7 @@ export default function MoffiSocialMasterpiece() {
         try {
             await apiService.updatePost(editingPost.id, {
                 desc: editingPost.desc,
-                mood: editingPost.mood
+                                 mood: editingPost.mood || undefined
             });
             setPosts(prev => prev.map(p => p.id === editingPost.id ? { ...p, desc: editingPost.desc, mood: editingPost.mood } : p));
             setEditingPost(null);
@@ -1239,13 +1338,137 @@ export default function MoffiSocialMasterpiece() {
         }
     };
 
+    const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        
+        const MAX_AUDIO_SIZE = 10 * 1024 * 1024; // 10MB
+        if (file.size > MAX_AUDIO_SIZE) {
+            showToast("Ses Dosyası Çok Büyük", "Lütfen 10MB'dan daha küçük bir ses dosyası seçin. 🎵", "error");
+            if (audioInputRef.current) audioInputRef.current.value = '';
+            return;
+        }
+
+        setAudioFile(file);
+        setAudioURL(URL.createObjectURL(file));
+        showToast("Ses Eklendi 🎵", `${file.name} başarıyla eklendi.`, "success");
+        if (audioInputRef.current) audioInputRef.current.value = '';
+    };
+
+    const handleTrimmerPointerDown = (e: React.PointerEvent<HTMLDivElement>, handle: 'start' | 'end' | 'window') => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        isDraggingRef.current = true;
+        setDraggingHandle(handle);
+        
+        if (uploadVideoRef.current) {
+            uploadVideoRef.current.pause();
+        }
+        
+        let lastClientX = e.clientX;
+        let latestStart = videoTrimRange[0];
+        
+        const handlePointerMove = (moveEvent: PointerEvent) => {
+            if (!trimmerRef.current || videoDuration <= 0) return;
+            const rect = trimmerRef.current.getBoundingClientRect();
+            const deltaX = moveEvent.clientX - lastClientX;
+            const deltaSeconds = (deltaX / rect.width) * videoDuration;
+            
+            lastClientX = moveEvent.clientX;
+            
+            setVideoTrimRange((prev) => {
+                const [start, end] = prev;
+                const rangeDuration = end - start;
+                
+                if (handle === 'start') {
+                    const newStart = Math.max(0, Math.min(start + deltaSeconds, end - 0.5));
+                    if (end - newStart > 10) {
+                        latestStart = end - 10;
+                        if (uploadVideoRef.current) uploadVideoRef.current.currentTime = latestStart;
+                        return [latestStart, end];
+                    }
+                    latestStart = newStart;
+                    if (uploadVideoRef.current) uploadVideoRef.current.currentTime = newStart;
+                    return [newStart, end];
+                } else if (handle === 'end') {
+                    const newEnd = Math.max(start + 0.5, Math.min(end + deltaSeconds, videoDuration));
+                    if (newEnd - start > 10) {
+                        latestStart = start;
+                        if (uploadVideoRef.current) uploadVideoRef.current.currentTime = start + 10;
+                        return [start, start + 10];
+                    }
+                    latestStart = start;
+                    if (uploadVideoRef.current) uploadVideoRef.current.currentTime = newEnd;
+                    return [start, newEnd];
+                } else {
+                    let newStart = start + deltaSeconds;
+                    let newEnd = end + deltaSeconds;
+                    
+                    if (newStart < 0) {
+                        newStart = 0;
+                        newEnd = rangeDuration;
+                    } else if (newEnd > videoDuration) {
+                        newEnd = videoDuration;
+                        newStart = videoDuration - rangeDuration;
+                    }
+                    latestStart = newStart;
+                    if (uploadVideoRef.current) {
+                        uploadVideoRef.current.currentTime = newStart;
+                    }
+                    return [newStart, newEnd];
+                }
+            });
+        };
+        
+        const handlePointerUp = () => {
+            isDraggingRef.current = false;
+            setDraggingHandle(null);
+            
+            window.removeEventListener('pointermove', handlePointerMove);
+            window.removeEventListener('pointerup', handlePointerUp);
+            
+            if (uploadVideoRef.current) {
+                uploadVideoRef.current.currentTime = latestStart;
+                uploadVideoRef.current.play().catch(() => {});
+            }
+        };
+        
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerUp);
+    };
+
+    const handleVideoTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+        if (isDraggingRef.current) return;
+        
+        const video = e.currentTarget;
+        const start = videoTrimRange[0];
+        const end = videoTrimRange[1];
+        setVideoCurrentTime(video.currentTime);
+        
+        if (video.currentTime < start || video.currentTime >= end) {
+            video.currentTime = start;
+            if (uploadAudioRef.current) {
+                uploadAudioRef.current.currentTime = 0;
+                uploadAudioRef.current.play().catch(() => {});
+            }
+        } else {
+            if (uploadAudioRef.current) {
+                const expectedAudioTime = video.currentTime - start;
+                if (Math.abs(uploadAudioRef.current.currentTime - expectedAudioTime) > 0.15) {
+                    uploadAudioRef.current.currentTime = expectedAudioTime;
+                }
+            }
+        }
+    };
+
     const handleCameraUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
         // --- GLOBAL STANDARDS CHECK ---
         const MAX_FILE_SIZE = 40 * 1024 * 1024; // 40MB
-        const MAX_VIDEO_DURATION = 20; // 20 Seconds Standard
+        const MAX_VIDEO_DURATION = 10; // 10 Seconds Standard
 
         if (file.size > MAX_FILE_SIZE) {
             showToast("Dosya Çok Büyük", "Lütfen 40MB'dan daha küçük bir video/resim seçin. 📏", "error");
@@ -1262,8 +1485,8 @@ export default function MoffiSocialMasterpiece() {
                 
                 if (video.duration > MAX_VIDEO_DURATION) {
                     // Long video: Don't block, just set initial trim
-                    setVideoTrimRange([0, 20]);
-                    showToast("Video Ayarlama", "Videonuz 20 saniyeden uzun. En iyi kısmını seçebilirsiniz. ✨", "info");
+                    setVideoTrimRange([0, 10]);
+                    showToast("Video Ayarlama", "Videonuz 10 saniyeden uzun. En iyi kısmını seçebilirsiniz. ✨", "info");
                 } else {
                     setVideoTrimRange([0, video.duration]);
                 }
@@ -1290,6 +1513,19 @@ export default function MoffiSocialMasterpiece() {
             return;
         }
 
+        if (isSchedulingMode) {
+            if (!scheduledDate) {
+                showToast("Tarih Seçilmedi 📅", "Lütfen paylaşım zamanı için geçerli bir tarih ve saat seçin kral!", "info");
+                return;
+            }
+            const selectedTime = new Date(scheduledDate).getTime();
+            const nowTime = new Date().getTime();
+            if (selectedTime <= nowTime) {
+                showToast("Geçersiz Tarih 📅", "Paylaşım zamanı şu andan ileri bir tarih olmalıdır kral!", "info");
+                return;
+            }
+        }
+
         setIsPublishing(true);
         setUploadProgress(0);
         try {
@@ -1299,13 +1535,13 @@ export default function MoffiSocialMasterpiece() {
                 fileToUpload = await compressImageToFile(selectedFile, 1200, 0.8, imageFilter);
             } else if (selectedFile.type.startsWith('video/')) {
                 // Show "Processing" state
-                showToast("Video Hazırlanıyor...", "Seçtiğiniz 20 saniyelik kısım işleniyor ve optimize ediliyor. ✨", "info");
+                showToast("Video Hazırlanıyor...", "Seçtiğiniz 10 saniyelik kısım işleniyor ve optimize ediliyor. ✨", "info");
                 
                 try {
                     const trimmedVideoBlob = await processVideo(
                         selectedFile, 
                         videoTrimRange[0], 
-                        Math.min(20, videoTrimRange[1] - videoTrimRange[0])
+                        Math.min(10, videoTrimRange[1] - videoTrimRange[0])
                     );
                     
                     fileToUpload = new File([trimmedVideoBlob], "trimmed_video.webm", { type: 'video/webm' });
@@ -1338,18 +1574,23 @@ export default function MoffiSocialMasterpiece() {
             const newPostResult = await apiService.addPost({
                 media: publicUrl,
                 caption: uploadCaption,
-                mood: uploadMood || null,
+                mood: uploadMood || undefined,
                 is_video: isVideo,
-                audio_url: audioPublicUrl,
+                audio_url: audioPublicUrl || undefined,
                 tagged_pets: taggedPetIds,
-                scheduled_at: isSchedulingMode ? scheduledDate : null,
+                scheduled_at: isSchedulingMode && scheduledDate ? new Date(scheduledDate).toISOString() : null,
                 status: isSchedulingMode ? 'scheduled' : 'published',
                 trim_start: isVideo ? (wasProcessed ? 0 : videoTrimRange[0]) : undefined,
                 trim_end: isVideo ? (wasProcessed ? (videoTrimRange[1] - videoTrimRange[0]) : videoTrimRange[1]) : undefined
             });
 
-            // 3. OPTIMISTIC UPDATE: Add to local state immediately
-            setPosts(prev => [newPostResult, ...prev]);
+            // 3. OPTIMISTIC UPDATE / UI Notification
+            if (newPostResult.status !== 'scheduled') {
+                setPosts(prev => [newPostResult, ...prev]);
+                showToast("Paylaşıldı", "Yeni gönderiniz yayında! ✨", "success");
+            } else {
+                showToast("Zamanlandı 📅", "Gönderiniz belirtilen tarih ve saatte otomatik olarak yayınlanacaktır.", "success");
+            }
 
             // 4. Clean up
             setIsUploadModalOpen(false);
@@ -1368,7 +1609,6 @@ export default function MoffiSocialMasterpiece() {
             setActiveTool(null);
             setUploadLocationEnabled(false);
             setActiveTab('feed');
-            showToast("Paylaşıldı", "Yeni gönderiniz yayında!", "success");
 
             // 5. Background sync
             fetchPosts();
@@ -1417,7 +1657,7 @@ export default function MoffiSocialMasterpiece() {
             const newAlert = await apiService.addLostPet({
                 name: lostPetName,
                 type: 'dog',
-                img: photoUrls[0] || null,
+                img: photoUrls[0] || undefined,
                 location: lostPetLocation,
                 description: lostPetDesc
             });
@@ -1459,7 +1699,7 @@ export default function MoffiSocialMasterpiece() {
 
     const handleAdoptionPost = async () => {
         if (!user) {
-            setIsAuthModalOpen(true);
+            window.dispatchEvent(new CustomEvent('open-auth-modal'));
             return;
         }
 
@@ -1483,7 +1723,7 @@ export default function MoffiSocialMasterpiece() {
                 name: adoptionPetName,
                 type: adoptionPetType,
                 description: adoptionPetDesc,
-                img: photoUrls[0] || null,
+                img: photoUrls[0] || undefined,
                 owner: user.username
             });
 
@@ -1599,7 +1839,7 @@ export default function MoffiSocialMasterpiece() {
 
     const handleReportLocation = () => {
         if (!user) {
-            showToast("Giriş Gerekli", "Anonim olarak ihbar verebilmek için üye girişi yapmalısınız.", "Zap");
+            showToast("Giriş Gerekli", "Anonim olarak ihbar verebilmek için üye girişi yapmalısınız.", "error");
             window.dispatchEvent(new CustomEvent('open-auth-modal'));
             return;
         }
@@ -1610,7 +1850,7 @@ export default function MoffiSocialMasterpiece() {
 
     const handleMessageOwner = () => {
         if (!user) {
-            showToast("Giriş Gerekli", "Mesaj atabilmek için giriş yapmalısınız.", "Zap");
+            showToast("Giriş Gerekli", "Mesaj atabilmek için giriş yapmalısınız.", "error");
             window.dispatchEvent(new CustomEvent('open-auth-modal'));
             return;
         }
@@ -1884,7 +2124,6 @@ export default function MoffiSocialMasterpiece() {
                 className="shrink-0 transition-all duration-300" 
             />
 
-
             {/* MAIN IMMERSIVE CONTENT - Unified Scroll per tab */}
             <main 
                 id="community-scroll-container"
@@ -1893,530 +2132,76 @@ export default function MoffiSocialMasterpiece() {
                 className="flex-1 relative z-10 w-full overflow-y-auto no-scrollbar overscroll-contain snap-y snap-mandatory"
             >
                 <AnimatePresence>
-
                     {/* FEED TAB */}
                     {activeTab === 'feed' && (
-                        <motion.div
-                            key="feed"
-                            initial={{ opacity: 0, filter: "blur(10px)" }}
-                            animate={{ opacity: 1, filter: "blur(0px)" }}
-                            exit={{ opacity: 0, filter: "blur(10px)" }}
-                            transition={{ duration: 0.3 }}
-                            className="w-full pb-32 flex flex-col gap-4"
-                        >
-                            {/* INSTAGRAM-STYLE STORIES BAR */}
-
-
-
-                            <div className="w-full flex gap-4 px-4 py-4 overflow-x-auto no-scrollbar snap-start shrink-0">
-                                {/* Current User Add Story - Apple Style Upgrade */}
-                                <div className="flex flex-col items-center gap-1.5 shrink-0 group">
-                                    <div 
-                                        onClick={handleStoryClick}
-                                        className="relative w-16 h-16 flex items-center justify-center cursor-pointer"
-                                    >
-                                        <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-cyan-500/20 via-purple-500/20 to-pink-500/20 border-2 border-dashed border-white/20 group-hover:border-cyan-400/50 group-hover:bg-white/5 transition-all duration-500" />
-                                        
-                                        <div className="relative z-10 w-12 h-12 rounded-full bg-[var(--card-bg)] backdrop-blur-md border border-white/10 flex items-center justify-center shadow-2xl group-hover:scale-110 group-active:scale-95 transition-all duration-300">
-                                            <div className="absolute inset-0 bg-cyan-400/5 blur-md group-hover:bg-cyan-400/20 transition-all" />
-                                            <Plus className="w-6 h-6 text-[var(--foreground)] group-hover:text-cyan-400" strokeWidth={2.5} />
-                                        </div>
-                                    </div>
-                                    <span className="text-[9px] text-[var(--secondary-text)] font-black uppercase tracking-[0.2em] group-hover:text-cyan-400 transition-colors">Hikaye</span>
-                                </div>
-
-                                {/* Real Database Stories */}
-                                {storyGroups.map((group, index) => (
-                                    <div key={group.user_id} className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group" onClick={() => {
-                                        setViewerStoryGroupIndex(index);
-                                        setViewerStoryIndex(0);
-                                    }}>
-                                        <div className={cn(
-                                            "w-16 h-16 rounded-full p-[2.5px] transition-transform group-hover:scale-105",
-                                            group.hasUnseen ? "bg-gradient-to-tr from-cyan-400 via-blue-500 to-purple-600" : "bg-white/10"
-                                        )}>
-                                            <div className="w-full h-full bg-[var(--background)] rounded-full border-2 border-[var(--background)] overflow-hidden relative">
-                                                <img 
-                                                    src={(group.user_id === user?.id ? (user?.avatar || group.author_avatar) : group.author_avatar) || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200"} 
-                                                    className="w-full h-full object-cover transition-opacity duration-500"
-                                                    onLoad={(e) => (e.target as HTMLImageElement).style.opacity = '1'}
-                                                    style={{ opacity: 0 }}
-                                                />
-                                            </div>
-                                        </div>
-                                        <span className={cn("text-[10px] tracking-wide", group.hasUnseen ? "font-bold text-[var(--foreground)]" : "font-medium text-[var(--secondary-text)] truncate w-16 text-center")}>
-                                            {user?.id === group.user_id ? "Sen" : group.author_name}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* Feed SOS Alerts (Respecting Privacy Settings) */}
-
-                            {/* Feed SOS Alerts (Respecting Privacy Settings) */}
-                            {activePet?.is_lost && !isSosAlertDismissed && activePet.sos_settings?.auto_post_sos !== false && (
-                                <motion.div 
-                                    initial={{ scale: 0.95, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    exit={{ scale: 0.95, opacity: 0 }}
-                                    className="px-4 -mt-2 mb-4 snap-start animate-in fade-in duration-300"
-                                >
-                                    <div className="bg-red-500/[0.04] dark:bg-red-950/20 border border-red-500/20 rounded-2xl p-2.5 px-3 backdrop-blur-xl relative overflow-hidden group shadow-lg shadow-red-950/10">
-                                        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-red-500/40 to-transparent" />
-                                        <div className="absolute -inset-10 bg-red-500/5 blur-2xl rounded-full pointer-events-none" />
-                                        
-                                        <div className="flex items-center justify-between relative z-10 gap-3">
-                                            <div className="flex items-center gap-2.5">
-                                                <div className="relative shrink-0">
-                                                    <div className="w-8 h-8 rounded-full border border-red-500/30 p-[1.5px] bg-red-500/10 flex items-center justify-center overflow-hidden">
-                                                        {activePet.avatar ? (
-                                                            <img 
-                                                                src={activePet.avatar} 
-                                                                alt={activePet.name} 
-                                                                className="w-full h-full object-cover rounded-full" 
-                                                            />
-                                                        ) : (
-                                                            <ShieldAlert className="w-4 h-4 text-red-400" />
-                                                        )}
-                                                    </div>
-                                                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full animate-ping" />
-                                                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 border border-[var(--background)] rounded-full" />
-                                                </div>
-                                                
-                                                <div className="flex flex-col text-left">
-                                                    <div className="flex items-center gap-1.5">
-                                                        <h3 className="text-[11px] font-black text-white uppercase tracking-wide leading-none">
-                                                            {activePet.name}
-                                                        </h3>
-                                                        <span className="text-[7.5px] font-black text-red-500 dark:text-red-400 bg-red-500/15 border border-red-500/25 px-1 py-[1.5px] rounded uppercase tracking-wider leading-none">
-                                                            KAYIP
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-[8.5px] font-bold text-red-200/50 uppercase tracking-wider mt-1 leading-none">
-                                                        Arama Kurtarma Sinyali Aktif
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="flex items-center gap-2 shrink-0">
-                                                <button 
-                                                    onClick={() => {
-                                                        setSosActivePet(activePet);
-                                                        setIsSOSCommandCenterOpen(true);
-                                                    }}
-                                                    className="px-2.5 py-1.5 bg-red-500 hover:bg-red-600 active:scale-95 text-white rounded-lg text-[8.5px] font-black uppercase tracking-wider transition-all duration-200 shadow-md shadow-red-500/20 cursor-pointer"
-                                                >
-                                                    YÖNET
-                                                </button>
-                                                <button 
-                                                    onClick={() => setIsSosAlertDismissed(true)}
-                                                    className="p-1.5 hover:bg-red-500/10 rounded-lg text-white/30 hover:text-red-400 transition-colors cursor-pointer shrink-0"
-                                                    title="Alarm Kartını Kapat (Kayıp modu aktif kalır)"
-                                                >
-                                                    <X className="w-3.5 h-3.5" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )}
-                            {isLoadingPosts ? (
-                                Array(3).fill(0).map((_, i) => (
-                                    <div key={i} className="w-full relative flex flex-col items-center justify-center px-4 shrink-0" style={{ height: "calc(100vh - 180px)" }}>
-                                        <div className="relative w-full h-full max-w-lg mx-auto rounded-[3rem] overflow-hidden bg-[var(--card-bg)] border border-white/10 shadow-2xl animate-pulse">
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                                            <div className="absolute inset-0 bg-[var(--card-bg)] overflow-hidden">
-                                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-shimmer" />
-                                            </div>
-                                            <div className="absolute bottom-8 left-8 right-8 space-y-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-12 h-12 rounded-full bg-white/10" />
-                                                    <div className="space-y-2">
-                                                        <div className="h-4 w-24 bg-white/10 rounded-full" />
-                                                        <div className="h-3 w-16 bg-white/10 rounded-full" />
-                                                    </div>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <div className="h-3 w-full bg-white/10 rounded-full" />
-                                                    <div className="h-3 w-4/5 bg-white/10 rounded-full" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : viewMode === 'grid' ? (
-                                <ExploreGrid 
-                                    posts={filteredPosts} 
-                                    onPostClick={handlePostClickFromGrid} 
-                                    isLoading={isLoadingPosts} 
-                                />
-                            ) : (
-                                filteredPosts.map((post, feedIdx) => (
-                                    <div key={post.id} id={`post-${post.id}`} className="w-full relative flex flex-col items-center justify-center px-0 shrink-0 snap-start" style={{ height: "calc(100vh - 160px)" }}>
-                                        <ImmersivePostCard
-                                            post={post}
-                                            currentUser={user}
-                                            onLike={() => toggleLike(post.id)}
-                                            onShare={() => setSelectedSharePost(post)}
-                                            onAddComment={(text) => addComment(post.id, text)}
-                                            onToggleCommentLike={(commentId) => toggleCommentLike(post.id, Number(commentId))}
-                                            onReplyComment={(commentId, text) => addCommentReply(post.id, Number(commentId), text)}
-                                            onDeleteComment={(commentId) => deleteComment(post.id, Number(commentId))}
-                                            onEditComment={(commentId, text) => editComment(post.id, Number(commentId), text)}
-                                            onReportComment={(commentId) => reportComment(post.id, Number(commentId))}
-                                            onDeletePost={() => setPostToDelete(post.id)}
-                                            onEditPost={() => setEditingPost({ id: post.id, desc: post.desc, mood: post.mood, media: post.media })}
-                                            priority={feedIdx === 0}
-                                            isCommentsDisabled={!user?.settings?.privacy?.allowComments}
-                                        />
-                                    </div>
-                                ))
-                            )}
-
-                            {/* Space for bottom nav */}
-                            <div className="h-12 w-full shrink-0" />
-                        </motion.div>
+                        <FeedTab
+                            user={user}
+                            activePet={activePet}
+                            isSosAlertDismissed={isSosAlertDismissed}
+                            setIsSosAlertDismissed={setIsSosAlertDismissed}
+                            setSosActivePet={setSosActivePet}
+                            setIsSOSCommandCenterOpen={setIsSOSCommandCenterOpen}
+                            posts={filteredPosts}
+                            storyGroups={storyGroups}
+                            isLoading={isLoadingPosts}
+                            viewMode={viewMode}
+                            onLike={toggleLike}
+                            onShare={(post) => setSelectedSharePost(post)}
+                            onAddComment={addComment}
+                            onToggleCommentLike={toggleCommentLike}
+                            onReplyComment={addCommentReply}
+                            onDeleteComment={deleteComment}
+                            onEditComment={editComment}
+                            onReportComment={reportComment}
+                            onDeletePost={(postId) => setPostToDelete(postId)}
+                            onEditPost={(post) => setEditingPost({ id: post.id, desc: post.desc, mood: post.mood, media: post.media })}
+                            onStoryClick={(index) => {
+                                setViewerStoryGroupIndex(index);
+                                setViewerStoryIndex(0);
+                            }}
+                            onAddStoryClick={handleStoryClick}
+                            onPostClickFromGrid={handlePostClickFromGrid}
+                            isCommentsDisabled={!user?.settings?.privacy?.allowComments}
+                        />
                     )}
 
                     {/* UNIFIED COMMUNITY RADAR TAB */}
-                    {activeTab === 'radar' && (
-                        <motion.div
-                            key="radar"
-                            initial={{ opacity: 0, scale: 0.98 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.98 }}
-                            className="w-full pb-32 bg-[var(--background)] flex flex-col items-center"
-                        >
-                            <div className="w-full max-w-md mx-auto relative">
-                                
-                                {/* 0. RADAR SUB-TAB SELECTOR (Apple Style Navigation) */}
-                                <div className="w-full px-6 pt-6 pb-2 flex items-center justify-between sticky top-0 z-40 bg-[var(--background)]/80 backdrop-blur-xl">
-                                    <button 
-                                        onClick={() => setActiveTab('feed')}
-                                        className="w-10 h-10 rounded-full bg-[var(--card-bg)] border border-white/5 flex items-center justify-center text-[var(--secondary-text)] hover:text-white transition-all active:scale-90 shadow-lg"
-                                        title="Geri Dön"
-                                    >
-                                        <ChevronLeft className="w-6 h-6" />
-                                    </button>
-                                    
-                                    <div className="flex bg-[var(--card-bg)] p-1 rounded-2xl border border-white/10 w-full max-w-[200px] shadow-sm ml-2">
-                                        <button 
-                                            onClick={() => setRadarTabMode('lost')}
-                                            className={cn(
-                                                "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                                radarTabMode === 'lost' ? "bg-white text-black shadow-lg" : "text-[var(--secondary-text)] hover:text-[var(--foreground)]"
-                                            )}
-                                        >
-                                            Kayıp
-                                        </button>
-                                        <button 
-                                            onClick={() => setRadarTabMode('adopt')}
-                                            className={cn(
-                                                "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                                radarTabMode === 'adopt' ? "bg-white text-black shadow-lg" : "text-[var(--secondary-text)] hover:text-[var(--foreground)]"
-                                            )}
-                                        >
-                                            Sahiplen
-                                        </button>
-                                    </div>
-                                    
-                                    <div className="w-10 h-10" />
-                                </div>
-
-                                {/* Pet Switcher for Radar Context */}
-                                <div className="flex justify-center mt-6 mb-2">
-                                    <PetSwitcher onAddPet={() => setIsLostAdModalOpen(true)} />
-                                </div>
-
-                                {radarTabMode === 'lost' ? (
-                                    <motion.div 
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        className="w-full"
-                                    >
-                                        <div className="px-6 pt-4 flex flex-col sm:flex-row gap-4 items-center justify-between">
-                                            {/* Advanced Filters */}
-                                            <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 shrink-0">
-                                                <select 
-                                                    value={filterPetType}
-                                                    onChange={(e) => setFilterPetType(e.target.value as any)}
-                                                    className="px-3 py-1.5 rounded-full bg-[var(--card-bg)] border border-white/10 text-[10px] font-black uppercase tracking-wider text-[var(--foreground)] outline-none focus:border-cyan-500 transition-colors"
-                                                >
-                                                    <option value="all">🐾 Tüm Türler</option>
-                                                    <option value="dog">🐶 Köpek</option>
-                                                    <option value="cat">🐱 Kedi</option>
-                                                </select>
-
-                                                <select 
-                                                    value={filterDistance}
-                                                    onChange={(e) => setFilterDistance(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                                                    className="px-3 py-1.5 rounded-full bg-[var(--card-bg)] border border-white/10 text-[10px] font-black uppercase tracking-wider text-[var(--foreground)] outline-none focus:border-cyan-500 transition-colors"
-                                                >
-                                                    <option value="all">📍 Tüm Mesafeler</option>
-                                                    <option value="1">1 km Yakınında</option>
-                                                    <option value="5">5 km Yakınında</option>
-                                                    <option value="10">10 km Yakınında</option>
-                                                </select>
-                                            </div>
-
-                                            {/* View Mode Toggle */}
-                                            <div className="flex bg-[var(--card-bg)] p-0.5 rounded-2xl border border-white/5 shadow-md self-end sm:self-auto shrink-0">
-                                                <button 
-                                                    onClick={() => setRadarViewMode('list')}
-                                                    className={cn(
-                                                        "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all",
-                                                        radarViewMode === 'list' ? "bg-white text-black shadow-lg" : "text-[var(--secondary-text)] hover:text-[var(--foreground)]"
-                                                    )}
-                                                >
-                                                    📋 Liste
-                                                </button>
-                                                <button 
-                                                    onClick={() => setRadarViewMode('map')}
-                                                    className={cn(
-                                                        "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all",
-                                                        radarViewMode === 'map' ? "bg-white text-black shadow-lg" : "text-[var(--secondary-text)] hover:text-[var(--foreground)]"
-                                                    )}
-                                                >
-                                                    🗺️ Harita
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {radarViewMode === 'map' ? (
-                                            <div className="w-full pt-6 px-6 pb-10 relative">
-                                                <div className="mb-6 flex items-center justify-between">
-                                                    <h3 className="text-red-500 font-bold text-sm tracking-wide uppercase flex items-center gap-2"><ShieldAlert className="w-4 h-4" /> Yakınımdaki İhbarlar</h3>
-                                                    <button onClick={() => setIsLostAdModalOpen(true)} className="px-3 py-1.5 rounded-full bg-red-500/10 text-red-500 text-[10px] font-black uppercase tracking-wider hover:bg-red-500/20 active:scale-95 transition-all border border-red-500/20">
-                                                        + İlan Ekle
-                                                    </button>
-                                                </div>
-                                                <div className="w-full rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl relative" style={{ height: "380px" }}>
-                                                    <RadarMap 
-                                                        lostPets={filteredLostPets} 
-                                                        onPetClick={(pet) => setSelectedLostPet(pet)} 
-                                                        userPos={userCoords}
-                                                    />
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            /* 1. SOS / KAYIP İLANLARI (Vertical List) */
-                                            <div className="w-full pt-6 pb-2 relative">
-                                                <div className="px-6 mb-6 flex items-center justify-between">
-                                                    <h3 className="text-red-500 font-bold text-sm tracking-wide uppercase flex items-center gap-2"><ShieldAlert className="w-4 h-4" /> Aktif İhbarlar</h3>
-                                                    <button onClick={() => setIsLostAdModalOpen(true)} className="px-3 py-1.5 rounded-full bg-red-500/10 text-red-500 text-[10px] font-black uppercase tracking-wider hover:bg-red-500/20 active:scale-95 transition-all border border-red-500/20">
-                                                        + İlan Ekle
-                                                    </button>
-                                                </div>
-
-                                                {filteredLostPets.length > 0 ? (
-                                                    <div className="space-y-4 px-6 pb-10">
-                                                        {filteredLostPets.map((pet) => (
-                                                            <div 
-                                                                key={pet.id} 
-                                                                className={cn(
-                                                                    "w-full rounded-3xl p-4 flex flex-col gap-3 cursor-pointer transition-all active:scale-[0.98] relative group overflow-hidden border",
-                                                                    pet.reward_enabled 
-                                                                        ? "bg-amber-500/5 border-amber-500/30 hover:bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.15)]" 
-                                                                        : "bg-red-500/5 border-red-500/20 hover:bg-red-500/10"
-                                                                )}
-                                                                onClick={() => setSelectedLostPet(pet)}
-                                                            >
-                                                                {/* Apple style blur background for red/gold accent */}
-                                                                <div className={cn(
-                                                                    "absolute top-0 right-0 w-32 h-32 blur-[40px] -mr-10 -mt-10 rounded-full pointer-events-none",
-                                                                    pet.reward_enabled ? "bg-amber-500/10" : "bg-red-500/10"
-                                                                )} />
-
-                                                                {user?.id === pet.user_id && (
-                                                                    <button 
-                                                                        onClick={(e) => { e.stopPropagation(); handleDeleteLostPet(pet.id); }} 
-                                                                        className={cn(
-                                                                            "absolute right-3 top-3 px-3 py-1.5 rounded-full bg-[var(--card-bg)] text-[10px] font-bold uppercase transition-transform hover:scale-105 active:scale-95 flex items-center gap-1 z-10 shadow-lg",
-                                                                            pet.reward_enabled ? "border-amber-500/30 text-amber-400" : "border-red-500/30 text-red-400"
-                                                                        )}
-                                                                    >
-                                                                        <Trash2 className="w-3 h-3" /> Sil
-                                                                    </button>
-                                                                )}
-
-                                                                <div className="flex gap-4 items-center">
-                                                                    <div className={cn(
-                                                                        "w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 border shadow-inner overflow-hidden",
-                                                                        pet.reward_enabled ? "bg-amber-500/20 border-amber-500/30" : "bg-red-500/20 border-red-500/30"
-                                                                    )}>
-                                                                        {pet.img ? (
-                                                                            <img src={pet.img} className="w-full h-full object-cover" />
-                                                                        ) : (
-                                                                            <div className="flex flex-col items-center">
-                                                                                <ShieldAlert className={cn("w-6 h-6", pet.reward_enabled ? "text-amber-500" : "text-red-500")} />
-                                                                                <span className={cn("text-[8px] font-black mt-1", pet.reward_enabled ? "text-amber-500" : "text-red-500")}>SOS</span>
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                    <div className="flex-1 overflow-hidden">
-                                                                        <div className="flex items-center justify-between">
-                                                                            <div className="flex items-center gap-2">
-                                                                                <p className={cn("font-black text-lg tracking-tight truncate", pet.reward_enabled ? "text-amber-500" : "text-red-500")}>{pet.name}</p>
-                                                                                <span className={cn("px-1.5 py-0.5 rounded-full text-[10px] font-bold border", pet.reward_enabled ? "bg-amber-500/20 border-amber-500/30 text-amber-500" : "bg-red-500/20 border-red-500/30 text-red-500")}>Kayıp</span>
-                                                                            </div>
-                                                                            {pet.reward_enabled && pet.reward && (
-                                                                                <span className="px-2 py-0.5 rounded-lg bg-orange-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg -mt-1">ÖDÜL</span>
-                                                                            )}
-                                                                        </div>
-                                                                        <p className="text-[var(--secondary-text)] text-xs font-medium truncate">{pet.type || "Bilinmiyor"}</p>
-                                                                        <p className={cn("text-[10px] mt-1.5 flex items-center gap-1 font-black", pet.reward_enabled ? "text-amber-400/80" : "text-red-400/80")}><MapPin className="w-3 h-3 text-cyan-400" /> {pet.last_seen_location || pet.location}</p>
-                                                                    </div>
-                                                                    <ChevronRight className={cn("w-5 h-5", pet.reward_enabled ? "text-amber-500/50" : "text-red-500/50")} />
-                                                                </div>
-                                                                <p className="text-[var(--foreground)]/70 text-[11px] mt-1 leading-snug line-clamp-2 px-1 font-medium italic">"{pet.description || "Lütfen görünce acil dönüş yapın."}"</p>
-                                                                
-                                                                <div className="mt-2 flex gap-2">
-                                                                    <button 
-                                                                        onClick={(e) => { e.stopPropagation(); /* Logic to open chat */ }}
-                                                                        className="flex-1 py-3 rounded-2xl bg-white text-black text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg"
-                                                                    >
-                                                                        İletişime Geç
-                                                                    </button>
-                                                                    <button 
-                                                                        className="px-4 py-3 rounded-2xl bg-white/10 text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all border border-white/5"
-                                                                    >
-                                                                        Konum Paylaş
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                ) : (
-                                                    <div className="text-center py-12 mx-6 mb-4 bg-red-500/5 rounded-3xl border border-red-500/10">
-                                                        <ShieldAlert className="w-10 h-10 text-red-500/20 mx-auto mb-3" />
-                                                        <p className="text-xs text-red-500/40 font-bold tracking-wide">Aktif İhbar Bulunmuyor</p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </motion.div>
-                                ) : (
-                                    <motion.div 
-                                        initial={{ opacity: 0, x: 20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        className="w-full mt-2"
-                                    >
-                                        {/* ADOPTION PANEL CONTENT */}
-                                        <div className="px-6 mb-8 mt-2 flex items-center justify-between">
-                                            <div>
-                                                <p className="text-[var(--secondary-text)] text-[11px] font-bold uppercase tracking-widest mb-1">
-                                                    Bugün Sahiplen
-                                                </p>
-                                                <h2 className="text-3xl font-black text-[var(--foreground)] tracking-tight mt-1">Sıcak Bir Yuva</h2>
-                                            </div>
-                                            <button onClick={() => setIsAddAdoptionModalOpen(true)} className="px-4 py-2 rounded-full bg-cyan-500/10 text-cyan-400 text-xs font-black uppercase tracking-wider hover:bg-cyan-500/20 active:scale-95 transition-all outline outline-1 outline-cyan-500/30 flex items-center gap-1.5 shadow-[0_0_15px_rgba(6,182,212,0.15)]">
-                                                <Plus className="w-4 h-4" /> İlan Ver
-                                            </button>
-                                        </div>
-
-                                        {/* APPLE-STYLE HORIZONTAL FILTER PILLS */}
-                                        <div className="w-full overflow-x-auto no-scrollbar px-6 mb-8 -mt-2 pb-2 flex gap-3 snap-x">
-                                            {["Hepsi", "🐱 Kediler", "🐶 Köpekler", "🦜 Kuşlar", "🚨 Acil", "🏢 Apartmana"].map((pill) => (
-                                                <button
-                                                    key={pill}
-                                                    onClick={() => setSelectedAdoptionCategory(pill)}
-                                                    className={cn(
-                                                        "snap-start whitespace-nowrap px-4 py-2 rounded-full text-[13px] font-bold transition-all active:scale-95",
-                                                        selectedAdoptionCategory === pill
-                                                            ? "bg-white text-black shadow-lg shadow-white/20"
-                                                            : "bg-[#1C1C1E] text-[#8E8E93] border border-[var(--card-border)] hover:bg-white/10 hover:text-[var(--foreground)]"
-                                                    )}
-                                                >
-                                                    {pill}
-                                                </button>
-                                            ))}
-                                        </div>
-
-                                        {/* REAL ADOPTION ADS LIST */}
-                                        <div className="px-6 mb-8 w-full">
-                                            <div className="flex justify-between items-end mb-4 pb-3">
-                                                <h2 className="text-2xl font-bold text-[var(--foreground)] tracking-tight">İlanlar</h2>
-                                                <span className="text-xs text-[var(--secondary-text)] font-bold bg-[var(--card-bg)] px-2 py-1 rounded-full">{adoptionAds.length} ilan</span>
-                                            </div>
-                                            {(() => {
-                                                const filtered = adoptionAds.filter(ad => {
-                                                    if (selectedAdoptionCategory === "Hepsi") return true;
-                                                    if (selectedAdoptionCategory === "🐱 Kediler") return ad.pet_type === "cat" || ad.breed?.toLowerCase().includes("kedi");
-                                                    if (selectedAdoptionCategory === "🐶 Köpekler") return ad.pet_type === "dog" || ad.breed?.toLowerCase().includes("köpek");
-                                                    if (selectedAdoptionCategory === "🦜 Kuşlar") return ad.pet_type === "bird" || ad.breed?.toLowerCase().includes("kuş");
-                                                    if (selectedAdoptionCategory === "🚨 Acil") return ad.is_emergency === true;
-                                                    if (selectedAdoptionCategory === "🏢 Apartmana") return ad.is_apartment_friendly === true;
-                                                    return true;
-                                                });
-
-                                                if (isLoadingAdoptions) {
-                                                    return (
-                                                        <div className="space-y-4">
-                                                            {Array(3).fill(0).map((_, i) => (
-                                                                <div key={i} className="flex gap-4 p-4 rounded-[2rem] bg-[var(--card-bg)] border border-[var(--card-border)] animate-pulse overflow-hidden relative">
-                                                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-shimmer" />
-                                                                    <div className="w-16 h-16 rounded-2xl bg-white/10 shrink-0" />
-                                                                    <div className="flex-1 space-y-3 pt-2">
-                                                                        <div className="h-4 w-32 bg-white/10 rounded-full" />
-                                                                        <div className="h-3 w-20 bg-white/10 rounded-full opacity-50" />
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    );
-                                                }
-
-                                                if (filtered.length === 0) {
-                                                    return (
-                                                        <div className="text-center py-12 bg-[var(--card-bg)] rounded-3xl border border-white/10">
-                                                            <HeartHandshake className="w-10 h-10 text-[var(--secondary-text)] mx-auto mb-3" />
-                                                            <p className="text-[var(--secondary-text)] font-bold">Henüz ilan yok</p>
-                                                        </div>
-                                                    );
-                                                }
-
-                                                return (
-                                                    <div className="space-y-4">
-                                                        {filtered.map((ad) => (
-                                                            <div
-                                                                key={ad.id}
-                                                                className="flex flex-row items-center gap-4 bg-[var(--card-bg)] p-3 rounded-2xl border border-[var(--card-border)] active:bg-[var(--card-bg)] transition-colors cursor-pointer relative"
-                                                                onClick={() => setSelectedAdoptionPet({
-                                                                    id: ad.id,
-                                                                    name: ad.name,
-                                                                    breed: ad.breed,
-                                                                    desc: ad.description || `${ad.name} sıcak bir yuva arıyor.`,
-                                                                    img: ad.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=600',
-                                                                    images: ad.images || [ad.image_url],
-                                                                    tags: [ad.age, ad.breed].filter(Boolean),
-                                                                    user_id: ad.user_id,
-                                                                    author_name: ad.author_name,
-                                                                    author_avatar: ad.author_avatar,
-                                                                    created_at: ad.created_at
-                                                                })}
-                                                            >
-                                                                <img src={ad.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=200'} className="w-16 h-16 rounded-[1rem] object-cover shrink-0" />
-                                                                <div className="flex-1 overflow-hidden">
-                                                                    <h4 className="text-[var(--foreground)] font-bold text-base">{ad.name} <span className="text-[var(--secondary-text)] font-medium text-xs ml-1">• {ad.age}</span></h4>
-                                                                    <p className="text-cyan-400 text-xs mt-0.5">{ad.breed}</p>
-                                                                </div>
-                                                                <ChevronRight className="w-5 h-5 text-[var(--secondary-text)] mr-1 shrink-0" />
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                );
-                                            })()}
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </div>
-                        </motion.div>
+                    {activeTab === 'radar' && radarTabMode === 'lost' && (
+                        <RadarTab
+                            user={user}
+                            lostPets={filteredLostPets}
+                            isLoading={isLoadingLost}
+                            userCoords={userCoords}
+                            filterPetType={filterPetType}
+                            setFilterPetType={setFilterPetType}
+                            filterDistance={filterDistance}
+                            setFilterDistance={setFilterDistance}
+                            radarViewMode={radarViewMode}
+                            setRadarViewMode={setRadarViewMode}
+                            radarTabMode={radarTabMode}
+                            setRadarTabMode={setRadarTabMode}
+                            setActiveTab={setActiveTab}
+                            setIsLostAdModalOpen={setIsLostAdModalOpen}
+                            setSelectedLostPet={setSelectedLostPet}
+                            onDeleteSOS={handleDeleteLostPet}
+                        />
                     )}
 
-
-
+                    {/* ADOPTION PANEL CONTENT */}
+                    {activeTab === 'radar' && radarTabMode === 'adopt' && (
+                        <AdoptionTab
+                            user={user}
+                            onAddAd={() => setIsAddAdoptionModalOpen(true)}
+                            selectedCategory={selectedAdoptionCategory}
+                            setSelectedCategory={setSelectedAdoptionCategory}
+                            onAdClick={setSelectedAdoptionPet}
+                            ads={adoptionAds}
+                            isLoading={isLoadingAdoptions}
+                            onDeleteAd={handleDeleteAdoptionAd}
+                        />
+                    )}
                 </AnimatePresence>
-            </main >
+            </main>
 
             <input type="file" ref={cameraInputRef} className="absolute opacity-0 w-0 h-0 pointer-events-none" accept="image/*,video/*" onChange={handleCameraUpload} />
 
@@ -2833,23 +2618,23 @@ export default function MoffiSocialMasterpiece() {
                                                     }
 
                                                     // 2. Add Pet via apiService
-                                                    await apiService.addPet({
-                                                        name: newPetName,
-                                                        type: newPetType,
-                                                        breed: newPetBreed,
-                                                        age: newPetAge,
-                                                        gender: newPetGender,
-                                                        is_neutered: newPetNeutered === "Evet",
-                                                        size: newPetSize,
-                                                        features: newPetFeatures,
-                                                        health_notes: newPetHealth,
-                                                        character_notes: newPetCharacter,
-                                                        microchip_number: newPetMicrochip,
-                                                        communication_preference: newPetShowPhone ? 'public_phone' : 'anonymous_only',
-                                                        avatar: photoUrls[0] || null,
-                                                        image: photoUrls[0] || null,
-                                                        images: photoUrls,
-                                                    });
+                                                                                                        await apiService.addPet({
+                                                         name: newPetName,
+                                                         type: newPetType,
+                                                         breed: newPetBreed,
+                                                         age: newPetAge,
+                                                         gender: newPetGender,
+                                                         is_neutered: newPetNeutered === "Evet",
+                                                         size: (newPetSize === 'small' || newPetSize === 'medium' || newPetSize === 'large') ? newPetSize : undefined,
+                                                         features: newPetFeatures,
+                                                         health_notes: newPetHealth,
+                                                         character_notes: newPetCharacter,
+                                                         microchip_number: newPetMicrochip,
+                                                         communication_preference: newPetShowPhone ? 'public_phone' : 'anonymous_only',
+                                                         avatar: photoUrls[0] || undefined,
+                                                         image: photoUrls[0] || undefined,
+                                                         images: photoUrls,
+                                                     } as any);
 
                                                     showToast("Hoş Geldin! 🐾", `${newPetName} Moffi ailesine katıldı.`, "success");
                                                     setIsAddPetOpen(false);
@@ -2913,21 +2698,31 @@ export default function MoffiSocialMasterpiece() {
 
                             {/* MEDIA PICKER / PREVIEW (Apple Native Style) */}
                             {uploadImageURL ? (
-                                <motion.div 
-                                    initial={{ scale: 0.9, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    className="w-full h-[60vh] min-h-[450px] max-h-[600px] rounded-[2.5rem] overflow-hidden bg-black border border-white/10 relative shadow-2xl group transition-all duration-500 ease-in-out"
-                                >
+                                                                    <motion.div 
+                                        initial={{ scale: 0.9, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        className={cn(
+                                            "w-full rounded-[2.5rem] overflow-hidden bg-black border border-white/10 relative shadow-2xl group transition-all duration-500 ease-in-out shrink-0",
+                                            activeTool 
+                                                ? "h-[30vh] min-h-[220px]" 
+                                                : "h-[50vh] min-h-[380px] max-h-[500px]"
+                                        )}
+                                    >
                                     {selectedFile?.type.startsWith('video/') ? (
                                         <div className="relative w-full h-full">
-                                            <video 
-                                                src={uploadImageURL} 
-                                                className="w-full h-full object-cover" 
-                                                autoPlay 
-                                                muted 
-                                                loop 
-                                                playsInline 
-                                            />
+                                                                                                                                             <video 
+                                                     ref={uploadVideoRef}
+                                                     src={uploadImageURL} 
+                                                     className="w-full h-full object-cover" 
+                                                     style={{ 
+                                                         filter: `${IMAGE_FILTERS[activeFilterIndex].filter} brightness(var(--preview-brightness, ${brightness}%)) contrast(var(--preview-contrast, ${contrast}%)) saturate(var(--preview-saturation, ${saturation}%))` 
+                                                     }}
+                                                    autoPlay 
+                                                    muted={!!audioURL} 
+                                                    loop 
+                                                    playsInline 
+                                                    onTimeUpdate={handleVideoTimeUpdate}
+                                                />
                                             {/* Video Indicator Badge */}
                                             <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-2 border border-white/10">
                                                 <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
@@ -2948,11 +2743,12 @@ export default function MoffiSocialMasterpiece() {
                                                 touchStartX.current = null;
                                             }}
                                         >
-                                            <img 
-                                                src={uploadImageURL} 
-                                                className="w-full h-full object-cover touch-pan-y" 
+                                                                                             <img 
+                                                     ref={uploadImageRef}
+                                                     src={uploadImageURL} 
+                                                     className="w-full h-full object-cover touch-pan-y" 
                                                 style={{ 
-                                                    filter: `${IMAGE_FILTERS[activeFilterIndex].filter} brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)` 
+                                                                                                            filter: `${IMAGE_FILTERS[activeFilterIndex].filter} brightness(var(--preview-brightness, ${brightness}%)) contrast(var(--preview-contrast, ${contrast}%)) saturate(var(--preview-saturation, ${saturation}%))` 
                                                 }}
                                                 draggable={false}
                                             />
@@ -3028,6 +2824,34 @@ export default function MoffiSocialMasterpiece() {
                                         >
                                             <Mic className="w-5 h-5" />
                                         </button>
+                                        <input 
+                                            type="file" 
+                                            ref={audioInputRef}
+                                            className="hidden" 
+                                            accept="audio/*" 
+                                            onChange={handleAudioUpload} 
+                                        />
+                                        {audioURL && (
+                                            <audio 
+                                                ref={uploadAudioRef}
+                                                src={audioURL}
+                                                loop
+                                            />
+                                        )}
+                                        <input 
+                                            type="file" 
+                                            ref={audioInputRef}
+                                            className="hidden" 
+                                            accept="audio/*" 
+                                            onChange={handleAudioUpload} 
+                                        />
+                                        {audioURL && (
+                                            <audio 
+                                                ref={uploadAudioRef}
+                                                src={audioURL}
+                                                loop
+                                            />
+                                        )}
 
                                         <button 
                                             type="button"
@@ -3061,7 +2885,7 @@ export default function MoffiSocialMasterpiece() {
                                 <motion.div 
                                     initial={{ y: 20, opacity: 0 }}
                                     animate={{ y: 0, opacity: 1 }}
-                                    className="w-full h-[60vh] min-h-[350px] max-h-[500px] rounded-[2rem] border-2 border-dashed border-white/10 bg-white/[0.02] flex flex-col items-center justify-center gap-6 cursor-pointer hover:bg-white/[0.05] hover:border-cyan-500/40 transition-all duration-700 group relative overflow-hidden"
+                                    className="w-full h-[45vh] min-h-[320px] max-h-[420px] rounded-[2rem] border-2 border-dashed border-white/10 bg-white/[0.02] flex flex-col items-center justify-center gap-6 cursor-pointer hover:bg-white/[0.05] hover:border-cyan-500/40 transition-all duration-700 group relative overflow-hidden shrink-0"
                                 >
                                     {/* Background Glow */}
                                     <div className="absolute inset-0 bg-cyan-500/5 blur-[100px] group-hover:bg-cyan-500/10 transition-colors" />
@@ -3091,10 +2915,131 @@ export default function MoffiSocialMasterpiece() {
                                     />
                                 </motion.div>
                             )}
-                        </div>
 
-                        {/* SCROLLABLE CONTENT AREA */}
-                        <div className="flex-1 overflow-y-auto px-4 pb-40 flex flex-col gap-6 custom-scrollbar">
+                            {selectedFile?.type.startsWith('video/') && videoDuration > 0 && (
+                                <div className="flex flex-col gap-3 py-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                    <div className="flex justify-between items-center text-[10px] font-black tracking-wide text-white/50 px-1">
+                                        <div className="flex items-center gap-1.5 text-cyan-400">
+                                            <Timer className="w-3.5 h-3.5" />
+                                            <span className="font-extrabold uppercase text-[9px] tracking-wider">{(videoTrimRange[1] - videoTrimRange[0]).toFixed(1)} sn seçildi</span>
+                                        </div>
+                                        <div className="font-mono text-[9px] text-white/30 flex gap-2">
+                                            <span>{videoTrimRange[0].toFixed(1)}s – {videoTrimRange[1].toFixed(1)}s</span>
+                                            <span className="text-white/10">|</span>
+                                            <span>Toplam: {videoDuration.toFixed(1)}s</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Visual Trimmer Timeline Track */}
+                                    <div 
+                                        ref={trimmerRef}
+                                        className="relative h-8 bg-white/[0.01] rounded-xl border border-white/5 overflow-visible select-none mt-2"
+                                    >
+                                        {/* Background waveform mock bars to look like a timeline */}
+                                        <div className="absolute inset-0 flex items-center justify-between px-3 gap-[2px] opacity-25 pointer-events-none z-0">
+                                            {Array.from({ length: 48 }).map((_, i) => {
+                                                const height = 10 + Math.sin(i * 0.4) * 6 + Math.cos(i * 0.7) * 3;
+                                                const barTime = (i / 47) * videoDuration;
+                                                const isActive = barTime >= videoTrimRange[0] && barTime <= videoTrimRange[1];
+                                                return (
+                                                    <div 
+                                                        key={i} 
+                                                        style={{ height: `${Math.max(4, Math.min(20, height))}px` }} 
+                                                        className={cn(
+                                                            "w-[1.5px] rounded-full transition-all duration-350", 
+                                                            isActive 
+                                                                ? "bg-gradient-to-t from-cyan-400 to-purple-400 opacity-90 scale-y-110" 
+                                                                : "bg-white/40 opacity-30"
+                                                        )}
+                                                    />
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Dimmed Areas (Discarded parts) */}
+                                        {/* Left dim */}
+                                        <div 
+                                            className="absolute left-0 top-0 bottom-0 bg-black/75 backdrop-blur-[1px] z-10 transition-all pointer-events-none rounded-l-xl"
+                                            style={{ width: `${(videoTrimRange[0] / videoDuration) * 100}%` }}
+                                        />
+                                        {/* Right dim */}
+                                        <div 
+                                            className="absolute right-0 top-0 bottom-0 bg-black/75 backdrop-blur-[1px] z-10 transition-all pointer-events-none rounded-r-xl"
+                                            style={{ width: `${100 - (videoTrimRange[1] / videoDuration) * 100}%` }}
+                                        />
+
+                                        {/* Active Selected Range Window (Draggable) */}
+                                        <div 
+                                            onPointerDown={(e) => handleTrimmerPointerDown(e, 'window')}
+                                            className="absolute top-0 bottom-0 border-y-[1.5px] border-cyan-400 bg-cyan-500/[0.03] shadow-[inset_0_0_15px_rgba(34,211,238,0.05)] z-10 cursor-grab active:cursor-grabbing hover:bg-cyan-400/[0.08] transition-colors"
+                                            style={{ 
+                                                left: `${(videoTrimRange[0] / videoDuration) * 100}%`,
+                                                right: `${100 - (videoTrimRange[1] / videoDuration) * 100}%`
+                                            }}
+                                        />
+
+                                        {/* Live Playhead Indicator */}
+                                        <div 
+                                            className="absolute top-0 bottom-0 w-[1.5px] bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)] z-20 pointer-events-none transition-all"
+                                            style={{ left: `${(videoCurrentTime / videoDuration) * 100}%` }}
+                                        />
+
+                                        {/* Dynamic Drag Tooltips */}
+                                        {draggingHandle === 'start' && (
+                                            <div 
+                                                className="absolute -top-9 bg-cyan-400 text-black text-[9px] font-black px-2 py-0.5 rounded-md shadow-[0_4px_12px_rgba(34,211,238,0.3)] -translate-x-1/2 pointer-events-none z-40 after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-cyan-400"
+                                                style={{ left: `${(videoTrimRange[0] / videoDuration) * 100}%` }}
+                                            >
+                                                {videoTrimRange[0].toFixed(1)}s
+                                            </div>
+                                        )}
+                                        {draggingHandle === 'end' && (
+                                            <div 
+                                                className="absolute -top-9 bg-cyan-400 text-black text-[9px] font-black px-2 py-0.5 rounded-md shadow-[0_4px_12px_rgba(34,211,238,0.3)] -translate-x-1/2 pointer-events-none z-40 after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-cyan-400"
+                                                style={{ left: `${(videoTrimRange[1] / videoDuration) * 100}%` }}
+                                            >
+                                                {videoTrimRange[1].toFixed(1)}s
+                                            </div>
+                                        )}
+                                        {draggingHandle === 'window' && (
+                                            <div 
+                                                className="absolute -top-9 bg-purple-500 text-white text-[9px] font-black px-2 py-0.5 rounded-md shadow-[0_4px_12px_rgba(168,85,247,0.3)] -translate-x-1/2 pointer-events-none z-40 after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-purple-500"
+                                                style={{ left: `${((videoTrimRange[0] + videoTrimRange[1]) / 2) / videoDuration * 100}%` }}
+                                            >
+                                                {((videoTrimRange[1] - videoTrimRange[0])).toFixed(1)}s
+                                            </div>
+                                        )}
+
+                                        {/* Left Handle */}
+                                        <div 
+                                            onPointerDown={(e) => handleTrimmerPointerDown(e, 'start')}
+                                            className="absolute top-0 bottom-0 w-6 cursor-ew-resize z-30 flex items-center justify-center touch-none"
+                                            style={{ left: `calc(${(videoTrimRange[0] / videoDuration) * 100}% - 12px)` }}
+                                        >
+                                            <div 
+                                                className={cn(
+                                                    "w-[3px] h-full bg-cyan-400 rounded-full transition-all duration-200 shadow-md",
+                                                    draggingHandle === 'start' ? "bg-cyan-300 scale-y-105 shadow-[0_0_10px_rgba(34,211,238,0.6)]" : "hover:bg-cyan-300"
+                                                )}
+                                            />
+                                        </div>
+
+                                        {/* Right Handle */}
+                                        <div 
+                                            onPointerDown={(e) => handleTrimmerPointerDown(e, 'end')}
+                                            className="absolute top-0 bottom-0 w-6 cursor-ew-resize z-30 flex items-center justify-center touch-none"
+                                            style={{ left: `calc(${(videoTrimRange[1] / videoDuration) * 100}% - 12px)` }}
+                                        >
+                                            <div 
+                                                className={cn(
+                                                    "w-[3px] h-full bg-cyan-400 rounded-full transition-all duration-200 shadow-md",
+                                                    draggingHandle === 'end' ? "bg-cyan-300 scale-y-105 shadow-[0_0_10px_rgba(34,211,238,0.6)]" : "hover:bg-cyan-300"
+                                                )}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                             {/* Filter guide hint */}
                             {selectedFile?.type.startsWith('image/') && (
                                 <p className="text-center text-[10px] text-white/30 font-medium tracking-widest uppercase mt-2 mb-1 animate-pulse">
@@ -3103,7 +3048,7 @@ export default function MoffiSocialMasterpiece() {
                             )}
 
                             {/* MINIMAL CAPTION BOX */}
-                            <div className="px-2 pt-2">
+                            <div className="px-2 pt-2 shrink-0">
                                 <textarea
                                     value={uploadCaption}
                                     onChange={(e) => setUploadCaption(e.target.value)}
@@ -3125,42 +3070,42 @@ export default function MoffiSocialMasterpiece() {
 
 
 
-                            {/* SMART TOOLBAR */}
-                            <div className="flex items-center justify-between px-2 py-4 border-y border-white/5 mt-2">
-                                <div className="flex items-center gap-6">
-                                    <button 
-                                        type="button"
-                                        onClick={() => setActiveTool(activeTool === 'adjust' ? null : 'adjust')}
-                                        className={cn("transition-all active:scale-90", activeTool === 'adjust' ? "text-cyan-400" : "text-white/40 hover:text-white")}
-                                        title="İnce Ayar"
-                                    >
-                                        <Palette className="w-5 h-5" />
-                                    </button>
-                                    <button 
-                                        type="button"
-                                        onClick={() => setActiveTool(activeTool === 'tag' ? null : 'tag')}
-                                        className={cn("transition-all active:scale-90", activeTool === 'tag' ? "text-cyan-400" : "text-white/40 hover:text-white")}
-                                        title="Etiketle"
-                                    >
-                                        <PawPrint className="w-5 h-5" />
-                                    </button>
-                                    <button 
-                                        type="button"
-                                        onClick={() => setActiveTool(activeTool === 'schedule' ? null : 'schedule')}
-                                        className={cn("transition-all active:scale-90", activeTool === 'schedule' ? "text-cyan-400" : "text-white/40 hover:text-white")}
-                                        title="Zamanla"
-                                    >
-                                        <Clock className="w-5 h-5" />
-                                    </button>
-                                    <button 
-                                        type="button"
-                                        onClick={() => setActiveTool(activeTool === 'mood' ? null : 'mood')}
-                                        className={cn("transition-all active:scale-90", activeTool === 'mood' ? "text-cyan-400" : "text-white/40 hover:text-white")}
-                                        title="Ruh Hali"
-                                    >
-                                        <Heart className="w-5 h-5" />
-                                    </button>
-                                </div>
+                                                                                     {/* SMART TOOLBAR */}
+                            <div className="flex items-center justify-between px-2 py-4 border-y border-white/5 mt-2 shrink-0">
+                                 <div className="flex items-center gap-6">
+                                     <button 
+                                         type="button"
+                                         onClick={() => { console.log("Adjust clicked. Current activeTool:", activeTool); setActiveTool(activeTool === 'adjust' ? null : 'adjust'); }}
+                                         className={cn("transition-all active:scale-90", activeTool === 'adjust' ? "text-cyan-400" : "text-white/40 hover:text-white")}
+                                         title="İnce Ayar"
+                                     >
+                                         <Palette className="w-5 h-5" />
+                                     </button>
+                                     <button 
+                                         type="button"
+                                         onClick={() => { console.log("Tag clicked. Current activeTool:", activeTool); setActiveTool(activeTool === 'tag' ? null : 'tag'); }}
+                                         className={cn("transition-all active:scale-90", activeTool === 'tag' ? "text-cyan-400" : "text-white/40 hover:text-white")}
+                                         title="Etiketle"
+                                     >
+                                         <PawPrint className="w-5 h-5" />
+                                     </button>
+                                     <button 
+                                         type="button"
+                                         onClick={() => { console.log("Schedule clicked. Current activeTool:", activeTool); setActiveTool(activeTool === 'schedule' ? null : 'schedule'); }}
+                                         className={cn("transition-all active:scale-90", activeTool === 'schedule' ? "text-cyan-400" : "text-white/40 hover:text-white")}
+                                         title="Zamanla"
+                                     >
+                                         <Clock className="w-5 h-5" />
+                                     </button>
+                                     <button 
+                                         type="button"
+                                         onClick={() => { console.log("Mood clicked. Current activeTool:", activeTool); setActiveTool(activeTool === 'mood' ? null : 'mood'); }}
+                                         className={cn("transition-all active:scale-90", activeTool === 'mood' ? "text-cyan-400" : "text-white/40 hover:text-white")}
+                                         title="Ruh Hali"
+                                     >
+                                         <Heart className="w-5 h-5" />
+                                     </button>
+                                 </div>
                                 
                                 <button 
                                     type="button"
@@ -3177,38 +3122,131 @@ export default function MoffiSocialMasterpiece() {
                             </div>
 
                             {/* DYNAMIC TOOL DRAWER */}
-                            <AnimatePresence mode="wait">
-                                {activeTool && (
-                                    <motion.div
-                                        key={activeTool}
-                                        initial={{ height: 0, opacity: 0, y: 10 }}
-                                        animate={{ height: 'auto', opacity: 1, y: 0 }}
-                                        exit={{ height: 0, opacity: 0, y: 10 }}
-                                        className="overflow-hidden bg-white/[0.03] rounded-3xl border border-white/5"
-                                    >
-                                        <div className="p-5">
-                                            {activeTool === 'adjust' && (
-                                                <div className="flex flex-col gap-5">
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Manuel İnce Ayar</span>
-                                                        <button type="button" onClick={() => { setBrightness(100); setContrast(100); setSaturation(100); }} className="text-[9px] font-bold text-cyan-400 uppercase">Sıfırla</button>
-                                                    </div>
-                                                    <div className="space-y-4">
-                                                        <div className="space-y-2">
-                                                            <div className="flex justify-between text-[10px] font-bold text-white/20 uppercase"><span>Parlaklık</span></div>
-                                                            <input type="range" min="50" max="150" step="0.5" value={brightness} onChange={(e) => setBrightness(parseFloat(e.target.value))} className="w-full h-0.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-500" />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <div className="flex justify-between text-[10px] font-bold text-white/20 uppercase"><span>Kontrast</span></div>
-                                                            <input type="range" min="50" max="150" step="0.5" value={contrast} onChange={(e) => setContrast(parseFloat(e.target.value))} className="w-full h-0.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-500" />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <div className="flex justify-between text-[10px] font-bold text-white/20 uppercase"><span>Doygunluk</span></div>
-                                                            <input type="range" min="0" max="200" step="1" value={saturation} onChange={(e) => setSaturation(parseFloat(e.target.value))} className="w-full h-0.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-500" />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
+                            {activeTool && (
+                                                                         <motion.div
+                                             key={activeTool}
+                                             id="upload-tool-drawer"
+                                             initial={{ opacity: 0, y: -10 }}
+                                             animate={{ opacity: 1, y: 0 }}
+                                             className="bg-[#0c0c0d]/30 backdrop-blur-xl border border-white/5 rounded-2xl overflow-hidden shrink-0"
+                                         >
+                                             <div className="p-4">
+                                                 {activeTool === 'adjust' && (
+                                                     <div className="flex flex-col gap-4">
+                                                         {/* Sub-tool selector & Reset */}
+                                                         <div className="flex justify-between items-center border-b border-white/5 pb-2.5">
+                                                             <div className="flex gap-4 sm:gap-6 overflow-x-auto no-scrollbar py-1">
+                                                                 <button 
+                                                                     type="button" 
+                                                                     onClick={() => setActiveAdjustSubTool('brightness')} 
+                                                                     className={cn(
+                                                                         "flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest transition-all shrink-0 relative py-1",
+                                                                         activeAdjustSubTool === 'brightness' 
+                                                                             ? "text-cyan-400" 
+                                                                             : "text-white/35 hover:text-white/60"
+                                                                     )}
+                                                                 >
+                                                                     <Sun className="w-3.5 h-3.5" /> Parlaklık
+                                                                     {activeAdjustSubTool === 'brightness' && (
+                                                                         <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-cyan-400 rounded-full" />
+                                                                     )}
+                                                                 </button>
+                                                                 <button 
+                                                                     type="button" 
+                                                                     onClick={() => setActiveAdjustSubTool('contrast')} 
+                                                                     className={cn(
+                                                                         "flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest transition-all shrink-0 relative py-1",
+                                                                         activeAdjustSubTool === 'contrast' 
+                                                                             ? "text-cyan-400" 
+                                                                             : "text-white/35 hover:text-white/60"
+                                                                     )}
+                                                                 >
+                                                                     <Contrast className="w-3.5 h-3.5" /> Kontrast
+                                                                     {activeAdjustSubTool === 'contrast' && (
+                                                                         <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-cyan-400 rounded-full" />
+                                                                     )}
+                                                                 </button>
+                                                                 <button 
+                                                                     type="button" 
+                                                                     onClick={() => setActiveAdjustSubTool('saturation')} 
+                                                                     className={cn(
+                                                                         "flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest transition-all shrink-0 relative py-1",
+                                                                         activeAdjustSubTool === 'saturation' 
+                                                                             ? "text-cyan-400" 
+                                                                             : "text-white/35 hover:text-white/60"
+                                                                     )}
+                                                                 >
+                                                                     <Droplet className="w-3.5 h-3.5" /> Doygunluk
+                                                                     {activeAdjustSubTool === 'saturation' && (
+                                                                         <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-cyan-400 rounded-full" />
+                                                                     )}
+                                                                 </button>
+                                                             </div>
+                                                             <button 
+                                                                 type="button" 
+                                                                 onClick={() => { setBrightness(100); setContrast(100); setSaturation(100); }} 
+                                                                 className="text-[9px] font-black text-white/30 hover:text-red-400 uppercase tracking-widest active:scale-95 transition-all shrink-0 ml-2"
+                                                             >
+                                                                 Sıfırla
+                                                             </button>
+                                                         </div>
+
+                                                         {/* Slider section - merged value label inline to save vertical space */}
+                                                         <div className="py-1">
+                                                             {activeAdjustSubTool === 'brightness' && (
+                                                                 <div className="flex items-center gap-4">
+                                                                     <input 
+                                                                         type="range" 
+                                                                         min="50" 
+                                                                         max="150" 
+                                                                         step="1" 
+                                                                         value={brightness} 
+                                                                         onChange={(e) => setBrightness(parseInt(e.target.value))} 
+                                                                         className="flex-1 pro-range-slider cursor-pointer animate-none" 
+                                                                         style={{
+                                                                             background: `linear-gradient(to right, #06b6d4 0%, #8b5cf6 ${((brightness - 50) / (150 - 50)) * 100}%, rgba(255, 255, 255, 0.08) ${((brightness - 50) / (150 - 50)) * 100}%)`
+                                                                         }}
+                                                                     />
+                                                                     <span className="font-mono text-cyan-400 text-xs min-w-[36px] text-right font-bold">{Math.round(brightness)}%</span>
+                                                                 </div>
+                                                             )}
+                                                             {activeAdjustSubTool === 'contrast' && (
+                                                                 <div className="flex items-center gap-4">
+                                                                     <input 
+                                                                         type="range" 
+                                                                         min="50" 
+                                                                         max="150" 
+                                                                         step="1" 
+                                                                         value={contrast} 
+                                                                         onChange={(e) => setContrast(parseInt(e.target.value))} 
+                                                                         className="flex-1 pro-range-slider cursor-pointer animate-none" 
+                                                                         style={{
+                                                                             background: `linear-gradient(to right, #06b6d4 0%, #8b5cf6 ${((contrast - 50) / (150 - 50)) * 100}%, rgba(255, 255, 255, 0.08) ${((contrast - 50) / (150 - 50)) * 100}%)`
+                                                                         }}
+                                                                     />
+                                                                     <span className="font-mono text-cyan-400 text-xs min-w-[36px] text-right font-bold">{Math.round(contrast)}%</span>
+                                                                 </div>
+                                                             )}
+                                                             {activeAdjustSubTool === 'saturation' && (
+                                                                 <div className="flex items-center gap-4">
+                                                                     <input 
+                                                                         type="range" 
+                                                                         min="0" 
+                                                                         max="200" 
+                                                                         step="1" 
+                                                                         value={saturation} 
+                                                                         onChange={(e) => setSaturation(parseInt(e.target.value))} 
+                                                                         className="flex-1 pro-range-slider cursor-pointer animate-none" 
+                                                                         style={{
+                                                                             background: `linear-gradient(to right, #06b6d4 0%, #8b5cf6 ${(saturation / 200) * 100}%, rgba(255, 255, 255, 0.08) ${(saturation / 200) * 100}%)`
+                                                                         }}
+                                                                     />
+                                                                     <span className="font-mono text-cyan-400 text-xs min-w-[36px] text-right font-bold">{Math.round(saturation)}%</span>
+                                                                 </div>
+                                                             )}
+                                                         </div>
+                                                     </div>
+                                                 )}
 
                                             {activeTool === 'tag' && (
                                                 <div className="flex flex-col gap-4">
@@ -3261,52 +3299,6 @@ export default function MoffiSocialMasterpiece() {
                                         </div>
                                     </motion.div>
                                 )}
-                            </AnimatePresence>
-                        </div>
-
-                        {/* FIXED FOOTER AREA */}
-                        <div className="fixed bottom-0 left-0 right-0 p-6 pt-10 bg-gradient-to-t from-[#0a0a0b] via-[#0a0a0b]/95 to-transparent z-[100] flex flex-col gap-4">
-                            {/* LOCATION TOGGLE */}
-                            <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-[1.5rem] p-3 backdrop-blur-md">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center">
-                                        <MapPin className="w-4 h-4" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[var(--foreground)] font-bold text-[13px]">Konum Bilgisini Ekle</p>
-                                        <p className="text-[var(--secondary-text)] text-[10px]">Açmadığınız sürece gizli kalır.</p>
-                                    </div>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setUploadLocationEnabled(!uploadLocationEnabled)}
-                                    className={cn("w-10 h-6 rounded-full transition-colors flex items-center px-1 duration-300", uploadLocationEnabled ? "bg-cyan-500" : "bg-white/20")}
-                                >
-                                    <div className={cn("w-4 h-4 bg-white rounded-full shadow-md transition-transform duration-300", uploadLocationEnabled ? "translate-x-4" : "translate-x-0")} />
-                                </button>
-                            </div>
-
-                            {/* PUBLISH BUTTON */}
-                            <button
-                                onClick={publishPost}
-                                disabled={isPublishing}
-                                className={cn("w-full py-4 rounded-full font-black text-white flex items-center justify-center gap-2 shadow-[0_10px_40px_rgba(34,211,238,0.3)] transition-all", isPublishing ? "bg-gray-800/50 cursor-not-allowed" : "bg-gradient-to-r from-cyan-400 to-purple-500 hover:scale-[1.02] active:scale-95")}
-                            >
-                                {isPublishing ? (
-                                    <div className="flex items-center gap-3">
-                                        <div className="relative w-6 h-6">
-                                            <svg className="w-full h-full -rotate-90">
-                                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="transparent" className="text-white/10" />
-                                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="transparent" strokeDasharray={62.8} strokeDashoffset={62.8 - (62.8 * uploadProgress) / 100} className="text-cyan-400 transition-all duration-300" />
-                                            </svg>
-                                            <span className="absolute inset-0 flex items-center justify-center text-[8px] font-black">{uploadProgress}%</span>
-                                        </div>
-                                        <span className="animate-pulse tracking-widest text-xs">YÜKLENİYOR...</span>
-                                    </div>
-                                ) : (
-                                    <><Send className="w-5 h-5" /> Paylaş</>
-                                )}
-                            </button>
                         </div>
                     </motion.div>
                 )}
@@ -4568,6 +4560,39 @@ export default function MoffiSocialMasterpiece() {
                 setIsDiaryOpen={setIsDiaryOpen}
                 setActiveTab={setActiveTab}
             />
+
+            {/* QUICK SHEETS & DETAILED MODALS */}
+            {isVetQuickSheetOpen && (
+                <VetQuickSheet 
+                    isOpen={isVetQuickSheetOpen} 
+                    onClose={() => setIsVetQuickSheetOpen(false)} 
+                    petId={activePet?.id} 
+                />
+            )}
+            {isWalkQuickSheetOpen && (
+                <WalkQuickSheet 
+                    isOpen={isWalkQuickSheetOpen} 
+                    onClose={() => setIsWalkQuickSheetOpen(false)} 
+                />
+            )}
+            {isMarketQuickSheetOpen && (
+                <MarketQuickSheet 
+                    isOpen={isMarketQuickSheetOpen} 
+                    onClose={() => setIsMarketQuickSheetOpen(false)} 
+                />
+            )}
+            {isStudioQuickSheetOpen && (
+                <StudioQuickSheet 
+                    isOpen={isStudioQuickSheetOpen} 
+                    onClose={() => setIsStudioQuickSheetOpen(false)} 
+                />
+            )}
+            {isGameQuickSheetOpen && (
+                <GameQuickSheet 
+                    isOpen={isGameQuickSheetOpen} 
+                    onClose={() => setIsGameQuickSheetOpen(false)} 
+                />
+            )}
         </div>
     );
 }

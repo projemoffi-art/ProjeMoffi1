@@ -3,7 +3,7 @@
 import OpenAI from 'openai';
 
 export async function generateImageAction(prompt: string) {
-    const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
         console.warn("OpenAI API Anahtarı bulunamadı. Sunum Modu/Mock Görsel üretiliyor...");

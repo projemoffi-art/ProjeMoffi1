@@ -4,7 +4,10 @@ import {
 } from './types';
 
 import { SupabaseApiService } from './supabaseApiService';
+import { MockApiService } from './mockApiService';
 
-export const isSupabaseEnabled = true;
+const useMock = typeof window !== 'undefined' && localStorage.getItem('moffi_force_mock') === 'true';
 
-export const apiService: IApiService = new SupabaseApiService();
+export const isSupabaseEnabled = !useMock;
+
+export const apiService: IApiService = useMock ? new MockApiService() : new SupabaseApiService();

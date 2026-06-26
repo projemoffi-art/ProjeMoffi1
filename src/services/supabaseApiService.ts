@@ -4,7 +4,6 @@ import {
 } from './types';
 import { supabase } from '@/lib/supabase';
 import { MockApiService } from './mockApiService';
-import { MOCK_POSTS } from '@/lib/mockData';
 import { UserVaccineRecord } from '@/types/domain';
 
 export class SupabaseApiService implements IApiService {
@@ -51,16 +50,18 @@ export class SupabaseApiService implements IApiService {
     }
 
     async getUserProfile(id: string): Promise<UserProfile | null> {
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', id)
-            .single();
+        const [profileRes, followersRes, followingRes] = await Promise.all([
+            supabase.from('profiles').select('*').eq('id', id).single(),
+            supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', id),
+            supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', id)
+        ]);
 
-        if (error || !data) {
-            console.warn('Profile not found:', error);
+        if (profileRes.error || !profileRes.data) {
+            console.warn('Profile not found:', profileRes.error);
             return null;
         }
+
+        const data = profileRes.data;
 
         return {
             id: data.id,
@@ -78,7 +79,23 @@ export class SupabaseApiService implements IApiService {
             birth_date: data.birth_date,
             gender: data.gender,
             account_status: data.account_status || 'active',
+            businessType: data.business_type,
+            businessName: data.business_name,
+            businessApproved: data.business_approved,
+            kybStatus: data.kyb_status,
+            taxId: data.tax_id,
+            iban: data.iban,
+            address: data.address,
+            ownerName: data.owner_name,
+            wallet_balance: data.wallet_balance || 0,
+            moffi_coins: data.coin_balance || 0,
+            settings: data.settings || {
+                appearance: { auraStyle: 'minimal', accentColor: 'cyan', font: 'font-sans', auraVisible: true, auraIntensity: 100 },
+                privacy: { smartShopEnabled: true }
+            },
             stats: {
+                followers: followersRes.count || 0,
+                following: followingRes.count || 0,
                 walks: 0,
                 pets: 1,
                 friends: 0
@@ -172,7 +189,14 @@ export class SupabaseApiService implements IApiService {
             .select('*')
             .order('created_at', { ascending: false });
 
-        const validData = data || [];
+        const now = new Date();
+        const validData = (data || []).filter(p => {
+            if (p.status === 'scheduled') {
+                if (!p.scheduled_at) return false;
+                return new Date(p.scheduled_at) <= now;
+            }
+            return true;
+        });
 
         const user = await this.getSessionUser();
         const currentUserIdOrName = user?.id || user?.user_metadata?.full_name || user?.user_metadata?.username || 'local-user';
@@ -197,26 +221,7 @@ export class SupabaseApiService implements IApiService {
 
         if (error || validData.length === 0) {
             if (error) console.error('Error fetching live posts:', error);
-            return MOCK_POSTS.map(p => {
-                const isLiked = likedPostIds.has(String(p.id));
-                const likesCount = p.likes_count || 0;
-
-                return {
-                    id: p.id,
-                    user_id: p.user_id,
-                    author: p.author_name || 'Moffi Kullanıcısı',
-                    avatar: p.author_avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300",
-                    image: p.media_url,
-                    desc: p.caption,
-                    likes: likesCount,
-                    comments: p.comments_count || 0,
-                    time: '2 saat önce',
-                    isLiked: isLiked,
-                    isSaved: false,
-                    category: (p as any).category || 'all',
-                    allow_comments: true
-                };
-            });
+            return [];
         }
 
         const userIds = Array.from(new Set(validData.map(p => p.user_id).filter(Boolean)));
@@ -348,7 +353,7 @@ export class SupabaseApiService implements IApiService {
             .eq('id', user.id)
             .single();
 
-        // Build minimal insert payload - include global comment rules
+        // Build insert payload including scheduled_at and status
         const payload: any = {
             user_id: user.id,
             content: post.caption || post.desc || '',
@@ -358,7 +363,10 @@ export class SupabaseApiService implements IApiService {
             comment_privacy: post.comment_privacy || profile?.default_comment_privacy || 'everyone',
             trim_start: post.trim_start,
             trim_end: post.trim_end,
-            is_video: post.is_video
+            is_video: post.is_video,
+            mood: post.mood || null,
+            scheduled_at: post.scheduled_at || null,
+            status: post.status || 'published'
         };
 
         const { data, error } = await supabase
@@ -391,7 +399,11 @@ export class SupabaseApiService implements IApiService {
             comment_privacy: data.comment_privacy || 'everyone',
             trim_start: data.trim_start,
             trim_end: data.trim_end,
-            is_video: data.is_video
+            is_video: data.is_video,
+            mood: data.mood || null,
+            audio_url: data.audio_url || null,
+            scheduled_at: data.scheduled_at,
+            status: data.status
         };
     }
 
@@ -2499,9 +2511,27 @@ export class SupabaseApiService implements IApiService {
 
         if (error) throw error;
 
-        // Update follower counts in profiles (fire-and-forget, no crash if RPC missing)
-        supabase.rpc('increment_followers', { target_user_id: targetId }).then(() => {}).catch(() => {});
+        supabase.rpc('increment_followers', { target_user_id: targetId }).then(() => {}, () => {});
 
+        // Dynamic Notification creation
+        try {
+            const senderProfile = await this.getUserProfile(user.id);
+            const senderName = senderProfile?.username || user.email?.split('@')[0] || 'Bir kullanıcı';
+            await supabase.from('notifications').insert({
+                user_id: targetId,
+                type: 'follow',
+                title: 'Yeni Takipçi 🐾',
+                content: `@${senderName} seni takip etmeye başladı!`,
+                is_read: false,
+                meta: {
+                    sender_id: user.id,
+                    sender_name: senderProfile?.name || senderName,
+                    sender_avatar: senderProfile?.avatar || null
+                }
+            });
+        } catch (notifErr) {
+            console.error("Follow notification error:", notifErr);
+        }
     }
 
     async unfollowUser(targetId: string): Promise<void> {
@@ -2521,10 +2551,10 @@ export class SupabaseApiService implements IApiService {
 
         const { data } = await supabase
             .from('follows')
-            .select('id')
+            .select('follower_id')
             .eq('follower_id', user.id)
             .eq('following_id', targetId)
-            .single();
+            .maybeSingle();
 
         return !!data;
     }
@@ -2548,6 +2578,64 @@ export class SupabaseApiService implements IApiService {
         await supabase
             .from('reports')
             .insert({ reporter_id: user.id, target_id: targetId, target_type: 'user', reason });
+    }
+
+    async getFollowers(userId: string): Promise<UserProfile[]> {
+        const { data: followsData, error: followsError } = await supabase
+            .from('follows')
+            .select('follower_id')
+            .eq('following_id', userId);
+
+        if (followsError || !followsData || followsData.length === 0) return [];
+
+        const followerIds = followsData.map(f => f.follower_id);
+
+        const { data: profilesData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('*')
+            .in('id', followerIds);
+
+        if (profilesError || !profilesData) return [];
+
+        return profilesData.map(data => ({
+            id: data.id,
+            name: data.full_name || 'Moffi Kullanıcısı',
+            username: data.username || data.full_name || 'moffi_user',
+            avatar: data.avatar_url || undefined,
+            cover_photo: data.aura_settings?.cover_photo || undefined,
+            petName: data.pet_name,
+            role: data.role || 'user',
+            bio: data.bio
+        })) as any[];
+    }
+
+    async getFollowing(userId: string): Promise<UserProfile[]> {
+        const { data: followsData, error: followsError } = await supabase
+            .from('follows')
+            .select('following_id')
+            .eq('follower_id', userId);
+
+        if (followsError || !followsData || followsData.length === 0) return [];
+
+        const followingIds = followsData.map(f => f.following_id);
+
+        const { data: profilesData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('*')
+            .in('id', followingIds);
+
+        if (profilesError || !profilesData) return [];
+
+        return profilesData.map(data => ({
+            id: data.id,
+            name: data.full_name || 'Moffi Kullanıcısı',
+            username: data.username || data.full_name || 'moffi_user',
+            avatar: data.avatar_url || undefined,
+            cover_photo: data.aura_settings?.cover_photo || undefined,
+            petName: data.pet_name,
+            role: data.role || 'user',
+            bio: data.bio
+        })) as any[];
     }
     // --- CHAT & MESSAGING (Real-time Supabase) ---
     async getChatConversations(): Promise<any[]> {
@@ -2717,7 +2805,7 @@ export class SupabaseApiService implements IApiService {
             .neq('sender_id', user.id);
     }
 
-    async uploadMedia(file: File, bucket: 'posts' | 'stories' | 'avatars' = 'posts', onProgress?: (percent: number) => void): Promise<string> {
+    async uploadMedia(file: File, bucket: 'posts' | 'stories' | 'avatars' | 'sounds' = 'posts', onProgress?: (percent: number) => void): Promise<string> {
         const user = await this.getSessionUser();
         if (!user) throw new Error('Giriş gerekli');
 
@@ -2934,6 +3022,65 @@ export class SupabaseApiService implements IApiService {
                 }
             }))
         }));
+    }
+
+    async getPetDailyStats(petId: string, date: string): Promise<any | null> {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(petId);
+        if (!isUuid) return null;
+
+        try {
+            const { data, error } = await supabase
+                .from('pet_daily_stats')
+                .select('*')
+                .eq('pet_id', petId)
+                .eq('date', date)
+                .maybeSingle();
+
+            if (error) {
+                console.error("Error fetching pet daily stats:", error);
+                return null;
+            }
+            if (!data) return null;
+
+            return {
+                waterIntake: data.water_intake,
+                waterTarget: data.water_target,
+                caloriesIntake: data.calories_intake,
+                caloriesTarget: data.calories_target,
+                foodLog: data.food_log || []
+            };
+        } catch (e) {
+            console.error("Failed to get daily stats:", e);
+            return null;
+        }
+    }
+
+    async savePetDailyStats(petId: string, date: string, stats: any): Promise<void> {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(petId);
+        if (!isUuid) return;
+
+        try {
+            const payload: any = {
+                pet_id: petId,
+                date: date,
+                updated_at: new Date().toISOString()
+            };
+
+            if (stats.waterIntake !== undefined) payload.water_intake = stats.waterIntake;
+            if (stats.waterTarget !== undefined) payload.water_target = stats.waterTarget;
+            if (stats.caloriesIntake !== undefined) payload.calories_intake = stats.caloriesIntake;
+            if (stats.caloriesTarget !== undefined) payload.calories_target = stats.caloriesTarget;
+            if (stats.foodLog !== undefined) payload.food_log = stats.foodLog;
+
+            const { error } = await supabase
+                .from('pet_daily_stats')
+                .upsert(payload, { onConflict: 'pet_id,date' });
+
+            if (error) throw error;
+        } catch (e) {
+            console.error("Failed to save daily stats in Supabase:", e);
+            throw e;
+        }
     }
 
     private formatTimeAgo(dateString: string): string {

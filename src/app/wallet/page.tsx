@@ -8,27 +8,41 @@ import { ExpenseChart } from "@/components/wallet/ExpenseChart";
 import { MOCK_TRANSACTIONS, BUDGET_STATUS, COIN_STATS, COIN_HISTORY, CoinTransaction } from "@/data/mockWallet";
 import { cn } from "@/lib/utils";
 import { useDragScroll } from "@/hooks/useDragScroll";
+import { useAuth } from "@/context/AuthContext";
 
 export default function WalletPage() {
     const router = useRouter();
+    const { user } = useAuth();
     const [activeWallet, setActiveWallet] = useState<'fiat' | 'coin'>('fiat');
-    const [balance, setBalance] = useState<number>(12450.00);
+    const [balance, setBalance] = useState<number>(0);
     const [transactions, setTransactions] = useState<any[]>([]);
+
+    const coinBalance = user ? (user.moffi_coins || 0) : (COIN_STATS.balance || 0);
 
     // Drag scroll hook
     const walletScroll = useDragScroll();
 
     useEffect(() => {
-        if (typeof window !== 'undefined') {
+        if (user) {
+            setBalance(user.wallet_balance || 0);
+        } else if (typeof window !== 'undefined') {
             try {
                 const storedBalance = localStorage.getItem('moffi_fiat_balance');
-                const storedTransactions = localStorage.getItem('moffi_fiat_transactions');
-                
                 if (storedBalance !== null) {
                     setBalance(Number(storedBalance));
                 } else {
-                    localStorage.setItem('moffi_fiat_balance', '12450.00');
+                    setBalance(12450.00);
                 }
+            } catch (e) {
+                console.error("Failed to load wallet balance:", e);
+            }
+        }
+    }, [user]);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const storedTransactions = localStorage.getItem('moffi_fiat_transactions');
                 
                 if (storedTransactions !== null) {
                     setTransactions(JSON.parse(storedTransactions));
@@ -124,7 +138,7 @@ export default function WalletPage() {
                                 </div>
                                 <div>
                                     <div className="text-xs font-medium opacity-80 mb-1">Moffi Coin</div>
-                                    <div className="text-3xl font-black tracking-tight">{COIN_STATS.balance} PC</div>
+                                    <div className="text-3xl font-black tracking-tight">{coinBalance} PC</div>
                                 </div>
                                 <div className="flex justify-between items-end">
                                     <div className="text-xs font-medium font-mono opacity-80 flex items-center gap-1">

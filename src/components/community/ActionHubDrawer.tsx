@@ -3,7 +3,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-    X, Zap, Wallet, QrCode, Users, Package, HeartPulse, Map, ChevronRight, Crown,
+    X, Zap, Wallet, Users, Package, HeartPulse, Map, ChevronRight, Crown,
     Activity, Scale, Sparkles, PawPrint, ShieldAlert
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -62,7 +62,6 @@ export function ActionHubDrawer({
     const identityActions = [
         { id: 'appointments', icon: HeartPulse, label: 'Sağlık & Takvim', sub: 'Aşı ve Randevular', color: 'text-red-400', bg: 'bg-red-500/10' },
         { id: 'wallet', icon: Wallet, label: 'Moffi Pay Cüzdanım', sub: 'Bakiye ve Harcamalar', color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-        { id: 'passport', icon: QrCode, label: 'Dijital Pet Pasaportu', sub: 'Resmi Kimlik Kaydı', color: 'text-blue-400', bg: 'bg-blue-500/10' },
         { id: 'family', icon: Users, label: 'Aile ve Paylaşım', sub: 'Ortak Hesap Yönetimi', color: 'text-purple-400', bg: 'bg-purple-500/10' },
         { id: 'orders', icon: Package, label: 'Market Siparişlerim', sub: 'Kargo Takibi', color: 'text-amber-400', bg: 'bg-amber-500/10' },
         { id: 'activity', icon: Activity, label: 'Yürüyüş ve Aktivite', sub: 'Egzersiz Geçmişi', color: 'text-rose-400', bg: 'bg-rose-500/10' },

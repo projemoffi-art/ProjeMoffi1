@@ -56,6 +56,18 @@ interface OverlaySystemProps {
     setIsDiaryOpen: (open: boolean) => void;
     
     setActiveTab: (tab: string) => void;
+
+    // Quick Sheet Props
+    isVetQuickSheetOpen?: boolean;
+    setIsVetQuickSheetOpen?: (open: boolean) => void;
+    isWalkQuickSheetOpen?: boolean;
+    setIsWalkQuickSheetOpen?: (open: boolean) => void;
+    isMarketQuickSheetOpen?: boolean;
+    setIsMarketQuickSheetOpen?: (open: boolean) => void;
+    isStudioQuickSheetOpen?: boolean;
+    setIsStudioQuickSheetOpen?: (open: boolean) => void;
+    isGameQuickSheetOpen?: boolean;
+    setIsGameQuickSheetOpen?: (open: boolean) => void;
 }
 
 export const OverlaySystem: React.FC<OverlaySystemProps> = ({
@@ -68,7 +80,12 @@ export const OverlaySystem: React.FC<OverlaySystemProps> = ({
     isEcosystemPortalOpen, setIsEcosystemPortalOpen,
     isSpotlightOpen, setIsSpotlightOpen,
     isDiaryOpen, setIsDiaryOpen,
-    setActiveTab
+    setActiveTab,
+    isVetQuickSheetOpen, setIsVetQuickSheetOpen,
+    isWalkQuickSheetOpen, setIsWalkQuickSheetOpen,
+    isMarketQuickSheetOpen, setIsMarketQuickSheetOpen,
+    isStudioQuickSheetOpen, setIsStudioQuickSheetOpen,
+    isGameQuickSheetOpen, setIsGameQuickSheetOpen
 }) => {
     // GLOBAL REALTIME NOTIFICATIONS — DB Trigger → WebSocket → UI badge
     const { notifications, unreadCount, markAllRead, markRead } = useRealtimeNotifications(user?.id);
@@ -321,8 +338,8 @@ export const OverlaySystem: React.FC<OverlaySystemProps> = ({
                             setActiveTab('profile');
                             setProfileViewMode('appointments'); 
                         }
-                        if (id === 'vet') setIsVetQuickSheetOpen(true);
-                        if (id === 'market') setIsMarketQuickSheetOpen(true);
+                        if (id === 'vet') setIsVetQuickSheetOpen?.(true);
+                        if (id === 'market') setIsMarketQuickSheetOpen?.(true);
                     }}
                 />
             )}

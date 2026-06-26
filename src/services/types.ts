@@ -280,6 +280,8 @@ export interface IApiService {
     recordMedicationDose(medId: string): Promise<void>;
     getNutritionPlan(petId: string): Promise<any | null>;
     updateNutritionPlan(petId: string, plan: any): Promise<void>;
+    getPetDailyStats(petId: string, date: string): Promise<any | null>;
+    savePetDailyStats(petId: string, date: string, stats: any): Promise<void>;
 
     // Walk & Tracking
     startWalk(userId: string, petId: string): Promise<any>;
@@ -306,6 +308,8 @@ export interface IApiService {
     isFollowing(targetId: string): Promise<boolean>;
     blockUser(targetId: string): Promise<void>;
     reportUser(targetId: string, reason: string): Promise<void>;
+    getFollowers(userId: string): Promise<UserProfile[]>;
+    getFollowing(userId: string): Promise<UserProfile[]>;
     
     // Direct Messaging (Chat)
     getChatConversations(): Promise<any[]>;
@@ -314,7 +318,7 @@ export interface IApiService {
     markChatAsRead(conversationId: string): Promise<void>;
     
     // Media & Storage
-    uploadMedia(file: File, bucket: 'posts' | 'stories' | 'avatars', onProgress?: (percent: number) => void): Promise<string>;
+    uploadMedia(file: File, bucket: 'posts' | 'stories' | 'avatars' | 'sounds', onProgress?: (percent: number) => void): Promise<string>;
 
     // Search
     globalSearch(query: string): Promise<{

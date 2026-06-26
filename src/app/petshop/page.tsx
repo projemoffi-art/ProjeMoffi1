@@ -22,7 +22,8 @@ import { CheckoutForm } from '@/components/shop/CheckoutForm';
 import { OrderTrackingModal } from '@/components/shop/OrderTrackingModal';
 import confetti from 'canvas-confetti';
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_51O7Lq8L0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k');
+const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
+const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
 
 const getImgUrl = (url: string) => {
     if (!url) return "";

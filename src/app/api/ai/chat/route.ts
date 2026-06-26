@@ -1,14 +1,14 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
-const API_KEY = process.env.GEMINI_API_KEY || "AIzaSyBnUBpO38MhK4lImGdzk0xVcus73JXGoTQ";
-const genAI = new GoogleGenerativeAI(API_KEY);
+const API_KEY = process.env.GEMINI_API_KEY || "";
+const genAI = API_KEY ? new GoogleGenerativeAI(API_KEY) : null;
 
 export async function POST(req: Request) {
     try {
-        const { messages, context } = await req.json(); // Expecting array of messages
+        const { messages, context, petData } = await req.json(); // Expecting array of messages
 
-        if (!API_KEY) {
+        if (!API_KEY || !genAI) {
             return NextResponse.json(
                 { error: "API Key not configured" },
                 { status: 500 }
@@ -19,11 +19,22 @@ export async function POST(req: Request) {
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
         // Construct history/prompt
-        // If we have context (e.g., current page), we inject it.
-        let systemInstruction = "You are Moffi AI, a friendly and helpful assistant for the MoffiPet Super App. You help users with pet care, app navigation, and creative ideas. Keep answers concise and using emojis.";
+        let systemInstruction = "You are Moffi AI, a friendly and helpful assistant for the MoffiPet Super App. You help users with pet care, app navigation, and creative ideas. Keep answers concise, and use emojis. Always answer in Turkish.";
 
         if (context) {
             systemInstruction += ` The user is currently on the "${context}" page.`;
+        }
+
+        if (petData) {
+            systemInstruction += `\n\n[Active Pet Data Context]\n` +
+                `Name: ${petData.name}\n` +
+                `Breed: ${petData.breed}\n` +
+                `Weight: ${petData.weight}\n` +
+                `Gender: ${petData.gender}\n` +
+                `Daily Water Intake: ${petData.waterCurrent} ml (Target: ${petData.waterTarget} ml)\n` +
+                `Daily Calories Intake: ${petData.foodCurrent} kcal (Target: ${petData.foodTarget} kcal)\n` +
+                `Vaccines Schedule: ${JSON.stringify(petData.vaccines || [])}\n\n` +
+                `If the user asks questions about their pet, answer using this data. For example, if they ask if the pet drank enough water today, compare the daily water intake with the target. If they ask about vaccines, check the upcoming vaccine dates in the schedule. Answer naturally in Turkish.`;
         }
 
         try {
@@ -57,26 +68,43 @@ export async function POST(req: Request) {
             console.error("Gemini API Failed, switching to Offline Mode:", apiError);
 
             // OFFLINE FALLBACK MODE
-            // We analyze the user message and provide a smart canned response
-            // This ensures the user ALWAYS gets a reply, satisfying the "Working System" requirement.
             const lastMessage = messages[messages.length - 1].content.toLowerCase();
-            let fallbackResponse = "Şu an bağlantımda anlık bir yavaşlama var ama sizi duyabiliyorum! 🐾";
+            let fallbackResponse = "";
 
-            if (lastMessage.includes("merhaba") || lastMessage.includes("selam")) {
-                fallbackResponse = "Merhaba! 😺 Moffi Asistan servisi şu an bakım modunda ama ben buradayım. Size petleriniz, randevularınız veya alışveriş hakkında yardımcı olabilirim.";
+            if (petData && (lastMessage.includes("su") || lastMessage.includes("içti mi") || lastMessage.includes("su miktarı"))) {
+                const diff = petData.waterTarget - petData.waterCurrent;
+                if (diff <= 0) {
+                    fallbackResponse = `${petData.name} bugün ${petData.waterCurrent} ml su içti. Günlük hedefine (${petData.waterTarget} ml) başarıyla ulaştı! Harika! 💧🎉`;
+                } else {
+                    fallbackResponse = `${petData.name} bugün ${petData.waterCurrent} ml su içti. Günlük hedefine ulaşması için ${diff} ml daha su içmesi gerekiyor. 💧`;
+                }
+            } else if (petData && (lastMessage.includes("kalori") || lastMessage.includes("mama") || lastMessage.includes("öğün") || lastMessage.includes("yemek") || lastMessage.includes("yedi"))) {
+                const diff = petData.foodTarget - petData.foodCurrent;
+                if (diff <= 0) {
+                    fallbackResponse = `${petData.name} bugün ${petData.foodCurrent} kcal kalori aldı. Günlük hedefine (${petData.foodTarget} kcal) ulaştı! 🍖✨`;
+                } else {
+                    fallbackResponse = `${petData.name} bugün ${petData.foodCurrent} kcal kalori aldı. Günlük hedefe ulaşmak için ${diff} kcal daha beslenmesi gerekiyor. 🍖`;
+                }
+            } else if (petData && (lastMessage.includes("aşı") || lastMessage.includes("aşıları") || lastMessage.includes("aşı takvimi"))) {
+                const pendingVaccines = (petData.vaccines || []).filter((v: any) => v.status !== 'completed');
+                if (pendingVaccines.length > 0) {
+                    fallbackResponse = `${petData.name}'in yaklaşan aşıları:\n` + pendingVaccines.map((v: any) => `- ${v.name} (Tarih: ${v.dueDate})`).join("\n") + " 💉";
+                } else {
+                    fallbackResponse = `${petData.name}'in yaklaşan veya gecikmiş bir aşısı görünmüyor, harika! 💉✨`;
+                }
+            } else if (petData && (lastMessage.includes("kilo") || lastMessage.includes("ağırlık") || lastMessage.includes("kaç kilo"))) {
+                fallbackResponse = `${petData.name}'in güncel kilosu: ${petData.weight}. ⚖️`;
+            } else if (lastMessage.includes("merhaba") || lastMessage.includes("selam")) {
+                fallbackResponse = `Merhaba! 😺 Ben Moffi AI. ${petData ? `${petData.name} hakkında sorularını sorabilirsin, verileri anlık takip ediyorum!` : 'Evcil hayvanının günlük hedeflerini ve aşılarını takip edebilirim.'}`;
             } else if (lastMessage.includes("nasılsın")) {
                 fallbackResponse = "Harikayım, teşekkürler! Patilerim kod yazmaktan biraz yoruldu ama sizin için buradayım. 😹";
-            } else if (lastMessage.includes("pet") || lastMessage.includes("hayvan")) {
-                fallbackResponse = "Pet dostlarınızla ilgili işlemler için 'Aylık Takip' sekmesine göz atabilirsiniz. Orada tüm aşı ve beslenme verilerini bulacaksınız.";
-            } else if (lastMessage.includes("hata") || lastMessage.includes("sorun")) {
-                fallbackResponse = "Bazen API bağlantılarında (örneğin Google sunucularında) yoğunluk olabiliyor. Ama merak etmeyin, uygulamanız gayet sağlıklı çalışıyor! ✅";
             } else {
-                fallbackResponse = "Anladım. Şu an tam kapasite yapay zeka sunucularına erişemiyorum (Google API yanıt vermiyor) ama notumu aldım! Başka nasıl yardımcı olabilirim? 🐾";
+                fallbackResponse = `Anladım. Şu an Gemini API çevrimdışı olduğundan genel sorularına cevap veremiyorum, ancak ${petData ? `${petData.name}'in su tüketimi (${petData.waterCurrent}/${petData.waterTarget} ml), kalori tüketimi (${petData.foodCurrent}/${petData.foodTarget} kcal) veya aşıları` : 'evcil hayvanının verileri'} hakkında bana soru sorabilirsin! 🐾`;
             }
 
             return NextResponse.json({
                 success: true,
-                message: fallbackResponse + " (Offline Mod)"
+                message: fallbackResponse + " (Çevrimdışı Mod)"
             });
         }
 

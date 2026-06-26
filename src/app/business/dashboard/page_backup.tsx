@@ -12,8 +12,16 @@ export default function BusinessDashboard() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
     const [isCampaignModalOpen, setIsCampaignModalOpen] = React.useState(false); // Modal State
     const { user, getAllUsers } = useAuth();
+    const [allUsers, setAllUsers] = React.useState<User[]>([]);
 
-    const allUsers: User[] = getAllUsers();
+    React.useEffect(() => {
+        const fetchUsers = async () => {
+            const data = await getAllUsers();
+            setAllUsers(data);
+        };
+        fetchUsers();
+    }, [getAllUsers]);
+
     // Filter out admin from the count if desired, or keep total
     const totalUsers = allUsers.filter(u => u.role !== 'admin').length;
 

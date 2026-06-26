@@ -7,7 +7,7 @@ import {
     Heart, MessageCircle, Share2, MoreHorizontal, User, 
     ChevronRight, Info, QrCode, Star, Copy, Bell, 
     Edit2, Trash2, VolumeX, Volume2, EyeOff, ShieldAlert, 
-    BadgeCheck, Plus, X, Sparkles, Send,
+    BadgeCheck, Plus, X, Sparkles, Send, Check,
     Download, Instagram, MessageSquare, Zap
 } from 'lucide-react';
 import { useSocial } from '@/context/SocialContext';
@@ -72,10 +72,17 @@ export function ImmersivePostCard({
     const [isVisible, setIsVisible] = useState(false);
     const [isVideoLoading, setIsVideoLoading] = useState(true);
     const [videoProgress, setVideoProgress] = useState(0);
+    const [activeBadgeInfo, setActiveBadgeInfo] = useState<'verified' | 'premium' | 'walker' | 'sos' | null>(null);
     const videoRef = React.useRef<HTMLVideoElement>(null);
     const containerRef = React.useRef<HTMLDivElement>(null);
     const { stories } = useSocial();
     const audioRef = React.useRef<HTMLAudioElement>(null);
+
+    const [mediaSrc, setMediaSrc] = useState(post?.media || post?.media_url || post?.image || "");
+
+    useEffect(() => {
+        setMediaSrc(post?.media || post?.media_url || post?.image || "");
+    }, [post]);
 
 
     // INTERSECTION OBSERVER FOR SMART PLAY/PAUSE
@@ -302,7 +309,7 @@ export function ImmersivePostCard({
     useEffect(() => {
         const scrollContainer = document.getElementById('community-scroll-container');
         
-        if (isMoreOpen || showComments) {
+        if (isMoreOpen || showComments || activeBadgeInfo) {
             document.body.style.overflow = 'hidden';
             if (scrollContainer) {
                 scrollContainer.style.overflow = 'hidden';
@@ -320,17 +327,51 @@ export function ImmersivePostCard({
                 scrollContainer.style.overflow = '';
             }
         };
-    }, [isMoreOpen, showComments]);
+    }, [isMoreOpen, showComments, activeBadgeInfo]);
 
     const [isFollowingAuthor, setIsFollowingAuthor] = useState(false);
+
+    useEffect(() => {
+        const authorId = post.user_id || post.userId || post.authorId;
+        if (!authorId || isOwner || !currentUser) return;
+
+        const checkFollow = async () => {
+            try {
+                const status = await apiService.isFollowing(authorId);
+                setIsFollowingAuthor(status);
+            } catch (err) {
+                console.error("isFollowing check error in post card:", err);
+            }
+        };
+        checkFollow();
+    }, [post.user_id, post.userId, post.authorId, isOwner, currentUser]);
+
+    useEffect(() => {
+        const authorId = post.user_id || post.userId || post.authorId;
+        if (!authorId) return;
+
+        const handleFollowChange = (e: any) => {
+            if (e.detail && e.detail.userId === authorId) {
+                setIsFollowingAuthor(e.detail.isFollowing);
+            }
+        };
+        window.addEventListener('moffi-follow-change', handleFollowChange);
+        return () => window.removeEventListener('moffi-follow-change', handleFollowChange);
+    }, [post.user_id, post.userId, post.authorId]);
 
     const handleFollow = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (isFollowingAuthor) return;
         
+        const authorId = post.user_id || post.userId || post.authorId;
+        if (!authorId) return;
+
         setIsFollowingAuthor(true);
         try {
-            await apiService.followUser(post.user_id || post.userId || post.authorId);
+            await apiService.followUser(authorId);
+            window.dispatchEvent(new CustomEvent('moffi-follow-change', {
+                detail: { userId: authorId, isFollowing: true }
+            }));
         } catch (err) {
             console.error("Takip hatası:", err);
             setIsFollowingAuthor(false);
@@ -368,12 +409,12 @@ export function ImmersivePostCard({
                     }}
                     className="w-full h-full relative"
                 >
-                    { (post?.is_video || (post?.media && (/\.(mp4|webm|ogg|mov|avi|m4v|mkv|flv|wmv)$/i.test(post.media)) )) ? (
+                    {(post?.is_video || (post?.media && (/\.(mp4|webm|ogg|mov|avi|m4v|mkv|flv|wmv)$/i.test(post.media)) )) ? (
                         <div className="w-full h-full relative bg-black flex items-center justify-center">
                             <video
                                 ref={videoRef}
-                                src={post?.media || post?.media_url || ""}
-                                muted={isMuted}
+                                src={mediaSrc}
+                                muted={isMuted || !!post?.audio_url}
                                 loop
                                 playsInline
                                 preload="auto"
@@ -385,6 +426,9 @@ export function ImmersivePostCard({
                                     if (post?.trim_start !== undefined && post?.trim_end !== undefined) {
                                         if (vid.currentTime >= post.trim_end || vid.currentTime < post.trim_start) {
                                             vid.currentTime = post.trim_start;
+                                            if (audioRef.current) {
+                                                audioRef.current.currentTime = 0;
+                                            }
                                         }
                                     }
                                 }}
@@ -392,6 +436,9 @@ export function ImmersivePostCard({
                                     setIsVideoLoading(false);
                                     if (post?.trim_start !== undefined) {
                                         e.currentTarget.currentTime = post.trim_start;
+                                        if (audioRef.current) {
+                                            audioRef.current.currentTime = 0;
+                                        }
                                     }
                                     if (e.currentTarget.paused) {
                                         e.currentTarget.play().catch(() => {});
@@ -400,6 +447,9 @@ export function ImmersivePostCard({
                                 onCanPlay={() => setIsVideoLoading(false)}
                                 onWaiting={() => setIsVideoLoading(true)}
                                 onPlaying={() => setIsVideoLoading(false)}
+                                onError={() => {
+                                    setMediaSrc("https://assets.mixkit.co/videos/preview/mixkit-dog-running-on-the-grass-on-a-sunny-day-40048-large.mp4");
+                                }}
                                 className={cn("w-full h-full object-cover opacity-90 transition-opacity duration-700", isVideoLoading ? "opacity-0" : "opacity-90")}
                             />
                             {isVideoLoading && (
@@ -407,8 +457,6 @@ export function ImmersivePostCard({
                                     <div className="w-8 h-8 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
                                 </div>
                             )}
-                            
-                            {/* INSTAGRAM-STYLE PROGRESS BAR */}
                             {!isVideoLoading && (
                                 <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/20 overflow-hidden z-[100]">
                                     <motion.div 
@@ -420,13 +468,13 @@ export function ImmersivePostCard({
                             )}
                         </div>
                     ) : (
-                        <Image 
-                            src={post?.image || post?.media || post?.media_url || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=800"} 
+                        <img 
+                            src={mediaSrc || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=800"} 
                             alt={post?.caption || post?.desc || "Moffi Gönderisi"}
-                            fill
-                            priority={priority}
-                            className="object-cover opacity-90"
-                            sizes="(max-width: 768px) 100vw, 50vw"
+                            onError={() => {
+                                setMediaSrc("https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=800");
+                            }}
+                            className="w-full h-full object-cover opacity-90"
                         />
                     )}
                     <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/75 via-black/20 to-transparent opacity-90 pointer-events-none" />
@@ -875,12 +923,44 @@ export function ImmersivePostCard({
                                     </span>
                                     
                                     {/* BADGES IN FEED PILL */}
-                                    <div className="flex items-center gap-0.5 border-l border-card-border pl-1.5">
+                                    <div className="flex items-center gap-1 border-l border-card-border pl-1.5">
                                         {(post.aura_settings.badges || []).map((bid: string) => {
-                                            if (bid === 'verified') return <ShieldCheck key={bid} className="w-2.5 h-2.5 text-emerald-400" />;
-                                            if (bid === 'premium') return <Crown key={bid} className="w-2.5 h-2.5 text-orange-400" />;
-                                            if (bid === 'walker') return <Footprints key={bid} className="w-2.5 h-2.5 text-cyan-400" />;
-                                            if (bid === 'sos') return <SOSZap key={bid} className="w-2.5 h-2.5 text-red-500" />;
+                                            if (bid === 'verified') return (
+                                                <button 
+                                                    key={bid} 
+                                                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); setActiveBadgeInfo('verified'); }}
+                                                    className="p-0.5 hover:bg-white/10 active:scale-90 rounded transition-all flex items-center justify-center cursor-pointer"
+                                                >
+                                                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                                                </button>
+                                            );
+                                            if (bid === 'premium') return (
+                                                <button 
+                                                    key={bid} 
+                                                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); setActiveBadgeInfo('premium'); }}
+                                                    className="p-0.5 hover:bg-white/10 active:scale-90 rounded transition-all flex items-center justify-center cursor-pointer"
+                                                >
+                                                    <Crown className="w-3.5 h-3.5 text-orange-400" />
+                                                </button>
+                                            );
+                                            if (bid === 'walker') return (
+                                                <button 
+                                                    key={bid} 
+                                                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); setActiveBadgeInfo('walker'); }}
+                                                    className="p-0.5 hover:bg-white/10 active:scale-90 rounded transition-all flex items-center justify-center cursor-pointer"
+                                                >
+                                                    <Footprints className="w-3.5 h-3.5 text-cyan-400" />
+                                                </button>
+                                            );
+                                            if (bid === 'sos') return (
+                                                <button 
+                                                    key={bid} 
+                                                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); setActiveBadgeInfo('sos'); }}
+                                                    className="p-0.5 hover:bg-white/10 active:scale-90 rounded transition-all flex items-center justify-center cursor-pointer"
+                                                >
+                                                    <SOSZap className="w-3.5 h-3.5 text-red-500" />
+                                                </button>
+                                            );
                                             return null;
                                         })}
                                     </div>
@@ -1172,6 +1252,85 @@ export function ImmersivePostCard({
                                 </div>
                             </div>
                         </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* BADGE INFO SHEET */}
+            <AnimatePresence>
+                {activeBadgeInfo && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setActiveBadgeInfo(null)}
+                        className="absolute inset-0 z-[2000] bg-black/60 backdrop-blur-md flex items-end justify-center"
+                    >
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 350 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full bg-[#121318]/95 border-t border-white/10 rounded-t-[2.5rem] p-6 pb-8 flex flex-col items-center text-center shadow-2xl relative pointer-events-auto"
+                        >
+                            {/* Handle */}
+                            <div 
+                                onClick={() => setActiveBadgeInfo(null)}
+                                className="w-12 h-1.5 bg-white/20 rounded-full mb-6 cursor-pointer hover:bg-white/40 transition-colors"
+                            />
+
+                            {/* Icon & Glow */}
+                            <div className="relative mb-4 flex items-center justify-center">
+                                <div className={cn(
+                                    "absolute w-20 h-20 rounded-full blur-2xl opacity-20 animate-pulse",
+                                    activeBadgeInfo === 'verified' && "bg-emerald-400",
+                                    activeBadgeInfo === 'premium' && "bg-orange-400",
+                                    activeBadgeInfo === 'walker' && "bg-cyan-400",
+                                    activeBadgeInfo === 'sos' && "bg-red-500"
+                                )} />
+                                <div className={cn(
+                                    "w-16 h-16 rounded-full flex items-center justify-center border shadow-xl relative z-10",
+                                    activeBadgeInfo === 'verified' && "bg-emerald-500/10 border-emerald-500/30 text-emerald-400",
+                                    activeBadgeInfo === 'premium' && "bg-orange-500/10 border-orange-500/30 text-orange-400",
+                                    activeBadgeInfo === 'walker' && "bg-cyan-500/10 border-cyan-500/30 text-cyan-400",
+                                    activeBadgeInfo === 'sos' && "bg-red-500/10 border-red-500/30 text-red-500"
+                                )}>
+                                    {activeBadgeInfo === 'verified' && <ShieldCheck className="w-8 h-8" />}
+                                    {activeBadgeInfo === 'premium' && <Crown className="w-8 h-8" />}
+                                    {activeBadgeInfo === 'walker' && <Footprints className="w-8 h-8" />}
+                                    {activeBadgeInfo === 'sos' && <SOSZap className="w-8 h-8" />}
+                                </div>
+                            </div>
+
+                            {/* Title & Desc */}
+                            <h3 className="text-lg font-black text-white mb-2 uppercase tracking-wide">
+                                {activeBadgeInfo === 'verified' && 'ONAYLI HESAP'}
+                                {activeBadgeInfo === 'premium' && 'PREMIUM ÜYE'}
+                                {activeBadgeInfo === 'walker' && 'ONAYLI GEZDİRİCİ'}
+                                {activeBadgeInfo === 'sos' && 'ACİL DURUM ORTAĞI'}
+                            </h3>
+                            <p className="text-xs text-white/60 font-medium leading-relaxed max-w-xs mb-6">
+                                {activeBadgeInfo === 'verified' && 'Bu profilin ve kimliğinin doğruluğu, Moffi moderasyon ekibi tarafından resmi belgelerle incelenmiş ve onaylanmıştır.'}
+                                {activeBadgeInfo === 'premium' && 'Moffi ekosistemindeki ayrıcalıklı özellikleri, özel avatarları ve gelişmiş akıllı araçları kullanan Moffi Premium üyesidir.'}
+                                {activeBadgeInfo === 'walker' && 'Moffi güvenli gezdirme eğitimi ve kimlik doğrulama süreçlerini tamamlamış, onaylı ve güvenilir köpek gezdiricisidir.'}
+                                {activeBadgeInfo === 'sos' && 'Moffi kayıp ve acil durum ağında aktif rol oynayan, yakın çevredeki acil durum bildirimlerine gönüllü müdahale yetkisine sahip kullanıcıdır.'}
+                            </p>
+
+                            {/* Close Button */}
+                            <button
+                                onClick={() => setActiveBadgeInfo(null)}
+                                className={cn(
+                                    "w-full py-3.5 rounded-full font-black text-xs uppercase tracking-widest text-black shadow-lg transition-transform active:scale-95",
+                                    activeBadgeInfo === 'verified' && "bg-emerald-400 shadow-emerald-400/20",
+                                    activeBadgeInfo === 'premium' && "bg-orange-400 shadow-orange-400/20",
+                                    activeBadgeInfo === 'walker' && "bg-cyan-400 shadow-cyan-400/20",
+                                    activeBadgeInfo === 'sos' && "bg-red-500 shadow-red-500/20 text-white"
+                                )}
+                            >
+                                Anladım
+                            </button>
+                        </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>

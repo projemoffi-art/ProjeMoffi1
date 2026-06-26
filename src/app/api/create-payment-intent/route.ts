@@ -1,14 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-// Standard Stripe Test Secret Key (Placeholder - User should replace with real test key in .env)
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_51O7Lq8L0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k', {
+const stripeKey = process.env.STRIPE_SECRET_KEY || "";
+const stripe = stripeKey ? new Stripe(stripeKey, {
   apiVersion: '2023-10-16' as any,
-});
+}) : null;
 
 export async function POST(req: NextRequest) {
   try {
     const { amount, currency = 'usd', items } = await req.json();
+
+    if (!stripeKey || !stripe) {
+      return NextResponse.json(
+        { error: "Stripe API Key is not configured." },
+        { status: 500 }
+      );
+    }
 
     // Create a PaymentIntent with the order amount and currency
     const paymentIntent = await stripe.paymentIntents.create({

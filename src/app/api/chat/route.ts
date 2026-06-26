@@ -1,7 +1,11 @@
-import { google } from '@ai-sdk/google';
+import { createGoogle } from '@ai-sdk/google';
 import { streamText, generateText } from 'ai';
 
 export const maxDuration = 30;
+
+const googleProvider = createGoogle({
+    apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || "",
+});
 
 // Helper to simulate a stream for fallback
 function createMockStream(text: string) {
@@ -29,13 +33,13 @@ export async function POST(req: Request) {
         const testMode = url.searchParams.get('test');
 
         if (testMode === 'generation') {
-            const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+            const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
             console.log("AI Route: Processing Test Generation Probe");
 
             try {
                 // FALLBACK ATTEMPT 1: Gemini Pro
                 const genResult = await generateText({
-                    model: google('gemini-2.5-flash-lite') as any,
+                    model: googleProvider('gemini-2.5-flash-lite') as any,
                     prompt: 'Say "Hello"',
                 });
 
@@ -66,7 +70,7 @@ export async function POST(req: Request) {
             detailLevel = 'medium' 
         } = body;
 
-        const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+        const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
         if (!apiKey) {
             throw new Error("Missing API Key");
@@ -94,7 +98,7 @@ export async function POST(req: Request) {
         }
 
         const result = streamText({
-            model: google('gemini-2.5-flash-lite') as any,
+            model: googleProvider('gemini-2.5-flash-lite') as any,
             messages,
             system: systemPrompt,
             temperature: creativity,

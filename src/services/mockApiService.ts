@@ -12,18 +12,62 @@ const STORAGE_PREFIX = 'moffi_local_';
 export class MockApiService implements IApiService {
     
     // Auth & Profile
+    private getUserStats(userId: string, baseStats?: any): { followers: number; following: number; posts: number } {
+        if (typeof window === 'undefined') return { followers: 0, following: 0, posts: 0 };
+        
+        let followingCount = 0;
+        let followersCount = 0;
+        
+        try {
+            const followsRaw = localStorage.getItem('moffi_local_follows');
+            const follows: Record<string, string[]> = followsRaw ? JSON.parse(followsRaw) : {};
+            
+            followingCount = follows[userId]?.length || 0;
+            for (const followerId in follows) {
+                if (follows[followerId]?.includes(userId)) {
+                    followersCount++;
+                }
+            }
+        } catch (e) {
+            console.error("Error parsing moffi_local_follows:", e);
+        }
+
+        if (baseStats) {
+            followingCount += (baseStats.following_count || baseStats.following || 0);
+            followersCount += (baseStats.followers_count || baseStats.followers || baseStats.pack || 0);
+        }
+
+        return {
+            followers: followersCount,
+            following: followingCount,
+            posts: baseStats?.posts_count || baseStats?.posts || 0
+        };
+    }
+
     async getCurrentUser(): Promise<UserProfile | null> {
-        const saved = await this.loadData<UserProfile>('current_user');
+        let saved: any = null;
+        if (typeof window !== 'undefined') {
+            const rawMock = localStorage.getItem('moffi_mock_user');
+            if (rawMock) {
+                try { saved = JSON.parse(rawMock); } catch {}
+            }
+        }
+        if (!saved) {
+            saved = await this.loadData<UserProfile>('current_user');
+        }
+
         if (saved) {
-            // Eski kayıtta Unsplash mock URL varsa temizle
             if (saved.avatar && saved.avatar.includes('unsplash.com')) {
                 saved.avatar = undefined;
+                if (typeof window !== 'undefined') {
+                    localStorage.setItem('moffi_mock_user', JSON.stringify(saved));
+                }
                 await this.saveData('current_user', saved);
             }
+            saved.stats = this.getUserStats(saved.id, saved.stats);
             return saved;
         }
         
-        // Mock mod için yeni kullanıcı — avatar YOK (baş harf gösterilecek)
         const newUser: UserProfile = {
             id: `user-mock-${Date.now()}`,
             name: 'Moffi Guest',
@@ -32,14 +76,69 @@ export class MockApiService implements IApiService {
             is_verified: false,
             subscription_status: 'free',
             wallet_balance: 0,
-            moffi_coins: 0
-        };
+            moffi_coins: 0,
+            stats: { followers: 0, following: 0, posts: 0 }
+        } as any;
+        
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('moffi_mock_user', JSON.stringify(newUser));
+        }
         await this.saveData('current_user', newUser);
         return newUser;
     }
 
     async getUserProfile(id: string): Promise<UserProfile | null> {
-        return this.getCurrentUser();
+        const current = await this.getCurrentUser();
+        if (current && current.id === id) {
+            return current;
+        }
+
+        if (typeof window !== 'undefined') {
+            const stored = localStorage.getItem('moffi_mock_users_list');
+            if (stored) {
+                try {
+                    const list = JSON.parse(stored);
+                    const matched = list.find((u: any) => u.id === id);
+                    if (matched) {
+                        return {
+                            id: matched.id,
+                            name: matched.name || matched.display_name || 'Moffi Kullanıcısı',
+                            username: matched.username,
+                            avatar: matched.avatar || undefined,
+                            cover_photo: matched.cover_photo || undefined,
+                            bio: matched.bio,
+                            is_verified: matched.is_verified || false,
+                            subscription_status: matched.subscription_status || 'free',
+                            stats: this.getUserStats(matched.id, matched.stats)
+                        } as any;
+                    }
+                } catch (e) {
+                    console.error("Error loading mock users list:", e);
+                }
+            }
+        }
+
+        const { MOCK_PROFILES } = await import('../lib/mockData');
+        const matched = MOCK_PROFILES.find(p => p.id === id);
+        if (matched) {
+            return {
+                id: matched.id,
+                name: matched.full_name || matched.name,
+                username: matched.username,
+                bio: matched.bio,
+                avatar: matched.avatar_url,
+                cover_photo: matched.cover_url,
+                is_verified: matched.is_premium,
+                subscription_status: matched.is_premium ? 'pro' : 'free',
+                stats: this.getUserStats(matched.id, {
+                    followers_count: matched.followers_count,
+                    following_count: matched.following_count,
+                    posts_count: matched.posts_count
+                })
+            } as any;
+        }
+
+        return null;
     }
 
     async updateProfile(updates: Partial<UserProfile>): Promise<UserProfile> {
@@ -124,6 +223,15 @@ export class MockApiService implements IApiService {
         const existingPosts = saved || [];
         const userPosts = existingPosts.filter(p => !mandatoryIds.includes(String(p.id)));
         const combinedPosts = [...userPosts, ...MOCK_POSTS];
+        
+        const now = new Date();
+        const filteredPosts = combinedPosts.filter(p => {
+            if (p.status === 'scheduled') {
+                if (!p.scheduled_at) return false;
+                return new Date(p.scheduled_at) <= now;
+            }
+            return true;
+        });
 
         let globalPostLikesCache: Record<string, any> = {};
         if (typeof window !== 'undefined') {
@@ -134,7 +242,7 @@ export class MockApiService implements IApiService {
         const currentUser = await this.getCurrentUser();
         const currentUserIdOrName = currentUser?.id || currentUser?.username || 'local-user';
 
-        const finalPosts = combinedPosts.map(p => {
+        const finalPosts = filteredPosts.map(p => {
             const pIdStr = String(p.id);
             const cacheInfo = globalPostLikesCache[pIdStr];
             if (cacheInfo) {
@@ -676,6 +784,14 @@ export class MockApiService implements IApiService {
         await this.saveData(`nutrition_${petId}`, plan);
     }
 
+    async getPetDailyStats(petId: string, date: string): Promise<any | null> {
+        return await this.loadData(`daily_stats_${petId}_${date}`);
+    }
+
+    async savePetDailyStats(petId: string, date: string, stats: any): Promise<void> {
+        await this.saveData(`daily_stats_${petId}_${date}`, stats);
+    }
+
     // Walk & Tracking
     async startWalk(userId: string, petId: string): Promise<any> { return {}; }
     async updateWalkLocation(sessionId: string, lat: number, lng: number): Promise<void> { }
@@ -702,11 +818,120 @@ export class MockApiService implements IApiService {
     async getPostReactions(postId: string): Promise<any[]> { return []; }
     
     // User Discovery & Social Interactions
-    async followUser(targetId: string): Promise<void> {}
-    async unfollowUser(targetId: string): Promise<void> {}
-    async isFollowing(targetId: string): Promise<boolean> { return false; }
-    async blockUser(targetId: string): Promise<void> {}
+    async followUser(targetId: string): Promise<void> {
+        const currentUser = await this.getCurrentUser();
+        if (!currentUser) throw new Error("Giriş gerekli");
+
+        if (typeof window !== 'undefined') {
+            try {
+                const followsRaw = localStorage.getItem('moffi_local_follows');
+                const follows: Record<string, string[]> = followsRaw ? JSON.parse(followsRaw) : {};
+                
+                if (!follows[currentUser.id]) {
+                    follows[currentUser.id] = [];
+                }
+                if (!follows[currentUser.id].includes(targetId)) {
+                    follows[currentUser.id].push(targetId);
+                    localStorage.setItem('moffi_local_follows', JSON.stringify(follows));
+
+                    // Add mock notification to inbox
+                    const senderName = currentUser.username || currentUser.name || 'Bir kullanıcı';
+                    await this.addInboxMessage({
+                        type: 'follow',
+                        user: `@${senderName}`,
+                        avatar: currentUser.avatar || '',
+                        text: 'seni takip etmeye başladı! 🐾',
+                        time: 'Şimdi',
+                        read: false,
+                        meta: {
+                            sender_id: currentUser.id,
+                            sender_name: currentUser.name || senderName,
+                            sender_avatar: currentUser.avatar || null
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error("Error saving followUser:", e);
+            }
+        }
+    }
+
+    async unfollowUser(targetId: string): Promise<void> {
+        const currentUser = await this.getCurrentUser();
+        if (!currentUser) return;
+
+        if (typeof window !== 'undefined') {
+            try {
+                const followsRaw = localStorage.getItem('moffi_local_follows');
+                const follows: Record<string, string[]> = followsRaw ? JSON.parse(followsRaw) : {};
+                
+                if (follows[currentUser.id]) {
+                    follows[currentUser.id] = follows[currentUser.id].filter(id => id !== targetId);
+                    localStorage.setItem('moffi_local_follows', JSON.stringify(follows));
+                }
+            } catch (e) {
+                console.error("Error saving unfollowUser:", e);
+            }
+        }
+    }
+
+    async isFollowing(targetId: string): Promise<boolean> {
+        const currentUser = await this.getCurrentUser();
+        if (!currentUser) return false;
+
+        if (typeof window !== 'undefined') {
+            try {
+                const followsRaw = localStorage.getItem('moffi_local_follows');
+                const follows: Record<string, string[]> = followsRaw ? JSON.parse(followsRaw) : {};
+                return follows[currentUser.id]?.includes(targetId) || false;
+            } catch (e) {
+                console.error("Error reading isFollowing:", e);
+            }
+        }
+        return false;
+    }
+
+    async blockUser(targetId: string): Promise<void> {
+        await this.unfollowUser(targetId);
+    }
+
     async reportUser(targetId: string, reason: string): Promise<void> {}
+
+    async getFollowers(userId: string): Promise<UserProfile[]> {
+        if (typeof window === 'undefined') return [];
+        try {
+            const followsRaw = localStorage.getItem('moffi_local_follows');
+            const follows: Record<string, string[]> = followsRaw ? JSON.parse(followsRaw) : {};
+            
+            const followerIds: string[] = [];
+            for (const followerId in follows) {
+                if (follows[followerId]?.includes(userId)) {
+                    followerIds.push(followerId);
+                }
+            }
+
+            const profiles = await Promise.all(followerIds.map(id => this.getUserProfile(id)));
+            return profiles.filter(Boolean) as UserProfile[];
+        } catch (e) {
+            console.error("Error getFollowers in mock:", e);
+            return [];
+        }
+    }
+
+    async getFollowing(userId: string): Promise<UserProfile[]> {
+        if (typeof window === 'undefined') return [];
+        try {
+            const followsRaw = localStorage.getItem('moffi_local_follows');
+            const follows: Record<string, string[]> = followsRaw ? JSON.parse(followsRaw) : {};
+            
+            const followingIds = follows[userId] || [];
+            const profiles = await Promise.all(followingIds.map(id => this.getUserProfile(id)));
+            return profiles.filter(Boolean) as UserProfile[];
+        } catch (e) {
+            console.error("Error getFollowing in mock:", e);
+            return [];
+        }
+    }
     
     // Direct Messaging (Chat)
     async getChatConversations(): Promise<any[]> { return []; }
@@ -988,7 +1213,7 @@ export class MockApiService implements IApiService {
     }
 
     // Media & Storage
-    async uploadMedia(file: File, bucket: 'posts' | 'stories' | 'avatars'): Promise<string> { 
+    async uploadMedia(file: File, bucket: 'posts' | 'stories' | 'avatars' | 'sounds'): Promise<string> { 
         // 1. Check if Supabase is available
         const { supabase } = await import('../lib/supabase');
         const isEnabled = process.env.NEXT_PUBLIC_DATA_SOURCE === 'supabase' || true; // Force cloud storage for media if available

@@ -9,7 +9,6 @@ import {
     PawPrint, Route, Gift, List
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { PassportTab } from "./PassportTab";
 import { FamilyTab } from "./FamilyTab";
 import { WalletTab } from "./WalletTab";
 import { OrdersTab } from "./OrdersTab";
@@ -31,7 +30,6 @@ export default function ProfileTabs({ userId, isOwnProfile, themeColor = 'cyan',
 
     const ALL_TABS = [
         { id: 'journal', label: 'Günlük', icon: Grid },
-        { id: 'passport', label: 'Pasaport', icon: ShieldCheck, private: true },
         { id: 'family', label: 'Aile', icon: Users, private: true },
         { id: 'activity', label: 'Aktivite', icon: Route, private: true },
         { id: 'wallet', label: 'Cüzdan', icon: Wallet, private: true },
@@ -166,7 +164,6 @@ export default function ProfileTabs({ userId, isOwnProfile, themeColor = 'cyan',
                                 )}
                             </div>
                         )}
-                        {activeTab === 'passport' && <PassportTab isPublic={!isOwnProfile} />}
                         {activeTab === 'family' && <FamilyTab userId={userId} />}
                         {activeTab === 'wallet' && <WalletTab />}
                         {activeTab === 'orders' && <OrdersTab orders={[]} />}

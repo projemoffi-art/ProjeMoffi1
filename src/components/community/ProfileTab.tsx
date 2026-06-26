@@ -13,7 +13,6 @@ import { PET_PERSONALITIES } from '@/lib/mockData';
 import Image from 'next/image';
 import { QRCodeSVG } from "qrcode.react";
 import { FamilyTab } from '../profile/FamilyTab';
-import { PassportTab } from '../profile/PassportTab';
 import { EcosystemReportSheet } from './EcosystemReportSheet';
 import { useVaccineSchedule } from "@/hooks/useVaccineSchedule";
 import { usePet } from "@/context/PetContext";
@@ -59,9 +58,19 @@ interface ProfileTabProps {
     setIsAuraStudioOpen?: (open: boolean) => void;
     auraSettings?: any;
     setAuraSettings?: (settings: any) => void;
+    onFollowersClick?: () => void;
+    onFollowingClick?: () => void;
 }
 
-function StatItem({ value, label }: { value: any, label: string }) {
+function StatItem({ value, label, onClick }: { value: any, label: string, onClick?: () => void }) {
+    if (onClick) {
+        return (
+            <button onClick={onClick} className="text-center active:scale-95 transition-transform hover:opacity-85 focus:outline-none">
+                <p className="text-foreground font-black text-lg leading-tight">{value}</p>
+                <p className="text-secondary text-[10px] font-bold uppercase tracking-widest mt-1">{label}</p>
+            </button>
+        );
+    }
     return (
         <div className="text-center">
             <p className="text-foreground font-black text-lg leading-tight">{value}</p>
@@ -312,7 +321,9 @@ export function ProfileTab({
     isAuraStudioOpen,
     setIsAuraStudioOpen,
     auraSettings,
-    setAuraSettings
+    setAuraSettings,
+    onFollowersClick,
+    onFollowingClick
 }: ProfileTabProps) {
     const { 
         pets, 
@@ -418,8 +429,8 @@ export function ProfileTab({
                                 </div>
                                 <div className="flex gap-4 sm:gap-6 pr-0 sm:pr-4">
                                     <StatItem value={posts.length} label="Gönderi" />
-                                    <StatItem value={user?.stats?.followers ?? user?.stats?.pack ?? 0} label="Takipçi" />
-                                    <StatItem value={user?.stats?.following ?? 0} label="Takip" />
+                                    <StatItem value={user?.stats?.followers ?? user?.stats?.pack ?? 0} label="Takipçi" onClick={onFollowersClick} />
+                                    <StatItem value={user?.stats?.following ?? 0} label="Takip" onClick={onFollowingClick} />
                                 </div>
                             </div>
 
@@ -484,8 +495,7 @@ export function ProfileTab({
                                      activeSubView === 'appointments' ? 'Sağlık & Takvim' :
                                      activeSubView === 'routes' ? 'Yürüyüş Rotaları' : 
                                      activeSubView === 'impact' ? 'Etki Analizi' :
-                                     activeSubView === 'bookmarks' ? 'Kaydedilenler' :
-                                     activeSubView === 'passport' ? 'Dijital PaspORT' : activeSubView}
+                                     activeSubView === 'bookmarks' ? 'Kaydedilenler' : activeSubView}
                                 </h3>
                                 <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mt-1">Geri Dön</p>
                             </div>
@@ -493,7 +503,6 @@ export function ProfileTab({
 
                         <AnimatePresence mode="wait">
                             {activeSubView === 'family' && <FamilyTab />}
-                            {activeSubView === 'passport' && <PassportTab pet={activePet} />}
                             {activeSubView === 'wallet' && <WalletTab />}
                             {activeSubView === 'orders' && <OrdersTab orders={currentOrders} />}
                             {activeSubView === 'routes' && <RoutesTab routes={currentRoutes} activePet={activePet} />}
@@ -517,7 +526,16 @@ export function ProfileTab({
                 )}
             </AnimatePresence>
 
-            <EcosystemReportSheet isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} onViewPassport={() => onSubViewChange?.('passport')} pet={activePet} isSmartShopEnabled={isSmartShopEnabled} />
+            <EcosystemReportSheet 
+                isOpen={isReportOpen} 
+                onClose={() => setIsReportOpen(false)} 
+                onViewPassport={() => {
+                    setIsReportOpen(false);
+                    window.location.href = '/community?open=passport';
+                }} 
+                pet={activePet} 
+                isSmartShopEnabled={isSmartShopEnabled} 
+            />
 
             <AddVaccineModal 
                 isOpen={isAddVaccineModalOpen}

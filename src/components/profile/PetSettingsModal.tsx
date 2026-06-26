@@ -129,6 +129,7 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
         name: pet?.name || "",
         breed: pet?.breed || "",
         microchip: pet?.microchip || pet?.microchip_id || pet?.microchip_no || "",
+        petvet: pet?.petvet || pet?.petvet_no || "",
         birthday: pet?.birthday || pet?.birth_date || pet?.sos_settings?.birthday || "",
         // Tür & boyut (AddPetModal'dan gelenler)
         type: pet?.type || "🐶",
@@ -168,6 +169,7 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
                 name: pet?.name || "",
                 breed: pet?.breed || "",
                 microchip: pet?.microchip || pet?.microchip_id || pet?.microchip_no || "",
+                petvet: pet?.petvet || pet?.petvet_no || "",
                 birthday: pet?.birthday || pet?.birth_date || pet?.sos_settings?.birthday || "",
                 // Tür & boyut (AddPetModal'dan gelenler)
                 type: pet?.type || "🐶",
@@ -359,6 +361,7 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
                                     <SettingRow icon={Fingerprint} label="İsim" value={formData.name} onChange={(v:any) => setFormData(f => ({...f, name: v}))} color="text-cyan-400" placeholder="Petin adı" />
                                     <SettingRow icon={Award} label="Cins / Irk" value={formData.breed} onChange={(v:any) => setFormData(f => ({...f, breed: v}))} color="text-purple-400" placeholder="örn: Golden Retriever" />
                                     <SettingRow icon={Hash} label="Microchip No" value={formData.microchip} onChange={(v:any) => setFormData(f => ({...f, microchip: v}))} color="text-emerald-400" placeholder="Chip numarası" />
+                                    <SettingRow icon={FileText} label="PETVET No" value={formData.petvet} onChange={(v:any) => setFormData(f => ({...f, petvet: v}))} color="text-amber-400" placeholder="Örn: TR-06-123456" />
                                     <SettingRow icon={Calendar} label="Doğum Tarihi" value={formData.birthday} onChange={(v:any) => setFormData(f => ({...f, birthday: v}))} type="date" color="text-orange-400" />
                                 </div>
                             </div>

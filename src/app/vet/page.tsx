@@ -6,7 +6,8 @@ import dynamic from "next/dynamic";
 import {
     Search, MapPin, Star, Calendar, CreditCard,
     ShieldAlert, ChevronRight, Syringe, Utensils, Clock, Pill,
-    CheckCircle2, ChevronLeft, X, Filter, PhoneCall, Activity, History
+    CheckCircle2, ChevronLeft, X, Filter, PhoneCall, Activity, History,
+    ShieldCheck
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -85,6 +86,10 @@ export default function VetPage() {
     const [cardCvc, setCardCvc] = useState("");
     const [paymentError, setPaymentError] = useState("");
     const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
+    const [showOtpModal, setShowOtpModal] = useState(false);
+    const [otpCode, setOtpCode] = useState("");
+    const [otpError, setOtpError] = useState("");
+    const [isOtpProcessing, setIsOtpProcessing] = useState(false);
     const [selectedClinic, setSelectedClinic] = useState<VetClinic | null>(null);
     const [detailClinicId, setDetailClinicId] = useState<string | null>(null);
     const [isExplorerOpen, setIsExplorerOpen] = useState(false);
@@ -443,6 +448,113 @@ export default function VetPage() {
         setActiveModal('payment');
     };
 
+    const completeAppointmentBooking = async () => {
+        if (!tempAppointmentData) return;
+        
+        const price = tempAppointmentData.clinic.price || 350;
+        let currentBalance = 12450.00;
+        try {
+            const stored = localStorage.getItem('moffi_fiat_balance');
+            if (stored !== null) currentBalance = parseFloat(stored);
+        } catch (e) {}
+
+        // Deduct B2C Balance
+        const nextBalance = currentBalance - price;
+        localStorage.setItem('moffi_fiat_balance', nextBalance.toFixed(2));
+
+        // Record Blocked Transaction
+        try {
+            const storedTx = localStorage.getItem('moffi_fiat_transactions');
+            const transactionsList = storedTx ? JSON.parse(storedTx) : [];
+            const newTx = {
+                id: 'tx_' + Date.now(),
+                title: `Randevu Bloke Tutarı`,
+                category: 'health',
+                amount: price,
+                date: new Date().toISOString().split('T')[0],
+                merchant: tempAppointmentData.clinic.name,
+                status: 'blocked',
+                icon: '💉'
+            };
+            transactionsList.unshift(newTx);
+            localStorage.setItem('moffi_fiat_transactions', JSON.stringify(transactionsList));
+        } catch (e) {}
+
+        // Book the actual appointment with payment details
+        const paymentDetails = {
+            paymentId: 'pay_' + Date.now(),
+            paymentAmount: price,
+            paymentStatus: 'pre_authorized'
+        };
+
+        await bookAppointment(
+            tempAppointmentData.clinic,
+            tempAppointmentData.date,
+            tempAppointmentData.time,
+            tempAppointmentData.type,
+            tempAppointmentData.sharedPassport,
+            tempAppointmentData.petInfo,
+            paymentDetails
+        );
+
+        // Record Transparency Log
+        try {
+            const storedLogs = localStorage.getItem('moffi_transparency_logs');
+            const logsList = storedLogs ? JSON.parse(storedLogs) : [];
+            const newLog = {
+                id: 'log_' + Date.now(),
+                clinicName: tempAppointmentData.clinic.name,
+                petName: activePet ? activePet.name : 'Evcil Hayvan',
+                date: new Date().toLocaleString('tr-TR'),
+                sharedFields: [
+                    "Temel Bilgiler",
+                    shareVaccines ? "Aşı Takvimi Geçmişi" : null,
+                    shareNotes ? "Sağlık Notları & Alerjiler" : null,
+                    shareOwner ? "Sahip Bilgileri" : null
+                ].filter(Boolean)
+            };
+            logsList.unshift(newLog);
+            localStorage.setItem('moffi_transparency_logs', JSON.stringify(logsList));
+        } catch (e) {
+            console.error("Failed to save transparency log:", e);
+        }
+
+        setSuccessMessage("Ödeme Başarılı & Randevu Oluşturuldu ✨");
+        setActiveModal('success');
+        setDetailClinicId(null);
+        setTimeout(() => setActiveModal(null), 3000);
+    };
+
+    const handleOtpSubmit = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        if (otpCode.length < 6) {
+            setOtpError("Lütfen 6 haneli doğrulama kodunu girin.");
+            return;
+        }
+
+        setIsOtpProcessing(true);
+        setOtpError("");
+
+        // Simulate OTP verification check
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        const isNumeric = /^\d+$/.test(otpCode);
+        if (!isNumeric) {
+            setOtpError("Doğrulama kodu sadece rakamlardan oluşmalıdır.");
+            setIsOtpProcessing(false);
+            return;
+        }
+
+        try {
+            await completeAppointmentBooking();
+            setShowOtpModal(false);
+        } catch (error) {
+            setOtpError("Ödeme doğrulanamadı. Lütfen tekrar deneyin.");
+        } finally {
+            setIsOtpProcessing(false);
+        }
+    };
+
     const confirmAppointment = async () => {
         if (!tempAppointmentData) return;
         setIsPaymentProcessing(true);
@@ -514,75 +626,40 @@ export default function VetPage() {
             return;
         }
 
-        // Processing payment simulation delay
+        // Processing payment simulation delay (connecting to PayTR)
         await new Promise(resolve => setTimeout(resolve, 1500));
 
-        // Deduct B2C Balance
-        const nextBalance = currentBalance - price;
-        localStorage.setItem('moffi_fiat_balance', nextBalance.toFixed(2));
-
-        // Record Blocked Transaction
+        // Call the simulated PayTR Token API to establish connection and get mock session
         try {
-            const storedTx = localStorage.getItem('moffi_fiat_transactions');
-            const transactionsList = storedTx ? JSON.parse(storedTx) : [];
-            const newTx = {
-                id: 'tx_' + Date.now(),
-                title: `Randevu Bloke Tutarı`,
-                category: 'health',
-                amount: price,
-                date: new Date().toISOString().split('T')[0],
-                merchant: tempAppointmentData.clinic.name,
-                status: 'blocked',
-                icon: '💉'
-            };
-            transactionsList.unshift(newTx);
-            localStorage.setItem('moffi_fiat_transactions', JSON.stringify(transactionsList));
-        } catch (e) {}
-
-        // Book the actual appointment with payment details
-        const paymentDetails = {
-            paymentId: 'pay_' + Date.now(),
-            paymentAmount: price,
-            paymentStatus: 'pre_authorized'
-        };
-
-        await bookAppointment(
-            tempAppointmentData.clinic,
-            tempAppointmentData.date,
-            tempAppointmentData.time,
-            tempAppointmentData.type,
-            tempAppointmentData.sharedPassport,
-            tempAppointmentData.petInfo,
-            paymentDetails
-        );
-
-        // Record Transparency Log
-        try {
-            const storedLogs = localStorage.getItem('moffi_transparency_logs');
-            const logsList = storedLogs ? JSON.parse(storedLogs) : [];
-            const newLog = {
-                id: 'log_' + Date.now(),
-                clinicName: tempAppointmentData.clinic.name,
-                petName: activePet ? activePet.name : 'Evcil Hayvan',
-                date: new Date().toLocaleString('tr-TR'),
-                sharedFields: [
-                    "Temel Bilgiler",
-                    shareVaccines ? "Aşı Takvimi Geçmişi" : null,
-                    shareNotes ? "Sağlık Notları & Alerjiler" : null,
-                    shareOwner ? "Sahip Bilgileri" : null
-                ].filter(Boolean)
-            };
-            logsList.unshift(newLog);
-            localStorage.setItem('moffi_transparency_logs', JSON.stringify(logsList));
+            console.log("Simulating PayTR Token API call...");
+            const response = await fetch('/api/paytr/payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    amount: price,
+                    email: user?.email || 'customer@moffipet.com',
+                    address: {
+                        name: cardholderName.split(" ")[0] || "Pati",
+                        surname: cardholderName.split(" ").slice(1).join(" ") || "Sahibi",
+                        phone: "05555555555",
+                        detail: "Moffi Mobil Ödeme"
+                    },
+                    items: [
+                        { productId: tempAppointmentData.clinic.id, quantity: 1, price: price, name: `${tempAppointmentData.clinic.name} Muayene` }
+                    ],
+                    userId: user?.id || 'guest'
+                })
+            });
+            const paytrResult = await response.json();
+            console.log("Simulated PayTR Token Response:", paytrResult);
         } catch (e) {
-            console.error("Failed to save transparency log:", e);
+            console.warn("PayTR API call failed or bypassed in simulation:", e);
         }
 
         setIsPaymentProcessing(false);
-        setSuccessMessage("Ödeme Başarılı & Randevu Oluşturuldu ✨");
-        setActiveModal('success');
-        setDetailClinicId(null);
-        setTimeout(() => setActiveModal(null), 3000);
+        setOtpCode("");
+        setOtpError("");
+        setShowOtpModal(true);
     };
 
     return (
@@ -1164,6 +1241,67 @@ export default function VetPage() {
                                         <span>Ödemeyi Tamamla ve Bloke Et</span>
                                     )}
                                 </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+
+                {showOtpModal && tempAppointmentData && (
+                    <motion.div key="otp-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-black/75 dark:bg-black/95 flex items-center justify-center p-4 backdrop-blur-md">
+                        <motion.div initial={{ y: 50, scale: 0.95 }} animate={{ y: 0, scale: 1 }} exit={{ y: 50, scale: 0.95 }} className="w-full max-w-sm bg-gradient-to-b from-white to-zinc-50 dark:from-[#0b0c0f] dark:to-[#121318] rounded-[2rem] p-6 shadow-2xl border border-zinc-200 dark:border-[#27272a] text-zinc-800 dark:text-[#fafafa] relative text-center">
+                            <div className="flex flex-col items-center">
+                                <div className="w-12 h-12 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mb-4">
+                                    <ShieldCheck className="w-6 h-6 animate-pulse" />
+                                </div>
+                                <h3 className="font-black text-base uppercase tracking-tight mb-1">PayTR 3D Secure</h3>
+                                <p className="text-[10px] text-zinc-400 dark:text-[#a1a1aa] uppercase tracking-wider mb-4">Ödeme Doğrulama</p>
+                                
+                                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mb-5 leading-relaxed">
+                                    Moffi Mobil Ödemeler için <b>{tempAppointmentData.clinic.name}</b> işlem tutarı <b>₺{tempAppointmentData.clinic.price || 350}</b> doğrulanacaktır. Lütfen cep telefonunuza gönderilen 6 haneli şifreyi girin.
+                                    <br />
+                                    <span className="text-[9px] text-zinc-400 mt-1 block">(Test Kodu: <b>123456</b>)</span>
+                                </p>
+
+                                <form onSubmit={handleOtpSubmit} className="w-full space-y-4">
+                                    <input
+                                        type="text"
+                                        maxLength={6}
+                                        placeholder="******"
+                                        className="w-full h-12 text-center text-xl font-mono font-black tracking-[0.4em] bg-zinc-50 dark:bg-[#18181b] rounded-xl border border-zinc-200 dark:border-[#27272a] outline-none focus:border-amber-500 transition-all text-zinc-800 dark:text-white"
+                                        value={otpCode}
+                                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                                        disabled={isOtpProcessing}
+                                    />
+
+                                    {otpError && (
+                                        <p className="text-[10px] text-red-500 font-bold text-center">{otpError}</p>
+                                    )}
+
+                                    <div className="flex gap-3 pt-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => { setShowOtpModal(false); setIsPaymentProcessing(false); }}
+                                            className="flex-1 py-3.5 bg-zinc-100 dark:bg-[#18181b] hover:bg-zinc-200 dark:hover:bg-[#27272a] rounded-xl font-bold text-xs uppercase tracking-wider transition-all text-zinc-700 dark:text-white"
+                                            disabled={isOtpProcessing}
+                                        >
+                                            İptal
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="flex-1 py-3.5 bg-amber-500 text-black rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/10 transition-all flex items-center justify-center gap-1.5"
+                                            disabled={isOtpProcessing || otpCode.length < 6}
+                                        >
+                                            {isOtpProcessing ? (
+                                                <>
+                                                    <span className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                                                    <span>Onaylanıyor...</span>
+                                                </>
+                                            ) : (
+                                                <span>Onayla</span>
+                                            )}
+                                        </button>
+                                    </div>
+                                </form>
                             </div>
                         </motion.div>
                     </motion.div>

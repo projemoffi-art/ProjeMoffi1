@@ -20,8 +20,8 @@ export default function Home() {
     if (user) {
       router.replace('/community');
     } else if (step === 'loading') {
-      // Giriş yapmamış kullanıcıyı direkt Kayıt (signup) ekranına gönder
-      setTimeout(() => setStep('signup'), 0);
+      // Giriş yapmamış kullanıcıyı direkt Giriş (login) ekranına gönder
+      setTimeout(() => setStep('login'), 0);
     }
 
   }, [user, isLoading, router, step]);

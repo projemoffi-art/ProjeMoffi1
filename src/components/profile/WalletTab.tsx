@@ -9,11 +9,13 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WALLET_TRANSACTIONS } from '@/lib/mockData';
+import { useAuth } from '@/context/AuthContext';
 
 export function WalletTab() {
+    const { user } = useAuth();
     const [expandedCard, setExpandedCard] = useState<string | null>(null);
 
-    const balance = 1250;
+    const balance = user?.moffi_coins || 0;
     const transactions = WALLET_TRANSACTIONS;
 
     const cards = [

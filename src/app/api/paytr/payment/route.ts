@@ -14,59 +14,75 @@ export async function POST(req: Request) {
         const body = await req.json();
         const { amount, email, address, items, userId } = body;
 
-        if (!supabaseAdmin) {
+        const isMock = (userId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId));
+
+        if (!isMock && !supabaseAdmin) {
             return NextResponse.json(
                 { error: "Veritabanı bağlantısı kurulamadı." },
                 { status: 500 }
             );
         }
 
-        // 1. Create a pending order in the Supabase database
-        const fullAddress = `${address.name} ${address.surname}, Tel: ${address.phone}, Adres: ${address.detail}`;
-        const { data: order, error: orderErr } = await supabaseAdmin
-            .from("orders")
-            .insert({
-                user_id: userId,
-                total_amount: amount,
-                shipping_address: fullAddress,
-                status: "pending"
-            })
-            .select()
-            .single();
+        let orderId = "mock-order-" + Math.floor(Math.random() * 1000000);
 
-        if (orderErr) {
-            console.error("Order creation in DB failed:", orderErr);
-            return NextResponse.json({ error: "Sipariş oluşturulamadı." }, { status: 400 });
+        if (!isMock && supabaseAdmin) {
+            // 1. Create a pending order in the Supabase database
+            const fullAddress = `${address.name} ${address.surname}, Tel: ${address.phone}, Adres: ${address.detail}`;
+            const { data: order, error: orderErr } = await supabaseAdmin
+                .from("orders")
+                .insert({
+                    user_id: userId,
+                    total_amount: amount,
+                    shipping_address: fullAddress,
+                    status: "pending"
+                })
+                .select()
+                .single();
+
+            if (orderErr) {
+                console.error("Order creation in DB failed:", orderErr);
+                return NextResponse.json({ error: "Sipariş oluşturulamadı." }, { status: 400 });
+            }
+
+            // 2. Insert order items
+            const orderItems = items.map((item: any) => ({
+                order_id: order.id,
+                product_id: item.productId,
+                quantity: item.quantity,
+                price_at_purchase: item.price
+            }));
+
+            const { error: itemsErr } = await supabaseAdmin
+                .from("order_items")
+                .insert(orderItems);
+
+            if (itemsErr) {
+                console.error("Order items creation failed:", itemsErr);
+                // Cleanup order
+                await supabaseAdmin.from("orders").delete().eq("id", order.id);
+                return NextResponse.json({ error: "Sipariş ürünleri kaydedilemedi." }, { status: 400 });
+            }
+
+            orderId = order.id;
         }
 
-        // 2. Insert order items
-        const orderItems = items.map((item: any) => ({
-            order_id: order.id,
-            product_id: item.productId,
-            quantity: item.quantity,
-            price_at_purchase: item.price
-        }));
-
-        const { error: itemsErr } = await supabaseAdmin
-            .from("order_items")
-            .insert(orderItems);
-
-        if (itemsErr) {
-            console.error("Order items creation failed:", itemsErr);
-            // Cleanup order
-            await supabaseAdmin.from("orders").delete().eq("id", order.id);
-            return NextResponse.json({ error: "Sipariş ürünleri kaydedilemedi." }, { status: 400 });
+        if (isMock) {
+            return NextResponse.json({
+                success: true,
+                token: "mock-paytr-token-" + Date.now(),
+                orderId: orderId
+            });
         }
 
         // 3. Prepare parameters for PayTR API
-        const merchant_id = process.env.NEXT_PUBLIC_PAYTR_MERCHANT_ID || "";
+        const merchant_id = process.env.PAYTR_MERCHANT_ID || process.env.NEXT_PUBLIC_PAYTR_MERCHANT_ID || "";
         const merchant_key = process.env.PAYTR_MERCHANT_KEY || "";
         const merchant_salt = process.env.PAYTR_MERCHANT_SALT || "";
 
         const rawIp = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "127.0.0.1";
         const user_ip = rawIp.split(',')[0].trim(); // Get first IP if multiple
         
-        const merchant_oid = order.id; // Using DB order ID as our PayTR order id
+        const merchant_oid = orderId; // Using order ID as our PayTR order id
         const user_email = email || "test@moffipet.com";
         const payment_amount = Math.round(amount * 100); // PayTR expects cents/kuruş (e.g. 10.00 TL -> 1000)
         
@@ -76,10 +92,10 @@ export async function POST(req: Request) {
 
         const no_shipping = "0"; // We show shipping/address fields
         const currency = "TL";
-        const test_mode = process.env.NEXT_PUBLIC_PAYTR_TEST_MODE || "1";
+        const test_mode = process.env.PAYTR_TEST_MODE || process.env.NEXT_PUBLIC_PAYTR_TEST_MODE || "1";
 
         const origin = req.headers.get("origin") || "http://localhost:3000";
-        const merchant_ok_url = `${origin}/petshop?status=success&orderId=${order.id}`;
+        const merchant_ok_url = `${origin}/petshop?status=success&orderId=${orderId}`;
         const merchant_fail_url = `${origin}/petshop?status=fail`;
 
         // 4. Generate the HMAC-SHA256 Token Signature
@@ -122,12 +138,14 @@ export async function POST(req: Request) {
             return NextResponse.json({
                 success: true,
                 token: paytrData.token,
-                orderId: order.id
+                orderId: orderId
             });
         } else {
             console.error("PayTR Token Request Failed:", paytrData.err_msg);
             // Cleanup order
-            await supabaseAdmin.from("orders").delete().eq("id", order.id);
+            if (!isMock && supabaseAdmin) {
+                await supabaseAdmin.from("orders").delete().eq("id", orderId);
+            }
             return NextResponse.json(
                 { error: `PayTR Hatası: ${paytrData.err_msg}` },
                 { status: 400 }
