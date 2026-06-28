@@ -2129,7 +2129,7 @@ export default function MoffiSocialMasterpiece() {
                 id="community-scroll-container"
                 ref={globalScrollRef}
                 onScroll={handleMainScroll}
-                className="flex-1 relative z-10 w-full overflow-y-auto no-scrollbar overscroll-contain snap-y snap-mandatory"
+                className="flex-1 relative z-10 w-full overflow-y-auto no-scrollbar overscroll-contain"
             >
                 <AnimatePresence>
                     {/* FEED TAB */}

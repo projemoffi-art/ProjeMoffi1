@@ -19,12 +19,15 @@ export class SupabaseApiService implements IApiService {
 
     private async getSessionUser() {
         try {
-            const { data: { session }, error } = await supabase.auth.getSession();
+            // Use getUser() NOT getSession() — getSession() reads from local cache
+            // and can return a stale/wrong user when switching accounts.
+            // getUser() validates the token with the Supabase server every time.
+            const { data: { user }, error } = await supabase.auth.getUser();
             if (error) {
-                console.error("Supabase auth getSession error:", error);
+                console.error("Supabase auth getUser error:", error);
                 return null;
             }
-            return session?.user || null;
+            return user || null;
         } catch (err) {
             console.error("Critical Auth Error in getSessionUser:", err);
             return null;

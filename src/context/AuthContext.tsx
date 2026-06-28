@@ -81,15 +81,23 @@ const MOCK_USER_BASE = (email: string, name?: string): User => ({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const isLoadingRef = React.useRef(true);
 
-    // Sync user role to cookies for Next.js Middleware route protection (Server-signed httpOnly cookie)
+    // Sync isLoadingRef so syncSessionCookie can access latest isLoading without re-renders
+    React.useEffect(() => {
+        isLoadingRef.current = isLoading;
+    }, [isLoading]);
+
+    // Sync user role to cookies for Next.js Middleware route protection
+    // IMPORTANT: Only runs AFTER loading is complete to avoid deleting valid sessions
     useEffect(() => {
+        // Do NOT touch cookies while initial auth check is still running
+        if (isLoading) return;
+
         const syncSessionCookie = async () => {
             if (typeof window !== 'undefined') {
                 if (user) {
-                    // Set legacy mock cookie for backwards compatibility in client-side code
                     document.cookie = `moffi_mock_user_role=${user.role}; path=/; max-age=86400; SameSite=Lax`;
-                    
                     try {
                         let token = "";
                         if (isSupabaseEnabled) {
@@ -98,7 +106,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         } else {
                             token = `mock-token-${user.role}`;
                         }
-
                         if (token) {
                             await fetch("/api/auth/session", {
                                 method: "POST",
@@ -112,11 +119,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         console.error("[AuthContext] Error setting secure server session cookie:", e);
                     }
                 } else {
+                    // Only clear cookies when we are certain the user is NOT logged in
                     document.cookie = "moffi_mock_user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
                     try {
-                        await fetch("/api/auth/session", {
-                            method: "DELETE"
-                        });
+                        await fetch("/api/auth/session", { method: "DELETE" });
                     } catch (e) {
                         console.error("[AuthContext] Error clearing secure server session cookie:", e);
                     }
@@ -125,130 +131,156 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
 
         syncSessionCookie();
-    }, [user]);
+    }, [user, isLoading]);
 
     // --- INITIALIZATION ---
     useEffect(() => {
         let isMounted = true;
-        const sessionSyncRef = { current: false };
-        
-        // Atomic Orchestrator for Auth & Profile
-        const handleAuthChange = async (event: string, session: any) => {
-            if (!isMounted) return;
-            
-            console.log(`[Auth] Orchestrating: ${event}`);
+        let authListener: any = null;
 
-            if (session?.user) {
-                try {
-                    // Start sync - prevent other handlers from competing
-                    sessionSyncRef.current = true;
-                    
-                    const profile = await apiService.getCurrentUser();
-                    
+        const initializeAuth = async () => {
+            if (!isSupabaseEnabled) {
+                const savedUser = localStorage.getItem('moffi_mock_user');
+                if (savedUser) setUser(JSON.parse(savedUser));
+                else setUser(MOCK_USER_BASE('guest@moffi.com', 'MoffiGuest'));
+                setIsLoading(false);
+                return;
+            }
+
+            try {
+                // 1. Get initial session
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                if (isMounted) {
+                    if (session?.user) {
+                        await syncProfile(session);
+                    } else {
+                        setUser(null);
+                    }
+                    setIsLoading(false);
+                }
+            } catch (err) {
+                console.error("[Auth] Initial session check failed:", err);
+                if (isMounted) {
+                    setUser(null);
+                    setIsLoading(false);
+                }
+            }
+
+            // 2. Set up event listener for subsequent changes
+            if (isMounted) {
+                const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
                     if (!isMounted) return;
+                    console.log(`[Auth] Auth state change event: ${event}`);
+                    
+                    if (event === 'SIGNED_OUT') {
+                        setUser(null);
+                    } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+                        if (session?.user) {
+                            await syncProfile(session);
+                        }
+                    }
+                });
+                authListener = subscription;
+            }
+        };
 
-                    if (profile) {
+        // FIX: syncProfile uses session.user.id DIRECTLY to query the profile.
+        // Previously it called getCurrentUser() → getSession() which could return
+        // a stale cached session for the WRONG user during account switching.
+        const syncProfile = async (session: any) => {
+            if (!session?.user?.id) return;
+            const authUser = session.user;
+            console.log(`[Auth] Syncing profile for user: ${authUser.id} (${authUser.email})`);
+
+            try {
+                // Use getUserProfile(id) directly — bypasses any stale getSession() cache
+                const profile = await apiService.getUserProfile(authUser.id);
+                if (!isMounted) return;
+
+                if (profile) {
+                    setUser({
+                        id: profile.id,
+                        username: profile.username || authUser.email?.split('@')[0] || 'user',
+                        name: (profile as any).name || profile.username || 'Moffi User',
+                        display_name: (profile as any).name || profile.username || 'Moffi User',
+                        email: authUser.email,
+                        role: profile.role || 'user',
+                        avatar: profile.avatar,
+                        cover_photo: profile.cover_photo,
+                        bio: profile.bio,
+                        is_prime: profile.subscription_status === 'plus' || profile.subscription_status === 'pro' || (profile as any).is_prime === true,
+                        joinedAt: (profile as any).created_at || new Date().toISOString(),
+                        stats: profile.stats || { posts: 0, followers: 0, following: 0 },
+                        subscription_status: profile.subscription_status,
+                        businessType: (profile as any).businessType,
+                        businessName: (profile as any).businessName,
+                        businessApproved: (profile as any).businessApproved,
+                        kybStatus: (profile as any).kybStatus,
+                        taxId: (profile as any).taxId,
+                        iban: (profile as any).iban,
+                        address: (profile as any).address,
+                        ownerName: (profile as any).ownerName,
+                        phone: profile.phone,
+                        settings: {
+                            appearance: (profile as any).settings?.appearance || { auraStyle: 'minimal', accentColor: 'cyan', font: 'font-sans', auraVisible: true, auraIntensity: 100 },
+                            privacy: (profile as any).settings?.privacy || { smartShopEnabled: true }
+                        }
+                    });
+                } else {
+                    // No profile row yet — create one (first-time login)
+                    console.log('[Auth] No profile found for', authUser.id, '— provisioning...');
+                    const newProfile = await apiService.updateProfile({
+                        name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'Moffi User',
+                        username: authUser.email?.split('@')[0] || 'user',
+                    } as any);
+                    if (isMounted && newProfile) {
                         setUser({
-                            id: profile.id,
-                            username: profile.username || profile.name || "user",
-                            name: profile.name,
-                            display_name: profile.name,
-                            email: profile.email || session.user.email,
-                            role: profile.role || 'user',
-                            avatar: profile.avatar,
-                            cover_photo: profile.cover_photo,
-                            bio: profile.bio,
-                            is_prime: profile.subscription_status === 'plus' || profile.subscription_status === 'pro' || profile.is_prime === true,
-                            joinedAt: profile.created_at || new Date().toISOString(),
-                            stats: profile.stats || { posts: 0, followers: 0, following: 0 },
-                            subscription_status: profile.subscription_status,
-                            businessType: (profile as any).businessType,
-                            businessName: (profile as any).businessName,
-                            businessApproved: (profile as any).businessApproved,
-                            kybStatus: (profile as any).kybStatus,
-                            taxId: (profile as any).taxId,
-                            iban: (profile as any).iban,
-                            address: (profile as any).address,
-                            ownerName: (profile as any).ownerName,
-                            phone: profile.phone,
-                            settings: (profile as any).settings || {
+                            id: newProfile.id,
+                            username: newProfile.username,
+                            name: newProfile.name,
+                            display_name: newProfile.name,
+                            email: authUser.email,
+                            role: newProfile.role || 'user',
+                            avatar: newProfile.avatar,
+                            joinedAt: new Date().toISOString(),
+                            stats: { posts: 0, followers: 0, following: 0 },
+                            settings: {
                                 appearance: { auraStyle: 'minimal', accentColor: 'cyan', font: 'font-sans', auraVisible: true, auraIntensity: 100 },
                                 privacy: { smartShopEnabled: true }
                             }
                         });
-                    } else {
-                        // Create missing profile for new users globally
-                        console.log("[Auth] Profile missing for active session. Provisioning...");
-                        const newProfile = await apiService.updateProfile({
-                            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Moffi User',
-                            username: session.user.email?.split('@')[0] || 'user',
-                            email: session.user.email || ''
-                        } as any);
-                        
-                        if (isMounted) {
-                            setUser({
-                                id: newProfile.id,
-                                username: newProfile.username,
-                                name: newProfile.name,
-                                display_name: newProfile.name,
-                                email: newProfile.email,
-                                role: newProfile.role || 'user',
-                                avatar: newProfile.avatar,
-                                cover_photo: newProfile.cover_photo,
-                                bio: newProfile.bio,
-                                is_prime: newProfile.subscription_status === 'plus' || newProfile.subscription_status === 'pro',
-                                joinedAt: new Date().toISOString(),
-                                stats: { posts: 0, followers: 0, following: 0 },
-                                subscription_status: newProfile.subscription_status,
-                                settings: {
-                                    appearance: { auraStyle: 'minimal', accentColor: 'cyan', font: 'font-sans', auraVisible: true, auraIntensity: 100 },
-                                    privacy: { smartShopEnabled: true }
-                                }
-                            });
-                        }
                     }
-                } catch (err) {
-                    console.error("[Auth] Sync failed:", err);
-                    // Stay logged in if session exists but profile fetch failed (fallback)
-                    if (isMounted && !user) setUser(null); 
                 }
-            } else {
-                // No valid session
-                sessionSyncRef.current = false;
-                if (!isSupabaseEnabled) {
-                    const savedUser = localStorage.getItem('moffi_mock_user');
-                    if (savedUser) setUser(JSON.parse(savedUser));
-                    else setUser(MOCK_USER_BASE('guest@moffi.com', 'MoffiGuest'));
-                } else {
-                    setUser(null);
+            } catch (err: any) {
+                console.error('[Auth] Profile sync failed:', err?.message || err);
+                // Fallback: use auth session data so user isn't blocked
+                if (isMounted) {
+                    setUser({
+                        id: authUser.id,
+                        username: authUser.email?.split('@')[0] || 'user',
+                        name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'Moffi User',
+                        display_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'Moffi User',
+                        email: authUser.email || '',
+                        role: 'user',
+                        avatar: authUser.user_metadata?.avatar_url,
+                        joinedAt: new Date().toISOString(),
+                        stats: { posts: 0, followers: 0, following: 0 },
+                        settings: {
+                            appearance: { auraStyle: 'minimal', accentColor: 'cyan', font: 'font-sans', auraVisible: true, auraIntensity: 100 },
+                            privacy: { smartShopEnabled: true }
+                        }
+                    });
                 }
             }
-            
-            if (isMounted) setIsLoading(false);
         };
 
-        if (isSupabaseEnabled) {
-            // 1. Check current session
-            supabase.auth.getSession().then(({ data: { session } }) => {
-                if (session) handleAuthChange('INITIAL_SESSION', session);
-                else handleAuthChange('NO_SESSION', null);
-            });
+        initializeAuth();
 
-            // 2. Listen for changes
-            const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-                // Ignore rapid-fire duplicate SIGNED_IN if we are already syncing
-                if (event === 'SIGNED_IN' && sessionSyncRef.current) return;
-                handleAuthChange(event, session);
-            });
-
-            return () => {
-                isMounted = false;
-                subscription.unsubscribe();
-            };
-        } else {
-            handleAuthChange('MOCK_MODE', null);
-            return () => { isMounted = false; };
-        }
+        return () => {
+            isMounted = false;
+            if (authListener) authListener.unsubscribe();
+        };
     }, []);
 
     // Listen to real-time auth / KYB updates
@@ -389,8 +421,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const logout = async () => {
-        if (isSupabaseEnabled) await supabase.auth.signOut();
-        else localStorage.removeItem('moffi_mock_user');
+        if (isSupabaseEnabled) {
+            await supabase.auth.signOut({ scope: 'local' });
+        }
+        // Clear ALL moffi and supabase auth keys from localStorage
+        // to prevent stale token contamination on next login
+        if (typeof window !== 'undefined') {
+            const keysToRemove = Object.keys(localStorage).filter(
+                k => k.startsWith('moffi_') || k.startsWith('sb-') || k.includes('supabase')
+            );
+            keysToRemove.forEach(k => localStorage.removeItem(k));
+        }
         setUser(null);
     };
 
@@ -675,7 +716,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     address: (profile as any).address,
                     ownerName: (profile as any).ownerName,
                     phone: profile.phone,
-                    settings: (profile as any).settings || {}
+                    settings: {
+                        appearance: (profile as any).settings?.appearance || { auraStyle: 'minimal', accentColor: 'cyan', font: 'font-sans', auraVisible: true, auraIntensity: 100 },
+                        privacy: (profile as any).settings?.privacy || { smartShopEnabled: true }
+                    }
                 });
             }
             return { success: true };

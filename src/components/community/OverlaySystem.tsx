@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import { X, Download, Grid3X3, List, Users, Coins, Globe, Package, Heart } from 'lucide-react';
 import { cn, showToast } from '@/lib/utils';
-import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
+import { useNotifications } from '@/context/NotificationContext';
 
 
 // Components
@@ -87,8 +87,9 @@ export const OverlaySystem: React.FC<OverlaySystemProps> = ({
     isStudioQuickSheetOpen, setIsStudioQuickSheetOpen,
     isGameQuickSheetOpen, setIsGameQuickSheetOpen
 }) => {
-    // GLOBAL REALTIME NOTIFICATIONS — DB Trigger → WebSocket → UI badge
-    const { notifications, unreadCount, markAllRead, markRead } = useRealtimeNotifications(user?.id);
+    // Use centralized NotificationContext — single channel for the whole app
+    const { notifications, unreadCount, markAllAsRead: markAllRead, markAsRead: markRead } = useNotifications();
+
 
     return (
         <>

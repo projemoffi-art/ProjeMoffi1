@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "./AuthContext";
 import { Notification } from "@/types/notifications";
@@ -45,18 +45,38 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [user?.id]);
 
+  // Ref to always call the latest fetchNotifications without stale closure
+  const fetchRef = useRef<() => void>(() => {});
+  const channelRef = useRef<any>(null);
+
+  // Keep fetchRef current
+  useEffect(() => {
+    fetchRef.current = fetchNotifications;
+  }, [fetchNotifications]);
+
   useEffect(() => {
     if (!user?.id) {
       setNotifications([]);
       setIsLoading(false);
+      // Clean up channel when user logs out
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
       return;
     }
 
     fetchNotifications();
 
-    // Subscribe to new notifications
-    const channel = supabase
-      .channel(`user-notifications-${user.id}`)
+    // Clean up any existing channel before creating a new one
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
+    // Subscribe to new notifications — only recreated when user.id changes
+    channelRef.current = supabase
+      .channel(`notif-ctx-${user.id}`)
       .on(
         "postgres_changes",
         {
@@ -73,9 +93,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
-  }, [user?.id, fetchNotifications]);
+  }, [user?.id]); // ← ONLY user.id, never fetchNotifications
 
   const showToast = (notif: Notification) => {
     // Dispatch global toast event

@@ -1173,6 +1173,19 @@ export default function LegendaryLightDashboard() {
     const [profileOrdersTab, setProfileOrdersTab] = useState<'active' | 'past' | 'cart' | 'settings'>('active');
     const [cartQty1, setCartQty1] = useState(1);
     const [cartQty2, setCartQty2] = useState(1);
+    
+    useEffect(() => {
+        if (!isPetLoading && userPets.length === 0) {
+            // Only open AddPetModal if the user has NOT already gone through onboarding.
+            // Onboarding (RootOnboardingWrapper) already saves the pet and sets this flag.
+            // Without this check, the modal opens again right after onboarding finishes.
+            const hasOnboarded = localStorage.getItem('moffi_onboarded');
+            if (!hasOnboarded) {
+                setIsAddPetOpen(true);
+            }
+        }
+    }, [isPetLoading, userPets.length]);
+
     const [showLiveMap, setShowLiveMap] = useState(false);
     const [geofenceAlerts, setGeofenceAlerts] = useState(true);
     const [collarLowBattery, setCollarLowBattery] = useState(true);
@@ -1192,11 +1205,6 @@ export default function LegendaryLightDashboard() {
         }
     }, [activePetObj?.is_lost, activePetObj?.id]);
 
-    useEffect(() => {
-        if (!isPetLoading && userPets.length === 0) {
-            setIsAddPetOpen(true);
-        }
-    }, [isPetLoading, userPets.length]);
 
     const [matchIndex, setMatchIndex] = useState(0);
 

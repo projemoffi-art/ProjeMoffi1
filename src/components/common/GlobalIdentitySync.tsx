@@ -9,7 +9,7 @@ export function GlobalIdentitySync() {
     const { setTheme } = useTheme();
 
     useEffect(() => {
-        if (!user?.settings) return;
+        if (!user?.settings?.appearance) return;
 
         const { appearance } = user.settings;
 
