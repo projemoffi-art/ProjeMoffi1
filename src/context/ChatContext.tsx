@@ -23,6 +23,7 @@ interface ChatContextType {
     openChat: (userId: string) => void;
     openSosAlerts: () => void;
     refreshInbox: () => Promise<void>;
+    deleteMessage: (messageId: string) => Promise<void>;
     setSosAlerts: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
@@ -124,6 +125,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             )
             .on(
                 'postgres_changes',
+                { event: 'DELETE', schema: 'public', table: 'messages' },
+                async (payload) => {
+                    const deletedId = payload.old?.id;
+                    if (deletedId) {
+                        setActiveMessages(prev => prev.filter(m => m.id !== deletedId));
+                        fetchInbox();
+                    }
+                }
+            )
+            .on(
+                'postgres_changes',
                 { event: 'DELETE', schema: 'public', table: 'conversations' },
                 async (payload) => {
                     const deletedId = payload.old?.id;
@@ -201,6 +213,20 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         }
     }, [replyMessage, activeChatUserId, fetchInbox]);
 
+    const deleteMessage = useCallback(async (messageId: string) => {
+        // Optimistic UI update
+        setActiveMessages(prev => prev.filter(m => m.id !== messageId));
+        try {
+            await apiService.deleteChatMessage(messageId);
+            fetchInbox();
+        } catch (err) {
+            console.error('Delete message error:', err);
+            if (activeChatUserId) {
+                fetchActiveMessages(activeChatUserId);
+            }
+        }
+    }, [activeChatUserId, fetchActiveMessages, fetchInbox]);
+
     return (
         <ChatContext.Provider value={{
             isInboxOpen, setIsInboxOpen,
@@ -212,6 +238,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             onSendReply, isReplying,
             openChat, openSosAlerts,
             refreshInbox: fetchInbox,
+            deleteMessage,
             setSosAlerts
         }}>
             {children}

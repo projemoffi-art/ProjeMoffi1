@@ -2808,6 +2808,22 @@ export class SupabaseApiService implements IApiService {
             .neq('sender_id', user.id);
     }
 
+    async deleteChatMessage(messageId: string): Promise<void> {
+        const user = await this.getSessionUser();
+        if (!user) throw new Error("Giriş gerekli");
+
+        const { error } = await supabase
+            .from('messages')
+            .delete()
+            .eq('id', messageId)
+            .eq('sender_id', user.id);
+
+        if (error) {
+            console.error('Delete message error:', error);
+            throw error;
+        }
+    }
+
     async uploadMedia(file: File, bucket: 'posts' | 'stories' | 'avatars' | 'sounds' = 'posts', onProgress?: (percent: number) => void): Promise<string> {
         const user = await this.getSessionUser();
         if (!user) throw new Error('Giriş gerekli');

@@ -316,6 +316,7 @@ export interface IApiService {
     getChatMessages(conversationId: string): Promise<any[]>;
     sendChatMessage(receiverId: string, content: string, associatedAdId?: string): Promise<any>;
     markChatAsRead(conversationId: string): Promise<void>;
+    deleteChatMessage(messageId: string): Promise<void>;
     
     // Media & Storage
     uploadMedia(file: File, bucket: 'posts' | 'stories' | 'avatars' | 'sounds', onProgress?: (percent: number) => void): Promise<string>;

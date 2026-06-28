@@ -4,7 +4,7 @@ import React, { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     X, Search, MessageCircle, ShieldAlert, ChevronRight, 
-    Send, CheckCheck, Plus, Smile
+    Send, CheckCheck, Plus, Smile, Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChat } from '@/context/ChatContext';
@@ -18,7 +18,8 @@ export function InboxModal() {
         activeChatUserId, setActiveChatUserId,
         activeMessages,
         replyMessage, setReplyMessage,
-        onSendReply, isReplying
+        onSendReply, isReplying,
+        deleteMessage
     } = useChat();
     
     const { user } = useAuth();
@@ -94,11 +95,26 @@ export function InboxModal() {
                             <div className="flex flex-col min-h-full px-6 py-6 pb-24 space-y-4">
                                 {currentChatMessages.map((m: any, idx: number) => (
                                     <div key={m.id || idx} className={cn("group flex flex-col max-w-[85%] relative", m.sentByMe ? "ml-auto items-end" : "mr-auto items-start")}>
-                                        <div className={cn("px-4 py-3 rounded-[1.5rem] relative active:scale-[0.98] transition-all shadow-sm", m.sentByMe ? "bg-cyan-500 text-black font-medium rounded-tr-none" : "bg-white/10 text-white border border-card-border rounded-tl-none")}>
-                                            <p className="text-sm leading-relaxed">{m.text}</p>
-                                            <div className={cn("flex items-center gap-1 mt-1.5", m.sentByMe ? "justify-end" : "justify-start")}>
-                                                <span className={cn("text-[9px] font-bold uppercase tracking-tighter opacity-60", m.sentByMe ? "text-black" : "text-white/40")}>{m.time}</span>
-                                                {m.sentByMe && <CheckCheck className="w-3 h-3 text-black/60" />}
+                                        <div className="flex items-center gap-2">
+                                            {m.sentByMe && (
+                                                <button 
+                                                    onClick={() => {
+                                                        if (confirm("Bu mesajı silmek istediğinizden emin misiniz?")) {
+                                                            deleteMessage(m.id);
+                                                        }
+                                                    }}
+                                                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-full hover:bg-white/5 active:scale-90 transition-all text-red-500/70 hover:text-red-500 cursor-pointer shrink-0"
+                                                    title="Mesajı Sil"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            )}
+                                            <div className={cn("px-4 py-3 rounded-[1.5rem] relative active:scale-[0.98] transition-all shadow-sm", m.sentByMe ? "bg-cyan-500 text-black font-medium rounded-tr-none" : "bg-white/10 text-white border border-card-border rounded-tl-none")}>
+                                                <p className="text-sm leading-relaxed">{m.text}</p>
+                                                <div className={cn("flex items-center gap-1 mt-1.5", m.sentByMe ? "justify-end" : "justify-start")}>
+                                                    <span className={cn("text-[9px] font-bold uppercase tracking-tighter opacity-60", m.sentByMe ? "text-black" : "text-white/40")}>{m.time}</span>
+                                                    {m.sentByMe && <CheckCheck className="w-3 h-3 text-black/60" />}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

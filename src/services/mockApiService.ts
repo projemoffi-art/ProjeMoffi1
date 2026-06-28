@@ -938,6 +938,7 @@ export class MockApiService implements IApiService {
     async getChatMessages(conversationId: string): Promise<any[]> { return []; }
     async sendChatMessage(receiverId: string, content: string, associatedAdId?: string): Promise<any> { return { id: Date.now(), content }; }
     async markChatAsRead(conversationId: string): Promise<void> {}
+    async deleteChatMessage(messageId: string): Promise<void> {}
 
     async reactToPost(postId: string | number, reaction: string): Promise<void> {
         const currentUser = await this.getCurrentUser();
