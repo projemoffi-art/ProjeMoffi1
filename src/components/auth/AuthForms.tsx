@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "@/context/LanguageContext";
-import { Mail, Apple, Eye, EyeOff, Lock, User, ArrowLeft, Loader2, ShieldCheck, X, Sparkles } from "lucide-react";
+import { Mail, Apple, Eye, EyeOff, Lock, User, ArrowLeft, Loader2, ShieldCheck, X, Sparkles, Dog, Cat, Bird } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -36,30 +36,30 @@ function LegalModal({ isOpen, onClose, type }: { isOpen: boolean, onClose: () =>
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-6 bg-black/80 backdrop-blur-md"
+                    className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-6 bg-black/40 backdrop-blur-sm"
                 >
                     <motion.div 
                         initial={{ y: "100%" }}
                         animate={{ y: 0 }}
                         exit={{ y: "100%" }}
-                        className="w-full max-w-xl bg-zinc-900 border-t sm:border border-card-border rounded-t-[2.5rem] sm:rounded-[3rem] p-8 pb-12 sm:pb-8 flex flex-col gap-6 shadow-2xl relative"
+                        className="w-full max-w-xl bg-white border-t sm:border border-zinc-200 rounded-t-[2.5rem] sm:rounded-[3rem] p-8 pb-12 sm:pb-8 flex flex-col gap-6 shadow-2xl relative"
                     >
-                        <div className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/10 rounded-full sm:hidden" />
+                        <div className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-zinc-200 rounded-full sm:hidden" />
                         
                         <div className="flex justify-between items-center mb-2">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
-                                    <ShieldCheck className="w-6 h-6 text-cyan-400" />
+                                <div className="w-10 h-10 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+                                    <ShieldCheck className="w-6 h-6 text-purple-600" />
                                 </div>
-                                <h3 className="text-xl font-black text-white uppercase tracking-tighter">{content[type].title}</h3>
+                                <h3 className="text-xl font-extrabold text-zinc-800 tracking-tight">{content[type].title}</h3>
                             </div>
-                            <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
-                                <X className="w-5 h-5 text-white" />
+                            <button onClick={onClose} className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center hover:bg-zinc-200 transition-colors">
+                                <X className="w-5 h-5 text-zinc-600" />
                             </button>
                         </div>
 
                         <div className="flex-1 overflow-y-auto pr-2 max-h-[60vh] custom-scrollbar">
-                            <p className="text-gray-400 text-sm leading-relaxed font-medium">
+                            <p className="text-zinc-600 text-sm leading-relaxed font-medium">
                                 {content[type].body}
                                 <br/><br/>
                                 Detaylı metin şu an teknik ekip tarafından güncellenmektedir. Bu özet metin, platformun temel işleyiş prensiplerini temsil eder.
@@ -68,7 +68,7 @@ function LegalModal({ isOpen, onClose, type }: { isOpen: boolean, onClose: () =>
 
                         <button 
                             onClick={onClose}
-                            className="w-full py-5 bg-card text-black rounded-3xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all"
+                            className="w-full py-5 bg-zinc-950 text-white rounded-3xl font-extrabold text-xs uppercase tracking-widest active:scale-95 transition-all"
                         >
                             Anladım, Kapat
                         </button>
@@ -76,6 +76,36 @@ function LegalModal({ isOpen, onClose, type }: { isOpen: boolean, onClose: () =>
                 </motion.div>
             )}
         </AnimatePresence>
+    );
+}
+
+// --- Brand Header with Cat, Dog, and Bird ---
+function PetBrandHeader({ title, subtitle }: { title: string; subtitle: string }) {
+    return (
+        <div className="flex flex-col select-none">
+            {/* Full-width Illustration Banner */}
+            <div className="mx-[-32px] mt-[-40px] w-[calc(100%+64px)] h-44 relative overflow-hidden rounded-t-[3rem] border-b border-purple-100/30 bg-gradient-to-b from-purple-50 to-indigo-50/50 flex items-center justify-center">
+                <img 
+                    src="/images/moffi_pet_trio.png" 
+                    alt="Moffi Pets" 
+                    className="w-full h-full object-cover scale-[1.03]"
+                />
+            </div>
+            
+            {/* Moffi Styled Brand Logo & Title block */}
+            <div className="flex flex-col items-center mt-5 mb-4">
+                <span className="text-3xl font-extrabold tracking-[0.18em] bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 bg-clip-text text-transparent px-2 py-1 leading-none select-none font-[family-name:var(--font-poppins)]">
+                    MOFFI
+                </span>
+                
+                <h2 className="text-lg font-extrabold text-zinc-800 tracking-tight text-center mt-2.5 leading-none">
+                    {title}
+                </h2>
+                <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-[0.2em] mt-2 text-center">
+                    {subtitle}
+                </p>
+            </div>
+        </div>
     );
 }
 
@@ -120,22 +150,22 @@ export function LoginForm({ setView, onComplete }: { setView: (v: AuthView) => v
             initial="initial"
             animate="animate"
             exit="exit"
-            className="flex flex-col h-full p-10 pt-12 bg-transparent overflow-y-auto"
+            className="flex flex-col h-full p-8 pt-10 bg-transparent overflow-y-auto custom-scrollbar"
         >
-            <div className="mb-12">
-                <h2 className="text-4xl font-black text-white tracking-tighter uppercase italic leading-none">{t('auth.login.title')}</h2>
-                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.3em] mt-4 italic">{t('auth.login.subtitle')}</p>
-            </div>
+            <PetBrandHeader 
+                title={t('auth.login.title')} 
+                subtitle={t('auth.login.subtitle')} 
+            />
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                    <label className="text-[10px] text-gray-600 font-black uppercase tracking-widest ml-1">{t('auth.login.email')}</label>
+            <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="space-y-1.5">
+                    <label className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest ml-1">{t('auth.login.email')}</label>
                     <div className="relative">
-                        <Mail className="w-5 h-5 text-gray-600 absolute left-6 top-1/2 -translate-y-1/2" />
+                        <Mail className="w-5 h-5 text-zinc-400 absolute left-5 top-1/2 -translate-y-1/2" />
                         <input
                             type="email"
                             placeholder="merhaba@moffi.net"
-                            className="w-full pl-16 pr-6 py-5 bg-white/5 border border-card-border rounded-[2rem] text-sm text-white focus:border-cyan-500/50 outline-none transition-all placeholder-gray-800"
+                            className="w-full pl-14 pr-6 py-4.5 bg-zinc-50/50 border border-zinc-200/80 rounded-2xl text-sm text-zinc-800 focus:border-purple-400/80 focus:bg-white focus:shadow-[0_0_0_4px_rgba(168,85,247,0.06)] outline-none transition-all placeholder-zinc-300"
                             required
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -143,33 +173,33 @@ export function LoginForm({ setView, onComplete }: { setView: (v: AuthView) => v
                     </div>
                 </div>
 
-                <div className="space-y-2">
-                    <label className="text-[10px] text-gray-600 font-black uppercase tracking-widest ml-1">Gizli Şifre</label>
+                <div className="space-y-1.5">
+                    <label className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest ml-1">Gizli Şifre</label>
                     <div className="relative">
-                        <Lock className="w-5 h-5 text-gray-600 absolute left-6 top-1/2 -translate-y-1/2" />
+                        <Lock className="w-5 h-5 text-zinc-400 absolute left-5 top-1/2 -translate-y-1/2" />
                         <input
                             type={showPassword ? "text" : "password"}
                             placeholder="••••••••"
-                            className="w-full pl-16 pr-16 py-5 bg-white/5 border border-card-border rounded-[2rem] text-sm text-white focus:border-cyan-500/50 outline-none transition-all placeholder-gray-800"
+                            className="w-full pl-14 pr-14 py-4.5 bg-zinc-50/50 border border-zinc-200/80 rounded-2xl text-sm text-zinc-800 focus:border-purple-400/80 focus:bg-white focus:shadow-[0_0_0_4px_rgba(168,85,247,0.06)] outline-none transition-all placeholder-zinc-300"
                             required
                             value={formData.password}
                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-600 hover:text-white transition-colors">
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 transition-colors">
                             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                         </button>
                     </div>
                 </div>
 
                 <div className="flex justify-end p-1">
-                    <button type="button" onClick={() => setView('reset')} className="text-[10px] font-black text-gray-600 uppercase tracking-widest hover:text-cyan-400 transition-colors">Şifremi Unuttum</button>
+                    <button type="button" onClick={() => setView('reset')} className="text-[10px] font-black text-zinc-400 uppercase tracking-widest hover:text-purple-600 transition-colors">Şifremi Unuttum</button>
                 </div>
 
                 {error && (
                     <motion.div 
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="bg-red-500/10 text-red-500 text-[10px] p-5 rounded-2xl border border-red-500/20 font-black uppercase tracking-wider text-center"
+                        className="bg-red-500/10 text-red-600 text-[10px] p-4 rounded-xl border border-red-500/20 font-bold uppercase tracking-wider text-center"
                     >
                         {error}
                     </motion.div>
@@ -178,40 +208,40 @@ export function LoginForm({ setView, onComplete }: { setView: (v: AuthView) => v
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-6 bg-cyan-500 text-black rounded-[2.5rem] font-black text-xs uppercase tracking-[0.2em] active:scale-95 transition-all shadow-xl shadow-cyan-500/20 disabled:opacity-50"
+                    className="w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl font-extrabold text-xs uppercase tracking-[0.2em] shadow-[0_10px_25px_-5px_rgba(124,58,237,0.3)] hover:shadow-[0_20px_35px_-5px_rgba(124,58,237,0.45)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all duration-300 disabled:opacity-50 disabled:pointer-events-none"
                 >
-                    {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Sisteme Bağlan'}
+                    {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-white" /> : 'Evrene Giriş'}
                 </button>
 
-                <div className="relative flex py-2 items-center">
-                    <div className="flex-grow border-t border-white/10"></div>
-                    <span className="flex-shrink mx-4 text-gray-600 text-[9px] font-black uppercase tracking-widest">veya</span>
-                    <div className="flex-grow border-t border-white/10"></div>
+                <div className="relative flex py-1 items-center">
+                    <div className="flex-grow border-t border-zinc-200/60"></div>
+                    <span className="flex-shrink mx-4 text-zinc-400 text-[9px] font-bold uppercase tracking-widest">veya</span>
+                    <div className="flex-grow border-t border-zinc-200/60"></div>
                 </div>
 
                 <div className="flex gap-3">
                     <button 
                         type="button"
                         onClick={() => signInWithGoogle()}
-                        className="flex-1 py-5 bg-white/5 border border-card-border rounded-3xl flex items-center justify-center gap-3 font-bold text-white hover:bg-white/10 transition-all active:scale-95"
+                        className="flex-1 py-4 bg-zinc-50/60 border border-zinc-200/80 rounded-2xl flex items-center justify-center gap-3 font-bold text-zinc-700 hover:bg-zinc-100/80 hover:border-zinc-300 transition-all active:scale-95"
                     >
                         <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
-                        <span className="text-[10px] uppercase tracking-widest font-black">{t('auth.landing.google')}</span>
+                        <span className="text-[10px] uppercase tracking-widest font-black text-zinc-700">{t('auth.landing.google')}</span>
                     </button>
                     <button 
                         type="button"
                         onClick={() => signInWithApple()}
-                        className="flex-1 py-5 bg-white/5 border border-card-border rounded-3xl flex items-center justify-center gap-3 font-bold text-white hover:bg-white/10 transition-all active:scale-95"
+                        className="flex-1 py-4 bg-zinc-50/60 border border-zinc-200/80 rounded-2xl flex items-center justify-center gap-3 font-bold text-zinc-700 hover:bg-zinc-100/80 hover:border-zinc-300 transition-all active:scale-95"
                     >
-                        <Apple className="w-5 h-5" />
-                        <span className="text-[10px] uppercase tracking-widest font-black">{t('auth.landing.apple')}</span>
+                        <Apple className="w-5 h-5 text-zinc-800" />
+                        <span className="text-[10px] uppercase tracking-widest font-black text-zinc-700">{t('auth.landing.apple')}</span>
                     </button>
                 </div>
             </form>
 
-            <div className="mt-auto text-center pt-8">
-                <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">
-                    Henüz Üye Değil Misin? <button onClick={() => setView('signup')} className="text-cyan-400 font-black ml-1">Katıl</button>
+            <div className="mt-auto text-center pt-6">
+                <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+                    Henüz Üye Değil Misin? <button onClick={() => setView('signup')} className="text-purple-500 hover:text-purple-600 font-black ml-1">Katıl</button>
                 </p>
             </div>
         </motion.div>
@@ -299,22 +329,22 @@ export function SignupForm({ setView, onComplete, setEmail }: { setView: (v: Aut
             initial="initial"
             animate="animate"
             exit="exit"
-            className="flex flex-col h-full p-10 pt-12 bg-transparent overflow-y-auto"
+            className="flex flex-col h-full p-8 pt-10 bg-transparent overflow-y-auto custom-scrollbar"
         >
-            <div className="mb-12">
-                <h2 className="text-4xl font-black text-white tracking-tighter uppercase italic leading-none">{t('auth.signup.title')}</h2>
-                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.3em] mt-4 italic">{t('auth.signup.subtitle')}</p>
-            </div>
+            <PetBrandHeader 
+                title={t('auth.signup.title')} 
+                subtitle={t('auth.signup.subtitle')} 
+            />
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                    <label className="text-[10px] text-gray-600 font-black uppercase tracking-widest ml-1">{t('auth.signup.full_name')}</label>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-1">
+                    <label className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest ml-1">{t('auth.signup.full_name')}</label>
                     <div className="relative">
-                        <User className="w-5 h-5 text-gray-600 absolute left-6 top-1/2 -translate-y-1/2" />
+                        <User className="w-5 h-5 text-zinc-400 absolute left-5 top-1/2 -translate-y-1/2" />
                         <input
                             type="text"
                             placeholder="Adınız Soyadınız"
-                            className="w-full pl-16 pr-6 py-5 bg-white/5 border border-card-border rounded-[2rem] text-sm text-white focus:border-cyan-500/50 outline-none transition-all placeholder-gray-800"
+                            className="w-full pl-14 pr-6 py-4 bg-zinc-50/50 border border-zinc-200/80 rounded-2xl text-sm text-zinc-800 focus:border-purple-400/80 focus:bg-white focus:shadow-[0_0_0_4px_rgba(168,85,247,0.06)] outline-none transition-all placeholder-zinc-300"
                             required
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -322,14 +352,14 @@ export function SignupForm({ setView, onComplete, setEmail }: { setView: (v: Aut
                     </div>
                 </div>
 
-                <div className="space-y-2">
-                    <label className="text-[10px] text-gray-600 font-black uppercase tracking-widest ml-1">E-posta</label>
+                <div className="space-y-1">
+                    <label className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest ml-1">E-posta</label>
                     <div className="relative">
-                        <Mail className="w-5 h-5 text-gray-600 absolute left-6 top-1/2 -translate-y-1/2" />
+                        <Mail className="w-5 h-5 text-zinc-400 absolute left-5 top-1/2 -translate-y-1/2" />
                         <input
                             type="email"
                             placeholder="ornek@moffi.net"
-                            className="w-full pl-16 pr-6 py-5 bg-white/5 border border-card-border rounded-[2rem] text-sm text-white focus:border-cyan-500/50 outline-none transition-all placeholder-gray-800"
+                            className="w-full pl-14 pr-6 py-4 bg-zinc-50/50 border border-zinc-200/80 rounded-2xl text-sm text-zinc-800 focus:border-purple-400/80 focus:bg-white focus:shadow-[0_0_0_4px_rgba(168,85,247,0.06)] outline-none transition-all placeholder-zinc-300"
                             required
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -337,32 +367,32 @@ export function SignupForm({ setView, onComplete, setEmail }: { setView: (v: Aut
                     </div>
                 </div>
 
-                <div className="space-y-2">
-                    <label className="text-[10px] text-gray-600 font-black uppercase tracking-widest ml-1">{t('auth.signup.password')}</label>
+                <div className="space-y-1">
+                    <label className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest ml-1">{t('auth.signup.password')}</label>
                     <div className="relative">
-                        <Lock className="w-5 h-5 text-gray-600 absolute left-6 top-1/2 -translate-y-1/2" />
+                        <Lock className="w-5 h-5 text-zinc-400 absolute left-5 top-1/2 -translate-y-1/2" />
                         <input
                             type={showPassword ? "text" : "password"}
                             placeholder="••••••••"
-                            className="w-full pl-16 pr-16 py-5 bg-white/5 border border-card-border rounded-[2rem] text-sm text-white focus:border-cyan-500/50 outline-none transition-all placeholder-gray-800"
+                            className="w-full pl-14 pr-16 py-4 bg-zinc-50/50 border border-zinc-200/80 rounded-2xl text-sm text-zinc-800 focus:border-purple-400/80 focus:bg-white focus:shadow-[0_0_0_4px_rgba(168,85,247,0.06)] outline-none transition-all placeholder-zinc-300"
                             required
                             value={formData.password}
                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-600">
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 transition-colors">
                             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                         </button>
                     </div>
                 </div>
 
-                <div className="space-y-2">
-                    <label className="text-[10px] text-gray-600 font-black uppercase tracking-widest ml-1">{t('auth.signup.confirm_password')}</label>
+                <div className="space-y-1">
+                    <label className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest ml-1">{t('auth.signup.confirm_password')}</label>
                     <div className="relative">
-                        <Lock className="w-5 h-5 text-gray-600 absolute left-6 top-1/2 -translate-y-1/2" />
+                        <Lock className="w-5 h-5 text-zinc-400 absolute left-5 top-1/2 -translate-y-1/2" />
                         <input
                             type="password"
                             placeholder="••••••••"
-                            className="w-full pl-16 pr-6 py-5 bg-white/5 border border-card-border rounded-[2rem] text-sm text-white focus:border-cyan-500/50 outline-none transition-all placeholder-gray-800"
+                            className="w-full pl-14 pr-6 py-4 bg-zinc-50/50 border border-zinc-200/80 rounded-2xl text-sm text-zinc-800 focus:border-purple-400/80 focus:bg-white focus:shadow-[0_0_0_4px_rgba(168,85,247,0.06)] outline-none transition-all placeholder-zinc-300"
                             required
                             value={formData.confirmPassword}
                             onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
@@ -371,8 +401,8 @@ export function SignupForm({ setView, onComplete, setEmail }: { setView: (v: Aut
                 </div>
 
                 {/* Legal Checkboxes */}
-                <div className="space-y-4 pt-4">
-                    <label className="flex gap-4 cursor-pointer group">
+                <div className="space-y-3 pt-2">
+                    <label className="flex gap-3 cursor-pointer group">
                         <div className="relative flex items-center">
                             <input 
                                 type="checkbox" 
@@ -382,21 +412,21 @@ export function SignupForm({ setView, onComplete, setEmail }: { setView: (v: Aut
                             />
                             <div className={cn(
                                 "h-5 w-5 border rounded-lg flex items-center justify-center transition-all",
-                                agreeTerms ? "bg-cyan-500 border-cyan-500" : "bg-white/5 border-card-border group-hover:border-card-border"
+                                agreeTerms ? "bg-purple-500 border-purple-500" : "bg-zinc-50/50 border-zinc-200 group-hover:border-zinc-300"
                             )}>
-                                {agreeTerms && <ShieldCheck className="w-3 h-3 text-black" />}
+                                {agreeTerms && <ShieldCheck className="w-3.5 h-3.5 text-white" />}
                             </div>
                         </div>
-                        <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest leading-relaxed">
+                        <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest leading-relaxed">
                             {t('auth.signup.terms_prefix')}{" "}
-                            <button type="button" onClick={() => setLegalType('terms')} className="text-white hover:text-cyan-400 underline">{t('auth.signup.terms_link')}</button>,{" "}
-                            <button type="button" onClick={() => setLegalType('privacy')} className="text-white hover:text-cyan-400 underline">{t('auth.signup.privacy_link')}</button>{" "}
+                            <button type="button" onClick={() => setLegalType('terms')} className="text-zinc-500 hover:text-purple-600 underline font-extrabold">{t('auth.signup.terms_link')}</button>,{" "}
+                            <button type="button" onClick={() => setLegalType('privacy')} className="text-zinc-500 hover:text-purple-600 underline font-extrabold">{t('auth.signup.privacy_link')}</button>{" "}
                             {t('auth.signup.terms_suffix')}{" "}
                              {t('auth.signup.terms_end')}
                         </p>
                     </label>
 
-                    <label className="flex gap-4 cursor-pointer group">
+                    <label className="flex gap-3 cursor-pointer group">
                         <div className="relative flex items-center">
                             <input 
                                 type="checkbox" 
@@ -406,19 +436,19 @@ export function SignupForm({ setView, onComplete, setEmail }: { setView: (v: Aut
                             />
                             <div className={cn(
                                 "h-5 w-5 border rounded-lg flex items-center justify-center transition-all",
-                                marketingConsent ? "bg-purple-500 border-purple-500" : "bg-white/5 border-card-border group-hover:border-card-border"
+                                marketingConsent ? "bg-purple-500 border-purple-500" : "bg-zinc-50/50 border-zinc-200 group-hover:border-zinc-300"
                             )}>
-                                {marketingConsent && <Sparkles className="w-3 h-3 text-black" />}
+                                {marketingConsent && <Sparkles className="w-3.5 h-3.5 text-white" />}
                             </div>
                         </div>
-                        <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest leading-relaxed">
+                        <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest leading-relaxed">
                             {t('auth.signup.marketing_consent')}
                         </p>
                     </label>
                 </div>
 
                 {error && (
-                    <div className="bg-red-500/10 text-red-500 text-[10px] p-5 rounded-2xl border border-red-500/20 font-black uppercase tracking-wider text-center">
+                    <div className="bg-red-500/10 text-red-600 text-[10px] p-4 rounded-xl border border-red-500/20 font-bold uppercase tracking-wider text-center">
                         {error}
                     </div>
                 )}
@@ -427,44 +457,44 @@ export function SignupForm({ setView, onComplete, setEmail }: { setView: (v: Aut
                     type="submit"
                     disabled={loading || !agreeTerms}
                     className={cn(
-                        "w-full py-6 rounded-[2.5rem] font-black text-xs uppercase tracking-[0.2em] active:scale-95 transition-all shadow-xl",
-                        agreeTerms ? "bg-card text-black shadow-white/10" : "bg-white/10 text-white/30 cursor-not-allowed"
+                        "w-full py-4 rounded-2xl font-extrabold text-xs uppercase tracking-[0.2em] transition-all duration-300 active:scale-[0.99]",
+                        agreeTerms 
+                            ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_10px_25px_-5px_rgba(124,58,237,0.3)] hover:shadow-[0_20px_35px_-5px_rgba(124,58,237,0.45)] hover:-translate-y-0.5 active:translate-y-0" 
+                            : "bg-zinc-200 text-zinc-400 cursor-not-allowed shadow-none"
                     )}
                 >
-                    {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : t('auth.signup.submit')}
+                    {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-white" /> : 'Evrene Katıl'}
                 </button>
 
-                <div className="relative flex py-2 items-center">
-                    <div className="flex-grow border-t border-white/10"></div>
-                    <span className="flex-shrink mx-4 text-gray-600 text-[9px] font-black uppercase tracking-widest">veya</span>
-                    <div className="flex-grow border-t border-white/10"></div>
+                <div className="relative flex py-1 items-center">
+                    <div className="flex-grow border-t border-zinc-200/60"></div>
+                    <span className="flex-shrink mx-4 text-zinc-400 text-[9px] font-bold uppercase tracking-widest">veya</span>
+                    <div className="flex-grow border-t border-zinc-200/60"></div>
                 </div>
 
                 <div className="flex gap-3">
                     <button 
                         type="button"
                         onClick={() => signInWithGoogle()}
-                        className="flex-1 py-5 bg-white/5 border border-card-border rounded-3xl flex items-center justify-center gap-3 font-bold text-white hover:bg-white/10 transition-all active:scale-95"
+                        className="flex-1 py-4 bg-zinc-50/60 border border-zinc-200/80 rounded-2xl flex items-center justify-center gap-3 font-bold text-zinc-700 hover:bg-zinc-100/80 hover:border-zinc-300 transition-all active:scale-95"
                     >
                         <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
-                        <span className="text-[10px] uppercase tracking-widest font-black">{t('auth.landing.google')}</span>
+                        <span className="text-[10px] uppercase tracking-widest font-black text-zinc-700">{t('auth.landing.google')}</span>
                     </button>
                     <button 
                         type="button"
                         onClick={() => signInWithApple()}
-                        className="flex-1 py-5 bg-white/5 border border-card-border rounded-3xl flex items-center justify-center gap-3 font-bold text-white hover:bg-white/10 transition-all active:scale-95"
+                        className="flex-1 py-4 bg-zinc-50/60 border border-zinc-200/80 rounded-2xl flex items-center justify-center gap-3 font-bold text-zinc-700 hover:bg-zinc-100/80 hover:border-zinc-300 transition-all active:scale-95"
                     >
-                        <Apple className="w-5 h-5" />
-                        <span className="text-[10px] uppercase tracking-widest font-black">{t('auth.landing.apple')}</span>
+                        <Apple className="w-5 h-5 text-zinc-800" />
+                        <span className="text-[10px] uppercase tracking-widest font-black text-zinc-700">{t('auth.landing.apple')}</span>
                     </button>
                 </div>
 
-                <div className="mt-auto pt-10 text-center">
-                    <div className="mt-8">
-                        <p className="text-[10px] text-foreground font-bold uppercase tracking-widest">
-                            {t('auth.landing.already_member')} <button onClick={() => setView('login')} className="text-white hover:text-cyan-400 transition-colors ml-2">{t('auth.landing.login')}</button>
-                        </p>
-                    </div>
+                <div className="text-center pt-4">
+                    <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+                        {t('auth.landing.already_member')} <button type="button" onClick={() => setView('login')} className="text-purple-500 hover:text-purple-600 transition-colors ml-2 font-black">{t('auth.landing.login')}</button>
+                    </p>
                 </div>
             </form>
 
@@ -507,27 +537,30 @@ export function ResetForm({ setView }: { setView: (v: AuthView) => void }) {
             initial="initial"
             animate="animate"
             exit="exit"
-            className="flex flex-col h-full p-10 pt-12 bg-transparent overflow-y-auto"
+            className="flex flex-col h-full p-8 pt-10 bg-transparent overflow-y-auto custom-scrollbar"
         >
-            <button onClick={() => setView('login')} className="mb-10 w-12 h-12 rounded-2xl bg-white/5 border border-card-border flex items-center justify-center hover:bg-white/10 transition-all group">
-                <ArrowLeft className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
-            </button>
-
-            <div className="mb-12">
-                <h2 className="text-3xl font-black text-white tracking-tighter uppercase italic leading-none">Şifre Sıfırla</h2>
-                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.3em] mt-4">Güvenli Bağlantı Gönderilecek</p>
+            <div className="flex items-center justify-between mb-6">
+                <button onClick={() => setView('login')} className="w-10 h-10 rounded-xl bg-zinc-50 border border-zinc-200 flex items-center justify-center hover:bg-zinc-100 transition-all group">
+                    <ArrowLeft className="w-5 h-5 text-zinc-500 group-hover:text-zinc-800 transition-colors" />
+                </button>
+                <span className="text-[10px] text-zinc-400 font-black uppercase tracking-widest">Şifre Sıfırlama</span>
             </div>
 
+            <PetBrandHeader 
+                title="Şifremi Unuttum" 
+                subtitle="Güvenli Bağlantı Gönderilecek" 
+            />
+
             {!sent ? (
-                <form onSubmit={handleReset} className="space-y-8">
-                    <div className="space-y-2">
-                        <label className="text-[10px] text-gray-600 font-black uppercase tracking-widest ml-1">Sayısal Kimlik (E-posta)</label>
+                <form onSubmit={handleReset} className="space-y-6">
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest ml-1">E-posta Adresiniz</label>
                         <div className="relative">
-                            <Mail className="w-5 h-5 text-gray-600 absolute left-6 top-1/2 -translate-y-1/2" />
+                            <Mail className="w-5 h-5 text-zinc-400 absolute left-5 top-1/2 -translate-y-1/2" />
                             <input
                                 type="email"
                                 placeholder="merhaba@moffi.net"
-                                className="w-full pl-16 pr-6 py-5 bg-white/5 border border-card-border rounded-[2rem] text-sm text-white focus:border-cyan-500/50 outline-none transition-all"
+                                className="w-full pl-14 pr-6 py-4.5 bg-zinc-50/50 border border-zinc-200/80 rounded-2xl text-sm text-zinc-800 focus:border-purple-400/80 focus:bg-white focus:shadow-[0_0_0_4px_rgba(168,85,247,0.06)] outline-none transition-all placeholder-zinc-300"
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -536,7 +569,7 @@ export function ResetForm({ setView }: { setView: (v: AuthView) => void }) {
                     </div>
 
                     {error && (
-                        <div className="bg-red-500/10 text-red-500 text-[10px] p-5 rounded-2xl border border-red-500/20 font-black uppercase tracking-wider text-center">
+                        <div className="bg-red-500/10 text-red-600 text-[10px] p-4 rounded-xl border border-red-500/20 font-bold uppercase tracking-wider text-center">
                             {error}
                         </div>
                     )}
@@ -544,18 +577,20 @@ export function ResetForm({ setView }: { setView: (v: AuthView) => void }) {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-6 bg-cyan-500 text-black rounded-[2.5rem] font-black text-xs uppercase tracking-[0.2em] active:scale-95 transition-all shadow-xl shadow-cyan-500/20"
+                        className="w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl font-extrabold text-xs uppercase tracking-[0.2em] shadow-[0_10px_25px_-5px_rgba(124,58,237,0.3)] hover:shadow-[0_20px_35px_-5px_rgba(124,58,237,0.45)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all duration-300"
                     >
-                        {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Bağlantıyı Gönder'}
+                        {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-white" /> : 'Bağlantıyı Gönder'}
                     </button>
                 </form>
             ) : (
-                <div className="flex flex-col items-center justify-center py-16 bg-emerald-500/5 border border-emerald-500/10 rounded-[3rem] animate-in fade-in zoom-in">
-                    <div className="w-20 h-20 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mb-6 text-emerald-400">
-                        <ShieldCheck className="w-10 h-10" />
+                <div className="flex flex-col items-center justify-center py-12 bg-emerald-50 border border-emerald-100 rounded-[2rem] animate-in fade-in zoom-in">
+                    <div className="w-16 h-16 bg-emerald-100 border border-emerald-200 rounded-full flex items-center justify-center mb-5 text-emerald-600">
+                        <ShieldCheck className="w-8 h-8" />
                     </div>
-                    <h3 className="text-xl font-black text-white uppercase italic tracking-tight">Kanal Açıldı</h3>
-                    <p className="text-[9px] text-emerald-400 font-black uppercase tracking-widest mt-2 px-6 text-center">Lütfen e-posta kutunuzu kontrol edin.</p>
+                    <h3 className="text-lg font-black text-zinc-800 uppercase tracking-tight">Kanal Açıldı</h3>
+                    <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest mt-2 px-6 text-center leading-relaxed">
+                        Şifre sıfırlama bağlantısı e-posta kutunuza gönderildi.
+                    </p>
                 </div>
             )}
         </motion.div>

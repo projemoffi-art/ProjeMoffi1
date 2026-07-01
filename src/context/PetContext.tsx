@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { apiService } from "../services/apiService";
+import { useAuth } from "./AuthContext";
 
 // --- TYPES ---
 export interface Pet {
@@ -102,6 +103,7 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
     const [pets, setPets] = useState<Pet[]>([]);
     const [activePetId, setActivePetId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const { user } = useAuth();
     
     // Track if initial load is done to prevent persistence effect from running prematurely
     const isInitializedRef = useRef(false);
@@ -109,10 +111,21 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
     const prevPetsRef = useRef<string>('');
     const prevActivePetIdRef = useRef<string | null>(null);
 
-    // LOAD FROM SERVICE LAYER - runs ONCE
+    // LOAD FROM SERVICE LAYER - runs whenever user changes
     useEffect(() => {
+        if (!user) {
+            setPets([]);
+            setActivePetId(null);
+            prevPetsRef.current = '';
+            prevActivePetIdRef.current = null;
+            setIsLoading(false);
+            isInitializedRef.current = false;
+            return;
+        }
+
         const loadInitialData = async () => {
             setIsLoading(true);
+            isInitializedRef.current = false;
             try {
                 const fetchedPets = await apiService.getPets();
                 setPets(fetchedPets as any);
@@ -125,14 +138,14 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
             } catch (err) {
                 console.error("Pet veri yükleme hatası:", err);
                 setPets(INITIAL_PETS);
-                setActivePetId(INITIAL_PETS[0].id);
+                setActivePetId(null);
             } finally {
                 setIsLoading(false);
                 isInitializedRef.current = true;
             }
         };
         loadInitialData();
-    }, []); // RUNS ONCE ONLY
+    }, [user?.id]);
 
     // PERSISTENCE EFFECT - only saves when data actually changes
     // Uses JSON comparison to prevent unnecessary saves

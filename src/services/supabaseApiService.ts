@@ -1,6 +1,7 @@
 import { 
     Pet, Post, UserProfile, LostPet, AdoptionPet, LostPetSighting,
-    ShopCategory, ShopProduct, ShopCartItem, ShopOrder, IApiService
+    ShopCategory, ShopProduct, ShopCartItem, ShopOrder, IApiService,
+    SystemAnnouncement
 } from './types';
 import { supabase } from '@/lib/supabase';
 import { MockApiService } from './mockApiService';
@@ -3110,5 +3111,90 @@ export class SupabaseApiService implements IApiService {
         if (diff < 3600) return `${Math.floor(diff / 60)}dk`;
         if (diff < 86400) return `${Math.floor(diff / 3600)}sa`;
         return `${Math.floor(diff / 86400)}g`;
+    }
+
+    async getAnnouncements(): Promise<SystemAnnouncement[]> {
+        try {
+            const { data, error } = await supabase
+                .from('system_announcements')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            
+            return (data || []).map((o: any) => ({
+                id: String(o.id),
+                title: o.title,
+                description: o.description,
+                media_url: o.media_url,
+                badge: o.badge,
+                cta_text: o.cta_text,
+                cta_type: o.cta_type,
+                cta_value: o.cta_value,
+                expires_at: o.expires_at,
+                created_at: o.created_at
+            }));
+        } catch (err) {
+            console.warn("Supabase system_announcements query failed, falling back to mockApi:", err);
+            return this.mockApi.getAnnouncements();
+        }
+    }
+
+    async addAnnouncement(announcement: Partial<SystemAnnouncement>): Promise<SystemAnnouncement> {
+        try {
+            const payload = {
+                title: announcement.title,
+                description: announcement.description,
+                media_url: announcement.media_url,
+                badge: announcement.badge,
+                cta_text: announcement.cta_text,
+                cta_type: announcement.cta_type,
+                cta_value: announcement.cta_value,
+                expires_at: announcement.expires_at,
+                created_at: new Date().toISOString()
+            };
+
+            const { data, error } = await supabase
+                .from('system_announcements')
+                .insert(payload)
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            return {
+                id: String(data.id),
+                title: data.title,
+                description: data.description,
+                media_url: data.media_url,
+                badge: data.badge,
+                cta_text: data.cta_text,
+                cta_type: data.cta_type,
+                cta_value: data.cta_value,
+                expires_at: data.expires_at,
+                created_at: data.created_at
+            };
+        } catch (err) {
+            console.warn("Supabase system_announcements insert failed, falling back to mockApi:", err);
+            return this.mockApi.addAnnouncement(announcement);
+        }
+    }
+
+    async deleteAnnouncement(id: string): Promise<void> {
+        try {
+            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+            if (!isUuid) {
+                return this.mockApi.deleteAnnouncement(id);
+            }
+            const { error } = await supabase
+                .from('system_announcements')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+        } catch (err) {
+            console.warn("Supabase system_announcements delete failed, falling back to mockApi:", err);
+            return this.mockApi.deleteAnnouncement(id);
+        }
     }
 }

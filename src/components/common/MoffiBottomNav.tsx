@@ -56,7 +56,7 @@ export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisibl
             initial={false}
             animate={{ y: isVisible ? 0 : 100, opacity: isVisible ? 1 : 0 }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="fixed bottom-0 left-0 right-0 z-[6000] bg-[#0c0c0c]/80 backdrop-blur-3xl border-t border-white/5 shadow-[0_-15px_50px_rgba(0,0,0,0.6)]"
+            className="fixed bottom-0 left-0 right-0 z-[6000] bg-[var(--background)]/80 backdrop-blur-3xl border-t border-white/5 shadow-[0_-15px_50px_rgba(0,0,0,0.6)]"
         >
             <div className="px-4 pt-3 pb-safe max-w-lg mx-auto relative h-[4.5rem] flex items-center justify-between">
                     
@@ -98,7 +98,7 @@ export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisibl
                             onPointerUp={() => { if (longPressTimer.current) clearTimeout(longPressTimer.current); setIsHubLongPressing(false); }}
                             onClick={handleHubClick}
                             className={cn(
-                                "w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center border-4 border-[#0c0c0c] active:scale-95 transition-all group absolute -top-8 sm:-top-10",
+                                "w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center border-4 border-[var(--background)] active:scale-95 transition-all group absolute -top-8 sm:-top-10",
                                 isHubLongPressing 
                                     ? "bg-red-600 scale-110 shadow-[0_0_30px_rgba(220,38,38,0.8)] border-red-400" 
                                     : "bg-gradient-to-tr from-cyan-400 via-blue-500 to-purple-600 text-white shadow-[0_15px_35px_rgba(34,211,238,0.4)]"
@@ -123,7 +123,7 @@ export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisibl
                                 <motion.div
                                     animate={{ scale: [1, 1.15, 1] }}
                                     transition={{ duration: 1.5, repeat: Infinity }}
-                                    className="absolute -top-1 -right-1 w-4 h-4 bg-cyan-400 rounded-full border border-[#0c0c0c] flex items-center justify-center shadow-[0_0_8px_rgba(34,211,238,0.6)]"
+                                    className="absolute -top-1 -right-1 w-4 h-4 bg-cyan-400 rounded-full border border-[var(--background)] flex items-center justify-center shadow-[0_0_8px_rgba(34,211,238,0.6)]"
                                 >
                                     <span className="text-[8px] font-black text-black">{unreadCount}</span>
                                 </motion.div>

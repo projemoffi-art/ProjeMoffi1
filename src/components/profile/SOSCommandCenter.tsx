@@ -11,8 +11,16 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { apiService } from '@/services/apiService';
+import dynamic from 'next/dynamic';
 
 import { usePet } from '@/context/PetContext';
+
+const SightingMapSelector = dynamic(() => import('@/components/community/SightingMapSelector'), {
+    ssr: false,
+    loading: () => (
+        <div className="w-full h-full bg-[#1A1A1A] animate-pulse rounded-2xl flex items-center justify-center text-white/20 font-bold text-[10px] uppercase tracking-wider">Harita Yükleniyor...</div>
+    )
+});
 
 interface SOSCommandCenterProps {
     isOpen: boolean;
@@ -44,7 +52,9 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
             emergencyBypass: pet?.sos_settings?.emergency_bypass ?? true,
             lastSeenLocation: pet?.sos_settings?.last_seen_location || "",
             rewardEnabled: pet?.sos_settings?.reward_enabled ?? true,
-            headerSosAlertEnabled: pet?.sos_settings?.header_sos_alert_enabled ?? true
+            headerSosAlertEnabled: pet?.sos_settings?.header_sos_alert_enabled ?? true,
+            latitude: pet?.sos_settings?.latitude || 40.9850,
+            longitude: pet?.sos_settings?.longitude || 29.0300
         }
     });
     
@@ -69,7 +79,9 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                     emergencyBypass: pet.sos_settings?.emergency_bypass ?? true,
                     lastSeenLocation: pet.sos_settings?.last_seen_location || "",
                     rewardEnabled: pet.sos_settings?.reward_enabled ?? true,
-                    headerSosAlertEnabled: pet.sos_settings?.header_sos_alert_enabled ?? true
+                    headerSosAlertEnabled: pet.sos_settings?.header_sos_alert_enabled ?? true,
+                    latitude: pet.sos_settings?.latitude || 40.9850,
+                    longitude: pet.sos_settings?.longitude || 29.0300
                 }
             });
             // Reset tab to status when switching pets for clarity
@@ -127,7 +139,9 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                 emergency_bypass: localSos.sosConfig.emergencyBypass,
                 last_seen_location: localSos.sosConfig.lastSeenLocation,
                 reward_enabled: localSos.sosConfig.rewardEnabled,
-                header_sos_alert_enabled: localSos.sosConfig.headerSosAlertEnabled
+                header_sos_alert_enabled: localSos.sosConfig.headerSosAlertEnabled,
+                latitude: localSos.sosConfig.latitude || 40.9850,
+                longitude: localSos.sosConfig.longitude || 29.0300
             };
 
             // Call specific service method for deep persistence/alerts
@@ -406,6 +420,24 @@ export function SOSCommandCenter({ isOpen, onClose, pet, allPets = [], onPetChan
                                                     />
                                                 </div>
                                                 <p className="text-[8px] text-cyan-400/40 ml-1 italic font-medium">Bu bilgi radarda tüm kullanıcılara gösterilecektir.</p>
+                                            </div>
+
+                                            {/* Haritada Konumu İşaretle */}
+                                            <div className="p-6 space-y-3 border-b border-white/5 bg-cyan-500/5">
+                                                <label className="text-[9px] font-black text-cyan-400/60 uppercase tracking-widest block ml-1">Haritada Kaybolduğu Konumu İşaretleyin 📍</label>
+                                                <div className="h-44 rounded-2xl overflow-hidden border border-cyan-400/20 relative z-20">
+                                                    <SightingMapSelector 
+                                                        userPos={[localSos.sosConfig.latitude, localSos.sosConfig.longitude]} 
+                                                        onChange={(coords) => setLocalSos((prev: any) => ({
+                                                            ...prev, 
+                                                            sosConfig: {
+                                                                ...prev.sosConfig, 
+                                                                latitude: coords[0], 
+                                                                longitude: coords[1]
+                                                            }
+                                                        }))} 
+                                                    />
+                                                </div>
                                             </div>
 
                                             {/* Health Note Row */}

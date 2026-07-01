@@ -72,39 +72,7 @@ export function RadarTab({
             className="w-full pb-32 bg-[var(--background)] flex flex-col items-center"
         >
             <div className="w-full max-w-md mx-auto relative">
-                {/* RADAR SUB-TAB SELECTOR (Apple Style Navigation) */}
-                <div className="w-full px-6 pt-6 pb-2 flex items-center justify-between sticky top-0 z-40 bg-[var(--background)]/80 backdrop-blur-xl">
-                    <button 
-                        onClick={() => setActiveTab('feed')}
-                        className="w-10 h-10 rounded-full bg-[var(--card-bg)] border border-white/5 flex items-center justify-center text-[var(--secondary-text)] hover:text-white transition-all active:scale-90 shadow-lg"
-                        title="Geri Dön"
-                    >
-                        <ChevronLeft className="w-6 h-6" />
-                    </button>
-                    
-                    <div className="flex bg-[var(--card-bg)] p-1 rounded-2xl border border-white/10 w-full max-w-[200px] shadow-sm ml-2">
-                        <button 
-                            onClick={() => setRadarTabMode('lost')}
-                            className={cn(
-                                "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                radarTabMode === 'lost' ? "bg-white text-black shadow-lg" : "text-[var(--secondary-text)] hover:text-[var(--foreground)]"
-                            )}
-                        >
-                            Kayıp
-                        </button>
-                        <button 
-                            onClick={() => setRadarTabMode('adopt')}
-                            className={cn(
-                                "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                radarTabMode === 'adopt' ? "bg-white text-black shadow-lg" : "text-[var(--secondary-text)] hover:text-[var(--foreground)]"
-                            )}
-                        >
-                            Sahiplen
-                        </button>
-                    </div>
-                    
-                    <div className="w-10 h-10" />
-                </div>
+
 
                 {/* Pet Switcher for Radar Context */}
                 <div className="flex justify-center mt-6 mb-2">

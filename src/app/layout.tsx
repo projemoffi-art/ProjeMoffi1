@@ -69,9 +69,6 @@ export const metadata: Metadata = {
   google: 'notranslate',
 };
 
-
-import { RootOnboardingWrapper } from "@/components/onboarding/RootOnboardingWrapper";
-
 import { ChatProvider } from "@/context/ChatContext";
 import { ActivityProvider } from "@/context/ActivityContext";
 
@@ -103,23 +100,21 @@ export default function RootLayout({
                             <SocialProvider>
                               <ShopProvider>
                                 <ClientAuthWrapper>
-                                  <RootOnboardingWrapper>
-                                    <GlobalIdentitySync />
-                                    <GlobalAuraBackground />
-                                    <div className="min-h-screen relative overflow-hidden">
-                                      <ErrorBoundary>
-                                        {children}
-                                      </ErrorBoundary>
-                                    </div>
+                                  <GlobalIdentitySync />
+                                  <GlobalAuraBackground />
+                                  <div className="min-h-screen relative overflow-hidden">
+                                    <ErrorBoundary>
+                                      {children}
+                                    </ErrorBoundary>
+                                  </div>
 
-                                    <Suspense fallback={null}>
-                                      <DynamicNavigation />
-                                    </Suspense>
-                                    <QuestRewardEngineLoader />
-                                    <Phase2Loader />
-                                    <AIWidgetLoader />
-                                    <GlobalToast />
-                                  </RootOnboardingWrapper>
+                                  <Suspense fallback={null}>
+                                    <DynamicNavigation />
+                                  </Suspense>
+                                  <QuestRewardEngineLoader />
+                                  <Phase2Loader />
+                                  <AIWidgetLoader />
+                                  <GlobalToast />
                                 </ClientAuthWrapper>
                               </ShopProvider>
                             </SocialProvider>

@@ -338,4 +338,22 @@ export interface IApiService {
     deleteProduct(id: string): Promise<void>;
     updateOrderStatus(orderId: string, status: OrderStatus): Promise<void>;
     getAllOrders(): Promise<ShopOrder[]>;
+
+    // Announcements
+    getAnnouncements(): Promise<SystemAnnouncement[]>;
+    addAnnouncement(announcement: Partial<SystemAnnouncement>): Promise<SystemAnnouncement>;
+    deleteAnnouncement(id: string): Promise<void>;
+}
+
+export interface SystemAnnouncement {
+    id: string;
+    title: string;
+    description: string;
+    media_url: string;
+    badge: string;
+    cta_text: string;
+    cta_type: 'toast' | 'chat' | 'map' | 'coupon' | 'url';
+    cta_value: string;
+    expires_at: string;
+    created_at?: string;
 }

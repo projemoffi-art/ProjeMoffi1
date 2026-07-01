@@ -12,14 +12,14 @@ const supabaseAdmin = (supabaseUrl && supabaseKey)
 
 const SESSION_SECRET = process.env.SESSION_SECRET || "moffi_default_secure_session_secret_key_2026";
 
-// Helper to sign the role
 function signRole(role: string, userId: string): string {
     const payload = JSON.stringify({ role, userId });
+    const base64Payload = Buffer.from(payload).toString("base64");
     const signature = crypto
         .createHmac("sha256", SESSION_SECRET)
-        .update(payload)
+        .update(base64Payload)
         .digest("hex");
-    return `${Buffer.from(payload).toString("base64")}.${signature}`;
+    return `${base64Payload}.${signature}`;
 }
 
 export async function POST(req: Request) {

@@ -77,6 +77,8 @@ interface ViewProps {
     setReduceMotion?: (v: boolean) => void;
     reduceTransparency?: boolean;
     setReduceTransparency?: (v: boolean) => void;
+    seniorMode?: boolean;
+    setSeniorMode?: (v: boolean) => void;
     newWord?: string;
     setNewWord?: (s: string) => void;
     handleAddWord?: () => void;
@@ -502,7 +504,8 @@ const NotificationsView = ({ user, setView, updateSettings }: ViewProps) => (
 const AccessibilityView = ({ 
     setView, fontSize, setFontSize, colorBlindMode, setColorBlindMode,
     boldText, setBoldText, highContrast, setHighContrast,
-    reduceMotion, setReduceMotion, reduceTransparency, setReduceTransparency 
+    reduceMotion, setReduceMotion, reduceTransparency, setReduceTransparency,
+    seniorMode, setSeniorMode
 }: ViewProps) => (
     <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 overflow-y-auto custom-scrollbar pr-1" style={{ maxHeight: 'calc(94vh - 180px)' }}>
         <div className="space-y-8 pb-10">
@@ -532,6 +535,27 @@ const AccessibilityView = ({
                             {fontSize === s && <div className="absolute top-2 right-2 w-2 h-2 bg-accent rounded-full animate-pulse" />}
                         </button>
                     ))}
+                </div>
+            </div>
+
+            {/* Büyüklere Özel Kolay Mod */}
+            <div className="px-2">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="w-8 h-8 rounded-2xl bg-amber-500/20 flex items-center justify-center">
+                        <Sparkles className="w-4 h-4 text-amber-500" />
+                    </div>
+                    <h3 className="text-[12px] font-black text-amber-500 uppercase tracking-[0.2em]">Büyüklere Özel Kolay Mod</h3>
+                </div>
+                <div className="bg-amber-500/5 rounded-[2.5rem] p-5 border-2 border-amber-500/30 mb-8">
+                    <button onClick={() => setSeniorMode?.(!seniorMode)} className="flex items-center justify-between text-left w-full gap-4">
+                        <div>
+                            <p className="text-[14px] font-black text-amber-400 uppercase tracking-tight">Kolay Mod (Senior Mode)</p>
+                            <p className="text-[10px] text-secondary mt-1.5 font-bold uppercase tracking-tighter">Daha büyük yazılar, basitleştirilmiş dev butonlar ve sesli Türkçe kılavuz ile uygulamayı en kolay şekilde kullanın.</p>
+                        </div>
+                        <div className={cn("w-14 h-7 rounded-full transition-all relative shrink-0 border border-amber-500/30", seniorMode ? "bg-amber-500 border-transparent shadow-lg shadow-amber-500/30" : "bg-foreground/5")}>
+                            <div className={cn("absolute top-0.5 w-6 h-6 rounded-full bg-card transition-all shadow-md", seniorMode ? "left-7.5" : "left-0.5")} />
+                        </div>
+                    </button>
                 </div>
             </div>
 
@@ -880,7 +904,8 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
         boldText, setBoldText,
         highContrast, setHighContrast,
         reduceMotion, setReduceMotion,
-        reduceTransparency, setReduceTransparency
+        reduceTransparency, setReduceTransparency,
+        seniorMode, setSeniorMode
     } = useTheme();
 
     const { 
@@ -997,7 +1022,8 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
         newWord, setNewWord, handleAddWord, handleRemoveWord, handleUnblock,
         terminateSession, terminateAllOtherSessions, changePassword,
         exportStatus,
-        theme, setTheme
+        theme, setTheme,
+        seniorMode, setSeniorMode
     };
 
     return (

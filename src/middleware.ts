@@ -131,17 +131,22 @@ export async function middleware(request: NextRequest) {
 
     // 1. Admin Rotaları Koruması
     if (pathname.startsWith("/admin")) {
-        if (role !== "admin") {
-            console.log(`[Middleware] Blocked unauthorized access to ${pathname} (Verified Role: ${role})`);
+        if (!role) {
+            console.log(`[Middleware] Redirecting unauthenticated user to login: ${pathname}`);
             return NextResponse.redirect(new URL("/", request.url));
         }
+        // Let it load so src/app/admin/layout.tsx can display the premium Access Denied page
     }
 
     // 2. İşletme (Business) Rotaları Koruması
     if (pathname.startsWith("/business")) {
+        if (!role) {
+            console.log(`[Middleware] Redirecting unauthenticated user to login: ${pathname}`);
+            return NextResponse.redirect(new URL("/", request.url));
+        }
         if (role !== "business" && role !== "admin") {
             console.log(`[Middleware] Blocked unauthorized access to ${pathname} (Verified Role: ${role})`);
-            return NextResponse.redirect(new URL("/", request.url));
+            return NextResponse.redirect(new URL("/community", request.url));
         }
     }
 

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
 // Routes that do NOT require authentication
-const PUBLIC_ROUTES = ["/", "/business-register", "/production-studio", "/sandbox-studio", "/terms", "/privacy", "/cookies"];
+const PUBLIC_ROUTES = ["/", "/business-register", "/production-studio", "/sandbox-studio", "/terms", "/privacy", "/cookies", "/aura-feed"];
 
 // Routes that require business role
 const BUSINESS_ROUTES_PREFIX = "/business";
@@ -47,14 +47,6 @@ export function ClientAuthWrapper({ children }: Props) {
             }
             // Business user but not approved → show pending page (handled within business layout)
         }
-
-        // Admin routes → need admin role
-        if (isAdminRoute) {
-            if (user.role !== 'admin') {
-                router.replace("/community");
-                return;
-            }
-        }
     }, [user, isLoading, isPublicRoute, isBusinessRoute, isAdminRoute, pathname, router]);
 
     // Public routes always render immediately
@@ -79,9 +71,6 @@ export function ClientAuthWrapper({ children }: Props) {
 
     // Wrong role for business routes
     if (isBusinessRoute && user.role !== 'business' && user.role !== 'admin') return null;
-
-    // Wrong role for admin routes
-    if (isAdminRoute && user.role !== 'admin') return null;
 
     return <>{children}</>;
 }

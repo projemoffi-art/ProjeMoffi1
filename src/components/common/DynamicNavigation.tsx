@@ -8,6 +8,7 @@ import { MoffiSidebar } from "@/components/community/MoffiSidebar";
 import { useAuth } from "@/context/AuthContext";
 import { usePet } from "@/context/PetContext";
 import { MoffiBottomNav } from "@/components/common/MoffiBottomNav";
+import { useTheme } from "@/context/ThemeContext";
 
 // Lazy loaded overlays — only the ones that SHOULD be overlays
 const ActionHubDrawer = dynamic(() => import("@/components/community/ActionHubDrawer").then(mod => mod.ActionHubDrawer), { ssr: false });
@@ -30,6 +31,7 @@ export function DynamicNavigation() {
     const router = useRouter();
     const { user } = useAuth();
     const { pets, updatePet, activePet } = usePet();
+    const { seniorMode } = useTheme();
 
     // Overlay states — only for things that are genuinely overlays
     const [isActionHubOpen, setIsActionHubOpen] = useState(false);
@@ -310,7 +312,7 @@ export function DynamicNavigation() {
         route === '/' ? pathname === '/' : pathname.startsWith(route)
     );
 
-    if (shouldHide) return null;
+    if (shouldHide || seniorMode) return null;
 
     return (
         <>

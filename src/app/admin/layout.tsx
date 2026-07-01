@@ -19,6 +19,7 @@ const MENU_GROUPS = [
         group: "PLATFORM",
         items: [
             { title: "Genel Bakış", icon: LayoutDashboard, path: "/admin" },
+            { title: "Sistem Duyuruları", icon: Megaphone, path: "/admin/alerts" },
             { title: "Analizler", icon: BarChart3, path: "/admin/analytics" },
         ]
     },
@@ -99,12 +100,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             <p className="text-xs text-gray-400 mt-1">Rol: <span className="text-indigo-400 font-bold uppercase">{user?.role}</span></p>
                         </div>
 
-                        <button
-                            onClick={() => router.push('/')}
-                            className="w-full py-4 bg-card text-black rounded-2xl font-black text-sm active:scale-95 transition-all"
-                        >
-                            Ana Sayfaya Dön
-                        </button>
+                        <div className="flex flex-col gap-3">
+                            <button
+                                onClick={() => router.push('/community')}
+                                className="w-full py-4 bg-white/5 border border-card-border hover:bg-white/10 text-white rounded-2xl font-black text-sm active:scale-95 transition-all cursor-pointer"
+                            >
+                                Ana Sayfaya Dön
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    await logout();
+                                    router.push('/');
+                                }}
+                                className="w-full py-4 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-400 rounded-2xl font-black text-sm active:scale-95 transition-all cursor-pointer"
+                            >
+                                Çıkış Yap ve Farklı Hesapla Giriş Yap
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

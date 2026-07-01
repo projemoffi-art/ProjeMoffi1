@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { apiService } from '@/services/apiService';
 
 export interface Story {
     id: string;
@@ -27,7 +28,41 @@ export function useStories() {
     const fetchStories = useCallback(async () => {
         setIsLoading(true);
         try {
-            // Curated, admin-controlled channels with multiple transitioning slides
+            // Fetch live lost pets from Supabase
+            const lostPets = await apiService.getLostPets();
+            // Fetch live system announcements
+            const announcements = await apiService.getAnnouncements();
+            
+            const liveAnnStories: Story[] = (announcements || [])
+                .filter((ann: any) => {
+                    if (!ann.expires_at) return true;
+                    return new Date(ann.expires_at).getTime() > Date.now();
+                })
+                .map((ann: any) => ({
+                    id: ann.id,
+                    media_url: ann.media_url || 'https://images.unsplash.com/photo-1589758438368-0ad531db3366?q=80&w=200',
+                    created_at: ann.created_at || new Date().toISOString(),
+                    title: ann.title,
+                    description: ann.description,
+                    badge: ann.badge || 'Duyuru',
+                    ctaText: ann.cta_text || 'İncele',
+                    ctaType: ann.cta_type || 'toast',
+                    ctaValue: ann.cta_value || ''
+                }));
+            
+            const liveSosStories: Story[] = lostPets.map((pet: any) => ({
+                id: pet.id,
+                media_url: pet.img || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=600',
+                created_at: pet.created_at || new Date().toISOString(),
+                title: `${pet.name} Kayıp! (${pet.location || 'Bilinmiyor'})`,
+                description: pet.description || `${pet.name} cinsi dostumuz kaybolmuştur. Görenlerin iletişime geçmesi rica olunur.`,
+                badge: pet.reward ? `Ödül: ${pet.reward}` : 'Acil İhbar',
+                ctaText: 'Konumu Haritada Gör 📍',
+                ctaType: 'sos' as any,
+                ctaValue: `${pet.latitude},${pet.longitude}`,
+                ctaValue2: pet.user_id
+            }));
+
             const systemChannels: UserStoryGroup[] = [
                 {
                     user_id: 'system_featured_pets',
@@ -97,71 +132,14 @@ export function useStories() {
                     author_name: '🚨 ACİL SOS',
                     author_avatar: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=200',
                     hasUnseen: true,
-                    stories: [
-                        {
-                            id: 'sos_1',
-                            media_url: 'https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=600',
-                            created_at: new Date().toISOString(),
-                            title: 'Luna Kayıp! (Moda)',
-                            description: 'Golden Retriever cinsi 2 yaşında Luna, Moda Parkı civarında kaybolmuştur. Tasmasında kırmızı SOS ışığı yanıp sönüyor.',
-                            badge: 'Ödül: 5.000 TL',
-                            ctaText: 'Konumu Haritada Gör 📍',
-                            ctaType: 'map',
-                            ctaValue: 'Moda Parkı, Kadıköy'
-                        },
-                        {
-                            id: 'sos_2',
-                            media_url: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=600',
-                            created_at: new Date(Date.now() - 3600000).toISOString(),
-                            title: 'Felix Kayıp! (Göztepe)',
-                            description: 'Tuxedo cinsi Felix, Göztepe Özgürlük Parkı yakınlarında balkondan düşerek kaybolmuştur. Çok ürkektir.',
-                            badge: 'Ödül: 3.000 TL',
-                            ctaText: 'Sahibiyle İletişime Geç 💬',
-                            ctaType: 'chat',
-                            ctaValue: '705d320c-13af-4979-8822-6673bf8f5e98'
-                        },
-                        {
-                            id: 'sos_3',
-                            media_url: 'https://images.unsplash.com/photo-1589941013453-ec89f33b5e95?q=80&w=600',
-                            created_at: new Date(Date.now() - 7200000).toISOString(),
-                            title: 'Şila Kayıp! (Bostancı)',
-                            description: 'Alman Çoban Köpeği Şila, dün akşam Bostancı Sahili\'nde ses fişeğinden korkarak kaçmıştır. İnsan canlısıdır.',
-                            badge: 'Acil Bildirim',
-                            ctaText: 'İhbar Bildir 📞',
-                            ctaType: 'toast',
-                            ctaValue: 'Şila için Bostancı ihbar hattı aktif edildi!'
-                        }
-                    ]
+                    stories: liveSosStories
                 },
                 {
                     user_id: 'system_announcements',
                     author_name: '📢 Moffi Duyuru',
                     author_avatar: 'https://images.unsplash.com/photo-1589758438368-0ad531db3366?q=80&w=200',
                     hasUnseen: true,
-                    stories: [
-                        {
-                            id: 'ann_1',
-                            media_url: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=600',
-                            created_at: new Date().toISOString(),
-                            title: 'Kadıköy Patimaratonu!',
-                            description: '24 Mayıs Pazar günü Caddebostan Sahili\'nde buluşuyoruz. Tüm patili dostlarımız ve sahipleri davetlidir.',
-                            badge: 'Etkinlik',
-                            ctaText: 'Ücretsiz Kaydol 🎟️',
-                            ctaType: 'toast',
-                            ctaValue: 'Patimaraton katılım biletiniz Moffi cüzdanınıza eklendi!'
-                        },
-                        {
-                            id: 'ann_2',
-                            media_url: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?q=80&w=600',
-                            created_at: new Date(Date.now() - 7200000).toISOString(),
-                            title: 'Akıllı Tasma V2 Çıktı!',
-                            description: 'Tasma yazılımı için yeni geofence optimizasyonları ve pil tasarruf modu yayınlandı. Ayarlar sekmesinden güncelleyebilirsiniz.',
-                            badge: 'Sistem Güncellemesi',
-                            ctaText: 'Hemen Güncelle ⚡',
-                            ctaType: 'toast',
-                            ctaValue: 'Akıllı Tasma V2 güncellemesi tasmanıza kablosuz (OTA) olarak yükleniyor...'
-                        }
-                    ]
+                    stories: liveAnnStories
                 },
                 {
                     user_id: 'system_vet',
@@ -235,6 +213,14 @@ export function useStories() {
 
     useEffect(() => {
         fetchStories();
+
+        const handleSync = () => {
+            fetchStories();
+        };
+        window.addEventListener('moffi_announcements_changed', handleSync);
+        return () => {
+            window.removeEventListener('moffi_announcements_changed', handleSync);
+        };
     }, [fetchStories]);
 
     const uploadStory = async (file: File) => {

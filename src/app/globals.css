@@ -87,9 +87,9 @@
   }
 
   /* --- ACCESSIBILITY MODIFIERS --- */
-  .font-size-small { font-size: 0.9rem !important; }
-  .font-size-medium { font-size: 1rem !important; }
-  .font-size-large { font-size: 1.25rem !important; }
+  .font-size-small { font-size: 1.05rem !important; }
+  .font-size-medium { font-size: 1.15rem !important; }
+  .font-size-large { font-size: 1.44rem !important; }
 
   /* Bold Text: Force weight on text elements */
   .bold-text p, .bold-text span, .bold-text button, .bold-text h1, .bold-text h2, .bold-text h3 { 
@@ -124,6 +124,39 @@
   .cb-protanopia { filter: saturate(0.8) hue-rotate(-20deg) contrast(1.1); }
   .cb-deuteranopia { filter: saturate(0.7) hue-rotate(10deg) contrast(1.1); }
   .cb-tritanopia { filter: sepia(0.3) saturate(1.5) hue-rotate(50deg); }
+
+  /* Senior Mode: Accessibility scaling and simplifications */
+  .senior-mode {
+    font-size: 1.35rem !important;
+  }
+  .senior-mode p, 
+  .senior-mode span, 
+  .senior-mode button, 
+  .senior-mode h1, 
+  .senior-mode h2, 
+  .senior-mode h3, 
+  .senior-mode a, 
+  .senior-mode input, 
+  .senior-mode label {
+    font-weight: 800 !important;
+  }
+  .senior-mode button,
+  .senior-mode [role="button"] {
+    min-height: 4rem !important;
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+    border-radius: 2rem !important;
+    border-width: 2px !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+  }
+  .senior-mode svg {
+    transform: scale(1.2) !important;
+  }
+  /* Force high contrast under senior mode for maximum visibility */
+  .senior-mode {
+    --card-border: rgba(255, 255, 255, 0.5) !important;
+    --secondary-text: rgba(255, 255, 255, 0.9) !important;
+  }
 }
 
 /* --- MOBILE OPTIMIZATION UTILITIES --- */
@@ -268,14 +301,14 @@ nextjs-portal {
 }
 
 .dark {
-  --background: #08080a; /* Premium Velvet Obsidian */
+  --background: #0f0f11; /* Deeper Dark Space Canvas */
   --foreground: #e4e4e7; /* Platinum Silver */
-  --card-bg: #111113;    /* Sophisticated Deep Charcoal */
-  --card-border: rgba(255, 255, 255, 0.03); /* Micro Subtle Border */
+  --card-bg: #1c1c21;    /* Premium Soft Obsidian Gray for Cards & Panels */
+  --card-border: rgba(255, 255, 255, 0.06); /* Micro Subtle Border */
   --accent: #10B981;    /* Vibrant Emerald Accent */
-  --secondary-text: #8e939e; /* Muted Soft Steel */
-  --glass-bg: rgba(17, 17, 19, 0.7); /* Frosted Glass */
-  --glass-border: rgba(255, 255, 255, 0.03);
+  --secondary-text: #9ca3af; /* Muted Soft Steel */
+  --glass-bg: rgba(28, 28, 33, 0.75); /* Frosted Obsidian Glass */
+  --glass-border: rgba(255, 255, 255, 0.06);
   --emergency: #EF4444;
   --brand-purple: #8B5CF6;
 
@@ -283,10 +316,17 @@ nextjs-portal {
   background-color: var(--background);
   color: var(--foreground);
 
-  /* Background overrides */
+  /* Force solid obsidian black on all cards/panels/overlays */
+  .bg-black,
+  .bg-zinc-950,
+  .bg-zinc-900,
+  .bg-\[\#000000\],
+  .bg-\[\#0c0c0c\],
   .bg-white,
   .bg-white\/95,
-  .bg-white\/80 {
+  .bg-white\/80,
+  .bg-\[\#111113\],
+  .bg-\[\#0d0d0f\] {
     background-color: var(--card-bg) !important;
   }
   
@@ -296,7 +336,7 @@ nextjs-portal {
   
   .bg-gray-50,
   .bg-gray-100 {
-    background-color: #0d0d0f !important;
+    background-color: #242429 !important;
   }
 
   /* Text overrides */
@@ -393,4 +433,14 @@ nextjs-portal {
     border-color: #a855f7;
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5), 0 0 0 8px rgba(168, 85, 247, 0.4);
   }
+
+  /* Override small font sizes by 22% for mobile friendliness */
+  .text-\[7px\] { font-size: 8.6px !important; }
+  .text-\[8px\] { font-size: 9.8px !important; }
+  .text-\[9px\] { font-size: 11px !important; }
+  .text-\[10px\] { font-size: 12.2px !important; }
+  .text-\[11px\] { font-size: 13.4px !important; }
+  .text-\[12px\] { font-size: 14.6px !important; }
+  .text-\[13px\] { font-size: 15.9px !important; }
+  .text-xs { font-size: 14.6px !important; }
 }

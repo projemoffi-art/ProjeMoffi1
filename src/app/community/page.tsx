@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { usePet } from '@/context/PetContext';
 import { useQuestEngine } from '@/context/QuestEngineContext';
 import { PetSettingsModal } from '@/components/profile/PetSettingsModal';
@@ -402,6 +402,28 @@ export default function LegendaryLightDashboard() {
     const { currentStreak, weeklyStamps } = useQuestEngine();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
+
+    // Dynamic 3D Parallax Tilt & Specular Shine Motion Values
+    const tiltX = useMotionValue(200);
+    const tiltY = useMotionValue(200);
+    const rotateX = useTransform(tiltY, [0, 400], [5, -5]);
+    const rotateY = useTransform(tiltX, [0, 400], [-5, 5]);
+    
+    const shineX = useTransform(tiltX, [0, 400], ['0%', '100%']);
+    const shineY = useTransform(tiltY, [0, 400], ['0%', '100%']);
+
+    const handleMouseMoveCard = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        tiltX.set((mouseX / rect.width) * 400);
+        tiltY.set((mouseY / rect.height) * 400);
+    };
+
+    const handleMouseLeaveCard = () => {
+        tiltX.set(200);
+        tiltY.set(200);
+    };
 
     const todayIdx = useMemo(() => {
         const day = new Date().getDay();
@@ -1000,6 +1022,7 @@ export default function LegendaryLightDashboard() {
     const [newPetActivityTarget, setNewPetActivityTarget] = useState("70");
     const [newPetWaterTarget, setNewPetWaterTarget] = useState("1200");
     const [newPetFoodTarget, setNewPetFoodTarget] = useState("1600");
+    const isAnyModalOpen = !!expandedPanel || isPetSettingsOpen || isAddPetOpen || isCareHubOpen;
 
     const handleSavePetSettings = async (updatedFields: any) => {
         try {
@@ -1176,13 +1199,7 @@ export default function LegendaryLightDashboard() {
     
     useEffect(() => {
         if (!isPetLoading && userPets.length === 0) {
-            // Only open AddPetModal if the user has NOT already gone through onboarding.
-            // Onboarding (RootOnboardingWrapper) already saves the pet and sets this flag.
-            // Without this check, the modal opens again right after onboarding finishes.
-            const hasOnboarded = localStorage.getItem('moffi_onboarded');
-            if (!hasOnboarded) {
-                setIsAddPetOpen(true);
-            }
+            setIsAddPetOpen(true);
         }
     }, [isPetLoading, userPets.length]);
 
@@ -1274,6 +1291,8 @@ export default function LegendaryLightDashboard() {
     const [viewerStoryGroupIndex, setViewerStoryGroupIndex] = useState<number | null>(null);
     const [viewerStoryIndex, setViewerStoryIndex] = useState(0);
     const [storyProgress, setStoryProgress] = useState(0);
+    const [isStoryPaused, setIsStoryPaused] = useState(false);
+    const storyPressStartTime = useRef<number>(0);
 
     const activeGroup = viewerStoryGroupIndex !== null ? storyGroups[viewerStoryGroupIndex] : null;
     const activeStory = activeGroup ? activeGroup.stories[viewerStoryIndex] : null;
@@ -1324,20 +1343,24 @@ export default function LegendaryLightDashboard() {
 
     useEffect(() => {
         if (viewerStoryGroupIndex === null) return;
-        setStoryProgress(0);
-        const animationTimer = setTimeout(() => {
-            setStoryProgress(100);
-        }, 50);
+        if (isStoryPaused) return;
 
-        const autoAdvanceTimer = setTimeout(() => {
-            nextStory();
-        }, 5050);
+        const intervalTime = 50;
+        const timer = setInterval(() => {
+            setStoryProgress(prev => {
+                if (prev >= 100) {
+                    clearInterval(timer);
+                    nextStory();
+                    return 0;
+                }
+                return prev + 1;
+            });
+        }, intervalTime);
 
         return () => {
-            clearTimeout(animationTimer);
-            clearTimeout(autoAdvanceTimer);
+            clearInterval(timer);
         };
-    }, [viewerStoryGroupIndex, viewerStoryIndex, storyGroups]);
+    }, [viewerStoryGroupIndex, viewerStoryIndex, isStoryPaused, storyGroups]);
 
     const formatTimeAgo = (dateStr?: string) => {
         if (!dateStr) return "şimdi";
@@ -1405,11 +1428,12 @@ export default function LegendaryLightDashboard() {
             {/* Main Dashboard Wrapper */}
             <motion.div 
                 animate={{ 
-                    scale: expandedPanel ? 0.95 : 1,
-                    filter: expandedPanel ? 'blur(6px)' : 'blur(0px)',
-                    opacity: expandedPanel ? 0.6 : 1
+                    scale: isAnyModalOpen ? 0.93 : 1,
+                    filter: isAnyModalOpen ? 'blur(16px)' : 'blur(0px)',
+                    opacity: isAnyModalOpen ? 0.05 : 1,
+                    pointerEvents: isAnyModalOpen ? 'none' : 'auto'
                 }}
-                transition={{ duration: 0.5, type: 'spring', damping: 25 }}
+                transition={{ duration: 0.4, ease: 'easeInOut' }}
                 className="max-w-md mx-auto pt-6 px-5"
             >
                 
@@ -1615,216 +1639,253 @@ export default function LegendaryLightDashboard() {
                     </div>
                 </section>
 
-                {/* 9. Hero Pet Identity Card */}
-                <motion.div 
-                    layout
-                    className="bg-white rounded-[36px] p-5 shadow-[0_16px_40px_rgba(0,0,0,0.04)] border border-gray-100/60 mb-6 relative overflow-hidden"
+                {/* 9. Hero Pet Identity Card - Premium 3D Parallax Card */}
+                <div 
+                    className="relative"
+                    onMouseMove={handleMouseMoveCard}
+                    onMouseLeave={handleMouseLeaveCard}
                 >
-                    {/* Switcher & Badges */}
-                    <div className="flex justify-between items-start mb-4">
-                        <div 
-                            ref={petSwitcherScroll.ref}
-                            onMouseDown={petSwitcherScroll.onMouseDown}
-                            onMouseLeave={petSwitcherScroll.onMouseLeave}
-                            onMouseUp={petSwitcherScroll.onMouseUp}
-                            onMouseMove={petSwitcherScroll.onMouseMove}
-                            className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-full border border-gray-100 shadow-inner max-w-[240px] overflow-x-auto no-scrollbar shrink-0 cursor-grab active:cursor-grabbing select-none"
-                        >
-                            {userPets.map((p) => (
-                                <motion.button
-                                    key={p.id}
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={() => switchPet(p.id)}
-                                    className={`relative w-8 h-8 rounded-full overflow-hidden border-2 transition-all shrink-0 ${
-                                        activePetObj?.id === p.id 
-                                            ? 'border-green-600 scale-105 shadow-sm' 
-                                            : 'border-transparent opacity-60'
-                                    }`}
-                                >
-                                    {p.image || p.avatar ? (
-                                        <img src={p.image || p.avatar} className="w-full h-full object-cover" alt={p.name} />
-                                    ) : (
-                                        <div className="w-full h-full bg-gradient-to-tr from-gray-150 to-gray-250 dark:from-zinc-800 dark:to-zinc-700 flex items-center justify-center">
-                                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-tighter">
-                                                {p.name ? p.name[0] : '🐾'}
-                                            </span>
-                                        </div>
-                                    )}
-                                </motion.button>
-                            ))}
-                            <motion.button
-                                whileTap={{ scale: 0.9 }}
-                                onClick={() => setIsAddPetOpen(true)}
-                                className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-500 hover:text-green-600 hover:border-green-600 transition-colors shrink-0 shadow-sm"
-                            >
-                                <Plus className="w-4.5 h-4.5" />
-                            </motion.button>
-                        </div>
+                    {/* Breathing Organic Glow Blobs behind the Card */}
+                    <div className="absolute top-4 left-6 w-36 h-36 bg-emerald-500/10 dark:bg-emerald-500/15 rounded-full blur-3xl pointer-events-none z-0 animate-pulse" />
+                    <div className="absolute bottom-6 right-8 w-36 h-36 bg-purple-500/10 dark:bg-purple-500/15 rounded-full blur-3xl pointer-events-none z-0 animate-pulse" />
 
-                        <motion.div 
-                            key={lostPetMode ? "KAYIP" : pet.status}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className={`px-3 py-1 rounded-full border text-[9px] font-black tracking-widest uppercase ${
-                                lostPetMode 
-                                    ? "text-white bg-red-600 border-red-500 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]" 
-                                    : pet.statusColor
-                            }`}
-                        >
-                            {lostPetMode ? "KAYIP 🚨" : pet.status}
-                        </motion.div>
-                    </div>
-
-                    <div className="flex items-center gap-5">
-                        <div className="relative">
-                            <div className="w-20 h-20 rounded-[28px] overflow-hidden shadow-md border-2 border-white relative group bg-gradient-to-tr from-gray-100 to-gray-250 dark:from-zinc-800 dark:to-zinc-900 flex items-center justify-center">
-                                {pet.image ? (
-                                    <motion.img 
-                                        key={pet.image}
-                                        initial={{ opacity: 0, scale: 0.95 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        transition={{ duration: 0.3 }}
-                                        src={pet.image} 
-                                        className="w-full h-full object-cover animate-fade-in" 
-                                        alt={pet.name} 
-                                    />
-                                ) : (
-                                    <span className="text-gray-400 dark:text-zinc-500 text-3xl font-black select-none uppercase">
-                                        {pet.name ? pet.name[0] : '🐾'}
-                                    </span>
-                                )}
-                                <div className="absolute inset-0 bg-black/15 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-[28px] cursor-pointer">
-                                    <Shirt className="w-5 h-5 text-white" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                                <motion.h2 
-                                    key={pet.name}
-                                    initial={{ opacity: 0, y: -5 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="text-2xl font-black text-gray-850 tracking-tight"
-                                >
-                                    {pet.name} <span className="text-sm opacity-50">🦴</span>
-                                </motion.h2>
-                                <button 
-                                    onClick={() => setIsPetSettingsOpen(true)}
-                                    className="p-1.5 text-gray-400 hover:text-green-600 rounded-full hover:bg-gray-50 transition-all cursor-pointer"
-                                >
-                                    <Sliders className="w-4.5 h-4.5" />
-                                </button>
-                            </div>
-                            <motion.p 
-                                key={pet.breed}
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                className="text-[11px] font-semibold text-gray-400 mt-0.5"
-                            >
-                                {pet.breed}
-                            </motion.p>
-                        </div>
-                    </div>
-
-                    {/* AI Dressing Closet Portal */}
                     <motion.div 
-                        layoutId="dressing-card-container"
-                        onClick={() => setExpandedPanel('dressing')}
-                        className="mt-4 p-3 bg-purple-50/50 rounded-2xl border border-purple-100/30 flex justify-between items-center cursor-pointer group hover:bg-purple-50 transition-colors duration-300"
+                        layout
+                        style={{
+                            rotateX,
+                            rotateY,
+                            transformStyle: "preserve-3d",
+                            perspective: 1000,
+                            background: isDark 
+                                ? 'linear-gradient(135deg, rgba(28, 28, 33, 0.95) 0%, rgba(20, 20, 25, 0.98) 100%)' 
+                                : 'linear-gradient(135deg, rgba(255, 255, 255, 0.90) 0%, rgba(248, 250, 247, 0.95) 100%)',
+                            borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(34, 197, 94, 0.15)',
+                        }}
+                        className="rounded-[36px] p-5 mb-6 border relative overflow-hidden transition-all duration-300 z-10 shadow-[0_12px_40px_-15px_rgba(0,0,0,0.06)] dark:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.4)]"
                     >
-                        <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
-                                <Shirt className="w-4 h-4" />
-                            </div>
-                            <div>
-                                <span className="text-[8.5px] font-black text-purple-700 uppercase tracking-widest block">AI TARZI & GARDIROP</span>
-                                <span className="text-[10px] font-bold text-gray-700 mt-0.5 block group-hover:text-purple-800 transition-colors">{pet.dressing.activeOutfit}</span>
-                            </div>
-                        </div>
-                        <button className="flex items-center gap-1 bg-white text-purple-700 border border-purple-200/50 text-[9.5px] font-black px-2.5 py-1.5 rounded-xl cursor-pointer transition-all shadow-sm shrink-0">
-                            <span>Kombinle</span>
-                            <Plus className="w-3 h-3" />
-                        </button>
-                    </motion.div>
+                        {/* Specular Light Reflection Overlay */}
+                        <motion.div 
+                            className="absolute inset-0 pointer-events-none z-20"
+                            style={{
+                                background: `radial-gradient(circle at ${shineX} ${shineY}, ${
+                                    isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.20)'
+                                } 0%, transparent 60%)`
+                            }}
+                        />
 
-                    {/* Integrated Rings & Quick Stats */}
-                    <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-100">
-                        <div onClick={() => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'nutrition' } }))} className="flex items-center gap-3 cursor-pointer hover:opacity-85 transition-opacity duration-200">
-                            <div className="relative w-12 h-12 flex items-center justify-center">
-                                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#F0FDF4" strokeWidth="3" />
-                                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#22C55E" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${activityPercent}, 100`} />
-                                    
-                                    <path d="M18 6.0845 a 11.9155 11.9155 0 0 1 0 23.831 a 11.9155 11.9155 0 0 1 0 -23.831" fill="none" stroke="#EFF6FF" strokeWidth="3" />
-                                    <path d="M18 6.0845 a 11.9155 11.9155 0 0 1 0 23.831 a 11.9155 11.9155 0 0 1 0 -23.831" fill="none" stroke="#3B82F6" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${waterPercent}, 100`} />
-                                    
-                                    <path d="M18 10.0845 a 7.9155 7.9155 0 0 1 0 15.831 a 7.9155 7.9155 0 0 1 0 -15.831" fill="none" stroke="#FFF7ED" strokeWidth="3" />
-                                    <path d="M18 10.0845 a 7.9155 7.9155 0 0 1 0 15.831 a 7.9155 7.9155 0 0 1 0 -15.831" fill="none" stroke="#F97316" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${foodPercent}, 100`} />
-                                </svg>
+                        {/* Switcher & Badges */}
+                        <div className="flex justify-between items-start mb-4 relative z-10" style={{ transform: "translateZ(25px)" }}>
+                            <div 
+                                ref={petSwitcherScroll.ref}
+                                onMouseDown={petSwitcherScroll.onMouseDown}
+                                onMouseLeave={petSwitcherScroll.onMouseLeave}
+                                onMouseUp={petSwitcherScroll.onMouseUp}
+                                onMouseMove={petSwitcherScroll.onMouseMove}
+                                className="flex items-center gap-2 bg-black/5 dark:bg-white/10 p-1.5 rounded-full border border-black/10 dark:border-white/10 shadow-inner max-w-[240px] overflow-x-auto no-scrollbar shrink-0 cursor-grab active:cursor-grabbing select-none"
+                            >
+                                {userPets.map((p) => (
+                                    <motion.button
+                                        key={p.id}
+                                        whileTap={{ scale: 0.9 }}
+                                        onClick={() => switchPet(p.id)}
+                                        className={`relative w-8 h-8 rounded-full overflow-hidden border-2 transition-all shrink-0 ${
+                                            activePetObj?.id === p.id 
+                                                ? 'border-green-600 scale-105 shadow-sm' 
+                                                : 'border-transparent opacity-60'
+                                        }`}
+                                    >
+                                        {p.image || p.avatar ? (
+                                            <img src={p.image || p.avatar} className="w-full h-full object-cover" alt={p.name} />
+                                        ) : (
+                                            <div className="w-full h-full bg-gradient-to-tr from-gray-150 to-gray-250 dark:from-zinc-800 dark:to-zinc-700 flex items-center justify-center">
+                                                <span className="text-[10px] font-black text-gray-500 uppercase tracking-tighter">
+                                                    {p.name ? p.name[0] : '🐾'}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </motion.button>
+                                ))}
+                                <motion.button
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => setIsAddPetOpen(true)}
+                                    className="w-8 h-8 rounded-full bg-white/20 dark:bg-white/10 border border-black/10 dark:border-white/10 flex items-center justify-center text-gray-500 dark:text-white hover:bg-black/10 dark:hover:bg-white/20 transition-colors shrink-0 shadow-sm"
+                                >
+                                    <Plus className="w-4.5 h-4.5" />
+                                </motion.button>
                             </div>
-                            <div className="flex flex-col">
-                                <span className="text-[10px] font-bold text-gray-700 tracking-tight">Günlük Hedefler</span>
-                                <span className="text-[9px] font-semibold text-gray-400 flex items-center gap-1.5 mt-0.5">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Gezi
-                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Su
-                                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500" /> Beslenme
-                                </span>
-                            </div>
+
+                            <motion.div 
+                                key={lostPetMode ? "KAYIP" : pet.status}
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className={`px-3 py-1 rounded-full border text-[9px] font-black tracking-widest uppercase ${
+                                    lostPetMode 
+                                        ? "text-white bg-red-600 border-red-500 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]" 
+                                        : "text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-500/20 shadow-sm"
+                                }`}
+                            >
+                                {lostPetMode ? "KAYIP 🚨" : pet.status}
+                            </motion.div>
                         </div>
 
-                        <div className="flex gap-4">
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-7 h-7 rounded-full bg-green-50 flex items-center justify-center">
-                                    <Heart className="w-3.5 h-3.5 text-green-600" fill="currentColor" />
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Sağlık</span>
-                                    <span className="text-[10px] font-black text-gray-750">{pet.health}</span>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center">
-                                    <span className="text-gray-500 font-black text-[9px]">KG</span>
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Ağırlık</span>
-                                    <span className="text-[10px] font-black text-gray-750">{pet.weight}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Integrated Weekly Streak Grid */}
-                    <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
-                        <div className="flex flex-col">
-                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">İstikrar Serisi</span>
-                            <span className="text-[10px] font-bold text-gray-600 mt-0.5">Haftalık Gezi</span>
-                        </div>
-                        <div className="flex gap-1.5">
-                            {['P', 'S', 'Ç', 'P', 'C', 'C', 'P'].map((day, idx) => {
-                                const isCompleted = idx < weeklyStamps;
-                                const isCurrentDay = idx === todayIdx;
-                                return (
-                                    <div key={idx} className="flex flex-col items-center">
-                                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black border transition-all ${
-                                            isCompleted 
-                                                ? 'bg-[#EAF5EC] border-green-200 text-green-700 shadow-sm shadow-green-100' 
-                                                : isCurrentDay
-                                                    ? 'bg-purple-500/10 border-purple-500/30 text-purple-600 animate-pulse shadow-[0_0_8px_rgba(168,85,247,0.2)]'
-                                                    : 'bg-gray-50 border-gray-100 text-gray-300'
-                                        }`}>
-                                            {isCompleted ? '✓' : day}
-                                        </div>
+                        <div className="flex items-center gap-5 relative z-10" style={{ transform: "translateZ(35px)" }}>
+                            <div className="relative">
+                                <div className="w-20 h-20 rounded-[28px] overflow-hidden shadow-md border-2 border-white/50 dark:border-zinc-700/50 relative group bg-black/5 dark:bg-white/5 flex items-center justify-center">
+                                    {pet.image ? (
+                                        <motion.img 
+                                            key={pet.image}
+                                            initial={{ opacity: 0, scale: 0.95 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ duration: 0.3 }}
+                                            src={pet.image} 
+                                            className="w-full h-full object-cover animate-fade-in" 
+                                            alt={pet.name} 
+                                        />
+                                    ) : (
+                                        <span className="text-gray-400 dark:text-zinc-500 text-3xl font-black select-none uppercase">
+                                            {pet.name ? pet.name[0] : '🐾'}
+                                        </span>
+                                    )}
+                                    <div className="absolute inset-0 bg-black/15 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-[28px] cursor-pointer">
+                                        <Shirt className="w-5 h-5 text-white" />
                                     </div>
-                                );
-                            })}
+                                </div>
+                            </div>
+
+                            <div className="flex-1">
+                                <div className="flex items-center justify-between">
+                                    <motion.h2 
+                                        key={pet.name}
+                                        initial={{ opacity: 0, y: -5 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="text-2xl font-black text-gray-800 dark:text-white tracking-tight"
+                                    >
+                                        {pet.name} <span className="text-sm opacity-50">🦴</span>
+                                    </motion.h2>
+                                    <button 
+                                        onClick={() => setIsPetSettingsOpen(true)}
+                                        className="p-1.5 text-gray-400 hover:text-green-600 dark:hover:text-emerald-450 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer"
+                                    >
+                                        <Sliders className="w-4.5 h-4.5" />
+                                    </button>
+                                </div>
+                                <motion.p 
+                                    key={pet.breed}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="text-[11px] font-semibold text-gray-400 dark:text-zinc-400 mt-0.5"
+                                >
+                                    {pet.breed}
+                                </motion.p>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-1 bg-orange-50 px-2.5 py-1 rounded-full border border-orange-100 shrink-0">
-                            <span className="text-[9px] font-black text-orange-600 uppercase tracking-wider">{currentStreak} GÜN 🔥</span>
+
+                        {/* AI Dressing Closet Portal */}
+                        <motion.div 
+                            layoutId="dressing-card-container"
+                            onClick={() => setExpandedPanel('dressing')}
+                            style={{ transform: "translateZ(25px)" }}
+                            className="mt-4 p-3 bg-black/5 dark:bg-white/5 rounded-2xl border border-black/10 dark:border-white/10 flex justify-between items-center cursor-pointer group hover:bg-black/10 dark:hover:bg-white/10 transition-colors duration-300 relative z-10 shadow-inner"
+                        >
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-950 flex items-center justify-center text-purple-650 dark:text-purple-400">
+                                    <Shirt className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <span className="text-[8.5px] font-black text-purple-700 dark:text-purple-400 uppercase tracking-widest block">AI TARZI & GARDIROP</span>
+                                    <span className="text-[10px] font-bold text-gray-700 dark:text-zinc-300 mt-0.5 block group-hover:text-purple-800 dark:group-hover:text-purple-300 transition-colors">{pet.dressing.activeOutfit}</span>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setExpandedPanel('dressing');
+                                }}
+                                className="flex items-center gap-1 bg-white dark:bg-zinc-800 text-purple-700 dark:text-purple-400 border border-purple-200/50 dark:border-purple-900/50 text-[9.5px] font-black px-2.5 py-1.5 rounded-xl cursor-pointer transition-all hover:scale-95 shadow-sm shrink-0"
+                            >
+                                <span>Kombinle</span>
+                                <Plus className="w-3 h-3" />
+                            </button>
+                        </motion.div>
+
+                        {/* Integrated Rings & Quick Stats */}
+                        <div className="flex justify-between items-center mt-4 pt-4 border-t border-black/10 dark:border-white/10 relative z-10" style={{ transform: "translateZ(30px)" }}>
+                            <div onClick={() => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'nutrition' } }))} className="flex items-center gap-3 cursor-pointer hover:opacity-85 transition-opacity duration-200">
+                                <div className="relative w-12 h-12 flex items-center justify-center">
+                                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={isDark ? "rgba(34, 197, 94, 0.08)" : "#F0FDF4"} strokeWidth="3" />
+                                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#22C55E" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${activityPercent}, 100`} />
+                                        
+                                        <path d="M18 6.0845 a 11.9155 11.9155 0 0 1 0 23.831 a 11.9155 11.9155 0 0 1 0 -23.831" fill="none" stroke={isDark ? "rgba(59, 130, 246, 0.08)" : "#EFF6FF"} strokeWidth="3" />
+                                        <path d="M18 6.0845 a 11.9155 11.9155 0 0 1 0 23.831 a 11.9155 11.9155 0 0 1 0 -23.831" fill="none" stroke="#3B82F6" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${waterPercent}, 100`} />
+                                        
+                                        <path d="M18 10.0845 a 7.9155 7.9155 0 0 1 0 15.831 a 7.9155 7.9155 0 0 1 0 -15.831" fill="none" stroke={isDark ? "rgba(249, 115, 22, 0.08)" : "#FFF7ED"} strokeWidth="3" />
+                                        <path d="M18 10.0845 a 7.9155 7.9155 0 0 1 0 15.831 a 7.9155 7.9155 0 0 1 0 -15.831" fill="none" stroke="#F97316" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${foodPercent}, 100`} />
+                                    </svg>
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-bold text-gray-700 dark:text-zinc-300 tracking-tight">Günlük Hedefler</span>
+                                    <span className="text-[9px] font-semibold text-gray-400 dark:text-zinc-500 flex items-center gap-1.5 mt-0.5">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Gezi
+                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Su
+                                        <span className="w-1.5 h-1.5 rounded-full bg-orange-500" /> Beslenme
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4">
+                                <div className="flex items-center gap-1.5">
+                                    <div className="w-7 h-7 rounded-full bg-green-50 dark:bg-green-950/50 flex items-center justify-center">
+                                        <Heart className="w-3.5 h-3.5 text-green-600 dark:text-green-400" fill="currentColor" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[8px] text-gray-400 dark:text-zinc-500 font-bold uppercase tracking-wider">Sağlık</span>
+                                        <span className="text-[10px] font-black text-gray-750 dark:text-zinc-300">{pet.health}</span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <div className="w-7 h-7 rounded-full bg-gray-50 dark:bg-zinc-800/50 flex items-center justify-center">
+                                        <span className="text-gray-500 dark:text-zinc-400 font-black text-[9px]">KG</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[8px] text-gray-400 dark:text-zinc-500 font-bold uppercase tracking-wider">Ağırlık</span>
+                                        <span className="text-[10px] font-black text-gray-750 dark:text-zinc-300">{pet.weight}</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </motion.div>
+
+                        {/* Integrated Weekly Streak Grid */}
+                        <div className="mt-4 pt-4 border-t border-black/10 dark:border-white/10 flex justify-between items-center relative z-10" style={{ transform: "translateZ(20px)" }}>
+                            <div className="flex flex-col">
+                                <span className="text-[9px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest">İstikrar Serisi</span>
+                                <span className="text-[10px] font-bold text-gray-600 dark:text-zinc-450 mt-0.5">Haftalık Gezi</span>
+                            </div>
+                            <div className="flex gap-1.5">
+                                {['P', 'S', 'Ç', 'P', 'C', 'C', 'P'].map((day, idx) => {
+                                    const isCompleted = idx < weeklyStamps;
+                                    const isCurrentDay = idx === todayIdx;
+                                    return (
+                                        <div key={idx} className="flex flex-col items-center">
+                                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black border transition-all ${
+                                                isCompleted 
+                                                    ? 'bg-[#EAF5EC] dark:bg-green-950/40 border-green-200 dark:border-green-900/30 text-green-700 dark:text-green-400 shadow-sm shadow-green-100 dark:shadow-none' 
+                                                    : isCurrentDay
+                                                        ? 'bg-purple-500/10 dark:bg-purple-500/20 border-purple-500/30 dark:border-purple-500/40 text-purple-600 dark:text-purple-400 animate-pulse shadow-[0_0_8px_rgba(168,85,247,0.2)]'
+                                                        : 'bg-gray-50 dark:bg-zinc-800/40 border-gray-100 dark:border-zinc-700/30 text-gray-300 dark:text-zinc-650'
+                                            }`}>
+                                                {isCompleted ? '✓' : day}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="flex items-center gap-1 bg-orange-50 dark:bg-orange-950/30 px-2.5 py-1 rounded-full border border-orange-100 dark:border-orange-900/30 shrink-0">
+                                <span className="text-[9px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-wider">{currentStreak} GÜN 🔥</span>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
 
                 {/* ⚡ QUEST ENGINE - Günlük Görevler Bento */}
                 <section className="mb-6 px-0">
@@ -3946,10 +4007,62 @@ export default function LegendaryLightDashboard() {
                             exit={{ scale: 0.9, y: 20 }}
                             className="relative w-full h-full md:max-w-md md:h-[800px] md:rounded-[32px] bg-gray-950 overflow-hidden shadow-2xl flex flex-col justify-between"
                         >
-                            {/* Left/Right click handlers for navigation (restricted to middle height to keep header close button and footer CTA clickable) */}
-                            <div className="absolute inset-x-0 top-[80px] bottom-[120px] z-10 flex">
-                                <div className="w-1/2 h-full cursor-w-resize" onClick={prevStory} />
-                                <div className="w-1/2 h-full cursor-e-resize" onClick={nextStory} />
+                            {/* Left/Right click/hold handlers for navigation & pausing (restricted to middle height to keep header close button and footer CTA clickable) */}
+                            <div className="absolute inset-x-0 top-[80px] bottom-[120px] z-10 flex select-none touch-none">
+                                <div 
+                                    className="w-1/2 h-full cursor-w-resize" 
+                                    onMouseDown={() => {
+                                        storyPressStartTime.current = Date.now();
+                                        setIsStoryPaused(true);
+                                    }}
+                                    onMouseUp={() => {
+                                        setIsStoryPaused(false);
+                                        const duration = Date.now() - storyPressStartTime.current;
+                                        if (duration < 250) prevStory();
+                                    }}
+                                    onMouseLeave={() => {
+                                        setIsStoryPaused(false);
+                                    }}
+                                    onTouchStart={() => {
+                                        storyPressStartTime.current = Date.now();
+                                        setIsStoryPaused(true);
+                                    }}
+                                    onTouchEnd={() => {
+                                        setIsStoryPaused(false);
+                                        const duration = Date.now() - storyPressStartTime.current;
+                                        if (duration < 250) prevStory();
+                                    }}
+                                    onTouchCancel={() => {
+                                        setIsStoryPaused(false);
+                                    }}
+                                />
+                                <div 
+                                    className="w-1/2 h-full cursor-e-resize" 
+                                    onMouseDown={() => {
+                                        storyPressStartTime.current = Date.now();
+                                        setIsStoryPaused(true);
+                                    }}
+                                    onMouseUp={() => {
+                                        setIsStoryPaused(false);
+                                        const duration = Date.now() - storyPressStartTime.current;
+                                        if (duration < 250) nextStory();
+                                    }}
+                                    onMouseLeave={() => {
+                                        setIsStoryPaused(false);
+                                    }}
+                                    onTouchStart={() => {
+                                        storyPressStartTime.current = Date.now();
+                                        setIsStoryPaused(true);
+                                    }}
+                                    onTouchEnd={() => {
+                                        setIsStoryPaused(false);
+                                        const duration = Date.now() - storyPressStartTime.current;
+                                        if (duration < 250) nextStory();
+                                    }}
+                                    onTouchCancel={() => {
+                                        setIsStoryPaused(false);
+                                    }}
+                                />
                             </div>
 
                             {/* Top Story Header & Bars */}
@@ -3966,7 +4079,7 @@ export default function LegendaryLightDashboard() {
                                                     className="h-full bg-white rounded-full"
                                                     style={{ 
                                                         width: `${pct}%`,
-                                                        transition: pct === 0 ? 'none' : 'width 5000ms linear'
+                                                        transition: idx === viewerStoryIndex && !isStoryPaused ? 'width 50ms linear' : 'none'
                                                     }}
                                                 />
                                             </div>

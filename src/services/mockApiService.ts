@@ -1,6 +1,7 @@
 import { 
     Pet, Post, UserProfile, LostPet, AdoptionPet, LostPetSighting,
-    ShopCategory, ShopProduct, ShopCartItem, ShopOrder, IApiService
+    ShopCategory, ShopProduct, ShopCartItem, ShopOrder, IApiService,
+    SystemAnnouncement
 } from './types';
 import { 
     MOCK_PETS, MOCK_LOST_PETS, MOCK_ADOPTIONS, 
@@ -1332,6 +1333,65 @@ export class MockApiService implements IApiService {
 
     async getAllOrders(): Promise<ShopOrder[]> {
         return this.getOrders();
+    }
+
+    async getAnnouncements(): Promise<SystemAnnouncement[]> {
+        const data = await this.loadData<SystemAnnouncement[]>('announcements');
+        if (!data) {
+            const initial: SystemAnnouncement[] = [
+                {
+                    id: 'ann_1',
+                    media_url: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=600',
+                    created_at: new Date().toISOString(),
+                    title: 'Kadıköy Patimaratonu!',
+                    description: '24 Mayıs Pazar günü Caddebostan Sahili\'nde buluşuyoruz. Tüm patili dostlarımız ve sahipleri davetlidir.',
+                    badge: 'Etkinlik',
+                    cta_text: 'Ücretsiz Kaydol 🎟️',
+                    cta_type: 'toast',
+                    cta_value: 'Patimaraton katılım biletiniz Moffi cüzdanınıza eklendi!',
+                    expires_at: new Date(Date.now() + 86400000 * 7).toISOString()
+                },
+                {
+                    id: 'ann_2',
+                    media_url: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?q=80&w=600',
+                    created_at: new Date(Date.now() - 7200000).toISOString(),
+                    title: 'Akıllı Tasma V2 Çıktı!',
+                    description: 'Tasma yazılımı için yeni geofence optimizasyonları ve pil tasarruf modu yayınlandı. Ayarlar sekmesinden güncelleyebilirsiniz.',
+                    badge: 'Sistem Güncellemesi',
+                    cta_text: 'Hemen Güncelle ⚡',
+                    cta_type: 'toast',
+                    cta_value: 'Akıllı Tasma V2 güncellemesi tasmanıza kablosuz (OTA) olarak yükleniyor...',
+                    expires_at: new Date(Date.now() + 86400000 * 30).toISOString()
+                }
+            ];
+            await this.saveData('announcements', initial);
+            return initial;
+        }
+        return data;
+    }
+
+    async addAnnouncement(announcement: Partial<SystemAnnouncement>): Promise<SystemAnnouncement> {
+        const list = await this.getAnnouncements();
+        const newAnn: SystemAnnouncement = {
+            id: `ann-${Date.now()}`,
+            title: announcement.title || 'Duyuru',
+            description: announcement.description || '',
+            media_url: announcement.media_url || 'https://images.unsplash.com/photo-1589758438368-0ad531db3366?q=80&w=600',
+            badge: announcement.badge || 'Duyuru',
+            cta_text: announcement.cta_text || 'İncele',
+            cta_type: announcement.cta_type || 'toast',
+            cta_value: announcement.cta_value || '',
+            expires_at: announcement.expires_at || new Date(Date.now() + 86400000 * 7).toISOString(),
+            created_at: new Date().toISOString()
+        };
+        await this.saveData('announcements', [newAnn, ...list]);
+        return newAnn;
+    }
+
+    async deleteAnnouncement(id: string): Promise<void> {
+        const list = await this.getAnnouncements();
+        const next = list.filter(item => item.id !== id);
+        await this.saveData('announcements', next);
     }
 }
 // Singleton instance for components that haven't migrated to the central services/apiService.ts yet

@@ -24,6 +24,8 @@ interface ThemeContextType {
     setReduceMotion: (v: boolean) => void;
     reduceTransparency: boolean;
     setReduceTransparency: (v: boolean) => void;
+    seniorMode: boolean;
+    setSeniorMode: (v: boolean) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -39,6 +41,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const [highContrast, setHighContrastState] = useState(false);
     const [reduceMotion, setReduceMotionState] = useState(false);
     const [reduceTransparency, setReduceTransparencyState] = useState(false);
+    const [seniorMode, setSeniorModeState] = useState(false);
 
     // localStorage'dan theme'i yükle (sadece ilk açılışta)
     useEffect(() => {
@@ -60,7 +63,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             'font-size-small', 'font-size-medium', 'font-size-large',
             'font-sans', 'font-serif', 'font-mono', 'font-pacifico', 'font-satisfy', 'font-playfair',
             'cb-protanopia', 'cb-deuteranopia', 'cb-tritanopia',
-            'bold-text', 'high-contrast', 'reduce-motion', 'reduce-transparency'
+            'bold-text', 'high-contrast', 'reduce-motion', 'reduce-transparency', 'senior-mode'
         ];
         root.classList.remove(...classesToRemove);
 
@@ -77,7 +80,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         if (highContrast) root.classList.add('high-contrast');
         if (reduceMotion) root.classList.add('reduce-motion');
         if (reduceTransparency) root.classList.add('reduce-transparency');
-    }, [theme, fontSize, colorBlindMode, boldText, highContrast, reduceMotion, reduceTransparency]);
+        if (seniorMode) root.classList.add('senior-mode');
+    }, [theme, fontSize, colorBlindMode, boldText, highContrast, reduceMotion, reduceTransparency, seniorMode]);
 
     const setTheme = React.useCallback((newTheme: Theme) => {
         setThemeState(newTheme);
@@ -115,6 +119,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         updateSettings('accessibility', { reduceTransparency: v });
     }, [updateSettings]);
 
+    const setSeniorMode = React.useCallback((v: boolean) => {
+        setSeniorModeState(v);
+        updateSettings('accessibility', { seniorMode: v });
+    }, [updateSettings]);
+
     const themeValue = React.useMemo(() => ({
         theme, setTheme,
         fontSize, setFontSize,
@@ -122,10 +131,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         boldText, setBoldText,
         highContrast, setHighContrast,
         reduceMotion, setReduceMotion,
-        reduceTransparency, setReduceTransparency
+        reduceTransparency, setReduceTransparency,
+        seniorMode, setSeniorMode
     }), [
-        theme, fontSize, colorBlindMode, boldText, highContrast, reduceMotion, reduceTransparency,
-        setTheme, setFontSize, setColorBlindMode, setBoldText, setHighContrast, setReduceMotion, setReduceTransparency
+        theme, fontSize, colorBlindMode, boldText, highContrast, reduceMotion, reduceTransparency, seniorMode,
+        setTheme, setFontSize, setColorBlindMode, setBoldText, setHighContrast, setReduceMotion, setReduceTransparency, setSeniorMode
     ]);
 
     // Sync from LocalStorage / AuthContext with redundancy check
@@ -163,6 +173,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             
             const rTrans = !!acc.reduceTransparency;
             if (rTrans !== reduceTransparency) setReduceTransparencyState(rTrans);
+
+            const sMode = !!(acc as any).seniorMode;
+            if (sMode !== seniorMode) setSeniorModeState(sMode);
         }
     }, [
         user?.id, 
@@ -171,7 +184,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         user?.settings?.accessibility?.boldText,
         user?.settings?.accessibility?.highContrast,
         user?.settings?.accessibility?.reduceMotion,
-        user?.settings?.accessibility?.reduceTransparency
+        user?.settings?.accessibility?.reduceTransparency,
+        (user?.settings?.accessibility as any)?.seniorMode
     ]);
 
     return (

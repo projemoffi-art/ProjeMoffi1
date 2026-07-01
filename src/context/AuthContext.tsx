@@ -62,11 +62,13 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const ADMIN_EMAIL = "admin@moffipet.com";
+
 const MOCK_USER_BASE = (email: string, name?: string): User => ({
     id: `user-${email.split('@')[0] || 'guest'}-${Date.now()}`,
     username: name || email.split('@')[0] || 'moffi_user',
     email: email,
-    role: email.includes('admin') ? 'admin' : 'user',
+    role: email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? 'admin' : 'user',
     avatar: undefined,
     bio: "Moffi Dünyasına yeni katıldı! 🐾",
     is_prime: false,
@@ -140,9 +142,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const initializeAuth = async () => {
             if (!isSupabaseEnabled) {
+                // Heal stale user lists in localStorage
+                if (typeof window !== 'undefined') {
+                    const storedList = localStorage.getItem('moffi_mock_users_list');
+                    if (storedList) {
+                        try {
+                            const list = JSON.parse(storedList);
+                            let changed = false;
+                            const updated = list.map((u: any) => {
+                                if (u.email && u.email.toLowerCase() === ADMIN_EMAIL.toLowerCase() && u.role !== 'admin') {
+                                    changed = true;
+                                    return { ...u, role: 'admin' };
+                                }
+                                return u;
+                            });
+                            if (changed) {
+                                localStorage.setItem('moffi_mock_users_list', JSON.stringify(updated));
+                            }
+                        } catch (e) {}
+                    }
+                }
+
                 const savedUser = localStorage.getItem('moffi_mock_user');
-                if (savedUser) setUser(JSON.parse(savedUser));
-                else setUser(MOCK_USER_BASE('guest@moffi.com', 'MoffiGuest'));
+                if (savedUser) {
+                    const parsed = JSON.parse(savedUser);
+                    if (parsed && parsed.email && parsed.email.toLowerCase() === ADMIN_EMAIL.toLowerCase() && parsed.role !== 'admin') {
+                        parsed.role = 'admin';
+                        localStorage.setItem('moffi_mock_user', JSON.stringify(parsed));
+                    }
+                    setUser(parsed);
+                } else {
+                    setUser(MOCK_USER_BASE('guest@moffi.com', 'MoffiGuest'));
+                }
                 setIsLoading(false);
                 return;
             }
@@ -205,7 +236,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         name: (profile as any).name || profile.username || 'Moffi User',
                         display_name: (profile as any).name || profile.username || 'Moffi User',
                         email: authUser.email,
-                        role: profile.role || 'user',
+                        role: (profile.role || 'user') as UserRole,
                         avatar: profile.avatar,
                         cover_photo: profile.cover_photo,
                         bio: profile.bio,
@@ -368,7 +399,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (error) return { success: false, error: error.message };
             return { success: true };
         } else {
-            const loggedUser = MOCK_USER_BASE(email);
+            let loggedUser: User | null = null;
+            if (typeof window !== 'undefined') {
+                const storedList = localStorage.getItem('moffi_mock_users_list');
+                if (storedList) {
+                    const list = JSON.parse(storedList);
+                    loggedUser = list.find((u: any) => u.email.toLowerCase() === email.toLowerCase()) || null;
+                }
+            }
+
+            if (!loggedUser) {
+                loggedUser = MOCK_USER_BASE(email);
+                if (typeof window !== 'undefined') {
+                    const storedList = localStorage.getItem('moffi_mock_users_list');
+                    const list = storedList ? JSON.parse(storedList) : [];
+                    list.push(loggedUser);
+                    localStorage.setItem('moffi_mock_users_list', JSON.stringify(list));
+                }
+            }
+
+            if (loggedUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+                loggedUser.role = 'admin';
+            }
+
             setUser(loggedUser);
             localStorage.setItem('moffi_mock_user', JSON.stringify(loggedUser));
             return { success: true };
@@ -416,6 +469,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const newUser = MOCK_USER_BASE(email, name);
             setUser(newUser);
             localStorage.setItem('moffi_mock_user', JSON.stringify(newUser));
+
+            if (typeof window !== 'undefined') {
+                const storedList = localStorage.getItem('moffi_mock_users_list');
+                const list = storedList ? JSON.parse(storedList) : [];
+                list.push(newUser);
+                localStorage.setItem('moffi_mock_users_list', JSON.stringify(list));
+            }
+
             return { success: true };
         }
     };
