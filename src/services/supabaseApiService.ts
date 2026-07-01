@@ -3288,7 +3288,7 @@ export class SupabaseApiService implements IApiService {
                     id: pet.id,
                     name: pet.name,
                     breed: pet.breed || 'Karışık',
-                    image: pet.image || pet.avatar || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200',
+                    image: pet.image || pet.avatar || '/images/moffi_pet_trio.png',
                     auraPoints: auraPoints,
                     badge: badges[idx] || "Aktif Pati ⚡",
                     ownerName: (pet as any).profiles?.username || (pet as any).profiles?.full_name || 'Moffi Üyesi',

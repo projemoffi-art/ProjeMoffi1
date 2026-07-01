@@ -1415,7 +1415,7 @@ export class MockApiService implements IApiService {
             id: pet.id,
             name: pet.name,
             breed: pet.breed,
-            image: pet.image || pet.avatar || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200',
+            image: pet.image || pet.avatar || '/images/moffi_pet_trio.png',
             auraPoints: candidateScores[idx] || 1500,
             badge: badges[idx] || "Aktif Pati ⚡",
             ownerName: 'Moffi Üyesi',
@@ -1472,7 +1472,7 @@ export class MockApiService implements IApiService {
             title: details.title || `Günün Yıldızı: ${selectedPet?.name || 'Pati'}`,
             description: details.description || '',
             badge: details.badge || 'Günün Yıldızı 🌟',
-            media_url: details.media_url || selectedPet?.image || selectedPet?.avatar || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200',
+            media_url: details.media_url || selectedPet?.image || selectedPet?.avatar || '/images/moffi_pet_trio.png',
             status: 'published',
             created_at: new Date().toISOString(),
             pet: selectedPet ? {

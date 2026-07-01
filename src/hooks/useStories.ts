@@ -68,7 +68,7 @@ export function useStories() {
 
             const featuredStories: Story[] = (dailyStars || []).map((star: any) => ({
                 id: star.id || `daily_star_${star.rank}`,
-                media_url: star.media_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=600',
+                media_url: star.media_url || '/images/moffi_pet_trio.png',
                 created_at: star.created_at || new Date().toISOString(),
                 title: star.title,
                 description: star.description,
@@ -81,7 +81,7 @@ export function useStories() {
             if (featuredStories.length === 0) {
                 featuredStories.push({
                     id: 'feat_default_1',
-                    media_url: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=600',
+                    media_url: '/images/moffi_pet_trio.png',
                     created_at: new Date().toISOString(),
                     title: 'Günün Yıldız Patileri Seçiliyor 🌟',
                     description: 'Moffi Evreninde günün en aktif patileri birazdan burada açıklanacak! Takipte kalın.',
@@ -96,7 +96,7 @@ export function useStories() {
                 {
                     user_id: 'system_featured_pets',
                     author_name: '👑 Yıldız Patiler',
-                    author_avatar: dailyStars[0]?.pet?.image || dailyStars[0]?.pet?.avatar || 'https://images.unsplash.com/photo-1537151625747-768eb6cf92b2?q=80&w=200',
+                    author_avatar: dailyStars[0]?.pet?.image || dailyStars[0]?.pet?.avatar || '/images/moffi_pet_trio.png',
                     hasUnseen: true,
                     stories: featuredStories
                 },
