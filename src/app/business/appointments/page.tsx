@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import {
     CalendarCheck, CheckCircle2,
     User, Bell, X, Syringe, ClipboardList, Pill, AlertTriangle,
-    Clock, Coffee, Save, Calendar
+    Clock, Coffee, Save, Calendar, Heart, Send
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BusinessSidebar as Sidebar } from "@/components/business/Sidebar";
@@ -76,7 +76,8 @@ export default function BusinessAppointmentsPage() {
     const [criticalNotes, setCriticalNotes] = useState("");
 
     // Tabs and Shift Settings States
-    const [activeTab, setActiveTab] = useState<'appointments' | 'shifts'>('appointments');
+    const [activeTab, setActiveTab] = useState<'appointments' | 'advice' | 'shifts'>('appointments');
+    const [isSavingAdvice, setIsSavingAdvice] = useState(false);
     const [workingDays, setWorkingDays] = useState<{ [key: string]: boolean }>({
         Monday: true,
         Tuesday: true,
@@ -625,32 +626,49 @@ export default function BusinessAppointmentsPage() {
         if (isSupabaseEnabled) {
             try {
                 await apiService.saveClinicSettings('biz_vet1', settings);
-                if (vetAdviceText.trim()) {
-                    await apiService.saveClinicAdvice('biz_vet1', vetAdviceText.trim(), vetAdviceBadge.trim());
-                    
-                    // Broadcast story changes
-                    try {
-                        const broadcast = new BroadcastChannel('moffi_announcements_channel');
-                        broadcast.postMessage('REFRESH_STORIES');
-                        broadcast.close();
-                    } catch (bErr) {
-                        console.error("Tab sync broadcast failed:", bErr);
-                    }
-                }
             } catch (e) {
                 console.error("Failed to save clinic settings to Supabase:", e);
-                showToast("Ayarlar veritabanına kaydedilemedi! ❌", "AlertTriangle", "text-red-500 font-bold");
+                showToast("Vardiya ayarları veritabanına kaydedilemedi! ❌", "AlertTriangle", "text-red-500 font-bold");
                 return;
             }
         }
 
         if (typeof window !== 'undefined') {
             localStorage.setItem('moffi_clinic_settings', JSON.stringify(settings));
-            if (vetAdviceText.trim()) {
-                localStorage.setItem('moffi_clinic_advice', JSON.stringify({ content: vetAdviceText.trim(), badge: vetAdviceBadge.trim() }));
-            }
         }
         showToast("Vardiya ve takvim ayarları başarıyla kaydedildi! 📅✨", "Save", "text-[#6366f1] font-bold");
+    };
+
+    const handleSaveAdvice = async () => {
+        if (!vetAdviceText.trim()) {
+            showToast("Lütfen bir tavsiye metni girin! ⚠️", "AlertTriangle", "text-amber-500 font-bold");
+            return;
+        }
+        setIsSavingAdvice(true);
+        try {
+            if (isSupabaseEnabled) {
+                await apiService.saveClinicAdvice('biz_vet1', vetAdviceText.trim(), vetAdviceBadge.trim());
+            } else {
+                localStorage.setItem('moffi_clinic_advice', JSON.stringify({ content: vetAdviceText.trim(), badge: vetAdviceBadge.trim() }));
+            }
+
+            // Broadcast story changes
+            try {
+                const broadcast = new BroadcastChannel('moffi_announcements_channel');
+                broadcast.postMessage('REFRESH_STORIES');
+                broadcast.close();
+            } catch (bErr) {
+                console.error("Tab sync broadcast failed:", bErr);
+            }
+
+            showToast("Günün sağlık tavsiyesi başarıyla hikayelerde yayınlandı! 🩺🚀", "Check", "text-green-500 font-bold");
+        } catch (e: any) {
+            console.error("Failed to save clinic advice:", e);
+            const errStr = e.message || e.error_description || JSON.stringify(e);
+            showToast(`Tavsiye kaydedilemedi! ❌ Hata: ${errStr.slice(0, 80)}`, "AlertTriangle", "text-red-500 font-bold");
+        } finally {
+            setIsSavingAdvice(false);
+        }
     };
 
     return (
@@ -685,6 +703,12 @@ export default function BusinessAppointmentsPage() {
                         Randevu Akışı
                     </button>
                     <button 
+                        onClick={() => setActiveTab('advice')}
+                        className={`pb-4 px-2 font-black text-xs uppercase tracking-wider transition-all border-b-2 -mb-px ${activeTab === 'advice' ? 'border-[#5B4D9D] text-[#5B4D9D]' : 'border-transparent text-gray-400 hover:text-foreground dark:hover:text-white'}`}
+                    >
+                        Günün Tavsiyesi 🩺
+                    </button>
+                    <button 
                         onClick={() => setActiveTab('shifts')}
                         className={`pb-4 px-2 font-black text-xs uppercase tracking-wider transition-all border-b-2 -mb-px ${activeTab === 'shifts' ? 'border-[#5B4D9D] text-[#5B4D9D]' : 'border-transparent text-gray-400 hover:text-foreground dark:hover:text-white'}`}
                     >
@@ -692,7 +716,7 @@ export default function BusinessAppointmentsPage() {
                     </button>
                 </div>
 
-                {activeTab === 'appointments' ? (
+                {activeTab === 'appointments' && (
                     <div className="flex flex-col lg:flex-row gap-8">
 
                     {/* LEFT: CALENDAR & CONFIRMED LIST */}
@@ -844,7 +868,9 @@ export default function BusinessAppointmentsPage() {
                     </div>
 
                     </div>
-                ) : (
+                )}
+
+                {activeTab === 'shifts' && (
                     <div className="bg-card dark:bg-[#121212] rounded-[2.5rem] p-8 border border-card-border dark:border-card-border shadow-moffi-card text-left max-w-3xl space-y-8">
                         <div>
                             <h2 className="text-xl font-black text-foreground dark:text-white flex items-center gap-2 mb-2">
@@ -884,14 +910,13 @@ export default function BusinessAppointmentsPage() {
                             </div>
                         </div>
 
-                        {/* Hours Selectors */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-zinc-150 dark:border-white/5">
-                            {/* Working Hours */}
+                        {/* Hours Inputs */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-zinc-150 dark:border-white/5 text-left">
                             <div className="space-y-4">
-                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5"><Clock className="w-4 h-4 text-emerald-500" /> MESAI SAATLERI</span>
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">ÇALIŞMA SAATLERİ</label>
                                 <div className="flex gap-4">
                                     <div className="flex-1 space-y-1.5">
-                                        <label className="text-[9px] font-bold text-gray-500">Başlangıç</label>
+                                        <label className="text-[9px] font-bold text-gray-500">Açılış</label>
                                         <select 
                                             value={startTime}
                                             onChange={e => setStartTime(e.target.value)}
@@ -901,21 +926,20 @@ export default function BusinessAppointmentsPage() {
                                         </select>
                                     </div>
                                     <div className="flex-1 space-y-1.5">
-                                        <label className="text-[9px] font-bold text-gray-500">Bitiş</label>
+                                        <label className="text-[9px] font-bold text-gray-500">Kapanış</label>
                                         <select 
                                             value={endTime}
                                             onChange={e => setEndTime(e.target.value)}
                                             className="w-full bg-[#F8F9FC] dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-xl px-3 py-2.5 text-xs focus:border-[#5B4D9D] outline-none text-foreground dark:text-white"
                                         >
-                                            {['16:00', '17:00', '18:00', '19:00', '20:00', '21:00'].map(t => <option key={t} value={t} className="bg-card dark:bg-[#121212]">{t}</option>)}
+                                            {['17:00', '17:30', '18:00', '18:30', '19:00', '20:00'].map(t => <option key={t} value={t} className="bg-card dark:bg-[#121212]">{t}</option>)}
                                         </select>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Lunch Break Hours */}
                             <div className="space-y-4">
-                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5"><Coffee className="w-4 h-4 text-orange-500" /> ÖĞLE ARASI SAATLERI</span>
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">ÖĞLE ARASI TATİLİ</label>
                                 <div className="flex gap-4">
                                     <div className="flex-1 space-y-1.5">
                                         <label className="text-[9px] font-bold text-gray-500">Başlangıç</label>
@@ -956,41 +980,6 @@ export default function BusinessAppointmentsPage() {
                             </select>
                         </div>
 
-                        {/* Vet Health Advice Box */}
-                        <div className="space-y-4 pt-6 border-t border-zinc-150 dark:border-white/5 text-left">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">GÜNÜN SAĞLIK TAVSIYESI (HIKAYELERDE YAYINLANIR)</label>
-                            
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <div className="space-y-1.5 sm:col-span-1">
-                                    <label className="text-[9px] font-bold text-gray-500">Tavsiye Kategorisi</label>
-                                    <select 
-                                        value={vetAdviceBadge}
-                                        onChange={e => setVetAdviceBadge(e.target.value)}
-                                        className="w-full bg-[#F8F9FC] dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-xl px-3 py-2.5 text-xs focus:border-[#5B4D9D] outline-none text-foreground dark:text-white"
-                                    >
-                                        <option value="Genel Sağlık 🩺" className="bg-card dark:bg-[#121212]">Genel Sağlık 🩺</option>
-                                        <option value="Aşı Uyarısı 💉" className="bg-card dark:bg-[#121212]">Aşı Uyarısı 💉</option>
-                                        <option value="Beslenme Tavsiyesi 🍖" className="bg-card dark:bg-[#121212]">Beslenme 🍖</option>
-                                        <option value="Yaz Bakımı ☀️" className="bg-card dark:bg-[#121212]">Yaz Bakımı ☀️</option>
-                                        <option value="Kış Bakımı ❄️" className="bg-card dark:bg-[#121212]">Kış Bakımı ❄️</option>
-                                    </select>
-                                </div>
-                                <div className="space-y-1.5 sm:col-span-2">
-                                    <label className="text-[9px] font-bold text-gray-500">Tavsiye Açıklaması (En fazla 150 Karakter)</label>
-                                    <textarea
-                                        value={vetAdviceText}
-                                        onChange={e => setVetAdviceText(e.target.value.slice(0, 150))}
-                                        placeholder="Kullanıcılar için pratik bir sağlık tavsiyesi yazın..."
-                                        rows={2}
-                                        className="w-full bg-[#F8F9FC] dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-xl px-3 py-2 text-xs focus:border-[#5B4D9D] outline-none text-foreground dark:text-white resize-none"
-                                    />
-                                    <div className="text-[9px] text-gray-400 text-right font-medium">
-                                        {vetAdviceText.length}/150 karakter
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                         {/* Save Button */}
                         <div className="pt-6 border-t border-zinc-150 dark:border-white/5 flex justify-end">
                             <button
@@ -998,6 +987,117 @@ export default function BusinessAppointmentsPage() {
                                 className="bg-gradient-to-r from-[#5B4D9D] to-[#4E3F8F] text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-wider hover:opacity-95 transition-all shadow-lg shadow-purple-500/10 flex items-center gap-2"
                             >
                                 <Save className="w-4 h-4" /> Ayarları Kaydet
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'advice' && (
+                    <div className="bg-white dark:bg-[#121212] rounded-[2.5rem] p-8 border border-zinc-200 dark:border-card-border shadow-moffi-card text-left max-w-3xl space-y-8">
+                        <div>
+                            <h2 className="text-xl font-black text-foreground dark:text-white flex items-center gap-2 mb-2">
+                                <Heart className="w-5 h-5 text-red-500 fill-current" /> Günün Sağlık Tavsiyesi 🩺
+                            </h2>
+                            <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">
+                                Moffi kullanıcılarına ulaştırılacak pratik bir evcil hayvan sağlığı tavsiyesi veya uyarısı yayınlayın.
+                            </p>
+                        </div>
+
+                        {/* Advice Form Inputs */}
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Tavsiye Kategorisi</label>
+                                    <select 
+                                        value={vetAdviceBadge}
+                                        onChange={e => setVetAdviceBadge(e.target.value)}
+                                        className="w-full bg-[#F8F9FC] dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-2xl px-4 py-3.5 text-xs font-bold focus:border-[#5B4D9D] focus:ring-1 focus:ring-[#5B4D9D] outline-none text-foreground dark:text-white transition-all shadow-sm"
+                                    >
+                                        <option value="Genel Sağlık 🩺">Genel Sağlık 🩺</option>
+                                        <option value="Aşı Uyarısı 💉">Aşı Uyarısı 💉</option>
+                                        <option value="Beslenme Tavsiyesi 🍖">Beslenme 🍖</option>
+                                        <option value="Yaz Bakımı ☀️">Yaz Bakımı ☀️</option>
+                                        <option value="Kış Bakımı ❄️">Kış Bakımı ❄️</option>
+                                    </select>
+                                </div>
+
+                                <div className="space-y-2 sm:col-span-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Tavsiye Açıklaması</label>
+                                    <textarea
+                                        value={vetAdviceText}
+                                        onChange={e => setVetAdviceText(e.target.value.slice(0, 150))}
+                                        placeholder="Örn: Yaz aylarında asfalt sıcaklığı dostlarımızın patilerini yakabilir. Yürüyüşleri sabah ve akşam yapın..."
+                                        rows={3}
+                                        className="w-full bg-[#F8F9FC] dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-2xl px-4 py-3 text-xs focus:border-[#5B4D9D] focus:ring-1 focus:ring-[#5B4D9D] outline-none text-foreground dark:text-white transition-all resize-none shadow-sm"
+                                    />
+                                    <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold mt-1.5 px-1">
+                                        <span>En fazla 150 karakter yazabilirsiniz</span>
+                                        <span className={vetAdviceText.length >= 135 ? "text-red-500 font-black" : "text-gray-400"}>
+                                            {vetAdviceText.length}/150
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Interactive Preview - Story Layout Mockup */}
+                        <div className="pt-6 border-t border-zinc-150 dark:border-white/5 space-y-4">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">HİKAYE ÖNİZLEME (KULLANICININ EKRANINDA BÖYLE GÖRÜNECEK)</label>
+                            
+                            <div className="flex justify-center">
+                                <div className="w-[280px] h-[450px] rounded-[2.2rem] bg-zinc-950 text-white relative overflow-hidden shadow-2xl border-4 border-zinc-900 flex flex-col justify-between p-6">
+                                    {/* Background Image / Placeholder */}
+                                    <div className="absolute inset-0 z-0 bg-cover bg-center opacity-65 transition-all duration-300" style={{ backgroundImage: `url('/images/moffi_pet_trio.png')` }} />
+                                    {/* Black Gradient Overlay */}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/70 z-10" />
+
+                                    {/* Top Bar (Clinic Info) */}
+                                    <div className="z-20 flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-full border border-white/20 overflow-hidden bg-white/10 flex items-center justify-center">
+                                            <img src="/images/moffi_pet_trio.png" className="w-full h-full object-cover" />
+                                        </div>
+                                        <div className="text-left">
+                                            <div className="font-black text-xs leading-none">VetLife Global Clinic</div>
+                                            <span className="text-[9px] text-zinc-300">Az Önce</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Middle Content */}
+                                    <div className="z-20 text-left space-y-2 mt-auto mb-5">
+                                        <div>
+                                            <span className="inline-block bg-[#5B4D9D] text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shadow">
+                                                {vetAdviceBadge}
+                                            </span>
+                                        </div>
+                                        <p className="text-[12.5px] leading-relaxed font-bold drop-shadow-md">
+                                            {vetAdviceText || "Yazacağınız tavsiye metni burada canlı olarak görüntülenecektir. Lütfen yukarıdaki alana tavsiyenizi girin..."}
+                                        </p>
+                                    </div>
+
+                                    {/* CTA Button */}
+                                    <div className="z-20 mt-auto">
+                                        <div className="w-full py-2.5 bg-white text-black font-black text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-1.5 shadow-lg select-none">
+                                            Randevu Al 📅
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Save Action */}
+                        <div className="pt-6 border-t border-zinc-150 dark:border-white/5 flex justify-end">
+                            <button
+                                onClick={handleSaveAdvice}
+                                disabled={isSavingAdvice}
+                                className="bg-[#5B4D9D] hover:bg-[#4E3F8F] text-white px-8 py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-purple-500/10 flex items-center gap-2 hover:scale-[1.02] disabled:opacity-50 disabled:scale-100"
+                            >
+                                {isSavingAdvice ? (
+                                    <>Yayınlanıyor...</>
+                                ) : (
+                                    <>
+                                        <Send className="w-4 h-4" /> Sağlık Tavsiyesini Yayınla 🚀
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>
