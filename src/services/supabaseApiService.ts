@@ -3238,16 +3238,52 @@ export class SupabaseApiService implements IApiService {
 
     async getDailyStarCandidates(): Promise<any[]> {
         try {
-            const pets = await this.getAllPetsAdmin();
-            if (pets.length === 0) return [];
-            
+            // 1. Fetch all pets with their profile details
+            const allPets = await this.getAllPetsAdmin();
+            if (allPets.length === 0) return [];
+
+            // 2. Fetch completed walk sessions
+            const { data: sessions, error } = await supabase
+                .from('walk_sessions')
+                .select('pet_id, steps, distance_meters')
+                .eq('status', 'completed');
+
+            // 3. Aggregate activity counts per pet_id
+            const activityMap: Record<string, { steps: number; distance: number }> = {};
+            if (!error && sessions) {
+                sessions.forEach((s: any) => {
+                    if (!s.pet_id) return;
+                    if (!activityMap[s.pet_id]) {
+                        activityMap[s.pet_id] = { steps: 0, distance: 0 };
+                    }
+                    activityMap[s.pet_id].steps += s.steps || 0;
+                    activityMap[s.pet_id].distance += s.distance_meters || 0;
+                });
+            }
+
+            // 4. Sort all registered pets by their activity (steps, then distance)
+            const sortedPets = [...allPets].sort((a, b) => {
+                const actA = activityMap[a.id] || { steps: 0, distance: 0 };
+                const actB = activityMap[b.id] || { steps: 0, distance: 0 };
+                if (actB.steps !== actA.steps) {
+                    return actB.steps - actA.steps;
+                }
+                return actB.distance - actA.distance;
+            });
+
             const badges = ["Günün Şampiyonu 👑", "Halkın Seçimi 🌸", "Stil İkonu ✨", "Aktif Pati ⚡", "Yükselen Yıldız 🚀"];
-            
-            return pets.slice(0, 5).map((pet, idx) => {
-                const seed = pet.id.replace(/-/g, '').slice(0, 6);
-                const numericSeed = parseInt(seed, 16) || 12345;
-                const auraPoints = (numericSeed % 3000) + 1500;
-                
+
+            // 5. Build Candidates list (maximum 5) using actual pet data
+            return sortedPets.slice(0, 5).map((pet, idx) => {
+                const activity = activityMap[pet.id] || { steps: 0, distance: 0 };
+                // Calculate Aura points: actual steps / 10, or custom hash fallback if zero
+                let auraPoints = Math.round(activity.steps / 10);
+                if (auraPoints === 0) {
+                    const seed = pet.id.replace(/-/g, '').slice(0, 6);
+                    const numericSeed = parseInt(seed, 16) || 12345;
+                    auraPoints = (numericSeed % 1500) + 1000;
+                }
+
                 return {
                     id: pet.id,
                     name: pet.name,
@@ -3256,7 +3292,9 @@ export class SupabaseApiService implements IApiService {
                     auraPoints: auraPoints,
                     badge: badges[idx] || "Aktif Pati ⚡",
                     ownerName: (pet as any).profiles?.username || (pet as any).profiles?.full_name || 'Moffi Üyesi',
-                    activitySummary: `Bugün toplam ${auraPoints} Aura puanı kazandı ve yürüyüş hedeflerini tamamladı.`
+                    activitySummary: activity.steps > 0 
+                        ? `Toplam ${activity.steps} adım atarak ${auraPoints} Aura kazandı!` 
+                        : `Toplam ${auraPoints} Aura kazanarak topluluğa katkı sağladı.`
                 };
             });
         } catch (err) {
