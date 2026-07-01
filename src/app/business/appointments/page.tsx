@@ -92,6 +92,10 @@ export default function BusinessAppointmentsPage() {
     const [lunchEnd, setLunchEnd] = useState("13:00");
     const [slotDuration, setSlotDuration] = useState<number>(30);
 
+    // Vet Health Advice States
+    const [vetAdviceText, setVetAdviceText] = useState("");
+    const [vetAdviceBadge, setVetAdviceBadge] = useState("Genel Sağlık 🩺");
+
     const fetchAppointmentsFromDb = async () => {
         try {
             const list = await apiService.getClinicAppointments('biz_vet1');
@@ -197,6 +201,17 @@ export default function BusinessAppointmentsPage() {
                 }
             } catch (e) {
                 console.error("Failed to load clinic settings:", e);
+            }
+
+            try {
+                const advices = await apiService.getVetAdvices();
+                const myAdvice = advices.find((item: any) => item.clinic_id === 'biz_vet1');
+                if (myAdvice) {
+                    setVetAdviceText(myAdvice.content);
+                    setVetAdviceBadge(myAdvice.badge);
+                }
+            } catch (adviceErr) {
+                console.error("Failed to load clinic advice:", adviceErr);
             }
         };
 
@@ -610,6 +625,18 @@ export default function BusinessAppointmentsPage() {
         if (isSupabaseEnabled) {
             try {
                 await apiService.saveClinicSettings('biz_vet1', settings);
+                if (vetAdviceText.trim()) {
+                    await apiService.saveClinicAdvice('biz_vet1', vetAdviceText.trim(), vetAdviceBadge.trim());
+                    
+                    // Broadcast story changes
+                    try {
+                        const broadcast = new BroadcastChannel('moffi_announcements_channel');
+                        broadcast.postMessage('REFRESH_STORIES');
+                        broadcast.close();
+                    } catch (bErr) {
+                        console.error("Tab sync broadcast failed:", bErr);
+                    }
+                }
             } catch (e) {
                 console.error("Failed to save clinic settings to Supabase:", e);
                 showToast("Ayarlar veritabanına kaydedilemedi! ❌", "AlertTriangle", "text-red-500 font-bold");
@@ -619,6 +646,9 @@ export default function BusinessAppointmentsPage() {
 
         if (typeof window !== 'undefined') {
             localStorage.setItem('moffi_clinic_settings', JSON.stringify(settings));
+            if (vetAdviceText.trim()) {
+                localStorage.setItem('moffi_clinic_advice', JSON.stringify({ content: vetAdviceText.trim(), badge: vetAdviceBadge.trim() }));
+            }
         }
         showToast("Vardiya ve takvim ayarları başarıyla kaydedildi! 📅✨", "Save", "text-[#6366f1] font-bold");
     };
@@ -924,6 +954,41 @@ export default function BusinessAppointmentsPage() {
                                 <option value={45} className="bg-card dark:bg-[#121212]">45 Dakika</option>
                                 <option value={60} className="bg-card dark:bg-[#121212]">60 Dakika</option>
                             </select>
+                        </div>
+
+                        {/* Vet Health Advice Box */}
+                        <div className="space-y-4 pt-6 border-t border-zinc-150 dark:border-white/5 text-left">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">GÜNÜN SAĞLIK TAVSIYESI (HIKAYELERDE YAYINLANIR)</label>
+                            
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div className="space-y-1.5 sm:col-span-1">
+                                    <label className="text-[9px] font-bold text-gray-500">Tavsiye Kategorisi</label>
+                                    <select 
+                                        value={vetAdviceBadge}
+                                        onChange={e => setVetAdviceBadge(e.target.value)}
+                                        className="w-full bg-[#F8F9FC] dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-xl px-3 py-2.5 text-xs focus:border-[#5B4D9D] outline-none text-foreground dark:text-white"
+                                    >
+                                        <option value="Genel Sağlık 🩺" className="bg-card dark:bg-[#121212]">Genel Sağlık 🩺</option>
+                                        <option value="Aşı Uyarısı 💉" className="bg-card dark:bg-[#121212]">Aşı Uyarısı 💉</option>
+                                        <option value="Beslenme Tavsiyesi 🍖" className="bg-card dark:bg-[#121212]">Beslenme 🍖</option>
+                                        <option value="Yaz Bakımı ☀️" className="bg-card dark:bg-[#121212]">Yaz Bakımı ☀️</option>
+                                        <option value="Kış Bakımı ❄️" className="bg-card dark:bg-[#121212]">Kış Bakımı ❄️</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5 sm:col-span-2">
+                                    <label className="text-[9px] font-bold text-gray-500">Tavsiye Açıklaması (En fazla 150 Karakter)</label>
+                                    <textarea
+                                        value={vetAdviceText}
+                                        onChange={e => setVetAdviceText(e.target.value.slice(0, 150))}
+                                        placeholder="Kullanıcılar için pratik bir sağlık tavsiyesi yazın..."
+                                        rows={2}
+                                        className="w-full bg-[#F8F9FC] dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-xl px-3 py-2 text-xs focus:border-[#5B4D9D] outline-none text-foreground dark:text-white resize-none"
+                                    />
+                                    <div className="text-[9px] text-gray-400 text-right font-medium">
+                                        {vetAdviceText.length}/150 karakter
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         {/* Save Button */}

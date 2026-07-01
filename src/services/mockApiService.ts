@@ -1491,6 +1491,91 @@ export class MockApiService implements IApiService {
         const updatedList = list.filter(item => !(item.date === dateString && item.rank === rank));
         await this.saveData('daily_stars', updatedList);
     }
+
+    // Vet Advices (Vet Tavsiyeleri) Mock Implementations
+    async getVetAdvices(): Promise<any[]> {
+        const list = await this.loadData<any[]>('vet_advices') || [];
+        
+        // 2 default admin fallbacks if there are no global tips yet
+        const defaultAdminAdvices = [
+            {
+                id: 'vet-default-1',
+                clinic_id: null,
+                content: 'Yaz aylarında asfalt sıcaklığı hava sıcaklığının iki katına çıkabilir. Patileri yakmamak için yürüyüşleri sabah veya akşam yapın.',
+                badge: 'Yaz Bakımı ☀️',
+                media_url: '/images/moffi_pet_trio.png',
+                created_at: new Date().toISOString()
+            },
+            {
+                id: 'vet-default-2',
+                clinic_id: null,
+                content: 'İlkbahar ve yaz aylarında dış parazit aşılarını aksatmayın. Çimlerde yürüyüş sonrası pati aralarını mutlaka kontrol edin.',
+                badge: 'Sağlık Uyarısı 🩺',
+                media_url: '/images/moffi_pet_trio.png',
+                created_at: new Date().toISOString()
+            }
+        ];
+
+        // Merge saved list with defaults (only if no admin advices exist in the saved list)
+        const adminAdvicesInList = list.filter(item => !item.clinic_id);
+        const compiledList = [...list];
+        if (adminAdvicesInList.length === 0) {
+            compiledList.push(...defaultAdminAdvices);
+        }
+
+        // Attach clinic details for presentation
+        return compiledList.map(item => {
+            if (item.clinic_id) {
+                // Mock clinic details for mock testing
+                return {
+                    ...item,
+                    clinic: {
+                        name: item.clinic_id === 'biz_vet1' ? 'Moffi Vet Polikliniği' : 'Pet Clinic Ataşehir',
+                        imageUrl: '/images/moffi_pet_trio.png'
+                    }
+                };
+            }
+            return item;
+        });
+    }
+
+    async saveClinicAdvice(clinicId: string, content: string, badge: string): Promise<void> {
+        const list = await this.loadData<any[]>('vet_advices') || [];
+        // Keep one active tip per clinic for simplicity in mock
+        const filtered = list.filter(item => item.clinic_id !== clinicId);
+        
+        const newAdvice = {
+            id: `advice-${Date.now()}`,
+            clinic_id: clinicId,
+            content,
+            badge,
+            media_url: '/images/moffi_pet_trio.png',
+            created_at: new Date().toISOString()
+        };
+
+        await this.saveData('vet_advices', [newAdvice, ...filtered]);
+    }
+
+    async addAdminAdvice(content: string, badge: string, mediaUrl?: string): Promise<any> {
+        const list = await this.loadData<any[]>('vet_advices') || [];
+        const newAdvice = {
+            id: `advice-${Date.now()}`,
+            clinic_id: null,
+            content,
+            badge,
+            media_url: mediaUrl || '/images/moffi_pet_trio.png',
+            created_at: new Date().toISOString()
+        };
+
+        await this.saveData('vet_advices', [newAdvice, ...list]);
+        return newAdvice;
+    }
+
+    async deleteAdvice(id: string): Promise<void> {
+        const list = await this.loadData<any[]>('vet_advices') || [];
+        const filtered = list.filter(item => item.id !== id);
+        await this.saveData('vet_advices', filtered);
+    }
 }
 // Singleton instance for components that haven't migrated to the central services/apiService.ts yet
 export const apiService = new MockApiService();

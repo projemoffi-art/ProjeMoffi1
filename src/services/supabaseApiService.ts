@@ -3426,4 +3426,104 @@ export class SupabaseApiService implements IApiService {
             return this.mockApi.removeDailyStar(dateString, rank);
         }
     }
+
+    // Vet Advices (Vet Tavsiyeleri) Supabase Implementations
+    async getVetAdvices(): Promise<any[]> {
+        try {
+            const { data, error } = await supabase
+                .from('vet_advices')
+                .select('*, clinics(*)')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            // Map database rows to expected model
+            return (data || []).map(item => {
+                if (item.clinic_id && item.clinics) {
+                    return {
+                        id: item.id,
+                        clinic_id: item.clinic_id,
+                        content: item.content,
+                        badge: item.badge,
+                        media_url: item.media_url,
+                        created_at: item.created_at,
+                        clinic: {
+                            name: item.clinics.name,
+                            imageUrl: item.clinics.image_url || '/images/moffi_pet_trio.png'
+                        }
+                    };
+                }
+                return {
+                    id: item.id,
+                    clinic_id: null,
+                    content: item.content,
+                    badge: item.badge,
+                    media_url: item.media_url,
+                    created_at: item.created_at
+                };
+            });
+        } catch (err) {
+            console.warn("Supabase getVetAdvices failed, falling back to mockApi:", err);
+            return this.mockApi.getVetAdvices();
+        }
+    }
+
+    async saveClinicAdvice(clinicId: string, content: string, badge: string): Promise<void> {
+        try {
+            // Keep it simple: insert new advice
+            const { error } = await supabase
+                .from('vet_advices')
+                .insert({
+                    clinic_id: clinicId,
+                    content: content,
+                    badge: badge,
+                    media_url: '/images/moffi_pet_trio.png'
+                });
+
+            if (error) throw error;
+        } catch (err) {
+            console.warn("Supabase saveClinicAdvice failed, falling back to mockApi:", err);
+            return this.mockApi.saveClinicAdvice(clinicId, content, badge);
+        }
+    }
+
+    async addAdminAdvice(content: string, badge: string, mediaUrl?: string): Promise<any> {
+        try {
+            const { data, error } = await supabase
+                .from('vet_advices')
+                .insert({
+                    clinic_id: null,
+                    content: content,
+                    badge: badge,
+                    media_url: mediaUrl || '/images/moffi_pet_trio.png'
+                })
+                .select()
+                .single();
+
+            if (error) throw error;
+            return data;
+        } catch (err) {
+            console.warn("Supabase addAdminAdvice failed, falling back to mockApi:", err);
+            return this.mockApi.addAdminAdvice(content, badge, mediaUrl);
+        }
+    }
+
+    async deleteAdvice(id: string): Promise<void> {
+        try {
+            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+            if (!isUuid) {
+                return this.mockApi.deleteAdvice(id);
+            }
+
+            const { error } = await supabase
+                .from('vet_advices')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+        } catch (err) {
+            console.warn("Supabase deleteAdvice failed, falling back to mockApi:", err);
+            return this.mockApi.deleteAdvice(id);
+        }
+    }
 }

@@ -35,6 +35,8 @@ export function useStories() {
             // Fetch today's daily star pets (up to 5)
             const todayStr = new Date().toISOString().slice(0, 10);
             const dailyStars = await apiService.getDailyStars(todayStr) || [];
+            // Fetch live vet health advices
+            const vetAdvices = await apiService.getVetAdvices() || [];
             
             const liveAnnStories: Story[] = (announcements || [])
                 .filter((ann: any) => {
@@ -92,6 +94,33 @@ export function useStories() {
                 });
             }
 
+            const liveVetStories: Story[] = (vetAdvices || []).map((advice: any) => {
+                if (advice.clinic_id && advice.clinic) {
+                    return {
+                        id: advice.id,
+                        media_url: advice.media_url || '/images/moffi_pet_trio.png',
+                        created_at: advice.created_at || new Date().toISOString(),
+                        title: advice.clinic.name,
+                        description: advice.content,
+                        badge: advice.badge || 'Tavsiye 🩺',
+                        ctaText: 'Randevu Al 📅',
+                        ctaType: 'url' as any,
+                        ctaValue: '/vet'
+                    };
+                }
+                return {
+                    id: advice.id,
+                    media_url: advice.media_url || '/images/moffi_pet_trio.png',
+                    created_at: advice.created_at || new Date().toISOString(),
+                    title: '🩺 Moffi Sağlık Tavsiyesi',
+                    description: advice.content,
+                    badge: advice.badge || 'Sağlık Uyarısı 🩺',
+                    ctaText: 'Sağlık Rehberini Oku 📚',
+                    ctaType: 'toast',
+                    ctaValue: 'Sağlık ve Koruma rehberi açılıyor...'
+                };
+            });
+
             const systemChannels: UserStoryGroup[] = [
                 {
                     user_id: 'system_featured_pets',
@@ -117,32 +146,9 @@ export function useStories() {
                 {
                     user_id: 'system_vet',
                     author_name: '🩺 Vet Tavsiyesi',
-                    author_avatar: 'https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?q=80&w=200',
+                    author_avatar: vetAdvices[0]?.clinic?.imageUrl || '/images/moffi_pet_trio.png',
                     hasUnseen: true,
-                    stories: [
-                        {
-                            id: 'vet_1',
-                            media_url: 'https://images.unsplash.com/photo-1541599540903-216a46ca1ad0?q=80&w=600',
-                            created_at: new Date().toISOString(),
-                            title: 'Asfalt Sıcaklığına Dikkat!',
-                            description: 'Yaz aylarında asfalt sıcaklığı hava sıcaklığının iki katına çıkabilir. Patileri yakmamak için yürüyüşleri sabah veya akşam yapın.',
-                            badge: 'Yaz Bakımı',
-                            ctaText: 'Sağlık Rehberini Oku 📚',
-                            ctaType: 'toast',
-                            ctaValue: 'Pati Sağlığı ve Koruma rehberi indirildi!'
-                        },
-                        {
-                            id: 'vet_2',
-                            media_url: 'https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?q=80&w=200',
-                            created_at: new Date(Date.now() - 14400000).toISOString(),
-                            title: 'Kene ve Parazit Mevsimi',
-                            description: 'İlkbahar ve yaz aylarında dış parazit aşılarını aksatmayın. Çimlerde yürüyüş sonrası pati aralarını mutlaka kontrol edin.',
-                            badge: 'Sağlık Uyarısı',
-                            ctaText: 'Aşı Takvimine Git 📅',
-                            ctaType: 'toast',
-                            ctaValue: 'Aşı takviminiz Hub paneli üzerinden senkronize edildi.'
-                        }
-                    ]
+                    stories: liveVetStories
                 },
                 {
                     user_id: 'system_deals',

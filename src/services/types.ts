@@ -350,6 +350,12 @@ export interface IApiService {
     getDailyStarCandidates(): Promise<any[]>;
     setDailyStar(dateString: string, rank: number, petId: string, details: any): Promise<void>;
     removeDailyStar(dateString: string, rank: number): Promise<void>;
+
+    // Vet Advices (Vet Tavsiyeleri)
+    getVetAdvices(): Promise<any[]>;
+    saveClinicAdvice(clinicId: string, content: string, badge: string): Promise<void>;
+    addAdminAdvice(content: string, badge: string, mediaUrl?: string): Promise<any>;
+    deleteAdvice(id: string): Promise<void>;
 }
 
 export interface SystemAnnouncement {
