@@ -110,6 +110,13 @@ export default function AdminAnnouncementsPage() {
             // Fetch list and trigger dynamic sync
             await fetchAnnouncements();
             window.dispatchEvent(new CustomEvent('moffi_announcements_changed'));
+            try {
+                const channel = new BroadcastChannel('moffi_announcements_channel');
+                channel.postMessage('REFRESH_STORIES');
+                channel.close();
+            } catch (e) {
+                console.error("BroadcastChannel error:", e);
+            }
         } catch (error) {
             console.error("Duyuru oluşturma hatası:", error);
             showToast("Duyuru oluşturulamadı.", "error");
@@ -129,6 +136,13 @@ export default function AdminAnnouncementsPage() {
             
             await fetchAnnouncements();
             window.dispatchEvent(new CustomEvent('moffi_announcements_changed'));
+            try {
+                const channel = new BroadcastChannel('moffi_announcements_channel');
+                channel.postMessage('REFRESH_STORIES');
+                channel.close();
+            } catch (e) {
+                console.error("BroadcastChannel error:", e);
+            }
         } catch (error) {
             console.error("Duyuru silme hatası:", error);
             showToast("Duyuru silinirken bir hata oluştu.", "error");

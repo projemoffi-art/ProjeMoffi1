@@ -1001,6 +1001,7 @@ export default function LegendaryLightDashboard() {
 
     const [isPetSettingsOpen, setIsPetSettingsOpen] = useState(false);
     const [isAddPetOpen, setIsAddPetOpen] = useState(false);
+    const [selectedAnn, setSelectedAnn] = useState<any | null>(null);
     const [addPetStep, setAddPetStep] = useState(1);
     const [newPetName, setNewPetName] = useState("");
     const [newPetType, setNewPetType] = useState("🐶");
@@ -1300,7 +1301,7 @@ export default function LegendaryLightDashboard() {
     const handleCtaClick = () => {
         if (!activeStory) return;
         if (activeStory.ctaType === 'toast') {
-            setToastMsg(`🎉 ${activeStory.ctaValue}`);
+            setSelectedAnn(activeStory);
         } else if (activeStory.ctaType === 'coupon') {
             setToastMsg(`🎟️ Kupon Kodu Kopyalandı: ${activeStory.ctaValue}`);
         } else if (activeStory.ctaType === 'map') {
@@ -4145,6 +4146,60 @@ export default function LegendaryLightDashboard() {
                 onSave={handleSavePetSettings}
                 onDelete={deletePet}
             />
+
+            {/* ANNOUNCEMENT DETAIL MODAL */}
+            <AnimatePresence>
+                {selectedAnn && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[250] bg-black/60 backdrop-blur-md flex items-center justify-center p-4"
+                        onClick={() => setSelectedAnn(null)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.95, y: 20 }}
+                            className="bg-white/95 backdrop-blur-2xl border border-white/20 rounded-[2.5rem] max-w-md w-full overflow-hidden shadow-2xl p-6 flex flex-col gap-4 text-zinc-800"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Header image/banner */}
+                            <div className="w-full h-48 rounded-3xl overflow-hidden relative shadow-inner">
+                                <img src={selectedAnn.media_url} className="w-full h-full object-cover" alt="Announcement" />
+                                <span className="absolute top-4 left-4 text-[9px] font-black tracking-widest text-purple-700 bg-purple-100/90 border border-purple-200 px-2.5 py-1 rounded-md uppercase shadow-sm">
+                                    {selectedAnn.badge || 'Duyuru'}
+                                </span>
+                            </div>
+
+                            {/* Content */}
+                            <div className="flex flex-col gap-2">
+                                <h3 className="text-xl font-black text-zinc-900 tracking-tight leading-snug">
+                                    {selectedAnn.title}
+                                </h3>
+                                <p className="text-sm text-zinc-600 font-medium leading-relaxed max-h-60 overflow-y-auto pr-1">
+                                    {selectedAnn.description}
+                                </p>
+                            </div>
+
+                            {/* Footer */}
+                            <div className="flex flex-col gap-2 mt-2">
+                                {selectedAnn.ctaValue && selectedAnn.ctaValue !== "Moffi'ye hoş geldiniz!" && (
+                                    <div className="text-[10px] font-bold text-purple-600 bg-purple-50 rounded-xl p-3 text-center border border-purple-100/50">
+                                        ✨ {selectedAnn.ctaValue}
+                                    </div>
+                                )}
+                                <button
+                                    onClick={() => setSelectedAnn(null)}
+                                    className="w-full py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-black uppercase tracking-wider rounded-2xl shadow-[0_10px_25px_-5px_rgba(124,58,237,0.3)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300"
+                                >
+                                    Kapat
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <AddPetModal 
                 isOpen={isAddPetOpen}

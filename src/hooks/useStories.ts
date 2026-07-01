@@ -217,9 +217,20 @@ export function useStories() {
         const handleSync = () => {
             fetchStories();
         };
+        
         window.addEventListener('moffi_announcements_changed', handleSync);
+        
+        // Tab-to-tab real-time sync channel
+        const channel = new BroadcastChannel('moffi_announcements_channel');
+        channel.onmessage = (event) => {
+            if (event.data === 'REFRESH_STORIES') {
+                fetchStories();
+            }
+        };
+
         return () => {
             window.removeEventListener('moffi_announcements_changed', handleSync);
+            channel.close();
         };
     }, [fetchStories]);
 
