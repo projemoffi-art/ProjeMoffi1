@@ -1300,18 +1300,47 @@ export default function LegendaryLightDashboard() {
 
     const handleCtaClick = () => {
         if (!activeStory) return;
-        if (activeStory.ctaType === 'toast') {
-            setSelectedAnn(activeStory);
-        } else if (activeStory.ctaType === 'coupon') {
-            setToastMsg(`🎟️ Kupon Kodu Kopyalandı: ${activeStory.ctaValue}`);
-        } else if (activeStory.ctaType === 'map') {
-            setToastMsg(`📍 Konum Haritada Gösteriliyor: ${activeStory.ctaValue}`);
-            setShowLiveMap(true);
-        } else if (activeStory.ctaType === 'chat') {
-            setToastMsg(`💬 Sohbet Başlatılıyor...`);
-        } else {
-            setToastMsg(activeStory.ctaValue || "İşlem yapıldı.");
+        
+        const ctaVal = activeStory.ctaValue?.trim() || "";
+        const ctaType = activeStory.ctaType;
+        
+        // 1. If it is a coupon, copy to clipboard & show toast
+        if (ctaType === 'coupon') {
+            try {
+                navigator.clipboard.writeText(ctaVal);
+                setToastMsg(`🎟️ Kupon Kodu Kopyalandı: ${ctaVal}`);
+            } catch (e) {
+                setToastMsg(`Kupon: ${ctaVal}`);
+            }
+            closeStoryViewer();
+            return;
         }
+        
+        // 2. If it is a map link
+        if (ctaType === 'map' || ctaVal.startsWith('map:')) {
+            const cleanCoords = ctaVal.replace('map:', '');
+            setToastMsg(`📍 Konum Haritada Gösteriliyor...`);
+            setShowLiveMap(true);
+            closeStoryViewer();
+            return;
+        }
+        
+        // 3. If it is an internal application route
+        if (ctaType === 'link' || ctaVal.startsWith('/')) {
+            router.push(ctaVal);
+            closeStoryViewer();
+            return;
+        }
+
+        // 4. If it is an external URL link
+        if (ctaType === 'url' || ctaVal.startsWith('http://') || ctaVal.startsWith('https://')) {
+            window.open(ctaVal, '_blank', 'noopener,noreferrer');
+            closeStoryViewer();
+            return;
+        }
+
+        // 5. Fallback: If it's a general informational message (toast type with no url/path), open the detailed modal
+        setSelectedAnn(activeStory);
         closeStoryViewer();
     };
 

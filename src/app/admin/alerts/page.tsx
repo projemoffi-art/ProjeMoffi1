@@ -382,8 +382,9 @@ export default function AdminAnnouncementsPage() {
                                                     onChange={(e) => setCtaType(e.target.value)}
                                                     className="w-full bg-black/40 border border-white/5 rounded-xl p-3 text-xs text-white focus:border-indigo-500 focus:outline-none"
                                                 >
-                                                    <option value="toast">Bilgi Mesajı (Toast)</option>
-                                                    <option value="url">Web Linki (URL)</option>
+                                                    <option value="toast">Bilgi Mesajı (Toast) / Detay Modalı</option>
+                                                    <option value="link">Uygulama İçi Sayfa (Örn: /shop, /wallet)</option>
+                                                    <option value="url">Dış Web Linki (http/https)</option>
                                                     <option value="coupon">İndirim Kuponu</option>
                                                 </select>
                                             </div>
