@@ -8,7 +8,7 @@ import {
     LayoutDashboard, Megaphone, Map, BarChart3, Store, Settings, LogOut,
     Shield, Menu, X, ChevronRight, ChevronLeft, Building2, Wallet,
     AlertTriangle, Sliders, MessageSquare, Gamepad2, HeartPulse, Palette,
-    PawPrint, Search, Users
+    PawPrint, Search, Users, Trophy
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,7 @@ const MENU_GROUPS = [
         items: [
             { title: "Genel Bakış", icon: LayoutDashboard, path: "/admin" },
             { title: "Sistem Duyuruları", icon: Megaphone, path: "/admin/alerts" },
+            { title: "Yıldız Patiler", icon: Trophy, path: "/admin/featured-pets" },
             { title: "Analizler", icon: BarChart3, path: "/admin/analytics" },
         ]
     },

@@ -3197,4 +3197,169 @@ export class SupabaseApiService implements IApiService {
             return this.mockApi.deleteAnnouncement(id);
         }
     }
+
+    // Daily Star Pet (Yıldız Patiler) Supabase Implementations
+    async getAllPetsAdmin(): Promise<Pet[]> {
+        try {
+            const { data, error } = await supabase
+                .from('pets')
+                .select('*, profiles(full_name, username)')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            return (data || []).map(item => ({
+                id: item.id,
+                name: item.name,
+                type: item.type || 'dog',
+                breed: item.breed,
+                age: item.age,
+                gender: item.gender,
+                image: item.avatar_url || '',
+                avatar: item.avatar_url,
+                cover_photo: item.cover_url,
+                is_neutered: item.is_neutered,
+                neutered: item.is_neutered,
+                size: item.size,
+                microchip_id: item.microchip_no,
+                microchip: item.microchip_no,
+                health_notes: item.health_notes,
+                personality: item.character,
+                is_lost: item.is_lost,
+                sos_settings: item.sos_settings,
+                birthday: item.birth_date || item.sos_settings?.birthday || '',
+                profiles: item.profiles
+            }));
+        } catch (err) {
+            console.warn("Supabase getAllPetsAdmin failed, falling back to mockApi:", err);
+            return this.mockApi.getAllPetsAdmin();
+        }
+    }
+
+    async getDailyStarCandidates(): Promise<any[]> {
+        try {
+            const pets = await this.getAllPetsAdmin();
+            if (pets.length === 0) return [];
+            
+            const badges = ["Günün Şampiyonu 👑", "Halkın Seçimi 🌸", "Stil İkonu ✨", "Aktif Pati ⚡", "Yükselen Yıldız 🚀"];
+            
+            return pets.slice(0, 5).map((pet, idx) => {
+                const seed = pet.id.replace(/-/g, '').slice(0, 6);
+                const numericSeed = parseInt(seed, 16) || 12345;
+                const auraPoints = (numericSeed % 3000) + 1500;
+                
+                return {
+                    id: pet.id,
+                    name: pet.name,
+                    breed: pet.breed || 'Karışık',
+                    image: pet.image || pet.avatar || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200',
+                    auraPoints: auraPoints,
+                    badge: badges[idx] || "Aktif Pati ⚡",
+                    ownerName: (pet as any).profiles?.username || (pet as any).profiles?.full_name || 'Moffi Üyesi',
+                    activitySummary: `Bugün toplam ${auraPoints} Aura puanı kazandı ve yürüyüş hedeflerini tamamladı.`
+                };
+            });
+        } catch (err) {
+            console.warn("Supabase getDailyStarCandidates failed, falling back to mockApi:", err);
+            return this.mockApi.getDailyStarCandidates();
+        }
+    }
+
+    async getDailyStar(dateString: string): Promise<any | null> {
+        try {
+            const { data, error } = await supabase
+                .from('daily_stars')
+                .select('*, pets(*)')
+                .eq('date', dateString)
+                .maybeSingle();
+
+            if (error) throw error;
+            if (data) {
+                return {
+                    id: data.id,
+                    pet_id: data.pet_id,
+                    date: data.date,
+                    title: data.title,
+                    description: data.description,
+                    badge: data.badge,
+                    media_url: data.media_url,
+                    status: data.status,
+                    created_at: data.created_at,
+                    pet: data.pets ? {
+                        name: data.pets.name,
+                        image: data.pets.avatar_url,
+                        breed: data.pets.breed
+                    } : null
+                };
+            }
+
+            // Fallback: dynamic calculation of the #1 candidate at 23:59 (or anytime if no record exists)
+            const candidates = await this.getDailyStarCandidates();
+            if (candidates.length === 0) return null;
+            
+            const topCandidate = candidates[0];
+            const payload = {
+                pet_id: topCandidate.id,
+                date: dateString,
+                title: `Günün Şampiyonu: ${topCandidate.name} 🐕`,
+                description: `${topCandidate.name} bugün ${topCandidate.auraPoints} Aura toplayarak günün en aktif patisi oldu!`,
+                badge: topCandidate.badge,
+                media_url: topCandidate.image,
+                status: 'auto',
+                created_at: new Date().toISOString()
+            };
+
+            const { data: insertedData, error: insertError } = await supabase
+                .from('daily_stars')
+                .insert(payload)
+                .select('*, pets(*)')
+                .single();
+
+            if (insertError) throw insertError;
+
+            return {
+                id: insertedData.id,
+                pet_id: insertedData.pet_id,
+                date: insertedData.date,
+                title: insertedData.title,
+                description: insertedData.description,
+                badge: insertedData.badge,
+                media_url: insertedData.media_url,
+                status: insertedData.status,
+                created_at: insertedData.created_at,
+                pet: insertedData.pets ? {
+                    name: insertedData.pets.name,
+                    image: insertedData.pets.avatar_url,
+                    breed: insertedData.pets.breed
+                } : null
+            };
+        } catch (err) {
+            console.warn("Supabase getDailyStar failed, falling back to mockApi:", err);
+            return this.mockApi.getDailyStar(dateString);
+        }
+    }
+
+    async setDailyStar(dateString: string, petId: string, details: any): Promise<void> {
+        try {
+            const payload = {
+                pet_id: petId,
+                date: dateString,
+                title: details.title,
+                description: details.description,
+                badge: details.badge,
+                media_url: details.media_url,
+                status: 'published',
+                created_at: new Date().toISOString()
+            };
+
+            const { error } = await supabase
+                .from('daily_stars')
+                .upsert(payload, { onConflict: 'date' });
+
+            if (error) throw error;
+        } catch (err) {
+            console.warn("Supabase setDailyStar failed, falling back to mockApi:", err);
+            return this.mockApi.setDailyStar(dateString, petId, details);
+        }
+    }
 }

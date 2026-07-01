@@ -343,6 +343,12 @@ export interface IApiService {
     getAnnouncements(): Promise<SystemAnnouncement[]>;
     addAnnouncement(announcement: Partial<SystemAnnouncement>): Promise<SystemAnnouncement>;
     deleteAnnouncement(id: string): Promise<void>;
+
+    // Daily Star Pet (Yıldız Patiler)
+    getAllPetsAdmin(): Promise<Pet[]>;
+    getDailyStar(dateString: string): Promise<any | null>;
+    getDailyStarCandidates(): Promise<any[]>;
+    setDailyStar(dateString: string, petId: string, details: any): Promise<void>;
 }
 
 export interface SystemAnnouncement {

@@ -1393,6 +1393,93 @@ export class MockApiService implements IApiService {
         const next = list.filter(item => item.id !== id);
         await this.saveData('announcements', next);
     }
+
+    // Daily Star Pet (Yıldız Patiler) Mock Implementations
+    async getAllPetsAdmin(): Promise<Pet[]> {
+        const customPets = await this.loadData<Pet[]>('pets') || [];
+        const allPets = [...customPets];
+        MOCK_PETS.forEach((mp: any) => {
+            if (!allPets.some(p => p.id === mp.id)) {
+                allPets.push(mp);
+            }
+        });
+        return allPets;
+    }
+
+    async getDailyStarCandidates(): Promise<any[]> {
+        const pets = await this.getAllPetsAdmin();
+        const candidateScores = [4200, 3850, 3100, 2900, 2450];
+        const badges = ["Günün Şampiyonu 👑", "Halkın Seçimi 🌸", "Stil İkonu ✨", "Aktif Pati ⚡", "Yükselen Yıldız 🚀"];
+        
+        return pets.slice(0, 5).map((pet, idx) => ({
+            id: pet.id,
+            name: pet.name,
+            breed: pet.breed,
+            image: pet.image || pet.avatar || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200',
+            auraPoints: candidateScores[idx] || 1500,
+            badge: badges[idx] || "Aktif Pati ⚡",
+            ownerName: 'Moffi Üyesi',
+            activitySummary: `Bugün toplam ${candidateScores[idx] || 1500} Aura puanı kazandı ve yürüyüş hedeflerini tamamladı.`
+        }));
+    }
+
+    async getDailyStar(dateString: string): Promise<any | null> {
+        const list = await this.loadData<any[]>('daily_stars') || [];
+        const found = list.find(item => item.date === dateString);
+        if (found) return found;
+
+        // Fallback: dynamic calculation of the #1 candidate at 23:59
+        const candidates = await this.getDailyStarCandidates();
+        if (candidates.length === 0) return null;
+        
+        const topCandidate = candidates[0];
+        const fallbackStar = {
+            id: `star-${Date.now()}`,
+            pet_id: topCandidate.id,
+            date: dateString,
+            title: `Günün Şampiyonu: ${topCandidate.name} 🐕`,
+            description: `${topCandidate.name} bugün ${topCandidate.auraPoints} Aura toplayarak günün en aktif patisi oldu!`,
+            badge: topCandidate.badge,
+            media_url: topCandidate.image,
+            status: 'auto',
+            created_at: new Date().toISOString(),
+            pet: {
+                name: topCandidate.name,
+                image: topCandidate.image,
+                breed: topCandidate.breed
+            }
+        };
+
+        const updatedList = [fallbackStar, ...list.filter(item => item.date !== dateString)];
+        await this.saveData('daily_stars', updatedList);
+        return fallbackStar;
+    }
+
+    async setDailyStar(dateString: string, petId: string, details: any): Promise<void> {
+        const list = await this.loadData<any[]>('daily_stars') || [];
+        const pets = await this.getAllPetsAdmin();
+        const selectedPet = pets.find(p => p.id === petId);
+        
+        const newStar = {
+            id: `star-${Date.now()}`,
+            pet_id: petId,
+            date: dateString,
+            title: details.title || `Günün Yıldızı: ${selectedPet?.name || 'Pati'}`,
+            description: details.description || '',
+            badge: details.badge || 'Günün Yıldızı 🌟',
+            media_url: details.media_url || selectedPet?.image || selectedPet?.avatar || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200',
+            status: 'published',
+            created_at: new Date().toISOString(),
+            pet: selectedPet ? {
+                name: selectedPet.name,
+                image: selectedPet.image || selectedPet.avatar,
+                breed: selectedPet.breed
+            } : null
+        };
+
+        const updatedList = [newStar, ...list.filter(item => item.date !== dateString)];
+        await this.saveData('daily_stars', updatedList);
+    }
 }
 // Singleton instance for components that haven't migrated to the central services/apiService.ts yet
 export const apiService = new MockApiService();

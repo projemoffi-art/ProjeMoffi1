@@ -32,6 +32,9 @@ export function useStories() {
             const lostPets = await apiService.getLostPets();
             // Fetch live system announcements
             const announcements = await apiService.getAnnouncements();
+            // Fetch today's daily star pet
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const dailyStar = await apiService.getDailyStar(todayStr);
             
             const liveAnnStories: Story[] = (announcements || [])
                 .filter((ann: any) => {
@@ -63,69 +66,40 @@ export function useStories() {
                 ctaValue2: pet.user_id
             }));
 
+            const featuredStories: Story[] = [];
+            if (dailyStar) {
+                featuredStories.push({
+                    id: dailyStar.id || 'daily_star_today',
+                    media_url: dailyStar.media_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200',
+                    created_at: dailyStar.created_at || new Date().toISOString(),
+                    title: dailyStar.title,
+                    description: dailyStar.description,
+                    badge: dailyStar.badge || 'Günün Yıldızı 🌟',
+                    ctaText: 'İncele',
+                    ctaType: 'toast',
+                    ctaValue: dailyStar.description
+                });
+            } else {
+                featuredStories.push({
+                    id: 'feat_default_1',
+                    media_url: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=600',
+                    created_at: new Date().toISOString(),
+                    title: 'Günün Yıldız Patisi Seçiliyor 🌟',
+                    description: 'Moffi Evreninde günün en aktif patisi birazdan burada açıklanacak! Takipte kalın.',
+                    badge: 'Moffi Yıldızı',
+                    ctaText: 'Keşfet',
+                    ctaType: 'toast',
+                    ctaValue: 'Pati Keşfet alanına yönlendiriliyorsunuz...'
+                });
+            }
+
             const systemChannels: UserStoryGroup[] = [
                 {
                     user_id: 'system_featured_pets',
-                    author_name: '👑 Yıldız Patiler & Gagalar',
-                    author_avatar: 'https://images.unsplash.com/photo-1537151625747-768eb6cf92b2?q=80&w=200',
+                    author_name: '👑 Günün Yıldız Patisi',
+                    author_avatar: dailyStar?.pet?.image || dailyStar?.pet?.avatar || 'https://images.unsplash.com/photo-1537151625747-768eb6cf92b2?q=80&w=200',
                     hasUnseen: true,
-                    stories: [
-                        {
-                            id: 'feat_tarcin_1',
-                            media_url: 'https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=600',
-                            created_at: new Date().toISOString(),
-                            title: 'Haftanın Şampiyonu: Tarçın 🐕',
-                            description: 'Moda mahallesinden Tarçın, bu hafta topladığı 3.500 Aura Puanı ile liderlik koltuğunda!',
-                            badge: 'Aura Lideri 👑',
-                            ctaText: 'Tarçın\'ı Alkışla 👏',
-                            ctaType: 'toast',
-                            ctaValue: 'Tarçın başarıyla alkışlandı!'
-                        },
-                        {
-                            id: 'feat_pamuk_1',
-                            media_url: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=600',
-                            created_at: new Date().toISOString(),
-                            title: 'Uykucu Güzeli: Pamuk 🐈',
-                            description: 'Göztepe mahallesinin uykucu güzeli Pamuk, paylaşılan tatlı esneme videosu ile 2.900 Aura kazandı.',
-                            badge: 'Halkın Seçimi 🌸',
-                            ctaText: 'Pamuk\'u Sev 💖',
-                            ctaType: 'toast',
-                            ctaValue: 'Pamuk\'a sevgi gönderildi!'
-                        },
-                        {
-                            id: 'feat_duman_1',
-                            media_url: 'https://images.unsplash.com/photo-1519052537078-e6302a4968d4?q=80&w=600',
-                            created_at: new Date().toISOString(),
-                            title: 'Karizmatik Beyefendi: Duman 😎',
-                            description: 'Bostancı\'nın en şık kedisi Duman, yeni Moffi yeşil papyonuyla göz kamaştırıyor.',
-                            badge: 'Tarz Sahibi ✨',
-                            ctaText: 'Tarzını Keşfet 👔',
-                            ctaType: 'toast',
-                            ctaValue: 'Duman\'ın gardırobuna yönlendiriliyorsunuz...'
-                        },
-                        {
-                            id: 'feat_kopuk_1',
-                            media_url: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=600',
-                            created_at: new Date().toISOString(),
-                            title: 'Köpük Gurme Yolculuğunda 🥩',
-                            description: 'Maltese Terrier Köpük, bu hafta denediği somonlu ödül bisküvisine 5 yıldız verdi!',
-                            badge: 'Minik Gurme 🍖',
-                            ctaText: 'Mamayı İncele 🛒',
-                            ctaType: 'toast',
-                            ctaValue: 'Somonlu Ödül Maması sayfasına yönlendiriliyorsunuz...'
-                        },
-                        {
-                            id: 'feat_milo_1',
-                            media_url: 'https://images.unsplash.com/photo-1507146426996-ef05306b995a?q=80&w=600',
-                            created_at: new Date().toISOString(),
-                            title: 'Frizbi Yıldızı: Milo 🌟',
-                            description: 'Border Collie Milo, havada 3 takla atarak frizbiyi yakaladığı videosu ile sosyal medyada viral oldu.',
-                            badge: 'Zeka Yıldızı 🧠',
-                            ctaText: 'Videoyu İzle 🎥',
-                            ctaType: 'toast',
-                            ctaValue: 'Milo\'nun frizbi performansı oynatılıyor...'
-                        }
-                    ]
+                    stories: featuredStories
                 },
                 {
                     user_id: 'system_sos',
