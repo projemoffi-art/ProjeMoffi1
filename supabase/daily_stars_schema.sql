@@ -1,3 +1,6 @@
+-- Drop daily_stars table if it exists to cleanly apply new ranked schema
+DROP TABLE IF EXISTS public.daily_stars CASCADE;
+
 -- Create daily_stars table in public schema supporting 5 ranked positions per day
 CREATE TABLE IF NOT EXISTS public.daily_stars (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
