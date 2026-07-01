@@ -397,7 +397,7 @@ export default function LegendaryLightDashboard() {
     const petSwitcherScroll = useDragScroll();
     const searchParams = useSearchParams();
     const { user: authUser, updateProfile } = useAuth();
-    const { pets: userPets, activePet: globalActivePet, switchPet, updatePet, addPet, deletePet, isLoading: isPetLoading } = usePet();
+    const { pets: userPets, activePet: globalActivePet, switchPet, updatePet, addPet, deletePet, isLoading: isPetLoading, isInitialized } = usePet();
     const { activeSession, history: walkHistory, stats: walkStats, isLoading: isWalkLoading, startWalk, endWalk } = useWalk();
     const { currentStreak, weeklyStamps } = useQuestEngine();
     const { theme } = useTheme();
@@ -1198,10 +1198,10 @@ export default function LegendaryLightDashboard() {
     const [cartQty2, setCartQty2] = useState(1);
     
     useEffect(() => {
-        if (!isPetLoading && userPets.length === 0) {
+        if (isInitialized && !isPetLoading && userPets.length === 0) {
             setIsAddPetOpen(true);
         }
-    }, [isPetLoading, userPets.length]);
+    }, [isInitialized, isPetLoading, userPets.length]);
 
     const [showLiveMap, setShowLiveMap] = useState(false);
     const [geofenceAlerts, setGeofenceAlerts] = useState(true);

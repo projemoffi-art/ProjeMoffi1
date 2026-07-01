@@ -78,6 +78,7 @@ interface PetContextType {
     pets: Pet[];
     activePet: Pet | null;
     isLoading: boolean;
+    isInitialized: boolean;
     addPet: (pet: Omit<Pet, 'id'> & { id?: string }) => void;
     updatePet: (id: string, updates: Partial<Pet>) => void;
     deletePet: (id: string) => void;
@@ -103,6 +104,7 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
     const [pets, setPets] = useState<Pet[]>([]);
     const [activePetId, setActivePetId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isInitialized, setIsInitialized] = useState(false);
     const { user } = useAuth();
     
     // Track if initial load is done to prevent persistence effect from running prematurely
@@ -119,12 +121,14 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
             prevPetsRef.current = '';
             prevActivePetIdRef.current = null;
             setIsLoading(false);
+            setIsInitialized(false);
             isInitializedRef.current = false;
             return;
         }
 
         const loadInitialData = async () => {
             setIsLoading(true);
+            setIsInitialized(false);
             isInitializedRef.current = false;
             try {
                 const fetchedPets = await apiService.getPets();
@@ -141,6 +145,7 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
                 setActivePetId(null);
             } finally {
                 setIsLoading(false);
+                setIsInitialized(true);
                 isInitializedRef.current = true;
             }
         };
@@ -288,11 +293,11 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
     }, [walkRoutes]);
 
     const petValue = React.useMemo(() => ({
-        pets: petsWithMascot, activePet, isLoading, addPet, updatePet, deletePet, switchPet,
+        pets: petsWithMascot, activePet, isLoading, isInitialized, addPet, updatePet, deletePet, switchPet,
         customRecords, setCustomRecords, recordDocuments, setRecordDocuments,
         orders, setOrders, appointments, setAppointments, walkRoutes, setWalkRoutes
     }), [
-        petsWithMascot, activePet, isLoading, addPet, updatePet, deletePet, switchPet,
+        petsWithMascot, activePet, isLoading, isInitialized, addPet, updatePet, deletePet, switchPet,
         customRecords, setCustomRecords, recordDocuments, setRecordDocuments,
         orders, setOrders, appointments, setAppointments, walkRoutes, setWalkRoutes
     ]);
