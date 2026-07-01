@@ -3430,28 +3430,51 @@ export class SupabaseApiService implements IApiService {
     // Vet Advices (Vet Tavsiyeleri) Supabase Implementations
     async getVetAdvices(): Promise<any[]> {
         try {
-            const { data, error } = await supabase
+            const { data: advices, error: adviceError } = await supabase
                 .from('vet_advices')
-                .select('*, clinics(*)')
+                .select('*')
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
+            if (adviceError) throw adviceError;
+
+            // Fetch all clinics to do a safe client-side join (avoiding text vs uuid type casting join errors)
+            const { data: clinics, error: clinicError } = await supabase
+                .from('clinics')
+                .select('*');
+
+            const clinicsList = clinics || [];
 
             // Map database rows to expected model
-            return (data || []).map(item => {
-                if (item.clinic_id && item.clinics) {
-                    return {
-                        id: item.id,
-                        clinic_id: item.clinic_id,
-                        content: item.content,
-                        badge: item.badge,
-                        media_url: item.media_url,
-                        created_at: item.created_at,
-                        clinic: {
-                            name: item.clinics.name,
-                            imageUrl: item.clinics.image_url || '/images/moffi_pet_trio.png'
-                        }
-                    };
+            return (advices || []).map(item => {
+                if (item.clinic_id) {
+                    const matchedClinic = clinicsList.find(c => String(c.id) === String(item.clinic_id));
+                    if (matchedClinic) {
+                        return {
+                            id: item.id,
+                            clinic_id: item.clinic_id,
+                            content: item.content,
+                            badge: item.badge,
+                            media_url: item.media_url,
+                            created_at: item.created_at,
+                            clinic: {
+                                name: matchedClinic.name,
+                                imageUrl: matchedClinic.image_url || '/images/moffi_pet_trio.png'
+                            }
+                        };
+                    } else if (item.clinic_id === 'biz_vet1') {
+                        return {
+                            id: item.id,
+                            clinic_id: item.clinic_id,
+                            content: item.content,
+                            badge: item.badge,
+                            media_url: item.media_url,
+                            created_at: item.created_at,
+                            clinic: {
+                                name: 'Moffi Vet Polikliniği',
+                                imageUrl: '/images/moffi_pet_trio.png'
+                            }
+                        };
+                    }
                 }
                 return {
                     id: item.id,

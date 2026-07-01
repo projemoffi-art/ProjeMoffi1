@@ -4,7 +4,7 @@ DROP TABLE IF EXISTS public.vet_advices CASCADE;
 -- Create vet_advices table in public schema
 CREATE TABLE IF NOT EXISTS public.vet_advices (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    clinic_id UUID REFERENCES public.clinics(id) ON DELETE CASCADE, -- NULL means it's a global platform advice from Admin
+    clinic_id TEXT, -- Changed from UUID to TEXT to support string/text ids like 'biz_vet1'
     content TEXT NOT NULL,
     badge TEXT NOT NULL,
     media_url TEXT,
@@ -20,11 +20,11 @@ ON public.vet_advices
 FOR SELECT 
 USING (true);
 
--- Policy: Authenticated users can insert/update/delete records
-CREATE POLICY "Allow authenticated write access to vet_advices" 
+-- Policy: Authenticated/anonymous users can write to vet_advices (matching clinic_settings permissions)
+CREATE POLICY "Allow write access to vet_advices" 
 ON public.vet_advices 
 FOR ALL 
-TO authenticated
+TO authenticated, anon
 USING (true)
 WITH CHECK (true);
 
