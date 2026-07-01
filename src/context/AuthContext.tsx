@@ -735,6 +735,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const registerBusiness = async (data: any) => {
         if (isSupabaseEnabled) {
             let userId = null;
+            let signUpDataResult: any = null;
             const userSession = await supabase.auth.getUser();
             if (userSession.data?.user) {
                 userId = userSession.data.user.id;
@@ -748,6 +749,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         emailRedirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`
                     }
                 });
+                signUpDataResult = signUpData;
                 if (signUpError) return { success: false, error: signUpError.message };
                 if (signUpData.user) {
                     userId = signUpData.user.id;
@@ -756,7 +758,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             if (!userId) return { success: false, error: 'Kayıt oluşturulamadı.' };
             
-            const { error } = await supabase.from('profiles').update({
+            const { error } = await supabase.from('profiles').upsert({
+                id: userId,
                 role: 'business',
                 business_type: data.businessType,
                 business_name: data.businessName,
@@ -767,7 +770,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 address: data.address,
                 owner_name: data.ownerName,
                 phone: data.phone
-            }).eq('id', userId);
+            });
 
             if (error) return { success: false, error: error.message };
 
@@ -802,7 +805,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     }
                 });
             }
-            return { success: true };
+            return { success: true, sessionActive: !!signUpDataResult?.session || !!userSession.data?.user };
         } else {
             if (typeof window !== 'undefined') {
                 const newUser: User = {
@@ -833,7 +836,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setUser(newUser);
                 localStorage.setItem('moffi_mock_user', JSON.stringify(newUser));
             }
-            return { success: true };
+            return { success: true, sessionActive: true };
         }
     };
 

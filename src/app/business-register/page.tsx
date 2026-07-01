@@ -35,6 +35,7 @@ export default function BusinessRegisterPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
+    const [emailVerificationRequired, setEmailVerificationRequired] = useState(false);
 
     // Form state
     const [businessType, setBusinessType] = useState<BusinessType | null>(null);
@@ -72,7 +73,11 @@ export default function BusinessRegisterPage() {
 
         if (result.success) {
             setSuccess(true);
-            setTimeout(() => router.push('/business/dashboard'), 2500);
+            if (result.sessionActive) {
+                setTimeout(() => router.push('/business/dashboard'), 2500);
+            } else {
+                setEmailVerificationRequired(true);
+            }
         } else {
             setError(result.error || 'Bir hata oluştu.');
         }
@@ -90,16 +95,35 @@ export default function BusinessRegisterPage() {
                         <CheckCircle className="w-10 h-10 text-green-600" />
                     </div>
                     <h2 className="text-2xl font-black text-foreground mb-2">Başvurunuz Alındı!</h2>
-                    <p className="text-gray-500 mb-2">İşletmeniz incelendikten sonra paneliniz aktif olacaktır.</p>
-                    <p className="text-xs text-gray-400">Yönlendiriliyorsunuz...</p>
-                    <div className="mt-6 w-full h-1 bg-gray-100 rounded-full overflow-hidden">
-                        <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: '100%' }}
-                            transition={{ duration: 2.5 }}
-                            className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full"
-                        />
-                    </div>
+                    {emailVerificationRequired ? (
+                        <>
+                            <p className="text-sm text-gray-500 mb-4">
+                                Lütfen e-posta adresinize (<strong>{email}</strong>) gönderilen doğrulama bağlantısına tıklayın. 
+                            </p>
+                            <p className="text-xs text-indigo-600 font-bold bg-indigo-50 dark:bg-[#1e1b4b] p-3 rounded-xl border border-indigo-100 dark:border-[#312e81]">
+                                E-posta doğrulamanız tamamlandıktan sonra giriş yapabilirsiniz! 🛡️
+                            </p>
+                            <button 
+                                onClick={() => router.push('/login')} 
+                                className="mt-6 w-full py-3 bg-[#5B4D9D] hover:bg-[#4a3e80] text-white font-bold rounded-xl transition-colors text-sm"
+                            >
+                                Giriş Sayfasına Git
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-gray-500 mb-2">İşletmeniz incelendikten sonra paneliniz aktif olacaktır.</p>
+                            <p className="text-xs text-gray-400">Yönlendiriliyorsunuz...</p>
+                            <div className="mt-6 w-full h-1 bg-gray-100 rounded-full overflow-hidden">
+                                <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: '100%' }}
+                                    transition={{ duration: 2.5 }}
+                                    className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full"
+                                />
+                            </div>
+                        </>
+                    )}
                 </motion.div>
             </div>
         );
