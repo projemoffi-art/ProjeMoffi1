@@ -734,8 +734,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const registerBusiness = async (data: any) => {
         if (isSupabaseEnabled) {
+            let userId = null;
             const userSession = await supabase.auth.getUser();
-            if (!userSession.data.user) return { success: false, error: 'Unauthorized' };
+            if (userSession.data?.user) {
+                userId = userSession.data.user.id;
+            } else {
+                // Sign up the new business user
+                const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+                    email: data.email,
+                    password: data.password,
+                    options: {
+                        data: { full_name: data.ownerName },
+                        emailRedirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`
+                    }
+                });
+                if (signUpError) return { success: false, error: signUpError.message };
+                if (signUpData.user) {
+                    userId = signUpData.user.id;
+                }
+            }
+
+            if (!userId) return { success: false, error: 'Kayıt oluşturulamadı.' };
             
             const { error } = await supabase.from('profiles').update({
                 role: 'business',
@@ -748,7 +767,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 address: data.address,
                 owner_name: data.ownerName,
                 phone: data.phone
-            }).eq('id', userSession.data.user.id);
+            }).eq('id', userId);
 
             if (error) return { success: false, error: error.message };
 
@@ -759,7 +778,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     username: profile.username || profile.name || "user",
                     name: profile.name,
                     display_name: profile.name,
-                    email: profile.email || userSession.data.user.email || '',
+                    email: profile.email || userSession.data?.user?.email || data.email || '',
                     role: profile.role || 'user',
                     avatar: profile.avatar,
                     cover_photo: profile.cover_photo,
