@@ -1423,47 +1423,52 @@ export class MockApiService implements IApiService {
         }));
     }
 
-    async getDailyStar(dateString: string): Promise<any | null> {
+    async getDailyStars(dateString: string): Promise<any[]> {
         const list = await this.loadData<any[]>('daily_stars') || [];
-        const found = list.find(item => item.date === dateString);
-        if (found) return found;
-
-        // Fallback: dynamic calculation of the #1 candidate at 23:59
         const candidates = await this.getDailyStarCandidates();
-        if (candidates.length === 0) return null;
-        
-        const topCandidate = candidates[0];
-        const fallbackStar = {
-            id: `star-${Date.now()}`,
-            pet_id: topCandidate.id,
-            date: dateString,
-            title: `Günün Şampiyonu: ${topCandidate.name} 🐕`,
-            description: `${topCandidate.name} bugün ${topCandidate.auraPoints} Aura toplayarak günün en aktif patisi oldu!`,
-            badge: topCandidate.badge,
-            media_url: topCandidate.image,
-            status: 'auto',
-            created_at: new Date().toISOString(),
-            pet: {
-                name: topCandidate.name,
-                image: topCandidate.image,
-                breed: topCandidate.breed
-            }
-        };
+        const results: any[] = [];
 
-        const updatedList = [fallbackStar, ...list.filter(item => item.date !== dateString)];
-        await this.saveData('daily_stars', updatedList);
-        return fallbackStar;
+        for (let r = 1; r <= 5; r++) {
+            const found = list.find(item => item.date === dateString && item.rank === r);
+            if (found) {
+                results.push(found);
+            } else {
+                // Fallback: Automatic candidate for this rank
+                const candidate = candidates[r - 1] || candidates[0];
+                if (candidate) {
+                    results.push({
+                        id: `star-${dateString}-${r}-auto`,
+                        pet_id: candidate.id,
+                        date: dateString,
+                        rank: r,
+                        title: `Günün Şampiyonu: ${candidate.name} 🐕`,
+                        description: `${candidate.name} bugün ${candidate.auraPoints} Aura toplayarak günün en aktif patilerinden biri oldu!`,
+                        badge: candidate.badge,
+                        media_url: candidate.image,
+                        status: 'auto',
+                        created_at: new Date().toISOString(),
+                        pet: {
+                            name: candidate.name,
+                            image: candidate.image,
+                            breed: candidate.breed
+                        }
+                    });
+                }
+            }
+        }
+        return results;
     }
 
-    async setDailyStar(dateString: string, petId: string, details: any): Promise<void> {
+    async setDailyStar(dateString: string, rank: number, petId: string, details: any): Promise<void> {
         const list = await this.loadData<any[]>('daily_stars') || [];
         const pets = await this.getAllPetsAdmin();
         const selectedPet = pets.find(p => p.id === petId);
         
         const newStar = {
-            id: `star-${Date.now()}`,
+            id: `star-${dateString}-${rank}-published`,
             pet_id: petId,
             date: dateString,
+            rank: rank,
             title: details.title || `Günün Yıldızı: ${selectedPet?.name || 'Pati'}`,
             description: details.description || '',
             badge: details.badge || 'Günün Yıldızı 🌟',
@@ -1477,7 +1482,13 @@ export class MockApiService implements IApiService {
             } : null
         };
 
-        const updatedList = [newStar, ...list.filter(item => item.date !== dateString)];
+        const updatedList = [newStar, ...list.filter(item => !(item.date === dateString && item.rank === rank))];
+        await this.saveData('daily_stars', updatedList);
+    }
+
+    async removeDailyStar(dateString: string, rank: number): Promise<void> {
+        const list = await this.loadData<any[]>('daily_stars') || [];
+        const updatedList = list.filter(item => !(item.date === dateString && item.rank === rank));
         await this.saveData('daily_stars', updatedList);
     }
 }

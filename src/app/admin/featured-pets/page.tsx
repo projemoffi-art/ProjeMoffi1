@@ -4,8 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
     Trophy, Sparkles, Search, User, Calendar, RefreshCw, 
-    Check, AlertTriangle, Eye, ArrowRight, ShieldAlert, Award,
-    Clock, Heart, Play
+    Check, AlertTriangle, Eye, Award, Trash2, Edit3, Plus
 } from "lucide-react";
 import { apiService } from "@/services/apiService";
 
@@ -14,8 +13,12 @@ export default function FeaturedPetsManager() {
     const [allPets, setAllPets] = useState<any[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<any[]>([]);
+    
+    // 5 slots data
+    const [dailyStars, setDailyStars] = useState<any[]>([]);
     const [selectedPet, setSelectedPet] = useState<any | null>(null);
-    const [dailyStar, setDailyStar] = useState<any | null>(null);
+    const [targetRank, setTargetRank] = useState<number>(1);
+    
     const [isLoading, setIsLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
     const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
@@ -31,7 +34,6 @@ export default function FeaturedPetsManager() {
         setTimeout(() => setToast(null), 3000);
     };
 
-    // Get today formatted as YYYY-MM-DD local time
     const getTodayDateString = () => {
         const d = new Date();
         const year = d.getFullYear();
@@ -51,8 +53,8 @@ export default function FeaturedPetsManager() {
             const all = await apiService.getAllPetsAdmin();
             setAllPets(all);
 
-            const star = await apiService.getDailyStar(dateStr);
-            setDailyStar(star);
+            const stars = await apiService.getDailyStars(dateStr);
+            setDailyStars(stars);
         } catch (err) {
             console.error("Yıldız pati verileri yüklenemedi:", err);
             showToast("Veriler yüklenirken bir hata oluştu.", "error");
@@ -80,19 +82,37 @@ export default function FeaturedPetsManager() {
         setSearchResults(filtered);
     }, [searchQuery, allPets]);
 
-    const handleSelectPet = (pet: any) => {
+    const handleSelectPet = (pet: any, suggestedRank: number = 1) => {
         setSelectedPet(pet);
+        setTargetRank(suggestedRank);
         
-        // Compute default pre-fills
         const name = pet.name;
         const breed = pet.breed || "Karışık";
         const aura = pet.auraPoints || (pet.id ? (parseInt(pet.id.replace(/-/g, '').slice(0, 5), 16) % 2000) + 1500 : 1500);
         const owner = pet.ownerName || pet.profiles?.username || "Moffi Üyesi";
 
         setTitle(`Günün Şampiyonu: ${name} 🐕`);
-        setDescription(`${name} (${breed}) bugün sahibi @${owner} ile birlikte toplam ${aura} Aura puanı toplayarak günün en aktif patisi oldu! Tebrikler! 🎉🐾`);
-        setBadge("Günün Lideri 👑");
+        setDescription(`${name} (${breed}) bugün sahibi @${owner} ile birlikte toplam ${aura} Aura puanı toplayarak günün en aktif patilerinden biri oldu! Tebrikler! 🎉🐾`);
+        
+        const badges = ["Günün Şampiyonu 👑", "Halkın Seçimi 🌸", "Stil İkonu ✨", "Aktif Pati ⚡", "Yükselen Yıldız 🚀"];
+        setBadge(badges[suggestedRank - 1] || "Günün Lideri 👑");
         setMediaUrl(pet.image || pet.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=600");
+    };
+
+    const handleEditSlot = (slot: any) => {
+        setSelectedPet({
+            id: slot.pet_id,
+            name: slot.pet?.name || "Evcil Hayvan",
+            breed: slot.pet?.breed || "Karışık",
+            image: slot.media_url,
+            avatar: slot.media_url,
+            ownerName: slot.ownerName || "Moffi Üyesi"
+        });
+        setTargetRank(slot.rank);
+        setTitle(slot.title);
+        setDescription(slot.description);
+        setBadge(slot.badge);
+        setMediaUrl(slot.media_url);
     };
 
     const handlePublish = async (e: React.FormEvent) => {
@@ -104,30 +124,59 @@ export default function FeaturedPetsManager() {
 
         setActionLoading(true);
         try {
-            await apiService.setDailyStar(dateStr, selectedPet.id || selectedPet.pet_id, {
+            await apiService.setDailyStar(dateStr, targetRank, selectedPet.id || selectedPet.pet_id, {
                 title: title.trim(),
                 description: description.trim(),
                 badge: badge.trim(),
                 media_url: mediaUrl.trim()
             });
 
-            showToast("Günün Yıldız Patisi başarıyla yayınlandı!");
+            showToast(`Slot #${targetRank} Yıldız Patisi başarıyla yayınlandı!`);
             
-            // Reload Daily Star
-            const star = await apiService.getDailyStar(dateStr);
-            setDailyStar(star);
+            // Reload Daily Stars
+            const stars = await apiService.getDailyStars(dateStr);
+            setDailyStars(stars);
 
-            // Broadcast real-time refresh to users
+            // Broadcast refresh to client stories
             try {
                 const channel = new BroadcastChannel('moffi_announcements_channel');
                 channel.postMessage('REFRESH_STORIES');
                 channel.close();
-            } catch (broadcastErr) {
-                console.error("Tab sync broadcast failed:", broadcastErr);
+            } catch (bErr) {
+                console.error("Tab sync broadcast failed:", bErr);
             }
         } catch (err) {
             console.error("Yıldız pati kaydedilemedi:", err);
             showToast("Yıldız pati yayınlanırken bir hata oluştu.", "error");
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleRemoveOverride = async (rank: number) => {
+        if (!confirm(`Slot #${rank} üzerindeki manuel admin seçimini kaldırmak istediğinize emin misiniz? Sistem bu sıra için en aktif aday pete otomatik dönecektir.`)) {
+            return;
+        }
+        
+        setActionLoading(true);
+        try {
+            await apiService.removeDailyStar(dateStr, rank);
+            showToast(`Slot #${rank} manuel seçimi kaldırıldı, sistem otomatiğine dönüldü.`);
+            
+            const stars = await apiService.getDailyStars(dateStr);
+            setDailyStars(stars);
+
+            // Broadcast refresh
+            try {
+                const channel = new BroadcastChannel('moffi_announcements_channel');
+                channel.postMessage('REFRESH_STORIES');
+                channel.close();
+            } catch (bErr) {
+                console.error("Tab sync broadcast failed:", bErr);
+            }
+        } catch (err) {
+            console.error("Manuel seçim kaldırılamadı:", err);
+            showToast("Seçim kaldırılırken bir hata oluştu.", "error");
         } finally {
             setActionLoading(false);
         }
@@ -162,118 +211,139 @@ export default function FeaturedPetsManager() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-6">
                 <div>
                     <h1 className="text-3xl font-black tracking-tighter uppercase flex items-center gap-3">
-                        <Trophy className="w-8 h-8 text-yellow-400" /> Günün Yıldız Patisi
+                        <Trophy className="w-8 h-8 text-yellow-400" /> Günün 5 Yıldız Patisi
                     </h1>
                     <p className="text-zinc-500 text-xs mt-1.5 font-medium">
-                        Moffi Evreni'nde günün en aktif evcil hayvanlarını listeyin, ödüllendirin ve hikayeler (Stories) sekmesinde manşet yapın.
+                        Moffi Evreni'nde günün en aktif 5 evcil hayvanını yönetin. Admin müdahale etmediğinde sistem en aktif 5 adayı otomatik yayınlar.
                     </p>
                 </div>
                 <div className="flex items-center gap-3 bg-zinc-900/40 border border-white/5 rounded-2xl px-4 py-2.5 text-xs">
                     <Calendar className="w-4 h-4 text-indigo-400" />
                     <span className="font-bold text-zinc-300">Tarih:</span>
-                    <span className="font-black text-indigo-400 tracking-wider uppercase">{new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                    <span className="font-black text-indigo-400 tracking-wider uppercase">
+                        {new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </span>
                 </div>
             </div>
 
             {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-40">
                     <RefreshCw className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
-                    <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Sistem yükleniyor...</p>
+                    <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Veriler Yükleniyor...</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                     
-                    {/* LEFT COLUMN: ACTIVE STAR & CANDIDATES */}
+                    {/* LEFT COLUMN: 5 SLOTS & CANDIDATES */}
                     <div className="xl:col-span-2 space-y-8">
-                        {/* 1. CURRENT ACTIVE DAILY STAR CARD */}
-                        <div className="border border-white/5 rounded-[2.5rem] bg-gradient-to-br from-zinc-950 to-zinc-900/60 p-6 md:p-8 relative overflow-hidden shadow-2xl">
-                            <div className="absolute top-0 right-0 w-48 h-48 bg-yellow-400/5 blur-[60px] rounded-full pointer-events-none" />
-                            
-                            <div className="flex items-start justify-between mb-6">
-                                <h3 className="text-sm font-black uppercase tracking-wider text-zinc-400 flex items-center gap-2">
-                                    <Award className="w-4 h-4 text-yellow-400" /> Günün Yayındaki Yıldızı
-                                </h3>
-                                {dailyStar && (
-                                    <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md border ${
-                                        dailyStar.status === 'published' 
-                                            ? "bg-purple-500/10 text-purple-400 border-purple-500/20" 
-                                            : "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                                    }`}>
-                                        {dailyStar.status === 'published' ? "MÜDAHALE (MANUEL)" : "23:59 GÜNLÜK YEDEK (AUTO)"}
-                                    </span>
-                                )}
-                            </div>
+                        
+                        {/* 1. THE 5 SLOTS GRID */}
+                        <div className="space-y-4">
+                            <h3 className="text-xs font-black uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+                                <Award className="w-4 h-4 text-yellow-400" /> Günün Yayındaki 5 Yıldız Pati Slotu
+                            </h3>
+                            <div className="grid grid-cols-1 gap-4">
+                                {dailyStars.map((slot) => (
+                                    <div 
+                                        key={slot.rank} 
+                                        className={`border rounded-3xl bg-gradient-to-br from-zinc-950 to-zinc-900/60 p-4 md:p-5 relative overflow-hidden transition-all flex flex-col md:flex-row gap-4 items-center ${
+                                            slot.status === 'published' 
+                                                ? "border-purple-500/20 shadow-lg shadow-purple-500/[0.02]" 
+                                                : "border-white/5"
+                                        }`}
+                                    >
+                                        {/* Badge showing slot number */}
+                                        <div className="flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-black text-lg">
+                                            #{slot.rank}
+                                        </div>
 
-                            {dailyStar ? (
-                                <div className="flex flex-col md:flex-row gap-6 items-center">
-                                    {/* Cover image */}
-                                    <div className="w-full md:w-44 h-44 rounded-3xl overflow-hidden border border-white/10 shadow-inner relative flex-shrink-0">
-                                        <img src={dailyStar.media_url} className="w-full h-full object-cover" alt="Featured Pet" />
-                                        <span className="absolute top-3 left-3 text-[8px] font-black tracking-wider bg-yellow-400 text-zinc-950 px-2 py-0.5 rounded shadow">
-                                            {dailyStar.badge}
-                                        </span>
-                                    </div>
-                                    {/* Text content */}
-                                    <div className="flex-grow space-y-3 w-full text-center md:text-left">
-                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-                                            <h2 className="text-xl font-black tracking-tight text-white leading-none">
-                                                {dailyStar.title}
-                                            </h2>
+                                        {/* Pet Avatar image */}
+                                        <div className="w-20 h-20 rounded-2xl overflow-hidden border border-white/10 shadow-inner relative flex-shrink-0 bg-zinc-800">
+                                            <img src={slot.media_url} className="w-full h-full object-cover" alt={slot.pet?.name || 'Star'} />
                                         </div>
-                                        <p className="text-xs text-zinc-400 leading-relaxed font-medium">
-                                            {dailyStar.description}
-                                        </p>
-                                        <div className="pt-2 border-t border-white/5 flex flex-wrap gap-4 justify-center md:justify-start text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
-                                            <span>🐾 Pati ID: <span className="text-zinc-300 font-mono">{dailyStar.pet_id.slice(0, 8)}...</span></span>
-                                            <span>📅 Tarih: <span className="text-zinc-300">{dailyStar.date}</span></span>
+
+                                        {/* Details */}
+                                        <div className="flex-grow min-w-0 text-center md:text-left space-y-1">
+                                            <div className="flex flex-wrap items-center gap-2 justify-center md:justify-start">
+                                                <h4 className="font-extrabold text-sm text-white truncate max-w-[200px] leading-tight">
+                                                    {slot.title}
+                                                </h4>
+                                                <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
+                                                    slot.status === 'published' 
+                                                        ? "bg-purple-500/10 text-purple-400 border border-purple-500/10" 
+                                                        : "bg-zinc-800 text-zinc-400"
+                                                }`}>
+                                                    {slot.status === 'published' ? "Manuel Seçim" : "Sistem Otomatik"}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-zinc-400 font-medium line-clamp-2 leading-relaxed">
+                                                {slot.description}
+                                            </p>
+                                            <div className="text-[9px] text-zinc-600 font-bold uppercase tracking-wider pt-0.5">
+                                                Rozet: <span className="text-yellow-400">{slot.badge}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Actions */}
+                                        <div className="flex-shrink-0 flex items-center gap-2">
+                                            <button 
+                                                onClick={() => handleEditSlot(slot)}
+                                                className="p-2.5 bg-zinc-900 border border-white/5 text-zinc-300 hover:text-indigo-400 hover:border-indigo-500/30 rounded-xl transition-all cursor-pointer"
+                                                title="Düzenle"
+                                            >
+                                                <Edit3 className="w-4 h-4" />
+                                            </button>
+                                            {slot.status === 'published' && (
+                                                <button 
+                                                    onClick={() => handleRemoveOverride(slot.rank)}
+                                                    className="p-2.5 bg-zinc-900/60 border border-red-500/10 text-red-500 hover:bg-red-500/10 hover:border-red-500/30 rounded-xl transition-all cursor-pointer"
+                                                    title="Seçimi Kaldır (Reset)"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
-                                </div>
-                            ) : (
-                                <div className="text-center py-12 text-zinc-500 text-xs font-bold uppercase tracking-wider">
-                                    Bugün henüz yayında bir yıldız pati bulunmuyor.
-                                </div>
-                            )}
+                                ))}
+                            </div>
                         </div>
 
                         {/* 2. TOP 5 CANDIDATES LIST */}
                         <div className="space-y-4">
                             <h3 className="text-xs font-black uppercase tracking-wider text-zinc-400 flex items-center gap-2">
-                                <Sparkles className="w-4 h-4 text-indigo-400" /> Günün En Aktif 5 Aday Patisi
+                                <Sparkles className="w-4 h-4 text-indigo-400" /> Günün En Aktif 5 Aday Patisi (Hesaplanan Sıralama)
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {candidates.map((cand, idx) => (
                                     <div 
                                         key={cand.id} 
-                                        onClick={() => handleSelectPet(cand)}
+                                        onClick={() => handleSelectPet(cand, idx + 1)}
                                         className={`border rounded-3xl p-4 bg-zinc-900/20 backdrop-blur-sm cursor-pointer transition-all flex items-center gap-4 group ${
                                             selectedPet?.id === cand.id 
                                                 ? "border-indigo-500 bg-indigo-500/5 shadow-lg shadow-indigo-500/5" 
                                                 : "border-white/5 hover:border-white/10 hover:bg-zinc-900/40"
                                         }`}
                                     >
-                                        {/* Rank bubble */}
                                         <span className="text-zinc-600 font-black text-sm group-hover:text-indigo-400 transition-colors w-5">
                                             #{idx + 1}
                                         </span>
-                                        {/* Avatar */}
                                         <div className="w-14 h-14 rounded-2xl overflow-hidden border border-white/5 relative flex-shrink-0 bg-zinc-800">
                                             <img src={cand.image} className="w-full h-full object-cover" alt={cand.name} />
                                         </div>
-                                        {/* Info */}
                                         <div className="flex-grow min-w-0">
                                             <h4 className="font-extrabold text-sm text-white truncate leading-none mb-1 group-hover:text-indigo-300 transition-colors">
                                                 {cand.name}
                                             </h4>
-                                            <p className="text-[10px] text-zinc-500 font-semibold truncate uppercase tracking-wider leading-none mb-1.5">{cand.breed}</p>
+                                            <p className="text-[10px] text-zinc-500 font-semibold truncate uppercase tracking-wider leading-none mb-1.5">@{cand.ownerName}</p>
                                             <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-indigo-400 tracking-wider">
-                                                <Trophy className="w-3 h-3" /> {cand.auraPoints} Aura
+                                                <Trophy className="w-3 h-3 text-yellow-400" /> {cand.auraPoints} Aura
                                             </div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         </div>
+
                     </div>
 
                     {/* RIGHT COLUMN: MANUAL SEARCH & PUBLISHING FORM */}
@@ -281,7 +351,7 @@ export default function FeaturedPetsManager() {
                         {/* 1. MANUAL SEARCH CONSOLE */}
                         <div className="border border-white/5 rounded-[2rem] bg-zinc-900/20 backdrop-blur-xl p-5 space-y-4 shadow-xl">
                             <h3 className="text-xs font-black uppercase tracking-wider text-zinc-400 flex items-center gap-2">
-                                <Search className="w-4 h-4 text-indigo-400" /> Tüm Patilerde Ara (Joker)
+                                <Search className="w-4 h-4 text-indigo-400" /> Tüm Patilerde Ara (Joker Arama)
                             </h3>
                             <div className="relative">
                                 <input 
@@ -294,14 +364,13 @@ export default function FeaturedPetsManager() {
                                 <Search className="w-4.5 h-4.5 text-zinc-500 absolute left-4 top-1/2 -translate-y-1/2" />
                             </div>
 
-                            {/* Search Results list dropdown-style */}
                             {searchResults.length > 0 && (
-                                <div className="bg-zinc-950 border border-white/5 rounded-2xl max-h-56 overflow-y-auto divide-y divide-white/5 custom-scrollbar">
+                                <div className="bg-zinc-950 border border-white/5 rounded-2xl max-h-56 overflow-y-auto divide-y divide-white/5 custom-scrollbar animate-fadeIn">
                                     {searchResults.map(pet => (
                                         <div 
                                             key={pet.id} 
                                             onClick={() => {
-                                                handleSelectPet(pet);
+                                                handleSelectPet(pet, 1);
                                                 setSearchQuery("");
                                             }}
                                             className="p-3 hover:bg-white/5 cursor-pointer flex items-center gap-3 transition-colors"
@@ -324,7 +393,7 @@ export default function FeaturedPetsManager() {
                         {/* 2. FEATURE/PUBLISHING FORM */}
                         <div className="border border-white/5 rounded-[2rem] bg-zinc-900/20 backdrop-blur-xl p-5 shadow-xl">
                             <h3 className="text-xs font-black uppercase tracking-wider text-zinc-400 flex items-center gap-2 mb-4">
-                                <Eye className="w-4 h-4 text-indigo-400" /> Yıldız Pati Yapılandırma
+                                <Eye className="w-4 h-4 text-indigo-400" /> Yıldız Pati Atama Formu
                             </h3>
 
                             {selectedPet ? (
@@ -334,17 +403,38 @@ export default function FeaturedPetsManager() {
                                         <div className="w-10 h-10 rounded-xl overflow-hidden bg-zinc-800 flex-shrink-0">
                                             <img src={selectedPet.image || selectedPet.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200"} className="w-full h-full object-cover" alt="Selected" />
                                         </div>
-                                        <div>
-                                            <h4 className="text-xs font-bold text-white leading-tight">Yıldız Adayı: {selectedPet.name}</h4>
-                                            <p className="text-[9px] text-zinc-500 leading-none mt-0.5">
-                                                Sahibi: @{selectedPet.ownerName || selectedPet.profiles?.username || "Moffi Üyesi"}
+                                        <div className="min-w-0 flex-grow">
+                                            <h4 className="text-xs font-bold text-white leading-tight truncate">Seçilen: {selectedPet.name}</h4>
+                                            <p className="text-[9px] text-zinc-500 leading-none truncate mt-0.5">
+                                                @{selectedPet.ownerName || selectedPet.profiles?.username || "Moffi Üyesi"}
                                             </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Target Slot Selection */}
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-black text-white/30 uppercase tracking-widest">Hedef Sıralama (Slot)</label>
+                                        <div className="grid grid-cols-5 gap-2">
+                                            {[1, 2, 3, 4, 5].map((num) => (
+                                                <button
+                                                    key={num}
+                                                    type="button"
+                                                    onClick={() => setTargetRank(num)}
+                                                    className={`py-2 rounded-xl text-xs font-black border transition-all cursor-pointer ${
+                                                        targetRank === num
+                                                            ? "bg-indigo-500/20 border-indigo-500 text-indigo-300"
+                                                            : "bg-black/20 border-white/5 text-zinc-500 hover:border-white/10"
+                                                    }`}
+                                                >
+                                                    #{num}
+                                                </button>
+                                            ))}
                                         </div>
                                     </div>
 
                                     {/* Form Fields */}
                                     <div className="space-y-1">
-                                        <label className="text-[9px] font-black text-white/30 uppercase tracking-widest">Duyuru Başlığı</label>
+                                        <label className="text-[9px] font-black text-white/30 uppercase tracking-widest">Başlık</label>
                                         <input 
                                             type="text"
                                             value={title}
@@ -355,7 +445,7 @@ export default function FeaturedPetsManager() {
                                     </div>
 
                                     <div className="space-y-1">
-                                        <label className="text-[9px] font-black text-white/30 uppercase tracking-widest">Açıklama (Tebrik Mesajı)</label>
+                                        <label className="text-[9px] font-black text-white/30 uppercase tracking-widest">Açıklama / Tebrik Mesajı</label>
                                         <textarea 
                                             value={description}
                                             onChange={(e) => setDescription(e.target.value)}
@@ -367,7 +457,7 @@ export default function FeaturedPetsManager() {
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-1">
-                                            <label className="text-[9px] font-black text-white/30 uppercase tracking-widest">Kategori / Rozet</label>
+                                            <label className="text-[9px] font-black text-white/30 uppercase tracking-widest">Rozet</label>
                                             <input 
                                                 type="text"
                                                 value={badge}
@@ -377,7 +467,7 @@ export default function FeaturedPetsManager() {
                                             />
                                         </div>
                                         <div className="space-y-1">
-                                            <label className="text-[9px] font-black text-white/30 uppercase tracking-widest">Görsel (Görsel URL)</label>
+                                            <label className="text-[9px] font-black text-white/30 uppercase tracking-widest">Görsel URL</label>
                                             <input 
                                                 type="text"
                                                 value={mediaUrl}
@@ -392,20 +482,20 @@ export default function FeaturedPetsManager() {
                                     <button
                                         type="submit"
                                         disabled={actionLoading}
-                                        className="w-full py-4 bg-gradient-to-r from-yellow-500 to-amber-600 text-zinc-950 text-xs font-black uppercase tracking-wider rounded-2xl shadow-[0_10px_25px_-5px_rgba(234,179,8,0.25)] hover:shadow-[0_20px_35px_-5px_rgba(234,179,8,0.4)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                                        className="w-full py-4 bg-gradient-to-r from-yellow-500 to-amber-600 text-zinc-950 text-xs font-black uppercase tracking-wider rounded-2xl shadow-[0_10px_25px_-5px_rgba(234,179,8,0.25)] hover:shadow-[0_20px_35px_-5px_rgba(234,179,8,0.4)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                                     >
                                         {actionLoading ? (
                                             <RefreshCw className="w-4.5 h-4.5 animate-spin" />
                                         ) : (
                                             <>
-                                                <Trophy className="w-4 h-4" /> Günün Yıldızı Yap
+                                                <Check className="w-4 h-4" /> Slot #{targetRank} İçin Yayınla
                                             </>
                                         )}
                                     </button>
                                 </form>
                             ) : (
                                 <div className="text-center py-10 border border-dashed border-white/5 rounded-2xl text-zinc-600 text-[10px] font-bold uppercase tracking-wider">
-                                    Lütfen soldaki adaylardan birini seçin veya arama yapın.
+                                    Lütfen soldaki adaylardan veya arama sonuçlarından bir evcil hayvan seçin.
                                 </div>
                             )}
                         </div>

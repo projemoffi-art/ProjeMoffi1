@@ -32,9 +32,9 @@ export function useStories() {
             const lostPets = await apiService.getLostPets();
             // Fetch live system announcements
             const announcements = await apiService.getAnnouncements();
-            // Fetch today's daily star pet
+            // Fetch today's daily star pets (up to 5)
             const todayStr = new Date().toISOString().slice(0, 10);
-            const dailyStar = await apiService.getDailyStar(todayStr);
+            const dailyStars = await apiService.getDailyStars(todayStr) || [];
             
             const liveAnnStories: Story[] = (announcements || [])
                 .filter((ann: any) => {
@@ -66,26 +66,25 @@ export function useStories() {
                 ctaValue2: pet.user_id
             }));
 
-            const featuredStories: Story[] = [];
-            if (dailyStar) {
-                featuredStories.push({
-                    id: dailyStar.id || 'daily_star_today',
-                    media_url: dailyStar.media_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200',
-                    created_at: dailyStar.created_at || new Date().toISOString(),
-                    title: dailyStar.title,
-                    description: dailyStar.description,
-                    badge: dailyStar.badge || 'Günün Yıldızı 🌟',
-                    ctaText: 'İncele',
-                    ctaType: 'toast',
-                    ctaValue: dailyStar.description
-                });
-            } else {
+            const featuredStories: Story[] = (dailyStars || []).map((star: any) => ({
+                id: star.id || `daily_star_${star.rank}`,
+                media_url: star.media_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=600',
+                created_at: star.created_at || new Date().toISOString(),
+                title: star.title,
+                description: star.description,
+                badge: star.badge || 'Günün Yıldızı 🌟',
+                ctaText: 'İncele',
+                ctaType: 'toast',
+                ctaValue: star.description
+            }));
+
+            if (featuredStories.length === 0) {
                 featuredStories.push({
                     id: 'feat_default_1',
                     media_url: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=600',
                     created_at: new Date().toISOString(),
-                    title: 'Günün Yıldız Patisi Seçiliyor 🌟',
-                    description: 'Moffi Evreninde günün en aktif patisi birazdan burada açıklanacak! Takipte kalın.',
+                    title: 'Günün Yıldız Patileri Seçiliyor 🌟',
+                    description: 'Moffi Evreninde günün en aktif patileri birazdan burada açıklanacak! Takipte kalın.',
                     badge: 'Moffi Yıldızı',
                     ctaText: 'Keşfet',
                     ctaType: 'toast',
@@ -96,8 +95,8 @@ export function useStories() {
             const systemChannels: UserStoryGroup[] = [
                 {
                     user_id: 'system_featured_pets',
-                    author_name: '👑 Günün Yıldız Patisi',
-                    author_avatar: dailyStar?.pet?.image || dailyStar?.pet?.avatar || 'https://images.unsplash.com/photo-1537151625747-768eb6cf92b2?q=80&w=200',
+                    author_name: '👑 Yıldız Patiler',
+                    author_avatar: dailyStars[0]?.pet?.image || dailyStars[0]?.pet?.avatar || 'https://images.unsplash.com/photo-1537151625747-768eb6cf92b2?q=80&w=200',
                     hasUnseen: true,
                     stories: featuredStories
                 },

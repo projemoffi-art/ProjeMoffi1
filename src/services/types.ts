@@ -346,9 +346,10 @@ export interface IApiService {
 
     // Daily Star Pet (Yıldız Patiler)
     getAllPetsAdmin(): Promise<Pet[]>;
-    getDailyStar(dateString: string): Promise<any | null>;
+    getDailyStars(dateString: string): Promise<any[]>;
     getDailyStarCandidates(): Promise<any[]>;
-    setDailyStar(dateString: string, petId: string, details: any): Promise<void>;
+    setDailyStar(dateString: string, rank: number, petId: string, details: any): Promise<void>;
+    removeDailyStar(dateString: string, rank: number): Promise<void>;
 }
 
 export interface SystemAnnouncement {
