@@ -232,16 +232,26 @@ export default function VetPage() {
 
     // Deep Linking query parameter listener
     useEffect(() => {
-        if (typeof window !== 'undefined') {
+        if (typeof window !== 'undefined' && !isLoading && allClinics.length > 0) {
             const params = new URLSearchParams(window.location.search);
             const openModal = params.get('open');
+            const targetClinicId = params.get('clinicId');
+            
             if (openModal === 'vaccine') {
                 setActiveModal('vaccine');
             } else if (openModal === 'appointment') {
                 setActiveModal('clinicList');
             }
+
+            if (targetClinicId) {
+                const found = allClinics.find(c => String(c.id) === String(targetClinicId));
+                if (found) {
+                    setSelectedClinic(found);
+                    setActiveModal('appointment');
+                }
+            }
         }
-    }, []);
+    }, [isLoading, allClinics]);
 
     // Appointment Form States
     const [selectedDate, setSelectedDate] = useState<string>("");

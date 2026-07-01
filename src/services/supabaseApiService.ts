@@ -3493,7 +3493,13 @@ export class SupabaseApiService implements IApiService {
 
     async saveClinicAdvice(clinicId: string, content: string, badge: string): Promise<void> {
         try {
-            // Keep it simple: insert new advice
+            // Overwrite: Delete previous advices for this clinic first
+            await supabase
+                .from('vet_advices')
+                .delete()
+                .eq('clinic_id', clinicId);
+
+            // Insert new advice
             const { error } = await supabase
                 .from('vet_advices')
                 .insert({

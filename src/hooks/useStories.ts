@@ -105,7 +105,7 @@ export function useStories() {
                         badge: advice.badge || 'Tavsiye 🩺',
                         ctaText: 'Randevu Al 📅',
                         ctaType: 'url' as any,
-                        ctaValue: '/vet'
+                        ctaValue: `/vet?clinicId=${advice.clinic_id}`
                     };
                 }
                 return {
@@ -120,6 +120,33 @@ export function useStories() {
                     ctaValue: 'Sağlık ve Koruma rehberi açılıyor...'
                 };
             });
+
+            if (liveVetStories.length === 0) {
+                liveVetStories.push(
+                    {
+                        id: 'vet-default-1',
+                        media_url: '/images/moffi_pet_trio.png',
+                        created_at: new Date().toISOString(),
+                        title: '🩺 Moffi Sağlık Tavsiyesi',
+                        description: 'Yaz aylarında asfalt sıcaklığı hava sıcaklığının iki katına çıkabilir. Patileri yakmamak için yürüyüşleri sabah veya akşam yapın.',
+                        badge: 'Yaz Bakımı ☀️',
+                        ctaText: 'Sağlık Rehberini Oku 📚',
+                        ctaType: 'toast',
+                        ctaValue: 'Pati Sağlığı ve Koruma rehberi açılıyor...'
+                    },
+                    {
+                        id: 'vet-default-2',
+                        media_url: '/images/moffi_pet_trio.png',
+                        created_at: new Date().toISOString(),
+                        title: '🩺 Moffi Sağlık Tavsiyesi',
+                        description: 'İlkbahar ve yaz aylarında dış parazit aşılarını aksatmayın. Çimlerde yürüyüş sonrası pati aralarını mutlaka kontrol edin.',
+                        badge: 'Sağlık Uyarısı 🩺',
+                        ctaText: 'Sağlık Rehberini Oku 📚',
+                        ctaType: 'toast',
+                        ctaValue: 'Pati Sağlığı ve Koruma rehberi açılıyor...'
+                    }
+                );
+            }
 
             const systemChannels: UserStoryGroup[] = [
                 {
