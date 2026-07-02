@@ -2179,46 +2179,46 @@ body {
     overflow: hidden !important;
   }
 
-  /* Viewport takes 28% of vertical space, no aspect-ratio constraint */
+  /* Viewport takes 48% of vertical space, making the pet the center of attention! */
   .studio-viewport {
-    height: 28vh !important;
+    height: 48vh !important;
     aspect-ratio: auto !important;
-    border-radius: 20px !important;
+    border-radius: 24px !important;
     padding: 0.25rem !important;
     flex-shrink: 0 !important;
   }
 
   .mascot-container {
     width: auto !important;
-    height: 95% !important;
+    height: 98% !important;
   }
 
-  /* Wardrobe takes all remaining vertical space above bottom nav */
+  /* Wardrobe takes remaining space, acting as a slim control bar at the bottom */
   .studio-drawer {
     flex: 1 !important;
     border-radius: 20px !important;
-    padding: 0.65rem !important;
-    gap: 0.4rem !important;
+    padding: 0.45rem !important;
+    gap: 0.3rem !important;
     overflow: hidden !important;
     display: flex !important;
     flex-direction: column !important;
   }
 
   .drawer-header {
-    padding-bottom: 0.35rem !important;
+    padding-bottom: 0.25rem !important;
   }
   .drawer-header h3 {
-    font-size: 0.85rem !important;
+    font-size: 0.8rem !important;
   }
 
   /* Tab options stay horizontal and swipeable */
   .drawer-tabs {
-    gap: 0.3rem !important;
-    padding-bottom: 0.15rem !important;
+    gap: 0.25rem !important;
+    padding-bottom: 0.1rem !important;
   }
   .tab-btn {
-    padding: 0.35rem 0.65rem !important;
-    font-size: 0.65rem !important;
+    padding: 0.3rem 0.55rem !important;
+    font-size: 0.6rem !important;
     border-radius: 8px !important;
   }
 
@@ -2229,8 +2229,8 @@ body {
     overflow-x: auto !important;
     overflow-y: hidden !important;
     white-space: nowrap !important;
-    gap: 0.5rem !important;
-    padding-bottom: 0.4rem !important;
+    gap: 0.4rem !important;
+    padding-bottom: 0.3rem !important;
     scrollbar-width: none !important; /* Hide scrollbar for clean UI */
     width: 100% !important;
   }
@@ -2240,31 +2240,31 @@ body {
 
   .item-card {
     flex-shrink: 0 !important;
-    width: 90px !important;
-    padding: 0.45rem 0.25rem !important;
-    border-radius: 10px !important;
+    width: 72px !important;
+    padding: 0.35rem 0.2rem !important;
+    border-radius: 8px !important;
   }
   .item-visual {
-    font-size: 1.3rem !important;
-    height: 32px !important;
+    font-size: 1.15rem !important;
+    height: 26px !important;
   }
   .item-label {
-    font-size: 0.6rem !important;
+    font-size: 0.55rem !important;
   }
   .item-price {
-    font-size: 0.55rem !important;
+    font-size: 0.5rem !important;
   }
 
   /* Actions at bottom are clean, compact and fully visible above bottom nav */
   .drawer-actions {
-    padding-top: 0.35rem !important;
+    padding-top: 0.25rem !important;
     margin-top: auto !important;
-    gap: 0.35rem !important;
+    gap: 0.3rem !important;
   }
   .btn-action {
-    padding: 0.5rem !important;
-    font-size: 0.7rem !important;
-    border-radius: 10px !important;
+    padding: 0.45rem !important;
+    font-size: 0.65rem !important;
+    border-radius: 8px !important;
   }
 
   /* Modals center properly and fit screen width */
