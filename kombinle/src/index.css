@@ -2112,61 +2112,76 @@ body {
 
 /* --- PREMIUM MOBILE SINGLE-SCREEN LAYOUT OVERRIDES --- */
 @media (max-width: 768px) {
-  /* Prevent scroll of app container on mobile so it acts like a native app */
+  /* Prevent scroll of app container on mobile and leave space for bottom nav bar */
   .app-container {
     padding: 0.5rem !important;
     gap: 0.5rem !important;
-    height: 100vh !important;
+    height: 100dvh !important;
+    padding-bottom: 74px !important; /* Leave exact space so bottom fixed nav never overlaps buttons! */
     overflow: hidden !important;
     display: flex !important;
     flex-direction: column !important;
   }
 
   .app-header {
-    padding: 0.5rem 0.75rem !important;
+    padding: 0.5rem 0.65rem !important;
     border-radius: 16px !important;
     margin-top: 0 !important;
     top: 0 !important;
+    gap: 0.35rem !important;
   }
 
-  .brand h1 {
-    font-size: 1.1rem !important;
+  /* Hide logo brand text to fit header on one row on small mobile screens */
+  .brand-text {
+    display: none !important; 
   }
-  .brand p {
-    font-size: 0.6rem !important;
+  .brand-icon {
+    font-size: 1.6rem !important;
   }
+
   .user-stats {
-    gap: 0.4rem !important;
+    gap: 0.35rem !important;
+    flex-grow: 1;
+    justify-content: flex-end;
   }
+
   .return-btn {
-    padding: 0.4rem 0.6rem !important;
-    font-size: 0.75rem !important;
+    padding: 0.35rem 0.55rem !important;
+    font-size: 0.7rem !important;
+    border-radius: 10px !important;
   }
+
   .stat-badge {
-    padding: 0.4rem 0.6rem !important;
-    font-size: 0.75rem !important;
+    padding: 0.35rem 0.55rem !important;
+    font-size: 0.7rem !important;
+    border-radius: 10px !important;
+  }
+
+  /* Hide XP text inside level badge on mobile */
+  .xp-text {
+    display: none !important;
   }
 
   .main-content {
     flex-grow: 1 !important;
-    overflow: hidden !important;
+    overflow-y: auto !important; /* Allow scroll only for non-studio pages if needed */
     display: flex !important;
     flex-direction: column !important;
   }
 
-  /* Grid turns into flex column to avoid off-screen overflow */
+  /* Grid turns into flex column to avoid off-screen overflow in Tasarım Odası */
   .grid-studio {
     display: flex !important;
     flex-direction: column !important;
-    gap: 0.5rem !important;
+    gap: 0.4rem !important;
     height: 100% !important;
     flex-grow: 1 !important;
     overflow: hidden !important;
   }
 
-  /* Viewport takes 32% of vertical space, no aspect-ratio constraint */
+  /* Viewport takes 28% of vertical space, no aspect-ratio constraint */
   .studio-viewport {
-    height: 32vh !important;
+    height: 28vh !important;
     aspect-ratio: auto !important;
     border-radius: 20px !important;
     padding: 0.25rem !important;
@@ -2178,69 +2193,80 @@ body {
     height: 95% !important;
   }
 
-  /* Wardrobe takes all remaining vertical space */
+  /* Wardrobe takes all remaining vertical space above bottom nav */
   .studio-drawer {
-    flex-grow: 1 !important;
+    flex: 1 !important;
     border-radius: 20px !important;
-    padding: 0.75rem !important;
-    gap: 0.5rem !important;
+    padding: 0.65rem !important;
+    gap: 0.4rem !important;
     overflow: hidden !important;
     display: flex !important;
     flex-direction: column !important;
   }
 
   .drawer-header {
-    padding-bottom: 0.4rem !important;
+    padding-bottom: 0.35rem !important;
   }
   .drawer-header h3 {
-    font-size: 0.9rem !important;
+    font-size: 0.85rem !important;
   }
 
   /* Tab options stay horizontal and swipeable */
   .drawer-tabs {
-    gap: 0.35rem !important;
-    padding-bottom: 0.2rem !important;
+    gap: 0.3rem !important;
+    padding-bottom: 0.15rem !important;
   }
   .tab-btn {
-    padding: 0.4rem 0.75rem !important;
-    font-size: 0.7rem !important;
-    border-radius: 10px !important;
+    padding: 0.35rem 0.65rem !important;
+    font-size: 0.65rem !important;
+    border-radius: 8px !important;
   }
 
   /* Items grid fills the drawer container and scrolls internally */
   .items-grid {
-    flex-grow: 1 !important;
+    flex: 1 !important;
     max-height: none !important;
-    grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)) !important;
-    gap: 0.5rem !important;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)) !important;
+    gap: 0.4rem !important;
     overflow-y: auto !important;
   }
 
   .item-card {
-    padding: 0.5rem 0.3rem !important;
-    border-radius: 12px !important;
+    padding: 0.45rem 0.25rem !important;
+    border-radius: 10px !important;
   }
   .item-visual {
-    font-size: 1.4rem !important;
-    height: 36px !important;
+    font-size: 1.3rem !important;
+    height: 32px !important;
   }
   .item-label {
-    font-size: 0.65rem !important;
-  }
-  .item-price {
     font-size: 0.6rem !important;
   }
+  .item-price {
+    font-size: 0.55rem !important;
+  }
 
-  /* Actions at bottom are clean and compact */
+  /* Actions at bottom are clean, compact and fully visible above bottom nav */
   .drawer-actions {
-    padding-top: 0.4rem !important;
+    padding-top: 0.35rem !important;
     margin-top: auto !important;
-    gap: 0.4rem !important;
+    gap: 0.35rem !important;
   }
   .btn-action {
-    padding: 0.6rem !important;
-    font-size: 0.75rem !important;
-    border-radius: 12px !important;
+    padding: 0.5rem !important;
+    font-size: 0.7rem !important;
+    border-radius: 10px !important;
+  }
+
+  /* Modals center properly and fit screen width */
+  .modal-overlay {
+    z-index: 10000 !important;
+  }
+  .modal-content {
+    width: 90% !important;
+    max-width: 350px !important;
+    padding: 1.25rem !important;
+    border-radius: 20px !important;
   }
 }
 
