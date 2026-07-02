@@ -134,6 +134,31 @@ body {
   gap: 1rem;
 }
 
+.return-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(24, 24, 27, 0.85);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  padding: 0.5rem 0.85rem;
+  border-radius: 14px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #a78bfa;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.return-btn:hover {
+  background: rgba(39, 39, 42, 0.95);
+  border-color: rgba(139, 92, 246, 0.5);
+  transform: translateY(-1px);
+}
+
+.return-btn:active {
+  transform: translateY(1px);
+}
+
 .stat-badge {
   display: flex;
   align-items: center;
@@ -1649,7 +1674,7 @@ body {
     width: auto !important;
     gap: 0.35rem !important;
   }
-  .user-stats button {
+  .user-stats button:not(.return-btn) {
     display: none !important; /* Hide header lobby entry button */
   }
   .xp-text {
@@ -1964,6 +1989,53 @@ body {
     stroke: #c084fc;
     filter: drop-shadow(0 0 8px rgba(192, 132, 252, 0.4));
   }
+}
+
+/* Premium Rarity Styling System */
+.item-card.rarity-common {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+.item-card.rarity-common:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.05);
+}
+
+.item-card.rarity-epic {
+  border-color: rgba(167, 139, 250, 0.35);
+  background: rgba(167, 139, 250, 0.02);
+}
+.item-card.rarity-epic:hover {
+  border-color: rgba(167, 139, 250, 0.65);
+  box-shadow: 0 4px 14px rgba(167, 139, 250, 0.15);
+}
+.item-card.rarity-epic .item-label {
+  color: #c084fc;
+}
+
+.item-card.rarity-legendary {
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.03);
+}
+.item-card.rarity-legendary:hover {
+  border-color: rgba(245, 158, 11, 0.8);
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.25);
+}
+.item-card.rarity-legendary .item-label {
+  color: #fbbf24;
+  font-weight: 800;
+  text-shadow: 0 0 8px rgba(245, 158, 11, 0.15);
+}
+
+.item-card.selected.rarity-epic {
+  border-color: #a78bfa !important;
+  background: rgba(167, 139, 250, 0.12) !important;
+  box-shadow: 0 0 18px rgba(167, 139, 250, 0.25) !important;
+}
+
+.item-card.selected.rarity-legendary {
+  border-color: #fbbf24 !important;
+  background: rgba(245, 158, 11, 0.14) !important;
+  box-shadow: 0 0 22px rgba(245, 158, 11, 0.35) !important;
 }
 
 

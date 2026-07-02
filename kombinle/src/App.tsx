@@ -2,34 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { 
   Shirt, 
   Sparkles, 
-  Crown, 
   Trash2, 
   Coins, 
   Trophy, 
-  Share2, 
   Heart, 
   Check, 
   Lock, 
   Gamepad2, 
   BookOpen, 
-  Flame, 
-  Volume2, 
-  VolumeX, 
   Compass, 
-  Smile,
-  CheckCircle,
-  Plus,
   Home,
-  Zap,
-  Gift,
   ArrowRight
 } from 'lucide-react';
 
 // Interfaces
 interface ApparelState {
-  body: 'sweatshirt' | 'singlet' | 'pajamas' | null;
-  head: 'crown' | 'pirate_hat' | 'top_hat' | 'beanie' | null;
-  eyes: 'sunglasses' | 'glasses' | 'eyepatch' | null;
+  body: 'sweatshirt' | 'singlet' | 'pajamas' | 'suit' | 'space_suit' | null;
+  head: 'crown' | 'pirate_hat' | 'top_hat' | 'beanie' | 'detective' | 'wizard' | null;
+  eyes: 'sunglasses' | 'glasses' | 'eyepatch' | 'cyber_visor' | null;
   hands: 'gloves' | 'boxing' | null;
   feet: 'sneakers' | 'boots' | null;
 }
@@ -49,17 +39,22 @@ const WARDROBE_ITEMS = {
   body: [
     { id: 'sweatshirt', label: 'Turuncu Sweatshirt', icon: '🧡', sp: 80, cost: 0, rarity: 'common' },
     { id: 'singlet', label: 'Spor Atlet', icon: '🎽', sp: 60, cost: 150, rarity: 'epic' },
-    { id: 'pajamas', label: 'Çizgili Pijama', icon: '💤', sp: 70, cost: 200, rarity: 'epic' }
+    { id: 'pajamas', label: 'Çizgili Pijama', icon: '💤', sp: 70, cost: 200, rarity: 'epic' },
+    { id: 'suit', label: 'Kraliyet Takımı', icon: '👔', sp: 150, cost: 400, rarity: 'legendary' },
+    { id: 'space_suit', label: 'Astronot Kıyafeti', icon: '🚀', sp: 180, cost: 500, rarity: 'legendary' }
   ],
   head: [
     { id: 'beanie', label: 'Örme Bere', icon: '🧶', sp: 50, cost: 0, rarity: 'common' },
     { id: 'top_hat', label: 'Silindir Şapka', icon: '🎩', sp: 120, cost: 350, rarity: 'epic' },
+    { id: 'detective', label: 'Dedektif Şapkası', icon: '🕵️', sp: 110, cost: 300, rarity: 'epic' },
     { id: 'crown', label: 'Altın Taç', icon: '👑', sp: 200, cost: 600, rarity: 'legendary' },
-    { id: 'pirate_hat', label: 'Korsan Şapkası', icon: '🏴‍☠️', sp: 140, cost: 450, rarity: 'legendary' }
+    { id: 'pirate_hat', label: 'Korsan Şapkası', icon: '🏴‍☠️', sp: 140, cost: 450, rarity: 'legendary' },
+    { id: 'wizard', label: 'Büyücü Şapkası', icon: '🧙', sp: 190, cost: 500, rarity: 'legendary' }
   ],
   eyes: [
     { id: 'glasses', label: 'Optik Gözlük', icon: '🤓', sp: 30, cost: 0, rarity: 'common' },
     { id: 'sunglasses', label: 'Güneş Gözlüğü', icon: '😎', sp: 50, cost: 100, rarity: 'epic' },
+    { id: 'cyber_visor', label: 'Siber Vizör', icon: '🕶️', sp: 120, cost: 300, rarity: 'epic' },
     { id: 'eyepatch', label: 'Göz Bandı', icon: '👁️', sp: 110, cost: 250, rarity: 'legendary' }
   ],
   hands: [
@@ -220,6 +215,22 @@ const MascotSVG = ({
             <path d="M 122,315 C 122,315 200,297 278,315 L 278,325 C 278,325 200,307 122,325 Z" fill="#a7f3d0" />
           </g>
         )}
+        {apparel.body === 'suit' && (
+          <g>
+            <path d="M 122,250 C 122,250 200,230 278,250 L 278,355 C 278,355 200,375 122,355 Z" fill="#1e293b" />
+            <path d="M 175,250 L 200,310 L 225,250 Z" fill="#ffffff" />
+            <polygon points="194,270 206,270 203,310 197,310" fill="#ef4444" />
+            <path d="M 165,250 L 190,300 L 175,300 Z" fill="#0f172a" />
+            <path d="M 235,250 L 210,300 L 225,300 Z" fill="#0f172a" />
+          </g>
+        )}
+        {apparel.body === 'space_suit' && (
+          <g>
+            <path d="M 122,250 C 122,250 200,230 278,250 L 278,355 C 278,355 200,375 122,355 Z" fill="#e2e8f0" />
+            <rect x="155" y="275" width="90" height="12" rx="4" fill="#38bdf8" />
+            <circle cx="220" cy="310" r="10" fill="#f43f5e" />
+          </g>
+        )}
 
         {/* HEAD */}
         <circle cx="200" cy="155" r="72" fill={bodyColor} />
@@ -282,6 +293,12 @@ const MascotSVG = ({
             <ellipse cx="228" cy="140" rx="18" ry="14" fill="#111827" />
           </g>
         )}
+        {apparel.eyes === 'cyber_visor' && (
+          <g>
+            <rect x="145" y="128" width="110" height="24" rx="6" fill="#06b6d4" opacity="0.9" stroke="#22d3ee" strokeWidth="2" />
+            <line x1="150" x2="250" y1="140" y2="140" stroke="#ffffff" strokeWidth="2" opacity="0.8" />
+          </g>
+        )}
 
         {/* 3D APPAREL: Head */}
         {apparel.head === 'crown' && (
@@ -308,6 +325,22 @@ const MascotSVG = ({
             <circle cx="200" cy="40" r="10" fill="#60a5fa" />
           </g>
         )}
+        {apparel.head === 'detective' && (
+          <g>
+            <path d="M 140,95 Q 200,35 260,95 Z" fill="#78350f" />
+            <path d="M 120,95 Q 200,105 280,95 Z" fill="#451a03" />
+            <rect x="190" y="55" width="20" height="15" fill="#f59e0b" rx="2" />
+          </g>
+        )}
+        {apparel.head === 'wizard' && (
+          <g>
+            <path d="M 140,95 Q 200,-5 260,95 Z" fill="#1e3a8a" />
+            <ellipse cx="200" cy="95" rx="75" ry="10" fill="#1e40af" />
+            <polygon points="195,45 200,35 205,45 200,42" fill="#fbbf24" />
+            <polygon points="175,70 180,60 185,70 180,67" fill="#fbbf24" />
+            <polygon points="215,70 220,60 225,70 220,67" fill="#fbbf24" />
+          </g>
+        )}
       </g>
     </svg>
   );
@@ -316,6 +349,15 @@ const MascotSVG = ({
 export default function App() {
   // Navigation states: 'lobby' (Cinematic portal selection), 'styling', 'battle', 'lookbook', 'feed'
   const [view, setView] = useState<'lobby' | 'styling' | 'battle' | 'lookbook' | 'feed'>('lobby');
+
+  const handleReturnToMoffi = () => {
+    if (document.referrer && (document.referrer.includes("localhost") || document.referrer.includes("moffi"))) {
+      window.location.href = document.referrer;
+    } else {
+      const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      window.location.href = isLocal ? "http://localhost:3000/community" : "/community";
+    }
+  };
   
   // App-wide persistent stats
   const [walletBalance, setWalletBalance] = useState(() => {
@@ -478,7 +520,7 @@ export default function App() {
   const currentSP = calculateStylePoints(selectedApparel, activeBg);
 
   // Equip or Purchase clothes item
-  const handleItemClick = (category: keyof typeof WARDROBE_ITEMS, itemId: string, cost: number, sp: number, label: string) => {
+  const handleItemClick = (category: keyof typeof WARDROBE_ITEMS, itemId: string, cost: number, _sp: number, label: string) => {
     const isEquipped = selectedApparel[category] === itemId;
     triggerEquipBounce();
     
@@ -564,6 +606,33 @@ export default function App() {
     setLookbook(prev => [newOutfit, ...prev]);
     triggerToast(`📸 "${newOutfit.name}" başarıyla albümüne kaydedildi! (+40 XP)`, '🌟');
     addXP(40);
+  };
+
+  const handleShuffle = () => {
+    const getRandomItem = (category: keyof typeof WARDROBE_ITEMS) => {
+      const items = WARDROBE_ITEMS[category].filter(item => unlockedItems.includes(item.id) || item.cost === 0);
+      if (items.length === 0) return null;
+      if (Math.random() < 0.25) return null;
+      const pick = items[Math.floor(Math.random() * items.length)];
+      return pick.id;
+    };
+
+    setSelectedApparel({
+      body: getRandomItem('body') as any,
+      head: getRandomItem('head') as any,
+      eyes: getRandomItem('eyes') as any,
+      hands: getRandomItem('hands') as any,
+      feet: getRandomItem('feet') as any
+    });
+
+    const randomColor = BODY_COLORS[Math.floor(Math.random() * BODY_COLORS.length)].value;
+    setBodyColor(randomColor);
+
+    const randomBg = BACKGROUNDS[Math.floor(Math.random() * BACKGROUNDS.length)].id;
+    setActiveBg(randomBg);
+
+    triggerToast("🎲 Rastgele kombin oluşturuldu!", "✨");
+    triggerEquipBounce();
   };
 
   // Delete saved outfit card
@@ -662,12 +731,12 @@ export default function App() {
 
     let matches = 0;
     const equipped = [
-      selectedApparel.body,
-      selectedApparel.head,
-      selectedApparel.eyes,
-      selectedApparel.hands,
-      selectedApparel.feet
-    ].filter(Boolean);
+      selectedApparel.body as string | null,
+      selectedApparel.head as string | null,
+      selectedApparel.eyes as string | null,
+      selectedApparel.hands as string | null,
+      selectedApparel.feet as string | null
+    ].filter((x): x is string => x !== null);
 
     activeQuest.requirements.forEach((req: string) => {
       if (equipped.includes(req)) {
@@ -738,6 +807,13 @@ export default function App() {
 
         {/* Global Wallet & Level Stats */}
         <div className="user-stats">
+          <button 
+            onClick={handleReturnToMoffi}
+            className="return-btn"
+            title="Moffi Topluluk Sayfasına Geri Dön"
+          >
+            🐾 Moffi'ye Dön
+          </button>
           {view !== 'lobby' && (
             <button 
               onClick={() => setView('lobby')}
@@ -844,15 +920,16 @@ export default function App() {
                 <div className="flex flex-wrap gap-2.5 justify-center">
                   {activeQuest.requirements.map((req: string, idx: number) => {
                     const equipped = [
-                      selectedApparel.body,
-                      selectedApparel.head,
-                      selectedApparel.eyes,
-                      selectedApparel.hands,
-                      selectedApparel.feet
-                    ].includes(req);
+                      selectedApparel.body as string | null,
+                      selectedApparel.head as string | null,
+                      selectedApparel.eyes as string | null,
+                      selectedApparel.hands as string | null,
+                      selectedApparel.feet as string | null
+                    ].filter((x): x is string => x !== null);
+                    const isEquipped = equipped.includes(req);
                     return (
-                      <span key={req} className={`px-2.5 py-1 rounded-xl text-xs font-bold border flex items-center gap-1.5 ${equipped ? 'bg-emerald-950/65 border-emerald-500/35 text-emerald-300' : 'bg-amber-950/20 border-amber-500/15 text-amber-400'}`}>
-                        {equipped ? '✓' : '○'} {activeQuest.reqLabels[idx]}
+                      <span key={req} className={`px-2.5 py-1 rounded-xl text-xs font-bold border flex items-center gap-1.5 ${isEquipped ? 'bg-emerald-950/65 border-emerald-500/35 text-emerald-300' : 'bg-amber-950/20 border-amber-500/15 text-amber-400'}`}>
+                        {isEquipped ? '✓' : '○'} {activeQuest.reqLabels[idx]}
                       </span>
                     );
                   })}
@@ -964,7 +1041,7 @@ export default function App() {
                           item.sp, 
                           item.label
                         )}
-                        className={`item-card ${isEquipped ? 'selected' : ''}`}
+                        className={`item-card rarity-${item.rarity} ${isEquipped ? 'selected' : ''}`}
                       >
                         {!isUnlocked && (
                           <span className="item-lock">
@@ -1033,14 +1110,22 @@ export default function App() {
                     triggerToast('🧹 Tüm giysiler çıkarıldı.', '🧹');
                   }}
                   className="btn-action secondary"
+                  title="Sıfırla"
                 >
-                  Sıfırla
+                  🧹 Sıfırla
+                </button>
+                <button 
+                  onClick={handleShuffle}
+                  className="btn-action secondary"
+                  title="Sahip olduğun giysilerden rastgele kombin yap"
+                >
+                  🎲 Rastgele
                 </button>
                 <button 
                   onClick={handleSaveOutfit}
                   className="btn-action primary"
                 >
-                  📸 Kombini Kaydet
+                  📸 Kaydet
                 </button>
               </div>
 
@@ -1266,7 +1351,7 @@ export default function App() {
                   <div key={post.id} className="bg-zinc-900/40 border border-white/5 p-4 rounded-3xl flex gap-4 items-center">
                     <div className="w-[120px] aspect-ratio-[10/12] bg-black/40 rounded-2xl overflow-hidden relative flex items-center justify-center p-2 shrink-0 shadow-inner">
                       <div className={`absolute inset-0 backdrop-${post.bg} opacity-30 z-0`} />
-                      <MascotSVG apparel={post.apparel} bodyColor={post.color} customStyle={{ zIndex: 1 }} />
+                      <MascotSVG apparel={post.apparel as ApparelState} bodyColor={post.color} customStyle={{ zIndex: 1 }} />
                     </div>
                     <div className="flex flex-col gap-2 flex-grow text-left">
                       <div className="flex flex-col">
