@@ -1831,7 +1831,8 @@ export default function LegendaryLightDashboard() {
                                     e.stopPropagation();
                                     if (typeof window !== 'undefined') {
                                         const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-                                        window.location.href = isLocal ? 'http://localhost:5173' : '/kombinle';
+                                        const query = `petName=${encodeURIComponent(pet.name || 'Zeytin')}&petBreed=${encodeURIComponent(pet.breed || 'Dog')}`;
+                                        window.location.href = isLocal ? `http://localhost:5173/?${query}` : `/kombinle?${query}`;
                                     }
                                 }}
                                 className="flex items-center gap-1 bg-white dark:bg-zinc-800 text-purple-700 dark:text-purple-400 border border-purple-200/50 dark:border-purple-900/50 text-[9.5px] font-black px-2.5 py-1.5 rounded-xl cursor-pointer transition-all hover:scale-95 shadow-sm shrink-0"

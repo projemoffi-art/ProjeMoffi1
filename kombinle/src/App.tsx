@@ -123,13 +123,17 @@ const MascotSVG = ({
   bodyColor = '#8b5cf6', 
   customStyle = {},
   isBlinking = false,
-  isEquipTriggered = false
+  isEquipTriggered = false,
+  isCat = false,
+  isDog = false
 }: { 
   apparel: ApparelState; 
   bodyColor?: string; 
   customStyle?: React.CSSProperties;
   isBlinking?: boolean;
   isEquipTriggered?: boolean;
+  isCat?: boolean;
+  isDog?: boolean;
 }) => {
   const [eyeOffset, setEyeOffset] = useState({ x: 0, y: 0 });
   const [headOffset, setHeadOffset] = useState({ x: 0, y: 0 });
@@ -339,14 +343,34 @@ const MascotSVG = ({
           <circle cx="200" cy="155" r="72" fill={bodyColor} />
 
           {/* EARS */}
-          <g>
-            {/* Left ear */}
-            <circle cx="140" cy="100" r="22" fill={bodyColor} className="mascot-left-ear" style={{ transformOrigin: '140px 100px' }} />
-            <circle cx="140" cy="100" r="14" fill="#fda4af" />
-            {/* Right ear */}
-            <circle cx="260" cy="100" r="22" fill={bodyColor} className="mascot-right-ear" style={{ transformOrigin: '260px 100px' }} />
-            <circle cx="260" cy="100" r="14" fill="#fda4af" />
-          </g>
+          {isCat ? (
+            <g>
+              {/* Left Cat Ear */}
+              <polygon points="115,120 138,55 162,105" fill={bodyColor} className="mascot-left-ear" style={{ transformOrigin: '140px 100px' }} />
+              <polygon points="125,114 138,68 152,102" fill="#fda4af" />
+              {/* Right Cat Ear */}
+              <polygon points="285,120 262,55 238,105" fill={bodyColor} className="mascot-right-ear" style={{ transformOrigin: '260px 100px' }} />
+              <polygon points="275,114 262,68 248,102" fill="#fda4af" />
+            </g>
+          ) : isDog ? (
+            <g>
+              {/* Left Dog Ear */}
+              <path d="M 125,90 C 105,90 95,145 125,145 C 135,145 140,115 125,90 Z" fill={bodyColor} className="mascot-left-ear" style={{ transformOrigin: '125px 90px' }} />
+              <path d="M 120,100 C 110,100 105,135 120,135 Z" fill="#fda4af" />
+              {/* Right Dog Ear */}
+              <path d="M 275,90 C 295,90 305,145 275,145 C 265,145 260,115 275,90 Z" fill={bodyColor} className="mascot-right-ear" style={{ transformOrigin: '275px 90px' }} />
+              <path d="M 280,100 C 290,100 295,135 280,135 Z" fill="#fda4af" />
+            </g>
+          ) : (
+            <g>
+              {/* Left ear */}
+              <circle cx="140" cy="100" r="22" fill={bodyColor} className="mascot-left-ear" style={{ transformOrigin: '140px 100px' }} />
+              <circle cx="140" cy="100" r="14" fill="#fda4af" />
+              {/* Right ear */}
+              <circle cx="260" cy="100" r="22" fill={bodyColor} className="mascot-right-ear" style={{ transformOrigin: '260px 100px' }} />
+              <circle cx="260" cy="100" r="14" fill="#fda4af" />
+            </g>
+          )}
 
           {/* SNOUT & NOSE */}
           <ellipse cx="200" cy="178" rx="26" ry="18" fill="#fed7aa" />
@@ -460,6 +484,28 @@ export default function App() {
   // Navigation states: 'lobby' (Cinematic portal selection), 'styling', 'battle', 'lookbook', 'feed'
   const [view, setView] = useState<'lobby' | 'styling' | 'battle' | 'lookbook' | 'feed'>('lobby');
 
+  // URL Query Parameters parsing for personalization
+  const [params] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return new URLSearchParams(window.location.search);
+    }
+    return new URLSearchParams();
+  });
+  
+  const petName = params.get('petName') || 'Zeytin';
+  const petBreed = params.get('petBreed') || 'Kayıtlı Pet';
+  const isCat = petBreed.toLowerCase().includes('cat') || petBreed.toLowerCase().includes('kedi') || petBreed.toLowerCase().includes('shorthair') || petBreed.toLowerCase().includes('siamese') || petBreed.toLowerCase().includes('tekir');
+  const isDog = !isCat;
+
+  const [showGuideModal, setShowGuideModal] = useState(false);
+
+  useEffect(() => {
+    const onboarded = localStorage.getItem('moffi_kombinle_onboarded');
+    if (!onboarded) {
+      setShowGuideModal(true);
+    }
+  }, []);
+
   const handleReturnToMoffi = () => {
     if (document.referrer && (document.referrer.includes("localhost") || document.referrer.includes("moffi"))) {
       window.location.href = document.referrer;
@@ -491,7 +537,9 @@ export default function App() {
   const [questRewards, setQuestRewards] = useState({ coins: 0, xp: 0 });
 
   // Customizer styling states
-  const [bodyColor, setBodyColor] = useState('#8b5cf6');
+  const [bodyColor, setBodyColor] = useState(() => {
+    return isCat ? '#f97316' : '#8b5cf6';
+  });
   const [activeBg, setActiveBg] = useState('stage');
   const [selectedApparel, setSelectedApparel] = useState<ApparelState>({
     body: 'sweatshirt',
@@ -500,7 +548,9 @@ export default function App() {
     hands: null,
     feet: null
   });
-  const [activeOutfitName, setActiveOutfitName] = useState('Havalı Canavarım');
+  const [activeOutfitName, setActiveOutfitName] = useState(() => {
+    return `${petName}'in Harika Tarzı`;
+  });
 
   // Gacha Chest animations and modals
   const [isShaking, setIsShaking] = useState(false);
@@ -918,6 +968,12 @@ export default function App() {
         {/* Global Wallet & Level Stats */}
         <div className="user-stats">
           <button 
+            onClick={() => setShowGuideModal(true)}
+            className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 px-3 py-1.8 rounded-xl text-amber-400 text-xs font-black hover:bg-amber-500/20 active:scale-95 transition-all cursor-pointer mr-1"
+          >
+            ❓ Nasıl Oynanır?
+          </button>
+          <button 
             onClick={handleReturnToMoffi}
             className="return-btn"
             title="Moffi Topluluk Sayfasına Geri Dön"
@@ -1069,7 +1125,7 @@ export default function App() {
               </div>
 
               <div className="mascot-container">
-                <MascotSVG apparel={selectedApparel} bodyColor={bodyColor} isBlinking={isBlinking} isEquipTriggered={isEquipTriggered} />
+                <MascotSVG apparel={selectedApparel} bodyColor={bodyColor} isBlinking={isBlinking} isEquipTriggered={isEquipTriggered} isCat={isCat} isDog={isDog} />
               </div>
 
               {/* Floating Style Point badge */}
@@ -1606,6 +1662,50 @@ export default function App() {
           <span>Albüm</span>
         </button>
       </nav>
+
+      {/* How to Play Onboarding Guide Modal */}
+      {showGuideModal && (
+        <div className="modal-overlay" onClick={() => setShowGuideModal(false)}>
+          <div className="modal-content text-left" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-gradient text-xl font-black mb-3">🐾 Moffi Kombinle Nedir?</h3>
+            <p className="text-xs text-gray-300 leading-relaxed mb-4">
+              Moffi Kombinle, evcil hayvanının tarzını oluşturduğun, yarışarak ve topluluktaki diğer kombinleri oylayarak **MoffiCoin kazandığın** eğlenceli bir giydirme arenasıdır!
+            </p>
+            <div className="flex flex-col gap-3.5 mb-5">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-xl bg-purple-500/10 border border-purple-500/25 flex items-center justify-center text-purple-400 shrink-0 text-sm">🎨</div>
+                <div className="flex flex-col text-left">
+                  <h4 className="text-xs font-black text-white">1. Tarzını Tasarla</h4>
+                  <p className="text-[10px] text-gray-400">Atölyede petine takım elbiseler, bereler ve vizörler giydir, tarz skorunu (SP) yükselt.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-xl bg-pink-500/10 border border-pink-500/25 flex items-center justify-center text-pink-400 shrink-0 text-sm">⚔️</div>
+                <div className="flex flex-col text-left">
+                  <h4 className="text-xs font-black text-white">2. Düellolara Katıl</h4>
+                  <p className="text-[10px] text-gray-400">Tasarımlarını Arenaya gönder. Diğer kullanıcılar tarafından oylansın, tarz liginde zirveye tırman.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-amber-400 shrink-0 text-sm">🪙</div>
+                <div className="flex flex-col text-left">
+                  <h4 className="text-xs font-black text-white">3. MoffiCoin Kazan</h4>
+                  <p className="text-[10px] text-gray-400">Kazandığın MoffiCoin'leri **Moffi Shop**'ta biriktirip, gerçek hayattaki pet mamanı indirimli al!</p>
+                </div>
+              </div>
+            </div>
+            <button 
+              onClick={() => {
+                setShowGuideModal(false);
+                localStorage.setItem('moffi_kombinle_onboarded', 'true');
+              }}
+              className="btn-action primary w-full"
+            >
+              Hazırım, Başlayalım! ➔
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

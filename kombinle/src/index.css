@@ -2222,16 +2222,25 @@ body {
     border-radius: 8px !important;
   }
 
-  /* Items grid fills the drawer container and scrolls internally */
+  /* Items grid turns into horizontal swiping carousel on mobile */
   .items-grid {
-    flex: 1 !important;
-    max-height: none !important;
-    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)) !important;
-    gap: 0.4rem !important;
-    overflow-y: auto !important;
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    white-space: nowrap !important;
+    gap: 0.5rem !important;
+    padding-bottom: 0.4rem !important;
+    scrollbar-width: none !important; /* Hide scrollbar for clean UI */
+    width: 100% !important;
+  }
+  .items-grid::-webkit-scrollbar {
+    display: none !important;
   }
 
   .item-card {
+    flex-shrink: 0 !important;
+    width: 90px !important;
     padding: 0.45rem 0.25rem !important;
     border-radius: 10px !important;
   }
