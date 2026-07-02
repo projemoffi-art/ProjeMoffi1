@@ -2277,6 +2277,43 @@ body {
     padding: 1.25rem !important;
     border-radius: 20px !important;
   }
+
+  /* Hide redundant top nav bar on mobile since we have the bottom nav bar! */
+  .app-nav {
+    display: none !important;
+  }
+
+  /* Lock viewport scroll on mobile completely to prevent browser rubber-banding/double scrolling */
+  html, body, #root {
+    overflow: hidden !important;
+    height: 100% !important;
+    position: fixed !important;
+    width: 100% !important;
+  }
+}
+
+/* --- CLOTH EQUIP ENTRANCE BOUNCE ANIMATION --- */
+.animate-cloth-equip {
+  animation: cloth-equip-bounce 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes cloth-equip-bounce {
+  0% {
+    transform: scale(0.7) translateY(-30px);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.1) translateY(4px);
+    opacity: 0.9;
+  }
+  85% {
+    transform: scale(0.96) translateY(-1px);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
 }
 
 
