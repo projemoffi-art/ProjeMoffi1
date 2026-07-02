@@ -2601,20 +2601,29 @@ export default function LegendaryLightDashboard() {
 
                                     {/* 4. AI Dressing Morph Screen (Talking Tom Interactive Dressing Studio) */}
                                     {expandedPanel === 'dressing' && (
-                                        <div className="flex flex-col h-[50vh] items-center justify-center p-6 text-center bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-white/5 shadow-2xl">
-                                            <div className="w-16 h-16 rounded-2xl bg-purple-100 dark:bg-purple-950/30 flex items-center justify-center text-purple-650 text-3xl mb-4">
-                                                👕
+                                        <div className="relative w-full h-[650px] bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-gray-150 dark:border-white/5 shadow-2xl overflow-hidden flex flex-col">
+                                            {/* Header bar with Back button */}
+                                            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-zinc-950">
+                                                <span className="text-xs font-black text-foreground dark:text-white flex items-center gap-1.5 uppercase tracking-wider">
+                                                    👕 Moffi Kombinle
+                                                </span>
+                                                <button 
+                                                    onClick={() => setExpandedPanel(null)}
+                                                    className="px-4 py-1.5 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-gray-300 text-xs font-bold rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors"
+                                                >
+                                                    Geri Dön
+                                                </button>
                                             </div>
-                                            <h3 className="text-lg font-black text-gray-800 dark:text-white">Kombinle</h3>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 max-w-xs leading-relaxed">
-                                                Bu panel geçici olarak devre dışı bırakılmıştır. Yeni tasarım ve özelliklerle yakında burada olacak!
-                                            </p>
-                                            <button 
-                                                onClick={() => setExpandedPanel(null)}
-                                                className="mt-6 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-650 text-white text-[11px] font-black rounded-xl cursor-pointer hover:shadow-lg hover:shadow-purple-500/10 active:scale-95 transition-all shadow-md"
-                                            >
-                                                Geri Dön
-                                            </button>
+                                            {/* Kombinle Iframe */}
+                                            <div className="flex-1 w-full h-full relative">
+                                                <iframe 
+                                                    src="http://localhost:5173" 
+                                                    className="absolute inset-0 w-full h-full border-0"
+                                                    title="Moffi Kombinle"
+                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                    sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                                                />
+                                            </div>
                                         </div>
                                     )}
                                     
