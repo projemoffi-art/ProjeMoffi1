@@ -1830,7 +1830,8 @@ export default function LegendaryLightDashboard() {
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     if (typeof window !== 'undefined') {
-                                        window.open('http://localhost:5173', 'MoffiKombinle', 'width=430,height=850,resizable=yes,scrollbars=yes,status=no,location=no');
+                                        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                                        window.location.href = isLocal ? 'http://localhost:5173' : '/kombinle';
                                     }
                                 }}
                                 className="flex items-center gap-1 bg-white dark:bg-zinc-800 text-purple-700 dark:text-purple-400 border border-purple-200/50 dark:border-purple-900/50 text-[9.5px] font-black px-2.5 py-1.5 rounded-xl cursor-pointer transition-all hover:scale-95 shadow-sm shrink-0"
