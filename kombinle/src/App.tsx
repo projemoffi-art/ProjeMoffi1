@@ -214,24 +214,32 @@ const MascotSVG = ({
       {/* SHADOW */}
       <ellipse cx="200" cy="415" rx="75" ry="12" fill="rgba(0,0,0,0.2)" />
 
-      {/* TAIL (Wagging!) */}
+      {/* TAIL (Moffi Fluffy Cat Tail) */}
       <path 
-        d="M 125,320 Q 90,320 85,280 Q 95,260 105,280 Q 105,310 125,310" 
+        d="M 125,320 C 90,320 60,340 50,290 C 40,230 75,200 85,210 C 95,220 70,260 85,290 C 95,310 125,310 125,310" 
         fill={bodyColor} 
         className="mascot-tail-wag"
         style={{ transformOrigin: '125px 315px' }}
       />
 
       <g className={`mascot-breathe-group mascot-anim-${animState} ${isEquipTriggered ? 'animate-equip-bounce' : ''}`}>
-        {/* LEGS (Interactive Jump) */}
+        {/* LEGS (Interactive Jump + White Paws) */}
         <g 
           onClick={triggerJump} 
           onTouchStart={(e) => { e.stopPropagation(); triggerJump(); }} 
           className="cursor-pointer" 
           style={{ transformOrigin: '200px 380px' }}
         >
-          <rect x="135" y="360" width="30" height="40" rx="10" fill={bodyColor} />
-          <rect x="235" y="360" width="30" height="40" rx="10" fill={bodyColor} />
+          {/* Left leg with paw */}
+          <g>
+            <rect x="135" y="360" width="30" height="40" rx="10" fill={bodyColor} />
+            <ellipse cx="150" cy="398" rx="16" ry="8" fill="#ffffff" />
+          </g>
+          {/* Right leg with paw */}
+          <g>
+            <rect x="235" y="360" width="30" height="40" rx="10" fill={bodyColor} />
+            <ellipse cx="250" cy="398" rx="16" ry="8" fill="#ffffff" />
+          </g>
         </g>
 
         {/* FEET APPAREL (Juicy Entrance Bounce) */}
@@ -254,21 +262,30 @@ const MascotSVG = ({
           </g>
         )}
 
-        {/* BODY & ARMS (Interactive Giggle) */}
+        {/* BODY & ARMS (Interactive Giggle + White Paws & Blue Shorts) */}
         <g 
           onClick={triggerGiggle} 
           onTouchStart={(e) => { e.stopPropagation(); triggerGiggle(); }} 
           className="cursor-pointer" 
           style={{ transformOrigin: '200px 285px' }}
         >
-          {/* Left arm */}
-          <ellipse cx="90" cy="280" rx="18" ry="38" fill={bodyColor} transform="rotate(-20 90 280)" />
-          {/* Right arm */}
-          <ellipse cx="310" cy="280" rx="18" ry="38" fill={bodyColor} transform="rotate(20 310 280)" />
+          {/* Left arm with white paw */}
+          <g>
+            <ellipse cx="90" cy="280" rx="18" ry="38" fill={bodyColor} transform="rotate(-20 90 280)" />
+            <circle cx="80" cy="310" r="14" fill="#ffffff" transform="rotate(-20 90 280)" />
+          </g>
+          {/* Right arm with white paw */}
+          <g>
+            <ellipse cx="310" cy="280" rx="18" ry="38" fill={bodyColor} transform="rotate(20 310 280)" />
+            <circle cx="320" cy="310" r="14" fill="#ffffff" transform="rotate(20 310 280)" />
+          </g>
 
           {/* MAIN BODY */}
           <ellipse cx="200" cy="285" rx="85" ry="85" fill={bodyColor} />
           <ellipse cx="200" cy="285" rx="58" ry="52" fill="#ffedd5" />
+          
+          {/* Moffi Sporty Blue Shorts */}
+          <path d="M 124,342 C 124,342 200,358 276,342 L 276,368 C 260,372 230,372 215,368 L 215,360 L 185,360 L 185,368 C 170,372 140,372 124,368 Z" fill="#0284c7" />
         </g>
 
         {/* HANDS APPAREL (Juicy Entrance Bounce) */}
@@ -288,9 +305,13 @@ const MascotSVG = ({
           <g key={apparel.body} className="animate-cloth-equip" style={{ transformOrigin: '200px 285px' }}>
             {apparel.body === 'sweatshirt' && (
               <g>
+                {/* Orange Hoodie Body */}
                 <path d="M 122,250 C 122,250 200,230 278,250 L 278,355 C 278,355 200,375 122,355 Z" fill="#f97316" />
-                <polygon points="200,285 165,250 235,250" fill="#ea580c" />
-                <rect x="155" y="305" width="90" height="35" rx="8" fill="#ea580c" />
+                {/* Hood folds/collar */}
+                <path d="M 152,250 C 152,250 200,285 248,250" fill="none" stroke="#ea580c" strokeWidth="6" strokeLinecap="round" />
+                {/* Neon Blue M logo (Glowing!) */}
+                <path d="M 175,320 L 188,285 L 200,305 L 212,285 L 225,320" fill="none" stroke="#38bdf8" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 0 6px #06b6d4)' }} />
+                <path d="M 175,320 L 188,285 L 200,305 L 212,285 L 225,320" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
               </g>
             )}
             {apparel.body === 'singlet' && (
@@ -372,8 +393,8 @@ const MascotSVG = ({
           )}
 
           {/* SNOUT & NOSE */}
-          <ellipse cx="200" cy="178" rx="26" ry="18" fill="#fed7aa" />
-          <ellipse cx="200" cy="169" rx="8" ry="5.5" fill="#1f2937" />
+          <ellipse cx="200" cy="178" rx="26" ry="18" fill="#ffffff" />
+          <ellipse cx="200" cy="169" rx="8" ry="5.5" fill="#e11d48" />
 
           {/* EYES */}
           {isBlinking || animState === 'giggle' ? (
@@ -392,11 +413,11 @@ const MascotSVG = ({
             <g>
               {/* Left Eye (Look At Cursor) */}
               <circle cx="172" cy="140" r="15" fill="white" />
-              <circle cx={174 + eyeOffset.x} cy={140 + eyeOffset.y} r="8" fill="#a855f7" />
+              <circle cx={174 + eyeOffset.x} cy={140 + eyeOffset.y} r="8" fill="#22c55e" />
               <circle cx={174 + eyeOffset.x} cy={140 + eyeOffset.y} r="4" fill="black" />
               {/* Right Eye (Look At Cursor) */}
               <circle cx="228" cy="140" r="15" fill="white" />
-              <circle cx={226 + eyeOffset.x} cy={140 + eyeOffset.y} r="8" fill="#a855f7" />
+              <circle cx={226 + eyeOffset.x} cy={140 + eyeOffset.y} r="8" fill="#22c55e" />
               <circle cx={226 + eyeOffset.x} cy={140 + eyeOffset.y} r="4" fill="black" />
             </g>
           )}
@@ -544,7 +565,7 @@ export default function App() {
 
   // Customizer styling states
   const [bodyColor, setBodyColor] = useState(() => {
-    return isCat ? '#f97316' : '#8b5cf6';
+    return '#8b5cf6';
   });
   const [activeBg, setActiveBg] = useState('stage');
   const [selectedApparel, setSelectedApparel] = useState<ApparelState>({
