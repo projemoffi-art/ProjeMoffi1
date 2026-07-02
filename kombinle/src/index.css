@@ -2110,4 +2110,138 @@ body {
   100% { transform: translateY(0) scale(1) rotate(360deg); }
 }
 
+/* --- PREMIUM MOBILE SINGLE-SCREEN LAYOUT OVERRIDES --- */
+@media (max-width: 768px) {
+  /* Prevent scroll of app container on mobile so it acts like a native app */
+  .app-container {
+    padding: 0.5rem !important;
+    gap: 0.5rem !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .app-header {
+    padding: 0.5rem 0.75rem !important;
+    border-radius: 16px !important;
+    margin-top: 0 !important;
+    top: 0 !important;
+  }
+
+  .brand h1 {
+    font-size: 1.1rem !important;
+  }
+  .brand p {
+    font-size: 0.6rem !important;
+  }
+  .user-stats {
+    gap: 0.4rem !important;
+  }
+  .return-btn {
+    padding: 0.4rem 0.6rem !important;
+    font-size: 0.75rem !important;
+  }
+  .stat-badge {
+    padding: 0.4rem 0.6rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  .main-content {
+    flex-grow: 1 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* Grid turns into flex column to avoid off-screen overflow */
+  .grid-studio {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    height: 100% !important;
+    flex-grow: 1 !important;
+    overflow: hidden !important;
+  }
+
+  /* Viewport takes 32% of vertical space, no aspect-ratio constraint */
+  .studio-viewport {
+    height: 32vh !important;
+    aspect-ratio: auto !important;
+    border-radius: 20px !important;
+    padding: 0.25rem !important;
+    flex-shrink: 0 !important;
+  }
+
+  .mascot-container {
+    width: auto !important;
+    height: 95% !important;
+  }
+
+  /* Wardrobe takes all remaining vertical space */
+  .studio-drawer {
+    flex-grow: 1 !important;
+    border-radius: 20px !important;
+    padding: 0.75rem !important;
+    gap: 0.5rem !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .drawer-header {
+    padding-bottom: 0.4rem !important;
+  }
+  .drawer-header h3 {
+    font-size: 0.9rem !important;
+  }
+
+  /* Tab options stay horizontal and swipeable */
+  .drawer-tabs {
+    gap: 0.35rem !important;
+    padding-bottom: 0.2rem !important;
+  }
+  .tab-btn {
+    padding: 0.4rem 0.75rem !important;
+    font-size: 0.7rem !important;
+    border-radius: 10px !important;
+  }
+
+  /* Items grid fills the drawer container and scrolls internally */
+  .items-grid {
+    flex-grow: 1 !important;
+    max-height: none !important;
+    grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)) !important;
+    gap: 0.5rem !important;
+    overflow-y: auto !important;
+  }
+
+  .item-card {
+    padding: 0.5rem 0.3rem !important;
+    border-radius: 12px !important;
+  }
+  .item-visual {
+    font-size: 1.4rem !important;
+    height: 36px !important;
+  }
+  .item-label {
+    font-size: 0.65rem !important;
+  }
+  .item-price {
+    font-size: 0.6rem !important;
+  }
+
+  /* Actions at bottom are clean and compact */
+  .drawer-actions {
+    padding-top: 0.4rem !important;
+    margin-top: auto !important;
+    gap: 0.4rem !important;
+  }
+  .btn-action {
+    padding: 0.6rem !important;
+    font-size: 0.75rem !important;
+    border-radius: 12px !important;
+  }
+}
+
 

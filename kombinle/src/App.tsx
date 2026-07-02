@@ -136,15 +136,15 @@ const MascotSVG = ({
   const [animState, setAnimState] = useState<'idle' | 'giggle' | 'dizzy' | 'jump'>('idle');
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMove = (clientX: number, clientY: number) => {
       const svgEl = document.querySelector('.mascot-svg');
       if (svgEl) {
         const rect = svgEl.getBoundingClientRect();
         const svgCenterX = rect.left + rect.width / 2;
         const svgCenterY = rect.top + rect.height / 3; // Head center level
         
-        const dx = e.clientX - svgCenterX;
-        const dy = e.clientY - svgCenterY;
+        const dx = clientX - svgCenterX;
+        const dy = clientY - svgCenterY;
         const dist = Math.sqrt(dx * dx + dy * dy) || 1;
         
         // Max offset for pupils: 6px
@@ -161,8 +161,26 @@ const MascotSVG = ({
         setHeadOffset({ x: headX, y: headY });
       }
     };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      handleMove(e.clientX, e.clientY);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches && e.touches[0]) {
+        handleMove(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    };
+
     window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('touchstart', handleTouchMove, { passive: true });
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchstart', handleTouchMove);
+    };
   }, []);
 
   const triggerGiggle = () => {
@@ -202,7 +220,12 @@ const MascotSVG = ({
 
       <g className={`mascot-breathe-group mascot-anim-${animState} ${isEquipTriggered ? 'animate-equip-bounce' : ''}`}>
         {/* LEGS (Interactive Jump) */}
-        <g onClick={triggerJump} className="cursor-pointer" style={{ transformOrigin: '200px 380px' }}>
+        <g 
+          onClick={triggerJump} 
+          onTouchStart={(e) => { e.stopPropagation(); triggerJump(); }} 
+          className="cursor-pointer" 
+          style={{ transformOrigin: '200px 380px' }}
+        >
           {/* Left leg */}
           <g>
             <rect x="135" y="360" width="30" height="40" rx="10" fill={bodyColor} />
@@ -227,7 +250,12 @@ const MascotSVG = ({
         </g>
 
         {/* BODY & ARMS (Interactive Giggle) */}
-        <g onClick={triggerGiggle} className="cursor-pointer" style={{ transformOrigin: '200px 285px' }}>
+        <g 
+          onClick={triggerGiggle} 
+          onTouchStart={(e) => { e.stopPropagation(); triggerGiggle(); }} 
+          className="cursor-pointer" 
+          style={{ transformOrigin: '200px 285px' }}
+        >
           {/* Left arm */}
           <g>
             <ellipse cx="90" cy="280" rx="18" ry="38" fill={bodyColor} transform="rotate(-20 90 280)" />
@@ -299,6 +327,7 @@ const MascotSVG = ({
         {/* HEAD & FACE (Interactive 3D Look-at rotation + Dizzy click) */}
         <g 
           onClick={triggerDizzy} 
+          onTouchStart={(e) => { e.stopPropagation(); triggerDizzy(); }} 
           className="cursor-pointer" 
           style={{ 
             transform: `translate(${headOffset.x}px, ${headOffset.y}px)`, 
