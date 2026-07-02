@@ -2038,4 +2038,76 @@ body {
   box-shadow: 0 0 22px rgba(245, 158, 11, 0.35) !important;
 }
 
+/* --- PREMIUM INTERACTIVE ANIME SYSTEM FOR MASCOT --- */
+
+/* 1. Tail Wagging (Organic & Loop) */
+.mascot-tail-wag {
+  animation: tail-wag 2s ease-in-out infinite;
+}
+
+@keyframes tail-wag {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-25deg); }
+}
+
+/* 2. Ear Wiggles (Loop & Ambient) */
+.mascot-left-ear {
+  animation: ear-wiggle-left 4s ease-in-out infinite;
+}
+.mascot-right-ear {
+  animation: ear-wiggle-right 4s ease-in-out infinite 0.5s;
+}
+
+@keyframes ear-wiggle-left {
+  0%, 90%, 100% { transform: rotate(0deg); }
+  95% { transform: rotate(-12deg); }
+}
+@keyframes ear-wiggle-right {
+  0%, 90%, 100% { transform: rotate(0deg); }
+  95% { transform: rotate(12deg); }
+}
+
+/* 3. Interactive Giggle State (Belly click) */
+.mascot-anim-giggle {
+  animation: mascot-giggle 1s ease-in-out;
+}
+
+@keyframes mascot-giggle {
+  0%, 100% { transform: scale(1) translateY(0); }
+  15% { transform: scale(1.08, 0.92) translateY(2px); }
+  30% { transform: scale(0.94, 1.06) translateY(-4px) rotate(-1deg); }
+  45% { transform: scale(1.06, 0.94) translateY(2px) rotate(1deg); }
+  60% { transform: scale(0.97, 1.03) translateY(-2px) rotate(-1deg); }
+  75% { transform: scale(1.02, 0.98) translateY(1px) rotate(0deg); }
+}
+
+/* 4. Interactive Dizzy State (Head click) */
+.mascot-anim-dizzy {
+  animation: mascot-dizzy 1.2s ease-in-out;
+}
+
+@keyframes mascot-dizzy {
+  0%, 100% { transform: rotate(0deg) translate(0, 0); }
+  15% { transform: rotate(-5deg) translate(-3px, -2px); }
+  30% { transform: rotate(5deg) translate(3px, -1px); }
+  45% { transform: rotate(-8deg) translate(-4px, 2px); }
+  60% { transform: rotate(6deg) translate(3px, 1px); }
+  75% { transform: rotate(-3deg) translate(-1px, -1px); }
+  90% { transform: rotate(1.5deg) translate(1px, 0px); }
+}
+
+/* 5. Interactive Jump Spin (Legs click) */
+.mascot-anim-jump {
+  animation: mascot-jump 0.7s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+@keyframes mascot-jump {
+  0% { transform: translateY(0) scale(1) rotate(0deg); }
+  15% { transform: translateY(12px) scale(1.15, 0.8) rotate(0deg); }
+  45% { transform: translateY(-75px) scale(0.85, 1.15) rotate(180deg); }
+  70% { transform: translateY(-30px) scale(0.9, 1.1) rotate(360deg); }
+  85% { transform: translateY(8px) scale(1.1, 0.9) rotate(360deg); }
+  100% { transform: translateY(0) scale(1) rotate(360deg); }
+}
+
 
