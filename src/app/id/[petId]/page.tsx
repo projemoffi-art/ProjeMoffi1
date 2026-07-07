@@ -61,7 +61,7 @@ export default function PetIDPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4">
+            <div className="min-h-screen flex flex-col items-center justify-center gap-4">
                 <Loader2 className="w-10 h-10 text-cyan-500 animate-spin" />
                 <p className="text-white/40 text-xs font-bold uppercase tracking-widest">Moffi Kimlik Bilgileri Alınıyor...</p>
             </div>
@@ -70,7 +70,7 @@ export default function PetIDPage() {
 
     if (!petData) {
         return (
-            <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-center">
+            <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
                 <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
                 <h1 className="text-xl font-bold text-white mb-2">Pet ID Bulunamadı</h1>
                 <p className="text-white/50 text-sm mb-6">Girdiğiniz kimlik numarası sistemimizde kayıtlı görünmüyor.</p>

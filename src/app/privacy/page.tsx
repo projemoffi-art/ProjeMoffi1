@@ -10,7 +10,7 @@ export default function PrivacyPage() {
     const router = useRouter();
 
     return (
-        <div className="min-h-screen bg-[#0A0A0E] text-white p-8 md:p-20 font-sans selection:bg-purple-500/30">
+        <div className="min-h-screen p-8 md:p-20 font-sans selection:bg-purple-500/30">
             {/* Ambient Background */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-500/10 blur-[120px] rounded-full" />

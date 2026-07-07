@@ -226,7 +226,7 @@ export default function ProductionStudio() {
     };
 
     return (
-        <div className="min-h-screen bg-[background] text-white font-sans selection:bg-cyan-500/30 overflow-hidden flex flex-col">
+        <div className="min-h-screen bg-[background] font-sans selection:bg-cyan-500/30 overflow-hidden flex flex-col">
             
             {/* AMBIENT BACKGROUND */}
             <div className="fixed inset-0 pointer-events-none">

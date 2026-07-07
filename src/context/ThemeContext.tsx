@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useAuth } from './AuthContext';
 
 type Theme = 'light' | 'dark';
@@ -54,6 +55,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
 
+    const pathname = usePathname();
+
     // Apply classes to document root
     useEffect(() => {
         const root = document.documentElement;
@@ -67,8 +70,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         ];
         root.classList.remove(...classesToRemove);
 
+        // Determine if current path should force light mode
+        const authPaths = ['/', '/login', '/register', '/business-register', '/reset-password', '/auth/callback'];
+        const isAuthPage = authPaths.includes(pathname || '');
+        const activeTheme = isAuthPage ? 'light' : theme;
+
         // Apply new classes
-        root.classList.add(theme);
+        root.classList.add(activeTheme);
         root.classList.add(`font-size-${fontSize}`);
         
         // Apply Global Font from settings if exists
@@ -81,7 +89,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         if (reduceMotion) root.classList.add('reduce-motion');
         if (reduceTransparency) root.classList.add('reduce-transparency');
         if (seniorMode) root.classList.add('senior-mode');
-    }, [theme, fontSize, colorBlindMode, boldText, highContrast, reduceMotion, reduceTransparency, seniorMode]);
+    }, [theme, fontSize, colorBlindMode, boldText, highContrast, reduceMotion, reduceTransparency, seniorMode, pathname, user?.settings?.appearance?.font]);
 
     const setTheme = React.useCallback((newTheme: Theme) => {
         setThemeState(newTheme);

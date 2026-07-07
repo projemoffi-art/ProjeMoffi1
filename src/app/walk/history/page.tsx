@@ -24,7 +24,7 @@ export default function WalkHistoryPage() {
     const displayWalks = [...walkHistory, ...MOCK_HISTORY_WALKS];
 
     return (
-        <main className="min-h-screen bg-gray-50 pb-20 max-w-md mx-auto relative shadow-2xl overflow-hidden font-sans flex flex-col border-x border-card-border">
+        <main className="min-h-screen pb-20 max-w-md mx-auto relative shadow-2xl overflow-hidden font-sans flex flex-col border-x border-card-border">
 
             {/* Header */}
             <div className="bg-card px-6 py-6 border-b border-card-border sticky top-0 z-20">

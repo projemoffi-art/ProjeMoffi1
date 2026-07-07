@@ -7,11 +7,12 @@ import {
     Sparkles, Send, X, Bot, User as UserIcon, 
     ChevronRight, Zap, Crown, MessageSquare, 
     Briefcase, Cpu, Trash2, ArrowLeft,
-    Heart, Shield
+    Heart, Shield, Stethoscope
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { usePet } from '@/context/PetContext';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 interface Message {
     id: string;
@@ -38,6 +39,7 @@ export function MoffiAssistant() {
     const [messages, setMessages] = useState<Message[]>([]);
     
     const scrollRef = useRef<HTMLDivElement>(null);
+    const router = useRouter();
 
     // Listen for global open/close events
     useEffect(() => {
@@ -57,15 +59,13 @@ export function MoffiAssistant() {
     // --- AI LOGIC CORE ---
     const aiSettings = user?.settings?.ai || { personality: 'casual', creativity: 0.7, detailLevel: 'medium' };
 
-    // Initialize messages based on settings
+    // Handle hydration
     useEffect(() => {
         setIsMounted(true);
-        const existing = document.querySelector('.moffi-assistant-portal-root');
-        if (existing && !isOpen) {
-            setIsMounted(false);
-            return;
-        }
+    }, []);
 
+    // Initialize messages based on settings
+    useEffect(() => {
         if (messages.length === 0) {
             let greeting = "";
             if (aiSettings.personality === 'technical') {
@@ -80,8 +80,7 @@ export function MoffiAssistant() {
 
             setMessages([{ id: 'welcome', role: 'assistant', content: greeting }]);
         }
-        return () => setIsMounted(false);
-    }, [isPro, user?.username, isOpen, aiSettings.personality]);
+    }, [isPro, user?.username, aiSettings.personality, messages.length]);
 
     // Auto-scroll
     useEffect(() => {
@@ -89,8 +88,6 @@ export function MoffiAssistant() {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [messages, isTyping]);
-
-    // if (!isMounted) return null; // Removed early return to prevent hook order issues
 
     const handleSend = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
@@ -133,9 +130,8 @@ export function MoffiAssistant() {
             };
         }
 
-        const userMsg: Message = { id: Date.now().toString(), role: 'user', content: input };
-        const updatedMessages = [...messages, userMsg];
-        setMessages(updatedMessages);
+        const userMessage: Message = { id: Date.now().toString(), role: 'user', content: input };
+        setMessages(prev => [...prev, userMessage]);
         setInput("");
         setIsTyping(true);
 
@@ -144,7 +140,7 @@ export function MoffiAssistant() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    messages: updatedMessages.map(m => ({
+                    messages: [...messages, userMessage].map(m => ({
                         role: m.role,
                         content: m.content
                     })),
@@ -167,7 +163,6 @@ export function MoffiAssistant() {
         } catch (apiError) {
             console.warn("Moffi AI API Failed, falling back to simulated response:", apiError);
 
-            // Simulation logic fallback
             let simulatedResponse = "";
             const petName = petDataPayload?.name || "dostun";
             if (aiSettings.personality === 'technical') {
@@ -205,6 +200,22 @@ export function MoffiAssistant() {
 
     const assistantContent = (
         <div className="moffi-assistant-portal-root">
+            {/* The Floating Action Button */}
+            <AnimatePresence>
+                {!isOpen && (
+                    <motion.button
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0, opacity: 0 }}
+                        onClick={() => setIsOpen(true)}
+                        className="fixed bottom-24 right-5 z-[99999] w-[52px] h-[52px] bg-gradient-to-tr from-purple-600 to-indigo-600 rounded-full shadow-[0_8px_30px_rgba(99,102,241,0.4)] flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-all group"
+                    >
+                        <Sparkles className="w-6 h-6 text-white group-hover:animate-pulse" />
+                        <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-background animate-pulse" />
+                    </motion.button>
+                )}
+            </AnimatePresence>
+
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
@@ -224,8 +235,15 @@ export function MoffiAssistant() {
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={() => { setIsOpen(false); router.push('/vet'); }} 
+                                    className="px-3 h-9 rounded-xl bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 flex items-center gap-1.5 text-[11px] font-bold transition-colors border border-emerald-500/20"
+                                >
+                                    <Stethoscope className="w-3.5 h-3.5" />
+                                    <span>VetLine</span>
+                                </button>
                                 <button onClick={clearChat} className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-secondary hover:text-red-400 transition-colors"><Trash2 className="w-4 h-4" /></button>
-                                <button onClick={() => { setIsOpen(false); window.history.back(); }} className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-foreground hover:bg-white/10 transition-all border border-card-border"><X className="w-5 h-5" /></button>
+                                <button onClick={() => { setIsOpen(false); }} className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-foreground hover:bg-white/10 transition-all border border-card-border"><X className="w-5 h-5" /></button>
                             </div>
                         </div>
 

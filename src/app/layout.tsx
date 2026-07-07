@@ -20,6 +20,7 @@ import { LiveEventsProvider } from "@/context/LiveEventsContext";
 import { QuestRewardEngineLoader } from "@/components/quests/QuestRewardEngineLoader";
 import { Phase2Loader } from "@/components/quests/Phase2Loader";
 import { GlobalToast } from "@/components/common/GlobalToast";
+import { RootOnboardingWrapper } from "@/components/drafts/RootOnboardingWrapper";
 
 const poppins = Poppins({
   weight: ['400', '600', '700', '900'],
@@ -104,7 +105,9 @@ export default function RootLayout({
                                   <GlobalAuraBackground />
                                   <div className="min-h-screen relative overflow-hidden">
                                     <ErrorBoundary>
-                                      {children}
+                                      <RootOnboardingWrapper>
+                                        {children}
+                                      </RootOnboardingWrapper>
                                     </ErrorBoundary>
                                   </div>
 

@@ -857,49 +857,7 @@ export function MoffiSidebar() {
                                                     </motion.div>
                                                 )}
 
-                                                {expandedWidgetId === 'ai' && (
-                                                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col h-[340px] w-full">
-                                                        <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col gap-2.5 mb-3 px-1">
-                                                            {aiChatMessages.map((msg, index) => (
-                                                                <div 
-                                                                    key={index}
-                                                                    className={cn(
-                                                                        "max-w-[85%] p-3 rounded-2xl text-[11px] leading-relaxed font-semibold shadow-sm",
-                                                                        msg.sender === 'user' 
-                                                                            ? "bg-purple-600 text-white self-end rounded-tr-none" 
-                                                                            : "bg-white/[0.06] border border-white/10 text-white/95 self-start rounded-tl-none"
-                                                                    )}
-                                                                >
-                                                                    {msg.text}
-                                                                </div>
-                                                            ))}
-                                                            {isAiTyping && (
-                                                                <div className="bg-white/[0.06] border border-white/10 p-3 rounded-2xl rounded-tl-none self-start flex gap-1 items-center shrink-0">
-                                                                    <span className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                                                    <span className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                                                    <span className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                                                                </div>
-                                                            )}
-                                                        </div>
 
-                                                        <div className="flex gap-2 items-center bg-white/[0.06] border border-white/10 rounded-2xl p-1.5 shrink-0">
-                                                            <input 
-                                                                type="text"
-                                                                placeholder="AI Veteriner Sor..."
-                                                                value={aiInputText}
-                                                                onChange={(e) => setAiInputText(e.target.value)}
-                                                                onKeyDown={(e) => { if (e.key === 'Enter') handleSendAiMessage(); }}
-                                                                className="flex-1 bg-transparent border-none focus:outline-none pl-3 text-xs text-white placeholder:text-white/30"
-                                                            />
-                                                            <button 
-                                                                onClick={handleSendAiMessage}
-                                                                className="w-8 h-8 rounded-xl bg-purple-650 hover:bg-purple-700 flex items-center justify-center text-white transition-colors"
-                                                            >
-                                                                <Send className="w-3.5 h-3.5" />
-                                                            </button>
-                                                        </div>
-                                                    </motion.div>
-                                                )}
                                             </div>
                                         </div>
                                     ) : (
@@ -1080,7 +1038,7 @@ export function MoffiSidebar() {
                                                                         whileTap={{ scale: 0.95 }}
                                                                         onClick={() => { 
                                                                             triggerHaptic(15); 
-                                                                            const expandableIds = ['ai', 'steps', 'weather', 'water', 'mood', 'qr'];
+                                                                            const expandableIds = ['steps', 'weather', 'water', 'mood', 'qr'];
                                                                             if (expandableIds.includes(widget.id)) {
                                                                                 setExpandedWidgetId(widget.id);
                                                                             } else {
@@ -1119,7 +1077,7 @@ export function MoffiSidebar() {
                                                                     whileTap={{ scale: 0.95 }}
                                                                     onClick={() => { 
                                                                         triggerHaptic(15); 
-                                                                        const expandableIds = ['ai', 'steps', 'weather', 'water', 'mood', 'qr'];
+                                                                        const expandableIds = ['steps', 'weather', 'water', 'mood', 'qr'];
                                                                         if (expandableIds.includes(widget.id)) {
                                                                             setExpandedWidgetId(widget.id);
                                                                         } else {

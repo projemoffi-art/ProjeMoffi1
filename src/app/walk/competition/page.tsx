@@ -50,7 +50,7 @@ export default function CompetitionPage() {
     const rest = currentData.slice(3);
 
     return (
-        <main className="min-h-screen bg-[#0B0F19] text-white pb-24 font-sans max-w-md mx-auto relative overflow-hidden flex flex-col">
+        <main className="min-h-screen pb-24 font-sans max-w-md mx-auto relative overflow-hidden flex flex-col">
 
             {/* Background Effects */}
             <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-indigo-900/50 to-transparent pointer-events-none" />

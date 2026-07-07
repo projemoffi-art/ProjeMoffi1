@@ -6,7 +6,7 @@ const API_KEY = process.env.GEMINI_API_KEY || "";
 const genAI = API_KEY ? new GoogleGenerativeAI(API_KEY) : null;
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const supabaseAdmin = (supabaseUrl && supabaseKey)
     ? createClient(supabaseUrl, supabaseKey)
@@ -184,15 +184,7 @@ YANIT FORMAT (sadece JSON):
 
         // ─── ADIM 4: Supabase Güncelleme ────────────────────────────────────
         if (!supabaseAdmin) {
-            console.warn("Supabase not configured, skipping database update.");
-            return NextResponse.json({
-                success: true,
-                safe: isSafe,
-                reason: isSafe ? "İçerik güvenli (Veritabanı kaydı atlandı)" : `❌ ${violationReason}`,
-                category: violationCategory || "safe",
-                confidence,
-                newStatus: isSafe ? "active" : "removed"
-            });
+            return NextResponse.json({ error: "Server misconfiguration: Service role key missing" }, { status: 500 });
         }
 
         const newStatus = isSafe ? "active" : "removed";

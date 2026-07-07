@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const supabaseAdmin = (supabaseUrl && supabaseKey)
     ? createClient(supabaseUrl, supabaseKey)
@@ -21,8 +21,13 @@ export async function POST(req: NextRequest) {
 
         console.log(`[PAYTR WEBHOOK] Received payload for order ${merchant_oid}: status=${status}, amount=${total_amount}`);
 
-        const merchant_key = process.env.PAYTR_MERCHANT_KEY || "";
-        const merchant_salt = process.env.PAYTR_MERCHANT_SALT || "";
+        const merchant_key = process.env.PAYTR_MERCHANT_KEY;
+        const merchant_salt = process.env.PAYTR_MERCHANT_SALT;
+
+        if (!merchant_key || !merchant_salt) {
+            console.error("[PAYTR WEBHOOK] Server misconfiguration: PayTR API keys are missing.");
+            return new Response("Fail: Server misconfiguration", { status: 500 });
+        }
 
         // 1. Verify PayTR HMAC-SHA256 Hash signature
         const hashString = merchant_oid + merchant_salt + status + total_amount;
@@ -38,7 +43,7 @@ export async function POST(req: NextRequest) {
 
         if (!supabaseAdmin) {
             console.error("[PAYTR WEBHOOK] Database connection is null. Cannot update order.");
-            return new Response("Fail: no database connection", { status: 500 });
+            return new Response("Fail: Database misconfiguration", { status: 500 });
         }
 
         // 2. Process transaction result

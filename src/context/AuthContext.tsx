@@ -842,16 +842,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const approveBusiness = async (id: string) => {
         if (isSupabaseEnabled) {
-            const { error } = await supabase.from('profiles').update({
-                business_approved: true,
-                kyb_status: 'approved',
-                role: 'business'
-            }).eq('id', id);
+            const res = await fetch('/api/admin/approve-business', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: id })
+            });
 
-            if (error) {
-                console.error("Error approving business:", error);
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                console.error("Error approving business:", data.error);
                 return;
             }
+
 
             const authChannel = new BroadcastChannel('moffi_auth_channel');
             authChannel.postMessage({ type: 'KYB_STATUS_UPDATED', userId: id, status: 'approved' });
@@ -871,16 +873,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const rejectBusiness = async (id: string, reason: string) => {
         if (isSupabaseEnabled) {
-            const { error } = await supabase.from('profiles').update({
-                business_approved: false,
-                kyb_status: 'rejected',
-                kyb_rejection_reason: reason
-            }).eq('id', id);
+            const res = await fetch('/api/admin/reject-business', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: id, reason })
+            });
 
-            if (error) {
-                console.error("Error rejecting business:", error);
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                console.error("Error rejecting business:", data.error);
                 return;
             }
+
 
             const authChannel = new BroadcastChannel('moffi_auth_channel');
             authChannel.postMessage({ type: 'KYB_STATUS_UPDATED', userId: id, status: 'rejected', reason });

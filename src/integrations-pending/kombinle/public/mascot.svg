@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 450" width="400" height="450">
+  <!-- SHADOW -->
+  <ellipse cx="200" cy="415" rx="75" ry="12" fill="rgba(0,0,0,0.2)" id="mascot_shadow" />
+
+  <!-- TAIL -->
+  <path d="M 125,320 C 90,320 60,340 50,290 C 40,230 75,200 85,210 C 95,220 70,260 85,290 C 95,310 125,310 125,310" fill="#8b5cf6" id="mascot_tail" />
+
+  <!-- LEGS -->
+  <g id="mascot_legs">
+    <!-- Left Leg -->
+    <g id="leg_left">
+      <rect x="135" y="360" width="30" height="40" rx="10" fill="#8b5cf6" />
+      <ellipse cx="150" cy="398" rx="16" ry="8" fill="#ffffff" />
+    </g>
+    <!-- Right Leg -->
+    <g id="leg_right">
+      <rect x="235" y="360" width="30" height="40" rx="10" fill="#8b5cf6" />
+      <ellipse cx="250" cy="398" rx="16" ry="8" fill="#ffffff" />
+    </g>
+  </g>
+
+  <!-- BODY & ARMS -->
+  <g id="mascot_body_group">
+    <!-- Left Arm -->
+    <g id="arm_left">
+      <ellipse cx="90" cy="280" rx="18" ry="38" fill="#8b5cf6" transform="rotate(-20 90 280)" />
+      <circle cx="80" cy="310" r="14" fill="#ffffff" transform="rotate(-20 90 280)" />
+    </g>
+    <!-- Right Arm -->
+    <g id="arm_right">
+      <ellipse cx="310" cy="280" rx="18" ry="38" fill="#8b5cf6" transform="rotate(20 310 280)" />
+      <circle cx="320" cy="310" r="14" fill="#ffffff" transform="rotate(20 310 280)" />
+    </g>
+    <!-- Main Body -->
+    <ellipse cx="200" cy="285" rx="85" ry="85" fill="#8b5cf6" id="body_base" />
+    <ellipse cx="200" cy="285" rx="58" ry="52" fill="#ffedd5" id="body_inner" />
+    
+    <!-- Sporty Blue Shorts -->
+    <path d="M 124,342 C 124,342 200,358 276,342 L 276,368 C 260,372 230,372 215,368 L 215,360 L 185,360 L 185,368 C 170,372 140,372 124,368 Z" fill="#0284c7" id="shorts" />
+  </g>
+
+  <!-- HEAD & FACE -->
+  <g id="mascot_head_group">
+    <!-- Left Ear -->
+    <g id="ear_left">
+      <polygon points="115,120 138,55 162,105" fill="#8b5cf6" />
+      <polygon points="125,114 138,68 152,102" fill="#fda4af" />
+    </g>
+    <!-- Right Ear -->
+    <g id="ear_right">
+      <polygon points="285,120 262,55 238,105" fill="#8b5cf6" />
+      <polygon points="275,114 262,68 248,102" fill="#fda4af" />
+    </g>
+    <!-- Head Base -->
+    <circle cx="200" cy="155" r="72" fill="#8b5cf6" id="head_base" />
+    <!-- Snout & Nose -->
+    <ellipse cx="200" cy="178" rx="26" ry="18" fill="#ffffff" id="snout" />
+    <ellipse cx="200" cy="169" rx="8" ry="5.5" fill="#e11d48" id="nose" />
+    <!-- Eyes -->
+    <g id="eyes_base">
+      <circle cx="172" cy="140" r="15" fill="white" />
+      <circle cx="174" cy="140" r="8" fill="#22c55e" />
+      <circle cx="174" cy="140" r="4" fill="black" />
+      <circle cx="228" cy="140" r="15" fill="white" />
+      <circle cx="226" cy="140" r="8" fill="#22c55e" />
+      <circle cx="226" cy="140" r="4" fill="black" />
+    </g>
+  </g>
+
+  <!-- CLOTHING & ACCESSORIES LAYER -->
+  <g id="apparel_items">
+    <!-- HATS -->
+    <g id="head_crown" display="none">
+      <path d="M 162,94 L 172,65 L 190,82 L 200,55 L 210,82 L 228,65 L 238,94 Z" fill="#eab308" stroke="#ca8a04" stroke-width="2.5" />
+    </g>
+    <g id="head_pirate_hat" display="none">
+      <path d="M 135,95 C 135,70 160,50 200,50 C 240,50 265,70 265,95 C 275,95 285,102 285,106 C 285,106 200,98 115,106 C 115,102 125,95 135,95 Z" fill="#0f172a" />
+      <circle cx="200" cy="80" r="7" fill="white" />
+      <path d="M 197,80 L 203,80 M 200,77 L 200,83" stroke="#000" stroke-width="1.5" />
+    </g>
+    <g id="head_top_hat" display="none">
+      <ellipse cx="200" cy="95" rx="52" ry="8" fill="#1e293b" />
+      <rect x="164" y="44" width="72" height="48" rx="2" fill="#1e293b" />
+      <rect x="164" y="82" width="72" height="10" fill="#ef4444" />
+    </g>
+    <g id="head_beanie" display="none">
+      <path d="M 148,96 C 148,50 252,50 252,96 Z" fill="#2563eb" />
+      <rect x="142" y="87" width="116" height="16" rx="5" fill="#1d4ed8" />
+      <circle cx="200" cy="40" r="10" fill="#60a5fa" />
+    </g>
+
+    <!-- GLASSES -->
+    <g id="eyes_glasses" display="none">
+      <circle cx="172" cy="140" r="18" fill="none" stroke="#1f2937" stroke-width="4" />
+      <circle cx="228" cy="140" r="18" fill="none" stroke="#1f2937" stroke-width="4" />
+      <line x1="190" x2="210" y1="140" y2="140" stroke="#1f2937" stroke-width="4.5" />
+    </g>
+    <g id="eyes_sunglasses" display="none">
+      <path d="M 150,135 Q 172,125 192,135 L 190,152 Q 172,160 152,152 Z" fill="#0f172a" opacity="0.95" />
+      <path d="M 208,135 Q 228,125 248,135 L 246,152 Q 228,160 208,152 Z" fill="#0f172a" opacity="0.95" />
+      <line x1="192" x2="208" y1="137" y2="137" stroke="#1e293b" stroke-width="4" />
+      <line x1="160" x2="175" y1="138" y2="148" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.6" />
+      <line x1="218" x2="233" y1="138" y2="148" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.6" />
+    </g>
+    <g id="eyes_cyber_visor" display="none">
+      <rect x="145" y="128" width="110" height="24" rx="6" fill="#06b6d4" opacity="0.9" stroke="#22d3ee" stroke-width="2" />
+      <line x1="150" x2="250" y1="140" y2="140" stroke="#ffffff" stroke-width="2" opacity="0.8" />
+    </g>
+
+    <!-- SHIRTS / APPAREL -->
+    <g id="body_sweatshirt" display="none">
+      <path d="M 122,250 C 122,250 200,230 278,250 L 278,355 C 278,355 200,375 122,355 Z" fill="#f97316" />
+      <path d="M 152,250 C 152,250 200,285 248,250" fill="none" stroke="#ea580c" stroke-width="6" stroke-linecap="round" />
+      <path d="M 175,320 L 188,285 L 200,305 L 212,285 L 225,320" fill="none" stroke="#38bdf8" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M 175,320 L 188,285 L 200,305 L 212,285 L 225,320" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+    <g id="body_singlet" display="none">
+      <path d="M 130,265 C 130,265 200,255 270,265 L 265,355 C 265,355 200,370 135,355 Z" fill="#0891b2" />
+      <rect x="140" y="232" width="16" height="38" rx="3" fill="#0891b2" />
+      <rect x="244" y="232" width="16" height="38" rx="3" fill="#0891b2" />
+      <polygon points="200,280 204,290 214,292 206,298 209,308 200,302 191,308 194,298 186,292 196,290" fill="#eab308" />
+    </g>
+    <g id="body_pajamas" display="none">
+      <path d="M 122,250 C 122,250 200,232 278,250 L 278,360 C 278,360 200,375 122,360 Z" fill="#10b981" />
+      <path d="M 122,275 C 122,275 200,257 278,275 L 278,285 C 278,285 200,267 122,285 Z" fill="#a7f3d0" />
+      <path d="M 122,315 C 122,315 200,297 278,315 L 278,325 C 278,325 200,307 122,325 Z" fill="#a7f3d0" />
+    </g>
+  </g>
+</svg>

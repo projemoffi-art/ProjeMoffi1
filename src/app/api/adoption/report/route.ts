@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const supabaseAdmin = (supabaseUrl && supabaseKey)
     ? createClient(supabaseUrl, supabaseKey)
@@ -21,8 +21,7 @@ export async function POST(req: Request) {
         }
 
         if (!supabaseAdmin) {
-            console.warn("Supabase not configured, skipping report save.");
-            return NextResponse.json({ success: true, message: "Report received (not saved)" });
+            return NextResponse.json({ error: "Server misconfiguration: Service role key missing" }, { status: 500 });
         }
 
         // Save report to adoption_reports table

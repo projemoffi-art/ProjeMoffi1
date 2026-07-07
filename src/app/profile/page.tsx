@@ -20,7 +20,7 @@ export default function ProfileRedirect() {
     }, [user, isLoading, router]);
 
     return (
-        <div className="min-h-screen bg-[#050508] flex items-center justify-center">
+        <div className="min-h-screen flex items-center justify-center">
             <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
         </div>
     );

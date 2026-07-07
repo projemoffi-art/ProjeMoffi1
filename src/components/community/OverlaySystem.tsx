@@ -15,7 +15,7 @@ import { PetSettingsModal } from '../profile/PetSettingsModal';
 import { EcosystemPortal } from './EcosystemPortal';
 import { SpotlightSearch } from './SpotlightSearch';
 import { DiaryModal } from './DiaryModal';
-import { MoffiAssistant } from '../ai/MoffiAssistant';
+
 
 interface OverlaySystemProps {
     user: any;
@@ -352,7 +352,7 @@ export const OverlaySystem: React.FC<OverlaySystemProps> = ({
                 />
             )}
 
-            <MoffiAssistant />
+
         </>
     );
 };

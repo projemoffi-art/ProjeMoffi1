@@ -391,7 +391,7 @@ export default function ProfilePage() {
     // ── Render: Loading ─────────────────────────────────────
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center">
+            <div className="min-h-screen flex items-center justify-center">
                 <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center gap-4">
                     <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center shadow-2xl shadow-emerald-500/30">
                         <Loader2 className="w-8 h-8 text-white animate-spin" />
@@ -404,7 +404,7 @@ export default function ProfilePage() {
 
     if (!displayUser && !isOwnProfile) {
         return (
-            <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center p-8 text-center">
+            <div className="min-h-screen flex items-center justify-center p-8 text-center">
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
                     <div className="w-20 h-20 rounded-[2rem] bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto">
                         <AlertCircle className="w-10 h-10 text-red-400" />
@@ -604,7 +604,7 @@ export default function ProfilePage() {
 
     // ── PREMIUM PROFILE PAGE ────────────────────────────────
     return (
-        <main className="min-h-screen bg-[#0A0A0F] pb-32 overflow-x-hidden">
+        <main className="min-h-screen pb-32 overflow-x-hidden">
             {/* ══ HERO — Cover + Avatar ══ */}
             <div className="relative w-full h-72 sm:h-80">
                 {/* Cover */}

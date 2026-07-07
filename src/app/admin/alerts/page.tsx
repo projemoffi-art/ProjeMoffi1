@@ -175,7 +175,7 @@ export default function AdminAnnouncementsPage() {
     const totalExpired = announcements.length - totalActive;
 
     return (
-        <div className="space-y-12 pb-32 max-w-7xl mx-auto px-4 lg:px-0 bg-[#050508] min-h-screen text-gray-400">
+        <div className="space-y-12 pb-32 max-w-7xl mx-auto px-4 lg:px-0 min-h-screen">
             {/* Global Toasts */}
             <AnimatePresence>
                 {toast && (

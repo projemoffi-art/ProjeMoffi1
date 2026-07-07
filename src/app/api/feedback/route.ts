@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 // Safe Supabase Init
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const supabaseAdmin = (supabaseUrl && supabaseKey)
     ? createClient(supabaseUrl, supabaseKey)
@@ -18,11 +18,7 @@ export async function POST(req: Request) {
         console.log(`[FEEDBACK] New submission for ${targetEmail}:`, { rating, category, comment });
 
         if (!supabaseAdmin) {
-            console.warn(`Feedback API: Supabase not configured. This feedback for ${targetEmail} is logged in Vercel Runtime Logs.`);
-            return NextResponse.json({ 
-                success: true, 
-                message: `Feedback received for ${targetEmail} (No DB connected)` 
-            });
+            return NextResponse.json({ error: "Server misconfiguration: Service role key missing" }, { status: 500 });
         }
 
         // Save to Supabase (assuming a 'feedbacks' table exists or will exist)

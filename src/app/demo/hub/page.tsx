@@ -33,7 +33,7 @@ export default function HubDemoPage() {
     ];
 
     return (
-        <div className="min-h-screen bg-gray-50 flex justify-center">
+        <div className="min-h-screen flex justify-center">
             {/* Mobile Frame Simulation */}
             <div className="w-full max-w-md bg-card min-h-screen relative shadow-2xl overflow-hidden flex flex-col">
                 

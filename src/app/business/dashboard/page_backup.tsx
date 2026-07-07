@@ -53,7 +53,7 @@ export default function BusinessDashboard() {
     const recentUsers = [...allUsers].filter(u => u.role !== 'admin').sort((a, b) => new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime()).slice(0, 5);
 
     return (
-        <div className="flex min-h-screen bg-gray-50/50 font-sans">
+        <div className="flex min-h-screen font-sans">
             {/* Modal */}
             <CreateCampaignModal
                 isOpen={isCampaignModalOpen}

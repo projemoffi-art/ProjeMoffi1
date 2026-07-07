@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moffi | Master Strategic Deck 2026</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;400;700;900&family=Playfair+Display:ital,wght@1,800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --accent: #22C55E; --bg: #000; }
+        body { font-family: 'Outfit', sans-serif; background-color: var(--bg); color: #fff; overflow: hidden; margin: 0; }
+        .slide { height: 100vh; width: 100vw; display: flex; position: absolute; top: 0; left: 0; opacity: 0; transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: none; }
+        .slide.active { opacity: 1; pointer-events: auto; }
+        .visual-side { flex: 1; position: relative; overflow: hidden; background: #080808; }
+        .content-side { flex: 1.2; padding: 5rem 6rem; overflow-y: auto; background: linear-gradient(135deg, #000, #0a0a0a); scrollbar-width: none; }
+        .content-side::-webkit-scrollbar { display: none; }
+        .glass { background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 2.5rem; }
+        .step-label { display: inline-block; padding: 0.5rem 1.5rem; background: rgba(34, 197, 94, 0.1); color: var(--accent); border-radius: 100px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 2rem; }
+        .progress-bar { position: fixed; top: 0; left: 0; height: 4px; background: var(--accent); z-index: 2000; transition: width 0.4s ease; }
+        .nav-dots { position: fixed; right: 2rem; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 1rem; z-index: 2000; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.1); cursor: pointer; transition: all 0.3s; }
+        .dot.active { background: var(--accent); transform: scale(1.6); box-shadow: 0 0 15px var(--accent); }
+        .text-gradient { background: linear-gradient(to right, #fff, #22C55E); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .slide-up { transform: translateY(30px); opacity: 0; transition: all 0.8s ease forwards; transition-delay: 0.3s; }
+        .active .slide-up { transform: translateY(0); opacity: 1; }
+        .controls { position: fixed; bottom: 3rem; right: 4rem; display: flex; gap: 1rem; z-index: 3000; }
+        .btn { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); padding: 1.2rem; border-radius: 1.5rem; cursor: pointer; transition: all 0.3s; font-size: 1.2rem; display: flex; items-center: center; justify-content: center; }
+        .btn:hover { background: rgba(255,255,255,0.15); border-color: var(--accent); transform: scale(1.1); }
+        .btn:active { transform: scale(0.9); }
+    </style>
+</head>
+<body>
+
+    <div class="progress-bar" id="progress"></div>
+    <div class="nav-dots" id="dots"></div>
+
+    <!-- 01: INTRO -->
+    <div class="slide active" data-index="1">
+        <div class="visual-side">
+            <img src="https://images.unsplash.com/photo-1548191265-cc70d3d45ba1?q=80&w=2000" class="w-full h-full object-cover opacity-40">
+            <div class="absolute inset-0 bg-gradient-to-r from-black via-transparent to-transparent"></div>
+            <div class="absolute inset-0 flex items-center justify-center p-20">
+                <h1 class="text-[10vw] font-black italic text-white/5 uppercase">FUTURE</h1>
+            </div>
+        </div>
+        <div class="content-side">
+            <span class="step-label">Moffi Strategic Workshop 2026</span>
+            <h1 class="text-8xl font-black mb-8 leading-tight">Mastering<br><span class="text-gradient">The Passport.</span></h1>
+            <p class="text-xl text-white/50 leading-relaxed mb-12 slide-up">
+                Bu sunum, Moffi Dijital Pasaport'un sadece bir "arayüz" olmadığını, pet sahipleri ve hekimler arasında kurulan **yıkılmaz bir veri köprüsü** olduğunu teknik ve stratejik kanıtlarıyla sunar.
+            </p>
+            <div class="p-8 border border-white/5 rounded-3xl bg-white/5 slide-up">
+                <p class="text-xs uppercase tracking-widest font-black text-emerald-500 mb-2">Presentation Content</p>
+                <ul class="text-sm space-y-2 opacity-60">
+                    <li>→ Teknik Altyapı ve Güvenlik</li>
+                    <li>→ Hekim Kazanım Stratejisi (Win-Win)</li>
+                    <li>→ KVKK ve Hukuki Temeller</li>
+                    <li>→ Global Vizyon & Blockchain</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- 02: THE PAIN (DEPTH) -->
+    <div class="slide" data-index="2">
+        <div class="visual-side">
+            <img src="https://images.unsplash.com/photo-1576201836106-db1758fd1c97?q=80&w=2000" class="w-full h-full object-cover opacity-30">
+            <div class="absolute inset-x-0 bottom-20 px-20">
+                <div class="glass p-10">
+                    <p class="text-3xl font-black italic">"Yıllık pasaport kaybı oranı: %15. Kaybolan verinin geri dönüşü: %0."</p>
+                </div>
+            </div>
+        </div>
+        <div class="content-side">
+            <span class="step-label">Derin Analiz: Problem</span>
+            <h2 class="text-6xl font-bold mb-12">Neden Çözmeliyiz?</h2>
+            <div class="space-y-10 slide-up">
+                <div>
+                    <h4 class="text-emerald-500 font-bold mb-2">1. Veri Körlüğü (Data Blindness)</h4>
+                    <p class="text-sm opacity-50">Bir veteriner, hastasının son 1 yılda ne yediğini, kaç saat uyuduğunu veya hangi klinikte hangi ilacı aldığını bilmiyor. Bu Körlük, yanlış teşhis ve maliyetli tedavilere yol açıyor.</p>
+                </div>
+                <div>
+                    <h4 class="text-emerald-500 font-bold mb-2">2. Güven Erezyonu</h4>
+                    <p class="text-sm opacity-50">Kâğıt karnedeki bilgiler manipülasyona açıktır. Özellikle pet satışlarında veya seyahatlerde "fake" kayıt riski her zaman bir tehdittir.</p>
+                </div>
+                <div>
+                    <h4 class="text-emerald-500 font-bold mb-2">3. Hukuki Zayıflık</h4>
+                    <p class="text-sm opacity-50">Çalınma veya mülkiyet tartışmalarında kâğıt belgeler kolayca yok edilebilir veya değiştirilebilir.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 03: TECHNICAL ARCHITECTURE -->
+    <div class="slide" data-index="3">
+        <div class="visual-side p-20 flex flex-col justify-center gap-6">
+             <div class="p-8 glass">
+                <p class="text-xs text-emerald-500 font-black mb-4 uppercase">Data Flow Logic</p>
+                <div class="space-y-6">
+                    <div class="flex items-center gap-4">
+                        <div class="w-3 h-3 bg-white rounded-full"></div>
+                        <div class="h-[2px] flex-1 bg-white/20"></div>
+                        <div class="w-10 h-10 border border-emerald-500 rounded-lg flex items-center justify-center">🩺</div>
+                    </div>
+                    <div class="text-[10px] opacity-40">Veteriner Hekim Onaylı Veri Girişi (Certified Input)</div>
+                    <div class="flex items-center gap-4">
+                         <div class="w-10 h-10 border border-emerald-500 rounded-lg flex items-center justify-center">📲</div>
+                        <div class="h-[2px] flex-1 bg-white/20"></div>
+                        <div class="w-3 h-3 bg-emerald-500 rounded-full shadow-[0_0_10px_#22C55E]"></div>
+                    </div>
+                     <div class="text-[10px] opacity-40">Push-to-Passport (Real-time Sync)</div>
+                </div>
+             </div>
+        </div>
+        <div class="content-side">
+            <span class="step-label">Teknik Mimari</span>
+            <h2 class="text-6xl font-bold mb-8">Nasıl Çalışır?</h2>
+            <div class="grid grid-cols-2 gap-8 slide-up">
+                <div class="space-y-4">
+                    <h5 class="font-bold text-lg">Holographic Rendering</h5>
+                    <p class="text-xs opacity-50">Önyüzde Apple-style WebGL ve Shaders kullanarak taklit edilemez bir görsel derinlik sağlıyoruz. Bu sadece estetik değil, bir "Güven Simgesi".</p>
+                </div>
+                <div class="space-y-4">
+                    <h5 class="font-bold text-lg">Hash Verification</h5>
+                    <p class="text-xs opacity-50">Her veteriner onayı, arkada tekil bir SHA-256 hash kodu üretir. Veri üzerinde oynama yapıldığı an bu imza bozulur.</p>
+                </div>
+                <div class="space-y-4">
+                    <h5 class="font-bold text-lg">Hybrid Tag Integration</h5>
+                    <p class="text-xs opacity-50">NFC ve QR teknolojisiyle pasaport fiziksel olan "Moffi Smart Tag" ile senkronize çalışır. Künye taranınca en güncel pasaport verisi açılır.</p>
+                </div>
+                <div class="space-y-4">
+                    <h5 class="font-bold text-lg">Offline Cache</h5>
+                    <p class="text-xs opacity-50">Acil bir durumda internet olmasa dahi, pasaportun son mühürlü hali telefonun güvenli alanında (Local Secure Cache) saklanır.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 04: VET WIN-WIN STRATEGY -->
+    <div class="slide" data-index="4">
+        <div class="visual-side">
+             <img src="/presentation/images/passport_mockup.png" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] rotate-12 opacity-20">
+             <div class="absolute inset-0 flex items-center justify-center p-20">
+                 <div class="text-center">
+                    <h2 class="text-9xl font-black italic text-emerald-500 mb-4">WIN²</h2>
+                    <p class="text-xs uppercase tracking-[1em] opacity-40">The Business Logic</p>
+                 </div>
+             </div>
+        </div>
+        <div class="content-side">
+            <span class="step-label">Strateji: Win-Win</span>
+            <h2 class="text-6xl font-bold mb-12">Hekimlerin Masadaki Kazancı.</h2>
+            <div class="space-y-6 slide-up text-sm">
+                <div class="p-6 glass border-l-4 border-emerald-500">
+                    <h4 class="font-black text-white mb-2 uppercase tracking-wide italic">Mali Verimlilik</h4>
+                    <p class="opacity-50">Moffi Otomatik Randevu Sistemi, aşı randevu kaçaklarını %25 oranında azaltır. Bu, kliniğin doğrudan kârlılığını artırır.</p>
+                </div>
+                <div class="p-6 glass">
+                    <h4 class="font-black text-white mb-2 uppercase tracking-wide">Operasyonel Hız</h4>
+                    <p class="opacity-50">Hekimler, petin tüm geçmişine kalem-kağıt karıştırmadan 1 saniyede ulaşır. Hasta başına harcanan "bürokrasi" süresi %60 düşer.</p>
+                </div>
+                <div class="p-6 glass">
+                    <h4 class="font-black text-white mb-2 uppercase tracking-wide">E-Ticaret ve Beslenme</h4>
+                    <p class="opacity-50">Moffi Pasaportundaki mama tüketim verileri sayesinde hekim, pati sahibine tam zamanında ve doğru mama önerisinde bulunarak klinikteki ürün satışlarını artırır.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 05: LEGAL & PRIVACY (KVKK) -->
+    <div class="slide" data-index="5">
+        <div class="visual-side flex items-center justify-center">
+            <div class="relative">
+                <div class="w-64 h-64 border-2 border-emerald-500/20 rounded-full animate-ping absolute -inset-4"></div>
+                <div class="w-64 h-64 border border-emerald-500 rounded-full flex items-center justify-center p-10 text-center">
+                    <p class="text-[10px] font-black uppercase tracking-widest text-emerald-500">100% KVKK Compliant Ecosystem</p>
+                </div>
+            </div>
+        </div>
+        <div class="content-side">
+            <span class="step-label">Hukuk ve Gizlilik</span>
+            <h2 class="text-6xl font-bold mb-12">Yasal Zemin.</h2>
+            <div class="grid grid-cols-1 gap-12 slide-up">
+                 <div class="space-y-4">
+                    <h4 class="text-xl font-bold">Veri Sorumluluğu</h4>
+                    <p class="text-sm opacity-50">Moffi, 6698 sayılı KVKK uyarınca "Veri İşleyen" (Data Processor) sıfatındadır. Veriler, hekim onayıyla ve kullanıcı rızasıyla uçtan uca şifreli (End-to-End Encrypted) saklanır.</p>
+                </div>
+                 <div class="space-y-4">
+                    <h4 class="text-xl font-bold">Kamu Otoritesiyle İlişki</h4>
+                    <p class="text-sm opacity-50">Pasaportumuz bir "Kişisel Sağlık Kaydı" (PHR) sistemidir. PETVET gibi resmi sistemlere rakip değil, tıpkı "E-Nabız" gibi, resmi verinin sivil hayatta kullanılabilir ve taşınabilir versiyonudur.</p>
+                </div>
+                <div class="p-8 bg-blue-500/10 rounded-3xl border border-blue-500/20">
+                    <p class="text-[10px] font-black text-blue-400 uppercase mb-2 italic tracking-widest">Important Note for the Board</p>
+                    <p class="text-xs italic opacity-60">"Moffi, kullanıcının verisini satmaz. Moffi, verinin yarattığı 'Güven' ve 'Hizmet Akışı' üzerinden bir premium ekonomi oluşturur."</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 06: FUTURE VISION (DEEP) -->
+    <div class="slide" data-index="6">
+        <div class="visual-side">
+            <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2000" class="w-full h-full object-cover">
+            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+                 <h2 class="text-[8vw] font-black tracking-tighter italic text-emerald-500/20">BEYOND</h2>
+            </div>
+        </div>
+        <div class="content-side">
+            <span class="step-label">The Vision Lab</span>
+            <h2 class="text-6xl font-bold mb-16 italic">Gelecek Vizyonları.</h2>
+            <div class="grid grid-cols-2 gap-x-12 gap-y-16 slide-up">
+                <div class="relative pl-12 border-l border-emerald-500">
+                    <h5 class="text-xl font-black mb-2 italic">Moffi AI Diagnostics</h5>
+                    <p class="text-xs opacity-40">Pasaporttaki aşı, yaş ve aktivite verilerini anonim olarak işleyen AI, potansiyel sağlık risklerini (örneğin eklem rahatsızlıkları) belirtiler başlamadan hekime raporlar.</p>
+                </div>
+                 <div class="relative pl-12 border-l border-emerald-500">
+                    <h5 class="text-xl font-black mb-2 italic">Global Pet Pass</h5>
+                    <p class="text-xs opacity-40">Sınır ötesi seyahatlerde, havayolu şirketlerinin doğrudan Moffi veri tabanına bağlanarak "Uçuşa Uygundur" onayını tek saniyede vereceği küresel bir ağ.</p>
+                </div>
+                 <div class="relative pl-12 border-l border-emerald-500">
+                    <h5 class="text-xl font-black mb-2 italic">Blockchain Identity</h5>
+                    <p class="text-xs opacity-40">Petin doğumundan itibaren tüm yaşam verisinin NFT tabanlı bir "Life-Chain"e işlenmesi. Safkan belgesi ve şecere hırsızlığının tamamen bitmesi.</p>
+                </div>
+                 <div class="relative pl-12 border-l border-emerald-500">
+                    <h5 class="text-xl font-black mb-2 italic">Smart Collar Sync</h5>
+                    <p class="text-xs opacity-40">Pasaporttaki tıbbi verilerle Moffi Smart Tag'in anlık nabız ve stres verilerinin birleşmesiyle oluşan 360 derece canlı sağlık pasaportu.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 07: CLOSING -->
+    <div class="slide" data-index="7">
+        <div class="visual-side flex items-center justify-center">
+             <div class="bg-emerald-500 w-1/2 aspect-square rounded-[3rem] shadow-[0_0_100px_#22C55E] flex flex-col items-center justify-center text-black p-12 text-center">
+                <h1 class="text-8xl font-black italic uppercase leading-none mb-4">YES!</h1>
+                <p class="font-black text-sm uppercase tracking-widest leading-tight">Bu Geleceği<br>Biz İnşa Ediyoruz.</p>
+             </div>
+        </div>
+        <div class="content-side flex flex-col justify-center">
+            <span class="step-label">Teşekkürler & Soru-Cevap</span>
+            <h2 class="text-7xl font-bold mb-8">Pazarı Yönetmeye Hazır Mısınız?</h2>
+            <p class="text-2xl text-white/40 mb-12 italic leading-relaxed">
+                "Moffi bir uygulama değil, pet dünyasının yeni iletişim ve güven standardıdır. Ekip olarak bu pasaportu hayata geçirdiğimizde, sadece bir özellik eklemiş olmayacağız; pet sektöründe yeni bir devir başlatacağız."
+            </p>
+             <button onclick="window.print()" class="w-fit px-12 py-5 bg-white text-black font-black uppercase text-xs rounded-full tracking-[0.4em] hover:scale-105 active:scale-95 transition-all shadow-2xl">
+                Vizyon Belgesini İndir (PDF)
+            </button>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn" onclick="downloadPresentation()" title="Sunumu İndir">💾</button>
+        <button class="btn" id="voiceBtn" title="Sesli Anlatım">🔊</button>
+        <button class="btn" id="prevBtn">←</button>
+        <button class="btn" id="nextBtn">→</button>
+    </div>
+
+    <script>
+        let currentSlide = 1;
+        const totalSlides = 7;
+        let isVoiceEnabled = false;
+        const synth = window.speechSynthesis;
+
+        const narrations = {
+            1: "Moffi 2026 Stratejik Master Deck sunumuna hoş geldiniz. Bugün sadece bir uygulama özelliğini değil, evcil hayvan dünyasının yeni dijital anayasasını konuşacağız. Dijital pasaport, pet sahipleri ile veteriner hekimler arasındaki o soğuk ve kopuk veri akışını, Apple estetiğinde ve yüksek güvenirlikte bir köprüye dönüştürüyor.",
+            2: "Mevcut düzen tam bir veri kaosuna hapsolmuş durumda. Her yıl pet pasaportlarının yüzde 15'i fiziksel olarak kayboluyor ve bu veriler asla geri gelmiyor. Hekimler, hastalarının geçmişini bilmedikleri için veri körlüğü yaşıyor. Bu durum yanlış teşhis riskini artırırken, mülkiyet tartışmalarında da hukuksal bir zayıflık yaratıyor. Kağıt karnelerin manipülasyona açık yapısı, modern dünyada kabul edilemez bir risk faktörüdür.",
+            3: "Moffi Dijital Pasaport, bu kaosu ileri teknolojiyle çözüyor. Önyüzde kullandığımız holografik rendering, belgeye taklit edilemez bir görsel derinlik katarken; arka planda her veteriner onayı için özel bir SHA-256 hash imzası oluşturuyoruz. Bu sayede veri üzerinde oynama yapıldığı an sistem uyarı veriyor. Hibrit tag teknolojimizle de, fiziksel künye taranır taranmaz en güncel dijital veriler saniyeler içinde hekimin ekranına düşüyor.",
+            4: "Veteriner hekimler için Moffi, bir kazan-kazan stratejisidir. Biz hekimlere sadece bir sağlık kaydı değil, modern bir müşteri yönetim sistemi sunuyoruz. Otomatik hatırlatıcılar sayesinde aşı randevu kaçakları yüzde 25 azalırken, klinikler doğrudan mali verimlilik sağlıyor. Manuel defter tutma yükü yüzde 60 oranında düşüyor ve hekimler petlerin beslenme verilerine ulaşarak doğru mama ve ürün satışlarını, yani klinik içi e-ticareti artırabiliyorlar.",
+            5: "Yasal zeminimiz sarsılmaz bir temel üzerine kurulu. Moffi, KVKK uyarınca veriyi uçtan uca şifreli işleyen güvenli bir platformdur. Devletin zorunlu kıldığı resmî sistemlere rakip değiliz; aksine tıpkı insanlardaki E-Nabız gibi, resmî verinin sivil hayatta taşınabilir ve pratik hale gelmiş versiyonuyuz. Pet-otellerden havayollarına kadar her yerde, Moffi Onaylı Mührü'nün yarattığı o yüksek güven ekonomisinden bahsediyoruz.",
+            6: "Gelecek vizyonumuz pasaportla bitmiyor. Yapay zeka destekli teşhis asistanımız, pasaport verilerini anonim olarak analiz ederek potansiyel hastalık risklerini erkenden tahmin edecek. Global seyahat ağımızla havayolu şirketlerine doğrudan veri kapısı açacağız. Blockchain Life-Chain teknolojimizle de petlerin tüm yaşam kronolojisini NFT tabanlı bir kimliğe dönüştürerek, piyasadaki safkan belgesi ve şecere hırsızlığını tamamen ortadan kaldıracağız.",
+            7: "Sonuç olarak Moffi, bir uygulamadan çok daha fazlası; pet dünyasının yeni iletişim ve güven standardıdır. Geleceği tasarlamayı bitirdik, şimdi onu yaşama ve pazarı domine etme zamanı. Bu vizyonu gerçeğe dönüştürmek için ekibimizdeki her bir arkadaşımızın bu stratejiye sahip çıkması kritik öneme sahip. Dinlediğiniz için teşekkürler, şimdi sorularınızla bu vizyonu daha da derinleştirelim."
+        };
+
+        function speak(text) {
+            if (!isVoiceEnabled) return;
+            synth.cancel();
+
+            // Metni daha akıcı ve kesilmeden okumak için parçalara ayırma (Chunking)
+            const chunks = text.match(/[^.!?]+[.!?]+/g) || [text];
+            let currentChunk = 0;
+
+            function speakNextChunk() {
+                if (currentChunk >= chunks.length || !isVoiceEnabled) return;
+
+                const utter = new SpeechSynthesisUtterance(chunks[currentChunk]);
+                
+                // En iyi Türkçe sesi bulma
+                const voices = synth.getVoices();
+                const trVoice = voices.find(v => v.lang.includes('tr')) || voices[0];
+                
+                utter.voice = trVoice;
+                utter.lang = 'tr-TR';
+                utter.rate = 1.0;
+                utter.pitch = 1.0;
+
+                // Chrome'daki uzun metin kesilme hatasını önlemek için "Keep-Alive"
+                const timer = setInterval(() => {
+                    if (synth.speaking) {
+                        synth.pause();
+                        synth.resume();
+                    } else {
+                        clearInterval(timer);
+                    }
+                }, 10000);
+
+                utter.onend = () => {
+                    clearInterval(timer);
+                    currentChunk++;
+                    speakNextChunk();
+                };
+
+                synth.speak(utter);
+            }
+
+            speakNextChunk();
+        }
+
+        function updateSlides() {
+            document.querySelectorAll('.slide').forEach(s => {
+                const idx = parseInt(s.dataset.index);
+                s.classList.remove('active');
+                if (idx === currentSlide) s.classList.add('active');
+            });
+            document.getElementById('progress').style.width = `${(currentSlide / totalSlides) * 100}%`;
+            document.querySelectorAll('.dot').forEach((d, i) => {
+                d.classList.remove('active');
+                if (i + 1 === currentSlide) d.classList.add('active');
+            });
+
+            if (isVoiceEnabled) {
+                setTimeout(() => speak(narrations[currentSlide]), 600);
+            }
+        }
+
+        document.getElementById('voiceBtn').addEventListener('click', () => {
+            isVoiceEnabled = !isVoiceEnabled;
+            document.getElementById('voiceBtn').innerHTML = isVoiceEnabled ? '🔇' : '🔊';
+            document.getElementById('voiceBtn').style.background = isVoiceEnabled ? 'var(--accent)' : 'rgba(255,255,255,0.1)';
+            if (isVoiceEnabled) speak(narrations[currentSlide]);
+            else synth.cancel();
+        });
+
+        // Çevrimdışı Kullanım İçin Sunumu İndir
+        function downloadPresentation() {
+            const html = document.documentElement.outerHTML;
+            const blob = new Blob([html], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Moffi_Passport_Vision_Master.html';
+            a.click();
+        }
+
+        const dotsContainer = document.getElementById('dots');
+        for (let i = 1; i <= totalSlides; i++) {
+            const dot = document.createElement('div');
+            dot.className = 'dot' + (i === 1 ? ' active' : '');
+            dot.onclick = () => { currentSlide = i; updateSlides(); };
+            dotsContainer.appendChild(dot);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') { if (currentSlide < totalSlides) currentSlide++; updateSlides(); }
+            if (e.key === 'ArrowLeft') { if (currentSlide > 1) currentSlide--; updateSlides(); }
+        });
+
+        let lastScroll = 0;
+        document.addEventListener('wheel', (e) => {
+            const now = Date.now();
+            if (now - lastScroll < 1000) return;
+            if (Math.abs(e.deltaY) < 30) return;
+            if (e.deltaY > 0) { if (currentSlide < totalSlides) currentSlide++; updateSlides(); lastScroll = now; }
+            else { if (currentSlide > 1) currentSlide--; updateSlides(); lastScroll = now; }
+        });
+
+        // Ses dosyalarını yüklemek için bir saniye bekle
+        window.speechSynthesis.onvoiceschanged = () => { console.log("Voices loaded"); };
+    </script>
+</body>
+</html>

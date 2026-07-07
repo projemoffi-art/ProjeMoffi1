@@ -60,12 +60,12 @@ export default function CheckoutPage() {
     };
 
     if (isLoading) {
-        return <div className="min-h-screen bg-[#000000] flex items-center justify-center"><Sparkles className="w-8 h-8 text-cyan-500 animate-spin" /></div>;
+        return <div className="min-h-screen flex items-center justify-center"><Sparkles className="w-8 h-8 text-cyan-500 animate-spin" /></div>;
     }
 
     if (orderComplete) {
         return (
-            <main className="min-h-screen bg-[#000000] flex flex-col items-center justify-center text-center p-6 relative overflow-hidden">
+            <main className="min-h-screen flex flex-col items-center justify-center text-center p-6 relative overflow-hidden">
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/20 blur-[100px] rounded-full" />
                 <motion.div 
                     initial={{ scale: 0.8, opacity: 0 }}
@@ -89,7 +89,7 @@ export default function CheckoutPage() {
 
     if (cart.length === 0) {
         return (
-            <main className="min-h-screen bg-[#000000] flex flex-col items-center justify-center text-center p-6">
+            <main className="min-h-screen flex flex-col items-center justify-center text-center p-6">
                 <div className="w-32 h-32 bg-white/5 border border-card-border rounded-full flex items-center justify-center mb-8">
                     <ShoppingBag className="w-12 h-12 text-white/20" />
                 </div>
@@ -106,7 +106,7 @@ export default function CheckoutPage() {
     }
 
     return (
-        <main className="min-h-screen bg-[#000000] text-white p-6 md:p-12 font-sans selection:bg-cyan-500/30">
+        <main className="min-h-screen p-6 md:p-12 font-sans selection:bg-cyan-500/30">
             {/* Ambient Backgrounds */}
             <div className="fixed inset-0 pointer-events-none z-0">
                 <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-cyan-500/10 blur-[150px] opacity-50" />

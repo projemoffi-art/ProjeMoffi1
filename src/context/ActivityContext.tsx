@@ -49,8 +49,7 @@ interface ActivityContextType {
     setOrderStep: React.Dispatch<React.SetStateAction<number>>;
     isLoading: boolean;
     refreshWalkData: () => Promise<void>;
-    isWalkSimulation: boolean;
-    setIsWalkSimulation: (sim: boolean) => void;
+    // Simulation settings removed
 }
 
 const ActivityContext = createContext<ActivityContextType | undefined>(undefined);
@@ -109,31 +108,10 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
     const [orderStep, setOrderStep] = useState(2); // 1: Prep, 2: Courier, 3: Delivered
     const [isLoaded, setIsLoaded] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [isWalkSimulation, setIsWalkSimulationState] = useState<boolean>(false);
 
-    // Load simulation setting on mount
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const stored = localStorage.getItem('moffi_walk_simulation');
-            if (stored !== null) {
-                setIsWalkSimulationState(stored === 'true');
-            } else {
-                const defaultSim = localStorage.getItem('moffi_force_mock') === 'true' || 
-                                   process.env.NEXT_PUBLIC_FORCE_MOCK === 'true';
-                setIsWalkSimulationState(defaultSim);
-            }
-        }
-    }, []);
-
-    const setIsWalkSimulation = (sim: boolean) => {
-        setIsWalkSimulationState(sim);
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('moffi_walk_simulation', String(sim));
-        }
-    };
-    
     const walkTimerRef = useRef<NodeJS.Timeout | null>(null);
-    const watchIdRef = useRef<number | null>(null);
+    const watchIdRef = React.useRef<number | null>(null);
+    const lastPosTimestampRef = React.useRef<number>(0);
     const recInterval = useRef<NodeJS.Timeout | null>(null);
 
     // Mapper function to support both Local and Backend WalkSession formats
@@ -337,35 +315,14 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
                     setWalkData(prev => {
                         const nextTime = prev.time + 1;
                         
-                        if (isWalkSimulation) {
-                            const distDelta = 1.35; // ~1.35 meters/second (approx 4.86 km/h)
-                            const nextDist = prev.distance + distDelta;
-                            const nextSpeed = 4.86 + Math.sin(nextTime / 8) * 0.3; // slightly variable speed
-                            
-                            const lastCoord = prev.path && prev.path.length > 0 
-                                ? prev.path[prev.path.length - 1] 
-                                : [40.9723, 29.0531] as [number, number]; // Caddebostan fallback
-                            
-                            const nextLat = lastCoord[0] + 0.000012 * Math.cos(nextTime * 0.04);
-                            const nextLng = lastCoord[1] + 0.000012 * Math.sin(nextTime * 0.04);
-                            
-                            return {
-                                ...prev,
-                                time: nextTime,
-                                distance: nextDist,
-                                speed: nextSpeed,
-                                path: [...prev.path, [nextLat, nextLng]]
-                            };
-                        } else {
-                            // Real GPS: only update timer seconds
-                            return { ...prev, time: nextTime };
-                        }
+                        // Real GPS: only update timer seconds
+                        return { ...prev, time: nextTime };
                     });
                 }, 1000);
             }
 
-            // 2. Start GPS Tracking (Only if not simulating)
-            if (!isWalkSimulation && !watchIdRef.current && navigator.geolocation) {
+            // 2. Start GPS Tracking
+            if (!watchIdRef.current && navigator.geolocation) {
                 watchIdRef.current = navigator.geolocation.watchPosition(
                     (pos) => {
                         const { latitude, longitude, speed: gpsSpeed } = pos.coords;
@@ -373,7 +330,7 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
 
                         setWalkData(prev => {
                             const currentPath = Array.isArray(prev.path) ? prev.path : [];
-                            const newPath = [...currentPath, newCoord];
+                            let newPath = currentPath;
                             let newDistance = prev.distance || 0;
                             let currentSpeed = 0;
 
@@ -381,19 +338,35 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
                                 const lastCoord = currentPath[currentPath.length - 1];
                                 const distDelta = calculateDistance(lastCoord[0], lastCoord[1], latitude, longitude);
                                 
-                                // Only add if movement is more than 2 meters (filters GPS drift noise when standing still)
-                                if (distDelta > 2) {
+                                const timeDeltaMs = pos.timestamp - lastPosTimestampRef.current;
+                                let calcSpeedKmH = 0;
+                                if (timeDeltaMs > 0 && lastPosTimestampRef.current > 0) {
+                                    calcSpeedKmH = (distDelta / (timeDeltaMs / 1000)) * 3.6;
+                                }
+
+                                // Gelişmiş GPS Drift Kalkanı (Desktop Sapmalarını Önleme):
+                                // 1. En az 15 metre hareket etmiş olmalı.
+                                // 2. İmkansız hızlarda (ör. 25 km/h üstü) sıçrama olmamalı (GPS zıplamasıdır).
+                                if (distDelta > 15 && calcSpeedKmH < 25) {
+                                    newPath = [...currentPath, newCoord];
                                     newDistance += distDelta;
-                                    currentSpeed = gpsSpeed ? (gpsSpeed * 3.6) : (distDelta * 3.6); 
+                                    
+                                    currentSpeed = gpsSpeed && gpsSpeed > 0 ? (gpsSpeed * 3.6) : calcSpeedKmH;
+                                    lastPosTimestampRef.current = pos.timestamp;
                                     
                                     // Sync coordinate to server if online
                                     if (prev.sessionId && navigator.onLine) {
                                         apiService.updateWalkLocation(prev.sessionId, latitude, longitude)
                                             .catch(err => console.error("Error updating GPS location on DB:", err));
                                     }
+                                } else {
+                                    // Eğer hareket 3 metreden azsa veya imkansız bir sıçramaysa hızı sıfırla
+                                    currentSpeed = 0;
                                 }
                             } else {
-                                // First coordinate
+                                // İlk koordinat
+                                newPath = [newCoord];
+                                lastPosTimestampRef.current = pos.timestamp;
                                 if (prev.sessionId && navigator.onLine) {
                                     apiService.updateWalkLocation(prev.sessionId, latitude, longitude)
                                         .catch(err => console.error("Error updating initial GPS location on DB:", err));
@@ -428,7 +401,7 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
             if (walkTimerRef.current) clearInterval(walkTimerRef.current);
             if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
         };
-    }, [walkData.isActive, walkData.isPaused, isLoaded, isWalkSimulation]);
+    }, [walkData.isActive, walkData.isPaused, isLoaded]);
 
     // Global Voice Rec Logic
     useEffect(() => {
@@ -450,8 +423,7 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
             orderStep, setOrderStep,
             isLoading,
             refreshWalkData,
-            isWalkSimulation,
-            setIsWalkSimulation
+
         }}>
             {children}
         </ActivityContext.Provider>

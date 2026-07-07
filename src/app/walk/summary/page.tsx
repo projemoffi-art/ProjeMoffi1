@@ -92,7 +92,7 @@ function WalkSummaryContent() {
     }, []);
 
     return (
-        <main className="min-h-screen bg-[#F8FAFC] dark:bg-[#0B0F19] relative overflow-hidden font-sans flex flex-col items-center justify-center">
+        <main className="min-h-screen relative overflow-hidden font-sans flex flex-col items-center justify-center">
 
             {/* 1. DYNAMIC AURA BACKGROUND (3 LAYERS) */}
             <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
@@ -354,7 +354,7 @@ function WalkSummaryContent() {
 
 export default function WalkSummaryPage() {
     return (
-        <Suspense fallback={<div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">Yükleniyor...</div>}>
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Yükleniyor...</div>}>
             <WalkSummaryContent />
         </Suspense>
     );

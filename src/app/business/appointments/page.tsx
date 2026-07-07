@@ -672,7 +672,7 @@ export default function BusinessAppointmentsPage() {
     };
 
     return (
-        <div className="flex min-h-screen bg-[#F8F9FC] dark:bg-[#000000] font-sans">
+        <div className="flex min-h-screen font-sans">
             <Sidebar />
 
             <main className="flex-1 p-8 ml-0 md:ml-20 lg:ml-72 transition-all duration-300">

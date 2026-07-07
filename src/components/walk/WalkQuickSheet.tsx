@@ -16,6 +16,7 @@ import { useWeather } from "@/context/WeatherContext";
 import { useQuestEngine, type Quest } from "@/context/QuestEngineContext";
 import confetti from "canvas-confetti";
 import { WeatherDetailSheet } from "./WeatherDetailSheet";
+import { supabase } from "@/lib/supabase";
 
 interface WalkQuickSheetProps {
     isOpen: boolean;
@@ -310,14 +311,14 @@ function WeatherSphereEffect({ condition, temp, windSpeed = 5 }: { condition: st
 
                     {/* Flying Birds */}
                     <motion.div
-                        className="absolute top-[20%] text-slate-800/20 w-8 h-8 pointer-events-none"
+                        className="absolute top-[20%] text-slate-800 dark:text-slate-100/20 w-8 h-8 pointer-events-none"
                         animate={{ x: ["-100vw", "100vw"], y: [0, -15, 5, -10, 0] }}
                         transition={{ repeat: Infinity, duration: 25 / windMultiplier, ease: "linear" }}
                     >
                         <BirdSVG />
                     </motion.div>
                     <motion.div
-                        className="absolute top-[25%] text-slate-800/15 w-6 h-6 pointer-events-none"
+                        className="absolute top-[25%] text-slate-800 dark:text-slate-100/15 w-6 h-6 pointer-events-none"
                         animate={{ x: ["-100vw", "100vw"], y: [5, -5, 10, -5, 5] }}
                         transition={{ repeat: Infinity, duration: 28 / windMultiplier, ease: "linear", delay: 2 }}
                     >
@@ -953,7 +954,7 @@ function DoubleRingDome({
             </div>
             
             <div className="mt-4 px-3.5 py-1.5 bg-white/80 backdrop-blur-md rounded-full shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-white/60 flex items-center justify-center">
-                <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest leading-none italic">{activePet?.name || "Luna"}</h4>
+                <h4 className="text-xs font-black text-slate-800 dark:text-slate-100 uppercase tracking-widest leading-none italic">{activePet?.name || "Luna"}</h4>
             </div>
             {walkData.isActive && (
                 <div className="flex items-center gap-1.5 mt-2 px-2.5 py-1 bg-emerald-500/10 backdrop-blur-md border border-emerald-500/20 rounded-full shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
@@ -994,7 +995,7 @@ function QuestBar({ quest }: { quest: Quest }) {
             <div className="flex items-start gap-3.5 relative z-10">
                 <div className={cn(
                     "w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0 mt-0.5 shadow-[0_4px_10px_rgba(0,0,0,0.02)]",
-                    isCompleted ? "bg-emerald-100 text-emerald-800" : "bg-slate-50"
+                    isCompleted ? "bg-emerald-100 text-emerald-800" : "bg-slate-50 dark:bg-white/5"
                 )}>
                     {isCompleted ? "✅" : quest.icon}
                 </div>
@@ -1003,7 +1004,7 @@ function QuestBar({ quest }: { quest: Quest }) {
                     <div className="flex items-center justify-between mb-0.5">
                         <span className={cn(
                             "text-xs font-black uppercase tracking-tight leading-none",
-                            isCompleted ? "text-emerald-700 line-through opacity-60" : "text-slate-800"
+                            isCompleted ? "text-emerald-700 line-through opacity-60" : "text-slate-800 dark:text-slate-100"
                         )}>
                             {quest.title}
                         </span>
@@ -1019,7 +1020,7 @@ function QuestBar({ quest }: { quest: Quest }) {
 
                     {/* Progress bar */}
                     <div className="flex items-center gap-2">
-                        <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="flex-1 h-1.5 bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden">
                             <motion.div
                                 className={cn("h-full rounded-full", isCompleted ? "bg-emerald-500" : `bg-gradient-to-r ${c.bar}`)}
                                 initial={{ width: 0 }}
@@ -1046,13 +1047,11 @@ function QuestBar({ quest }: { quest: Quest }) {
 export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
     const router = useRouter();
     const { 
-        walkData, walkStats, startWalk, stopWalk,
-        isWalkSimulation, setIsWalkSimulation
+        walkData, walkStats, startWalk, stopWalk
     } = useActivity();
     const { activePet } = usePet();
     const { weather, isLoading: weatherLoading } = useWeather();
-    const [weatherOverride, setWeatherOverride] = React.useState<any>(null);
-    const activeWeather = weatherOverride || weather;
+    const activeWeather = weather;
     const [isWeatherDetailOpen, setIsWeatherDetailOpen] = React.useState(false);
     const { dailyQuests, dailyGoal, todayEarned, level } = useQuestEngine();
     const [activeTab, setActiveTab] = React.useState<'controls' | 'stats' | 'map'>('controls');
@@ -1079,18 +1078,64 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
     const [selectedRoute, setSelectedRoute] = React.useState(MOCK_ROUTES[0]);
     const [activeRoute, setActiveRoute] = React.useState<any>(null);
 
+    // Hibrit Hedef Sistemi (Akıllı Özel Hedef)
+    const initialCustomTarget = React.useMemo(() => {
+        if (walkStats && walkStats.totalWalks > 0 && walkStats.totalDistanceKm) {
+            // Gerçek verilere dayalı akıllı öneri (Geçmiş ortalamaya göre + 0.5km teşvik)
+            return parseFloat((Math.max(1.0, (walkStats.totalDistanceKm / walkStats.totalWalks) + 0.5)).toFixed(1));
+        }
+        return 3.0; // Fallback
+    }, [walkStats]);
+
+    const [customTargetKm, setCustomTargetKm] = React.useState(3.0);
+    const [isCustomTargetEnabled, setIsCustomTargetEnabled] = React.useState(false);
+
+    // Initial load logic only once when walkStats arrive
+    React.useEffect(() => {
+        if (walkStats && customTargetKm === 3.0) {
+            setCustomTargetKm(initialCustomTarget);
+        }
+    }, [initialCustomTarget]);
+
     // Hazırlık checklist'i state'leri
     const [checkedItems, setCheckedItems] = React.useState({ poopBag: false, water: false, leash: false });
     const checklistComplete = checkedItems.poopBag && checkedItems.water && checkedItems.leash;
 
-    // Davet durumları
-    const [isInviting, setIsInviting] = React.useState(false);
-    const [inviteSent, setInviteSent] = React.useState(false);
+    // Load checklist from localStorage
+    React.useEffect(() => {
+        const savedChecklist = localStorage.getItem('moffi_walk_checklist');
+        if (savedChecklist) {
+            try { setCheckedItems(JSON.parse(savedChecklist)); } catch {}
+        }
+    }, []);
+
+    // Save checklist whenever it changes
+    React.useEffect(() => {
+        localStorage.setItem('moffi_walk_checklist', JSON.stringify(checkedItems));
+    }, [checkedItems]);
+
+
+
+    // Dinamik Lig Sıralaması
+    const globalRank = React.useMemo(() => {
+        if (!level) return 6; // Default
+        // Seviye ve seriye (streak) göre deterministik ama dinamik bir sıra
+        // Yüksek level = Düşük sıra (Daha iyi)
+        const baseRank = Math.max(1, 100 - (level * 2) - (walkStats?.currentStreak || 0));
+        return baseRank;
+    }, [level, walkStats?.currentStreak]);
 
     // Sürgü (Swipe-to-Start) referans ve koordinatları
     const sliderTrackRef = React.useRef<HTMLDivElement>(null);
     const [maxDrag, setMaxDrag] = React.useState(200);
     const dragX = useMotionValue(0);
+
+    // Yürüyüş durdurulduğunda sürgüyü başa sar
+    React.useEffect(() => {
+        if (!walkData.isActive) {
+            dragX.set(0);
+        }
+    }, [walkData.isActive, dragX]);
 
     // Kayıtlı rotayı yükle
     React.useEffect(() => {
@@ -1118,28 +1163,6 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
             setMaxDrag(sliderTrackRef.current.clientWidth - 52);
         }
     }, [isOpen, walkData.isActive]);
-
-    // Davet gönderme simulasyonu
-    const handleSendInvite = () => {
-        if (isInviting || inviteSent) return;
-        setIsInviting(true);
-        setTimeout(() => {
-            setIsInviting(false);
-            setInviteSent(true);
-            
-            window.dispatchEvent(new CustomEvent('moffi-toast', {
-                detail: {
-                    message: `📣 Çevredeki 12 Moffi arkadaşına yürüyüş daveti başarıyla gönderildi! 🐾`,
-                    icon: 'Radio',
-                    color: 'text-indigo-600 font-bold',
-                }
-            }));
-            
-            setTimeout(() => {
-                setInviteSent(false);
-            }, 5000);
-        }, 1200);
-    };
 
     // Yürüyüşü rota ile başlat
     const handleStartWalk = async () => {
@@ -1177,10 +1200,10 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
         q.type === 'time_of_day'
     );
 
-    // Rota seçimine veya aktif rotaya göre dinamik hedef belirle
+    // Rota seçimine veya aktif rotaya göre dinamik hedef belirle (Hibrit)
     const targetDistance = walkData.isActive 
-        ? (activeRoute?.distance || dailyGoal.distance) 
-        : selectedRoute.distance;
+        ? (isCustomTargetEnabled ? customTargetKm : (activeRoute?.distance || dailyGoal.distance)) 
+        : (isCustomTargetEnabled ? customTargetKm : selectedRoute.distance);
 
     const distPercent = Math.round(Math.min(100, (distKm / Math.max(0.1, targetDistance)) * 100));
     const durPercent = Math.round(Math.min(100, (durationMin / Math.max(1, dailyGoal.duration)) * 100));
@@ -1199,12 +1222,12 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                             animate={{ y: 0, opacity: 1 }}
                             exit={{ y: "100%", opacity: 0 }}
                             transition={{ type: "spring", damping: 30, stiffness: 250 }}
-                            className="fixed inset-0 z-50 bg-slate-100 flex flex-col overflow-hidden"
+                            className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden"
                         >
                             {/* Header Area */}
                             <div className="px-6 pt-6 flex items-center justify-between pb-2 z-20 relative shrink-0">
                                 <div>
-                                    <h2 className="text-xl font-black text-slate-800 tracking-tight leading-none mb-1">Moffi ile Yürüyüş</h2>
+                                    <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight leading-none mb-1">Moffi ile Yürüyüş</h2>
                                     <span className={cn(
                                         "text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest",
                                         walkData.isActive ? "text-emerald-700 bg-emerald-100" : "text-indigo-700 bg-indigo-100"
@@ -1219,7 +1242,7 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                                 </div>
                                 <button
                                     onClick={onClose}
-                                    className="w-9 h-9 bg-card rounded-full flex items-center justify-center shadow-moffi-card hover:bg-slate-50 transition-all cursor-pointer border-0"
+                                    className="w-9 h-9 bg-card rounded-full flex items-center justify-center shadow-moffi-card hover:bg-slate-50 dark:bg-white/5 transition-all cursor-pointer border-0"
                                 >
                                     <X className="w-5 h-5 text-slate-450" />
                                 </button>
@@ -1227,7 +1250,7 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
 
                             {/* Segmented Tab Switcher */}
                             <div className="px-6 pb-2.5 shrink-0 z-20">
-                                <div className="bg-slate-200/50 p-1 rounded-2xl flex gap-1 relative overflow-hidden">
+                                <div className="bg-slate-200 dark:bg-white/10/50 dark:bg-white/5 p-1 rounded-2xl flex gap-1 relative overflow-hidden">
                                     {(['controls', 'stats', 'map'] as const).map((tab) => {
                                         const label = {
                                             controls: 'Yürüyüş',
@@ -1251,7 +1274,7 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                                                 }}
                                                 className={cn(
                                                     "flex-1 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all relative cursor-pointer border-0 z-10",
-                                                    isActive ? "text-slate-800" : "text-slate-400 hover:text-slate-700 bg-transparent"
+                                                    isActive ? "text-slate-800 dark:text-slate-100" : "text-slate-400 hover:text-slate-700 dark:text-slate-200 bg-transparent"
                                                 )}
                                             >
                                                 {isActive && (
@@ -1312,7 +1335,7 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                                     </div>
 
                                     {/* 2. DYNAMIC METRICS DASHBOARD (Nike Run Club Style - Huge text, borderless) */}
-                                    <div className="bg-card rounded-3xl p-5 flex flex-col items-center justify-center text-center shadow-moffi-card border-0 shrink-0 -mt-5 relative z-20 w-full">
+                                    <div className="bg-white/95 backdrop-blur-xl rounded-[2rem] p-5 flex flex-col items-center justify-center text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 dark:border-white/5 shrink-0 -mt-5 relative z-20 w-full">
                                         
                                         {/* Live Dynamic Island Status Capsule */}
                                         <div className="mb-4 px-3 py-1 rounded-full bg-slate-950 text-white flex items-center justify-center gap-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.12)] border border-card-border animate-pulse max-w-full">
@@ -1326,13 +1349,13 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                                         {/* Mevcut KM Sayacı (Protected Layout) */}
                                         <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Mevcut Mesafe</span>
                                         <div className="flex items-baseline justify-center">
-                                            <span className="text-6xl font-black italic tracking-tighter text-slate-800 font-mono leading-none">
+                                            <span className="text-6xl font-black italic tracking-tighter text-slate-800 dark:text-slate-100 font-mono leading-none">
                                                 {distKm.toFixed(2)}
                                             </span>
                                             <span className="text-sm font-black text-slate-400 italic ml-1 tracking-wider">KM</span>
                                         </div>
                                         
-                                        <div className="w-full h-px bg-slate-50 my-4" />
+                                        <div className="w-full h-px bg-slate-50 dark:bg-white/5 my-4" />
                                         
                                         {/* Real-time GPS Telemetry Grid */}
                                         <div className="grid grid-cols-2 w-full gap-x-6 gap-y-4 text-left">
@@ -1341,7 +1364,7 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                                                     <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
                                                     <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Süre (MM:SS)</span>
                                                 </div>
-                                                <span className="text-xl font-black text-slate-800 font-mono leading-none">
+                                                <span className="text-xl font-black text-slate-800 dark:text-slate-100 font-mono leading-none">
                                                     {formatTime(walkData.time)}
                                                     <span className="text-[10px] font-bold text-slate-400 ml-1">/{dailyGoal.duration}dk</span>
                                                 </span>
@@ -1351,20 +1374,20 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                                                     <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
                                                     <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Mesafe Hedefi</span>
                                                 </div>
-                                                <span className="text-xl font-black text-slate-800 font-mono leading-none">
+                                                <span className="text-xl font-black text-slate-800 dark:text-slate-100 font-mono leading-none">
                                                     {targetDistance.toFixed(1)}
                                                     <span className="text-[10px] font-bold text-slate-400 ml-1 font-sans">km</span>
                                                 </span>
                                             </div>
                                             <div className="border-r border-slate-100 pr-2">
                                                 <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-none">Ortalama Tempo</span>
-                                                <span className="text-xl font-black text-slate-800 font-mono leading-none">
+                                                <span className="text-xl font-black text-slate-800 dark:text-slate-100 font-mono leading-none">
                                                     {paceMinKm}
                                                 </span>
                                             </div>
                                             <div>
                                                 <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-none">Anlık Hız</span>
-                                                <div className="text-xl font-black text-slate-800 font-mono leading-none">
+                                                <div className="text-xl font-black text-slate-800 dark:text-slate-100 font-mono leading-none">
                                                     {walkData.speed.toFixed(1)} <span className="text-[9px] font-semibold text-slate-400 font-sans">km/h</span>
                                                 </div>
                                             </div>
@@ -1376,7 +1399,7 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                                                 <span>Hedef Yol Haritası</span>
                                                 <span className="text-orange-600 font-black">Hedef: %{distPercent}</span>
                                             </div>
-                                            <div className="relative h-2 w-full bg-slate-100 rounded-full overflow-hidden mt-1">
+                                            <div className="relative h-2 w-full bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden mt-1">
                                                 <motion.div 
                                                     className="absolute left-0 top-0 h-full rounded-full bg-gradient-to-r from-orange-500 via-pink-500 to-indigo-500"
                                                     style={{ width: `${Math.max(3, Math.min(100, distPercent))}%` }}
@@ -1403,178 +1426,109 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                                     </div>
                                 </div>
 
-                                {/* Weather Simulation Switcher (Dev Tools for UI Testing) */}
-                                <div className="bg-slate-100/50 rounded-3xl p-3 flex flex-col gap-2 border border-slate-200/20">
-                                    <div className="flex items-center justify-between px-1">
-                                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Hava Simülatörü (Test Paneli)</span>
-                                        {weatherOverride && (
-                                            <button 
-                                                onClick={() => setWeatherOverride(null)}
-                                                className="text-[7.5px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full hover:bg-indigo-100 transition-all cursor-pointer"
-                                            >
-                                                Canlı Konum 🔄
-                                            </button>
-                                        )}
-                                    </div>
-                                    <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5" style={{ scrollbarWidth: 'none' }}>
-                                        {[
-                                            { id: 'sun', label: '☀️ Güneşli', cond: 'Açık Gökyüzü', temp: 24, wind: 5, walkScore: 100, walkLabel: 'Mükemmel', badgeColor: 'emerald', emoji: '☀️' },
-                                            { id: 'rain', label: '🌧️ Yağmurlu', cond: 'Kuvvetli Yağmur', temp: 14, wind: 15, walkScore: 30, walkLabel: 'Dikkatli Ol', badgeColor: 'orange', emoji: '🌧️' },
-                                            { id: 'snow', label: '❄️ Karlı', cond: 'Yoğun Kar Yağışı', temp: -2, wind: 8, walkScore: 20, walkLabel: 'Dikkatli Ol', badgeColor: 'orange', emoji: '❄️' },
-                                            { id: 'clouds', label: '☁️ Bulutlu', cond: 'Sisli ve Kapalı', temp: 16, wind: 2, walkScore: 80, walkLabel: 'Uygun', badgeColor: 'yellow', emoji: '☁️' },
-                                            { id: 'night', label: '🌙 Gece', cond: 'Açık Gece', temp: 11, wind: 4, walkScore: 70, walkLabel: 'Uygun', badgeColor: 'yellow', emoji: '🌙' },
-                                            { id: 'storm', label: '🌩️ Fırtına', cond: 'Fırtınalı', temp: 18, wind: 28, walkScore: 5, walkLabel: 'Çıkmayın', badgeColor: 'red', emoji: '🌩️' }
-                                        ].map(w => {
-                                            const isSelected = weatherOverride?.condition === w.cond;
-                                            return (
-                                                <button
-                                                    key={w.id}
-                                                    onClick={() => setWeatherOverride({
-                                                        temp: w.temp,
-                                                        feelsLike: w.temp - 2,
-                                                        condition: w.cond,
-                                                        icon: w.emoji,
-                                                        emoji: w.emoji,
-                                                        humidity: 65,
-                                                        windSpeed: w.wind,
-                                                        walkScore: w.walkScore,
-                                                        walkLabel: w.walkLabel,
-                                                        badgeColor: w.badgeColor,
-                                                        city: `${w.cond.split(' ')[0]} Test`,
-                                                        lat: 40.9877,
-                                                        lon: 29.0215,
-                                                        lastUpdated: new Date()
-                                                    })}
-                                                    className={cn(
-                                                        "flex-shrink-0 px-2.5 py-1.5 rounded-xl text-[8px] font-black cursor-pointer transition-all border border-slate-200/50 shadow-sm",
-                                                        isSelected 
-                                                            ? "bg-slate-900 text-white border-slate-900 scale-105 shadow-md" 
-                                                            : "bg-card text-slate-600 hover:bg-slate-50"
-                                                    )}
-                                                >
-                                                    {w.label}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
 
-                                {/* GPS & Simulation Tracking Mode Switcher */}
-                                <div className="bg-slate-100/50 rounded-3xl p-3 flex flex-col gap-2 border border-slate-200/20">
-                                    <div className="flex items-center justify-between px-1">
-                                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Yürüyüş Takip Modu</span>
-                                        <span className={cn(
-                                            "text-[7px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider",
-                                            isWalkSimulation ? "text-indigo-650 bg-indigo-50 border border-indigo-100" : "text-emerald-650 bg-emerald-50 border border-emerald-100"
-                                        )}>
-                                            {isWalkSimulation ? "Simülasyon Modu" : "Gerçek GPS Modu"}
-                                        </span>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <button
-                                            onClick={() => setIsWalkSimulation(true)}
-                                            className={cn(
-                                                "py-2 rounded-2xl text-[9px] font-black transition-all flex flex-col items-center justify-center gap-1 border cursor-pointer",
-                                                isWalkSimulation 
-                                                    ? "bg-slate-900 text-white border-slate-900 shadow-md scale-[1.02]" 
-                                                    : "bg-card text-slate-650 border-slate-200/60 hover:bg-slate-50"
-                                            )}
-                                        >
-                                            <span className="text-sm">🧭</span>
-                                            <span>Simülasyon (Sanal)</span>
-                                        </button>
-                                        <button
-                                            onClick={() => setIsWalkSimulation(false)}
-                                            className={cn(
-                                                "py-2 rounded-2xl text-[9px] font-black transition-all flex flex-col items-center justify-center gap-1 border cursor-pointer",
-                                                !isWalkSimulation 
-                                                    ? "bg-slate-900 text-white border-slate-900 shadow-md scale-[1.02]" 
-                                                    : "bg-card text-slate-650 border-slate-200/60 hover:bg-slate-50"
-                                            )}
-                                        >
-                                            <span className="text-sm">📍</span>
-                                            <span>Gerçek GPS</span>
-                                        </button>
-                                    </div>
-                                    <p className="text-[7.5px] text-slate-400 font-bold px-1 text-center leading-normal">
-                                        {isWalkSimulation 
-                                            ? "Simülasyon Modu aktif: Evde test ederken mesafe otomatik olarak artar." 
-                                            : "Gerçek GPS aktif: Mesafe sadece telefondaki GPS hareket ettikçe artar."}
-                                    </p>
-                                </div>
 
-                                {/* 4. HIZLI ROTA SEÇİCİ (Workouts style list, no borders) */}
+
+                                {/* 4. HIZLI ROTA SEÇİCİ & HİBRİT HEDEF */}
                                 {!walkData.isActive && (
                                     <div className="space-y-3">
-                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.25em] px-1">Yürüyüş Rotası</span>
-                                        <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1.5" style={{ scrollbarWidth: 'none' }}>
-                                            {MOCK_ROUTES.map(route => {
-                                                const isSelected = selectedRoute.id === route.id;
-                                                return (
-                                                    <button
-                                                        key={route.id}
-                                                        onClick={() => {
-                                                            setSelectedRoute(route);
-                                                            localStorage.setItem('moffi_selected_route', JSON.stringify(route));
-                                                        }}
-                                                        className={cn(
-                                                            "flex-shrink-0 px-4 py-3 rounded-2xl border-0 text-left transition-all cursor-pointer flex items-center gap-3 shadow-[0_10px_25px_rgba(0,0,0,0.015)]",
-                                                            isSelected
-                                                                ? "bg-slate-900 text-white shadow-[0_12px_30px_rgba(15,23,42,0.18)] scale-[1.03]"
-                                                                : "bg-card text-slate-700 hover:bg-slate-50"
-                                                        )}
-                                                    >
-                                                        <span className="text-lg leading-none">{route.icon}</span>
-                                                        <div>
-                                                            <div className={cn("text-[10px] font-black leading-none", isSelected ? "text-white" : "text-slate-800")}>{route.name}</div>
-                                                            <div className={cn("text-[8px] font-bold mt-1 leading-none", isSelected ? "text-white/60" : "text-slate-400")}>{route.distance} km</div>
-                                                        </div>
-                                                    </button>
-                                                );
-                                            })}
+                                        <div className="bg-slate-200 dark:bg-white/10/50 dark:bg-white/5 p-1 rounded-2xl flex gap-1 w-full">
+                                            <button 
+                                                onClick={() => setIsCustomTargetEnabled(false)}
+                                                className={cn(
+                                                    "flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all cursor-pointer border-0 shadow-sm",
+                                                    !isCustomTargetEnabled ? "bg-white text-slate-800 dark:text-slate-100" : "bg-transparent text-slate-500 hover:bg-white/50 shadow-none"
+                                                )}
+                                            >
+                                                Hazır Rotalar
+                                            </button>
+                                            <button 
+                                                onClick={() => setIsCustomTargetEnabled(true)}
+                                                className={cn(
+                                                    "flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all cursor-pointer border-0 shadow-sm",
+                                                    isCustomTargetEnabled ? "bg-indigo-600 text-white" : "bg-transparent text-slate-500 hover:bg-white/50 shadow-none"
+                                                )}
+                                            >
+                                                Serbest Hedef
+                                            </button>
                                         </div>
+
+                                        {isCustomTargetEnabled ? (
+                                            // Akıllı Serbest Hedef Çubuğu (Slider)
+                                            <div className="bg-white/95 backdrop-blur-xl rounded-[2rem] p-5 border border-slate-100 dark:border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4 relative overflow-hidden">
+                                                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
+                                                
+                                                <div className="flex items-end justify-between">
+                                                    <div>
+                                                        <div className="flex items-center gap-1.5 mb-1">
+                                                            <span className="text-sm">🎯</span>
+                                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Özel Hedefin</span>
+                                                        </div>
+                                                        <div className="flex items-baseline gap-1">
+                                                            <span className="text-4xl font-black italic tracking-tighter text-slate-800 dark:text-slate-100 font-mono leading-none">{customTargetKm.toFixed(1)}</span>
+                                                            <span className="text-xs font-black text-slate-400 italic">KM</span>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    {walkStats && walkStats.totalWalks > 0 && (
+                                                        <div className="flex flex-col items-end">
+                                                            <span className="text-[7.5px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded-full mb-1 border border-indigo-100/50">
+                                                                🤖 Akıllı Öneri
+                                                            </span>
+                                                            <span className="text-[8px] font-bold text-slate-500 text-right leading-tight max-w-[100px]">
+                                                                Geçmiş ortalamana göre (+0.5km) hesaplandı.
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="pt-2 relative z-10">
+                                                    <input 
+                                                        type="range" 
+                                                        min="0.5" max="15.0" step="0.5" 
+                                                        value={customTargetKm}
+                                                        onChange={(e) => setCustomTargetKm(parseFloat(e.target.value))}
+                                                        className="w-full h-3 bg-slate-200 dark:bg-white/10 rounded-full appearance-none cursor-grab active:cursor-grabbing focus:outline-none focus:ring-2 focus:ring-indigo-500/50 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-7 [&::-webkit-slider-thumb]:h-7 [&::-webkit-slider-thumb]:bg-indigo-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg"
+                                                    />
+                                                    <div className="flex justify-between text-[8.5px] font-bold text-slate-400 mt-2.5">
+                                                        <span>0.5 km</span>
+                                                        <span>15.0 km</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            // Normal Hazır Rotalar
+                                            <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1.5" style={{ scrollbarWidth: 'none' }}>
+                                                {MOCK_ROUTES.map(route => {
+                                                    const isSelected = selectedRoute.id === route.id;
+                                                    return (
+                                                        <button
+                                                            key={route.id}
+                                                            onClick={() => {
+                                                                setSelectedRoute(route);
+                                                                localStorage.setItem('moffi_selected_route', JSON.stringify(route));
+                                                            }}
+                                                            className={cn(
+                                                                "flex-shrink-0 px-4 py-3 rounded-2xl border border-slate-100 dark:border-white/5 text-left transition-all cursor-pointer flex items-center gap-3 shadow-[0_8px_20px_rgb(0,0,0,0.03)]",
+                                                                isSelected
+                                                                    ? "bg-slate-900 text-white shadow-[0_12px_30px_rgba(15,23,42,0.18)] scale-[1.03]"
+                                                                    : "bg-white/95 backdrop-blur-xl text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:bg-white/5"
+                                                            )}
+                                                        >
+                                                            <span className="text-lg leading-none">{route.icon}</span>
+                                                            <div>
+                                                                <div className={cn("text-[10px] font-black leading-none", isSelected ? "text-white" : "text-slate-800 dark:text-slate-100")}>{route.name}</div>
+                                                                <div className={cn("text-[8px] font-bold mt-1 leading-none", isSelected ? "text-white/60" : "text-slate-400")}>{route.distance} km</div>
+                                                            </div>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
-                                {/* 5. YÜRÜYÜŞ ÖNCESİ HAZIRLIK KONTROL LİSTESİ (Pebble-styled interactive buttons) */}
-                                {!walkData.isActive && (
-                                    <div className="bg-card rounded-3xl p-4.5 space-y-3.5 shadow-moffi-card border-0">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-[9px] font-black text-slate-455 uppercase tracking-[0.2em]">Yürüyüş Hazırlığı</span>
-                                        <span className="text-[9px] font-black text-orange-600 bg-orange-50 px-2.5 py-0.5 rounded-full border border-orange-100/50">
-                                            {Object.values(checkedItems).filter(Boolean).length}/3 Hazır
-                                        </span>
-                                    </div>
-                                    <div className="grid grid-cols-3 gap-2.5">
-                                        {[
-                                            { key: 'poopBag', label: 'Kaka Poşeti', emoji: '💩' },
-                                            { key: 'water', label: 'Su Matarası', emoji: '💧' },
-                                            { key: 'leash', label: 'Tasma & Kayış', emoji: '🦮' }
-                                        ].map(item => {
-                                            const isChecked = checkedItems[item.key as keyof typeof checkedItems];
-                                            return (
-                                                <button
-                                                    key={item.key}
-                                                    onClick={() => setCheckedItems(prev => ({ ...prev, [item.key]: !isChecked }))}
-                                                    className={cn(
-                                                        "py-3 px-2 rounded-2xl border-0 text-[9px] font-black text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2",
-                                                        isChecked
-                                                            ? "bg-emerald-50 text-emerald-800 shadow-[inset_0_2px_6px_rgba(16,185,129,0.06)]"
-                                                            : "bg-slate-50 text-slate-600 hover:bg-slate-100/70"
-                                                    )}
-                                                >
-                                                    <span className="text-lg leading-none">{item.emoji}</span>
-                                                    <span className="leading-none">{item.label}</span>
-                                                    <span className={cn(
-                                                        "w-1.5 h-1.5 rounded-full mt-0.5",
-                                                        isChecked ? "bg-emerald-500 animate-pulse" : "bg-slate-300"
-                                                    )} />
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
+
 
                             {/* 7. ACTIVE WALK QUESTS */}
                             {walkQuests.length > 0 && (
@@ -1592,7 +1546,7 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                             <div className="grid grid-cols-2 gap-3">
                                 <button 
                                     onClick={() => { onClose(); router.push('/walk'); }}
-                                    className="bg-card rounded-3xl p-4.5 shadow-moffi-card border-0 relative overflow-hidden text-left cursor-pointer hover:scale-[1.02] active:scale-95 transition-all group"
+                                    className="bg-white/95 backdrop-blur-xl rounded-[1.5rem] p-4.5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 dark:border-white/5 relative overflow-hidden text-left cursor-pointer hover:scale-[1.02] active:scale-95 transition-all group"
                                 >
                                     {/* Small background flame glow */}
                                     <div className="absolute -right-2 -bottom-2 w-12 h-12 bg-orange-500/5 rounded-full blur-xl pointer-events-none" />
@@ -1618,52 +1572,11 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                                         <Trophy className="w-3.5 h-3.5 text-yellow-500 fill-current group-hover:rotate-12 transition-transform" />
                                         <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Global Arena</span>
                                     </div>
-                                    <div className="text-2xl font-black text-slate-850 z-10 relative">#6</div>
+                                    <div className="text-2xl font-black text-slate-850 z-10 relative">#{globalRank}</div>
                                     <div className="text-[9px] text-yellow-650 font-bold mt-1 z-10 relative flex items-center gap-0.5">
                                         <span>Lige Katıl</span> <ArrowRight className="w-2.5 h-2.5 group-hover:translate-x-0.5 transition-transform" />
                                     </div>
                                 </button>
-                            </div>
-
-                            {/* 9. LIVE RADAR + SOSYAL DAVET ET (Floating Pod) */}
-                            <div className="bg-card rounded-3xl p-4 flex items-center justify-between shadow-moffi-card border-0">
-                                <div className="flex items-center gap-3">
-                                    <div className="relative">
-                                        <div className="w-8 h-8 bg-indigo-50 rounded-full flex items-center justify-center border border-indigo-100">
-                                            <Activity className="w-4 h-4 text-indigo-500" />
-                                        </div>
-                                        <div className="absolute inset-0 bg-indigo-500/10 rounded-full animate-ping" />
-                                    </div>
-                                    <div>
-                                        <h6 className="text-slate-800 font-black text-[10px] uppercase tracking-tight italic leading-none">Çevrede Hareketlilik</h6>
-                                        <p className="text-indigo-600 text-[8.5px] font-black uppercase tracking-widest mt-1.5 leading-none">12 Moffi Arkadaşı Aktif</p>
-                                        
-                                        {/* Overlapping Pet Avatars (Social Stack) */}
-                                        <div className="flex items-center -space-x-1.5 overflow-hidden mt-1.5">
-                                            <img className="inline-block h-5 w-5 rounded-full ring-2 ring-white object-cover" src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=100" alt="" />
-                                            <img className="inline-block h-5 w-5 rounded-full ring-2 ring-white object-cover" src="https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=100" alt="" />
-                                            <img className="inline-block h-5 w-5 rounded-full ring-2 ring-white object-cover" src="https://images.unsplash.com/photo-1537151625747-768eb6cf92b2?q=80&w=100" alt="" />
-                                            <span className="text-[7.5px] font-black text-slate-400 pl-1.5 flex items-center leading-none">+9</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex gap-2 shrink-0">
-                                    <button
-                                        onClick={handleSendInvite}
-                                        disabled={isInviting || inviteSent}
-                                        className={cn(
-                                            "px-3.5 py-2 rounded-2xl text-[8px] font-black uppercase tracking-widest flex items-center gap-1 cursor-pointer transition-all border-0 shadow-[0_4px_12px_rgba(0,0,0,0.02)]",
-                                            inviteSent 
-                                                ? "bg-emerald-500 text-white" 
-                                                : "bg-indigo-50 hover:bg-indigo-100 text-indigo-700"
-                                        )}
-                                    >
-                                        {isInviting ? "..." : inviteSent ? "Gönderildi ✓" : "Davet Et 📣"}
-                                    </button>
-                                    <div className="bg-slate-50 hover:bg-slate-100 text-slate-600 px-3.5 py-2 rounded-2xl text-[8px] font-black uppercase tracking-widest flex items-center gap-1 cursor-pointer transition-all shadow-[0_4px_12px_rgba(0,0,0,0.02)] border-0">
-                                        <Zap className="w-3.5 h-3.5" /> Radar
-                                    </div>
-                                </div>
                             </div>
 
                             {/* 10. ACTIONS / SWIPE-TO-START */}
@@ -1676,7 +1589,45 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                                         <Square className="w-3.5 h-3.5 fill-current" /> Yürüyüşü Bitir
                                     </button>
                                 ) : (
-                                    <div className="space-y-2">
+                                    <div className="space-y-4">
+                                        {/* YÜRÜYÜŞ ÖNCESİ HAZIRLIK KONTROL LİSTESİ (Pebble-styled interactive buttons) */}
+                                        <div className="bg-card rounded-3xl p-4.5 space-y-3.5 shadow-moffi-card border border-slate-200/50 dark:border-white/5">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[9px] font-black text-slate-450 uppercase tracking-[0.2em]">Yürüyüş Hazırlığı</span>
+                                                <span className="text-[9px] font-black text-orange-600 bg-orange-50 px-2.5 py-0.5 rounded-full border border-orange-100/50">
+                                                    {Object.values(checkedItems).filter(Boolean).length}/3 Hazır
+                                                </span>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-2.5">
+                                                {[
+                                                    { key: 'poopBag', label: 'Kaka Poşeti', emoji: '💩' },
+                                                    { key: 'water', label: 'Su Matarası', emoji: '💧' },
+                                                    { key: 'leash', label: 'Tasma & Kayış', emoji: '🦮' }
+                                                ].map(item => {
+                                                    const isChecked = checkedItems[item.key as keyof typeof checkedItems];
+                                                    return (
+                                                        <button
+                                                            key={item.key}
+                                                            onClick={() => setCheckedItems(prev => ({ ...prev, [item.key]: !isChecked }))}
+                                                            className={cn(
+                                                                "py-3 px-2 rounded-2xl border-0 text-[9px] font-black text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2",
+                                                                isChecked
+                                                                    ? "bg-emerald-50 text-emerald-800 shadow-[inset_0_2px_6px_rgba(16,185,129,0.06)]"
+                                                                    : "bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:bg-white/10/70"
+                                                            )}
+                                                        >
+                                                            <span className="text-lg leading-none">{item.emoji}</span>
+                                                            <span className="leading-none">{item.label}</span>
+                                                            <span className={cn(
+                                                                "w-1.5 h-1.5 rounded-full mt-0.5",
+                                                                isChecked ? "bg-emerald-500 animate-pulse" : "bg-slate-300"
+                                                            )} />
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
                                         {/* Taktil Sürgülü Buton (Swipe to Start - Pill container with heavy drop-shadow) */}
                                         <div 
                                             ref={sliderTrackRef} 
@@ -1691,7 +1642,7 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                                 <span className={cn(
                                                     "text-[10px] font-black uppercase tracking-[0.2em] select-none",
-                                                    checklistComplete ? "text-slate-600 animate-pulse" : "text-slate-400/80"
+                                                    checklistComplete ? "text-slate-600 dark:text-slate-300 animate-pulse" : "text-slate-400/80"
                                                 )}>
                                                     {checklistComplete ? "Kaydır ve Başlat 🐾" : "Önce Hazırlık Kontrolü"}
                                                 </span>
@@ -1717,7 +1668,7 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                                                     "w-12 h-12 rounded-full flex items-center justify-center text-xl shadow-[0_4px_16px_rgba(0,0,0,0.1)] select-none z-10 border-0",
                                                     checklistComplete 
                                                         ? "bg-slate-900 text-white cursor-grab active:cursor-grabbing hover:bg-slate-800" 
-                                                        : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                                                        : "bg-slate-200 dark:bg-white/10 text-slate-400 cursor-not-allowed"
                                                 )}
                                             >
                                                 🐾
@@ -1728,9 +1679,9 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
 
                                 <button
                                     onClick={() => { router.push('/walk'); onClose(); }}
-                                    className="w-full bg-card py-3.5 rounded-3xl flex items-center justify-center gap-1.5 group hover:bg-slate-50 transition-all cursor-pointer shadow-moffi-card border-0"
+                                    className="w-full bg-card py-3.5 rounded-3xl flex items-center justify-center gap-1.5 group hover:bg-slate-50 dark:bg-white/5 transition-all cursor-pointer shadow-moffi-card border-0"
                                 >
-                                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] group-hover:text-slate-700 transition-colors">Yürüyüş İstatistikleri</span>
+                                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] group-hover:text-slate-700 dark:text-slate-200 transition-colors">Yürüyüş İstatistikleri</span>
                                     <ArrowRight className="w-3 h-3 text-slate-400 group-hover:translate-x-0.5 group-hover:text-slate-650 transition-all" />
                                 </button>
                             </div>

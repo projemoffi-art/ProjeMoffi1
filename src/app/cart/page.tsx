@@ -27,7 +27,7 @@ export default function CartPage() {
     const total = subtotal + shipping;
 
     return (
-        <main className="min-h-screen bg-[#F8F9FC] dark:bg-black font-sans pb-32">
+        <main className="min-h-screen dark: font-sans pb-32">
 
             {/* HEADER */}
             <header className="sticky top-0 z-40 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-b border-card-border dark:border-card-border px-6 h-16 flex items-center justify-between">

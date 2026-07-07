@@ -3,14 +3,17 @@ import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-// Use service role key to query profiles bypassing RLS, or fall back to anon key
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const supabaseAdmin = (supabaseUrl && supabaseKey)
     ? createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } })
     : null;
 
-const SESSION_SECRET = process.env.SESSION_SECRET || "moffi_default_secure_session_secret_key_2026";
+const SESSION_SECRET = process.env.SESSION_SECRET;
+
+if (!SESSION_SECRET) {
+    throw new Error("SESSION_SECRET environment variable is required but missing.");
+}
 
 function signRole(role: string, userId: string): string {
     const payload = JSON.stringify({ role, userId });
@@ -43,7 +46,7 @@ export async function POST(req: Request) {
             console.log(`[Session API] Development Mock Token accepted: user=${userId}, role=${role}`);
         } else {
             if (!supabaseAdmin) {
-                return NextResponse.json({ error: "Database configuration error" }, { status: 500 });
+                return NextResponse.json({ error: "Server misconfiguration: Service role key missing" }, { status: 500 });
             }
 
             const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);

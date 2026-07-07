@@ -52,7 +52,7 @@ export default function BusinessProductsPage() {
     };
 
     return (
-        <div className="flex min-h-screen bg-gray-50/50 font-sans">
+        <div className="flex min-h-screen font-sans">
             <BusinessSidebar isMobileOpen={isMobileMenuOpen} onMobileClose={() => setIsMobileMenuOpen(false)} />
 
             <main className="flex-1 p-4 md:p-8 md:pl-80 transition-all duration-300 w-full">

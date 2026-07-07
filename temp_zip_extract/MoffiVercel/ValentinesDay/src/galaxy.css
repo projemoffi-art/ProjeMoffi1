@@ -1,0 +1,511 @@
+/* ========================================
+   GALAXY MODE - COSMIC VISUAL FEAST
+   Space-Themed Love Story Experience
+   ======================================== */
+
+.galaxy-mode {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #000814;
+    overflow: hidden;
+    z-index: 40000;
+    perspective: 2000px;
+}
+
+/* Starfield with 5 parallax layers */
+.starfield {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+}
+
+.star {
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 0 4px #fff, 0 0 8px #0ff;
+    animation: starMove 30s linear infinite;
+}
+
+.star[style*="--layer: 1"] {
+    animation-duration: 50s;
+    opacity: 0.3;
+}
+
+.star[style*="--layer: 2"] {
+    animation-duration: 40s;
+    opacity: 0.5;
+}
+
+.star[style*="--layer: 3"] {
+    animation-duration: 30s;
+    opacity: 0.7;
+}
+
+.star[style*="--layer: 4"] {
+    animation-duration: 20s;
+    opacity: 0.9;
+}
+
+.star[style*="--layer: 5"] {
+    animation-duration: 10s;
+    opacity: 1;
+}
+
+@keyframes starMove {
+    from {
+        transform: translateY(0) translateZ(0);
+    }
+
+    to {
+        transform: translateY(100vh) translateZ(100px);
+    }
+}
+
+/* Nebula background */
+.nebula {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    opacity: 0.4;
+    filter: blur(100px);
+    mix-blend-mode: screen;
+}
+
+/* Aurora overlay */
+.aurora {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to bottom,
+            transparent 0%,
+            #00ff8820 30%,
+            #ff1493 20 50%,
+            #00d4ff20 70%,
+            transparent 100%);
+    opacity: 0.3;
+    animation: auroraWave 15s ease-in-out infinite;
+    mix-blend-mode: screen;
+}
+
+@keyframes auroraWave {
+
+    0%,
+    100% {
+        transform: translateY(0) scale(1);
+        opacity: 0.3;
+    }
+
+    50% {
+        transform: translateY(-20px) scale(1.1);
+        opacity: 0.5;
+    }
+}
+
+/* Meteors */
+.meteor {
+    position: absolute;
+    width: 3px;
+    height: 80px;
+    background: linear-gradient(to bottom, #fff, transparent);
+    box-shadow: 0 0 10px #0ff, 0 0 20px #0ff;
+    transform: rotate(45deg);
+}
+
+/* Particle burst */
+.particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: radial-gradient(circle, #ffd700, #ff1493);
+    border-radius: 50%;
+    box-shadow: 0 0 10px #ffd700;
+}
+
+/* Close & Play/Pause buttons */
+.galaxy-close,
+.galaxy-play-pause {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 2px solid;
+    border-image: linear-gradient(45deg, #ff1493, #00d4ff, #ffd700) 1;
+    background: rgba(0, 8, 20, 0.8);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 40002;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 20px rgba(255, 20, 147, 0.5);
+    transition: all 0.3s ease;
+}
+
+.galaxy-close {
+    top: 2rem;
+    right: 2rem;
+}
+
+.galaxy-play-pause {
+    bottom: 2rem;
+    right: 2rem;
+}
+
+.galaxy-fullscreen {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 2px solid;
+    border-image: linear-gradient(45deg, #ff1493, #00d4ff, #ffd700) 1;
+    background: rgba(0, 8, 20, 0.8);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 40002;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    transition: all 0.3s ease;
+    bottom: 2rem;
+    right: 6rem;
+}
+
+.galaxy-close:hover,
+.galaxy-play-pause:hover,
+.galaxy-fullscreen:hover {
+    box-shadow: 0 0 40px rgba(255, 20, 147, 0.8), 0 0 60px rgba(0, 212, 255, 0.6);
+}
+
+/* Intro - Spiral Galaxy */
+.galaxy-intro {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 40001;
+    text-align: center;
+}
+
+.spiral-galaxy {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    background:
+        radial-gradient(ellipse at center, transparent 20%, #ff149330 40%, transparent 60%),
+        radial-gradient(ellipse at center, transparent 30%, #00d4ff30 50%, transparent 70%);
+    border-radius: 50%;
+    filter: blur(20px);
+}
+
+.spiral-galaxy::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 80%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #ffd700, transparent);
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 20px #ffd700;
+}
+
+.galaxy-intro h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 4rem;
+    background: linear-gradient(45deg, #ff1493, #00d4ff, #ffd700, #ff1493);
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradientShift 5s ease infinite;
+    text-shadow: 0 0 80px rgba(255, 20, 147, 0.8);
+    margin-bottom: 2rem;
+    position: relative;
+    z-index: 1;
+}
+
+.galaxy-intro p {
+    font-size: 2rem;
+    color: rgba(255, 255, 255, 0.9);
+    text-shadow: 0 0 20px rgba(0, 212, 255, 0.8);
+    margin-bottom: 2rem;
+    position: relative;
+    z-index: 1;
+}
+
+.cosmic-subtitle {
+    font-size: 3rem;
+    font-weight: 700;
+    color: #ffd700;
+    text-shadow: 0 0 40px #ffd700, 0 0 80px #ff1493;
+    letter-spacing: 10px;
+    position: relative;
+    z-index: 1;
+}
+
+@keyframes gradientShift {
+
+    0%,
+    100% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+/* Holographic title */
+.holographic-title {
+    position: absolute;
+    top: 8rem;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    z-index: 40001;
+}
+
+.hologram-text {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--glow-color, #ff1493);
+    text-shadow:
+        0 0 10px var(--glow-color, #ff1493),
+        0 0 20px var(--glow-color, #ff1493),
+        0 0 40px var(--glow-color, #ff1493);
+    letter-spacing: 8px;
+    animation: hologramFlicker 3s ease-in-out infinite;
+}
+
+.hologram-subtitle {
+    font-size: 1.3rem;
+    color: rgba(255, 255, 255, 0.8);
+    margin-top: 1rem;
+    font-style: italic;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+@keyframes hologramFlicker {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+
+    75% {
+        opacity: 0.9;
+    }
+}
+
+/* Planet container */
+.planet-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 500px;
+    height: 500px;
+    transform-style: preserve-3d;
+}
+
+.planet-sphere {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    transform-style: preserve-3d;
+    overflow: hidden;
+}
+
+.planet-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    box-shadow:
+        inset 0 0 50px rgba(0, 0, 0, 0.5),
+        0 0 50px rgba(255, 20, 147, 0.5);
+}
+
+.planet-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 120%;
+    height: 120%;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    opacity: 0.6;
+    animation: planetGlow 3s ease-in-out infinite;
+}
+
+@keyframes planetGlow {
+
+    0%,
+    100% {
+        opacity: 0.6;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    50% {
+        opacity: 0.8;
+        transform: translate(-50%, -50%) scale(1.05);
+    }
+}
+
+.planet-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 140%;
+    height: 30%;
+    border: 3px solid rgba(255, 215, 0, 0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) rotateX(75deg);
+    box-shadow:
+        0 0 20px rgba(255, 215, 0, 0.5),
+        inset 0 0 20px rgba(255, 215, 0, 0.3);
+}
+
+/* Cosmic caption */
+.cosmic-caption {
+    position: absolute;
+    bottom: -8rem;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    width: 600px;
+}
+
+.cosmic-caption h2 {
+    font-size: 2rem;
+    background: linear-gradient(45deg, #ffd700, #ff1493, #00d4ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 1rem;
+    font-family: 'Playfair Display', serif;
+}
+
+.cosmic-caption p {
+    font-size: 1.3rem;
+    color: rgba(255, 255, 255, 0.9);
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    line-height: 1.8;
+}
+
+/* Constellation progress */
+.constellation-progress {
+    position: absolute;
+    bottom: 4rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 1.5rem;
+    z-index: 40001;
+}
+
+.constellation-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.constellation-dot.active {
+    background: #ffd700;
+    border-color: #ffd700;
+    transform: scale(1.5);
+}
+
+.constellation-dot.passed {
+    background: #00d4ff;
+    border-color: #00d4ff;
+}
+
+.constellation-dot::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 200%;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.2);
+    transform: translate(-50%, -50%);
+    right: -100%;
+}
+
+.constellation-dot:last-child::before {
+    display: none;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .planet-container {
+        width: 300px;
+        height: 300px;
+    }
+
+    .cosmic-caption {
+        width: 90%;
+    }
+
+    .cosmic-caption h2 {
+        font-size: 1.5rem;
+    }
+
+    .cosmic-caption p {
+        font-size: 1.1rem;
+    }
+
+    .hologram-text {
+        font-size: 1.8rem;
+    }
+
+    .galaxy-intro h1 {
+        font-size: 2.5rem;
+    }
+
+    .galaxy-intro p {
+        font-size: 1.3rem;
+    }
+}
+
+/* Performance optimizations */
+@media (prefers-reduced-motion: reduce) {
+
+    .star,
+    .meteor,
+    .particle,
+    .aurora,
+    .spiral-galaxy {
+        animation: none !important;
+    }
+}

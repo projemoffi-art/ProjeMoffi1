@@ -1,0 +1,195 @@
+{
+  "common": {
+    "loading": "Yükleniyor...",
+    "error": "Hata",
+    "back": "Geri Dön",
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "confirm": "Onayla",
+    "done": "Tamam",
+    "search": "Ara...",
+    "no_results": "Sonuç bulunamadı",
+    "success": "Başarılı",
+    "oops": "Bir şeyler ters gitti"
+  },
+  "auth": {
+    "landing": {
+      "title": "Moffi Evrenine Katılın",
+      "subtitle": "Evcil dostunuzla daha elit bir dünyaya ilk adımı atın.",
+      "email_start": "E-posta ile Başla",
+      "google": "Google",
+      "apple": "Apple",
+      "already_member": "Zaten üyeyim?",
+      "login": "Giriş Yap"
+    },
+    "login": {
+      "title": "Tekrar Hoş Geldin",
+      "subtitle": "Evrene Giriş Doğrulanıyor",
+      "email": "E-posta",
+      "password": "Gizli Şifre",
+      "forgot_password": "Şifremi Unuttum",
+      "submit": "Sisteme Bağlan",
+      "not_member": "Henüz Üye Değil Misin?",
+      "join": "Katıl"
+    },
+    "signup": {
+      "title": "Moffi'ye Katıl",
+      "subtitle": "Kişisel Hesabınızı Başlatın",
+      "full_name": "Ad Soyad",
+      "email": "E-posta",
+      "password": "Güçlü Şifre",
+      "confirm_password": "Şifre Tekrar",
+      "submit": "Kayıt Onayla",
+      "terms_prefix": "Kaydolarak",
+      "terms_link": "Kullanım Şartları",
+      "privacy_link": "Gizlilik Politikası",
+      "cookies_link": "Çerez Politikası",
+      "terms_suffix": "ve",
+      "terms_end": "metinlerini okuduğumu ve kabul ettiğimi beyan ederim.",
+      "marketing_consent": "Kampanya ve duyurulardan haberdar olmak istiyorum."
+    }
+  },
+  "legal": {
+    "title_privacy": "Gizlilik Politikası",
+    "title_terms": "Kullanım Şartları",
+    "title_cookies": "Çerez Politikası",
+    "last_updated": "Son Güncelleme",
+    "back_to_app": "Uygulamaya Dön"
+  },
+  "navigation": {
+    "home": "Ana Sayfa",
+    "discover": "Keşfet",
+    "community": "Topluluk",
+    "shop": "Market",
+    "profile": "Profil",
+    "notifications": "Bildirimler",
+    "settings": "Ayarlar",
+    "search_placeholder": "Nereye gidelim?.."
+  },
+  "sidebar": {
+    "ai_assistant": "AI Asistan",
+    "post": "Paylaş",
+    "passport": "Pasaport",
+    "mood": "Ruh Hali",
+    "sos": "SOS",
+    "aura": "Aura Stüdyosu",
+    "voice_note": "Sesli Not",
+    "walk": "Yürüyüş",
+    "weather": "Hava",
+    "water": "Su",
+    "health": "Sağlık",
+    "location": "Konum",
+    "market": "Market",
+    "vet": "Veteriner",
+    "game": "Oyunlar",
+    "wallet": "Cüzdan",
+    "radar": "Radar",
+    "vaccine": "Aşılar",
+    "tv": "Moffi TV",
+    "family": "Aile",
+    "diary": "Günlük",
+    "places": "Mekanlar",
+    "search": "Arama",
+    "adoption": "Sahiplendir",
+    "lost_report": "Kayıp Bildir",
+    "pinned_tools": "Öncelikli Araçlar",
+    "widget_library": "Widget Kütüphanesi",
+    "panel_settings": "Panel Ayarları"
+  },
+  "profile": {
+    "pets": "Patiler",
+    "family_members": "Aile Üyelerimiz",
+    "see_all": "TÜMÜNÜ GÖR",
+    "edit_profile": "Profili Düzenle",
+    "add_pet": "Pati Ekle",
+    "not_found": "Profil Bulunamadı",
+    "followers": "Takipçi",
+    "following": "Takip",
+    "posts": "Paylaşımlar",
+    "bio_empty": "Henüz biyografi eklenmemiş."
+  },
+  "setup": {
+    "welcome": {
+      "title": "Moffi Evrenine Hoş Geldin",
+      "subtitle": "Dostunla birlikte elit bir dijital yaşamın kapıları aralanıyor. Hazırsan aura aktivasyonunu başlatalım.",
+      "button": "YOLCULUĞA BAŞLA"
+    },
+    "step1": {
+      "title": "Moffi Kimliğin",
+      "subtitle": "Kişisel aura profilini mühürleyelim",
+      "add_photo": "FOTOĞRAF EKLE",
+      "full_name": "Ad Soyad",
+      "username": "Kullanıcı Adı"
+    },
+    "step2": {
+      "title": "İlk Dostumuz",
+      "subtitle": "Yol Arkadaşınızı Sisteme Tanıtın",
+      "pet_type": "Pati Türü",
+      "dog": "Köpek",
+      "cat": "Kedi",
+      "bird": "Kuş",
+      "other": "Diğer",
+      "pet_name": "Pati Adı"
+    },
+    "step3": {
+      "title": "Statü Seçimi",
+      "subtitle": "Dostun İçin Elite Özellikleri Keşfet",
+      "pro": "PRO",
+      "elite": "ELITE",
+      "free": "FREE",
+      "elite_desc": "Elite patiler için en premium deneyim.",
+      "pro_desc": "Gelişmiş takip ve sağlık izleme.",
+      "free_desc": "Temel sosyal ve kimlik özellikleri.",
+      "launch": "EVRENE GİRİŞ YAP",
+      "continue": "DEVAM ET"
+    }
+  },
+  "settings": {
+    "danger_zone": "Tehlikeli Bölge",
+    "delete_account": "Hesabı ve Verileri Sil",
+    "delete_confirm": "DİKKAT! Hesabını ve tüm verilerini (patiler, paylaşımlar, mesajlar) kalıcı olarak silmek istediğinden emin misin? Bu işlem GERİ ALINAMAZ. 🐾",
+    "delete_final_confirm": "Son bir kez daha soruyoruz: Moffi evreninden tamamen ayrılmak istiyor musun?",
+    "delete_success": "Hesabınız silinme kuyruğuna alındı. Verileriniz 30 gün içinde tamamen yok edilecektir. Güle güle dostum... 🕊️",
+    "delete_desc": "Tüm dijital izlerini Moffi'den temizler (GDPR)."
+  },
+  "company": {
+    "name": "Moffi Dijital Hizmetler Ltd. Şti.",
+    "email": "privacy@moffi.net",
+    "address": "Dijital Evren, İstanbul/Türkiye"
+  },
+  "business": {
+    "sidebar": {
+      "dashboard": "Kontrol Paneli",
+      "appointments": "Randevular",
+      "finance": "Finansal Analiz",
+      "orders": "Sipariş Takibi",
+      "products": "Ürün Yönetimi",
+      "quests": "Görev & Kampanya",
+      "client_mode": "Müşteri Moduna Geç",
+      "logout": "Çıkış Yap"
+    },
+    "dashboard": {
+      "title": "Kontrol Paneli",
+      "welcome": "Hoşgeldin",
+      "balance": "Bakiye",
+      "new_campaign": "+ Yeni Kampanya",
+      "total_views": "Toplam Gösterim",
+      "total_users": "Toplam Kullanıcı",
+      "page_clicks": "Sayfa Tıklaması",
+      "active_campaigns": "Aktif Kampanya",
+      "weekly_traffic": "Haftalık Ziyaretçi Trafiği",
+      "weekly_traffic_sub": "Mağazanızın önünden geçen MoffiWalk kullanıcıları",
+      "weekly": "Haftalık",
+      "monthly": "Aylık",
+      "proximity_title": "Yakınlık Bildirimi",
+      "proximity_desc_1": "Şu an mağazanızın 100m yakınında ",
+      "proximity_desc_2": " potansiyel müşteri yürüyor.",
+      "send_notification": "Bildirim Gönder (₺50)",
+      "live": "CANLI",
+      "recent_activities": "Son Aktiviteler (Yeni Üyeler)",
+      "joined_moffi": "MoffiPet'e katıldı",
+      "new": "Yeni",
+      "no_new_members": "Henüz yeni üye yok."
+    }
+  }
+}

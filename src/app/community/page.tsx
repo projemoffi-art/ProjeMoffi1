@@ -66,7 +66,8 @@ import {
     Trophy,
     SunMoon,
     Sun,
-    Moon
+    Moon,
+    Clock
 } from 'lucide-react';
 
 import { useStories } from '../../hooks/useStories';
@@ -78,38 +79,7 @@ import { cn } from '@/lib/utils';
 import Mascot3DCanvas from '@/components/dressing/Mascot3DCanvas';
 import { useDragScroll } from '@/hooks/useDragScroll';
 
-const MATCH_CANDIDATES = [
-    {
-        name: "Max",
-        breed: "Golden Retriever",
-        age: "2 Yaşında",
-        gender: "Erkek",
-        aura: "Uysal & Sosyal 🌟",
-        auraMatch: 95,
-        image: "https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=350",
-        bio: "Top oynamayı çok sever, diğer köpeklerle arası harikadır!"
-    },
-    {
-        name: "Bella",
-        breed: "French Bulldog",
-        age: "1.5 Yaşında",
-        gender: "Dişi",
-        aura: "Enerjik & Oyuncu ⚡",
-        auraMatch: 88,
-        image: "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?q=80&w=350",
-        bio: "Moda sahilinde koşmayı ve çimlerde yuvarlanmayı çok sever."
-    },
-    {
-        name: "Coco",
-        breed: "Pomeranian Boo",
-        age: "3 Yaşında",
-        gender: "Dişi",
-        aura: "Sakin & Kucaksever 🌸",
-        auraMatch: 92,
-        image: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=350",
-        bio: "Tüyleri yumuşacık, kafe buluşmalarına bayılır."
-    }
-];
+
 
 const cleanDefaultTemplate = {
     name: 'Moffi',
@@ -578,7 +548,7 @@ export default function LegendaryLightDashboard() {
         });
     }, [activePetObj?.id]);
 
-    const [expandedPanel, setExpandedPanel] = useState<'wallet' | 'passport' | 'collar' | 'dressing' | 'quests' | 'shop' | 'profile' | 'match' | 'events' | null>(null);
+    const [expandedPanel, setExpandedPanel] = useState<'wallet' | 'passport' | 'collar' | 'dressing' | 'quests' | 'shop' | 'profile' | 'events' | null>(null);
     const [isNfcScanning, setIsNfcScanning] = useState(false);
 
     const handleNfcScan = () => {
@@ -1224,7 +1194,7 @@ export default function LegendaryLightDashboard() {
     }, [activePetObj?.is_lost, activePetObj?.id]);
 
 
-    const [matchIndex, setMatchIndex] = useState(0);
+
 
     // Yürüyüş canlı zamanlayıcı
     const [walkElapsedSeconds, setWalkElapsedSeconds] = useState(0);
@@ -1285,7 +1255,7 @@ export default function LegendaryLightDashboard() {
         }
     }, [endWalk, addTransaction]);
 
-    const [isMatched, setIsMatched] = useState(false);
+
 
     // Dynamic Stories Hook & States
     const { storyGroups } = useStories();
@@ -2274,14 +2244,10 @@ export default function LegendaryLightDashboard() {
                 <section className="mb-6">
                     <h3 className="text-[15px] font-bold text-gray-800 tracking-tight mb-3 px-1">Hızlı erişim</h3>
                     <div className="grid grid-cols-2 gap-3.5">
-                        <QuickAccessBtn icon={Radio} title="Kayıp İlanı" subtitle="Acil Bildirim Gönder" color="text-red-500" delay={0.1} onClick={() => router.push('/topluluk?tab=radar&mode=lost')} />
+                        <QuickAccessBtn icon={Radio} title="Kayıp & Sahiplen" subtitle="İlan Merkezi" color="text-red-500" delay={0.1} onClick={() => router.push('/topluluk?tab=radar')} />
                         <QuickAccessBtn icon={Compass} title="Topluluk" subtitle="Moffi Kaşif Dünyası" color="text-blue-500" delay={0.2} onClick={() => router.push('/topluluk')} />
-                        <QuickAccessBtn icon={Flame} title="Eşleştir" subtitle={`${pet.name} için Flört Bul`} color="text-rose-500" delay={0.3} onClick={() => setExpandedPanel('match')} />
-                        <QuickAccessBtn icon={Activity} title="Veteriner" subtitle="Sağlık ve Aşılama" color="text-emerald-600" delay={0.4} onClick={() => router.push('/vet')} />
-                        <QuickAccessBtn icon={ShoppingBag} title="Market" subtitle="Mama ve Ekipman" color="text-amber-500" delay={0.5} onClick={() => router.push('/petshop')} />
+                        <QuickAccessBtn icon={ShoppingBag} title="Moffi Market" subtitle="Online Alışveriş" color="text-rose-500" delay={0.3} onClick={() => window.open('https://moffi.net', '_blank')} />
                         <QuickAccessBtn icon={Scissors} title="Bakım Merkezi" subtitle="Mama, Su ve Sağlık Hub" color="text-teal-600" delay={0.6} onClick={() => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'nutrition' } }))} />
-                        <QuickAccessBtn icon={HeartHandshake} title="Sahiplendirme" subtitle="Ömürlük Yuva Bul" color="text-pink-500" delay={0.7} onClick={() => router.push('/topluluk?tab=radar&mode=adopt')} />
-                        <QuickAccessBtn icon={Sparkles} title="AI Asistan" subtitle="Veteriner Destek" color="text-purple-500" delay={0.8} />
                     </div>
                 </section>
 
@@ -2708,135 +2674,7 @@ export default function LegendaryLightDashboard() {
                                         </>
                                     )}
 
-                                    {/* 7. Eşleştir (Match) Panel */}
-                                    {expandedPanel === 'match' && (
-                                        <>
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <Flame className="w-6 h-6 text-rose-500 animate-pulse" />
-                                                    <h3 className="text-lg font-black text-gray-800">Pati Flört & Eşleştirme</h3>
-                                                </div>
-                                                <span className="text-[9px] font-black text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">
-                                                    Canlı Arama
-                                                </span>
-                                            </div>
 
-                                            {isMatched ? (
-                                                <motion.div 
-                                                    initial={{ scale: 0.9, opacity: 0 }}
-                                                    animate={{ scale: 1, opacity: 1 }}
-                                                    className="flex-1 flex flex-col items-center justify-center text-center p-4 bg-gradient-to-b from-rose-50 to-white rounded-[28px] border border-rose-100"
-                                                >
-                                                    <div className="flex items-center justify-center gap-4 mb-4">
-                                                        <div className="w-16 h-16 rounded-full overflow-hidden border-4 border-white shadow-md relative flex items-center justify-center bg-gray-100">
-                                                            {pet.image ? (
-                                                                <img src={pet.image} className="w-full h-full object-cover" alt={pet.name} />
-                                                            ) : (
-                                                                <span className="text-gray-400 text-xl font-black select-none uppercase font-sans">
-                                                                    {pet.name ? pet.name[0] : '🐾'}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <span className="text-3xl animate-bounce">💖</span>
-                                                        <div className="w-16 h-16 rounded-full overflow-hidden border-4 border-white shadow-md">
-                                                            <img src={MATCH_CANDIDATES[matchIndex].image} className="w-full h-full object-cover" alt="Match" />
-                                                        </div>
-                                                    </div>
-                                                    <h4 className="text-lg font-black text-rose-800">Eşleşme Başarılı! 🎉</h4>
-                                                    <p className="text-xs text-gray-500 font-semibold mt-2 leading-relaxed px-4">
-                                                        **{pet.name}** ve **{MATCH_CANDIDATES[matchIndex].name}** için harika bir aura uyumu (%{MATCH_CANDIDATES[matchIndex].auraMatch}) bulundu.
-                                                    </p>
-                                                    <div className="mt-5 p-3.5 bg-white border border-rose-100 rounded-2xl w-full flex items-center gap-2 text-left">
-                                                        <Sparkles className="w-4 h-4 text-rose-500 shrink-0" />
-                                                        <p className="text-[10px] text-rose-800 font-bold">
-                                                            **Sohbeti Başlat:** Canlı sohbet odası aktif. İlk mesajı gönderin!
-                                                        </p>
-                                                    </div>
-                                                    <div className="flex gap-2.5 w-full mt-6">
-                                                        <button 
-                                                            onClick={() => {
-                                                                setIsMatched(false);
-                                                                setMatchIndex((prev) => (prev + 1) % MATCH_CANDIDATES.length);
-                                                            }}
-                                                            className="flex-1 py-3 border border-rose-200 hover:bg-rose-50/50 text-rose-600 rounded-xl text-[11px] font-black cursor-pointer transition-all"
-                                                        >
-                                                            Yeni Adaylar
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => {
-                                                                setExpandedPanel(null);
-                                                                setToastMsg(`💬 ${MATCH_CANDIDATES[matchIndex].name} için sohbet başlatıldı!`);
-                                                            }}
-                                                            className="flex-1 py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-[11px] font-black shadow-md shadow-rose-500/10 cursor-pointer transition-all"
-                                                        >
-                                                            Mesaj Gönder
-                                                        </button>
-                                                    </div>
-                                                </motion.div>
-                                            ) : (
-                                                <div className="flex-1 flex flex-col gap-4">
-                                                    {/* The Swipe Card */}
-                                                    <div className="bg-white border border-gray-150 rounded-[28px] overflow-hidden shadow-sm flex flex-col relative group">
-                                                        {/* Aura Match Indicator Tag */}
-                                                        <div className="absolute top-3 left-3 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-[9px] font-black px-2.5 py-1 rounded-full shadow-sm z-10 flex items-center gap-1">
-                                                            <Sparkles className="w-3 h-3 text-white" />
-                                                            <span>AURA UYUMU %{MATCH_CANDIDATES[matchIndex].auraMatch}</span>
-                                                        </div>
-
-                                                        {/* Image */}
-                                                        <div className="h-44 w-full relative">
-                                                            <img 
-                                                                src={MATCH_CANDIDATES[matchIndex].image} 
-                                                                className="w-full h-full object-cover" 
-                                                                alt={MATCH_CANDIDATES[matchIndex].name} 
-                                                            />
-                                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-                                                            <div className="absolute bottom-3 left-4 text-white">
-                                                                <h4 className="text-base font-black flex items-baseline gap-1.5 leading-none">
-                                                                    {MATCH_CANDIDATES[matchIndex].name}
-                                                                    <span className="text-[10px] font-bold opacity-90">({MATCH_CANDIDATES[matchIndex].age})</span>
-                                                                </h4>
-                                                                <span className="text-[9px] font-bold opacity-80 mt-1 block">{MATCH_CANDIDATES[matchIndex].breed} • {MATCH_CANDIDATES[matchIndex].gender}</span>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Card Body */}
-                                                        <div className="p-4 flex flex-col gap-2.5">
-                                                            <div className="flex justify-between items-center bg-gray-55 border border-gray-100 p-2 rounded-xl">
-                                                                <span className="text-[9px] font-black text-gray-450 uppercase">Mizac & Aura</span>
-                                                                <span className="text-[10px] font-black text-gray-800">{MATCH_CANDIDATES[matchIndex].aura}</span>
-                                                            </div>
-                                                            <p className="text-[10px] text-gray-500 font-semibold leading-relaxed">
-                                                                {MATCH_CANDIDATES[matchIndex].bio}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Action Buttons */}
-                                                    <div className="flex justify-center items-center gap-4 py-2">
-                                                        <button 
-                                                            onClick={() => {
-                                                                setMatchIndex((prev) => (prev + 1) % MATCH_CANDIDATES.length);
-                                                                setToastMsg("👎 Aday geçildi.");
-                                                            }}
-                                                            className="w-12 h-12 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors shadow-sm cursor-pointer"
-                                                        >
-                                                            <X className="w-5 h-5" strokeWidth={2.5} />
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => {
-                                                                setIsMatched(true);
-                                                                setToastMsg(`💖 Eşleşme İsteği Gönderildi!`);
-                                                            }}
-                                                            className="w-14 h-14 bg-gradient-to-tr from-rose-500 to-pink-500 text-white rounded-full flex items-center justify-center transition-transform hover:scale-105 shadow-md shadow-rose-500/10 cursor-pointer"
-                                                        >
-                                                            <Heart className="w-6 h-6 fill-white" strokeWidth={2} />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </>
-                                    )}
 
                                     {/* 8. Etkinlikler (Events) Panel */}
                                     {expandedPanel === 'events' && (
@@ -4158,11 +3996,25 @@ export default function LegendaryLightDashboard() {
                             {/* Bottom Story Content */}
                             <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-black/90 via-black/60 to-transparent z-25 flex flex-col gap-4">
                                 <div className="flex flex-col gap-1.5 text-white">
-                                    {activeStory.badge && (
-                                        <span className="self-start text-[8px] font-black tracking-widest text-yellow-400 bg-yellow-400/10 border border-yellow-450/20 px-2 py-0.5 rounded-md uppercase">
-                                            {activeStory.badge}
-                                        </span>
-                                    )}
+                                    <div className="flex gap-2">
+                                        {activeStory.badge && (
+                                            <span className="self-start text-[8px] font-black tracking-widest text-yellow-400 bg-yellow-400/10 border border-yellow-450/20 px-2 py-0.5 rounded-md uppercase">
+                                                {activeStory.badge}
+                                            </span>
+                                        )}
+                                        {activeStory.expires_at && (
+                                            <span className="self-start text-[8px] font-black tracking-widest text-red-400 bg-red-400/10 border border-red-450/20 px-2 py-0.5 rounded-md uppercase flex items-center gap-1">
+                                                <Clock className="w-2.5 h-2.5" /> 
+                                                {(() => {
+                                                    const diff = new Date(activeStory.expires_at).getTime() - Date.now();
+                                                    if (diff <= 0) return 'SÜRESİ DOLDU';
+                                                    const h = Math.floor(diff / 3600000);
+                                                    const m = Math.floor((diff % 3600000) / 60000);
+                                                    return `SON ${h} SAAT ${m} DK`;
+                                                })()}
+                                            </span>
+                                        )}
+                                    </div>
                                     <h3 className="text-base font-black tracking-tight drop-shadow-sm leading-snug">{activeStory.title}</h3>
                                     <p className="text-[11px] text-white/80 font-medium leading-relaxed drop-shadow-sm">{activeStory.description}</p>
                                 </div>

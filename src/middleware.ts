@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const SESSION_SECRET = process.env.SESSION_SECRET || "moffi_default_secure_session_secret_key_2026";
+const SESSION_SECRET = process.env.SESSION_SECRET;
+if (!SESSION_SECRET) {
+    throw new Error("SESSION_SECRET environment variable is required but missing.");
+}
 
 async function verifyRoleSignature(cookieValue: string): Promise<{ role: string; userId: string } | null> {
     try {

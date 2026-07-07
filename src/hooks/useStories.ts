@@ -11,6 +11,7 @@ export interface Story {
     ctaText?: string;
     ctaType?: 'toast' | 'chat' | 'map' | 'coupon';
     ctaValue?: string;
+    expires_at?: string;
 }
 
 export interface UserStoryGroup {
@@ -37,6 +38,18 @@ export function useStories() {
             const dailyStars = await apiService.getDailyStars(todayStr) || [];
             // Fetch live vet health advices
             const vetAdvices = await apiService.getVetAdvices() || [];
+
+            // Fetch live business deals
+            let liveDeals: any[] = [];
+            try {
+                const dealsRes = await fetch('/api/deals');
+                const dealsData = await dealsRes.json();
+                if (dealsData.success) {
+                    liveDeals = dealsData.deals;
+                }
+            } catch (e) {
+                console.error("Deals fetch error:", e);
+            }
             
             const liveAnnStories: Story[] = (announcements || [])
                 .filter((ann: any) => {
@@ -182,28 +195,28 @@ export function useStories() {
                     author_name: '🎁 Günün Fırsatı',
                     author_avatar: 'https://images.unsplash.com/photo-1585499193151-0f50d54c4e1c?q=80&w=200',
                     hasUnseen: true,
-                    stories: [
+                    stories: liveDeals.length > 0 ? liveDeals.map(deal => ({
+                        id: deal.id,
+                        media_url: deal.media_url,
+                        created_at: deal.created_at,
+                        expires_at: deal.expires_at,
+                        title: deal.title,
+                        description: deal.description,
+                        badge: deal.value ? `${deal.value} Fırsat` : 'Fırsat',
+                        ctaText: deal.coupon_code ? 'Kuponu Al 🎟️' : 'Detayları Gör',
+                        ctaType: deal.coupon_code ? 'coupon' : 'toast',
+                        ctaValue: deal.coupon_code || 'Kampanya detayları yükleniyor...'
+                    })) : [
                         {
-                            id: 'deal_1',
+                            id: 'deal_default_1',
                             media_url: 'https://images.unsplash.com/photo-1554818538-98e34543195f?q=80&w=600',
                             created_at: new Date().toISOString(),
-                            title: 'Moda Pet Cafe\'de %15 İndirim!',
-                            description: 'Moffi Pati-Kart sahiplerine özel tüm cafe menüsünde ve pet ikramlarında geçerli %15 anlık indirim kodu.',
-                            badge: 'Pati-Kart Özel',
-                            ctaText: 'Kupon Kodunu Al 🎟️',
-                            ctaType: 'coupon',
-                            ctaValue: 'MODAPET15'
-                        },
-                        {
-                            id: 'deal_2',
-                            media_url: 'https://images.unsplash.com/photo-1585499193151-0f50d54c4e1c?q=80&w=600',
-                            created_at: new Date(Date.now() - 3600000).toISOString(),
-                            title: 'Mama Alışverişine Hediye!',
-                            description: 'Seçili 12kg ve üzeri kuru mamalarda Moffi Diş Oyuncağı hediye! Kampanya bu pazar gecesine kadar geçerlidir.',
-                            badge: 'Sepet Fırsatı',
-                            ctaText: 'Markete Git 🛒',
+                            title: 'Bölgenizde Aktif Kampanya Yok',
+                            description: 'Şu an sizin veya dostunuz için aktif bir fırsat bulamadık. Lütfen daha sonra tekrar kontrol edin.',
+                            badge: 'Moffi Deals',
+                            ctaText: 'Geri Dön',
                             ctaType: 'toast',
-                            ctaValue: 'Moffi Market sekmesine yönlendiriliyorsunuz...'
+                            ctaValue: 'Ana sayfaya dönülüyor...'
                         }
                     ]
                 }

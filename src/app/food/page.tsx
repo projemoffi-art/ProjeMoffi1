@@ -133,7 +133,7 @@ export default function FoodPage() {
     // LOADING SCREEN
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-[#F8F9FC] dark:bg-black flex items-center justify-center">
+            <div className="min-h-screen dark: flex items-center justify-center">
                 <div className="animate-pulse text-green-500 font-bold">Moffi Nutrition Loading...</div>
             </div>
         );
@@ -146,7 +146,7 @@ export default function FoodPage() {
 
     // MAIN DASHBOARD
     return (
-        <div className="min-h-screen bg-[#F8F9FC] dark:bg-black pb-32 font-sans">
+        <div className="min-h-screen dark: pb-32 font-sans">
 
 
 

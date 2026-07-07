@@ -1576,6 +1576,27 @@ export class MockApiService implements IApiService {
         const filtered = list.filter(item => item.id !== id);
         await this.saveData('vet_advices', filtered);
     }
+
+    // --- LEADERBOARD ---
+    async getLeaderboard(role: 'user' | 'business', limit: number = 50): Promise<any[]> {
+        const MOCK_USERS = [
+            { id: '1', name: "Atlas & Mochi", avatar: "https://images.unsplash.com/photo-1552053831-71594a27632d?w=150&h=150&fit=crop", score: 62450, country: "TR", pet: "Golden Ret.", change: 2 },
+            { id: '2', name: "Sarah & Max", avatar: "https://images.unsplash.com/photo-1517849845537-4d257902454a?w=150&h=150&fit=crop", score: 58900, country: "US", pet: "Border Collie", change: -1 },
+            { id: '3', name: "Kenji & Hachi", avatar: "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=150&h=150&fit=crop", score: 54200, country: "JP", pet: "Shiba Inu", change: 0 },
+        ];
+
+        const MOCK_BUSINESSES = [
+            { id: 'b1', name: "Pati Cafe Moda", avatar: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=150&h=150&fit=crop", score: 120500, country: "TR", pet: "Cafe", change: 0 },
+            { id: 'b2', name: "Royal Vet London", avatar: "https://images.unsplash.com/photo-1519415943484-9fa1873496d4?w=150&h=150&fit=crop", score: 98000, country: "UK", pet: "Veteriner", change: 3 },
+            { id: 'b3', name: "PetZone NY", avatar: "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=150&h=150&fit=crop", score: 87500, country: "US", pet: "Shop", change: -1 },
+        ];
+
+        return role === 'user' ? MOCK_USERS : MOCK_BUSINESSES;
+    }
+
+    async getUserRank(userId: string): Promise<number> {
+        return 6;
+    }
 }
 // Singleton instance for components that haven't migrated to the central services/apiService.ts yet
 export const apiService = new MockApiService();

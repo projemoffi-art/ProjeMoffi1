@@ -195,7 +195,7 @@ export default function GamePage() {
     );
 
     return (
-        <div className="min-h-screen bg-[#F8F9FC] dark:bg-black font-sans pb-32">
+        <div className="min-h-screen dark: font-sans pb-32">
 
             {/* BACK BUTTON */}
             <button 

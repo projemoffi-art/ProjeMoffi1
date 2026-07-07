@@ -32,7 +32,7 @@ export default function OrderSuccessPage() {
     }, []);
 
     return (
-        <main className="min-h-screen bg-[#F8F9FC] dark:bg-black font-sans flex items-center justify-center p-6 relative overflow-hidden">
+        <main className="min-h-screen dark: font-sans flex items-center justify-center p-6 relative overflow-hidden">
 
             {/* Background Gradients */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">

@@ -78,7 +78,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     if (!isAdmin) {
         return (
-            <div className="min-h-screen bg-[#050508] flex items-center justify-center p-6 text-center">
+            <div className="min-h-screen flex items-center justify-center p-6 text-center">
                 <div className="max-w-md w-full bg-[#0A0A0E] border border-card-border p-10 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 blur-[50px] rounded-full" />
 
@@ -97,8 +97,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                 <span>Mevcut Hesap</span>
                                 <span className="text-red-400">Yetkisiz</span>
                             </div>
-                            <p className="text-white font-bold truncate">{user?.email}</p>
-                            <p className="text-xs text-gray-400 mt-1">Rol: <span className="text-indigo-400 font-bold uppercase">{user?.role}</span></p>
+                            <p className="text-white font-bold truncate">{user?.email || "Email Yok"}</p>
+                            <p className="text-xs text-gray-400 mt-1">Rol: <span className="text-indigo-400 font-bold uppercase">{user?.role || "Rol Yok"}</span></p>
+                            <p className="text-xs text-red-400 mt-2">Debug ID: {user?.id || "ID Yok"}</p>
                         </div>
 
                         <div className="flex flex-col gap-3">
@@ -125,7 +126,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
 
     return (
-        <div className="min-h-screen bg-[#050508] flex font-sans text-gray-400 selection:bg-indigo-500/30">
+        <div className="min-h-screen flex font-sans selection:bg-indigo-500/30">
             {/* Mobile Sidebar Overlay */}
             {sidebarOpen && (
                 <div className="fixed inset-0 bg-black/80 z-40 lg:hidden backdrop-blur-md" onClick={() => setSidebarOpen(false)} />

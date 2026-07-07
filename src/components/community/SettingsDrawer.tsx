@@ -1209,6 +1209,19 @@ const AIAssistantView = ({ user, setView, updateSettings }: ViewProps) => {
                         />
                         <p className="text-[9px] text-secondary mt-3 px-1 uppercase font-bold tracking-tighter italic">Bu isim, asistan seninle konuştuğunda görünecek.</p>
                     </div>
+
+                    <div className="bg-foreground/[0.03] rounded-[2.5rem] p-4 border border-card-border flex items-center justify-between">
+                        <div>
+                            <p className="text-[13px] font-black text-foreground uppercase tracking-tight">Ekranda Göster</p>
+                            <p className="text-[9.5px] text-secondary mt-1.5 font-bold uppercase tracking-tighter">Yüzen asistan butonu sayfalarda görünsün mü?</p>
+                        </div>
+                        <button 
+                            onClick={() => updateSettings('ai', { widgetEnabled: ai.widgetEnabled !== false ? false : true })}
+                            className={cn("w-10 h-5.5 rounded-full transition-all relative shrink-0 border border-card-border", ai.widgetEnabled !== false ? "bg-emerald-500 border-transparent shadow-lg shadow-emerald-500/20" : "bg-foreground/5")}
+                        >
+                            <div className={cn("absolute top-0.5 w-4.5 h-4.5 rounded-full bg-card transition-all shadow-moffi-card", ai.widgetEnabled !== false ? "left-5" : "left-0.5")} />
+                        </button>
+                    </div>
                 </div>
 
                 <div className="space-y-3">

@@ -47,7 +47,7 @@ import { MessageSquareHeart } from 'lucide-react';
 
 import { ShareSheet } from '../../components/community/ShareSheet';
 import { NotificationsDrawer } from '../../components/community/NotificationsDrawer';
-import { MoffiAssistant } from '../../components/ai/MoffiAssistant';
+
 import { ImmersivePostCard } from '../../components/community/ImmersivePostCard';
 import { ProfileTab } from '@/components/community/ProfileTab';
 import { VetQuickSheet } from '@/components/vet/VetQuickSheet';

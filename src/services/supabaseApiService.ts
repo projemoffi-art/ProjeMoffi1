@@ -3555,4 +3555,59 @@ export class SupabaseApiService implements IApiService {
             return this.mockApi.deleteAdvice(id);
         }
     }
+
+    // --- LEADERBOARD ---
+    async getLeaderboard(role: 'user' | 'business', limit: number = 50): Promise<any[]> {
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('id, full_name, avatar_url, coin_balance, role, pet_name')
+                .eq('role', role)
+                .order('coin_balance', { ascending: false, nullsFirst: false })
+                .limit(limit);
+
+            if (error) throw error;
+
+            return (data || []).map(p => ({
+                id: p.id,
+                name: p.full_name || 'Gizli Kullanıcı',
+                avatar: p.avatar_url,
+                score: p.coin_balance || 0,
+                country: 'TR',
+                pet: p.pet_name || (role === 'business' ? 'İşletme' : 'Moffi'),
+                change: 0 // Mocking daily change for now
+            }));
+        } catch (err) {
+            console.error("Supabase getLeaderboard failed:", err);
+            return [];
+        }
+    }
+
+    async getUserRank(userId: string): Promise<number> {
+        try {
+            // Get user's score first
+            const { data: userProfile, error: userError } = await supabase
+                .from('profiles')
+                .select('coin_balance')
+                .eq('id', userId)
+                .single();
+
+            if (userError || !userProfile) return 0;
+            const score = userProfile.coin_balance || 0;
+
+            // Count how many users have a STRICTLY higher score
+            const { count, error } = await supabase
+                .from('profiles')
+                .select('id', { count: 'exact', head: true })
+                .gt('coin_balance', score);
+
+            if (error) throw error;
+
+            // Their rank is (number of people with higher score) + 1
+            return (count || 0) + 1;
+        } catch (err) {
+            console.error("Supabase getUserRank failed:", err);
+            return 0;
+        }
+    }
 }

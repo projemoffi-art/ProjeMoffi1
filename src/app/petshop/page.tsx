@@ -457,7 +457,7 @@ export default function PetShopPage() {
     }, [products, isSmartShopEnabled]);
 
     return (
-        <div className="min-h-screen bg-[#F9FAFB] dark:bg-[#050505] pb-32 font-sans selection:bg-orange-500/30">
+        <div className="min-h-screen pb-32 font-sans selection:bg-orange-500/30">
 
             {/* HEADER */}
             <div className="sticky top-0 z-50 bg-white/70 dark:bg-black/70 backdrop-blur-3xl border-b border-card-border dark:border-card-border transition-colors">

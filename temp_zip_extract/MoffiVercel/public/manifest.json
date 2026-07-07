@@ -1,0 +1,21 @@
+{
+    "name": "Moffi Pro Studio",
+    "short_name": "Moffi",
+    "description": "Professional Architectural Customization Engine",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#050505",
+    "theme_color": "#050505",
+    "icons": [
+        {
+            "src": "https://moffi.net/wp-content/uploads/2023/06/moffi-logo-1.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "https://moffi.net/wp-content/uploads/2023/06/moffi-logo-1.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

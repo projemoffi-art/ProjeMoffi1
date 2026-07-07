@@ -1,0 +1,1600 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
+import { 
+    Heart, MessageCircle, Share2, MoreHorizontal, User, 
+    ChevronRight, Info, QrCode, Star, Copy, Bell, 
+    Edit2, Trash2, VolumeX, Volume2, EyeOff, ShieldAlert, 
+    BadgeCheck, Plus, X, Sparkles, Send, Check,
+    Download, Instagram, MessageSquare, Zap
+} from 'lucide-react';
+import { useSocial } from '@/context/SocialContext';
+import { cn } from '@/lib/utils';
+import { ShieldCheck, Crown, Footprints, Zap as SOSZap } from 'lucide-react';
+import Image from 'next/image';
+import { apiService } from '@/services/apiService';
+import { useRealtimeComments } from '@/hooks/useRealtimeComments';
+
+interface ImmersivePostCardProps {
+    post: any;
+    currentUser: any;
+    onLike: () => void;
+    onAddComment: (text: string) => void;
+    onDeletePost?: () => void;
+    onEditPost?: () => void;
+    onShare: () => void;
+    onToggleCommentLike?: (commentId: string) => void;
+    onReplyComment?: (parentCommentId: string, text: string) => void;
+    onDeleteComment?: (commentId: string) => void;
+    onEditComment?: (commentId: string, text: string) => void;
+    onReportComment?: (commentId: string) => void;
+    priority?: boolean;
+    isCommentsDisabled?: boolean;
+}
+
+export function ImmersivePostCard({ 
+    post, 
+    currentUser, 
+    onLike, 
+    onAddComment, 
+    onDeletePost = () => {}, 
+    onEditPost = () => {}, 
+    onShare,
+    onToggleCommentLike,
+    onReplyComment,
+    onDeleteComment = () => {},
+    onEditComment = () => {},
+    onReportComment = () => {},
+    priority = false,
+    isCommentsDisabled = false
+}: ImmersivePostCardProps) {
+    const router = useRouter();
+    const [tapHeart, setTapHeart] = useState(false);
+    const [showComments, setShowComments] = useState(false);
+    const [commentInput, setCommentInput] = useState('');
+    const [isMoreOpen, setIsMoreOpen] = useState(false);
+    const [localAllowComments, setLocalAllowComments] = useState(post?.allow_comments ?? true);
+    const [localCommentPrivacy, setLocalCommentPrivacy] = useState(post?.comment_privacy || 'everyone');
+    const [showCommentSettings, setShowCommentSettings] = useState(false);
+    const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
+    const allowComments = localAllowComments !== false;
+    const hiddenWords = currentUser?.settings?.content?.hiddenWords || [];
+    const [isAddingToStory, setIsAddingToStory] = useState(false);
+    const [replyingTo, setReplyingTo] = useState<any>(null);
+    const [showAISuggestions, setShowAISuggestions] = useState(false);
+    const [mentionSearch, setMentionSearch] = useState('');
+    const [selectedMedia, setSelectedMedia] = useState<any>(null);
+    const [showGIFPicker, setShowGIFPicker] = useState(false);
+    const [editingComment, setEditingComment] = useState<any>(null);
+    const [isMuted, setIsMuted] = useState(true);
+    const [isVisible, setIsVisible] = useState(false);
+    const [isVideoLoading, setIsVideoLoading] = useState(true);
+    const [videoProgress, setVideoProgress] = useState(0);
+    const [activeBadgeInfo, setActiveBadgeInfo] = useState<'verified' | 'premium' | 'walker' | 'sos' | null>(null);
+    const videoRef = React.useRef<HTMLVideoElement>(null);
+    const containerRef = React.useRef<HTMLDivElement>(null);
+    const { stories } = useSocial();
+    const audioRef = React.useRef<HTMLAudioElement>(null);
+
+    const [mediaSrc, setMediaSrc] = useState(post?.media || post?.media_url || post?.image || "");
+
+    useEffect(() => {
+        setMediaSrc(post?.media || post?.media_url || post?.image || "");
+    }, [post]);
+
+
+    // INTERSECTION OBSERVER FOR SMART PLAY/PAUSE
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                setIsVisible(entry.isIntersecting);
+            },
+            { threshold: 0.6 } // Needs 60% visibility to play
+        );
+
+        if (containerRef.current) {
+            observer.observe(containerRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
+        if (videoRef.current) {
+            if (isVisible) {
+                videoRef.current.play().catch(() => {});
+            } else {
+                videoRef.current.pause();
+            }
+        }
+        
+        // Handle background audio for photos/videos
+        if (audioRef.current && post?.audio_url) {
+            audioRef.current.muted = isMuted;
+            if (isVisible) {
+                audioRef.current.play().catch(() => {});
+            } else {
+                audioRef.current.pause();
+            }
+        }
+    }, [isVisible, isMuted, post?.audio_url]);
+
+
+    // Censorship Logic
+    const filterContent = (text: string) => {
+        if (!text || hiddenWords.length === 0) return text;
+        let filtered = text;
+        hiddenWords.forEach((word: string) => {
+            const regex = new RegExp(`\\b${word}\\b`, 'gi');
+            filtered = filtered.replace(regex, '***');
+        });
+        return filtered;
+    };
+
+    const MOCK_GIFS = [
+        { id: 'g1', url: "https://i.giphy.com/4T7eWG7jRmsTVypLOH.gif" }, // Happy Goldie
+        { id: 'g2', url: "https://i.giphy.com/3o72F7YpG6X5sVz6so.gif" }, // Cute Cat
+        { id: 'g3', url: "https://i.giphy.com/12u0fLq9pxj9rW.gif" }, // Paws
+        { id: 'g4', url: "https://i.giphy.com/kyLYXonQpkUsS1dY9L.gif" }, // Dancing Dog
+        { id: 'g5', url: "https://i.giphy.com/jpbnoe3UIa8TU8UC8F.gif" }, // Sleeping Cat
+    ];
+
+    const AI_SUGGESTIONS = [
+        "Harika bir paylaşım! ✨",
+        "Çok tatlı görünüyor 😍",
+        "Buna bayıldım! 🦴",
+        "Nerede burası? 📍",
+        "Pati dostu mu? 🐾"
+    ];
+
+    const MOCK_USERS = [
+        { id: 'u1', username: 'pati_sever', name: 'Pati Sever' },
+        { id: 'u2', username: 'moffi_fan', name: 'Moffi Hayranı' },
+        { id: 'u3', username: 'kedi_dostu', name: 'Kedi Dostu' }
+    ];
+
+    // PINCH TO ZOOM STATE
+    const scale = useMotionValue(1);
+    const x = useMotionValue(0);
+    const y = useMotionValue(0);
+    const [isZooming, setIsZooming] = useState(false);
+
+    const springConfig = { damping: 25, stiffness: 200 };
+    const springScale = useSpring(scale, springConfig);
+    const springX = useSpring(x, springConfig);
+    const springY = useSpring(y, springConfig);
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        if (e.touches.length === 2) {
+            setIsZooming(true);
+        }
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (e.touches.length === 2 && isZooming) {
+            const touch1 = e.touches[0];
+            const touch2 = e.touches[1];
+
+            // Distance calculation
+            const dist = Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY);
+            
+            // Midpoint calculation
+            const midX = (touch1.clientX + touch2.clientX) / 2;
+            const midY = (touch1.clientY + touch2.clientY) / 2;
+
+            // Simple scale logic (initial distance is assumed 150 for start of pinch)
+            const newScale = Math.max(1, dist / 150);
+            scale.set(newScale);
+
+            // Centering logic
+            if (newScale > 1.05) {
+                const moveX = (midX - window.innerWidth / 2) * 0.5;
+                const moveY = (midY - window.innerHeight / 2) * 0.5;
+                x.set(moveX);
+                y.set(moveY);
+            }
+        }
+    };
+
+    const handleTouchEnd = () => {
+        setIsZooming(false);
+        scale.set(1);
+        x.set(0);
+        y.set(0);
+    };
+
+    const isOwner = currentUser?.id === post.user_id || currentUser?.username === post.author?.replace('@', '');
+
+    const handleProfileNavigation = () => {
+        const targetId = post.user_id || post.userId || post.authorId || post.owner_id || post.user?.id;
+        
+        if (isOwner) {
+            // Navigate to own profile page directly
+            if (targetId) router.push(`/profile/${targetId}`);
+            else window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'profile' }));
+        } else {
+            // Navigate to other user's profile
+            if (targetId) {
+                router.push(`/profile/${targetId}`);
+            } else {
+                console.warn('Profile navigation failed: no user_id on post', post);
+            }
+        }
+    };
+
+    const handleDoubleTap = () => {
+        if (!currentUser || String(currentUser.id) === 'local-user') {
+            alert('❤️ Beğenmek ve etkileşime geçmek için lütfen giriş yapın veya kayıt olun.');
+            window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'login' }));
+            return;
+        }
+        if (!post.isLiked) onLike();
+        setTapHeart(true);
+        setTimeout(() => setTapHeart(false), 800);
+    };
+
+    const handleShareClick = () => {
+        onShare();
+    };
+
+    const copyLink = () => {
+        navigator.clipboard.writeText(window.location.href);
+        alert('Bağlantı panoya kopyalandı 🔗');
+    };
+
+    const handleAddToStory = () => {
+        setIsAddingToStory(true);
+        setTimeout(() => {
+            setIsAddingToStory(false);
+            alert('Gönderi hikayenize başarıyla eklendi! 🚀');
+        }, 1500);
+    };
+
+    const handleUpdateCommentSettings = async (allow: boolean, privacy: string) => {
+        setIsUpdatingSettings(true);
+        try {
+            await apiService.updatePost(post.id, { allow_comments: allow, comment_privacy: privacy } as any);
+            setLocalAllowComments(allow);
+            setLocalCommentPrivacy(privacy);
+            alert('Yorum ayarları başarıyla güncellendi! 🛡️');
+            setShowCommentSettings(false);
+        } catch (err: any) {
+            console.error('Yorum ayarları güncellenemedi:', err);
+            alert('Ayar güncellenirken bir hata oluştu.');
+        } finally {
+            setIsUpdatingSettings(false);
+        }
+    };
+
+    // GLOBAL REALTIME COMMENTS — Supabase WebSocket (Instagram/TikTok pattern)
+    const { comments, isLoading: isLoadingComments, addComment, refetchComments } = useRealtimeComments(
+        post.id,
+        showComments
+    );
+
+    const handleSendComment = async () => {
+        if (!currentUser || String(currentUser.id) === 'local-user') {
+            alert('💬 Yorum yazmak için lütfen giriş yapın veya kayıt olun.');
+            window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'login' }));
+            return;
+        }
+        if (!commentInput.trim() && !selectedMedia) return;
+        const text = commentInput;
+        setCommentInput("");
+        setSelectedMedia(null);
+
+        const currentEdit = editingComment;
+        const currentReply = replyingTo;
+
+        setReplyingTo(null);
+        setEditingComment(null);
+
+        if (currentEdit) {
+            await onEditComment?.(currentEdit.id, text);
+            await apiService.editComment(currentEdit.id, text);
+            refetchComments();
+        } else if (currentReply) {
+            await onReplyComment?.(currentReply.id, text);
+            await addComment(text, currentUser, currentReply.id);
+            refetchComments();
+        } else {
+            await addComment(text, currentUser);
+            onAddComment?.(text);
+            refetchComments();
+        }
+    };
+
+    useEffect(() => {
+        const scrollContainer = document.getElementById('community-scroll-container');
+        
+        if (isMoreOpen || showComments || activeBadgeInfo) {
+            document.body.style.overflow = 'hidden';
+            if (scrollContainer) {
+                scrollContainer.style.overflow = 'hidden';
+            }
+        } else {
+            document.body.style.overflow = '';
+            if (scrollContainer) {
+                // Keep it empty to allow CSS classes (snap-scroll) to work
+                scrollContainer.style.overflow = '';
+            }
+        }
+        return () => {
+            document.body.style.overflow = '';
+            if (scrollContainer) {
+                scrollContainer.style.overflow = '';
+            }
+        };
+    }, [isMoreOpen, showComments, activeBadgeInfo]);
+
+    const [isFollowingAuthor, setIsFollowingAuthor] = useState(false);
+
+    useEffect(() => {
+        const authorId = post.user_id || post.userId || post.authorId;
+        if (!authorId || isOwner || !currentUser) return;
+
+        const checkFollow = async () => {
+            try {
+                const status = await apiService.isFollowing(authorId);
+                setIsFollowingAuthor(status);
+            } catch (err) {
+                console.error("isFollowing check error in post card:", err);
+            }
+        };
+        checkFollow();
+    }, [post.user_id, post.userId, post.authorId, isOwner, currentUser]);
+
+    useEffect(() => {
+        const authorId = post.user_id || post.userId || post.authorId;
+        if (!authorId) return;
+
+        const handleFollowChange = (e: any) => {
+            if (e.detail && e.detail.userId === authorId) {
+                setIsFollowingAuthor(e.detail.isFollowing);
+            }
+        };
+        window.addEventListener('moffi-follow-change', handleFollowChange);
+        return () => window.removeEventListener('moffi-follow-change', handleFollowChange);
+    }, [post.user_id, post.userId, post.authorId]);
+
+    const handleFollow = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (isFollowingAuthor) return;
+        
+        const authorId = post.user_id || post.userId || post.authorId;
+        if (!authorId) return;
+
+        setIsFollowingAuthor(true);
+        try {
+            await apiService.followUser(authorId);
+            window.dispatchEvent(new CustomEvent('moffi-follow-change', {
+                detail: { userId: authorId, isFollowing: true }
+            }));
+        } catch (err) {
+            console.error("Takip hatası:", err);
+            setIsFollowingAuthor(false);
+        }
+    };
+
+    return (
+        <motion.div
+            ref={containerRef}
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true, amount: 0.1 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="relative w-full aspect-[4/5] sm:aspect-[4/5] max-h-[85vh] sm:max-h-[82vh] rounded-none sm:rounded-[3rem] overflow-hidden bg-background border-b border-card-border shadow-2xl group"
+        >
+            {/* MEDIA */}
+            <div 
+                className={cn("absolute inset-0 bg-black cursor-pointer touch-pan-y", isZooming ? "z-[100] touch-none" : "z-0")} 
+                onClick={() => {
+                    const isVideo = post?.is_video || (post?.media && (/\.(mp4|webm|ogg|mov|avi|m4v|mkv|flv|wmv)$/i.test(post.media)));
+                    if (isVideo) {
+                        setIsMuted(!isMuted);
+                    }
+                }}
+                onDoubleClick={handleDoubleTap}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+            >
+                <motion.div 
+                    style={{ 
+                        scale: springScale,
+                        x: springX,
+                        y: springY,
+                    }}
+                    className="w-full h-full relative"
+                >
+                    {(post?.is_video || (post?.media && (/\.(mp4|webm|ogg|mov|avi|m4v|mkv|flv|wmv)$/i.test(post.media)) )) ? (
+                        <div className="w-full h-full relative bg-black flex items-center justify-center">
+                            <video
+                                ref={videoRef}
+                                src={mediaSrc}
+                                muted={isMuted || !!post?.audio_url}
+                                loop
+                                playsInline
+                                preload="auto"
+                                onTimeUpdate={(e) => {
+                                    const vid = e.currentTarget;
+                                    if (vid.duration) {
+                                        setVideoProgress((vid.currentTime / vid.duration) * 100);
+                                    }
+                                    if (post?.trim_start !== undefined && post?.trim_end !== undefined) {
+                                        if (vid.currentTime >= post.trim_end || vid.currentTime < post.trim_start) {
+                                            vid.currentTime = post.trim_start;
+                                            if (audioRef.current) {
+                                                audioRef.current.currentTime = 0;
+                                            }
+                                        }
+                                    }
+                                }}
+                                onLoadedData={(e) => {
+                                    setIsVideoLoading(false);
+                                    if (post?.trim_start !== undefined) {
+                                        e.currentTarget.currentTime = post.trim_start;
+                                        if (audioRef.current) {
+                                            audioRef.current.currentTime = 0;
+                                        }
+                                    }
+                                    if (e.currentTarget.paused) {
+                                        e.currentTarget.play().catch(() => {});
+                                    }
+                                }}
+                                onCanPlay={() => setIsVideoLoading(false)}
+                                onWaiting={() => setIsVideoLoading(true)}
+                                onPlaying={() => setIsVideoLoading(false)}
+                                onError={() => {
+                                    setMediaSrc("https://assets.mixkit.co/videos/preview/mixkit-dog-running-on-the-grass-on-a-sunny-day-40048-large.mp4");
+                                }}
+                                className={cn("w-full h-full object-cover opacity-90 transition-opacity duration-700", isVideoLoading ? "opacity-0" : "opacity-90")}
+                            />
+                            {isVideoLoading && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+                                    <div className="w-8 h-8 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
+                                </div>
+                            )}
+                            {!isVideoLoading && (
+                                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/20 overflow-hidden z-[100]">
+                                    <motion.div 
+                                        className="h-full bg-card shadow-[0_0_5px_rgba(255,255,255,0.8)]"
+                                        style={{ width: `${videoProgress}%` }}
+                                        transition={{ ease: "linear", duration: 0.1 }}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <img 
+                            src={mediaSrc || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=800"} 
+                            alt={post?.caption || post?.desc || "Moffi Gönderisi"}
+                            onError={() => {
+                                setMediaSrc("https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=800");
+                            }}
+                            className="w-full h-full object-cover opacity-90"
+                        />
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/75 via-black/20 to-transparent opacity-90 pointer-events-none" />
+                </motion.div>
+                
+                {/* BACKGROUND AUDIO ELEMENT */}
+                {post?.audio_url && (
+                    <audio 
+                        ref={audioRef}
+                        src={post.audio_url}
+                        muted={isMuted}
+                        loop
+                    />
+                )}
+            </div>
+
+
+
+
+
+            {/* TOP BAR BUILT INTO CARD */}
+            <div className="absolute top-5 left-5 right-5 flex justify-between items-start z-20 pointer-events-none">
+                <div className="flex gap-2">
+                    {post.mood && (
+                        <div className="bg-card/40 backdrop-blur-xl border border-card-border px-3 py-1.5 rounded-full text-[10px] font-bold text-foreground flex items-center gap-1.5 shadow-lg relative overflow-hidden group/badge">
+                            <span className="relative z-10">{post.mood}</span>
+                            <div className="absolute inset-0 bg-white/10 -translate-x-full group-hover/badge:translate-x-full transition-transform duration-700 pointer-events-none" />
+                        </div>
+                    )}
+                </div>
+                <button onClick={() => setIsMoreOpen(true)} className="w-8 h-8 rounded-full bg-card/40 backdrop-blur-xl border border-card-border flex items-center justify-center text-foreground hover:bg-foreground/10 transition-colors pointer-events-auto">
+                    <MoreHorizontal className="w-4 h-4" />
+                </button>
+            </div>
+
+            {/* MORE OPTIONS MENU (APPLE STYLE) */}
+            <AnimatePresence>
+                {isMoreOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/60 z-[440] backdrop-blur-sm pointer-events-auto"
+                            onClick={() => setIsMoreOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 30, stiffness: 350, mass: 0.8 }}
+                            className="absolute bottom-0 left-0 right-0 z-[450] bg-background/80 backdrop-blur-[50px] border-t border-card-border rounded-t-[48px] shadow-2xl flex flex-col pointer-events-auto overflow-hidden max-h-[92%]"
+                        >
+                            <div 
+                                onClick={() => setIsMoreOpen(false)}
+                                className="w-full flex flex-col items-center pt-5 pb-2 shrink-0 cursor-pointer group/handle"
+                            >
+                                <div className="w-12 h-1.5 bg-white/20 rounded-full mb-1 group-hover/handle:bg-white/40 transition-colors" />
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto no-scrollbar px-6 space-y-6 pb-32 overscroll-contain text-white">
+                                {/* AI SMART ANALYSIS SECTION */}
+                                <div className="flex flex-col bg-gradient-to-br from-accent/10 to-accent/5 rounded-[32px] border border-card-border overflow-hidden">
+                                    <button 
+                                        onClick={() => { setIsMoreOpen(false); alert('AI Akıllı Analiz başlatılıyor... ✨'); }}
+                                        className="w-full px-6 py-6 flex items-center justify-between active:bg-white/10 transition-all group"
+                                    >
+                                        <div className="flex items-center gap-5">
+                                            <div className="p-3 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-2xl shadow-lg shadow-indigo-500/20 text-white">
+                                                <Sparkles className="w-6 h-6" />
+                                            </div>
+                                            <div className="flex flex-col items-start text-left">
+                                                <span className="font-black text-[18px] bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">Akıllı Analiz (AI)</span>
+                                                <span className="text-indigo-200/50 text-[12px] font-medium">Bu gönderiyi yapay zeka ile incele</span>
+                                            </div>
+                                        </div>
+                                        <Zap className="w-5 h-5 text-indigo-400 animate-pulse" />
+                                    </button>
+                                </div>
+
+                                {/* POST MANAGEMENT SECTION */}
+                                <div className="flex flex-col bg-white/[0.03] rounded-[32px] border border-white/[0.08] divide-y divide-white/[0.05] overflow-hidden">
+                                    <button 
+                                        onClick={() => { 
+                                            setIsMoreOpen(false); 
+                                            handleProfileNavigation();
+                                        }}
+                                        className="w-full px-6 py-5 flex items-center justify-between active:bg-white/[0.07] transition-all group"
+                                    >
+                                        <div className="flex items-center gap-5">
+                                            <div className="p-3 bg-cyan-500/10 rounded-2xl border border-cyan-500/20 text-cyan-400">
+                                                <User className="w-6 h-6" />
+                                            </div>
+                                            <div className="flex flex-col items-start">
+                                                <span className="text-white font-bold text-[17px]">Profili Görüntüle</span>
+                                                <span className="text-white/40 text-[12px]">Kullanıcı detaylarını incele</span>
+                                            </div>
+                                        </div>
+                                        <ChevronRight className="w-5 h-5 text-white/10 group-active:translate-x-1 transition-transform" />
+                                    </button>
+                                    
+                                    <button 
+                                        onClick={() => { setIsMoreOpen(false); alert('Favorilerime eklendi ⭐'); }}
+                                        className="w-full px-6 py-5 flex items-center gap-5 active:bg-white/[0.07] transition-all"
+                                    >
+                                        <div className="p-3 bg-orange-500/10 rounded-2xl border border-orange-500/20 text-orange-400">
+                                            <Star className="w-6 h-6" />
+                                        </div>
+                                        <span className="text-white/90 font-semibold text-[17px]">Favorilerime Ekle</span>
+                                    </button>
+
+                                    <button 
+                                        onClick={() => { setIsMoreOpen(false); alert('Bu hesap hakkında bilgiler...'); }}
+                                        className="w-full px-6 py-5 flex items-center gap-5 active:bg-white/[0.07] transition-all"
+                                    >
+                                        <div className="p-3 bg-white/5 rounded-2xl border border-card-border text-white/60">
+                                            <Info className="w-6 h-6" />
+                                        </div>
+                                        <span className="text-white/90 font-semibold text-[17px]">Bu Hesap Hakkında</span>
+                                    </button>
+                                </div>
+
+                                {isOwner && (
+                                    <div className="flex flex-col bg-white/[0.03] rounded-[32px] border border-white/[0.08] divide-y divide-white/[0.05] overflow-hidden">
+                                        <button 
+                                            onClick={() => { setIsMoreOpen(false); setShowCommentSettings(true); }}
+                                            className="w-full px-6 py-5 flex items-center justify-between active:bg-white/[0.07] transition-all group"
+                                        >
+                                            <div className="flex items-center gap-5">
+                                                <div className="p-3 bg-cyan-500/10 rounded-2xl border border-cyan-500/20 text-cyan-400">
+                                                    <MessageSquare className="w-6 h-6" />
+                                                </div>
+                                                <div className="flex flex-col items-start text-left">
+                                                    <span className="text-white font-semibold text-[17px]">Yorum Ayarları</span>
+                                                    <span className="text-white/40 text-[12px]">Gizlilik ve kapatma seçenekleri</span>
+                                                </div>
+                                            </div>
+                                            <ChevronRight className="w-5 h-5 text-white/10 group-active:translate-x-1 transition-transform" />
+                                        </button>
+
+                                        <button 
+                                            onClick={() => { setIsMoreOpen(false); onEditPost(); }}
+                                            className="w-full px-6 py-5 flex items-center gap-5 active:bg-white/[0.07] transition-all"
+                                        >
+                                            <div className="p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20 text-blue-400">
+                                                <Edit2 className="w-6 h-6" />
+                                            </div>
+                                            <span className="text-white font-semibold text-[17px]">Gönderiyi Düzenle</span>
+                                        </button>
+                                        <button 
+                                            onClick={() => { setIsMoreOpen(false); onDeletePost(); }}
+                                            className="w-full px-6 py-5 flex items-center gap-5 active:bg-red-500/10 transition-all text-red-500"
+                                        >
+                                            <div className="p-3 bg-red-500/10 rounded-2xl border border-red-500/20 text-red-500">
+                                                <Trash2 className="w-6 h-6" />
+                                            </div>
+                                            <span className="font-bold text-[17px]">Gönderiyi Sil</span>
+                                        </button>
+                                    </div>
+                                )}
+
+                                {!isOwner && (
+                                    <div className="flex flex-col bg-white/[0.03] rounded-[32px] border border-white/[0.08] divide-y divide-white/[0.05] overflow-hidden">
+                                        <button 
+                                            onClick={() => { setIsMoreOpen(false); alert('Sessize alındı 🔇'); }}
+                                            className="w-full px-6 py-5 flex items-center gap-5 active:bg-white/[0.07] transition-all"
+                                        >
+                                            <div className="p-3 bg-white/5 rounded-2xl border border-card-border text-white/40">
+                                                <VolumeX className="w-6 h-6" />
+                                            </div>
+                                            <span className="text-white/90 font-semibold text-[17px]">Sessize Al</span>
+                                        </button>
+                                        <button 
+                                            onClick={() => { setIsMoreOpen(false); alert('Şikayetiniz iletildi 🛡️'); }}
+                                            className="w-full px-6 py-5 flex items-center gap-5 active:bg-red-500/10 transition-all text-red-500"
+                                        >
+                                            <div className="p-3 bg-red-500/10 rounded-2xl border border-red-500/20 text-red-500">
+                                                <ShieldAlert className="w-6 h-6" />
+                                            </div>
+                                            <span className="font-bold text-[17px]">Şikayet Et</span>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background via-background/90 to-transparent pt-12 shrink-0">
+                                <button 
+                                    onClick={() => setIsMoreOpen(false)}
+                                    className="w-full py-5 bg-foreground text-background rounded-[28px] font-black text-[18px] active:scale-[0.97] transition-all shadow-xl"
+                                >
+                                    Vazgeç
+                                </button>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* COMMENT SETTINGS OVERLAY MODAL */}
+            <AnimatePresence>
+                {showCommentSettings && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/70 z-[460] backdrop-blur-md pointer-events-auto flex items-center justify-center p-6"
+                            onClick={() => setShowCommentSettings(false)}
+                        >
+                            <motion.div
+                                initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-full max-w-sm bg-[#121316] border border-card-border rounded-[32px] p-6 flex flex-col gap-5 shadow-2xl text-white"
+                            >
+                                <div className="flex items-center justify-between pb-3 border-b border-card-border">
+                                    <div className="flex items-center gap-2">
+                                        <MessageSquare className="w-5 h-5 text-cyan-400" />
+                                        <h4 className="font-bold text-base">Yorum Ayarları</h4>
+                                    </div>
+                                    <button onClick={() => setShowCommentSettings(false)} className="p-1 hover:bg-white/10 rounded-full transition-colors">
+                                        <X className="w-4 h-4 text-white/60" />
+                                    </button>
+                                </div>
+
+                                <div className="flex flex-col gap-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-sm">Yorumlara İzin Ver</span>
+                                            <span className="text-xs text-white/40">Kullanıcılar yorum yapabilsin</span>
+                                        </div>
+                                        <button
+                                            onClick={() => setLocalAllowComments(!localAllowComments)}
+                                            className={cn(
+                                                "w-12 h-6 rounded-full p-0.5 transition-colors duration-300 relative",
+                                                localAllowComments ? "bg-cyan-500" : "bg-white/10"
+                                            )}
+                                        >
+                                            <div className={cn(
+                                                "w-5 h-5 rounded-full bg-card transition-transform duration-300 shadow-moffi-card",
+                                                localAllowComments ? "translate-x-6" : "translate-x-0"
+                                            )} />
+                                        </button>
+                                    </div>
+
+                                    <div className="flex flex-col gap-2 pt-2 border-t border-card-border">
+                                        <span className="font-bold text-sm">Kimler Yorum Yapabilir?</span>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {[
+                                                { id: 'everyone', label: 'Herkes' },
+                                                { id: 'followers', label: 'Sadece Takipçiler' }
+                                            ].map((item) => (
+                                                <button
+                                                    key={item.id}
+                                                    onClick={() => setLocalCommentPrivacy(item.id)}
+                                                    className={cn(
+                                                        "py-2.5 px-3 rounded-xl border text-xs font-bold transition-all",
+                                                        localCommentPrivacy === item.id 
+                                                            ? "bg-cyan-500/20 border-cyan-500 text-cyan-400" 
+                                                            : "bg-white/5 border-card-border text-white/60 hover:text-white"
+                                                    )}
+                                                >
+                                                    {item.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={() => handleUpdateCommentSettings(localAllowComments, localCommentPrivacy)}
+                                    disabled={isUpdatingSettings}
+                                    className="w-full py-3 mt-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-black font-black text-sm rounded-2xl transition-transform active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 disabled:opacity-50"
+                                >
+                                    {isUpdatingSettings ? (
+                                        <>
+                                            <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                                            Güncelleniyor...
+                                        </>
+                                    ) : (
+                                        'Ayarları Kaydet'
+                                    )}
+                                </button>
+                            </motion.div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* SHARE SHEET (REMOVED - Using Global ShareSheet) */}
+
+            {/* DOUBLE TAP ANIMATION */}
+            <AnimatePresence>
+                {tapHeart && (
+                    <motion.div
+                        initial={{ scale: 0, opacity: 0, rotate: -15 }}
+                        animate={{ scale: 1.5, opacity: 1, rotate: 0 }}
+                        exit={{ scale: 2, opacity: 0 }}
+                        transition={{ type: "spring", bounce: 0.5 }}
+                        className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none"
+                    >
+                        <Heart className="w-32 h-32 text-red-500 fill-red-500 drop-shadow-[0_0_40px_rgba(239,68,68,0.8)]" />
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* USER INFO & CAPTION & ACTIONS */}
+            <div className="absolute bottom-6 sm:bottom-6 left-5 sm:left-6 right-5 sm:right-6 z-20 flex flex-col gap-3">
+                {/* MUTE BUTTON - ABSOLUTE BOTTOM RIGHT CORNER */}
+                {(post.is_video || (post.media && /\.(mp4|webm|ogg|mov|avi|m4v|mkv)$/i.test(post.media)) || post.audio_url) && (
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
+                        className={cn(
+                            "absolute bottom-3 right-3 w-7 h-7 rounded-full backdrop-blur-md border flex items-center justify-center transition-all shadow-lg z-30",
+                            isMuted ? "bg-black/40 border-card-border" : "bg-cyan-500/30 border-cyan-400/50"
+                        )}
+                    >
+                        {isMuted ? <VolumeX className="w-3.5 h-3.5 text-white/50" /> : <Volume2 className="w-3.5 h-3.5 text-cyan-300" />}
+                    </button>
+                )}
+
+                {/* ACTION BUTTONS SIDEBAR */}
+                <div className="absolute right-0 sm:right-0 bottom-0 flex flex-col gap-4 sm:gap-3 z-30 translate-y-[-2.5rem] sm:translate-y-[-2rem]">
+                    {/* LIKE */}
+                    <div className="flex flex-col items-center gap-0.5">
+                        <button 
+                            onClick={() => {
+                                if (!currentUser || String(currentUser.id) === 'local-user') {
+                                    alert('❤️ Beğenmek ve etkileşime geçmek için lütfen giriş yapın veya kayıt olun.');
+                                    window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'login' }));
+                                    return;
+                                }
+                                onLike();
+                            }} 
+                            className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-md border border-card-border flex items-center justify-center transition-transform active:scale-90 hover:bg-white/20 shadow-xl"
+                        >
+                            {post.isLiked ? (
+                                <Heart className="w-4 h-4 text-red-500 fill-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]" />
+                            ) : (
+                                <Heart className="w-4 h-4 text-white drop-shadow-md" />
+                            )}
+                        </button>
+                        <span className="text-[9px] font-bold text-white drop-shadow-md">{post.likes ?? post.likes_count ?? 0}</span>
+                    </div>
+
+                    {/* COMMENT - Global Standard: active by default, disabled only if explicitly set false in DB */}
+                    <div className="flex flex-col items-center gap-0.5">
+                        <button 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (allowComments === false) {
+                                    alert('Bu gönderi yorumlara kapatılmıştır. 🔒');
+                                    return;
+                                }
+                                setShowComments(true);
+                            }} 
+                            className={cn(
+                                "w-8 h-8 rounded-full backdrop-blur-md border flex items-center justify-center transition-all shadow-xl active:scale-90",
+                                allowComments === false
+                                    ? "bg-white/5 border-card-border opacity-40 cursor-not-allowed" 
+                                    : "bg-white/10 border-card-border hover:bg-white/20 hover:border-white/40"
+                            )}
+                        >
+                            <MessageCircle className={cn("w-4 h-4 drop-shadow-md", allowComments === false ? "text-white/20" : "text-white")} />
+                        </button>
+                        <span className={cn("text-[9px] font-bold drop-shadow-md", allowComments === false ? "text-white/20" : "text-white")}>
+                            {allowComments === false ? '-' : (post.comments ?? post.comments_count ?? 0)}
+                        </span>
+                    </div>
+
+                    {/* SHARE */}
+                    <div className="flex flex-col items-center gap-0.5">
+                        <button onClick={handleShareClick} className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-md border border-card-border flex items-center justify-center transition-transform active:scale-90 hover:bg-white/20 shadow-xl">
+                            <Share2 className="w-4 h-4 text-white drop-shadow-md" />
+                        </button>
+                        <span className="text-[9px] font-bold text-white drop-shadow-md">Paylaş</span>
+                    </div>
+                </div>
+
+                <div className="pr-16 w-full flex items-center gap-3">
+                    <div 
+                        onClick={handleProfileNavigation}
+                        className="w-12 h-12 rounded-full border-2 border-card-border p-0.5 relative pointer-events-auto cursor-pointer active:scale-95 transition-transform"
+                    >
+                        <Image src={(isOwner ? (currentUser?.avatar || post.avatar || post.author_avatar || post.user?.avatar) : (post.avatar || post.author_avatar || post.user?.avatar)) || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} fill className="rounded-full object-cover" alt="Author" />
+                        {!isOwner && !isFollowingAuthor && (
+                            <motion.div 
+                                className="absolute -bottom-1 -right-1 w-5 h-5 bg-cyan-500 rounded-full flex items-center justify-center border-2 border-black cursor-pointer shadow-lg shadow-cyan-500/40" 
+                                onClick={handleFollow}
+                                whileHover={{ scale: 1.2, rotate: 90 }}
+                                whileTap={{ scale: 0.8 }}
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                            >
+                                <Plus className="w-3 h-3 text-white" />
+                                <motion.div 
+                                    className="absolute inset-0 rounded-full bg-cyan-400"
+                                    initial={{ scale: 1, opacity: 0 }}
+                                    whileTap={{ scale: 3, opacity: 0.5 }}
+                                    transition={{ duration: 0.5 }}
+                                />
+                            </motion.div>
+                        )}
+                        {isFollowingAuthor && (
+                            <motion.div 
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center border-2 border-black shadow-lg"
+                            >
+                                <Check className="w-3 h-3 text-white" />
+                            </motion.div>
+                        )}
+                    </div>
+                    <div className="flex flex-col pointer-events-auto cursor-pointer active:opacity-70 transition-opacity" onClick={handleProfileNavigation}>
+                        <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-sm font-black text-white drop-shadow-lg leading-tight">
+                                {post.author || post.author_name || post.user?.name || 'Anonim'}
+                            </span>
+                            {/* AURA BADGE IN FEED */}
+                            {post.aura_settings && (
+                                <div 
+                                    className={cn(
+                                        "px-2.5 py-0.5 flex items-center gap-1.5 transition-all duration-500 backdrop-blur-md",
+                                        post.aura_settings.frameStyle === 'glass' && "rounded-full bg-white/10 border border-card-border shadow-xl",
+                                        post.aura_settings.frameStyle === 'neon' && "rounded-lg bg-black/40 border-[0.5px] border-card-border shadow-[0_0_15px_rgba(255,255,255,0.05)]",
+                                        post.aura_settings.frameStyle === 'metal' && "rounded-md bg-gradient-to-br from-gray-700 to-black border border-card-border",
+                                        post.aura_settings.frameStyle === 'minimal' && "px-1"
+                                    )}
+                                >
+                                    <div 
+                                        className="w-1.5 h-1.5 rounded-full animate-pulse shrink-0"
+                                        style={{ backgroundColor: post.aura_settings.accentColor === 'default' ? '#6366f1' : post.aura_settings.accentColor }}
+                                    />
+                                    <span 
+                                        className={cn(
+                                            "text-[8px] font-black uppercase tracking-[0.3em] transition-all duration-500",
+                                            post.aura_settings.fontFamily === 'font-serif' && "font-serif",
+                                            post.aura_settings.fontFamily === 'font-mono' && "font-mono",
+                                            post.aura_settings.fontFamily === 'italic' && "italic",
+                                            post.aura_settings.fontFamily === 'font-pacifico' && "font-pacifico lowercase !tracking-widest",
+                                            post.aura_settings.fontFamily === 'font-satisfy' && "font-satisfy lowercase !tracking-widest",
+                                            post.aura_settings.fontFamily === 'font-playfair' && "font-playfair",
+                                        )}
+                                        style={{ 
+                                            color: (post.aura_settings.frameStyle === 'glass' || post.aura_settings.frameStyle === 'metal') ? '#FFFFFF' : '#FFFFFF',
+                                            textShadow: post.aura_settings.frameStyle === 'neon' ? `0 0 8px ${post.aura_settings.accentColor === 'default' ? '#6366f1' : post.aura_settings.accentColor}` : 'none'
+                                        }}
+                                    >
+                                        Pioneer
+                                    </span>
+                                    
+                                    {/* BADGES IN FEED PILL */}
+                                    <div className="flex items-center gap-1 border-l border-card-border pl-1.5">
+                                        {(post.aura_settings.badges || []).map((bid: string) => {
+                                            if (bid === 'verified') return (
+                                                <button 
+                                                    key={bid} 
+                                                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); setActiveBadgeInfo('verified'); }}
+                                                    className="p-0.5 hover:bg-white/10 active:scale-90 rounded transition-all flex items-center justify-center cursor-pointer"
+                                                >
+                                                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                                                </button>
+                                            );
+                                            if (bid === 'premium') return (
+                                                <button 
+                                                    key={bid} 
+                                                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); setActiveBadgeInfo('premium'); }}
+                                                    className="p-0.5 hover:bg-white/10 active:scale-90 rounded transition-all flex items-center justify-center cursor-pointer"
+                                                >
+                                                    <Crown className="w-3.5 h-3.5 text-orange-400" />
+                                                </button>
+                                            );
+                                            if (bid === 'walker') return (
+                                                <button 
+                                                    key={bid} 
+                                                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); setActiveBadgeInfo('walker'); }}
+                                                    className="p-0.5 hover:bg-white/10 active:scale-90 rounded transition-all flex items-center justify-center cursor-pointer"
+                                                >
+                                                    <Footprints className="w-3.5 h-3.5 text-cyan-400" />
+                                                </button>
+                                            );
+                                            if (bid === 'sos') return (
+                                                <button 
+                                                    key={bid} 
+                                                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); setActiveBadgeInfo('sos'); }}
+                                                    className="p-0.5 hover:bg-white/10 active:scale-90 rounded transition-all flex items-center justify-center cursor-pointer"
+                                                >
+                                                    <SOSZap className="w-3.5 h-3.5 text-red-500" />
+                                                </button>
+                                            );
+                                            return null;
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        <span className="text-[11px] text-zinc-400 font-medium drop-shadow-md">
+                            {post.username || post.author_name || (post.author ? `@${post.author.toLowerCase().replace(/\s+/g, '_')}` : (post.user?.name ? `@${post.user.name.toLowerCase().replace(/\s+/g, '_')}` : '@anonim'))}
+                        </span>
+                    </div>
+                </div>
+
+                <p className="text-[13px] sm:text-xs text-white/90 leading-relaxed font-medium drop-shadow-md line-clamp-2 w-5/6 pl-1.5 pointer-events-none">
+                    {filterContent(post.desc || post.caption || post.description || '')}
+                </p>
+
+                {/* MUSIC INDICATOR (TikTok Style) */}
+                {post?.audio_url && (
+                    <div className="flex items-center gap-2 mt-1 pl-1.5 pointer-events-auto cursor-pointer group/music w-max">
+                        <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center animate-spin-slow">
+                            <SOSZap className="w-3 h-3 text-cyan-400" />
+                        </div>
+                        <div className="overflow-hidden flex items-center gap-1.5">
+                            <span className="text-[10px] font-black text-white/60 uppercase tracking-widest group-hover/music:text-cyan-400 transition-colors whitespace-nowrap">
+                                Orijinal Ses - {post.author || 'Moffi Kullanıcısı'}
+                            </span>
+                            <div className="flex gap-0.5">
+                                {[1, 2, 3].map(i => (
+                                    <div key={i} className="w-0.5 h-2 bg-cyan-400/40 rounded-full animate-music-bar" style={{ animationDelay: `${i * 0.2}s` }} />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/75 via-black/20 to-transparent pointer-events-none" />
+
+            <AnimatePresence>
+                {showComments && (
+                    <motion.div
+                        initial={{ y: "100%", opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: "100%", opacity: 0 }}
+                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                        className="absolute inset-x-0 bottom-0 h-[82%] bg-background/90 backdrop-blur-[40px] z-40 rounded-t-[2.5rem] border-t border-card-border p-4 flex flex-col shadow-2xl"
+                    >
+                        {/* HANDLE */}
+                        <div 
+                            onClick={() => setShowComments(false)}
+                            className="w-full flex justify-center pt-2 pb-4 shrink-0 cursor-pointer group/handle"
+                        >
+                            <div className="w-12 h-1.5 bg-white/20 rounded-full group-hover/handle:bg-white/40 transition-colors" />
+                        </div>
+
+                        {/* HEADER */}
+                        <div className="flex justify-between items-center mb-4 pb-4 border-b border-foreground/5">
+                            <h3 className="font-bold text-foreground flex items-center gap-2">
+                                <MessageCircle className="w-5 h-5 text-accent" />
+                                {post.comments} Yorum
+                            </h3>
+                            <button onClick={() => setShowComments(false)} className="bg-foreground/10 p-2 rounded-full hover:bg-foreground/20 transition-colors">
+                                <X className="w-4 h-4 text-foreground" />
+                            </button>
+                        </div>
+
+                        {/* COMMENT LIST CONTAINER */}
+                        <div className="flex-1 overflow-y-auto no-scrollbar pt-2 overscroll-contain pb-4">
+                            <div className="space-y-6 px-1">
+                                {isLoadingComments ? (
+                                    <div className="flex flex-col items-center justify-center mt-20">
+                                        <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mb-4" />
+                                        <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Yorumlar Yükleniyor...</p>
+                                    </div>
+                                ) : comments && comments.length > 0 ? (
+                                    comments.map((c: any) => (
+                                        <CommentItem 
+                                            key={c.id} 
+                                            comment={c} 
+                                            currentUser={currentUser}
+                                            onLike={async (cid) => {
+                                                await onToggleCommentLike?.(cid);
+                                                await apiService.toggleCommentLike(cid);
+                                                refetchComments();
+                                            }}
+                                            onReply={(target) => {
+                                                setReplyingTo(target);
+                                                setEditingComment(null);
+                                                setCommentInput('');
+                                            }}
+                                            onEdit={(target) => {
+                                                setEditingComment(target);
+                                                setReplyingTo(null);
+                                                setCommentInput(target.text);
+                                            }}
+                                            onDelete={async (cid) => {
+                                                await onDeleteComment?.(cid);
+                                                await apiService.deleteComment(cid);
+                                                refetchComments();
+                                            }}
+                                            onReport={async (cid) => {
+                                                onReportComment?.(cid);
+                                                alert("🛡️ Yorum İhbarı Başarıyla Kaydedildi!\n\nŞikayetiniz Moffi İçerik Güvenliği ve Moderasyon Ekibinin 'Gelen Kutusu / İnceleme Paneline' anında iletilmiştir. Zararlı içerikler 7/24 denetlenmektedir. Geri bildiriminiz için teşekkür ederiz.");
+                                                if (typeof window !== 'undefined') {
+                                                    try {
+                                                        const overrides = JSON.parse(localStorage.getItem('moffi_global_comment_state') || '{}');
+                                                        overrides[String(cid)] = { ...(overrides[String(cid)] || {}), status: 'pending' };
+                                                        localStorage.setItem('moffi_global_comment_state', JSON.stringify(overrides));
+                                                        window.dispatchEvent(new Event('moffi_comments_changed'));
+                                                    } catch {}
+
+                                                    for (let i = 0; i < localStorage.length; i++) {
+                                                        const key = localStorage.key(i);
+                                                        if (key?.startsWith('moffi_local_comments_')) {
+                                                            try {
+                                                                const items = JSON.parse(localStorage.getItem(key) || '[]');
+                                                                let updated = false;
+                                                                const nextItems = items.map((cm: any) => {
+                                                                    if (String(cm.id) === String(cid)) {
+                                                                        updated = true;
+                                                                        return { ...cm, status: 'pending' };
+                                                                    }
+                                                                    return cm;
+                                                                });
+                                                                if (updated) {
+                                                                    localStorage.setItem(key, JSON.stringify(nextItems));
+                                                                    break;
+                                                                }
+                                                            } catch {}
+                                                        }
+                                                    }
+                                                }
+                                                refetchComments();
+                                            }}
+                                            filterContent={filterContent}
+                                        />
+                                    ))
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center mt-20 opacity-30">
+                                        <MessageCircle className="w-12 h-12 mb-3" />
+                                        <p className="text-xs font-black uppercase tracking-widest text-center px-10">Henüz hiç yorum yok.<br/>İlk patiyi sen at!</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* INPUT ACTIONS AREA */}
+                        <div className="mt-auto shrink-0">
+                            {/* AI SUGGESTION BAR */}
+                            <AnimatePresence>
+                                {showAISuggestions && !commentInput && !replyingTo && !editingComment && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: 10 }}
+                                        className="flex gap-2 overflow-x-auto no-scrollbar py-2 mb-1 shrink-0 px-2"
+                                    >
+                                        {AI_SUGGESTIONS.map((suggestion, i) => (
+                                            <button
+                                                key={i}
+                                                onClick={() => setCommentInput(suggestion)}
+                                                className="whitespace-nowrap px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-card-border rounded-full text-[11px] font-bold text-white/90 transition-all active:scale-95"
+                                            >
+                                                {suggestion}
+                                            </button>
+                                        ))}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            {/* INDICATOR BOX (Replying/Editing) */}
+                            <AnimatePresence>
+                                {(replyingTo || editingComment) && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        exit={{ opacity: 0, height: 0 }}
+                                        className="px-4 py-2 bg-cyan-500/10 border border-cyan-500/20 rounded-2xl mb-2 flex items-center justify-between mx-2"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                                            <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">
+                                                {editingComment ? 'YORUM DÜZENLENİYOR' : `YANITLANIYOR: @${replyingTo.author || replyingTo.userName}`}
+                                            </span>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                setReplyingTo(null);
+                                                setEditingComment(null);
+                                                if (editingComment) setCommentInput('');
+                                            }}
+                                            className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                                        >
+                                            <X className="w-3.5 h-3.5 text-cyan-400" />
+                                        </button>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            <div className="relative">
+                                {/* MENTION LIST overlay */}
+                                <AnimatePresence>
+                                    {mentionSearch && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                            className="absolute bottom-full left-0 right-0 mb-4 bg-[#1a1b1e]/90 backdrop-blur-3xl border border-card-border rounded-2xl overflow-hidden shadow-2xl z-50 mx-2"
+                                        >
+                                            <div className="p-3 border-b border-card-border bg-white/5">
+                                                <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Kişi Etiketle</span>
+                                            </div>
+                                            <div className="max-h-48 overflow-y-auto no-scrollbar divide-y divide-white/5">
+                                                {MOCK_USERS.filter(u => u.username.includes(mentionSearch.slice(1))).map(u => (
+                                                     <button
+                                                         key={u.id}
+                                                         onClick={() => {
+                                                             setCommentInput(prev => prev.replace(mentionSearch, `@${u.username} `));
+                                                             setMentionSearch('');
+                                                         }}
+                                                         className="w-full px-5 py-3 flex items-center gap-3 hover:bg-white/5 active:bg-white/10 transition-colors"
+                                                     >
+                                                         <div className="w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 font-bold text-xs">
+                                                             {u.username[0].toUpperCase()}
+                                                         </div>
+                                                         <div className="flex flex-col items-start text-left">
+                                                             <span className="text-sm font-bold text-white">@{u.username}</span>
+                                                             <span className="text-[10px] text-white/40">{u.name}</span>
+                                                         </div>
+                                                     </button>
+                                                 ))}
+                                             </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+
+                                <div className="flex items-center gap-3 relative bg-white/5 border border-card-border rounded-[2rem] py-2 px-2 shrink-0">
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        <button
+                                            onClick={() => alert('Fotoğraf seçimi yakında aktif! 📸')}
+                                            className="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center text-white/50 transition-colors"
+                                        >
+                                            <Plus className="w-4 h-4" />
+                                        </button>
+                                        <div className="w-8 h-8 rounded-full border border-card-border relative overflow-hidden">
+                                            <Image src={currentUser?.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} fill className="object-cover" alt="User" />
+                                        </div>
+                                    </div>
+
+                                    <input
+                                        type="text"
+                                        value={commentInput}
+                                        onFocus={() => { setShowAISuggestions(true); setShowGIFPicker(false); }}
+                                        onBlur={() => setTimeout(() => setShowAISuggestions(false), 200)}
+                                        onChange={(e) => {
+                                            setCommentInput(e.target.value);
+                                            const words = e.target.value.split(' ');
+                                            const lastWord = words[words.length - 1];
+                                            if (lastWord.startsWith('@')) {
+                                                setMentionSearch(lastWord);
+                                            } else {
+                                                setMentionSearch('');
+                                            }
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') handleSendComment();
+                                        }}
+                                        placeholder={editingComment ? "Yorumu düzenle..." : (replyingTo ? "Yanıtınızı yazın..." : "Düşüncelerini bir pati ile paylaş...")}
+                                        className="w-full bg-transparent text-sm text-white pr-20 focus:outline-none placeholder:text-white/20"
+                                    />
+
+                                    <div className="absolute right-2 flex items-center gap-1.5">
+                                        <button
+                                            onClick={() => setShowGIFPicker(!showGIFPicker)}
+                                            className={cn(
+                                                "w-8 h-8 rounded-full flex items-center justify-center font-black text-[10px] border transition-all",
+                                                showGIFPicker ? "bg-cyan-500 border-cyan-400 text-black" : "hover:bg-white/10 text-cyan-400 border-card-border"
+                                            )}
+                                        >
+                                            GIF
+                                        </button>
+                                        <button
+                                            onClick={handleSendComment}
+                                            className="w-9 h-9 rounded-full bg-card hover:bg-gray-200 flex items-center justify-center text-black font-bold transition-transform active:scale-95 shadow-xl"
+                                        >
+                                            <Send className="w-4 h-4 -ml-0.5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* BADGE INFO SHEET */}
+            <AnimatePresence>
+                {activeBadgeInfo && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setActiveBadgeInfo(null)}
+                        className="absolute inset-0 z-[2000] bg-black/60 backdrop-blur-md flex items-end justify-center"
+                    >
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 350 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full bg-[#121318]/95 border-t border-white/10 rounded-t-[2.5rem] p-6 pb-8 flex flex-col items-center text-center shadow-2xl relative pointer-events-auto"
+                        >
+                            {/* Handle */}
+                            <div 
+                                onClick={() => setActiveBadgeInfo(null)}
+                                className="w-12 h-1.5 bg-white/20 rounded-full mb-6 cursor-pointer hover:bg-white/40 transition-colors"
+                            />
+
+                            {/* Icon & Glow */}
+                            <div className="relative mb-4 flex items-center justify-center">
+                                <div className={cn(
+                                    "absolute w-20 h-20 rounded-full blur-2xl opacity-20 animate-pulse",
+                                    activeBadgeInfo === 'verified' && "bg-emerald-400",
+                                    activeBadgeInfo === 'premium' && "bg-orange-400",
+                                    activeBadgeInfo === 'walker' && "bg-cyan-400",
+                                    activeBadgeInfo === 'sos' && "bg-red-500"
+                                )} />
+                                <div className={cn(
+                                    "w-16 h-16 rounded-full flex items-center justify-center border shadow-xl relative z-10",
+                                    activeBadgeInfo === 'verified' && "bg-emerald-500/10 border-emerald-500/30 text-emerald-400",
+                                    activeBadgeInfo === 'premium' && "bg-orange-500/10 border-orange-500/30 text-orange-400",
+                                    activeBadgeInfo === 'walker' && "bg-cyan-500/10 border-cyan-500/30 text-cyan-400",
+                                    activeBadgeInfo === 'sos' && "bg-red-500/10 border-red-500/30 text-red-500"
+                                )}>
+                                    {activeBadgeInfo === 'verified' && <ShieldCheck className="w-8 h-8" />}
+                                    {activeBadgeInfo === 'premium' && <Crown className="w-8 h-8" />}
+                                    {activeBadgeInfo === 'walker' && <Footprints className="w-8 h-8" />}
+                                    {activeBadgeInfo === 'sos' && <SOSZap className="w-8 h-8" />}
+                                </div>
+                            </div>
+
+                            {/* Title & Desc */}
+                            <h3 className="text-lg font-black text-white mb-2 uppercase tracking-wide">
+                                {activeBadgeInfo === 'verified' && 'ONAYLI HESAP'}
+                                {activeBadgeInfo === 'premium' && 'PREMIUM ÜYE'}
+                                {activeBadgeInfo === 'walker' && 'ONAYLI GEZDİRİCİ'}
+                                {activeBadgeInfo === 'sos' && 'ACİL DURUM ORTAĞI'}
+                            </h3>
+                            <p className="text-xs text-white/60 font-medium leading-relaxed max-w-xs mb-6">
+                                {activeBadgeInfo === 'verified' && 'Bu profilin ve kimliğinin doğruluğu, Moffi moderasyon ekibi tarafından resmi belgelerle incelenmiş ve onaylanmıştır.'}
+                                {activeBadgeInfo === 'premium' && 'Moffi ekosistemindeki ayrıcalıklı özellikleri, özel avatarları ve gelişmiş akıllı araçları kullanan Moffi Premium üyesidir.'}
+                                {activeBadgeInfo === 'walker' && 'Moffi güvenli gezdirme eğitimi ve kimlik doğrulama süreçlerini tamamlamış, onaylı ve güvenilir köpek gezdiricisidir.'}
+                                {activeBadgeInfo === 'sos' && 'Moffi kayıp ve acil durum ağında aktif rol oynayan, yakın çevredeki acil durum bildirimlerine gönüllü müdahale yetkisine sahip kullanıcıdır.'}
+                            </p>
+
+                            {/* Close Button */}
+                            <button
+                                onClick={() => setActiveBadgeInfo(null)}
+                                className={cn(
+                                    "w-full py-3.5 rounded-full font-black text-xs uppercase tracking-widest text-black shadow-lg transition-transform active:scale-95",
+                                    activeBadgeInfo === 'verified' && "bg-emerald-400 shadow-emerald-400/20",
+                                    activeBadgeInfo === 'premium' && "bg-orange-400 shadow-orange-400/20",
+                                    activeBadgeInfo === 'walker' && "bg-cyan-400 shadow-cyan-400/20",
+                                    activeBadgeInfo === 'sos' && "bg-red-500 shadow-red-500/20 text-white"
+                                )}
+                            >
+                                Anladım
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
+    );
+}
+
+// RENDER HELPER FOR COMMENTS
+// RENDER HELPER FOR COMMENTS
+function CommentItem({ 
+    comment, 
+    onLike, 
+    onReply, 
+    onEdit, 
+    onDelete, 
+    onReport, 
+    filterContent,
+    currentUser,
+    isReply = false 
+}: { 
+    comment: any, 
+    onLike: (commentId: string) => void, 
+    onReply: (comment: any) => void, 
+    onEdit: (comment: any) => void, 
+    onDelete: (commentId: string) => void, 
+    onReport: (commentId: string) => void, 
+    filterContent: (text: string) => string,
+    currentUser?: any,
+    isReply?: boolean 
+}) {
+    const [showReplies, setShowReplies] = useState(false);
+    const [showContextMenu, setShowContextMenu] = useState(false);
+    const [likesCount, setLikesCount] = useState(comment.likes || 0);
+    const [isLikedLocal, setIsLikedLocal] = useState(comment.isLiked || false);
+    const router = useRouter();
+
+    const currentUsername = currentUser?.username || currentUser?.name || currentUser?.full_name;
+    const commentUsername = comment.user || comment.author || comment.userName;
+    const isCommentOwner = 
+        (currentUser?.id && comment.user_id && String(currentUser.id) === String(comment.user_id)) ||
+        (currentUsername && commentUsername && String(currentUsername).toLowerCase() === String(commentUsername).toLowerCase());
+
+    useEffect(() => {
+        setLikesCount(comment.likes || 0);
+        setIsLikedLocal(comment.isLiked || false);
+    }, [comment.likes, comment.isLiked]);
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, x: isReply ? 10 : 0 }}
+            animate={{ opacity: 1, x: 0 }}
+            className={cn("flex flex-col relative", isReply ? "pl-1" : "")}
+        >
+            <div className="flex gap-3 group/comment items-start">
+                <div className="flex flex-col items-center shrink-0 mt-0.5">
+                    {comment.isSystem ? (
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-600 flex items-center justify-center shrink-0 shadow-lg shadow-cyan-500/20 ring-2 ring-cyan-400/20">
+                            <Sparkles className="w-4 h-4 text-white" />
+                        </div>
+                    ) : (
+                        <motion.div
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => {
+                                const targetId = comment.userId || comment.user_id || comment.authorId;
+                                router.push(targetId ? `/profile/${targetId}` : '/profile');
+                            }}
+                            className="relative cursor-pointer"
+                        >
+                            <div className="w-8 h-8 rounded-full border border-card-border relative overflow-hidden shrink-0">
+                                <Image src={comment.avatar || comment.userImg || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} fill className="object-cover" alt="Commenter" />
+                            </div>
+                            {isLikedLocal && (
+                                <motion.div
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    className="absolute -bottom-0.5 -right-0.5 bg-red-500 rounded-full w-3.5 h-3.5 flex items-center justify-center border border-black shadow-sm"
+                                >
+                                    <Heart className="w-2 h-2 text-white fill-white" />
+                                </motion.div>
+                            )}
+                        </motion.div>
+                    )}
+                    {isReply && <div className="flex-1 w-0.5 bg-gradient-to-b from-white/10 to-transparent my-1 rounded-full" />}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                    <div className="relative overflow-hidden group/reply-target">
+                        <div className="relative z-10">
+                            <div className="flex items-center gap-2 mb-0.5">
+                                <span
+                                    onClick={() => {
+                                        const targetId = comment.userId || comment.user_id || comment.authorId;
+                                        router.push(targetId ? `/profile/${targetId}` : '/profile');
+                                    }}
+                                    className={cn("text-[13px] font-black truncate cursor-pointer hover:underline max-w-[140px] sm:max-w-[180px]", comment.isSystem ? "text-cyan-400" : "text-white/90")}
+                                >
+                                    {comment.user || comment.author || comment.userName || 'Moffi Kullanıcısı'}
+                                </span>
+                                
+                                {comment.isReplyTo && (
+                                    <span className="text-[10px] text-cyan-400/50 font-black flex items-center shrink-0">
+                                        <ChevronRight className="w-2.5 h-2.5" />
+                                        @{comment.isReplyTo}
+                                    </span>
+                                )}
+
+                                {comment.status === 'pending' && (
+                                    <span className="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded font-bold shrink-0">
+                                        Onay Bekliyor 🛡️
+                                    </span>
+                                )}
+
+                                <div className="flex items-center gap-2 ml-auto shrink-0">
+                                    <span className="text-[9px] text-white/20 font-black uppercase tracking-tighter">{comment.time || "YENİ"}</span>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowContextMenu(!showContextMenu);
+                                        }}
+                                        className="p-1 hover:bg-white/10 rounded-full transition-colors opacity-40 hover:opacity-100 group-hover/comment:opacity-100"
+                                    >
+                                        <MoreHorizontal className="w-3.5 h-3.5 text-white" />
+                                    </button>
+                                </div>
+                            </div>
+                            <p className={cn("text-[13px] leading-relaxed font-medium font-sans break-words pl-0.5", comment.status === 'pending' ? "text-amber-400/80 italic" : "text-white/80")}>
+                                {comment.status === 'pending' ? "[İnceleniyor] " + filterContent(comment.text) : filterContent(comment.text)}
+                            </p>
+
+                            {comment.media && (
+                                <div className="mt-2 rounded-2xl overflow-hidden border border-card-border shadow-2xl max-w-[200px]">
+                                    <img src={comment.media.url} className="w-full h-auto object-cover" />
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-5 mt-1.5 ml-0.5">
+                        <button
+                            onClick={async () => {
+                                if (!currentUser || String(currentUser.id) === 'local-user') {
+                                    alert('❤️ Yorumları beğenmek için lütfen giriş yapın veya kayıt olun.');
+                                    window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'login' }));
+                                    return;
+                                }
+                                const newLiked = !isLikedLocal;
+                                setIsLikedLocal(newLiked);
+                                setLikesCount((prev: number) => newLiked ? prev + 1 : Math.max(0, prev - 1));
+                                await onLike(comment.id);
+                            }}
+                            className={cn(
+                                "flex items-center gap-1 text-[10px] font-black uppercase tracking-widest transition-all active:scale-95",
+                                isLikedLocal ? "text-red-500" : "text-white/40 hover:text-white/60"
+                            )}
+                        >
+                            {isLikedLocal ? <Heart className="w-3 h-3 fill-red-500" /> : <Heart className="w-3 h-3" />}
+                            {likesCount > 0 ? likesCount : "BEĞEN"}
+                        </button>
+                        <button
+                            onClick={() => onReply(comment)}
+                            className="flex items-center gap-1 text-[10px] text-white/40 font-black uppercase tracking-widest hover:text-white transition-all active:scale-95"
+                        >
+                            <MessageSquare className="w-3 h-3" />
+                            YANITLA
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* CONTEXT MENU */}
+            <AnimatePresence>
+                {showContextMenu && (
+                    <>
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowContextMenu(false)}
+                            className="fixed inset-0 z-[60] bg-black/20 backdrop-blur-[2px]"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: -10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: -10 }}
+                            className="absolute right-2 top-8 z-[70] min-w-[160px] bg-[#121316]/95 backdrop-blur-3xl border border-card-border rounded-2xl p-1.5 shadow-2xl"
+                        >
+                            {isCommentOwner && (
+                                <>
+                                    <button 
+                                        onClick={() => {
+                                            onEdit(comment);
+                                            setShowContextMenu(false);
+                                        }}
+                                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/10 text-white transition-colors"
+                                    >
+                                        <span className="text-[11px] font-bold">DÜZENLE</span>
+                                        <Edit2 className="w-3.5 h-3.5 text-white/40" />
+                                    </button>
+                                    <button 
+                                        onClick={() => {
+                                            onDelete(comment.id);
+                                            setShowContextMenu(false);
+                                        }}
+                                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-red-500/20 text-red-400 transition-colors"
+                                    >
+                                        <span className="text-[11px] font-bold">SİL</span>
+                                        <Trash2 className="w-3.5 h-3.5 opacity-60" />
+                                    </button>
+                                    <div className="h-px bg-white/5 my-1 mx-2" />
+                                </>
+                            )}
+                            <button 
+                                onClick={() => {
+                                    onReport(comment.id);
+                                    setShowContextMenu(false);
+                                }}
+                                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/10 text-white/60 transition-colors"
+                            >
+                                <span className="text-[11px] font-bold">ŞİKAYET ET</span>
+                                <ShieldAlert className="w-3.5 h-3.5 opacity-40" />
+                            </button>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* NESTED REPLIES */}
+            {comment.replies && comment.replies.length > 0 && (
+                <div className="ml-6 flex flex-col gap-3 mt-1 pl-4 border-l border-card-border relative">
+                    {!showReplies ? (
+                        <button
+                            onClick={() => setShowReplies(true)}
+                            className="flex items-center gap-2 text-[10px] font-black text-cyan-400/80 hover:text-cyan-400 transition-colors py-1 group"
+                        >
+                            <div className="w-5 h-px bg-white/10 group-hover:bg-cyan-400/30" />
+                            {comment.replies.length} YANITA BAK
+                        </button>
+                    ) : (
+                        <div className="flex flex-col gap-4">
+                            {comment.replies.map((reply: any) => (
+                                <CommentItem
+                                    key={reply.id}
+                                    comment={reply}
+                                    currentUser={currentUser}
+                                    onLike={onLike}
+                                    onReply={onReply}
+                                    onEdit={onEdit}
+                                    onDelete={onDelete}
+                                    onReport={onReport}
+                                    filterContent={filterContent}
+                                    isReply={true}
+                                />
+                            ))}
+                            <button
+                                onClick={() => setShowReplies(false)}
+                                className="flex items-center gap-2 text-[10px] font-black text-white/20 hover:text-white transition-colors py-1"
+                            >
+                                <div className="w-5 h-px bg-white/10" />
+                                YANITLARI GİZLE
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+        </motion.div>
+    );
+}

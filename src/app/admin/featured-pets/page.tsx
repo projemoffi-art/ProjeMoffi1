@@ -183,7 +183,7 @@ export default function FeaturedPetsManager() {
     };
 
     return (
-        <div className="min-h-screen bg-[#050508] text-white p-6 md:p-8 space-y-8 select-none relative overflow-hidden">
+        <div className="min-h-screen p-6 md:p-8 space-y-8 select-none relative overflow-hidden">
             {/* Background decorative glow spots */}
             <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-500/5 blur-[120px] rounded-full pointer-events-none" />
             <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-purple-500/5 blur-[150px] rounded-full pointer-events-none" />

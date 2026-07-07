@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const supabaseAdmin = (supabaseUrl && supabaseKey)
     ? createClient(supabaseUrl, supabaseKey)
@@ -76,8 +76,12 @@ export async function POST(req: Request) {
 
         // 3. Prepare parameters for PayTR API
         const merchant_id = process.env.PAYTR_MERCHANT_ID || process.env.NEXT_PUBLIC_PAYTR_MERCHANT_ID || "";
-        const merchant_key = process.env.PAYTR_MERCHANT_KEY || "";
-        const merchant_salt = process.env.PAYTR_MERCHANT_SALT || "";
+        const merchant_key = process.env.PAYTR_MERCHANT_KEY;
+        const merchant_salt = process.env.PAYTR_MERCHANT_SALT;
+
+        if (!merchant_id || !merchant_key || !merchant_salt) {
+            return NextResponse.json({ error: "PayTR API keys are missing in environment variables." }, { status: 500 });
+        }
 
         const rawIp = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "127.0.0.1";
         const user_ip = rawIp.split(',')[0].trim(); // Get first IP if multiple
