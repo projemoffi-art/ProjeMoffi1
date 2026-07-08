@@ -2,17 +2,20 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, X, Camera, MapPin, Activity, History, Sparkles } from 'lucide-react';
+import { Mic, X, Camera, MapPin, Activity, History, Sparkles, Info, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePet } from '@/context/PetContext';
+import { useRouter } from 'next/navigation';
 
 export function MoffiUltimateHub({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
+    const router = useRouter();
     const { activePet, pets } = usePet();
     const petToUse = activePet || pets?.[0];
 
     const [isListening, setIsListening] = useState(false);
     const [transcript, setTranscript] = useState('');
-    const [recognitionActive, setRecognitionActive] = useState(false);
+    const [showInfo, setShowInfo] = useState(false);
+    const [actionFeedback, setActionFeedback] = useState<{text: string, icon: any} | null>(null);
     
     // Simulate finding nearby pets
     const [nearbyPets, setNearbyPets] = useState<any[]>([]);
@@ -21,14 +24,15 @@ export function MoffiUltimateHub({ isOpen, onClose }: { isOpen: boolean, onClose
         if (isOpen) {
             // Generate some random nearby pets for the radar
             setNearbyPets([
-                { id: 1, x: '20%', y: '30%', name: 'Leo', img: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=150&h=150&fit=crop' },
-                { id: 2, x: '80%', y: '40%', name: 'Pamuk', img: 'https://images.unsplash.com/photo-1517849845537-4d257902454a?q=80&w=150&h=150&fit=crop' },
-                { id: 3, x: '60%', y: '80%', name: 'Max', img: 'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?q=80&w=150&h=150&fit=crop' }
+                { id: 1, x: '20%', y: '30%', name: 'Leo', img: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=150&h=150&fit=crop', profileId: 'leo' },
+                { id: 2, x: '80%', y: '40%', name: 'Pamuk', img: 'https://images.unsplash.com/photo-1517849845537-4d257902454a?q=80&w=150&h=150&fit=crop', profileId: 'pamuk' },
+                { id: 3, x: '60%', y: '80%', name: 'Max', img: 'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?q=80&w=150&h=150&fit=crop', profileId: 'max' }
             ]);
         } else {
             setNearbyPets([]);
             setTranscript('');
             setIsListening(false);
+            setActionFeedback(null);
         }
     }, [isOpen]);
 
@@ -36,6 +40,7 @@ export function MoffiUltimateHub({ isOpen, onClose }: { isOpen: boolean, onClose
     const handleStartListening = () => {
         setIsListening(true);
         setTranscript('Seni dinliyorum...');
+        setActionFeedback(null);
         
         try {
             const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -46,8 +51,30 @@ export function MoffiUltimateHub({ isOpen, onClose }: { isOpen: boolean, onClose
                 recognition.maxAlternatives = 1;
 
                 recognition.onresult = (event: any) => {
-                    const speechResult = event.results[0][0].transcript;
-                    setTranscript(speechResult);
+                    const speechResult = event.results[0][0].transcript.toLowerCase();
+                    setTranscript(`"${speechResult}"`);
+                    
+                    // LOCAL INTENT PARSER (Zero-Cost Logic)
+                    if (speechResult.includes('su') || speechResult.includes('içti')) {
+                        setTimeout(() => {
+                            window.dispatchEvent(new CustomEvent('moffi-daily-goals-update'));
+                            setActionFeedback({ text: '100ml Su Eklendi!', icon: Activity });
+                        }, 1000);
+                    } else if (speechResult.includes('mama') || speechResult.includes('yedi') || speechResult.includes('besle')) {
+                        setTimeout(() => {
+                            window.dispatchEvent(new CustomEvent('moffi-daily-goals-update'));
+                            setActionFeedback({ text: '1 Öğün Eklendi!', icon: Activity });
+                        }, 1000);
+                    } else if (speechResult.includes('yürü') || speechResult.includes('park') || speechResult.includes('dışarı')) {
+                        setTimeout(() => {
+                            router.push('/walk');
+                            onClose();
+                        }, 1000);
+                    } else {
+                        setTimeout(() => {
+                            setActionFeedback({ text: 'Anlaşılamadı, tekrar dener misin?', icon: X });
+                        }, 1500);
+                    }
                 };
 
                 recognition.onspeechend = () => {
@@ -99,12 +126,35 @@ export function MoffiUltimateHub({ isOpen, onClose }: { isOpen: boolean, onClose
                     className="fixed inset-0 z-[4000] bg-black/60 backdrop-blur-xl flex flex-col overflow-hidden"
                 >
                     {/* Header Controls */}
-                    <div className="absolute top-0 inset-x-0 p-6 flex justify-between items-center z-50">
-                        <div className="flex flex-col">
+                    <div className="absolute top-0 inset-x-0 p-6 flex justify-between items-start z-50">
+                        <div className="flex flex-col relative">
                             <h2 className="text-white text-xl font-black tracking-tight flex items-center gap-2">
-                                <Sparkles className="w-5 h-5 text-cyan-400" /> Moffi Core
+                                <Sparkles className="w-5 h-5 text-cyan-400" /> 
+                                Moffi Core
+                                <span className="text-[9px] font-bold bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded ml-1 border border-cyan-500/30">
+                                    BETA
+                                </span>
                             </h2>
-                            <p className="text-cyan-400/80 text-xs font-medium tracking-widest uppercase mt-0.5">Quantum Hub</p>
+                            <button onClick={() => setShowInfo(!showInfo)} className="flex items-center gap-1 text-cyan-400/80 text-xs font-medium uppercase mt-1 cursor-pointer hover:text-cyan-300 transition-colors">
+                                <Info className="w-3.5 h-3.5" /> Nasıl Çalışıyor?
+                            </button>
+
+                            <AnimatePresence>
+                                {showInfo && (
+                                    <motion.div 
+                                        initial={{ opacity: 0, y: -10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                        className="absolute top-full mt-2 left-0 w-64 bg-gray-900/90 backdrop-blur-md border border-cyan-500/30 rounded-2xl p-4 shadow-xl z-50"
+                                    >
+                                        <p className="text-white/80 text-[11px] leading-relaxed">
+                                            <strong className="text-cyan-400">Gizlilik & Performans Odaklı:</strong> Şu anki "BETA" sürümünde sesin sadece kendi cihazında (yerel) işlenir, hiçbir sunucuya gönderilmez. Radardaki patiler yakın zamanda aktif olan kullanıcılardır. Anıların ise sadece senin galerinde güvenle tutulur. 
+                                            <br/><br/>
+                                            Büyük yapay zeka beyni ve canlı radar güncellemeleri önümüzdeki sürümlerde aktif edilecektir!
+                                        </p>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
                         <button 
                             onClick={onClose}
@@ -143,19 +193,23 @@ export function MoffiUltimateHub({ isOpen, onClose }: { isOpen: boolean, onClose
                             {/* Nearby Pets Blips */}
                             <AnimatePresence>
                                 {nearbyPets.map((pet) => (
-                                    <motion.div
+                                    <motion.button
                                         key={pet.id}
+                                        onClick={() => {
+                                            router.push(`/profile/${pet.profileId}`);
+                                            onClose();
+                                        }}
                                         initial={{ opacity: 0, scale: 0 }}
                                         animate={{ opacity: 1, scale: 1 }}
                                         exit={{ opacity: 0, scale: 0 }}
                                         transition={{ duration: 0.5, delay: Math.random() * 2 }}
-                                        className="absolute w-10 h-10 -ml-5 -mt-5"
+                                        className="absolute w-10 h-10 -ml-5 -mt-5 group"
                                         style={{ left: pet.x, top: pet.y }}
                                     >
                                         <div className="absolute inset-0 bg-cyan-400 rounded-full animate-ping opacity-30"></div>
-                                        <img src={pet.img} className="w-10 h-10 rounded-full border-2 border-cyan-400 object-cover relative z-10" />
-                                        <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[9px] font-bold text-white bg-black/50 px-2 py-0.5 rounded-full">{pet.name}</span>
-                                    </motion.div>
+                                        <img src={pet.img} className="w-10 h-10 rounded-full border-2 border-cyan-400 object-cover relative z-10 transition-transform group-hover:scale-110" />
+                                        <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[9px] font-bold text-white bg-black/50 px-2 py-0.5 rounded-full whitespace-nowrap">{pet.name}</span>
+                                    </motion.button>
                                 ))}
                             </AnimatePresence>
 
@@ -187,10 +241,21 @@ export function MoffiUltimateHub({ isOpen, onClose }: { isOpen: boolean, onClose
                             </motion.button>
                         </div>
 
-                        {/* Transcript Area */}
-                        <div className="h-16 mt-12 flex items-center justify-center w-full max-w-xs px-4 text-center">
+                        {/* Transcript & Feedback Area */}
+                        <div className="h-20 mt-12 flex flex-col items-center justify-center w-full max-w-xs px-4 text-center">
                             <AnimatePresence mode="wait">
-                                {transcript && (
+                                {actionFeedback ? (
+                                    <motion.div
+                                        key="feedback"
+                                        initial={{ opacity: 0, scale: 0.8 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.8 }}
+                                        className="flex items-center gap-2 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 px-4 py-2 rounded-full font-bold text-sm"
+                                    >
+                                        <actionFeedback.icon className="w-4 h-4" />
+                                        {actionFeedback.text}
+                                    </motion.div>
+                                ) : transcript ? (
                                     <motion.p
                                         key={transcript}
                                         initial={{ opacity: 0, y: 10 }}
@@ -198,9 +263,9 @@ export function MoffiUltimateHub({ isOpen, onClose }: { isOpen: boolean, onClose
                                         exit={{ opacity: 0, y: -10 }}
                                         className="text-white font-medium text-lg leading-tight"
                                     >
-                                        "{transcript}"
+                                        {transcript}
                                     </motion.p>
-                                )}
+                                ) : null}
                             </AnimatePresence>
                         </div>
 
@@ -233,7 +298,7 @@ export function MoffiUltimateHub({ isOpen, onClose }: { isOpen: boolean, onClose
                                     </div>
                                     <div className="flex flex-col text-left">
                                         <h4 className="text-white font-bold text-lg">Günün Anısı</h4>
-                                        <p className="text-white/70 text-xs">{petToUse?.name || 'Dostunun'} bugünkü kapsülü eksik!</p>
+                                        <p className="text-white/70 text-[11px] font-medium">{petToUse?.name || 'Dostunun'} bugünkü kapsülü eksik!</p>
                                     </div>
                                 </div>
                                 <div className="relative z-10 bg-white text-gray-900 px-4 py-2 rounded-full text-xs font-black">
@@ -244,19 +309,26 @@ export function MoffiUltimateHub({ isOpen, onClose }: { isOpen: boolean, onClose
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 animate={{ opacity: 1, scale: 1 }}
-                                className="w-full bg-white/10 backdrop-blur-md border border-emerald-500/50 rounded-3xl p-4 flex items-center gap-4"
+                                className="w-full bg-white/10 backdrop-blur-md border border-emerald-500/30 rounded-3xl p-4 flex items-center justify-between"
                             >
-                                <img src={capsulePhoto} className="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-500" />
-                                <div className="flex flex-col">
-                                    <h4 className="text-emerald-400 font-bold text-base">Kapsül Mühürlendi!</h4>
-                                    <p className="text-white/70 text-[11px]">2026 Anı Defterine eklendi 📸</p>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center">
+                                        <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <h4 className="text-emerald-400 font-bold text-sm">Görev Tamamlandı!</h4>
+                                        <p className="text-white/70 text-[10px]">+10 Pati Puan Kazandın 🏆</p>
+                                    </div>
                                 </div>
-                                <button 
-                                    onClick={() => setCapsulePhoto(null)}
-                                    className="ml-auto w-8 h-8 flex items-center justify-center bg-white/10 rounded-full text-white/50 hover:text-white"
-                                >
-                                    <History className="w-4 h-4" />
-                                </button>
+                                <div className="text-right flex flex-col items-end">
+                                    <span className="text-white text-[10px] bg-white/10 px-2 py-1 rounded-full mb-1">Cihazına Kaydedildi</span>
+                                    <button 
+                                        onClick={() => setCapsulePhoto(null)}
+                                        className="text-white/50 hover:text-white text-[10px] underline"
+                                    >
+                                        Tekrar Çek
+                                    </button>
+                                </div>
                             </motion.div>
                         )}
                     </div>
