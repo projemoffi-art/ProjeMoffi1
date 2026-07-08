@@ -24,10 +24,17 @@ GRANT ALL ON TABLE public.pet_daily_stats TO postgres, service_role, authenticat
 ALTER TABLE public.pet_daily_stats ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow select for all users on pet_daily_stats" ON public.pet_daily_stats;
-CREATE POLICY "Allow select for all users on pet_daily_stats" 
+DROP POLICY IF EXISTS "Allow select for pet owners on pet_daily_stats" ON public.pet_daily_stats;
+CREATE POLICY "Allow select for pet owners on pet_daily_stats" 
 ON public.pet_daily_stats FOR SELECT 
-TO authenticated, anon
-USING (true);
+TO authenticated
+USING (
+    EXISTS (
+        SELECT 1 FROM public.pets 
+        WHERE pets.id = pet_daily_stats.pet_id 
+        AND pets.owner_id = auth.uid()
+    )
+);
 
 DROP POLICY IF EXISTS "Allow all actions for all users on pet_daily_stats" ON public.pet_daily_stats;
 CREATE POLICY "Allow all actions for pet owners on pet_daily_stats" 
