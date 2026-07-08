@@ -42,6 +42,7 @@ import {
     Wifi,
     Coins,
     QrCode,
+    Star,
     Shirt,
     ArrowUpRight,
     TrendingUp,
@@ -189,32 +190,37 @@ const QuickAccessBtn = ({
     icon: Icon, 
     title, 
     subtitle,
-    color, 
+    gradient, 
+    bgTint,
     delay = 0, 
     onClick 
 }: { 
     icon: any, 
     title: string, 
     subtitle: string,
-    color: string, 
+    gradient: string, 
+    bgTint: string,
     delay?: number, 
     onClick?: () => void 
 }) => (
     <motion.button 
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay, duration: 0.4 }}
-        whileHover={{ scale: 1.03, y: -1.5 }}
-        whileTap={{ scale: 0.97 }}
+        initial={{ opacity: 0, scale: 0.9, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ delay, duration: 0.4, type: "spring", stiffness: 200 }}
+        whileHover={{ scale: 1.03, y: -2 }}
+        whileTap={{ scale: 0.96 }}
         onClick={onClick}
-        className="flex items-center gap-3.5 p-3.5 rounded-[22px] bg-white shadow-[0_4px_12px_rgba(0,0,0,0.015),0_1px_2px_rgba(0,0,0,0.01)] border border-gray-100/80 transition-all duration-300 cursor-pointer group w-full text-left"
+        className={`relative flex items-center gap-3.5 p-3 rounded-[20px] ${bgTint} shadow-sm border border-white/40 dark:border-white/5 transition-all duration-300 cursor-pointer group w-full text-left overflow-hidden`}
     >
-        <div className="w-10 h-10 rounded-2xl bg-gray-50/50 flex items-center justify-center transform group-hover:scale-105 transition-transform duration-300 shrink-0">
-            <Icon className={`w-5.5 h-5.5 ${color} drop-shadow-[0_1px_2px_rgba(0,0,0,0.04)]`} strokeWidth={2.2} />
+        {/* Glow Background inside the button */}
+        <div className={`absolute -inset-1 opacity-0 group-hover:opacity-10 dark:opacity-5 dark:group-hover:opacity-15 blur-xl transition-opacity duration-300 bg-gradient-to-br ${gradient} to-transparent`} />
+        
+        <div className={`relative w-11 h-11 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center transform group-hover:scale-105 transition-transform duration-300 shrink-0 shadow-sm`}>
+            <Icon className="w-5.5 h-5.5 text-white drop-shadow-md" strokeWidth={2.2} />
         </div>
-        <div className="flex flex-col">
-            <span className="text-[12px] font-black text-gray-800 tracking-tight leading-tight">{title}</span>
-            <span className="text-[9px] text-gray-400 font-semibold mt-0.5 leading-none">{subtitle}</span>
+        <div className="flex flex-col relative z-10">
+            <span className="text-[13px] font-black text-gray-900 dark:text-white tracking-tight leading-tight">{title}</span>
+            <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mt-0.5 leading-none">{subtitle}</span>
         </div>
     </motion.button>
 );
@@ -1642,6 +1648,20 @@ export default function LegendaryLightDashboard() {
                         })}
                     </div>
                 </section>
+                {/* 2.5 Hızlı Erişim (Quick Access) - Premium Grid */}
+                <section className="mb-6 px-1">
+                    <h3 className="text-[14px] font-bold text-gray-800 dark:text-white tracking-tight mb-3 px-1 opacity-90">Keşfet & Kısayollar</h3>
+                    <div className="bg-gray-100/80 dark:bg-zinc-900/50 p-2 rounded-[28px] grid grid-cols-2 gap-2 shadow-inner border border-gray-200/50 dark:border-white/5">
+                        <QuickAccessBtn icon={Radio} title="Kayıp & Sahiplen" subtitle="İlan Merkezi" bgTint="bg-red-50/80 dark:bg-red-950/20 hover:bg-red-100/80 dark:hover:bg-red-900/30" gradient="from-red-400 to-rose-600" delay={0.1} onClick={() => router.push('/topluluk?tab=radar')} />
+                        <QuickAccessBtn icon={Compass} title="Topluluk" subtitle="Keşif Dünyası" bgTint="bg-blue-50/80 dark:bg-blue-950/20 hover:bg-blue-100/80 dark:hover:bg-blue-900/30" gradient="from-blue-400 to-indigo-600" delay={0.2} onClick={() => router.push('/topluluk')} />
+                        <QuickAccessBtn icon={Stethoscope} title="Moffi Vet" subtitle="Sağlık Asistanı" bgTint="bg-indigo-50/80 dark:bg-indigo-950/20 hover:bg-indigo-100/80 dark:hover:bg-indigo-900/30" gradient="from-indigo-400 to-purple-600" delay={0.3} onClick={() => router.push('/vet')} />
+                        <QuickAccessBtn icon={Syringe} title="Aşı Takvimi" subtitle="Sağlık Geçmişi" bgTint="bg-emerald-50/80 dark:bg-emerald-950/20 hover:bg-emerald-100/80 dark:hover:bg-emerald-900/30" gradient="from-emerald-400 to-teal-600" delay={0.4} onClick={() => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'health' } }))} />
+                        <QuickAccessBtn icon={ShoppingBag} title="Market" subtitle="Moffi Petshop" bgTint="bg-orange-50/80 dark:bg-orange-950/20 hover:bg-orange-100/80 dark:hover:bg-orange-900/30" gradient="from-orange-400 to-red-500" delay={0.5} onClick={() => router.push('/petshop')} />
+                        <QuickAccessBtn icon={Scissors} title="Bakım Merkezi" subtitle="Kişisel Bakım" bgTint="bg-teal-50/80 dark:bg-teal-950/20 hover:bg-teal-100/80 dark:hover:bg-teal-900/30" gradient="from-teal-400 to-emerald-600" delay={0.6} onClick={() => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'nutrition' } }))} />
+                        <QuickAccessBtn icon={Star} title="Moffi Kurumsal" subtitle="moffi.net" bgTint="bg-purple-50/80 dark:bg-purple-950/20 hover:bg-purple-100/80 dark:hover:bg-purple-900/30" gradient="from-purple-400 to-fuchsia-600" delay={0.7} onClick={() => window.open('https://moffi.net', '_blank')} />
+                        <QuickAccessBtn icon={Activity} title="Yürüyüş" subtitle="GPS Takip" bgTint="bg-sky-50/80 dark:bg-sky-950/20 hover:bg-sky-100/80 dark:hover:bg-sky-900/30" gradient="from-sky-400 to-blue-500" delay={0.8} onClick={() => router.push('/walk')} />
+                    </div>
+                </section>
 
                 {/* 9. Hero Pet Identity Card - Premium 3D Parallax Card */}
                 <div 
@@ -2246,15 +2266,7 @@ export default function LegendaryLightDashboard() {
                 </section>
 
                 <section className="mb-6">
-                    <h3 className="text-[15px] font-bold text-gray-800 tracking-tight mb-3 px-1">Hızlı erişim</h3>
-                    <div className="grid grid-cols-2 gap-3.5">
-                        <QuickAccessBtn icon={Radio} title="Kayıp & Sahiplen" subtitle="İlan Merkezi" color="text-red-500" delay={0.1} onClick={() => router.push('/topluluk?tab=radar')} />
-                        <QuickAccessBtn icon={Compass} title="Topluluk" subtitle="Moffi Kaşif Dünyası" color="text-blue-500" delay={0.2} onClick={() => router.push('/topluluk')} />
-                        <QuickAccessBtn icon={Stethoscope} title="Moffi Vet" subtitle="Sağlık Asistanı" color="text-indigo-500" delay={0.3} onClick={() => router.push('/vet')} />
-                        <QuickAccessBtn icon={Syringe} title="Aşı & Takvim" subtitle="Sağlık Geçmişi" color="text-emerald-500" delay={0.4} onClick={() => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'health' } }))} />
-                        <QuickAccessBtn icon={ShoppingBag} title="Moffi Market" subtitle="Online Alışveriş" color="text-rose-500" delay={0.5} onClick={() => window.open('https://moffi.net', '_blank')} />
-                        <QuickAccessBtn icon={Scissors} title="Bakım Merkezi" subtitle="Mama, Su ve Sağlık Hub" color="text-teal-600" delay={0.6} onClick={() => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'nutrition' } }))} />
-                    </div>
+                    {/* Hızlı Erişim was moved to the top of the feed */}
                 </section>
 
                 {/* 7. Promotional Banner - MOVED TO THE TOP */}

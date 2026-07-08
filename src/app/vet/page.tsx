@@ -1492,7 +1492,7 @@ export default function VetPage() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => alert("Canlı VetLine desteği başlatılıyor...")}
-                    className="fixed bottom-24 right-6 z-40 w-14 h-14 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-indigo-600/30 border border-indigo-400/20 active:scale-95 transition-all cursor-pointer"
+                    className="fixed bottom-40 right-6 z-40 w-14 h-14 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-indigo-600/30 border border-indigo-400/20 active:scale-95 transition-all cursor-pointer"
                     title="7/24 Canlı Veteriner Desteği"
                 >
                     <PhoneCall className="w-5 h-5 animate-pulse" />
