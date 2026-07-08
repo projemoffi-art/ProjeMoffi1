@@ -1,5 +1,7 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { streamText, generateText } from 'ai';
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
 export const maxDuration = 30;
 
@@ -28,37 +30,23 @@ export async function POST(req: Request) {
     try {
         console.log("AI Route: Received request");
 
-        // --- DEBUG PROBE (Via Query Param) ---
-        const url = new URL(req.url);
-        const testMode = url.searchParams.get('test');
-
-        if (testMode === 'generation') {
-            const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-            console.log("AI Route: Processing Test Generation Probe");
-
-            try {
-                // FALLBACK ATTEMPT 1: Gemini Pro
-                const genResult = await generateText({
-                    model: googleProvider('gemini-2.5-flash-lite') as any,
-                    prompt: 'Say "Hello"',
-                });
-
-                return new Response(JSON.stringify({
-                    status: 'success',
-                    message: 'AI Generation Successful!',
-                    output: genResult.text,
-                    envCheck: { hasApiKey: !!apiKey }
-                }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-
-            } catch (e: any) {
-                console.error("AI Route Probe Error:", e);
-                // Return descriptive error but don't crash
-                return new Response(JSON.stringify({
-                    status: 'error',
-                    message: 'Manual Test Failed',
-                    errorDetails: e.message
-                }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        // KİMLİK DOĞRULAMA (Spam / Maliyet Engeli)
+        const cookieStore = cookies();
+        const supabase = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            {
+                cookies: {
+                    get(name: string) { return cookieStore.get(name)?.value; },
+                    set() {},
+                    remove() {}
+                }
             }
+        );
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
         }
 
         // --- NORMAL CHAT FLOW ---
