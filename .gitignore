@@ -69,3 +69,5 @@ scratch/
 *.fixed
 *.backup
 *.BACKUP*
+
+.vercel

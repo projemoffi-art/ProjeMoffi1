@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-    Home, Compass, ShieldAlert, MessageCircle, User
+    Home, Compass, Sparkles, MessageCircle, User
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter, usePathname } from 'next/navigation';
@@ -83,16 +83,16 @@ export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisibl
                         <Compass className={cn("w-5 h-5", activeTab === 'feed' && "text-cyan-600 dark:text-cyan-400")} />
                     </button>
 
-                    {/* 3. CENTER: SOS BUTTON */}
+                    {/* 3. CENTER: MOFFI AI HUB BUTTON */}
                     <div className="flex-1 flex justify-center relative">
                         <button
-                            onClick={() => window.dispatchEvent(new CustomEvent('open-sos-center'))}
+                            onClick={() => window.dispatchEvent(new CustomEvent('open-moffi-ai-hub'))}
                             className={cn(
                                 "w-11 h-11 rounded-full flex items-center justify-center border-[2.5px] border-[var(--background)] dark:border-[#1c1c21] active:scale-95 transition-all group absolute -top-4",
-                                "bg-gradient-to-tr from-red-500 via-rose-600 to-red-700 text-white shadow-[0_8px_20px_rgba(220,38,38,0.4)]"
+                                "bg-gradient-to-tr from-cyan-400 via-blue-500 to-purple-600 text-white shadow-[0_8px_20px_rgba(34,211,238,0.4)]"
                             )}
                         >
-                            <ShieldAlert className="w-5 h-5 transition-transform duration-500 group-hover:scale-110" />
+                            <Sparkles className="w-5 h-5 transition-transform duration-500 group-hover:scale-110" />
                         </button>
                         <div className="h-full" />
                     </div>

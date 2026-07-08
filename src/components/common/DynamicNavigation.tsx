@@ -22,6 +22,7 @@ const SpotlightSearch = dynamic(() => import("@/components/community/SpotlightSe
 const AuthModal = dynamic(() => import("@/components/auth/AuthModal").then(mod => mod.default), { ssr: false });
 const NotificationDrawer = dynamic(() => import("@/components/notifications/NotificationDrawer").then(mod => mod.NotificationDrawer), { ssr: false });
 const EcosystemPortal = dynamic(() => import("@/components/community/EcosystemPortal").then(mod => mod.EcosystemPortal), { ssr: false });
+const AIActionHub = dynamic(() => import("@/components/community/AIActionHub").then(mod => mod.AIActionHub), { ssr: false });
 
 const HIDDEN_ROUTES = ['/', '/studio', '/lab', '/production-studio', '/login', '/register', '/auth'];
 
@@ -44,6 +45,7 @@ export function DynamicNavigation() {
     const [isAuthOpen, setIsAuthOpen] = useState(false);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const [isEcosystemPortalOpen, setIsEcosystemPortalOpen] = useState(false);
+    const [isAIHubOpen, setIsAIHubOpen] = useState(false);
     const [isNavVisible, setIsNavVisible] = useState(true);
     const [isNavAllowedByExternalOverlays, setIsNavAllowedByExternalOverlays] = useState(true);
     const [sosActivePet, setSosActivePet] = useState<any>(null);
@@ -58,7 +60,8 @@ export function DynamicNavigation() {
         isSpotlightOpen || 
         isAuthOpen || 
         isNotificationOpen ||
-        isEcosystemPortalOpen;
+        isEcosystemPortalOpen ||
+        isAIHubOpen;
 
     const overlayOpenRef = useRef(false);
     overlayOpenRef.current = isAnyLocalOverlayOpen;
@@ -131,6 +134,11 @@ export function DynamicNavigation() {
             setIsSOSOpen(true);
         };
 
+        const handleOpenAIHub = () => {
+            window.history.pushState({ modal: 'ai-hub' }, "");
+            setIsAIHubOpen(true);
+        };
+
         const handleOpenSpotlight = () => {
             window.history.pushState({ modal: 'spotlight' }, "");
             setIsActionHubOverlayOpen(false);
@@ -166,6 +174,7 @@ export function DynamicNavigation() {
             setIsAuthOpen(modal === 'auth');
             setIsNotificationOpen(modal === 'notifications');
             setIsEcosystemPortalOpen(modal === 'ecosystem');
+            setIsAIHubOpen(modal === 'ai-hub');
 
             if (modal !== 'ai') {
                 window.dispatchEvent(new CustomEvent('close-ai-assistant'));
@@ -284,6 +293,7 @@ export function DynamicNavigation() {
         window.addEventListener('open-auth-modal', handleOpenAuth);
         window.addEventListener('open-notification-drawer', handleOpenNotifications);
         window.addEventListener('open-ecosystem-portal', handleOpenEcosystem);
+        window.addEventListener('open-moffi-ai-hub', handleOpenAIHub);
         window.addEventListener('moffi-navigate', handleGlobalNavigate);
         window.addEventListener('scroll', handleGlobalScroll, { capture: true, passive: true });
         window.addEventListener('moffi-toggle-nav', handleToggleNav);
@@ -300,6 +310,7 @@ export function DynamicNavigation() {
             window.removeEventListener('open-auth-modal', handleOpenAuth);
             window.removeEventListener('open-notification-drawer', handleOpenNotifications);
             window.removeEventListener('open-ecosystem-portal', handleOpenEcosystem);
+            window.removeEventListener('open-moffi-ai-hub', handleOpenAIHub);
             window.removeEventListener('moffi-navigate', handleGlobalNavigate);
             window.removeEventListener('moffi-toggle-nav', handleToggleNav);
             window.removeEventListener('popstate', handlePopState);
@@ -410,6 +421,11 @@ export function DynamicNavigation() {
             <EcosystemPortal
                 isOpen={isEcosystemPortalOpen}
                 onClose={() => setIsEcosystemPortalOpen(false)}
+            />
+
+            <AIActionHub
+                isOpen={isAIHubOpen}
+                onClose={() => setIsAIHubOpen(false)}
             />
 
             {/* GLOBAL BOTTOM NAVIGATION */}
