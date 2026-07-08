@@ -22,7 +22,7 @@ const SpotlightSearch = dynamic(() => import("@/components/community/SpotlightSe
 const AuthModal = dynamic(() => import("@/components/auth/AuthModal").then(mod => mod.default), { ssr: false });
 const NotificationDrawer = dynamic(() => import("@/components/notifications/NotificationDrawer").then(mod => mod.NotificationDrawer), { ssr: false });
 const EcosystemPortal = dynamic(() => import("@/components/community/EcosystemPortal").then(mod => mod.EcosystemPortal), { ssr: false });
-const AIActionHub = dynamic(() => import("@/components/community/AIActionHub").then(mod => mod.AIActionHub), { ssr: false });
+const MoffiUltimateHub = dynamic(() => import("@/components/community/MoffiUltimateHub").then(mod => mod.MoffiUltimateHub), { ssr: false });
 
 const HIDDEN_ROUTES = ['/', '/studio', '/lab', '/production-studio', '/login', '/register', '/auth'];
 
@@ -423,7 +423,7 @@ export function DynamicNavigation() {
                 onClose={() => setIsEcosystemPortalOpen(false)}
             />
 
-            <AIActionHub
+            <MoffiUltimateHub
                 isOpen={isAIHubOpen}
                 onClose={() => setIsAIHubOpen(false)}
             />
