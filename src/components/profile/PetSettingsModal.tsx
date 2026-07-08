@@ -229,12 +229,30 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
                 }
             }
 
+            const updatedSosSettings = {
+                ...(pet?.sos_settings || {}),
+                owner: {
+                    name: formData.ownerName,
+                    phone: formData.ownerPhone,
+                    address: formData.ownerAddress,
+                },
+                color: formData.color,
+                birthday: formData.birthday,
+                health: formData.healthStatus,
+                parasiteInternal: formData.parasiteInternal,
+                parasiteExternal: formData.parasiteExternal,
+                activity_target: formData.activityTarget,
+                water_target: formData.waterTarget,
+                food_target: formData.foodTarget,
+            };
+
             onSave({
                 ...formData,
                 image: finalImageUrl,
                 avatar: finalImageUrl,
                 // Yaşı doğum tarihinden hesapla, yoksa mevcut koru
                 age: calculatedAge || pet?.age || "",
+                sos_settings: updatedSosSettings,
             });
         } finally {
             setIsSaving(false);

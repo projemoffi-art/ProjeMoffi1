@@ -23,6 +23,8 @@ const AuthModal = dynamic(() => import("@/components/auth/AuthModal").then(mod =
 const NotificationDrawer = dynamic(() => import("@/components/notifications/NotificationDrawer").then(mod => mod.NotificationDrawer), { ssr: false });
 const EcosystemPortal = dynamic(() => import("@/components/community/EcosystemPortal").then(mod => mod.EcosystemPortal), { ssr: false });
 const MoffiUltimateHub = dynamic(() => import("@/components/community/MoffiUltimateHub").then(mod => mod.MoffiUltimateHub), { ssr: false });
+const SubscriptionManagementModal = dynamic(() => import("@/components/community/modals/SubscriptionManagementModal").then(mod => mod.SubscriptionManagementModal), { ssr: false });
+const PremiumUpgradeModal = dynamic(() => import("@/components/community/modals/PremiumUpgradeModal").then(mod => mod.PremiumUpgradeModal), { ssr: false });
 
 const HIDDEN_ROUTES = ['/', '/studio', '/lab', '/production-studio', '/login', '/register', '/auth'];
 
@@ -211,7 +213,8 @@ export function DynamicNavigation() {
             } else if (id === 'profile') {
                 if (user?.id) router.push(`/profile/${user.id}`);
             } else if (id === 'passport') {
-                router.push('/community?open=passport');
+                if (user?.id) router.push(`/profile/${user.id}?view=passport`);
+                else window.dispatchEvent(new CustomEvent('open-auth-modal'));
             } else if (profileViews.includes(id)) {
                 if (user?.id) router.push(`/profile/${user.id}?view=${id}`);
                 else window.dispatchEvent(new CustomEvent('open-auth-modal'));
@@ -427,6 +430,9 @@ export function DynamicNavigation() {
                 isOpen={isAIHubOpen}
                 onClose={() => setIsAIHubOpen(false)}
             />
+
+            <SubscriptionManagementModal />
+            <PremiumUpgradeModal />
 
             {/* GLOBAL BOTTOM NAVIGATION */}
             <div className={`fixed bottom-0 inset-x-0 z-[2900] transition-transform duration-300 ${isNavVisible ? 'translate-y-0' : 'translate-y-full'}`}>

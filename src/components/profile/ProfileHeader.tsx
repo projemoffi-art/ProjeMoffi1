@@ -21,6 +21,7 @@ interface ProfileHeaderProps {
         cover: string;
         bio: string;
         location: string;
+        aura_settings?: any;
         subscription_status?: 'free' | 'pro' | 'elite';
         stats: {
             pack: number;
@@ -41,6 +42,11 @@ export default function ProfileHeader({ user, isFollowingInitial, userId, onMess
     const [loading, setLoading] = useState(false);
     const { user: currentUser } = useAuth();
     const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
+
+    const frameStyle = user.isOwnProfile 
+        // @ts-ignore
+        ? (currentUser?.settings?.appearance?.frameStyle || 'minimal') 
+        : (user.aura_settings?.frameStyle || 'minimal');
 
     const handleJoinPack = async () => {
         if (!currentUser) return;
@@ -89,8 +95,14 @@ export default function ProfileHeader({ user, isFollowingInitial, userId, onMess
             {/* 2. Identity Info Overlap - Refined Mobile Spacing */}
             <div className="px-6 relative -mt-20 mb-8 z-10">
                 <div className="flex justify-between items-end mb-6">
-                    <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-[2.5rem] border-[6px] border-background relative bg-card overflow-hidden shadow-moffi-card">
-                        <img src={user.avatar} className="w-full h-full object-cover" alt={user.username} />
+                    <div className={cn(
+                        "w-32 h-32 sm:w-40 sm:h-40 rounded-[2.5rem] relative overflow-hidden transition-all duration-500",
+                        frameStyle === 'glass' ? "border-4 border-white/40 shadow-[0_8px_32px_rgba(255,255,255,0.15)] bg-white/10 backdrop-blur-md" :
+                        frameStyle === 'neon' ? "border-[6px] border-[#00FFFF] shadow-[0_0_30px_rgba(0,255,255,0.8)] bg-black" :
+                        frameStyle === 'metal' ? "border-[6px] border-gray-400 bg-gradient-to-br from-gray-300 via-gray-600 to-gray-900 shadow-[inset_0_0_20px_rgba(0,0,0,0.8),_0_10px_25px_rgba(0,0,0,0.5)]" :
+                        "border-[6px] border-background bg-card shadow-moffi-card"
+                    )}>
+                        <img src={user.avatar} className="w-full h-full object-cover mix-blend-normal" alt={user.username} />
                         <div className="absolute bottom-2 right-2 w-8 h-8 bg-accent rounded-xl flex items-center justify-center border-4 border-background shadow-lg">
                             <Sparkles className="w-4 h-4 text-white" />
                         </div>
@@ -99,13 +111,6 @@ export default function ProfileHeader({ user, isFollowingInitial, userId, onMess
                     <div className="flex gap-2.5 pb-2">
                         {user.isOwnProfile ? (
                             <div className="flex gap-2">
-                                <button 
-                                    onClick={() => window.dispatchEvent(new CustomEvent('open-moffi-hub'))}
-                                    className="w-12 h-12 bg-accent/10 border border-accent/20 rounded-2xl text-accent flex items-center justify-center active:scale-90 transition-all"
-                                    title="Eylem Merkezi"
-                                >
-                                    <Zap className="w-5 h-5 fill-current" />
-                                </button>
                                 <button 
                                     onClick={onEdit} 
                                     className="px-6 h-12 rounded-2xl border border-card-border font-black text-[10px] uppercase tracking-widest bg-foreground/5 hover:bg-foreground/10 transition-all flex items-center gap-2 text-foreground active:scale-95"

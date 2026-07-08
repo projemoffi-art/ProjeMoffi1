@@ -30,8 +30,20 @@ TO authenticated, anon
 USING (true);
 
 DROP POLICY IF EXISTS "Allow all actions for all users on pet_daily_stats" ON public.pet_daily_stats;
-CREATE POLICY "Allow all actions for all users on pet_daily_stats" 
+CREATE POLICY "Allow all actions for pet owners on pet_daily_stats" 
 ON public.pet_daily_stats FOR ALL 
-TO authenticated, anon
-USING (true)
-WITH CHECK (true);
+TO authenticated
+USING (
+    EXISTS (
+        SELECT 1 FROM public.pets 
+        WHERE pets.id = pet_daily_stats.pet_id 
+        AND pets.owner_id = auth.uid()
+    )
+)
+WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM public.pets 
+        WHERE pets.id = pet_daily_stats.pet_id 
+        AND pets.owner_id = auth.uid()
+    )
+);

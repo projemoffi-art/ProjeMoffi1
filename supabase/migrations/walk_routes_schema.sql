@@ -39,9 +39,7 @@ TO public;
 
 -- Policy: Sadece Admin / Service Role ekleme/güncelleme yapabilir (Varsayılan olarak kısıtlı tutuyoruz)
 DROP POLICY IF EXISTS "Admins can manage walk routes" ON public.walk_routes;
-CREATE POLICY "Admins can manage walk routes"
-ON public.walk_routes
-FOR ALL
+CREATE POLICY "Allow select actions for authenticated users" 
+ON public.walk_routes FOR SELECT
 TO authenticated
-USING (true)
-WITH CHECK (true);
+USING (true);

@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
+import { ProductMockService } from "@/services/mock/ProductMockService";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const supabaseAdmin = (supabaseUrl && supabaseKey)
@@ -12,16 +16,113 @@ const supabaseAdmin = (supabaseUrl && supabaseKey)
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { amount, email, address, items, userId } = body;
+        const { amount: clientAmount, email, address, items, userId } = body;
 
         const isMock = (userId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId));
 
-        if (!isMock && !supabaseAdmin) {
+        if (!isMock && (!supabaseAdmin || !supabaseAnonKey)) {
             return NextResponse.json(
                 { error: "Veritabanı bağlantısı kurulamadı." },
                 { status: 500 }
             );
         }
+
+        // KİMLİK DOĞRULAMA (Sadece gerçek kullanıcılar için)
+        if (!isMock && supabaseUrl && supabaseAnonKey) {
+            const cookieStore = cookies();
+            const supabase = createServerClient(
+                supabaseUrl,
+                supabaseAnonKey,
+                {
+                    cookies: {
+                        get(name: string) {
+                            return cookieStore.get(name)?.value;
+                        },
+                        set() {},
+                        remove() {}
+                    },
+                }
+            );
+
+            const { data: { user }, error: authErr } = await supabase.auth.getUser();
+            
+            if (authErr || !user) {
+                console.error("[PayTR] Yetkisiz işlem denemesi. Oturum bulunamadı.", authErr);
+                return NextResponse.json({ error: "Oturum bulunamadı. Lütfen giriş yapın." }, { status: 401 });
+            }
+            
+            if (user.id !== userId) {
+                console.error(`[PayTR] Kimlik sahtekarlığı denemesi! Login olan: ${user.id}, Talep edilen: ${userId}`);
+                return NextResponse.json({ error: "Geçersiz kullanıcı kimliği." }, { status: 403 });
+            }
+        }
+
+        // SECURE CALCULATION: Never trust client amount
+        let calculatedAmount = 0;
+        const secureItems = [];
+        const productIds = items.map((i: any) => i.productId);
+
+        if (isMock) {
+            for (const item of items) {
+                if (!item.quantity || item.quantity <= 0) {
+                    return NextResponse.json({ error: "Siparişte geçersiz ürün miktarı tespit edildi." }, { status: 400 });
+                }
+                const product = await ProductMockService.getProductById(item.productId);
+                if (!product) continue;
+                
+                let itemPrice = product.basePrice;
+                if (item.sizeId) {
+                    const sizeObj = product.sizes.find(s => s.id === item.sizeId);
+                    if (sizeObj) itemPrice += sizeObj.priceModifier;
+                } else if (item.price && item.price !== product.basePrice) {
+                     const possibleModifier = product.sizes.find(s => (product.basePrice + s.priceModifier) === item.price);
+                     if (possibleModifier) itemPrice = item.price;
+                }
+                
+                calculatedAmount += itemPrice * item.quantity;
+                secureItems.push({
+                    ...item,
+                    price: itemPrice,
+                    name: product.name
+                });
+            }
+        } else {
+            // GERÇEK ÜRÜNLERİ SUPABASE'DEN ÇEK
+            const { data: realProducts, error: dbErr } = await supabaseAdmin
+                .from('products')
+                .select('id, price, name')
+                .in('id', productIds);
+                
+            if (dbErr || !realProducts) {
+                console.error("Ürün fiyatları doğrulanamadı:", dbErr);
+                return NextResponse.json({ error: "Sipariş güvenliği doğrulanamadı." }, { status: 400 });
+            }
+            
+            for (const item of items) {
+                if (!item.quantity || item.quantity <= 0) {
+                    console.warn(`[PayTR] Geçersiz miktar tespiti: ${item.quantity}`);
+                    return NextResponse.json({ error: "Siparişte geçersiz ürün miktarı tespit edildi." }, { status: 400 });
+                }
+                
+                const realProduct = realProducts.find(p => p.id === item.productId);
+                if (!realProduct) continue;
+                
+                const itemPrice = Number(realProduct.price);
+                calculatedAmount += itemPrice * item.quantity;
+                secureItems.push({
+                    ...item,
+                    price: itemPrice,
+                    name: realProduct.name
+                });
+            }
+        }
+
+        // HİÇBİR ZAMAN CLİENT TUTARINA GÜVENME - HATA VARSA REDDET
+        if (calculatedAmount <= 0) {
+            return NextResponse.json({ error: "Sipariş tutarı geçersiz veya ürün bulunamadı." }, { status: 400 });
+        }
+        
+        const amount = calculatedAmount;
 
         let orderId = "mock-order-" + Math.floor(Math.random() * 1000000);
 
@@ -45,7 +146,7 @@ export async function POST(req: Request) {
             }
 
             // 2. Insert order items
-            const orderItems = items.map((item: any) => ({
+            const orderItems = secureItems.map((item: any) => ({
                 order_id: order.id,
                 product_id: item.productId,
                 quantity: item.quantity,
@@ -91,7 +192,7 @@ export async function POST(req: Request) {
         const payment_amount = Math.round(amount * 100); // PayTR expects cents/kuruş (e.g. 10.00 TL -> 1000)
         
         // user_basket: base64 encoded JSON array of [ [name, price, quantity], ... ]
-        const basketArray = items.map((item: any) => [item.name, String(item.price), item.quantity]);
+        const basketArray = secureItems.map((item: any) => [item.name, String(item.price), item.quantity]);
         const user_basket = Buffer.from(JSON.stringify(basketArray)).toString("base64");
 
         const no_shipping = "0"; // We show shipping/address fields

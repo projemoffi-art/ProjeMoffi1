@@ -21,13 +21,20 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO postgres, service_role,
 ALTER TABLE public.vaccines ENABLE ROW LEVEL SECURITY;
 
 -- A) Aşı Kayıtlarını Okuma Politikası
--- Herkes (anonim veya giriş yapmış) aşı kayıtlarını okuyabilir (SELECT).
+-- Sadece giriş yapmış olan kullanıcılar, kendi sahibi oldukları petlere ait aşı kayıtlarını okuyabilir.
 DROP POLICY IF EXISTS "Anyone can read vaccines" ON public.vaccines;
-CREATE POLICY "Anyone can read vaccines" 
+DROP POLICY IF EXISTS "Owners can read their pets vaccines" ON public.vaccines;
+CREATE POLICY "Owners can read their pets vaccines" 
 ON public.vaccines
 FOR SELECT 
-TO public
-USING (true);
+TO authenticated
+USING (
+    EXISTS (
+        SELECT 1 FROM public.pets 
+        WHERE pets.id = vaccines.pet_id 
+        AND pets.owner_id = auth.uid()
+    )
+);
 
 -- B) Aşı Kayıtlarını Yönetme Politikası (INSERT, UPDATE, DELETE)
 -- Giriş yapmış kullanıcılar sadece kendi sahibi oldukları petlere ait aşı kayıtlarını yönetebilir.

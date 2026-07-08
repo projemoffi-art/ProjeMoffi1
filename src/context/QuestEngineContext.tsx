@@ -133,6 +133,7 @@ export interface QuestEngineContextType {
     // Tetikleyiciler
     triggerQuestEvent: (type: string, data?: Record<string, unknown>) => void;
     completeManualQuest: (questId: string) => void;
+    spendPatiPuan: (amount: number) => boolean;
 }
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -1099,6 +1100,19 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
         window.dispatchEvent(new CustomEvent('moffi-quest-trigger', { detail: { type, ...data } }));
     }, []);
 
+    // ── Ekonomi ───────────────────────────────────────────────────────────
+    const spendPatiPuan = useCallback((amount: number) => {
+        if (totalPatiPuan >= amount) {
+            setTotalPatiPuan(prev => {
+                const newValue = prev - amount;
+                localStorage.setItem(PUAN_KEY, String(newValue));
+                return newValue;
+            });
+            return true;
+        }
+        return false;
+    }, [totalPatiPuan]);
+
     // ── Streak kalkanı ────────────────────────────────────────────────────
     const useStreakShield = useCallback(() => {
         if (!streakShieldAvailable) return;
@@ -1127,6 +1141,7 @@ export function QuestEngineProvider({ children }: { children: React.ReactNode })
     return (
         <QuestEngineContext.Provider value={{
             dailyQuests,
+            spendPatiPuan,
             completedCount,
             totalCount,
             dailyGoal,

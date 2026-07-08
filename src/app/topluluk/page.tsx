@@ -2106,10 +2106,9 @@ export default function MoffiSocialMasterpiece() {
             </AnimatePresence>
 
             {/* AMBIENT BACKGROUND GLOW */}
-            <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-
-                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-600/20 blur-[120px] rounded-full mix-blend-screen" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-cyan-600/20 blur-[120px] rounded-full mix-blend-screen" />
+            <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden dark:opacity-100 opacity-40">
+                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-accent/10 blur-[120px] rounded-full" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-accent/5 blur-[120px] rounded-full" />
             </div>
 
             {/* MAIN IMMERSIVE CONTENT - Unified Scroll per tab */}

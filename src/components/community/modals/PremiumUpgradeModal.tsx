@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Crown, Check, X, Sparkles, Shield, Rocket, Palette, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
+import { paymentService } from '@/services/paymentService';
 
 export function PremiumUpgradeModal({ isOpen: isOpenProp, onClose: onCloseProp }: { isOpen?: boolean, onClose?: () => void }) {
     const [isOpenInternal, setIsOpenInternal] = useState(false);
@@ -24,27 +26,43 @@ export function PremiumUpgradeModal({ isOpen: isOpenProp, onClose: onCloseProp }
         return () => window.removeEventListener('open-premium-modal', handleOpen);
     }, []);
 
-    const handleUpgrade = () => {
+    const { user, refreshUser } = useAuth();
+
+    const handleUpgrade = async () => {
+        if (!user?.id) return;
         setIsBuying(true);
         
-        // Simülasyon: Satın alma isteği atılıyor (2 saniye sürecek)
-        setTimeout(() => {
-            setIsBuying(false);
+        // Simülasyon: Iyzico Checkout oluşturuluyor (Gerçekte paymentService.createSubscriptionCheckout çağrılıp yönlendirilecek)
+        const checkout = await paymentService.createSubscriptionCheckout("prime_monthly", user.id);
+        
+        // Şimdilik ödemeyi anında başarılı varsayıyoruz (Gerçekte webhook ile çalışacak)
+        const result = await paymentService.completeSubscription(user.id, "prime_monthly");
+        
+        setIsBuying(false);
+        if (result.success) {
             setIsSuccess(true);
+            if (refreshUser) refreshUser(); // Context'i güncelle
             
-            // Satın alma başarılı olduktan sonra pencereyi kapat ve profil güncel hissiyatı ver
             setTimeout(() => {
                 handleClose();
-                window.location.reload(); // Değişiklikleri hissetmesi için sahte reload
-            }, 3000);
-        }, 2000);
+            }, 2500);
+        } else {
+            window.dispatchEvent(new CustomEvent('moffi-toast', { detail: { message: result.error || 'Satın alma başarısız.', icon: 'AlertTriangle' } }));
+        }
     };
 
-    const benefits = [
-        { title: "Onaylanmış Hesap Rozeti", desc: "Mavi tik ve isim yanında sarı kral tacı 👑", icon: Crown },
-        { title: "Büyülü Aura Temaları", desc: "Neon, Glass, Karbon profillerin kilidini aç.", icon: Palette },
-        { title: "Stüdyo Ayrıcalığı", desc: "POD Stüdyo mağazamızda sonsuza dek ücretsiz kargo.", icon: Rocket },
-        { title: "Gelişmiş SOS Sistemi", desc: "Acil durumlarda 10KM çapa VIP fırlatma.", icon: Shield }
+    // Karşılaştırma Tablosu Verileri (Tüm Prime Özellikleri)
+    const comparisonFeatures = [
+        { name: "Reklamsız Deneyim", free: false, prime: true },
+        { name: "Temassız (NFC) Ödeme Limiti", free: "Max 5 İşlem/Ay", prime: "Sınırsız" },
+        { name: "Moffi AI Asistan", free: "Günlük 5 Soru", prime: "Aylık 500 Gelişmiş Sorgu" },
+        { name: "AI Görüntü Analizi (Veteriner)", free: false, prime: true },
+        { name: "Stüdyo Kargo Hakkı", free: "Ücretli", prime: "Ayda 3 Kez (Max 30 Desi)" },
+        { name: "Sınırsız Günlük Adım Puanı", free: "Limitli", prime: "Limitsiz (Cap Yok)" },
+        { name: "Profil Ziyaretçilerini Görme", free: false, prime: true },
+        { name: "Profil Aura & Neon Çerçeveleri", free: false, prime: true },
+        { name: "Prime Özel Elite Rozet", free: false, prime: true },
+        { name: "Öncelikli Müşteri Desteği", free: false, prime: true }
     ];
 
     return (
@@ -99,24 +117,27 @@ export function PremiumUpgradeModal({ isOpen: isOpenProp, onClose: onCloseProp }
                                 Ekosistemin en prestijli kulübüne katıl. Moffi evrenindeki gücünü zirveye taşı.
                             </p>
 
-                            <div className="w-full space-y-4 mb-10">
-                                {benefits.map((benefit, i) => (
-                                    <motion.div 
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: i * 0.1 + 0.3 }}
-                                        key={i} 
-                                        className="flex items-start gap-4 p-4 rounded-2xl bg-foreground/5 border border-glass-border text-left"
-                                    >
-                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#D4AF37]/20 to-[#FFD700]/10 flex items-center justify-center shrink-0 border border-[#D4AF37]/20">
-                                            <benefit.icon className="w-5 h-5 text-[#FFD700]" />
+                            <div className="w-full mb-10 bg-foreground/5 border border-glass-border rounded-2xl overflow-hidden shadow-lg">
+                                {/* Table Header */}
+                                <div className="grid grid-cols-3 bg-foreground/5 text-xs font-bold text-muted-foreground py-3 px-2 text-center uppercase tracking-wider">
+                                    <div className="text-left pl-2">Özellik</div>
+                                    <div className="text-muted-foreground">Normal</div>
+                                    <div className="text-[#FFD700]">Prime</div>
+                                </div>
+                                {/* Table Rows */}
+                                <div className="divide-y divide-foreground/5">
+                                    {comparisonFeatures.map((feature, i) => (
+                                        <div key={i} className="grid grid-cols-3 text-[11px] py-4 px-2 items-center text-center">
+                                            <div className="text-left font-semibold text-foreground pl-2 pr-2">{feature.name}</div>
+                                            <div className="text-muted-foreground font-medium">
+                                                {feature.free === false ? <X className="w-4 h-4 mx-auto opacity-50" /> : feature.free}
+                                            </div>
+                                            <div className="text-[#FFD700] font-black">
+                                                {feature.prime === true ? <Check className="w-4 h-4 mx-auto" /> : feature.prime}
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h4 className="font-bold text-foreground text-sm mb-1">{benefit.title}</h4>
-                                            <p className="text-xs text-gray-500">{benefit.desc}</p>
-                                        </div>
-                                    </motion.div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
 
                             <motion.div className="w-full" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
@@ -135,7 +156,7 @@ export function PremiumUpgradeModal({ isOpen: isOpenProp, onClose: onCloseProp }
                                     ) : isSuccess ? (
                                         <><Check className="w-5 h-5" /> Prime Aktif Edildi</>
                                     ) : (
-                                        <>149₺ / Ay ile Başla <Sparkles className="w-5 h-5" /></>
+                                        <>299₺ / Ay ile Başla <Sparkles className="w-5 h-5" /></>
                                     )}
                                 </button>
                             </motion.div>

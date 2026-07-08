@@ -55,7 +55,7 @@ export default function ProfilePage() {
     const id = params.id as string;
     const { user: currentUser, updateProfile } = useAuth();
     const { pets, activePet, switchPet } = usePet();
-    const isOwnProfile = !!(currentUser && id === currentUser.id);
+    const isOwnProfile = !!(currentUser && (id === currentUser.id || id === 'me'));
 
     // ── State ──────────────────────────────────────────────
     const [loading, setLoading] = useState(true);
@@ -173,12 +173,9 @@ export default function ProfilePage() {
         }
     };
 
-    // Sync activeSubView with URL query parameter
     useEffect(() => {
         const view = searchParams.get('view');
-        if (view === 'passport') {
-            router.replace('/community?open=passport');
-        } else if (view) {
+        if (view) {
             setActiveSubView(view);
         } else {
             setActiveSubView('main');
@@ -188,11 +185,6 @@ export default function ProfilePage() {
     // Listen to global moffi-navigate events for instant feedback
     useEffect(() => {
         const handleNavigate = (e: any) => {
-            const dest = e.detail;
-            if (dest === 'passport') {
-                router.push('/community?open=passport');
-                return;
-            }
             if (isOwnProfile && dest) {
                 setActiveSubView(dest);
             }
@@ -213,9 +205,9 @@ export default function ProfilePage() {
     const [editCommentPrivacy, setEditCommentPrivacy] = useState('everyone');
     const [editFilterWords, setEditFilterWords] = useState('');
 
-    // Add Pet
     const [isAddPetOpen, setIsAddPetOpen] = useState(false);
     const [addPetStep, setAddPetStep] = useState(1);
+    const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
     const [newPetName, setNewPetName] = useState('');
     const [newPetType, setNewPetType] = useState('🐶');
     const [newPetBreed, setNewPetBreed] = useState('');
@@ -238,7 +230,7 @@ export default function ProfilePage() {
 
     // ── Data Fetch ─────────────────────────────────────────
     useEffect(() => {
-        if (!id) return;
+        if (!id || id === 'me') return;
         const fetchProfile = async () => {
             setLoading(true);
             try {
@@ -609,7 +601,12 @@ export default function ProfilePage() {
             <div className="relative w-full h-72 sm:h-80">
                 {/* Cover */}
                 {coverUrl ? (
-                    <img src={coverUrl} className="absolute inset-0 w-full h-full object-cover" alt="Kapak" />
+                    <img 
+                        src={coverUrl} 
+                        className="absolute inset-0 w-full h-full object-cover cursor-pointer" 
+                        alt="Kapak" 
+                        onClick={() => coverUrl && setEnlargedImage(coverUrl)}
+                    />
                 ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-[#0f2027] via-[#203a43] to-[#2c5364]">
                         <div className="absolute inset-0 opacity-30"
@@ -620,10 +617,9 @@ export default function ProfilePage() {
                 {/* Gradient overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0F] via-[#0A0A0F]/20 to-transparent" />
 
-                {/* Back button */}
                 <motion.button
                     whileTap={{ scale: 0.9 }}
-                    onClick={() => router.back()}
+                    onClick={() => router.push('/community')}
                     className="absolute top-4 left-4 w-10 h-10 bg-black/40 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-white/10 z-10"
                 >
                     <ArrowLeft className="w-5 h-5" />
@@ -632,7 +628,10 @@ export default function ProfilePage() {
                 {/* Avatar */}
                 <div className="absolute -bottom-14 left-5 z-20">
                     <div className="relative">
-                        <div className="w-28 h-28 rounded-[2rem] border-4 border-[#0A0A0F] overflow-hidden shadow-2xl shadow-black/50 bg-[#111]">
+                        <div 
+                            className="w-28 h-28 rounded-[2rem] border-4 border-[#0A0A0F] overflow-hidden shadow-2xl shadow-black/50 bg-[#111] cursor-pointer"
+                            onClick={() => avatarUrl && setEnlargedImage(avatarUrl)}
+                        >
                             {avatarUrl ? (
                                 <img src={avatarUrl} className="w-full h-full object-cover" alt="Avatar" />
                             ) : (
@@ -720,9 +719,11 @@ export default function ProfilePage() {
 
                 {/* Bio */}
                 <div className="mt-4">
-                    <p className="text-white/60 text-sm leading-relaxed">
-                        {displayUser?.bio || 'Moffi Ekosistemine Hoşgeldiniz ✨'}
-                    </p>
+                    {displayUser?.bio && (
+                        <p className="text-sm font-medium text-white/60 leading-relaxed max-w-sm ml-1">
+                            {displayUser.bio}
+                        </p>
+                    )}
                 </div>
 
                 {/* Stats */}
@@ -1122,6 +1123,35 @@ function PostsGrid({ userId }: { userId: string }) {
                             )}
                         </motion.div>
                     </>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {enlargedImage && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[99999] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 cursor-zoom-out"
+                        onClick={() => setEnlargedImage(null)}
+                    >
+                        <button 
+                            className="absolute top-6 right-6 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white border border-white/20 transition-all z-10"
+                            onClick={() => setEnlargedImage(null)}
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+                        <motion.img
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                            src={enlargedImage}
+                            alt="Enlarged"
+                            className="max-w-full max-h-full object-contain rounded-3xl shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                    </motion.div>
                 )}
             </AnimatePresence>
         </>

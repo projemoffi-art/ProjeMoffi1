@@ -7,7 +7,9 @@ import { usePet } from '@/context/PetContext';
 import { useQuestEngine } from '@/context/QuestEngineContext';
 import { PetSettingsModal } from '@/components/profile/PetSettingsModal';
 import { AddPetModal } from '@/components/community/modals/AddPetModal';
-import { CareHubModal } from '@/components/community/modals/CareHubModal';
+
+import { PatiKartPolicyModal } from '@/components/community/modals/PatiKartPolicyModal';
+import { TodayForYouEngine } from '@/components/community/TodayForYouEngine';
 import { apiService } from '@/services/apiService';
 import { 
     Bell, 
@@ -68,7 +70,8 @@ import {
     SunMoon,
     Sun,
     Moon,
-    Clock
+    Clock,
+    ShieldCheck
 } from 'lucide-react';
 
 import { useStories } from '../../hooks/useStories';
@@ -78,6 +81,8 @@ import { useTheme } from '@/context/ThemeContext';
 import { QuestBentoCard } from '@/components/quests/QuestBentoCard';
 import { cn } from '@/lib/utils';
 import Mascot3DCanvas from '@/components/dressing/Mascot3DCanvas';
+import { useHubData } from "@/hooks/useHubData";
+import { usePetShop } from "@/hooks/usePetShop";
 import { useDragScroll } from '@/hooks/useDragScroll';
 
 
@@ -192,7 +197,8 @@ const QuickAccessBtn = ({
     subtitle,
     gradient, 
     bgTint,
-    delay = 0, 
+    delay = 0,
+    className = "",
     onClick 
 }: { 
     icon: any, 
@@ -200,27 +206,28 @@ const QuickAccessBtn = ({
     subtitle: string,
     gradient: string, 
     bgTint: string,
-    delay?: number, 
+    delay?: number,
+    className?: string,
     onClick?: () => void 
 }) => (
     <motion.button 
-        initial={{ opacity: 0, scale: 0.9, y: 10 }}
+        initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ delay, duration: 0.4, type: "spring", stiffness: 200 }}
-        whileHover={{ scale: 1.03, y: -2 }}
+        whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.96 }}
         onClick={onClick}
-        className={`relative flex items-center gap-3.5 p-3 rounded-[20px] ${bgTint} shadow-sm border border-white/40 dark:border-white/5 transition-all duration-300 cursor-pointer group w-full text-left overflow-hidden`}
+        className={`relative flex items-center gap-3 px-3.5 py-5 ${bgTint} transition-all duration-300 cursor-pointer group text-left overflow-hidden w-full ${className}`}
     >
         {/* Glow Background inside the button */}
         <div className={`absolute -inset-1 opacity-0 group-hover:opacity-10 dark:opacity-5 dark:group-hover:opacity-15 blur-xl transition-opacity duration-300 bg-gradient-to-br ${gradient} to-transparent`} />
         
-        <div className={`relative w-11 h-11 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center transform group-hover:scale-105 transition-transform duration-300 shrink-0 shadow-sm`}>
-            <Icon className="w-5.5 h-5.5 text-white drop-shadow-md" strokeWidth={2.2} />
+        <div className={`relative w-10 h-10 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center transform group-hover:scale-105 transition-transform duration-300 shrink-0 shadow-sm`}>
+            <Icon className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.2} />
         </div>
-        <div className="flex flex-col relative z-10">
-            <span className="text-[13px] font-black text-gray-900 dark:text-white tracking-tight leading-tight">{title}</span>
-            <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mt-0.5 leading-none">{subtitle}</span>
+        <div className="flex flex-col relative z-10 overflow-hidden">
+            <span className="text-[13px] font-black text-gray-900 dark:text-white tracking-tight leading-tight truncate">{title}</span>
+            <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mt-0.5 leading-none truncate">{subtitle}</span>
         </div>
     </motion.button>
 );
@@ -375,7 +382,8 @@ export default function LegendaryLightDashboard() {
     const { user: authUser, updateProfile } = useAuth();
     const { pets: userPets, activePet: globalActivePet, switchPet, updatePet, addPet, deletePet, isLoading: isPetLoading, isInitialized } = usePet();
     const { activeSession, history: walkHistory, stats: walkStats, isLoading: isWalkLoading, startWalk, endWalk } = useWalk();
-    const { currentStreak, weeklyStamps } = useQuestEngine();
+    const { subscriptions, cart, cartCount, cartTotal, updateCartItem, products, clearCart } = usePetShop();
+    const { currentStreak, weeklyStamps, totalPatiPuan, spendPatiPuan } = useQuestEngine();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
 
@@ -436,9 +444,7 @@ export default function LegendaryLightDashboard() {
 
 
     const [toastMsg, setToastMsg] = useState<string | null>(null);
-    const [isCareHubOpen, setIsCareHubOpen] = useState(false);
-    const [activeCareHubTab, setActiveCareHubTab] = useState<'nutrition' | 'health' | 'vet'>('nutrition');
-    const [walletBalance, setWalletBalance] = useState(0);
+    const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
     const [transactions, setTransactions] = useState<any[]>([]);
     const [vaccines, setVaccines] = useState<any[]>([]);
 
@@ -448,21 +454,16 @@ export default function LegendaryLightDashboard() {
         const handleGoalsUpdate = () => {
             setGoalsTrigger(prev => prev + 1);
         };
-        const handleOpenCareHub = (e: any) => {
-            const tab = e.detail?.tab || 'nutrition';
-            setActiveCareHubTab(tab);
-            setIsCareHubOpen(true);
-        };
         window.addEventListener('moffi-daily-goals-update', handleGoalsUpdate);
-        window.addEventListener('open-care-hub', handleOpenCareHub);
         return () => {
             window.removeEventListener('moffi-daily-goals-update', handleGoalsUpdate);
-            window.removeEventListener('open-care-hub', handleOpenCareHub);
         };
     }, []);
 
+    const hasOpenedWalkRef = useRef(false);
     useEffect(() => {
-        if (searchParams.get('openWalk') === 'true') {
+        if (searchParams.get('openWalk') === 'true' && !hasOpenedWalkRef.current) {
+            hasOpenedWalkRef.current = true;
             window.dispatchEvent(new CustomEvent('open-walk-panel'));
         }
     }, [searchParams]);
@@ -503,14 +504,7 @@ export default function LegendaryLightDashboard() {
     useEffect(() => {
         if (!activePetObj?.id) return;
         
-        // 1. Balance
-        const savedCoins = localStorage.getItem(`moffi_coins_${activePetObj.id}`);
-        if (savedCoins !== null) {
-            setWalletBalance(Number(savedCoins));
-        } else {
-            setWalletBalance(0);
-            localStorage.setItem(`moffi_coins_${activePetObj.id}`, '0');
-        }
+
 
         // 2. Transactions
         const savedTx = localStorage.getItem(`moffi_transactions_${activePetObj.id}`);
@@ -531,12 +525,7 @@ export default function LegendaryLightDashboard() {
         }
     }, [activePetObj?.id, goalsTrigger]);
 
-    // Save balance on changes
-    useEffect(() => {
-        if (activePetObj?.id) {
-            localStorage.setItem(`moffi_coins_${activePetObj.id}`, String(walletBalance));
-        }
-    }, [walletBalance, activePetObj?.id]);
+
 
     const addTransaction = useCallback((type: 'gelir' | 'gider', title: string, amount: number) => {
         if (!activePetObj?.id) return;
@@ -562,7 +551,7 @@ export default function LegendaryLightDashboard() {
         setIsNfcScanning(true);
         setTimeout(() => {
             setIsNfcScanning(false);
-            setExpandedPanel('passport');
+            router.push(`/profile/${authUser?.id || 'me'}?view=passport`);
         }, 1500);
     };
     const [selectedAccessories, setSelectedAccessories] = useState<string[]>(['glasses', 'scarf']);
@@ -687,8 +676,8 @@ export default function LegendaryLightDashboard() {
         const cost = item?.cost || 0;
 
         if (itemId && !unlockedApparel.includes(itemId)) {
-            if (walletBalance >= cost) {
-                setWalletBalance(prev => prev - cost);
+            if (totalPatiPuan >= cost) {
+                spendPatiPuan(cost);
                 setUnlockedApparel(prev => [...prev, itemId]);
                 setToastMsg(`🎉 Tebrikler! "${item.label}" açıldı. Cüzdandan ${cost} MoffiCoin harcandı.`);
                 triggerSpeechBubble("Yeni kıyafetime bayıldım! 😍");
@@ -759,12 +748,12 @@ export default function LegendaryLightDashboard() {
     };
 
     const handleOpenChest = () => {
-        if (walletBalance < 100) {
+        if (totalPatiPuan < 100) {
             setToastMsg("❌ Sandık açmak için 100 MoffiCoin gerekiyor! Yetersiz bakiye.");
             return;
         }
 
-        setWalletBalance(prev => prev - 100);
+        spendPatiPuan(100);
         setIsChestOpening(true);
         setChestResult(null);
 
@@ -831,8 +820,8 @@ export default function LegendaryLightDashboard() {
         if (!unlockedAccessories.includes(id)) {
             const costs: Record<string, number> = { hat: 150, crown: 350 };
             const cost = costs[id] || 0;
-            if (walletBalance >= cost) {
-                setWalletBalance(prev => prev - cost);
+            if (totalPatiPuan >= cost) {
+                spendPatiPuan(cost);
                 setUnlockedAccessories(prev => [...prev, id]);
                 setSelectedAccessories(prev => [...prev, id]);
                 setToastMsg(`🎉 Tebrikler! Premium eşya açıldı. Cüzdandan ${cost} MoffiCoin harcandı.`);
@@ -896,7 +885,7 @@ export default function LegendaryLightDashboard() {
         let dailyThemeCoins = 0;
         if (meetsTheme) {
             dailyThemeCoins = 50;
-            setWalletBalance(prev => prev + 50);
+            // triggerQuestEvent handles adding points
         }
 
         // Add to polaroid album
@@ -933,22 +922,102 @@ export default function LegendaryLightDashboard() {
         : (activePetObj?.sos_settings?.activity_target ?? baseMockTemplate.ringProgress.activity);
 
     // Streak değerine göre haftalık aktivite grafiği üret — Math.random yerine deterministik seed
+    // Aktivite Raporu - Gerçek Yürüyüş Geçmişine Bağlandı
     const weeklyData = useMemo(() => {
-        const seed = (activePetObj?.id || 'default').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-        return Array.from({ length: 7 }, (_, i) => {
-            const pseudoRand = ((seed * (i + 1) * 9301 + 49297) % 233280) / 233280;
-            if (i < resolvedStreak) {
-                // Tamamlanmış günler: hedef etrafında stabil varyasyon
-                return Math.min(100, Math.round(resolvedActivityTarget + (pseudoRand * 20) - 5));
-            }
-            // Tamamlanmamış günler: düşük aktivite
-            return Math.round(resolvedActivityTarget * 0.3 + pseudoRand * 15);
-        });
-    }, [activePetObj?.id, resolvedStreak, resolvedActivityTarget]);
+        const data = [0, 0, 0, 0, 0, 0, 0];
+        
+        const now = new Date();
+        const currentDayOfWeek = now.getDay(); // 0 is Sunday, 1 is Monday...
+        const distanceToMonday = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1;
+        
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - distanceToMonday);
+        startOfWeek.setHours(0, 0, 0, 0);
 
+        walkHistory.forEach((walk: any) => {
+            const walkDateStr = walk.ended_at || walk.started_at || walk.date;
+            if (!walkDateStr) return;
+            
+            const walkDate = new Date(walkDateStr);
+            if (isNaN(walkDate.getTime())) return;
+            
+            // Check if walk is in the current week
+            if (walkDate >= startOfWeek) {
+                let dayIndex = walkDate.getDay() - 1;
+                if (dayIndex === -1) dayIndex = 6; // Sunday
+                
+                let minutes = walk.duration_minutes || 0;
+                if (!minutes && walk.duration) {
+                     const match = walk.duration.toString().match(/\d+/);
+                     if (match) minutes = parseInt(match[0]);
+                }
+                
+                if (dayIndex >= 0 && dayIndex < 7) {
+                    data[dayIndex] += minutes;
+                }
+            }
+        });
+
+        return data;
+    }, [walkHistory]);
+
+
+    const dynamicOffer = useMemo(() => {
+        if (!activePetObj) return baseMockTemplate.specialOffer;
+        
+        const breed = (activePetObj.breed || '').toLowerCase();
+        const type = activePetObj.type || '🐶';
+        
+        // 1. Yavru (Kitten/Puppy)
+        if (activePetObj.age && parseInt(activePetObj.age.toString()) < 1) {
+             return {
+                title: 'Yavru Gelişim Maması',
+                desc: 'Yavru dostunuzun bağışıklığını ve kemik gelişimini destekleyen Hills premium mama.',
+                oldPrice: '699 TL',
+                newPrice: '549 TL',
+                discount: 'İNDİRİMLİ',
+                link: '/petshop?openProduct=ps-4'
+            };
+        }
+
+        // 2. Kedi
+        if (type === '🐱' || breed.includes('kedi') || breed.includes('scottish') || breed.includes('british')) {
+            return {
+                title: 'Özel Kedi Maması Kampanyası',
+                desc: 'Kediniz için özel formüle edilmiş Pro Plan Yetişkin Kedi Maması.',
+                oldPrice: '799 TL',
+                newPrice: '649 TL',
+                discount: 'ÇOK SATAN',
+                link: '/petshop?openProduct=ps-1'
+            };
+        }
+        
+        // 3. Büyük / Hareketli Köpek
+        if (breed.includes('golden') || breed.includes('labrador') || breed.includes('kangal') || activePetObj.size?.toLowerCase() === 'büyük') {
+            return {
+                title: 'Büyük Irk Eklem Koruyucu',
+                desc: 'Büyük ırk köpekler için özel formüle edilmiş glukozamin destekli koruyucu.',
+                oldPrice: '850 TL',
+                newPrice: '680 TL',
+                discount: '%20 İNDİRİM',
+                link: '/petshop'
+            };
+        }
+
+        // 4. Varsayılan (Herkes için uygun bakım)
+        return {
+            title: 'Tüy Bakım Fırçası',
+            desc: `${activePetObj.name || 'Dostunuz'} için profesyonel dökülme önleyici Furminator tüy bakım fırçası.`,
+            oldPrice: '499 TL',
+            newPrice: '399 TL',
+            discount: 'ÇOK SATAN',
+            link: '/petshop?openProduct=ps-11'
+        };
+    }, [activePetObj, baseMockTemplate.specialOffer]);
 
     const pet = {
         ...baseMockTemplate,
+        specialOffer: dynamicOffer,
         id: activePetObj?.id,
         name: activePetObj?.name || baseMockTemplate.name,
         image: activePetObj?.image || activePetObj?.avatar || '',
@@ -999,7 +1068,7 @@ export default function LegendaryLightDashboard() {
     const [newPetActivityTarget, setNewPetActivityTarget] = useState("70");
     const [newPetWaterTarget, setNewPetWaterTarget] = useState("1200");
     const [newPetFoodTarget, setNewPetFoodTarget] = useState("1600");
-    const isAnyModalOpen = !!expandedPanel || isPetSettingsOpen || isAddPetOpen || isCareHubOpen;
+    const isAnyModalOpen = !!expandedPanel || isPetSettingsOpen || isAddPetOpen;
 
     const handleSavePetSettings = async (updatedFields: any) => {
         try {
@@ -1171,8 +1240,7 @@ export default function LegendaryLightDashboard() {
     };
 
     const [profileOrdersTab, setProfileOrdersTab] = useState<'active' | 'past' | 'cart' | 'settings'>('active');
-    const [cartQty1, setCartQty1] = useState(1);
-    const [cartQty2, setCartQty2] = useState(1);
+
     
     useEffect(() => {
         if (isInitialized && !isPetLoading && userPets.length === 0) {
@@ -1184,9 +1252,7 @@ export default function LegendaryLightDashboard() {
     const [geofenceAlerts, setGeofenceAlerts] = useState(true);
     const [collarLowBattery, setCollarLowBattery] = useState(true);
     const [anomaliesSms, setAnomaliesSms] = useState(false);
-    const [activeOrders, setActiveOrders] = useState<Array<{id: string, name: string, desc: string, timeRemaining: string, status: string, progress: number}>>([
-        { id: 'order-1', name: 'Somonlu Premium Mama (15 kg)', desc: 'Moda Dağıtım Noktası • Kurye: Walky Emre', timeRemaining: '8 dk kaldı', status: 'Kurye Yaklaşıyor', progress: 65 }
-    ]);
+    const [activeOrders, setActiveOrders] = useState<Array<{id: string, name: string, desc: string, timeRemaining: string, status: string, progress: number}>>([]);
 
     // Roadmap States
     const [nfcPaymentLocked, setNfcPaymentLocked] = useState(false);
@@ -1254,7 +1320,7 @@ export default function LegendaryLightDashboard() {
             const distKm = (distM / 1000).toFixed(2);
             const patiEarned = Math.round(distM * 0.05); // ~50 PATI/km
             if (patiEarned > 0) {
-                setWalletBalance(prev => prev + patiEarned);
+                // setWalletBalance(prev => prev + patiEarned);
                 addTransaction('gelir', 'Yürüyüş Ödülü 🐾', patiEarned);
             }
             setToastMsg(`🎉 Yürüyüş tamamlandı! ${distKm} KM • +${patiEarned} PATI kazanıldı 🔥`);
@@ -1409,7 +1475,7 @@ export default function LegendaryLightDashboard() {
     }
 
     return (
-        <div className="min-h-screen bg-background text-foreground font-sans selection:bg-green-500/30 overflow-x-hidden pb-32">
+        <div className="min-h-screen w-full bg-background text-foreground font-sans selection:bg-green-500/30 overflow-x-hidden pb-32">
             
             {/* Top Floating Toast Notification */}
             <AnimatePresence>
@@ -1460,45 +1526,49 @@ export default function LegendaryLightDashboard() {
                             </div>
                         </div>
                     ) : (
-                        <motion.div 
-                            layoutId="collar-card-container"
-                            onClick={() => setExpandedPanel('collar')}
-                            className="flex items-center gap-2.5 cursor-pointer group"
-                        >
-                            <div className="relative">
-                                <div className="w-9 h-9 rounded-2xl bg-gray-900 flex items-center justify-center shadow-lg shadow-gray-900/10 text-green-400">
-                                    <Radio className="w-5 h-5" />
+                        <>
+                            {/* [V2_FEATURE_TASMA] - Akıllı tasma durumu gizlendi
+                            <motion.div 
+                                layoutId="collar-card-container"
+                                onClick={() => setExpandedPanel('collar')}
+                                className="flex items-center gap-2.5 cursor-pointer group"
+                            >
+                                <div className="relative">
+                                    <div className="w-9 h-9 rounded-2xl bg-gray-900 flex items-center justify-center shadow-lg shadow-gray-900/10 text-green-400">
+                                        <Radio className="w-5 h-5" />
+                                    </div>
+                                    {pet.collar.connected && (
+                                        <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white animate-pulse" />
+                                    )}
                                 </div>
-                                {pet.collar.connected && (
-                                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white animate-pulse" />
-                                )}
-                            </div>
-                            <div className="flex flex-col text-left">
-                                <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest leading-none">TASMA DURUMU</span>
-                                <span className="text-[10px] font-bold text-gray-700 mt-0.5 flex items-center gap-1.5 leading-none">
-                                    {pet.collar.connected ? `Bağlı (%${pet.collar.battery})` : 'Bağlantı Yok'}
-                                </span>
-                            </div>
-                        </motion.div>
+                                <div className="flex flex-col text-left">
+                                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest leading-none">TASMA DURUMU</span>
+                                    <span className="text-[10px] font-bold text-gray-700 mt-0.5 flex items-center gap-1.5 leading-none">
+                                        {pet.collar.connected ? `Bağlı (%${pet.collar.battery})` : 'Bağlantı Yok'}
+                                    </span>
+                                </div>
+                            </motion.div>
+                            */}
+                            {!hasNoPets && (
+                                <motion.button 
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => window.dispatchEvent(new CustomEvent('open-sos-center'))}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full shadow-sm relative overflow-hidden group cursor-pointer border ${
+                                        lostPetMode 
+                                            ? 'bg-red-600 border-red-500 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]' 
+                                            : 'bg-red-50 border-red-200/60 text-red-600 hover:bg-red-100/50'
+                                     }`}
+                                >
+                                    <span className="absolute inset-0 bg-red-500/10 animate-pulse rounded-full" />
+                                    <span className="w-2 h-2 rounded-full bg-red-500 animate-ping absolute left-3" />
+                                    <span className="w-2 h-2 rounded-full bg-red-500" />
+                                    <span className={`text-[10px] font-black tracking-wider uppercase ml-1 ${lostPetMode ? 'text-white' : 'text-red-600'}`}>SOS</span>
+                                </motion.button>
+                            )}
+                        </>
                     )}
                     
                     <div className="flex items-center gap-3">
-                        {!hasNoPets && (
-                            <motion.button 
-                                whileTap={{ scale: 0.9 }}
-                                onClick={() => window.dispatchEvent(new CustomEvent('open-sos-center'))}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full shadow-sm relative overflow-hidden group cursor-pointer border ${
-                                    lostPetMode 
-                                        ? 'bg-red-600 border-red-500 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]' 
-                                        : 'bg-red-50 border-red-200/60 text-red-600 hover:bg-red-100/50'
-                                 }`}
-                            >
-                                <span className="absolute inset-0 bg-red-500/10 animate-pulse rounded-full" />
-                                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping absolute left-3" />
-                                <span className="w-2 h-2 rounded-full bg-red-500" />
-                                <span className={`text-[10px] font-black tracking-wider uppercase ml-1 ${lostPetMode ? 'text-white' : 'text-red-600'}`}>SOS</span>
-                            </motion.button>
-                        )}
 
                         <button className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
                             <Bell className="w-5 h-5" />
@@ -1648,21 +1718,19 @@ export default function LegendaryLightDashboard() {
                         })}
                     </div>
                 </section>
-                {/* 2.5 Hızlı Erişim (Quick Access) - Premium Grid */}
-                <section className="mb-6 px-1">
-                    <h3 className="text-[14px] font-bold text-gray-800 dark:text-white tracking-tight mb-3 px-1 opacity-90">Keşfet & Kısayollar</h3>
-                    <div className="bg-gray-100/80 dark:bg-zinc-900/50 p-2 rounded-[28px] grid grid-cols-2 gap-2 shadow-inner border border-gray-200/50 dark:border-white/5">
-                        <QuickAccessBtn icon={Radio} title="Kayıp & Sahiplen" subtitle="İlan Merkezi" bgTint="bg-red-50/80 dark:bg-red-950/20 hover:bg-red-100/80 dark:hover:bg-red-900/30" gradient="from-red-400 to-rose-600" delay={0.1} onClick={() => router.push('/topluluk?tab=radar')} />
-                        <QuickAccessBtn icon={Compass} title="Topluluk" subtitle="Keşif Dünyası" bgTint="bg-blue-50/80 dark:bg-blue-950/20 hover:bg-blue-100/80 dark:hover:bg-blue-900/30" gradient="from-blue-400 to-indigo-600" delay={0.2} onClick={() => router.push('/topluluk')} />
-                        <QuickAccessBtn icon={Stethoscope} title="Moffi Vet" subtitle="Sağlık Asistanı" bgTint="bg-indigo-50/80 dark:bg-indigo-950/20 hover:bg-indigo-100/80 dark:hover:bg-indigo-900/30" gradient="from-indigo-400 to-purple-600" delay={0.3} onClick={() => router.push('/vet')} />
-                        <QuickAccessBtn icon={Syringe} title="Aşı Takvimi" subtitle="Sağlık Geçmişi" bgTint="bg-emerald-50/80 dark:bg-emerald-950/20 hover:bg-emerald-100/80 dark:hover:bg-emerald-900/30" gradient="from-emerald-400 to-teal-600" delay={0.4} onClick={() => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'health' } }))} />
-                        <QuickAccessBtn icon={ShoppingBag} title="Market" subtitle="Moffi Petshop" bgTint="bg-orange-50/80 dark:bg-orange-950/20 hover:bg-orange-100/80 dark:hover:bg-orange-900/30" gradient="from-orange-400 to-red-500" delay={0.5} onClick={() => router.push('/petshop')} />
-                        <QuickAccessBtn icon={Scissors} title="Bakım Merkezi" subtitle="Kişisel Bakım" bgTint="bg-teal-50/80 dark:bg-teal-950/20 hover:bg-teal-100/80 dark:hover:bg-teal-900/30" gradient="from-teal-400 to-emerald-600" delay={0.6} onClick={() => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'nutrition' } }))} />
-                        <QuickAccessBtn icon={Star} title="Moffi Kurumsal" subtitle="moffi.net" bgTint="bg-purple-50/80 dark:bg-purple-950/20 hover:bg-purple-100/80 dark:hover:bg-purple-900/30" gradient="from-purple-400 to-fuchsia-600" delay={0.7} onClick={() => window.open('https://moffi.net', '_blank')} />
-                        <QuickAccessBtn icon={Activity} title="Yürüyüş" subtitle="GPS Takip" bgTint="bg-sky-50/80 dark:bg-sky-950/20 hover:bg-sky-100/80 dark:hover:bg-sky-900/30" gradient="from-sky-400 to-blue-500" delay={0.8} onClick={() => router.push('/walk')} />
+                {/* 2.5 Hızlı Erişim (Quick Access) - Edge to Edge, No Frame */}
+                <section className="mb-6 -mx-5">
+                    <div className="grid grid-cols-2 gap-0">
+                        <QuickAccessBtn icon={Radio} title="Kayıp & Sahiplen" subtitle="İlan Merkezi" bgTint="bg-red-100/80 dark:bg-red-900/40 hover:bg-red-200 dark:hover:bg-red-800/60" gradient="from-red-400 to-rose-600" delay={0.1} onClick={() => router.push('/topluluk?tab=radar')} />
+                        <QuickAccessBtn icon={Stethoscope} title="Veteriner" subtitle="Sağlık Asistanı" bgTint="bg-indigo-100/80 dark:bg-indigo-900/40 hover:bg-indigo-200 dark:hover:bg-indigo-800/60" gradient="from-indigo-400 to-purple-600" delay={0.15} onClick={() => router.push('/vet')} />
+                        
+                        <QuickAccessBtn icon={ShoppingBag} title="Market" subtitle="Moffi Petshop" bgTint="bg-orange-100/80 dark:bg-orange-900/40 hover:bg-orange-200 dark:hover:bg-orange-800/60" gradient="from-orange-400 to-red-500" delay={0.2} onClick={() => router.push('/petshop')} />
+                        <QuickAccessBtn icon={Syringe} title="Aşı Takvimi" subtitle="Sağlık Geçmişi" bgTint="bg-emerald-100/80 dark:bg-emerald-900/40 hover:bg-emerald-200 dark:hover:bg-emerald-800/60" gradient="from-emerald-400 to-teal-600" delay={0.25} onClick={() => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'health' } }))} />
+                        
+                        <QuickAccessBtn icon={Trophy} title="Görev Merkezi" subtitle="Kazan & Harca" bgTint="bg-yellow-100/80 dark:bg-yellow-900/40 hover:bg-yellow-200 dark:hover:bg-yellow-800/60" gradient="from-yellow-400 to-amber-600" delay={0.3} onClick={() => router.push('/quests')} />
+                        <QuickAccessBtn icon={Star} title="moffi.net" subtitle="Kurumsal Sitemiz" bgTint="bg-purple-100/80 dark:bg-purple-900/40 hover:bg-purple-200 dark:hover:bg-purple-800/60" gradient="from-purple-400 to-fuchsia-600" delay={0.35} onClick={() => window.open('https://moffi.net', '_blank')} />
                     </div>
                 </section>
-
                 {/* 9. Hero Pet Identity Card - Premium 3D Parallax Card */}
                 <div 
                     className="relative"
@@ -1670,8 +1738,8 @@ export default function LegendaryLightDashboard() {
                     onMouseLeave={handleMouseLeaveCard}
                 >
                     {/* Breathing Organic Glow Blobs behind the Card */}
-                    <div className="absolute top-4 left-6 w-36 h-36 bg-emerald-500/10 dark:bg-emerald-500/15 rounded-full blur-3xl pointer-events-none z-0 animate-pulse" />
-                    <div className="absolute bottom-6 right-8 w-36 h-36 bg-purple-500/10 dark:bg-purple-500/15 rounded-full blur-3xl pointer-events-none z-0 animate-pulse" />
+                    <div className="absolute top-0 left-0 w-48 h-48 bg-emerald-500/20 dark:bg-emerald-500/30 rounded-full blur-3xl pointer-events-none z-0 animate-pulse" />
+                    <div className="absolute bottom-0 right-0 w-48 h-48 bg-purple-500/20 dark:bg-purple-500/30 rounded-full blur-3xl pointer-events-none z-0 animate-pulse" />
 
                     <motion.div 
                         layout
@@ -1683,9 +1751,9 @@ export default function LegendaryLightDashboard() {
                             background: isDark 
                                 ? 'linear-gradient(135deg, rgba(28, 28, 33, 0.95) 0%, rgba(20, 20, 25, 0.98) 100%)' 
                                 : 'linear-gradient(135deg, rgba(255, 255, 255, 0.90) 0%, rgba(248, 250, 247, 0.95) 100%)',
-                            borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(34, 197, 94, 0.15)',
+                            borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(34, 197, 94, 0.25)',
                         }}
-                        className="rounded-[36px] p-5 mb-6 border relative overflow-hidden transition-all duration-300 z-10 shadow-[0_12px_40px_-15px_rgba(0,0,0,0.06)] dark:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.4)]"
+                        className="rounded-[36px] p-5 mb-6 border relative overflow-hidden transition-all duration-300 z-10 shadow-[0_20px_60px_-15px_rgba(16,185,129,0.15)] dark:shadow-[0_20px_60px_-15px_rgba(16,185,129,0.25)] ring-4 ring-emerald-500/5 dark:ring-emerald-500/10"
                     >
                         {/* Specular Light Reflection Overlay */}
                         <motion.div 
@@ -1915,67 +1983,6 @@ export default function LegendaryLightDashboard() {
                     </motion.div>
                 </div>
 
-                {/* ⚡ QUEST ENGINE - Günlük Görevler Bento */}
-                <section className="mb-6 px-0">
-                    <motion.button
-                        whileHover={{ scale: 1.015, y: -1.5, boxShadow: isDark ? '0 12px 30px rgba(139, 92, 246, 0.12)' : '0 12px 30px rgba(99, 102, 241, 0.08)' }}
-                        whileTap={{ scale: 0.985 }}
-                        onClick={() => router.push('/quests')}
-                        className={cn(
-                            "w-full flex items-center justify-between p-4 rounded-[24px] relative overflow-hidden transition-all duration-300 border cursor-pointer",
-                            isDark 
-                                ? "bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-indigo-500/20 text-white shadow-lg shadow-black/20" 
-                                : "bg-gradient-to-r from-indigo-50/70 via-purple-50/70 to-indigo-50/70 border-indigo-200/60 text-slate-800 shadow-[0_12px_32px_rgba(99,102,241,0.04)]"
-                        )}
-                    >
-                        {/* Background glow effects */}
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-all duration-500" />
-                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-orange-500/5 rounded-full blur-xl" />
-                        
-                        {/* Left Content (Icon + Texts) */}
-                        <div className="flex items-center gap-4 relative z-10">
-                            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center shadow-md shadow-orange-500/20 group-hover:scale-105 transition-transform duration-300">
-                                <Trophy className="w-6 h-6 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)] animate-pulse" />
-                            </div>
-                            <div className="flex flex-col text-left">
-                                <div className="flex items-center gap-1.5">
-                                    <span className={cn(
-                                        "text-[13px] font-black tracking-tight transition-colors duration-300",
-                                        isDark ? "text-white group-hover:text-amber-300" : "text-slate-800 group-hover:text-indigo-650"
-                                    )}>
-                                        Görev Merkezi
-                                    </span>
-                                    <span className={cn(
-                                        "text-[8px] font-black px-1.5 py-0.5 rounded-full border transition-colors duration-300",
-                                        isDark 
-                                            ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
-                                            : "bg-emerald-50 text-emerald-600 border-emerald-200"
-                                    )}>
-                                        AKTİF GÖREVLER
-                                    </span>
-                                </div>
-                                <span className={cn(
-                                    "text-[9.5px] font-medium mt-1 leading-normal transition-colors duration-300",
-                                    isDark ? "text-slate-400" : "text-slate-500"
-                                )}>
-                                    Günlük hedefleri tamamla, ekstra PatiPuan ve ödüller kazan!
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Right Content (Chevron/Arrow) */}
-                        <div className="flex items-center gap-1.5 relative z-10">
-                            <div className={cn(
-                                "w-8 h-8 rounded-full border flex items-center justify-center transition-all duration-300",
-                                isDark 
-                                    ? "bg-white/5 border-white/10 group-hover:bg-white/10 group-hover:border-white/20 text-slate-300 group-hover:text-white" 
-                                    : "bg-slate-200/50 border-slate-200/80 group-hover:bg-slate-200/80 group-hover:border-slate-300 text-slate-500 group-hover:text-slate-700"
-                            )}>
-                                <ChevronRight className="w-5 h-5 transition-colors" />
-                            </div>
-                        </div>
-                    </motion.button>
-                </section>
 
                 {/* 3. Live Walk Tracking Widget - useWalk hook ile canlı */}
                 <section className="mb-6">
@@ -2122,171 +2129,126 @@ export default function LegendaryLightDashboard() {
                     </BentoCard>
                 </section>
 
-                {/* 4. Mini Trends & Comparison Chart (Sağlık Gelişim) - MOVED TO THE TOP */}
+                {/* 4. Mini Trends & Comparison Chart (Sağlık Gelişim) */}
                 <section className="mb-6">
                     <div className="flex justify-between items-end mb-3 px-1">
-                        <h3 className="text-[15px] font-bold text-gray-800 tracking-tight">Haftalık Sağlık & Gelişim</h3>
-                        <span className="text-[10px] font-black text-green-600 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-                            <Flame className="w-3.5 h-3.5" /> +12% Gelişim
+                        <h3 className="text-[15px] font-bold text-gray-900 dark:text-gray-100 tracking-tight">Haftalık Aktivite & Gelişim</h3>
+                        <span className="text-[10px] font-black text-emerald-700 dark:text-emerald-400 bg-emerald-100/50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <TrendingUp className="w-3.5 h-3.5" /> +12% Performans
                         </span>
                     </div>
                     
-                    <BentoCard className="bg-white !p-4 relative overflow-hidden">
-                        <div className="flex justify-between items-start mb-4">
+                    <BentoCard className="bg-white dark:bg-zinc-900/50 !p-5 relative overflow-hidden shadow-md border border-gray-200 dark:border-white/5">
+                        {/* Header Stats */}
+                        <div className="flex justify-between items-start mb-6">
                             <div>
-                                <h4 className="text-sm font-bold text-gray-800">Aktivite Seviyesi</h4>
-                                <p className="text-[10px] text-gray-400 font-semibold mt-0.5">Son 7 günlük gezi ve hareket karşılaştırması</p>
+                                <h4 className="text-base font-black text-gray-900 dark:text-gray-100">Aktivite Raporu</h4>
+                                <p className="text-[11px] text-gray-500 dark:text-gray-400 font-bold mt-1">Son 7 günlük hareket analizi</p>
                             </div>
-                            <span className="text-[10px] font-black text-green-700 uppercase tracking-widest">DENGELİ</span>
+                            <div className="text-right">
+                                <span className="text-[10px] font-black text-gray-400 block mb-1 tracking-widest">ORTALAMA</span>
+                                <span className="text-xl font-black text-gray-900 dark:text-gray-100">{Math.round(pet.weeklyData.reduce((a, b) => a + b, 0) / 7)} <span className="text-[11px] font-bold text-gray-500">dk/gün</span></span>
+                            </div>
                         </div>
                         
-                        <div className="h-28 w-full flex items-end relative pt-2">
-                            <div className="absolute inset-x-0 top-1/4 border-b border-gray-100/60" />
-                            <div className="absolute inset-x-0 top-2/4 border-b border-gray-100/60" />
-                            <div className="absolute inset-x-0 top-3/4 border-b border-gray-100/60" />
+                        {/* Bar Chart */}
+                        <div className="h-36 w-full flex items-end justify-between gap-1.5 relative pt-4">
+                            {/* Grid Lines */}
+                            <div className="absolute inset-x-0 top-0 border-b border-gray-200 dark:border-gray-800/60 border-dashed z-0" />
+                            <div className="absolute inset-x-0 top-1/2 border-b border-gray-200 dark:border-gray-800/60 border-dashed z-0" />
+                            <div className="absolute inset-x-0 bottom-[18px] border-b border-gray-300 dark:border-gray-800 z-0" />
                             
-                            <svg className="w-full h-full overflow-visible z-10" viewBox="0 0 340 100">
-                                <defs>
-                                    <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="#22C55E" stopOpacity="0.15" />
-                                        <stop offset="100%" stopColor="#22C55E" stopOpacity="0.0" />
-                                    </linearGradient>
-                                </defs>
-                                <path d={`M 10 90 L 10 ${100 - pet.weeklyData[0]} Q 60 ${100 - pet.weeklyData[1]} 110 ${100 - pet.weeklyData[2]} T 210 ${100 - pet.weeklyData[4]} T 330 ${100 - pet.weeklyData[6]} L 330 90 Z`} fill="url(#chartGradient)" />
-                                <path d={`M 10 ${100 - pet.weeklyData[0]} Q 60 ${100 - pet.weeklyData[1]} 110 ${100 - pet.weeklyData[2]} T 210 ${100 - pet.weeklyData[4]} T 330 ${100 - pet.weeklyData[6]}`} fill="none" stroke="#22C55E" strokeWidth="3" strokeLinecap="round" />
+                            {/* Bars */}
+                            {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map((day, i) => {
+                                const val = pet.weeklyData[i];
+                                const isCompleted = i < resolvedStreak;
+                                const heightPercent = Math.min(100, Math.max(5, (val / 100) * 100)); // Normalized to 100 max
                                 
-                                {pet.weeklyData.map((val, i) => (
-                                    <circle key={i} cx={10 + i * 53} cy={100 - val} r={4} fill="#22C55E" stroke="white" strokeWidth="1.5" />
-                                ))}
-                            </svg>
-                        </div>
-                        <div className="flex justify-between mt-3 text-[9px] font-bold text-gray-400 uppercase tracking-widest px-1">
-                            <span>Pzt</span>
-                            <span>Sal</span>
-                            <span>Çar</span>
-                            <span>Per</span>
-                            <span>Cum</span>
-                            <span>Cmt</span>
-                            <span>Paz</span>
+                                return (
+                                    <div key={day} className="flex flex-col items-center gap-2 z-10 w-full h-full group relative">
+                                        {/* Tooltip */}
+                                        <div className="absolute -top-7 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg pointer-events-none z-20">
+                                            {val} dk
+                                        </div>
+                                        {/* Bar Wrapper */}
+                                        <div className="w-full h-[calc(100%-20px)] flex items-end justify-center">
+                                            <div 
+                                                className={`w-full max-w-[28px] rounded-t-lg transition-all duration-700 ease-out cursor-pointer ${
+                                                    isCompleted 
+                                                        ? 'bg-gradient-to-t from-emerald-500 to-emerald-400 dark:from-emerald-400 dark:to-emerald-300 shadow-[0_4px_12px_rgba(52,211,153,0.4)] group-hover:from-emerald-400 group-hover:to-emerald-300' 
+                                                        : 'bg-gray-200 dark:bg-zinc-800/50 group-hover:bg-gray-300 dark:group-hover:bg-zinc-700/50'
+                                                }`}
+                                                style={{ height: `${heightPercent}%` }}
+                                            />
+                                        </div>
+                                        {/* Day Label */}
+                                        <span className={`text-[9px] font-black uppercase tracking-wider shrink-0 ${isCompleted ? 'text-gray-800 dark:text-gray-300' : 'text-gray-400 dark:text-gray-600'}`}>
+                                            {day}
+                                        </span>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </BentoCard>
                 </section>
 
-                <section className="mb-6">
-                    <h3 className="text-[15px] font-bold text-gray-800 tracking-tight mb-3 px-1">Bugün senin için</h3>
-                    <div 
-                        ref={communityCardScroll.ref}
-                        onMouseDown={communityCardScroll.onMouseDown}
-                        onMouseLeave={communityCardScroll.onMouseLeave}
-                        onMouseUp={communityCardScroll.onMouseUp}
-                        onMouseMove={communityCardScroll.onMouseMove}
-                        className="flex gap-3.5 overflow-x-auto pb-4 pt-1 snap-x scrollbar-none px-1 cursor-grab active:cursor-grabbing select-none"
-                    >
-                        
-                        {/* Aşı Kartı */}
-                        <motion.div 
-                            initial={{ opacity: 0, x: 25 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.2, duration: 0.5 }}
-                            onClick={() => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'health' } }))}
-                            className="w-[160px] h-[140px] shrink-0 snap-start bg-white shadow-[0_4px_12px_rgba(0,0,0,0.015),0_1px_2px_rgba(0,0,0,0.01)] border border-gray-100/80 rounded-[22px] p-4 flex flex-col justify-between cursor-pointer transition-all duration-300 hover:shadow-[0_8px_20px_rgba(0,0,0,0.03)] hover:scale-[1.02]"
-                        >
-                            <div className="flex justify-between items-start">
-                                <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center">
-                                    <Syringe className="w-5 h-5 text-emerald-600" />
-                                </div>
-                                <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full uppercase tracking-wider">Aşı</span>
-                            </div>
-                            <div>
-                                <h4 className="text-[12px] font-black text-gray-800 leading-tight">Karma Aşı Vakti</h4>
-                                <p className="text-[10px] text-gray-400 font-semibold mt-1">3 Gün Kaldı</p>
-                            </div>
-                        </motion.div>
-
-                        {/* Veteriner Kartı */}
-                        <motion.div 
-                            initial={{ opacity: 0, x: 25 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.3, duration: 0.5 }}
-                            onClick={() => router.push('/vet')}
-                            className="w-[160px] h-[140px] shrink-0 snap-start bg-white shadow-[0_4px_12px_rgba(0,0,0,0.015),0_1px_2px_rgba(0,0,0,0.01)] border border-gray-100/80 rounded-[22px] p-4 flex flex-col justify-between cursor-pointer transition-all duration-300 hover:shadow-[0_8px_20px_rgba(0,0,0,0.03)] hover:scale-[1.02]"
-                        >
-                            <div className="flex justify-between items-start">
-                                <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center">
-                                    <Calendar className="w-5 h-5 text-orange-500" />
-                                </div>
-                                <span className="text-[9px] font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full uppercase tracking-wider">Randevu</span>
-                            </div>
-                            <div>
-                                <h4 className="text-[12px] font-black text-gray-800 leading-tight">Vet Muayenesi</h4>
-                                <p className="text-[10px] text-gray-400 font-semibold mt-1">Yarın • 11:30</p>
-                            </div>
-                        </motion.div>
-
-                        {/* Kayıp İlanı Kartı */}
-                        <motion.div 
-                            initial={{ opacity: 0, x: 25 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.4, duration: 0.5 }}
-                            onClick={() => router.push('/topluluk?tab=radar&mode=lost')}
-                            className="w-[160px] h-[140px] shrink-0 snap-start bg-white shadow-[0_4px_12px_rgba(0,0,0,0.015),0_1px_2px_rgba(0,0,0,0.01)] border border-gray-100/80 rounded-[22px] p-4 flex flex-col justify-between cursor-pointer transition-all duration-300 hover:shadow-[0_8px_20px_rgba(0,0,0,0.03)] hover:scale-[1.02]"
-                        >
-                            <div className="flex justify-between items-start">
-                                <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center">
-                                    <MapPin className="w-5 h-5 text-red-500" />
-                                </div>
-                                <span className="text-[9px] font-black text-red-600 bg-red-50 px-2 py-0.5 rounded-full uppercase tracking-wider">Kayıp</span>
-                            </div>
-                            <div>
-                                <h4 className="text-[12px] font-black text-gray-800 leading-tight">Çevrede Kayıp</h4>
-                                <p className="text-[10px] text-gray-400 font-semibold mt-1">1.2 KM Yakınında</p>
-                            </div>
-                        </motion.div>
-
-                        {/* Aktivite / Yürüyüş Kartı */}
-                        <motion.div 
-                            initial={{ opacity: 0, x: 25 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.5, duration: 0.5 }}
-                            className="w-[160px] h-[140px] shrink-0 snap-start bg-white shadow-[0_4px_12px_rgba(0,0,0,0.015),0_1px_2px_rgba(0,0,0,0.01)] border border-gray-100/80 rounded-[22px] p-4 flex flex-col justify-between cursor-pointer transition-all duration-300 hover:shadow-[0_8px_20px_rgba(0,0,0,0.03)] hover:scale-[1.02]"
-                        >
-                            <div className="flex justify-between items-start">
-                                <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
-                                    <Activity className="w-5 h-5 text-blue-500" />
-                                </div>
-                                <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase tracking-wider">Hedef</span>
-                            </div>
-                            <div>
-                                <h4 className="text-[12px] font-black text-gray-800 leading-tight">Yürüyüş Hedefi</h4>
-                                <p className="text-[10px] text-gray-400 font-semibold mt-1">240 Adım Kaldı</p>
-                            </div>
-                        </motion.div>
-
-                    </div>
-                </section>
+                <TodayForYouEngine />
 
                 <section className="mb-6">
                     {/* Hızlı Erişim was moved to the top of the feed */}
                 </section>
 
-                {/* 7. Promotional Banner - MOVED TO THE TOP */}
+                {/* 7. Super App Vision Banner */}
                 <motion.div 
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="relative bg-[#F4EFE7] rounded-[28px] p-6 overflow-hidden flex justify-between items-center shadow-sm border border-orange-100/20 mb-8"
+                    className="relative bg-gradient-to-br from-slate-900 to-indigo-950 dark:from-zinc-900 dark:to-zinc-950 rounded-[32px] p-1 overflow-hidden shadow-2xl mb-8 group"
                 >
-                    <div className="relative z-10">
-                        <h4 className="text-lg font-black text-gray-800 tracking-tight mb-1">Onlar bize emanet.</h4>
-                        <p className="text-xs text-gray-600 font-medium mb-4">Biz de onlara.</p>
-                        <button className="bg-gray-700 hover:bg-gray-800 text-white text-[11px] font-bold px-4 py-2 rounded-full cursor-pointer transition-colors">Keşfet</button>
+                    {/* Animated background glows */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl group-hover:bg-indigo-500/30 transition-all duration-700 pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-fuchsia-500/10 rounded-full blur-3xl group-hover:bg-fuchsia-500/20 transition-all duration-700 pointer-events-none" />
+                    
+                    <div className="bg-slate-900/60 dark:bg-zinc-900/80 backdrop-blur-xl rounded-[28px] p-6 relative z-10 border border-white/10 h-full flex flex-col">
+                        
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+                                <Sparkles className="w-4 h-4 text-white" />
+                            </div>
+                            <div>
+                                <h4 className="text-lg font-black text-white tracking-tight leading-none">Moffi Ekosistemi</h4>
+                                <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest mt-0.5 block">Süper Uygulama</span>
+                            </div>
+                        </div>
+
+                        <p className="text-xs text-slate-300 font-medium leading-relaxed mb-6">
+                            Evcil dostunuzun tüm ihtiyaçları tek bir merkezde. Yapay zeka destekli sağlık asistanından akıllı tasmaya, kişiselleştirilmiş petshop'tan sosyal ağa kadar her şey parmaklarınızın ucunda.
+                        </p>
+
+                        <div className="grid grid-cols-2 gap-3 mb-6">
+                            {[
+                                { icon: Stethoscope, title: "Moffi AI Vet", desc: "Anlık Sağlık Analizi" },
+                                { icon: Navigation, title: "Akıllı Tasma", desc: "Canlı GPS & Aktivite" },
+                                { icon: ShoppingBag, title: "Moffi Market", desc: "Özel Fırsatlar" },
+                                { icon: Trophy, title: "Görev & Ödül", desc: "PatiPuan Kazan" }
+                            ].map((feature, idx) => (
+                                <div key={idx} className="bg-white/5 border border-white/5 rounded-2xl p-3 flex flex-col gap-2 hover:bg-white/10 transition-colors cursor-default">
+                                    <feature.icon className="w-5 h-5 text-indigo-400" />
+                                    <div>
+                                        <h5 className="text-[11px] font-bold text-white">{feature.title}</h5>
+                                        <span className="text-[9px] text-slate-400 font-medium leading-none block mt-0.5">{feature.desc}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <button 
+                            onClick={() => setExpandedPanel('about')}
+                            className="w-full bg-white hover:bg-slate-100 text-slate-900 text-[12px] font-black py-3.5 rounded-2xl transition-all duration-300 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] cursor-pointer"
+                        >
+                            Uygulama Vizyonunu Keşfet
+                        </button>
                     </div>
-                    <div className="absolute right-0 bottom-0 h-[120%] w-[60%] pointer-events-none">
-                        <img src="https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=400" className="w-full h-full object-cover object-left-bottom mix-blend-multiply opacity-90" alt="Dog and Owner" />
-                    </div>
-                    <button className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-white/30 backdrop-blur-md rounded-full">
-                        <Heart className="w-4 h-4 text-gray-700" />
-                    </button>
                 </motion.div>
 
 
@@ -2305,7 +2267,7 @@ export default function LegendaryLightDashboard() {
 
                     <BentoCard 
                         layoutId="shop-card-container"
-                        onClick={() => setExpandedPanel('shop')}
+                        onClick={() => router.push(pet.specialOffer.link || '/petshop')}
                         className="bg-gradient-to-br from-amber-50/70 to-orange-50/50 !p-4 border border-orange-100/30 flex gap-4 items-center relative overflow-hidden cursor-pointer group hover:scale-[1.01] transition-transform duration-300"
                     >
                         <div className="absolute right-[-10px] top-[-10px] w-20 h-20 bg-orange-400/5 rounded-full blur-xl pointer-events-none" />
@@ -2328,27 +2290,7 @@ export default function LegendaryLightDashboard() {
                     </BentoCard>
                 </section>
 
-                {/* 13. AI Assistant Advice Banner */}
-                <motion.div 
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100/60 rounded-3xl p-4 flex items-start gap-3 shadow-sm relative overflow-hidden"
-                >
-                    <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-white/40 blur-xl rounded-full pointer-events-none" />
-                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-md shadow-purple-500/20 text-white shrink-0">
-                        <Sparkles className="w-5 h-5" />
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] font-black tracking-widest text-purple-700 uppercase">MOFFI AI ÖNERİSİ</span>
-                            <span className="px-1.5 py-0.5 rounded bg-purple-100 text-[8px] font-black text-purple-700 uppercase tracking-widest">Canlı</span>
-                        </div>
-                        <p className="text-[11px] font-bold text-gray-700 mt-1 leading-relaxed">
-                            Hava bugün Kadıköy'de çok sıcak. {pet.name}'in patilerini korumak için yürüyüşünüzü akşam 19:30 sonrasına planlayabilirsiniz.
-                        </p>
-                    </div>
-                </motion.div>
+
                     </>
                 )}
 
@@ -2441,7 +2383,7 @@ export default function LegendaryLightDashboard() {
                                                 <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-green-500/10 rounded-full blur-2xl" />
                                                 <span className="text-[8px] font-black tracking-widest text-gray-400 block">CARDMEMBERSHIP</span>
                                                 <h4 className="text-2xl font-black mt-4 tracking-tight flex items-baseline gap-1">
-                                                    {walletBalance.toLocaleString('tr-TR')} <span className="text-xs text-yellow-400 font-bold">{pet.wallet.currency}</span>
+                                                    {totalPatiPuan.toLocaleString('tr-TR')} <span className="text-xs text-yellow-400 font-bold">{pet.wallet.currency}</span>
                                                 </h4>
                                                 <div className="flex justify-between items-end mt-6">
                                                     <span className="text-[10px] text-gray-400 font-mono tracking-wider">{pet.wallet.cardNumber}</span>
@@ -2450,16 +2392,42 @@ export default function LegendaryLightDashboard() {
                                             </div>
 
                                             {/* Advanced Action Panel */}
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <button className="flex items-center justify-center gap-1 bg-[#EAF5EC] hover:bg-green-100 border border-green-200 p-3 rounded-2xl text-[11px] font-black text-green-700 transition-all cursor-pointer">
+                                            <div className="grid grid-cols-2 gap-3 mt-3">
+                                                <button 
+                                                    disabled
+                                                    className="flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-100 p-3.5 rounded-2xl text-[11px] font-black text-gray-400 transition-all cursor-not-allowed shadow-sm relative overflow-hidden"
+                                                >
+                                                    <div className="absolute inset-0 bg-white/50 z-10" />
                                                     <Plus className="w-3.5 h-3.5" />
                                                     <span>Bakiye Yükle</span>
+                                                    <span className="absolute top-0 right-0 bg-orange-100 text-orange-600 text-[7px] px-1.5 py-0.5 rounded-bl-lg font-black z-20">YAKINDA</span>
                                                 </button>
-                                                <button className="flex items-center justify-center gap-1 bg-[#EFF6FF] hover:bg-blue-100 border border-blue-200 p-3 rounded-2xl text-[11px] font-black text-blue-700 transition-all cursor-pointer">
+                                                <button 
+                                                    disabled
+                                                    className="flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-100 p-3.5 rounded-2xl text-[11px] font-black text-gray-400 transition-all cursor-not-allowed shadow-sm relative overflow-hidden"
+                                                >
+                                                    <div className="absolute inset-0 bg-white/50 z-10" />
                                                     <ArrowUpRight className="w-3.5 h-3.5" />
-                                                    <span>Patipuan Yolla</span>
+                                                    <span>Puan Transferi</span>
+                                                    <span className="absolute top-0 right-0 bg-orange-100 text-orange-600 text-[7px] px-1.5 py-0.5 rounded-bl-lg font-black z-20">YAKINDA</span>
                                                 </button>
                                             </div>
+
+                                            <button 
+                                                onClick={() => setIsPolicyModalOpen(true)}
+                                                className="w-full mt-3 p-3.5 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-between group hover:bg-gray-100 transition-colors cursor-pointer"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-xl bg-white border border-gray-100 shadow-sm flex items-center justify-center">
+                                                        <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                                                    </div>
+                                                    <div className="text-left">
+                                                        <span className="text-[11px] font-black text-gray-800 block">Pati-Kart KVKK & Kurallar</span>
+                                                        <span className="text-[9px] text-gray-500 font-medium">Adil kullanım politikalarını inceleyin</span>
+                                                    </div>
+                                                </div>
+                                                <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-emerald-500 transition-colors" />
+                                            </button>
 
                                             {/* Transaction Feed */}
                                             <div>
@@ -2527,9 +2495,17 @@ export default function LegendaryLightDashboard() {
                                                 </div>
                                             </div>
 
-                                            <button className="w-full bg-gray-900 hover:bg-gray-800 text-white text-[11px] font-black py-3.5 rounded-2xl cursor-pointer transition-colors shadow-md shadow-gray-900/10">
-                                                Çip Bilgilerini Paylaş
-                                            </button>
+                                            <div className="flex flex-col gap-2 mt-4">
+                                                <button className="w-full bg-gray-900 hover:bg-gray-800 text-white text-[11px] font-black py-3.5 rounded-2xl cursor-pointer transition-colors shadow-md shadow-gray-900/10">
+                                                    Çip Bilgilerini Paylaş
+                                                </button>
+                                                <button 
+                                                    onClick={() => router.push(`/profile/${authUser?.id}?view=passport`)}
+                                                    className="w-full bg-orange-100 hover:bg-orange-200 text-orange-800 text-[11px] font-black py-3.5 rounded-2xl cursor-pointer transition-colors shadow-sm"
+                                                >
+                                                    Tüm Detayları Düzenle / PDF İndir
+                                                </button>
+                                            </div>
                                         </>
                                     )}
 
@@ -2615,6 +2591,61 @@ export default function LegendaryLightDashboard() {
                                         </div>
                                     )}
                                     
+                                    {/* 4.5. About / Ecosystem Morph Screen */}
+                                    {expandedPanel === 'about' && (
+                                        <div className="w-full bg-white dark:bg-zinc-950 rounded-[2.5rem] overflow-hidden shadow-2xl border border-gray-100 dark:border-white/5 relative flex flex-col h-[85vh]">
+                                            {/* Header Image / Pattern */}
+                                            <div className="h-44 shrink-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-fuchsia-600 relative overflow-hidden flex flex-col items-center justify-center">
+                                                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+                                                <div className="relative z-10 text-center px-4 mt-4">
+                                                    <div className="w-14 h-14 mx-auto bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 mb-3 shadow-xl">
+                                                        <Sparkles className="w-7 h-7 text-white drop-shadow-md" />
+                                                    </div>
+                                                    <h2 className="text-xl font-black text-white tracking-tight drop-shadow-md leading-none">Moffi Süper Uygulaması</h2>
+                                                    <p className="text-[11px] font-bold text-indigo-100 mt-2">Evcil Hayvan Bakımının Geleceği</p>
+                                                </div>
+                                                
+                                                <button 
+                                                    onClick={() => setExpandedPanel(null)}
+                                                    className="absolute top-4 right-4 w-9 h-9 bg-black/20 hover:bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-colors cursor-pointer"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            </div>
+
+                                            {/* Content */}
+                                            <div className="p-5 md:p-6 overflow-y-auto no-scrollbar flex-1 pb-24">
+                                                <div className="text-[13.5px] text-gray-700 dark:text-gray-300">
+                                                    <p className="first-letter:text-5xl first-letter:font-black first-letter:text-indigo-600 dark:first-letter:text-indigo-400 first-letter:mr-3 first-letter:float-left mb-6 leading-relaxed">
+                                                        Moffi, evcil dostunuzun hayatındaki tüm karmaşayı tek bir merkezde çözen devasa bir ekosistemdir. Biz, evcil hayvan bakımının birbirinden kopuk, düzensiz ve karmaşık uygulamalar yığını olmaktan çıkması gerektiğine inanıyoruz. Parçalanmış sistemler yerine, her şeyin birbiriyle akıcı bir şekilde konuştuğu akıllı bir gelecek inşa ediyoruz.
+                                                    </p>
+                                                    
+                                                    <p className="mb-6 leading-relaxed">
+                                                        Hayal edin; <strong>Moffi AI Veteriner</strong> sayesinde 7/24 kesintisiz, anlık ve yapay zeka destekli sağlık analizleri alabiliyorsunuz. Semptomları saniyeler içinde yorumlayıp beslenme tavsiyelerine ulaşıyorsunuz. Diğer tarafta <strong>Moffi Cüzdan</strong> teknolojimizle, anlaşmalı pet-friendly mekanlarda veya marketlerde saniyeler içinde ödeme yapıp PatiPuan kazanıyorsunuz.
+                                                    </p>
+                                                    
+                                                    <p className="mb-6 leading-relaxed">
+                                                        Üstelik sadece sağlıkla da yetinmiyoruz. <strong>Özelleştirilmiş Moffi Market</strong>, dostunuzun yaşına, ırkına ve o güne kadarki sağlık geçmişine bakarak sadece ona en uygun, en kaliteli ürünleri vitrine çıkarıyor. Kafa karıştıran binlerce ürün yerine, nokta atışı ve akıllı bir alışveriş deneyimi sunuyor.
+                                                    </p>
+
+                                                    <p className="leading-relaxed font-bold text-gray-900 dark:text-white bg-indigo-50 dark:bg-indigo-900/20 p-5 rounded-2xl border border-indigo-100 dark:border-indigo-500/20 shadow-sm">
+                                                        Sonuç olarak Moffi; yalnızca bir uygulama değil, sizin ve en iyi arkadaşınızın hayatını kusursuzlaştırmak için tasarlanmış, yaşayan, öğrenen ve sürekli büyüyen dev bir <strong>Pati Ekosistemidir</strong>.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Footer Button - Fixed at bottom */}
+                                            <div className="absolute bottom-0 inset-x-0 p-5 bg-gradient-to-t from-white via-white to-transparent dark:from-zinc-950 dark:via-zinc-950 pt-10 flex justify-center border-t border-gray-100/50 dark:border-white/5">
+                                                <button 
+                                                    onClick={() => setExpandedPanel(null)}
+                                                    className="w-full py-3.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-black rounded-xl shadow-lg hover:scale-[1.02] transition-all cursor-pointer"
+                                                >
+                                                    Moffi'ye Geri Dön
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                    
                                     {/* 5. Quests Morph Screen */}
                                     {expandedPanel === 'quests' && (
                                         <>
@@ -2636,6 +2667,9 @@ export default function LegendaryLightDashboard() {
                                                     <div className="h-full bg-gradient-to-r from-yellow-500 to-amber-500 rounded-full" style={{ width: '66%' }} />
                                                 </div>
                                                 <span className="text-[9.5px] font-semibold text-gray-500 mt-2 block">1000 Patipuana son 150 P kaldı!</span>
+                                                <p className="text-[7.5px] font-medium text-amber-600/70 mt-1.5 leading-snug">
+                                                    *PatiPuan'lar dijital kozmetiklerde ve anlaşmalı markalarda (max %10) indirim için kullanılır.
+                                                </p>
                                             </div>
 
                                             {/* Quests status lists */}
@@ -2931,7 +2965,7 @@ export default function LegendaryLightDashboard() {
                                                         <div>
                                                             <span className="text-[9px] font-bold text-gray-455 uppercase block">Cüzdan Bakiyesi</span>
                                                             <h3 className="text-2xl font-black tracking-tight mt-0.5 flex items-baseline gap-1">
-                                                                {walletBalance.toLocaleString('tr-TR')} <span className="text-xs font-black text-yellow-400">{pet.wallet.currency}</span>
+                                                                {totalPatiPuan.toLocaleString('tr-TR')} <span className="text-xs font-black text-yellow-400">{pet.wallet.currency}</span>
                                                             </h3>
                                                         </div>
                                                         <div className="text-right font-mono">
@@ -2950,25 +2984,40 @@ export default function LegendaryLightDashboard() {
 
                                                 <div className="grid grid-cols-2 gap-3">
                                                     <button 
-                                                        onClick={() => {
-                                                            setWalletBalance(prev => prev + 500);
-                                                            setToastMsg("💳 Hesabınıza 500 Patipuan başarıyla yüklendi!");
-                                                        }}
-                                                        className="flex items-center justify-center gap-1.5 bg-[#EAF5EC] hover:bg-green-100 border border-green-200/60 p-3.5 rounded-2xl text-[11px] font-black text-green-700 transition-all cursor-pointer shadow-sm"
+                                                        disabled
+                                                        className="flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-100 p-3.5 rounded-2xl text-[11px] font-black text-gray-400 transition-all cursor-not-allowed shadow-sm relative overflow-hidden"
                                                     >
+                                                        <div className="absolute inset-0 bg-white/50 z-10" />
                                                         <Plus className="w-3.5 h-3.5" />
                                                         <span>Bakiye Yükle</span>
+                                                        <span className="absolute top-0 right-0 bg-orange-100 text-orange-600 text-[7px] px-1.5 py-0.5 rounded-bl-lg font-black z-20">YAKINDA</span>
                                                     </button>
                                                     <button 
-                                                        onClick={() => {
-                                                            setToastMsg("💸 Puan transfer arayüzü başlatılıyor...");
-                                                        }}
-                                                        className="flex items-center justify-center gap-1.5 bg-[#EFF6FF] hover:bg-blue-100 border border-blue-200/60 p-3.5 rounded-2xl text-[11px] font-black text-blue-700 transition-all cursor-pointer shadow-sm"
+                                                        disabled
+                                                        className="flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-100 p-3.5 rounded-2xl text-[11px] font-black text-gray-400 transition-all cursor-not-allowed shadow-sm relative overflow-hidden"
                                                     >
+                                                        <div className="absolute inset-0 bg-white/50 z-10" />
                                                         <ArrowUpRight className="w-3.5 h-3.5" />
                                                         <span>Puan Transferi</span>
+                                                        <span className="absolute top-0 right-0 bg-orange-100 text-orange-600 text-[7px] px-1.5 py-0.5 rounded-bl-lg font-black z-20">YAKINDA</span>
                                                     </button>
                                                 </div>
+
+                                                <button 
+                                                    onClick={() => setIsPolicyModalOpen(true)}
+                                                    className="w-full p-3.5 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-between group hover:bg-gray-100 transition-colors cursor-pointer mt-3"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-xl bg-white border border-gray-100 shadow-sm flex items-center justify-center">
+                                                            <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                                                        </div>
+                                                        <div className="text-left">
+                                                            <span className="text-[11px] font-black text-gray-800 block">Pati-Kart KVKK & Kurallar</span>
+                                                            <span className="text-[9px] text-gray-500 font-medium">Adil kullanım politikalarını inceleyin</span>
+                                                        </div>
+                                                    </div>
+                                                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-emerald-500 transition-colors" />
+                                                </button>
 
                                                 {/* Pati-Kart Security Settings */}
                                                 <div className="bg-white border border-gray-100 rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-4">
@@ -3024,12 +3073,11 @@ export default function LegendaryLightDashboard() {
                                                 </div>
                                             </div>
 
-                                            {/* 3. Moffi Link™ Akıllı Tasma OS & AI Çevirmen */}
+                                            {/* [V2_FEATURE_TASMA] - Akıllı Tasma OS & AI Çevirmen Gizlendi
                                             <div className="flex flex-col gap-3">
                                                 <span className="text-[10px] font-black tracking-widest text-gray-400 uppercase px-1">AKILLI TASMA (IoT) OS & AI SES ANALİZİ</span>
                                                 
                                                 <div className="bg-white border border-gray-100 rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-4">
-                                                    {/* Tasma Konfigürasyonu */}
                                                     <div className="flex justify-between items-center">
                                                         <div className="flex items-center gap-2.5">
                                                             <div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center text-green-600 shrink-0">
@@ -3056,7 +3104,6 @@ export default function LegendaryLightDashboard() {
                                                         </div>
                                                     </div>
 
-                                                    {/* AI Translator & Bark Logger */}
                                                     <div className="p-3.5 bg-purple-50/50 border border-purple-100/80 rounded-2xl flex flex-col gap-2">
                                                         <div className="flex justify-between items-center">
                                                             <div className="flex items-center gap-1.5">
@@ -3070,7 +3117,6 @@ export default function LegendaryLightDashboard() {
                                                         </p>
                                                     </div>
 
-                                                    {/* SOS / Lost Mode warning and activator */}
                                                     <div className={`p-3.5 border rounded-2xl flex flex-col gap-2 transition-all ${
                                                         lostPetMode 
                                                             ? 'bg-red-50 border-red-200 text-red-700 shadow-sm animate-pulse' 
@@ -3112,7 +3158,6 @@ export default function LegendaryLightDashboard() {
                                                         </p>
                                                     </div>
 
-                                                    {/* Acoustic Controls */}
                                                     <div className="grid grid-cols-3 gap-2.5 pt-1">
                                                         <button 
                                                             onClick={() => setToastMsg("🔊 Tasmaya ses sinyali gönderildi.")}
@@ -3138,43 +3183,40 @@ export default function LegendaryLightDashboard() {
                                                     </div>
                                                 </div>
                                             </div>
+                                            */}
 
                                             {/* 4. Smart Food & Service Subscriptions (Abonelikler) */}
                                             <div className="flex flex-col gap-3">
                                                 <span className="text-[10px] font-black tracking-widest text-gray-400 uppercase px-1">MAMA & HİZMET ABONELİKLERİM</span>
                                                 
                                                 <div className="bg-white border border-gray-100 rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3">
-                                                    <div className="flex justify-between items-center pb-3 border-b border-gray-50">
-                                                        <div className="flex items-center gap-2.5">
-                                                            <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center text-orange-655 shrink-0">
-                                                                <ShoppingBag className="w-5 h-5" />
+                                                    {subscriptions.length > 0 ? subscriptions.map((sub: any, idx: number) => (
+                                                        <div key={sub.id || idx} className={`flex justify-between items-center ${idx !== subscriptions.length - 1 ? 'pb-3 border-b border-gray-50' : ''}`}>
+                                                            <div className="flex items-center gap-2.5">
+                                                                <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center text-orange-655 shrink-0">
+                                                                    <ShoppingBag className="w-5 h-5" />
+                                                                </div>
+                                                                <div>
+                                                                    <h4 className="text-[11.5px] font-black text-gray-800">{sub.name}</h4>
+                                                                    <p className="text-[9.5px] text-gray-400 font-semibold mt-0.5">Aylık Düzenli Teslimat • %10 İndirimli</p>
+                                                                </div>
                                                             </div>
-                                                            <div>
-                                                                <h4 className="text-[11.5px] font-black text-gray-800">Düzenli Somonlu Mama (12kg)</h4>
-                                                                <p className="text-[9.5px] text-gray-400 font-semibold mt-0.5">Her ayın 25'inde teslimat • %20 İndirimli</p>
-                                                            </div>
-                                                        </div>
-                                                        <div className="text-right">
-                                                            <span className="text-[11.5px] font-black text-orange-600 block">960 TL</span>
-                                                            <span className="text-[8px] font-bold text-gray-400 block uppercase font-sans">Mama Aboneliği</span>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex justify-between items-center">
-                                                        <div className="flex items-center gap-2.5">
-                                                            <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-650 shrink-0">
-                                                                <Scissors className="w-5 h-5" />
-                                                            </div>
-                                                            <div>
-                                                                <h4 className="text-[11.5px] font-black text-gray-800">Moffi Premium Tüy Bakımı</h4>
-                                                                <p className="text-[9.5px] text-gray-400 font-semibold mt-0.5">Her 60 günde bir pet kuaför seansı</p>
+                                                            <div className="text-right">
+                                                                <span className="text-[11.5px] font-black text-orange-600 block">{(sub.price * 0.9).toLocaleString('tr-TR')} TL</span>
+                                                                <span className="text-[8px] font-bold text-gray-400 block uppercase font-sans">Abonelik</span>
                                                             </div>
                                                         </div>
-                                                        <div className="text-right">
-                                                            <span className="text-[11.5px] font-black text-indigo-650 block">450 TL</span>
-                                                            <span className="text-[8px] font-bold text-gray-400 block uppercase font-sans">Hizmet Paketi</span>
+                                                    )) : (
+                                                        <div className="text-center py-4 flex flex-col items-center">
+                                                            <p className="text-[10px] font-bold text-gray-400 mb-2.5">Henüz aktif bir aboneliğiniz bulunmuyor.</p>
+                                                            <button 
+                                                                onClick={() => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'petshop' }))}
+                                                                className="text-[10px] font-black text-indigo-650 bg-indigo-50 border border-indigo-100/50 hover:bg-indigo-100 px-4 py-2 rounded-xl transition-colors"
+                                                            >
+                                                                Marketi Keşfet
+                                                            </button>
                                                         </div>
-                                                    </div>
+                                                    )}
                                                 </div>
                                             </div>
 
@@ -3196,7 +3238,10 @@ export default function LegendaryLightDashboard() {
                                                                 <p className="text-[9.5px] text-emerald-600 font-semibold mt-0.5">Gold Üye Ayrıcalıklı Canlı Konsültasyon</p>
                                                             </div>
                                                         </div>
-                                                        <button className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9.5px] font-black px-3.5 py-2 rounded-xl shadow-sm cursor-pointer transition-colors relative z-10">
+                                                        <button 
+                                                            onClick={() => alert('Çok Yakında!')}
+                                                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9.5px] font-black px-3.5 py-2 rounded-xl shadow-sm cursor-pointer transition-colors relative z-10"
+                                                        >
                                                             Bağlan
                                                         </button>
                                                     </div>
@@ -3217,7 +3262,7 @@ export default function LegendaryLightDashboard() {
                                                             </div>
                                                         </div>
                                                         <button 
-                                                            onClick={() => setExpandedPanel('passport')}
+                                                            onClick={() => router.push(`/profile/${authUser?.id || 'me'}?view=passport`)}
                                                             className="text-[9.5px] font-black text-emerald-650 bg-emerald-50 hover:bg-emerald-100/70 border border-emerald-100/50 px-2.5 py-1.5 rounded-xl cursor-pointer shrink-0"
                                                         >
                                                             Pasaportu Aç
@@ -3239,68 +3284,14 @@ export default function LegendaryLightDashboard() {
                                                 </div>
                                             </div>
 
-                                            {/* 6. Moffi Club™ & Sosyalleşme */}
-                                            <div className="flex flex-col gap-3">
-                                                <span className="text-[10px] font-black tracking-widest text-gray-400 uppercase px-1">MOFFI CLUB™ SOSYALLEŞME REHBERİ</span>
-                                                
-                                                <div className="bg-white border border-gray-100 rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3.5">
-                                                    
-                                                    {/* Playdate Matcher */}
-                                                    <div className="flex justify-between items-center p-3.5 bg-rose-50/50 border border-rose-100/60 rounded-2xl">
-                                                        <div className="flex items-center gap-3">
-                                                            <span className="text-2xl shrink-0">🐕‍🦺</span>
-                                                            <div>
-                                                                <h5 className="text-[11.5px] font-black text-rose-800 leading-tight">Pati Flört & Oyun Arkadaşı</h5>
-                                                                <p className="text-[9.5px] text-rose-600 font-semibold mt-0.5">Kadıköy'de **3 yeni oyun adayı** seni bekliyor!</p>
-                                                            </div>
-                                                        </div>
-                                                        <button 
-                                                            onClick={() => setExpandedPanel('match')}
-                                                            className="bg-rose-500 hover:bg-rose-600 text-white text-[9.5px] font-black px-3 py-2 rounded-xl shadow-sm cursor-pointer transition-all shrink-0"
-                                                        >
-                                                            Eşleştir
-                                                        </button>
-                                                    </div>
 
-                                                    {/* Pet Friendly Places */}
-                                                    <div className="flex justify-between items-center p-3.5 bg-amber-50/40 border border-amber-100/50 rounded-2xl">
-                                                        <div className="flex items-center gap-3">
-                                                            <Coffee className="w-5 h-5 text-amber-600 shrink-0" strokeWidth={2.5} />
-                                                            <div>
-                                                                <h5 className="text-[11.5px] font-black text-amber-800 leading-tight">Patili Mekanlar Keşfi</h5>
-                                                                <p className="text-[9.5px] text-amber-600 font-semibold mt-0.5">Moda Pet Cafe'de Pati-Kart sahiplerine **%15 indirim**.</p>
-                                                            </div>
-                                                        </div>
-                                                        <button className="bg-amber-650 hover:bg-amber-700 text-white text-[9.5px] font-black px-3 py-2 rounded-xl shadow-sm cursor-pointer transition-all shrink-0">
-                                                            Keşfet
-                                                        </button>
-                                                    </div>
-
-                                                    {/* Event Ticket */}
-                                                    <div className="p-3.5 bg-indigo-50/50 border border-indigo-100/60 rounded-2xl flex justify-between items-center">
-                                                        <div className="flex items-center gap-3">
-                                                            <QrCode className="w-5 h-5 text-indigo-650 shrink-0" />
-                                                            <div>
-                                                                <h5 className="text-[11.5px] font-black text-indigo-850 leading-tight">Etkinlik Biletlerim</h5>
-                                                                <p className="text-[9.5px] text-indigo-600 font-semibold mt-0.5">Moffi Kadıköy Patimaratonu (24 Mayıs) • 1 Bilet</p>
-                                                            </div>
-                                                        </div>
-                                                        <button 
-                                                            onClick={() => setExpandedPanel('events')}
-                                                            className="bg-indigo-600 hover:bg-indigo-700 text-white text-[9.5px] font-black px-2.5 py-1.5 rounded-xl shadow-sm cursor-pointer transition-all shrink-0"
-                                                        >
-                                                            Göster
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
 
                                             {/* 7. Trendyol-Style Interactive Orders & Cart System */}
                                             <div className="flex flex-col gap-3">
                                                 <div className="flex justify-between items-center px-1">
                                                     <span className="text-[10px] font-black tracking-widest text-gray-400 uppercase">SİPARİŞLERİM & SEPETİM</span>
                                                     <span className="text-[9.5px] font-black text-green-700 bg-green-50 border border-green-200/50 px-2 py-0.5 rounded-full">
-                                                        {cartQty1 + cartQty2 > 0 ? `${cartQty1 + cartQty2} Ürün` : 'Sepet Boş'}
+                                                        {cartCount > 0 ? `${cartCount} Ürün` : 'Sepet Boş'}
                                                     </span>
                                                 </div>
                                                 
@@ -3335,9 +3326,9 @@ export default function LegendaryLightDashboard() {
                                                         }`}
                                                     >
                                                         Sepetim
-                                                        {cartQty1 + cartQty2 > 0 && (
+                                                        {cartCount > 0 && (
                                                             <span className="absolute -top-1 -right-1 w-4 h-4 bg-orange-600 text-white text-[8px] font-black rounded-full flex items-center justify-center border border-white">
-                                                                {cartQty1 + cartQty2}
+                                                                {cartCount}
                                                             </span>
                                                         )}
                                                     </button>
@@ -3474,26 +3465,6 @@ export default function LegendaryLightDashboard() {
                                                             ))
                                                         )}
 
-                                                        {/* Booking management */}
-                                                        <div className="p-4 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3">
-                                                            <div className="flex justify-between items-center pb-2.5 border-b border-gray-100">
-                                                                <div>
-                                                                    <span className="text-[8px] font-bold text-gray-400 block uppercase">REZERVASYON 1</span>
-                                                                    <h5 className="text-[11.5px] font-black text-gray-800 mt-0.5">Dog Walker (Gezdirici)</h5>
-                                                                    <p className="text-[9.5px] text-gray-400 font-semibold mt-0.5">Bugün, 18:00 • 60 dk • Emre Kaplan</p>
-                                                                </div>
-                                                                <span className="text-[9px] font-black text-blue-700 bg-blue-50 border border-blue-200/50 px-2 py-0.5 rounded-full shrink-0 h-fit">ONAYLANDI</span>
-                                                            </div>
-
-                                                            <div className="flex justify-between items-center">
-                                                                <div>
-                                                                    <span className="text-[8px] font-bold text-gray-400 block uppercase">REZERVASYON 2</span>
-                                                                    <h5 className="text-[11.5px] font-black text-gray-800 mt-0.5">Premium Pet Groomer</h5>
-                                                                    <p className="text-[9.5px] text-gray-400 font-semibold mt-0.5">20 Mayıs Çarşamba, 14:00 • Tıraş ve Banyo</p>
-                                                                </div>
-                                                                <span className="text-[9px] font-black text-amber-700 bg-amber-50 border border-amber-200/50 px-2 py-0.5 rounded-full shrink-0 h-fit">BEKLEMEDE</span>
-                                                            </div>
-                                                        </div>
                                                     </div>
                                                 )}
 
@@ -3563,13 +3534,13 @@ export default function LegendaryLightDashboard() {
                                                 {/* TAB 3: SEPETİM */}
                                                 {profileOrdersTab === 'cart' && (
                                                     <div className="flex flex-col gap-3">
-                                                        {cartQty1 + cartQty2 === 0 ? (
+                                                        {cartCount === 0 ? (
                                                             <div className="p-8 bg-white border border-gray-100 rounded-3xl text-center flex flex-col items-center justify-center gap-2">
                                                                 <span className="text-3xl">🛒</span>
                                                                 <h5 className="text-xs font-black text-gray-800">Sepetiniz Boş</h5>
                                                                 <p className="text-[10px] text-gray-400 font-semibold max-w-[200px]">{pet.name || 'Petiniz'} için eklediğiniz ürünler burada görünür.</p>
                                                                 <button 
-                                                                    onClick={() => setProfileOrdersTab('active')}
+                                                                    onClick={() => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'petshop' }))}
                                                                     className="mt-2 bg-[#527958] text-white text-[10px] font-black px-4 py-2 rounded-xl"
                                                                 >
                                                                     Alışverişe Başla
@@ -3579,76 +3550,56 @@ export default function LegendaryLightDashboard() {
                                                             <div className="flex flex-col gap-3">
                                                                 {/* Cart items list */}
                                                                 <div className="p-4 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3.5">
-                                                                    {cartQty1 > 0 && (
-                                                                        <div className="flex justify-between items-center">
-                                                                            <div className="flex gap-2.5 items-center">
-                                                                                <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-100/35 flex items-center justify-center text-orange-600 shrink-0">
-                                                                                    <ShoppingBag className="w-5 h-5" />
-                                                                                </div>
-                                                                                <div>
-                                                                                    <h5 className="text-[11.5px] font-black text-gray-800">Somonlu Mama (12kg)</h5>
-                                                                                    <span className="text-[9.5px] font-black text-orange-600 block mt-0.5">960 TL <span className="text-[8px] text-gray-400 line-through">1,200 TL</span></span>
-                                                                                </div>
-                                                                            </div>
-                                                                            {/* Quantity Controls */}
-                                                                            <div className="flex items-center gap-2 bg-gray-55 border border-gray-150 px-2 py-1 rounded-xl">
-                                                                                <button 
-                                                                                    onClick={() => setCartQty1(Math.max(0, cartQty1 - 1))}
-                                                                                    className="text-[12px] font-black text-gray-650 w-4 text-center cursor-pointer"
-                                                                                >
-                                                                                    -
-                                                                                </button>
-                                                                                <span className="text-[11px] font-black text-gray-800 w-3 text-center">{cartQty1}</span>
-                                                                                <button 
-                                                                                    onClick={() => setCartQty1(cartQty1 + 1)}
-                                                                                    className="text-[12px] font-black text-gray-650 w-4 text-center cursor-pointer"
-                                                                                >
-                                                                                    +
-                                                                                </button>
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
+                                                                    {cart.map((item: any, idx: number) => {
+                                                                        const product = products.find((p: any) => p.id === item.productId);
+                                                                        if (!product) return null;
+                                                                        const isSubscribed = subscriptions.some((s: any) => s.id === product.id);
+                                                                        const price = isSubscribed ? product.price * 0.9 : product.price;
 
-                                                                    {cartQty2 > 0 && (
-                                                                        <div className="flex justify-between items-center pt-3 border-t border-gray-100">
-                                                                            <div className="flex gap-2.5 items-center">
-                                                                                <div className="w-10 h-10 rounded-xl bg-purple-55 border border-purple-100/35 flex items-center justify-center text-purple-650 shrink-0">
-                                                                                    <Shirt className="w-5 h-5" />
+                                                                        return (
+                                                                            <div key={item.id} className={`flex justify-between items-center ${idx !== 0 ? 'pt-3 border-t border-gray-100' : ''}`}>
+                                                                                <div className="flex gap-2.5 items-center">
+                                                                                    <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-100/35 flex items-center justify-center text-orange-600 shrink-0 overflow-hidden">
+                                                                                        {product.image ? (
+                                                                                            <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                                                                                        ) : (
+                                                                                            <ShoppingBag className="w-5 h-5" />
+                                                                                        )}
+                                                                                    </div>
+                                                                                    <div className="max-w-[120px]">
+                                                                                        <h5 className="text-[11px] font-black text-gray-800 truncate">{product.name}</h5>
+                                                                                        <span className="text-[9.5px] font-black text-orange-600 block mt-0.5">
+                                                                                            {(price * item.quantity).toLocaleString('tr-TR')} TL 
+                                                                                            {isSubscribed && <span className="text-[8px] text-gray-400 line-through ml-1">{(product.price * item.quantity).toLocaleString('tr-TR')} TL</span>}
+                                                                                        </span>
+                                                                                    </div>
                                                                                 </div>
-                                                                                <div>
-                                                                                    <h5 className="text-[11.5px] font-black text-gray-800">Moffi Diş Oyuncağı</h5>
-                                                                                    <span className="text-[9.5px] font-black text-purple-700 block mt-0.5">180 TL</span>
+                                                                                {/* Quantity Controls */}
+                                                                                <div className="flex items-center gap-2 bg-gray-55 border border-gray-150 px-2 py-1 rounded-xl">
+                                                                                    <button 
+                                                                                        onClick={() => updateCartItem(item.id, item.quantity - 1)}
+                                                                                        className="text-[12px] font-black text-gray-650 w-4 text-center cursor-pointer"
+                                                                                    >
+                                                                                        -
+                                                                                    </button>
+                                                                                    <span className="text-[11px] font-black text-gray-800 w-3 text-center">{item.quantity}</span>
+                                                                                    <button 
+                                                                                        onClick={() => updateCartItem(item.id, item.quantity + 1)}
+                                                                                        className="text-[12px] font-black text-gray-650 w-4 text-center cursor-pointer"
+                                                                                    >
+                                                                                        +
+                                                                                    </button>
                                                                                 </div>
                                                                             </div>
-                                                                            {/* Quantity Controls */}
-                                                                            <div className="flex items-center gap-2 bg-gray-55 border border-gray-150 px-2 py-1 rounded-xl">
-                                                                                <button 
-                                                                                    onClick={() => setCartQty2(Math.max(0, cartQty2 - 1))}
-                                                                                    className="text-[12px] font-black text-gray-655 w-4 text-center cursor-pointer"
-                                                                                >
-                                                                                    -
-                                                                                </button>
-                                                                                <span className="text-[11px] font-black text-gray-800 w-3 text-center">{cartQty2}</span>
-                                                                                <button 
-                                                                                    onClick={() => setCartQty2(cartQty2 + 1)}
-                                                                                    className="text-[12px] font-black text-gray-655 w-4 text-center cursor-pointer"
-                                                                                >
-                                                                                    +
-                                                                                </button>
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
+                                                                        );
+                                                                    })}
                                                                 </div>
 
                                                                 {/* Checkout calculation */}
                                                                 <div className="p-4 bg-[#FBFBFB] border border-gray-100 rounded-3xl flex flex-col gap-2">
                                                                     <div className="flex justify-between text-[10px] font-bold text-gray-500">
                                                                         <span>Sepet Toplamı</span>
-                                                                        <span>{cartQty1 * 1200 + cartQty2 * 180} TL</span>
-                                                                    </div>
-                                                                    <div className="flex justify-between text-[10px] font-bold text-green-700">
-                                                                        <span>Moffi Gold İndirimi</span>
-                                                                        <span>-{cartQty1 * 240} TL</span>
+                                                                        <span>{cartTotal.toLocaleString('tr-TR')} TL</span>
                                                                     </div>
                                                                     <div className="flex justify-between text-[10px] font-bold text-gray-500">
                                                                         <span>Kargo Ücreti</span>
@@ -3656,36 +3607,32 @@ export default function LegendaryLightDashboard() {
                                                                     </div>
                                                                     <div className="flex justify-between text-[11px] font-black text-gray-800 pt-2 border-t border-gray-200">
                                                                         <span>Ödenecek Tutar</span>
-                                                                        <span className="text-orange-600 text-sm font-black">{cartQty1 * 960 + cartQty2 * 180} TL</span>
+                                                                        <span className="text-orange-600 text-sm font-black">{cartTotal.toLocaleString('tr-TR')} TL</span>
                                                                     </div>
                                                                 </div>
 
                                                                 {/* Complete order button */}
                                                                 <button 
                                                                     onClick={() => {
-                                                                        const totalAmt = cartQty1 * 960 + cartQty2 * 180;
                                                                         if (nfcPaymentLocked) {
                                                                             setToastMsg("❌ Ödeme Başarısız: Pati-Kartınız güvenlik nedeniyle kilitli! (Kilidi profilden açabilirsiniz)");
                                                                             return;
                                                                         }
-                                                                        if (totalAmt > dailySpendLimit) {
+                                                                        if (cartTotal > dailySpendLimit) {
                                                                             setToastMsg(`❌ Ödeme Başarısız: Günlük harcama limitinizi (${dailySpendLimit} PATI) aştınız!`);
                                                                             return;
                                                                         }
-                                                                        if (walletBalance < totalAmt) {
-                                                                            setToastMsg("❌ Yetersiz Bakiye! Lütfen Pati-Kartınıza bakiye yükleyin.");
+                                                                        if (totalPatiPuan < cartTotal) {
+                                                                            setToastMsg("❌ Yetersiz Bakiye! Daha fazla görev yaparak PatiPuan kazanın.");
                                                                             return;
                                                                         }
                                                                         
-                                                                        setWalletBalance(prev => prev - totalAmt);
-                                                                        
-                                                                        const items = [];
-                                                                        if (cartQty1 > 0) items.push(`Somonlu Mama (${cartQty1} ad.)`);
-                                                                        if (cartQty2 > 0) items.push(`Diş Oyuncağı (${cartQty2} ad.)`);
+                                                                        const success = spendPatiPuan(cartTotal);
+                                                                        if (!success) return;
                                                                         
                                                                         const newOrder = {
                                                                             id: `order-${Date.now()}`,
-                                                                            name: items.join(" + "),
+                                                                            name: cart.map((c: any) => `${products.find((p: any) => p.id === c.productId)?.name} (${c.quantity} ad.)`).join(' + '),
                                                                             desc: "Moda Dağıtım Noktası • Kurye: Walky Can",
                                                                             timeRemaining: "12 dk kaldı",
                                                                             status: "Hazırlanıyor",
@@ -3693,9 +3640,8 @@ export default function LegendaryLightDashboard() {
                                                                         };
                                                                         
                                                                         setActiveOrders(prev => [newOrder, ...prev]);
-                                                                        setCartQty1(0);
-                                                                        setCartQty2(0);
-                                                                        setToastMsg(`🎉 Sipariş alındı! Kurye Can yola çıkıyor. -${totalAmt} PatiPuan`);
+                                                                        clearCart();
+                                                                        setToastMsg(`🎉 Sipariş alındı! Kurye Can yola çıkıyor. -${cartTotal} PatiPuan`);
                                                                         setProfileOrdersTab('active');
                                                                     }}
                                                                     className="w-full py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs font-black uppercase tracking-wider rounded-2xl cursor-pointer shadow-md shadow-orange-500/10 hover:opacity-95 transition-opacity text-center"
@@ -3744,7 +3690,7 @@ export default function LegendaryLightDashboard() {
                                                                             <CreditCard className="w-4.5 h-4.5 text-gray-600" />
                                                                             <div>
                                                                                 <span className="text-[10px] font-black text-gray-800 block">Moffi Pati-Kart (NFC)</span>
-                                                                                <span className="text-[8.5px] text-gray-400 font-semibold">Bakiye: {walletBalance.toLocaleString()} Patipuan</span>
+                                                                                <span className="text-[8.5px] text-gray-400 font-semibold">Bakiye: {totalPatiPuan.toLocaleString()} Patipuan</span>
                                                                             </div>
                                                                         </div>
                                                                         <span className="w-2 h-2 rounded-full bg-green-500" />
@@ -3762,11 +3708,28 @@ export default function LegendaryLightDashboard() {
                                                                 <button className="mt-2 text-[9.5px] font-black text-[#527958] flex items-center gap-1 cursor-pointer">
                                                                     <Plus className="w-3.5 h-3.5" /> Yeni Ödeme Yöntemi Ekle
                                                                 </button>
+                                                                
+                                                                <button 
+                                                                    onClick={() => setIsPolicyModalOpen(true)}
+                                                                    className="mt-4 w-full p-3 rounded-2xl bg-gray-50 border border-gray-100/60 flex items-center justify-between group hover:bg-gray-100 transition-colors"
+                                                                >
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className="w-6 h-6 rounded-lg bg-gray-200/50 flex items-center justify-center">
+                                                                            <ShieldCheck className="w-3.5 h-3.5 text-gray-500 group-hover:text-emerald-500 transition-colors" />
+                                                                        </div>
+                                                                        <div className="text-left">
+                                                                            <span className="text-[10px] font-bold text-gray-700 block">Pati-Kart & KVKK Aydınlatması</span>
+                                                                            <span className="text-[8px] text-gray-500">Adil kullanım koşullarını incele</span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-emerald-500 transition-colors" />
+                                                                </button>
                                                             </div>
 
                                                             <div className="pt-3 border-t border-gray-100">
-                                                                <h5 className="text-[9.5px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">TASMA IOT & BİLDİRİM AYARLARI</h5>
+                                                                <h5 className="text-[9.5px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">SİPARİŞ & BİLDİRİM AYARLARI</h5>
                                                                 <div className="flex flex-col gap-2 text-[9.5px] font-bold text-gray-750">
+                                                                    {/* [V2_FEATURE_TASMA] - Tasma & Anomali bildirim ayarları gizlendi
                                                                     <label className="flex justify-between items-center p-2.5 rounded-2xl bg-gray-50/70 cursor-pointer">
                                                                         <div className="flex flex-col gap-0.5">
                                                                             <span>Akıllı Tasma Geofence (Güvenli Çember)</span>
@@ -3812,6 +3775,7 @@ export default function LegendaryLightDashboard() {
                                                                             className="rounded border-gray-300 text-[#527958] focus:ring-[#527958] w-4 h-4 cursor-pointer animate-none" 
                                                                         />
                                                                     </label>
+                                                                    */}
                                                                     <label className="flex justify-between items-center p-2.5 rounded-2xl bg-gray-50/70 cursor-pointer">
                                                                         <span>Anlık Kurye ve Sipariş Takip Bildirimleri</span>
                                                                         <input type="checkbox" defaultChecked className="rounded border-gray-300 text-[#527958] focus:ring-[#527958] w-4 h-4 cursor-pointer animate-none" />
@@ -3869,13 +3833,6 @@ export default function LegendaryLightDashboard() {
                                                 </div>
                                             </div>
 
-                                            {/* 9. Secure Logout Button */}
-                                            <button 
-                                                onClick={() => setExpandedPanel(null)}
-                                                className="w-full py-4 rounded-2.5xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-black tracking-wider uppercase border border-red-100/60 cursor-pointer transition-colors text-center shadow-sm"
-                                            >
-                                                Güvenli Çıkış Yap
-                                            </button>
                                         </div>
                                     )}
 
@@ -4158,20 +4115,11 @@ export default function LegendaryLightDashboard() {
                 setNewPetFoodTarget={setNewPetFoodTarget}
             />
 
-            <CareHubModal 
-                isOpen={isCareHubOpen}
-                onClose={() => setIsCareHubOpen(false)}
-                defaultTab={activeCareHubTab}
-                petName={activePetObj?.name || 'Petin'}
-                activityPercent={activityPercent}
-                activityCurrent={walkedDistanceToday}
-                activityTarget={targetActivityKm}
-                waterPercent={waterPercent}
-                waterCurrent={waterCurrent}
-                waterTarget={waterTarget}
-                foodPercent={foodPercent}
-                foodCurrent={foodCurrent}
-                foodTarget={foodTarget}
+
+
+            <PatiKartPolicyModal 
+                isOpen={isPolicyModalOpen}
+                onClose={() => setIsPolicyModalOpen(false)}
             />
 
             {/* NFC Smart Chip Reading / Data Sync Premium Animation Overlay */}

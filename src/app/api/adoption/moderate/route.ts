@@ -89,6 +89,24 @@ const BANNED_KEYWORDS: { words: string[]; reason: string; category: string; remo
 // ─── ANA MODERASYON FONKSİYONU ──────────────────────────────────────────────
 export async function POST(req: Request) {
     try {
+        // --- GÜVENLİK KONTROLÜ (SECURITY CHECK) ---
+        const authHeader = req.headers.get("authorization");
+        const webhookSecret = req.headers.get("x-webhook-secret");
+        
+        if (webhookSecret !== process.env.MOFFI_WEBHOOK_SECRET) {
+            if (!authHeader) {
+                return NextResponse.json({ error: "Yetkisiz erişim. Token veya secret eksik." }, { status: 401 });
+            }
+            if (supabaseAdmin) {
+                const token = authHeader.replace("Bearer ", "");
+                const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+                if (!user) {
+                     return NextResponse.json({ error: "Yetkisiz erişim. Geçersiz token." }, { status: 401 });
+                }
+            }
+        }
+        // --- GÜVENLİK KONTROLÜ SONU ---
+
         const { adId, name, breed, description, age } = await req.json();
 
         if (!adId) {

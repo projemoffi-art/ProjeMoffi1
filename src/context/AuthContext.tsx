@@ -82,8 +82,13 @@ const MOCK_USER_BASE = (email: string, name?: string): User => ({
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
+    const userRef = React.useRef<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const isLoadingRef = React.useRef(true);
+
+    useEffect(() => {
+        userRef.current = user;
+    }, [user]);
 
     // Sync isLoadingRef so syncSessionCookie can access latest isLoading without re-renders
     React.useEffect(() => {
@@ -555,29 +560,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const updateSettings = async (category: any, data: any) => {
-        setUser(prev => {
-            if (!prev) return null;
-            const updatedSettings = {
-                ...prev.settings,
-                [category]: { ...prev.settings?.[category], ...data }
-            };
-            const updatedUser = {
-                ...prev,
-                settings: updatedSettings
-            };
-            
-            if (typeof window !== 'undefined') {
-                if (isSupabaseEnabled) {
-                    supabase.from('profiles').update({ settings: updatedSettings }).eq('id', prev.id)
-                        .then(({ error }) => {
-                            if (error) console.error("Error saving settings to database:", error);
-                        });
-                } else {
-                    localStorage.setItem('moffi_mock_user', JSON.stringify(updatedUser));
+        const currentUser = userRef.current;
+        if (!currentUser) return;
+
+        const updatedSettings = {
+            ...currentUser.settings,
+            [category]: { ...currentUser.settings?.[category], ...data }
+        };
+        const updatedUser = {
+            ...currentUser,
+            settings: updatedSettings
+        };
+        
+        // State ve Ref'i anında senkron güncelle ki art arda çağrılarda patlamasın
+        setUser(updatedUser);
+        userRef.current = updatedUser;
+
+        if (typeof window !== 'undefined') {
+            if (isSupabaseEnabled) {
+                try {
+                    const { error } = await supabase
+                        .from('profiles')
+                        .update({ settings: updatedSettings })
+                        .eq('id', currentUser.id);
+                    if (error) console.error("Error saving settings to database:", error);
+                } catch (err) {
+                    console.error("Exception saving settings:", err);
                 }
+            } else {
+                localStorage.setItem('moffi_mock_user', JSON.stringify(updatedUser));
             }
-            return updatedUser;
-        });
+        }
     };
 
     const forgotPassword = async (email: string) => {

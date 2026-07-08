@@ -26,7 +26,7 @@ interface SettingsDrawerProps {
     onClose: () => void;
 }
 
-type DrawerView = 'main' | 'activity' | 'blocked' | 'words' | 'stories' | 'wellbeing' | 'accessibility' | 'password' | 'privacy' | 'notifications' | 'sos_config' | 'sidebar_config' | 'ai_assistant' | 'account_settings';
+type DrawerView = 'main' | 'activity' | 'blocked' | 'words' | 'stories' | 'wellbeing' | 'accessibility' | 'password' | 'privacy' | 'notifications' | 'sos_config' | 'sidebar_config' | 'ai_assistant' | 'account_settings' | 'profile_personalization';
 
 // --- Shared Interfaces ---
 interface SectionProps {
@@ -201,6 +201,154 @@ const SliderRow = React.memo(({ label, value, min, max, unit, onChange, category
 SliderRow.displayName = 'SliderRow';
 
 // --- View Components ---
+
+const ProfilePersonalizationView = ({ user, setView, updateSettings }: ViewProps) => {
+    const isPrime = user?.is_prime;
+    // @ts-ignore
+    const currentFrame = user?.settings?.appearance?.frameStyle || 'minimal';
+
+    const handleSelect = (style: string, locked: boolean) => {
+        if (locked && !isPrime) {
+            window.dispatchEvent(new CustomEvent('open-premium-modal'));
+            return;
+        }
+        updateSettings('appearance', { frameStyle: style });
+        window.dispatchEvent(new CustomEvent('moffi-toast', { detail: { message: 'Profil çerçeveniz güncellendi!', icon: 'Check' } }));
+    };
+
+    const frames = [
+        { id: 'minimal', label: 'Minimal', icon: User, desc: 'Sade ve zarif bir profil çerçevesi.', isPremium: false },
+        { id: 'glass', label: 'Glassmorphism', icon: Layers, desc: 'Yarı saydam, cam efektli modern bir görünüm.', isPremium: false },
+        { id: 'neon', label: 'Neon Aura', icon: Zap, desc: 'Profilini parlat. Tüm dikkatleri üzerine çek.', isPremium: true },
+        { id: 'metal', label: 'Dark Metal', icon: Shield, desc: 'Ağır, prestijli ve güçlü bir zırh çerçevesi.', isPremium: true },
+    ];
+
+    return (
+        <motion.div 
+            initial={{ x: -20, opacity: 0 }} 
+            animate={{ x: 0, opacity: 1 }} 
+            exit={{ x: -20, opacity: 0 }} 
+            className="flex-1 overflow-y-auto pr-2 custom-scrollbar scroll-smooth space-y-4"
+            style={{ maxHeight: 'calc(94vh - 180px)' }}
+        >
+            <div className="flex items-center gap-4 mb-6">
+                <button onClick={() => setView('main')} className="w-10 h-10 rounded-2xl bg-foreground/5 flex items-center justify-center hover:bg-foreground/10 transition-colors">
+                    <ArrowLeft className="w-5 h-5" />
+                </button>
+                <h2 className="text-xl font-black uppercase tracking-tighter">Profil Kişiselleştirme</h2>
+            </div>
+            
+            <p className="text-[11px] text-secondary mb-6 font-medium leading-relaxed">
+                Profil fotoğrafı çerçeveni seç. Neon ve Metal Aura tarzları Prime üyelerine özeldir. Ziyaretçilerini büyüle!
+            </p>
+
+            <div className="space-y-6">
+                {/* 1. Aura Çerçevesi */}
+                <div>
+                    <h3 className="text-[10px] font-black text-secondary uppercase tracking-widest mb-3 px-1">1. Profil Çerçevesi</h3>
+                    <div className="space-y-2">
+                        {frames.map(frame => {
+                            const isLocked = frame.isPremium && !isPrime;
+                            const isSelected = currentFrame === frame.id;
+                            return (
+                                <button 
+                                    key={frame.id}
+                                    onClick={() => handleSelect(frame.id, frame.isPremium)}
+                                    className={cn(
+                                        "w-full text-left p-3 rounded-2xl border-2 transition-all relative overflow-hidden group",
+                                        isSelected ? "border-accent bg-accent/5" : "border-card-border bg-foreground/[0.02] hover:bg-foreground/[0.05]",
+                                        isLocked ? "opacity-70 grayscale hover:grayscale-0" : ""
+                                    )}
+                                >
+                                    {isLocked && (
+                                        <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-[#FFD700]/10 text-[#FFD700] px-2 py-1 rounded-lg">
+                                            <Lock className="w-3 h-3" />
+                                            <span className="text-[9px] font-black uppercase">Prime</span>
+                                        </div>
+                                    )}
+                                    <div className="flex items-center gap-4">
+                                        <div className={cn(
+                                            "w-10 h-10 rounded-full flex items-center justify-center border-2 relative shrink-0",
+                                            frame.id === 'minimal' ? "border-foreground/10 bg-background" :
+                                            frame.id === 'glass' ? "border-white/40 bg-white/10 backdrop-blur-md" :
+                                            frame.id === 'neon' ? "border-[#00FFFF] shadow-[0_0_15px_rgba(0,255,255,0.6)] bg-black" :
+                                            "border-gray-500 bg-gray-900 shadow-[inset_0_4px_10px_rgba(255,255,255,0.2)]"
+                                        )}>
+                                            <User className={cn("w-4 h-4", frame.id === 'neon' ? "text-[#00FFFF]" : "text-secondary")} />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-xs font-black uppercase tracking-widest">{frame.label}</h4>
+                                            <p className="text-[9px] text-secondary font-medium mt-0.5">{frame.desc}</p>
+                                        </div>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* 2. Vurgu Rengi */}
+                <ChoiceRow 
+                    label="2. Tema Vurgu Rengi" 
+                    category="appearance" 
+                    field="accentColor" 
+                    current={user?.settings?.appearance?.accentColor || 'green'} 
+                    onSelect={(cat: any, val: any) => {
+                        if (val.accentColor === 'gold' && !isPrime) {
+                            window.dispatchEvent(new CustomEvent('open-premium-modal'));
+                        } else {
+                            updateSettings(cat, val);
+                        }
+                    }}
+                    options={[
+                        { id: 'green', label: 'Doğa Yeşili' },
+                        { id: 'cyan', label: 'Siber Mavi' },
+                        { id: 'purple', label: 'Galaksi Moru' },
+                        { id: 'rose', label: 'Neon Pembe' },
+                        { id: 'gold', label: 'Prime Altın 👑' }
+                    ]}
+                />
+
+                {/* 3. Yazı Tipi */}
+                <ChoiceRow 
+                    label="3. Profil Yazı Tipi" 
+                    category="appearance" 
+                    field="font" 
+                    current={user?.settings?.appearance?.font || 'font-sans'} 
+                    onSelect={(cat: any, val: any) => {
+                        if ((val.font === 'font-pacifico' || val.font === 'font-satisfy') && !isPrime) {
+                            window.dispatchEvent(new CustomEvent('open-premium-modal'));
+                        } else {
+                            updateSettings(cat, val);
+                        }
+                    }}
+                    options={[
+                        { id: 'font-sans', label: 'Modern (Sans)' },
+                        { id: 'font-playfair', label: 'Klasik (Serif)' },
+                        { id: 'font-mono', label: 'Kod (Mono)' },
+                        { id: 'font-pacifico', label: 'El Yazısı 👑' },
+                        { id: 'font-satisfy', label: 'İmza 👑' }
+                    ]}
+                />
+            </div>
+
+            {!isPrime && (
+                <div className="mt-8 p-5 bg-gradient-to-r from-[#FFD700]/10 to-[#B8860B]/10 border border-[#FFD700]/30 rounded-3xl text-center shadow-lg">
+                    <Crown className="w-8 h-8 text-[#FFD700] mx-auto mb-2 drop-shadow-md" />
+                    <h3 className="text-sm font-black text-foreground uppercase tracking-widest mb-1">Daha Fazlasını İstiyor Musun?</h3>
+                    <p className="text-[10px] text-secondary mb-4 font-bold">Aura çerçeveleri, animasyonlu rozetler ve prestijli profil görünümleri için Prime kulübüne katıl.</p>
+                    <button 
+                        onClick={() => window.dispatchEvent(new CustomEvent('open-premium-modal'))}
+                        className="w-full py-3 bg-gradient-to-r from-[#FFD700] to-[#B8860B] hover:brightness-110 text-black rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-[0_0_20px_rgba(255,215,0,0.3)]"
+                    >
+                        Moffi Prime'a Yükselt
+                    </button>
+                </div>
+            )}
+        </motion.div>
+    );
+};
+
 const MainView = ({ user, setView, handleToggle, handleExport, isExporting, exportStatus, onClose, logout, handleResetSystem, updateSettings }: ViewProps) => (
     <motion.div 
         initial={{ x: -20, opacity: 0 }}
@@ -209,27 +357,48 @@ const MainView = ({ user, setView, handleToggle, handleExport, isExporting, expo
         className="flex-1 overflow-y-auto pr-2 scroll-smooth space-y-4 custom-scrollbar"
         style={{ maxHeight: 'calc(94vh - 180px)' }}
     >
-        {/* PREMIUM BANNER */}
-        <div className="mx-2 mb-6 mt-2 relative group overflow-hidden rounded-[2rem] border border-accent/30 bg-card p-5 shadow-lg cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-premium-modal'))}>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-accent/10 blur-3xl group-hover:bg-accent/20 transition-all rounded-full" />
-            <div className="relative flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-[1.2rem] bg-accent p-0.5 shadow-lg flex items-center justify-center">
-                        <div className="w-full h-full bg-card rounded-xl flex items-center justify-center">
-                            <Crown className="w-6 h-6 text-accent" />
+        {/* PREMIUM BANNER / SUBSCRIPTION MANAGEMENT */}
+        {!user?.is_prime ? (
+            <div className="mx-2 mb-6 mt-2 relative group overflow-hidden rounded-[2rem] border border-accent/30 bg-card p-5 shadow-lg cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-premium-modal'))}>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-accent/10 blur-3xl group-hover:bg-accent/20 transition-all rounded-full" />
+                <div className="relative flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-[1.2rem] bg-accent p-0.5 shadow-lg flex items-center justify-center">
+                            <div className="w-full h-full bg-card rounded-xl flex items-center justify-center">
+                                <Crown className="w-6 h-6 text-accent" />
+                            </div>
+                        </div>
+                        <div>
+                            <h4 className="text-[13px] font-black text-foreground uppercase tracking-widest flex items-center gap-2">Moffi Prime <Sparkles className="w-3 h-3 text-accent" /></h4>
+                            <p className="text-[9px] text-accent font-medium uppercase tracking-widest mt-1">Ayrıcalıkların Kilidini Aç</p>
                         </div>
                     </div>
-                    <div>
-                        <h4 className="text-[13px] font-black text-foreground uppercase tracking-widest flex items-center gap-2">Moffi Prime <Sparkles className="w-3 h-3 text-accent" /></h4>
-                        <p className="text-[9px] text-accent font-medium uppercase tracking-widest mt-1">Ayrıcalıkların Kilidini Aç</p>
-                    </div>
+                    <ChevronRight className="w-5 h-5 text-accent/50 group-hover:text-accent transition-colors group-hover:translate-x-1 transform" />
                 </div>
-                <ChevronRight className="w-5 h-5 text-accent/50 group-hover:text-accent transition-colors group-hover:translate-x-1 transform" />
             </div>
-        </div>
+        ) : (
+            <div className="mx-2 mb-6 mt-2 relative group overflow-hidden rounded-[2rem] border border-green-500/30 bg-green-500/5 p-5 shadow-lg cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-subscription-management'))}>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 blur-3xl group-hover:bg-green-500/20 transition-all rounded-full" />
+                <div className="relative flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-[1.2rem] bg-gradient-to-br from-green-400 to-emerald-600 p-0.5 shadow-lg flex items-center justify-center">
+                            <div className="w-full h-full bg-green-50 rounded-xl flex items-center justify-center">
+                                <Crown className="w-6 h-6 text-emerald-600" />
+                            </div>
+                        </div>
+                        <div>
+                            <h4 className="text-[13px] font-black text-emerald-700 uppercase tracking-widest flex items-center gap-2">Moffi Prime <Sparkles className="w-3 h-3 text-emerald-500" /></h4>
+                            <p className="text-[9px] text-emerald-600/80 font-medium uppercase tracking-widest mt-1">Aboneliği Yönet / Detaylar</p>
+                        </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-emerald-500/50 group-hover:text-emerald-500 transition-colors group-hover:translate-x-1 transform" />
+                </div>
+            </div>
+        )}
 
         <Section title="Hesap Merkezi & Profil">
             <ActionRow icon={User} label="Hesap Ayarları ve Bilgiler" desc="Kişisel detaylar, e-posta, telefon ve bağlantılar." onClick={() => setView('account_settings')} />
+            <ActionRow icon={Palette} label="Profil Kişiselleştirme" desc="Aura çerçeveleri ve profil görünümü." onClick={() => setView('profile_personalization')} />
         </Section>
 
         <Section title="Erişilebilirlik ve Görünüm">
@@ -1097,6 +1266,8 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
                                     <AIAssistantView key="ai" {...viewProps} />
                                 ) : view === 'account_settings' ? (
                                     <AccountSettingsView key="account" {...viewProps} />
+                                ) : view === 'profile_personalization' ? (
+                                    <ProfilePersonalizationView key="personalization" {...viewProps} />
                                 ) : (
                                     <AccessibilityView key="accessibility" {...viewProps} />
                                 )}
@@ -1481,30 +1652,28 @@ const AccountSettingsView = ({ user, setView, updateSettings }: ViewProps) => {
                     {activeTab === 'connections' && (
                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-3">
                             {[
-                                { id: 'ig', name: 'Instagram', desc: 'Hikaye ve gönderi çapraz paylaşımı aktif', connected: true, color: 'text-pink-500', handle: '@moffiapp' },
-                                { id: 'tt', name: 'TikTok', desc: 'Reels video senkronizasyonu', connected: true, color: 'text-cyan-500', handle: '@moffi_global' },
-                                { id: 'fb', name: 'Facebook', desc: 'Sayfa ve grup entegrasyonu', connected: false, color: 'text-blue-500', handle: '' }
+                                { id: 'ig', name: 'Instagram', desc: 'Hikaye ve gönderi çapraz paylaşımı', color: 'text-pink-500' },
+                                { id: 'tt', name: 'TikTok', desc: 'Reels video senkronizasyonu', color: 'text-cyan-500' },
+                                { id: 'fb', name: 'Facebook', desc: 'Sayfa ve grup entegrasyonu', color: 'text-blue-500' }
                             ].map(conn => (
-                                <div key={conn.id} className="flex items-center justify-between p-4 rounded-2xl bg-foreground/[0.02] border border-card-border">
+                                <div key={conn.id} className="flex items-center justify-between p-4 rounded-2xl bg-foreground/[0.02] border border-card-border opacity-70">
                                     <div className="flex items-center gap-3">
                                         <div className={cn("w-10 h-10 rounded-xl bg-background flex items-center justify-center font-black text-lg", conn.color)}>
                                             {conn.name[0]}
                                         </div>
                                         <div>
                                             <p className="text-xs font-black text-foreground uppercase tracking-tight flex items-center gap-1.5">
-                                                {conn.name} {conn.connected && <span className="text-[9px] text-secondary lowercase not-italic font-bold">({conn.handle})</span>}
+                                                {conn.name} 
+                                                <span className="text-[7.5px] font-black text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded uppercase tracking-widest border border-orange-500/20">Çok Yakında</span>
                                             </p>
                                             <p className="text-[9px] text-secondary font-bold uppercase tracking-tighter mt-0.5">{conn.desc}</p>
                                         </div>
                                     </div>
                                     <button 
-                                        onClick={() => alert(`${conn.name} bağlantı ayarları Meta API protokolü üzerinden açılıyor...`)}
-                                        className={cn(
-                                            "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                            conn.connected ? "bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white" : "bg-foreground/10 text-foreground hover:bg-foreground hover:text-background"
-                                        )}
+                                        disabled
+                                        className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-foreground/5 text-secondary cursor-not-allowed"
                                     >
-                                        {conn.connected ? 'Bağlantıyı Kes' : 'Bağla'}
+                                        Yakında
                                     </button>
                                 </div>
                             ))}
@@ -1513,24 +1682,24 @@ const AccountSettingsView = ({ user, setView, updateSettings }: ViewProps) => {
 
                     {activeTab === 'verification' && (
                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
-                            <div className="p-5 rounded-2xl bg-foreground/[0.02] border border-card-border text-center space-y-3">
-                                <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto text-blue-500">
-                                    <Check className="w-6 h-6 stroke-[3]" />
+                            <div className="p-5 rounded-2xl bg-foreground/[0.02] border border-card-border text-center space-y-3 opacity-70">
+                                <div className="w-12 h-12 rounded-full bg-gray-200/50 flex items-center justify-center mx-auto text-gray-400">
+                                    <ShieldCheck className="w-6 h-6 stroke-[3]" />
                                 </div>
                                 <div>
-                                    <h4 className="text-xs font-black text-foreground uppercase tracking-widest">Meta / Moffi Verified Rozeti</h4>
+                                    <h4 className="text-xs font-black text-foreground uppercase tracking-widest flex items-center justify-center gap-2">
+                                        Meta / Moffi Verified 
+                                        <span className="text-[7.5px] font-black text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded uppercase tracking-widest border border-orange-500/20">Çok Yakında</span>
+                                    </h4>
                                     <p className="text-[10px] text-secondary font-bold uppercase tracking-tighter mt-1">
-                                        Hesabın resmi kimlik belgeleriyle doğrulanmıştır.
+                                        Resmi kimlik doğrulama sistemi yapım aşamasındadır.
                                     </p>
-                                </div>
-                                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-500 text-[9px] font-black uppercase tracking-widest">
-                                    <ShieldCheck className="w-3 h-3" /> MAVİ TİK AKTİF
                                 </div>
                             </div>
                             <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 text-left flex gap-3">
                                 <Info className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                                 <p className="text-[10px] text-amber-500/90 font-medium leading-relaxed">
-                                    Aylık doğrulama aboneliği otomatik olarak yenilenmektedir. Rozetini gizlemek veya aboneliğini yönetmek için Prime paneline gidebilirsin.
+                                    Yakında, resmi belgelerinle profilini doğrulayabilecek ve profilinde özel bir Moffi Blue Badge rozeti taşıyabileceksin.
                                 </p>
                             </div>
                         </motion.div>

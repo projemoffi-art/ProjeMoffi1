@@ -41,6 +41,13 @@
   --color-moffi-primary: #22C55E;
 }
 
+/* THEME ACCENT COLORS */
+.theme-green { --accent: #22C55E; }
+.theme-cyan { --accent: #06B6D4; }
+.theme-purple { --accent: #A855F7; }
+.theme-gold { --accent: #F59E0B; }
+.theme-rose { --accent: #F43F5E; }
+
 /* SMART FONT INHERITANCE: Overrides --font-sans globally when a theme font is active */
 .font-serif { --font-sans: var(--font-playfair) !important; font-family: var(--font-playfair) !important; }
 .font-mono { --font-sans: var(--font-inter) !important; font-family: var(--font-inter) !important; }

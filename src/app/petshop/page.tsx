@@ -249,6 +249,23 @@ export default function PetShopPage() {
 
     useEffect(() => {
         if (products.length > 0) {
+            const params = new URLSearchParams(window.location.search);
+            const openProductId = params.get('openProduct');
+            if (openProductId) {
+                const targetProduct = products.find(p => p.id === openProductId);
+                if (targetProduct) {
+                    setSelectedProduct(targetProduct);
+                    
+                    // Remove the query parameter so it doesn't stay in the URL
+                    const newUrl = window.location.pathname;
+                    window.history.replaceState({}, '', newUrl);
+                }
+            }
+        }
+    }, [products]);
+
+    useEffect(() => {
+        if (products.length > 0) {
             const initialReviews = { ...reviews };
             let updated = false;
             products.forEach(p => {

@@ -25,13 +25,13 @@ ON public.clinic_settings FOR SELECT
 TO authenticated, anon 
 USING (true);
 
--- Yazma/Güncelleme Politikası: Hekimler ve yetkilendirilmiş herkes ekleyebilir/güncelleyebilir
+-- Yazma/Güncelleme Politikası: Sadece clinic_id sahibi kendisini güncelleyebilir
 DROP POLICY IF EXISTS "Allow all for authenticated/anon on clinic_settings" ON public.clinic_settings;
 CREATE POLICY "Allow all for authenticated/anon on clinic_settings" 
 ON public.clinic_settings FOR ALL 
-TO authenticated, anon 
-USING (true)
-WITH CHECK (true);
+TO authenticated 
+USING (auth.uid()::text = clinic_id)
+WITH CHECK (auth.uid()::text = clinic_id);
 
 -- Realtime yayını
 DO $$

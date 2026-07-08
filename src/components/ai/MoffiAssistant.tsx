@@ -208,10 +208,10 @@ export function MoffiAssistant() {
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0, opacity: 0 }}
                         onClick={() => setIsOpen(true)}
-                        className="fixed bottom-24 right-5 z-[99999] w-[52px] h-[52px] bg-gradient-to-tr from-purple-600 to-indigo-600 rounded-full shadow-[0_8px_30px_rgba(99,102,241,0.4)] flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-all group"
+                        className="fixed bottom-24 right-5 z-[99999] w-[42px] h-[42px] bg-gradient-to-tr from-zinc-900 to-black border border-white/10 rounded-full shadow-2xl flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-all group"
                     >
-                        <Sparkles className="w-6 h-6 text-white group-hover:animate-pulse" />
-                        <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-background animate-pulse" />
+                        <Sparkles className="w-5 h-5 text-white group-hover:animate-pulse" />
+                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-background animate-pulse" />
                     </motion.button>
                 )}
             </AnimatePresence>

@@ -191,7 +191,7 @@ export function MoffiSidebar() {
     const ALL_WIDGETS: SidebarWidget[] = [
         { id: 'ai', label: t('sidebar.ai_assistant'), icon: Sparkles, color: 'from-indigo-500 to-purple-650', iconColor: 'text-indigo-400', action: () => window.dispatchEvent(new CustomEvent('open-ai-assistant')) },
         { id: 'post', label: t('sidebar.post'), icon: Plus, color: 'from-emerald-400 to-teal-650', iconColor: 'text-emerald-400', action: () => window.dispatchEvent(new CustomEvent('open-add-post')) },
-        { id: 'qr', label: t('sidebar.passport'), icon: QrCode, color: 'from-amber-400 to-orange-650', iconColor: 'text-amber-400', action: () => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'passport' })) },
+        { id: 'qr', label: t('sidebar.passport'), icon: QrCode, color: 'from-amber-400 to-orange-650', iconColor: 'text-amber-400', action: () => { setIsOpen(false); router.push(`/profile/${user?.id || 'me'}?view=passport`); } },
         { id: 'mood', label: t('sidebar.mood'), icon: Zap, color: 'from-pink-400 to-rose-650', iconColor: 'text-pink-400', action: () => window.dispatchEvent(new CustomEvent('open-moffi-navigate', { detail: 'mood-selector' })) },
         { id: 'sos', label: t('sidebar.sos'), icon: ShieldAlert, color: 'from-red-500 to-red-700', iconColor: 'text-red-400', action: () => window.dispatchEvent(new CustomEvent('open-sos-center')) },
         { id: 'voice', label: t('sidebar.voice_note'), icon: Mic, color: 'from-orange-400 to-red-500', iconColor: 'text-orange-400', action: () => { triggerHaptic(30); setActiveMode('voice'); setIsOpen(true); } },
@@ -1038,7 +1038,7 @@ export function MoffiSidebar() {
                                                                         whileTap={{ scale: 0.95 }}
                                                                         onClick={() => { 
                                                                             triggerHaptic(15); 
-                                                                            const expandableIds = ['steps', 'weather', 'water', 'mood', 'qr'];
+                                                                            const expandableIds = ['steps', 'weather', 'water', 'mood'];
                                                                             if (expandableIds.includes(widget.id)) {
                                                                                 setExpandedWidgetId(widget.id);
                                                                             } else {
@@ -1077,7 +1077,7 @@ export function MoffiSidebar() {
                                                                     whileTap={{ scale: 0.95 }}
                                                                     onClick={() => { 
                                                                         triggerHaptic(15); 
-                                                                        const expandableIds = ['steps', 'weather', 'water', 'mood', 'qr'];
+                                                                        const expandableIds = ['steps', 'weather', 'water', 'mood'];
                                                                         if (expandableIds.includes(widget.id)) {
                                                                             setExpandedWidgetId(widget.id);
                                                                         } else {

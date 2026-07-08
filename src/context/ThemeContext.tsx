@@ -66,7 +66,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             'font-size-small', 'font-size-medium', 'font-size-large',
             'font-sans', 'font-serif', 'font-mono', 'font-pacifico', 'font-satisfy', 'font-playfair',
             'cb-protanopia', 'cb-deuteranopia', 'cb-tritanopia',
-            'bold-text', 'high-contrast', 'reduce-motion', 'reduce-transparency', 'senior-mode'
+            'bold-text', 'high-contrast', 'reduce-motion', 'reduce-transparency', 'senior-mode',
+            'theme-green', 'theme-cyan', 'theme-purple', 'theme-gold', 'theme-rose'
         ];
         root.classList.remove(...classesToRemove);
 
@@ -83,13 +84,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         const activeFont = user?.settings?.appearance?.font || 'font-sans';
         root.classList.add(activeFont);
 
+        // Apply Accent Color from settings if exists
+        const activeAccentColor = user?.settings?.appearance?.accentColor || 'green';
+        root.classList.add(`theme-${activeAccentColor}`);
+
         if (colorBlindMode !== 'none') root.classList.add(`cb-${colorBlindMode}`);
         if (boldText) root.classList.add('bold-text');
         if (highContrast) root.classList.add('high-contrast');
         if (reduceMotion) root.classList.add('reduce-motion');
         if (reduceTransparency) root.classList.add('reduce-transparency');
         if (seniorMode) root.classList.add('senior-mode');
-    }, [theme, fontSize, colorBlindMode, boldText, highContrast, reduceMotion, reduceTransparency, seniorMode, pathname, user?.settings?.appearance?.font]);
+    }, [theme, fontSize, colorBlindMode, boldText, highContrast, reduceMotion, reduceTransparency, seniorMode, pathname, user?.settings?.appearance?.font, user?.settings?.appearance?.accentColor]);
 
     const setTheme = React.useCallback((newTheme: Theme) => {
         setThemeState(newTheme);

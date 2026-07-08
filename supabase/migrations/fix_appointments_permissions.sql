@@ -25,12 +25,12 @@ ALTER TABLE public.appointments ADD COLUMN IF NOT EXISTS shared_passport JSONB;
 -- 3. SATIR BAZLI GÜVENLİK (RLS) ETKİNLEŞTİRME
 ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
 
--- Okuma Politikası: Kullanıcı kendi randevularını, veterinerler de tüm randevuları okuyabilir (Kolaylık açısından true veriyoruz)
+-- Okuma Politikası: Kullanıcı sadece kendi randevularını görebilir
 DROP POLICY IF EXISTS "Allow select for authenticated users on appointments" ON public.appointments;
 CREATE POLICY "Allow select for authenticated users on appointments" 
 ON public.appointments FOR SELECT 
 TO authenticated 
-USING (true);
+USING (auth.uid() = user_id);
 
 -- Ekleme Politikası: Sadece giriş yapmış kullanıcılar kendi adlarına randevu ekleyebilir
 DROP POLICY IF EXISTS "Allow insert for authenticated users on appointments" ON public.appointments;
@@ -39,13 +39,13 @@ ON public.appointments FOR INSERT
 TO authenticated 
 WITH CHECK (auth.uid() = user_id);
 
--- Güncelleme Politikası: Hekimler ve kullanıcılar kendi randevularını güncelleyebilir (Onaylama/Tamamlama vb.)
+-- Güncelleme Politikası: Sadece randevu sahibi kendi randevusunu güncelleyebilir/iptal edebilir
 DROP POLICY IF EXISTS "Allow update for authenticated users on appointments" ON public.appointments;
 CREATE POLICY "Allow update for authenticated users on appointments" 
 ON public.appointments FOR UPDATE 
 TO authenticated 
-USING (true)
-WITH CHECK (true);
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
 
 -- 4. REALTIME YAYINI
 DO $$

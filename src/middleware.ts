@@ -125,7 +125,6 @@ export async function middleware(request: NextRequest) {
             if (payload) {
                 role = payload.role;
                 userId = payload.userId;
-                console.log(`[Middleware] Authenticated via Signed Session Cookie: ${userId} (${role})`);
             } else {
                 console.warn(`[Middleware] Tampered or invalid session cookie detected for ${pathname}`);
             }
@@ -134,21 +133,27 @@ export async function middleware(request: NextRequest) {
 
     // 1. Admin Rotaları Koruması
     if (pathname.startsWith("/admin")) {
+        // İzin verilen tek admin rotası: access-denied (sonsuz döngüyü önlemek için)
+        if (pathname === "/admin/access-denied") {
+            return response;
+        }
+
         if (!role) {
-            console.log(`[Middleware] Redirecting unauthenticated user to login: ${pathname}`);
             return NextResponse.redirect(new URL("/", request.url));
         }
-        // Let it load so src/app/admin/layout.tsx can display the premium Access Denied page
+        
+        // Defense-in-depth: RLS dışında middleware katmanında da engelleme yapıyoruz.
+        if (role !== "admin") {
+            return NextResponse.redirect(new URL("/admin/access-denied", request.url));
+        }
     }
 
     // 2. İşletme (Business) Rotaları Koruması
     if (pathname.startsWith("/business")) {
         if (!role) {
-            console.log(`[Middleware] Redirecting unauthenticated user to login: ${pathname}`);
             return NextResponse.redirect(new URL("/", request.url));
         }
         if (role !== "business" && role !== "admin") {
-            console.log(`[Middleware] Blocked unauthorized access to ${pathname} (Verified Role: ${role})`);
             return NextResponse.redirect(new URL("/community", request.url));
         }
     }
