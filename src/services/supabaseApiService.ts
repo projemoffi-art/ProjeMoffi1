@@ -1786,20 +1786,12 @@ export class SupabaseApiService implements IApiService {
     }
 
     async addBalance(amount: number, type: 'fiat' | 'coin'): Promise<void> {
-        const user = await this.getSessionUser();
-        if (!user) throw new Error('Giriş gerekli');
-        // Increment wallet_balance in profiles
-        const field = type === 'coin' ? 'coin_balance' : 'wallet_balance';
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select(`${field}`)
-            .eq('id', user.id)
-            .single();
-        const current = (profile as any)?.[field] || 0;
-        await supabase
-            .from('profiles')
-            .update({ [field]: current + amount })
-            .eq('id', user.id);
+        // [GÜVENLİK YAMASI] - KRİTİK AÇIK KAPATILDI
+        // Bu işlem tamamen istemci tarafında çalışıyordu ve cüzdan/coin bakiyesinin sınırsız manipüle edilmesine olanak tanıyordu.
+        // Bu fonksiyon devre dışı bırakılmıştır. Bakiye artırma işlemleri yalnızca sunucu tarafında (Server-side) 
+        // ve gerçek ödeme webhook'ları (Örn: PayTR/Stripe API rotası) üzerinden yapılmalıdır.
+        console.error("GÜVENLİK İHLALİ: İstemci tarafından bakiye artırma işlemi engellendi!");
+        throw new Error("Geçersiz işlem: Bakiye yalnızca yetkili ödeme kanalları aracılığıyla eklenebilir.");
     }
 
     async updateAuraSettings(settings: any): Promise<void> {

@@ -86,6 +86,9 @@ BEGIN
       NEW.kyb_status = OLD.kyb_status;
       NEW.account_status = OLD.account_status;
       NEW.business_type = OLD.business_type;
+      -- FİNANSAL GÜVENLİK: Kullanıcılar kendi bakiyelerini doğrudan değiştiremez
+      NEW.wallet_balance = OLD.wallet_balance;
+      NEW.coin_balance = OLD.coin_balance;
     END IF;
     
   END IF;
