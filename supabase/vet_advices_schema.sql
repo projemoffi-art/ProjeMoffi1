@@ -20,13 +20,27 @@ ON public.vet_advices
 FOR SELECT 
 USING (true);
 
--- Policy: Authenticated/anonymous users can write to vet_advices (matching clinic_settings permissions)
-CREATE POLICY "Allow write access to vet_advices" 
+-- Policy: Only admin and business roles can write to vet_advices
+DROP POLICY IF EXISTS "Allow write access to vet_advices" ON public.vet_advices;
+
+CREATE POLICY "Allow write access to vet_advices for admins and businesses" 
 ON public.vet_advices 
 FOR ALL 
-TO authenticated, anon
-USING (true)
-WITH CHECK (true);
+TO authenticated
+USING (
+    EXISTS (
+        SELECT 1 FROM public.profiles 
+        WHERE profiles.id = auth.uid() 
+        AND profiles.role IN ('admin', 'business')
+    )
+)
+WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM public.profiles 
+        WHERE profiles.id = auth.uid() 
+        AND profiles.role IN ('admin', 'business')
+    )
+);
 
 -- Index for querying recent advices
 CREATE INDEX IF NOT EXISTS idx_vet_advices_created_at ON public.vet_advices(created_at DESC);
