@@ -23,7 +23,7 @@ const AuthModal = dynamic(() => import("@/components/auth/AuthModal").then(mod =
 const NotificationDrawer = dynamic(() => import("@/components/notifications/NotificationDrawer").then(mod => mod.NotificationDrawer), { ssr: false });
 const EcosystemPortal = dynamic(() => import("@/components/community/EcosystemPortal").then(mod => mod.EcosystemPortal), { ssr: false });
 
-const HIDDEN_ROUTES = ['/', '/studio', '/lab', '/production-studio'];
+const HIDDEN_ROUTES = ['/', '/studio', '/lab', '/production-studio', '/login', '/register', '/auth'];
 
 export function DynamicNavigation() {
     const pathname = usePathname();
