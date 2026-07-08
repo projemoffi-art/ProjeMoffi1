@@ -78,9 +78,11 @@ export function FeedTab({
             transition={{ duration: 0.3 }}
             className="w-full h-[100dvh] overflow-y-auto snap-y snap-mandatory no-scrollbar flex flex-col"
         >
-            {headerElement}
-            {/* STORIES BAR */}
-            <div className="w-full flex gap-4 px-4 pt-4 pb-4 overflow-x-auto no-scrollbar snap-start shrink-0">
+            {/* Header and Stories Combined Snap Block */}
+            <div className="w-full flex flex-col snap-start shrink-0">
+                {headerElement}
+                {/* STORIES BAR */}
+                <div className="w-full flex gap-4 px-4 pt-2 pb-4 overflow-x-auto no-scrollbar">
                 {/* Current User Add Story */}
                 <div className="flex flex-col items-center gap-1.5 shrink-0 group">
                     <div 
@@ -125,6 +127,7 @@ export function FeedTab({
                         </span>
                     </div>
                 ))}
+                </div>
             </div>
 
             {/* Feed SOS Alerts */}
