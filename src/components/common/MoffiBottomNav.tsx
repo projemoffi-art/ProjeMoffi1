@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-    Home, Compass, Plus, MessageCircle, User
+    Home, Compass, ShieldAlert, MessageCircle, User
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter, usePathname } from 'next/navigation';
@@ -57,9 +57,9 @@ export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisibl
                 initial={false}
                 animate={{ y: isVisible ? 0 : 150, opacity: isVisible ? 1 : 0 }}
                 transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
-                className="pointer-events-auto w-full max-w-md bg-white/10 dark:bg-black/20 backdrop-blur-md backdrop-saturate-[1.5] border-t border-x border-white/30 dark:border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),_0_-5px_20px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),_0_-5px_20px_rgba(0,0,0,0.3)] rounded-t-3xl overflow-visible pb-1"
+                className="pointer-events-auto w-full max-w-md bg-white/10 dark:bg-black/20 backdrop-blur-md backdrop-saturate-[1.5] border-t border-x border-white/30 dark:border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),_0_-5px_20px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),_0_-5px_20px_rgba(0,0,0,0.3)] rounded-t-2xl overflow-visible pb-0.5"
             >
-                <div className="px-6 relative h-[3.25rem] flex items-center justify-between">
+                <div className="px-6 relative h-11 flex items-center justify-between">
                     
                     {/* 1. ANA SAYFA */}
                     <button
@@ -83,27 +83,16 @@ export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisibl
                         <Compass className={cn("w-5 h-5", activeTab === 'feed' && "text-cyan-600 dark:text-cyan-400")} />
                     </button>
 
-                    {/* 3. CENTER: HUB BUTTON */}
+                    {/* 3. CENTER: SOS BUTTON */}
                     <div className="flex-1 flex justify-center relative">
                         <button
-                            onPointerDown={() => {
-                                longPressTimer.current = setTimeout(() => {
-                                    setIsHubLongPressing(true);
-                                    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
-                                    window.dispatchEvent(new CustomEvent('open-sos-center'));
-                                    setTimeout(() => setIsHubLongPressing(false), 800);
-                                }, 500);
-                            }}
-                            onPointerUp={() => { if (longPressTimer.current) clearTimeout(longPressTimer.current); setIsHubLongPressing(false); }}
-                            onClick={handleHubClick}
+                            onClick={() => window.dispatchEvent(new CustomEvent('open-sos-center'))}
                             className={cn(
-                                "w-12 h-12 rounded-full flex items-center justify-center border-[3px] border-[var(--background)] dark:border-[#1c1c21] active:scale-95 transition-all group absolute -top-5",
-                                isHubLongPressing 
-                                    ? "bg-red-600 scale-110 shadow-[0_0_30px_rgba(220,38,38,0.8)] border-red-400" 
-                                    : "bg-gradient-to-tr from-cyan-400 via-blue-500 to-purple-600 text-white shadow-[0_10px_25px_rgba(34,211,238,0.4)]"
+                                "w-11 h-11 rounded-full flex items-center justify-center border-[2.5px] border-[var(--background)] dark:border-[#1c1c21] active:scale-95 transition-all group absolute -top-4",
+                                "bg-gradient-to-tr from-red-500 via-rose-600 to-red-700 text-white shadow-[0_8px_20px_rgba(220,38,38,0.4)]"
                             )}
                         >
-                            <Plus className={cn("w-6 h-6 transition-transform duration-500", isHubLongPressing ? "scale-125 rotate-45" : "group-hover:rotate-90")} />
+                            <ShieldAlert className="w-5 h-5 transition-transform duration-500 group-hover:scale-110" />
                         </button>
                         <div className="h-full" />
                     </div>
