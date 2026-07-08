@@ -2461,29 +2461,38 @@ export class SupabaseApiService implements IApiService {
     }
 
     // --- HİKAYELER (Stories) ---
-    async getStories(): Promise<any[]> {
+        async getStories(): Promise<any[]> {
         const { data, error } = await supabase
             .from('stories')
-            .select(`
-                *,
-                user:profiles(id, username, avatar_url)
-            `)
+            .select('*')
             .gt('expires_at', new Date().toISOString())
             .order('created_at', { ascending: false })
             .limit(50);
 
-        if (error || !data) return [];
+        if (error) { console.error("getStories error:", error); return []; } 
+        if (!data) return [];
 
-        return data.map(s => ({
-            id: s.id,
-            userId: s.user_id,
-            userName: s.user?.username || 'Kullanıcı',
-            userAvatar: s.user?.avatar_url || '',
-            imageUrl: s.image_url,
-            caption: s.caption,
-            viewCount: s.view_count,
-            expiresAt: s.expires_at
-        }));
+        const userIds = [...new Set(data.map(s => s.user_id))];
+        const { data: profilesData } = await supabase.from('profiles').select('id, username, avatar_url').in('id', userIds);
+        
+        const profilesMap = new Map();
+        if (profilesData) {
+            profilesData.forEach(p => profilesMap.set(p.id, p));
+        }
+
+        return data.map(s => {
+            const user = profilesMap.get(s.user_id);
+            return {
+                id: s.id,
+                userId: s.user_id,
+                userName: user?.username || 'Kullanıcı',
+                userAvatar: user?.avatar_url || '',
+                imageUrl: s.image_url,
+                caption: s.caption,
+                viewCount: s.view_count,
+                expiresAt: s.expires_at
+            };
+        });
     }
 
     async addStory(storyData: any): Promise<void> {
@@ -2659,7 +2668,7 @@ export class SupabaseApiService implements IApiService {
             .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
             .order('last_message_at', { ascending: false });
 
-        if (error || !data) return [];
+        if (error) { console.error("getStories error:", error); return []; } if (!data) return [];
 
         // For each conversation, fetch the OTHER user's profile
         const results = await Promise.all(data.map(async (conv) => {
@@ -2716,7 +2725,7 @@ export class SupabaseApiService implements IApiService {
             .eq('conversation_id', conv.id)
             .order('created_at', { ascending: true });
 
-        if (error || !data) return [];
+        if (error) { console.error("getStories error:", error); return []; } if (!data) return [];
 
         return data.map(msg => ({
             id: msg.id,

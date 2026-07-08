@@ -8,7 +8,7 @@ import {
     ChevronRight, Info, QrCode, Star, Copy, Bell, 
     Edit2, Trash2, VolumeX, Volume2, EyeOff, ShieldAlert, 
     BadgeCheck, Plus, X, Sparkles, Send, Check,
-    Download, Instagram, MessageSquare, Zap
+    Download, Instagram, MessageSquare, Zap, Compass
 } from 'lucide-react';
 import { useSocial } from '@/context/SocialContext';
 import { cn } from '@/lib/utils';
@@ -385,7 +385,7 @@ export function ImmersivePostCard({
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true, amount: 0.1 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className="relative w-full aspect-[4/5] sm:aspect-[4/5] max-h-[85vh] sm:max-h-[82vh] rounded-none sm:rounded-[3rem] overflow-hidden bg-background border-b border-card-border shadow-2xl group"
+            className="relative w-full h-[100dvh] max-w-lg mx-auto bg-black overflow-hidden group"
         >
             {/* MEDIA */}
             <div 
@@ -477,7 +477,7 @@ export function ImmersivePostCard({
                             className="w-full h-full object-cover opacity-90"
                         />
                     )}
-                    <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/75 via-black/20 to-transparent opacity-90 pointer-events-none" />
+                    
                 </motion.div>
                 
                 {/* BACKGROUND AUDIO ELEMENT */}
@@ -777,227 +777,97 @@ export function ImmersivePostCard({
             </AnimatePresence>
 
             {/* USER INFO & CAPTION & ACTIONS */}
-            <div className="absolute bottom-6 sm:bottom-6 left-5 sm:left-6 right-5 sm:right-6 z-20 flex flex-col gap-3">
-                {/* MUTE BUTTON - ABSOLUTE BOTTOM RIGHT CORNER */}
+            {/* Left text Details (Author & Caption) inside a glass card */}
+            <div className="absolute bottom-2 left-4 right-16 z-20 pointer-events-auto drop-shadow-lg pb-4">
+                <div 
+                    onClick={handleProfileNavigation}
+                    className="flex items-center gap-2 cursor-pointer mb-2"
+                >
+                    <img 
+                        src={(isOwner ? (currentUser?.avatar || post.avatar || post.author_avatar || post.user?.avatar) : (post.avatar || post.author_avatar || post.user?.avatar)) || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} 
+                        className="w-9 h-9 rounded-full border border-white/20 object-cover" 
+                        alt="Author"
+                    />
+                    <div>
+                        <div className="flex items-center gap-1">
+                            <span className="text-xs font-black tracking-wide text-white">
+                                @{post.username || post.author_name || (post.author ? post.author.toLowerCase().replace(/\s+/g, '_') : (post.user?.name ? post.user.name.toLowerCase().replace(/\s+/g, '_') : 'anonim'))}
+                            </span>
+                            <BadgeCheck className="w-3.5 h-3.5 text-cyan-400 fill-black" />
+                        </div>
+                        <span className="text-[8px] text-white/50 font-bold uppercase tracking-wider">Moffi Kullanıcısı</span>
+                    </div>
+                </div>
+                
+
+
+                <p className="text-[11px] text-white/90 leading-relaxed mt-1 line-clamp-2">
+                    {filterContent(post.desc || post.caption || post.description || '')}
+                </p>
+                
+            </div>
+
+            {/* Right Sidebar actions */}
+            <div className="absolute bottom-24 right-4 z-20 flex flex-col gap-5 items-center pointer-events-auto">
+                {/* LIKE */}
+                <button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (!currentUser || String(currentUser.id) === 'local-user') {
+                            alert('❤️ Beğenmek ve etkileşime geçmek için lütfen giriş yapın veya kayıt olun.');
+                            window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'login' }));
+                            return;
+                        }
+                        onLike();
+                    }}
+                    className="flex flex-col items-center gap-1 group active:scale-90 transition"
+                >
+                    <Heart className={cn("w-8 h-8 drop-shadow-md transition-colors", post.isLiked ? "fill-red-500 text-red-500" : "text-white group-hover:text-white/80 fill-transparent")} />
+                    <span className="text-[11px] font-bold text-white drop-shadow-md">{post.likes ?? post.likes_count ?? 0}</span>
+                </button>
+
+                {/* COMMENT */}
+                <button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (allowComments === false) {
+                            alert('Bu gönderi yorumlara kapatılmıştır. 🔒');
+                            return;
+                        }
+                        setShowComments(true);
+                    }}
+                    className="flex flex-col items-center gap-1 group active:scale-90 transition"
+                >
+                    <MessageCircle className={cn("w-8 h-8 drop-shadow-md transition-colors", allowComments === false ? "text-white/40 fill-transparent" : "text-white group-hover:text-white/80 fill-transparent")} />
+                    <span className="text-[11px] font-bold text-white drop-shadow-md">
+                        {allowComments === false ? '-' : (post.comments ?? post.comments_count ?? 0)}
+                    </span>
+                </button>
+
+                {/* SHARE */}
+                <button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleShareClick();
+                    }}
+                    className="flex flex-col items-center gap-1 group active:scale-90 transition"
+                >
+                    <Share2 className="w-8 h-8 text-white drop-shadow-md group-hover:text-white/80 transition-colors" />
+                    <span className="text-[11px] font-bold text-white drop-shadow-md">Paylaş</span>
+                </button>
+
+                {/* MUTE BUTTON */}
                 {(post.is_video || (post.media && /\.(mp4|webm|ogg|mov|avi|m4v|mkv)$/i.test(post.media)) || post.audio_url) && (
                     <button 
                         onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
-                        className={cn(
-                            "absolute bottom-3 right-3 w-7 h-7 rounded-full backdrop-blur-md border flex items-center justify-center transition-all shadow-lg z-30",
-                            isMuted ? "bg-black/40 border-card-border" : "bg-cyan-500/30 border-cyan-400/50"
-                        )}
+                        className="mt-2 active:scale-90 transition group"
                     >
-                        {isMuted ? <VolumeX className="w-3.5 h-3.5 text-white/50" /> : <Volume2 className="w-3.5 h-3.5 text-cyan-300" />}
+                        {isMuted ? <VolumeX className="w-6 h-6 text-white/70 drop-shadow-md group-hover:text-white/90" /> : <Volume2 className="w-6 h-6 text-white drop-shadow-md group-hover:text-white/80" />}
                     </button>
-                )}
-
-                {/* ACTION BUTTONS SIDEBAR */}
-                <div className="absolute right-0 sm:right-0 bottom-0 flex flex-col gap-4 sm:gap-3 z-30 translate-y-[-2.5rem] sm:translate-y-[-2rem]">
-                    {/* LIKE */}
-                    <div className="flex flex-col items-center gap-0.5">
-                        <button 
-                            onClick={() => {
-                                if (!currentUser || String(currentUser.id) === 'local-user') {
-                                    alert('❤️ Beğenmek ve etkileşime geçmek için lütfen giriş yapın veya kayıt olun.');
-                                    window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'login' }));
-                                    return;
-                                }
-                                onLike();
-                            }} 
-                            className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-md border border-card-border flex items-center justify-center transition-transform active:scale-90 hover:bg-white/20 shadow-xl"
-                        >
-                            {post.isLiked ? (
-                                <Heart className="w-4 h-4 text-red-500 fill-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]" />
-                            ) : (
-                                <Heart className="w-4 h-4 text-white drop-shadow-md" />
-                            )}
-                        </button>
-                        <span className="text-[9px] font-bold text-white drop-shadow-md">{post.likes ?? post.likes_count ?? 0}</span>
-                    </div>
-
-                    {/* COMMENT - Global Standard: active by default, disabled only if explicitly set false in DB */}
-                    <div className="flex flex-col items-center gap-0.5">
-                        <button 
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                if (allowComments === false) {
-                                    alert('Bu gönderi yorumlara kapatılmıştır. 🔒');
-                                    return;
-                                }
-                                setShowComments(true);
-                            }} 
-                            className={cn(
-                                "w-8 h-8 rounded-full backdrop-blur-md border flex items-center justify-center transition-all shadow-xl active:scale-90",
-                                allowComments === false
-                                    ? "bg-white/5 border-card-border opacity-40 cursor-not-allowed" 
-                                    : "bg-white/10 border-card-border hover:bg-white/20 hover:border-white/40"
-                            )}
-                        >
-                            <MessageCircle className={cn("w-4 h-4 drop-shadow-md", allowComments === false ? "text-white/20" : "text-white")} />
-                        </button>
-                        <span className={cn("text-[9px] font-bold drop-shadow-md", allowComments === false ? "text-white/20" : "text-white")}>
-                            {allowComments === false ? '-' : (post.comments ?? post.comments_count ?? 0)}
-                        </span>
-                    </div>
-
-                    {/* SHARE */}
-                    <div className="flex flex-col items-center gap-0.5">
-                        <button onClick={handleShareClick} className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-md border border-card-border flex items-center justify-center transition-transform active:scale-90 hover:bg-white/20 shadow-xl">
-                            <Share2 className="w-4 h-4 text-white drop-shadow-md" />
-                        </button>
-                        <span className="text-[9px] font-bold text-white drop-shadow-md">Paylaş</span>
-                    </div>
-                </div>
-
-                <div className="pr-16 w-full flex items-center gap-3">
-                    <div 
-                        onClick={handleProfileNavigation}
-                        className="w-12 h-12 rounded-full border-2 border-card-border p-0.5 relative pointer-events-auto cursor-pointer active:scale-95 transition-transform"
-                    >
-                        <Image src={(isOwner ? (currentUser?.avatar || post.avatar || post.author_avatar || post.user?.avatar) : (post.avatar || post.author_avatar || post.user?.avatar)) || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} fill className="rounded-full object-cover" alt="Author" />
-                        {!isOwner && !isFollowingAuthor && (
-                            <motion.div 
-                                className="absolute -bottom-1 -right-1 w-5 h-5 bg-cyan-500 rounded-full flex items-center justify-center border-2 border-black cursor-pointer shadow-lg shadow-cyan-500/40" 
-                                onClick={handleFollow}
-                                whileHover={{ scale: 1.2, rotate: 90 }}
-                                whileTap={{ scale: 0.8 }}
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                transition={{ type: "spring", stiffness: 500, damping: 15 }}
-                            >
-                                <Plus className="w-3 h-3 text-white" />
-                                <motion.div 
-                                    className="absolute inset-0 rounded-full bg-cyan-400"
-                                    initial={{ scale: 1, opacity: 0 }}
-                                    whileTap={{ scale: 3, opacity: 0.5 }}
-                                    transition={{ duration: 0.5 }}
-                                />
-                            </motion.div>
-                        )}
-                        {isFollowingAuthor && (
-                            <motion.div 
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center border-2 border-black shadow-lg"
-                            >
-                                <Check className="w-3 h-3 text-white" />
-                            </motion.div>
-                        )}
-                    </div>
-                    <div className="flex flex-col pointer-events-auto cursor-pointer active:opacity-70 transition-opacity" onClick={handleProfileNavigation}>
-                        <div className="flex items-center gap-2 mb-0.5">
-                            <span className="text-sm font-black text-white drop-shadow-lg leading-tight">
-                                {post.author || post.author_name || post.user?.name || 'Anonim'}
-                            </span>
-                            {/* AURA BADGE IN FEED */}
-                            {post.aura_settings && (
-                                <div 
-                                    className={cn(
-                                        "px-2.5 py-0.5 flex items-center gap-1.5 transition-all duration-500 backdrop-blur-md",
-                                        post.aura_settings.frameStyle === 'glass' && "rounded-full bg-white/10 border border-card-border shadow-xl",
-                                        post.aura_settings.frameStyle === 'neon' && "rounded-lg bg-black/40 border-[0.5px] border-card-border shadow-[0_0_15px_rgba(255,255,255,0.05)]",
-                                        post.aura_settings.frameStyle === 'metal' && "rounded-md bg-gradient-to-br from-gray-700 to-black border border-card-border",
-                                        post.aura_settings.frameStyle === 'minimal' && "px-1"
-                                    )}
-                                >
-                                    <div 
-                                        className="w-1.5 h-1.5 rounded-full animate-pulse shrink-0"
-                                        style={{ backgroundColor: post.aura_settings.accentColor === 'default' ? '#6366f1' : post.aura_settings.accentColor }}
-                                    />
-                                    <span 
-                                        className={cn(
-                                            "text-[8px] font-black uppercase tracking-[0.3em] transition-all duration-500",
-                                            post.aura_settings.fontFamily === 'font-serif' && "font-serif",
-                                            post.aura_settings.fontFamily === 'font-mono' && "font-mono",
-                                            post.aura_settings.fontFamily === 'italic' && "italic",
-                                            post.aura_settings.fontFamily === 'font-pacifico' && "font-pacifico lowercase !tracking-widest",
-                                            post.aura_settings.fontFamily === 'font-satisfy' && "font-satisfy lowercase !tracking-widest",
-                                            post.aura_settings.fontFamily === 'font-playfair' && "font-playfair",
-                                        )}
-                                        style={{ 
-                                            color: (post.aura_settings.frameStyle === 'glass' || post.aura_settings.frameStyle === 'metal') ? '#FFFFFF' : '#FFFFFF',
-                                            textShadow: post.aura_settings.frameStyle === 'neon' ? `0 0 8px ${post.aura_settings.accentColor === 'default' ? '#6366f1' : post.aura_settings.accentColor}` : 'none'
-                                        }}
-                                    >
-                                        Pioneer
-                                    </span>
-                                    
-                                    {/* BADGES IN FEED PILL */}
-                                    <div className="flex items-center gap-1 border-l border-card-border pl-1.5">
-                                        {(post.aura_settings.badges || []).map((bid: string) => {
-                                            if (bid === 'verified') return (
-                                                <button 
-                                                    key={bid} 
-                                                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); setActiveBadgeInfo('verified'); }}
-                                                    className="p-0.5 hover:bg-white/10 active:scale-90 rounded transition-all flex items-center justify-center cursor-pointer"
-                                                >
-                                                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                                                </button>
-                                            );
-                                            if (bid === 'premium') return (
-                                                <button 
-                                                    key={bid} 
-                                                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); setActiveBadgeInfo('premium'); }}
-                                                    className="p-0.5 hover:bg-white/10 active:scale-90 rounded transition-all flex items-center justify-center cursor-pointer"
-                                                >
-                                                    <Crown className="w-3.5 h-3.5 text-orange-400" />
-                                                </button>
-                                            );
-                                            if (bid === 'walker') return (
-                                                <button 
-                                                    key={bid} 
-                                                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); setActiveBadgeInfo('walker'); }}
-                                                    className="p-0.5 hover:bg-white/10 active:scale-90 rounded transition-all flex items-center justify-center cursor-pointer"
-                                                >
-                                                    <Footprints className="w-3.5 h-3.5 text-cyan-400" />
-                                                </button>
-                                            );
-                                            if (bid === 'sos') return (
-                                                <button 
-                                                    key={bid} 
-                                                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); setActiveBadgeInfo('sos'); }}
-                                                    className="p-0.5 hover:bg-white/10 active:scale-90 rounded transition-all flex items-center justify-center cursor-pointer"
-                                                >
-                                                    <SOSZap className="w-3.5 h-3.5 text-red-500" />
-                                                </button>
-                                            );
-                                            return null;
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                        <span className="text-[11px] text-zinc-400 font-medium drop-shadow-md">
-                            {post.username || post.author_name || (post.author ? `@${post.author.toLowerCase().replace(/\s+/g, '_')}` : (post.user?.name ? `@${post.user.name.toLowerCase().replace(/\s+/g, '_')}` : '@anonim'))}
-                        </span>
-                    </div>
-                </div>
-
-                <p className="text-[13px] sm:text-xs text-white/90 leading-relaxed font-medium drop-shadow-md line-clamp-2 w-5/6 pl-1.5 pointer-events-none">
-                    {filterContent(post.desc || post.caption || post.description || '')}
-                </p>
-
-                {/* MUSIC INDICATOR (TikTok Style) */}
-                {post?.audio_url && (
-                    <div className="flex items-center gap-2 mt-1 pl-1.5 pointer-events-auto cursor-pointer group/music w-max">
-                        <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center animate-spin-slow">
-                            <SOSZap className="w-3 h-3 text-cyan-400" />
-                        </div>
-                        <div className="overflow-hidden flex items-center gap-1.5">
-                            <span className="text-[10px] font-black text-white/60 uppercase tracking-widest group-hover/music:text-cyan-400 transition-colors whitespace-nowrap">
-                                Orijinal Ses - {post.author || 'Moffi Kullanıcısı'}
-                            </span>
-                            <div className="flex gap-0.5">
-                                {[1, 2, 3].map(i => (
-                                    <div key={i} className="w-0.5 h-2 bg-cyan-400/40 rounded-full animate-music-bar" style={{ animationDelay: `${i * 0.2}s` }} />
-                                ))}
-                            </div>
-                        </div>
-                    </div>
                 )}
             </div>
 
-            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/75 via-black/20 to-transparent pointer-events-none" />
+            
 
             <AnimatePresence>
                 {showComments && (

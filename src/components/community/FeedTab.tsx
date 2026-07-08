@@ -36,6 +36,7 @@ interface FeedTabProps {
     onAddStoryClick: () => void;
     onPostClickFromGrid: (post: any) => void;
     isCommentsDisabled?: boolean;
+    headerElement?: React.ReactNode;
 }
 
 export function FeedTab({
@@ -65,7 +66,8 @@ export function FeedTab({
     onStoryClick,
     onAddStoryClick,
     onPostClickFromGrid,
-    isCommentsDisabled = false
+    isCommentsDisabled = false,
+    headerElement
 }: FeedTabProps) {
     return (
         <motion.div
@@ -74,24 +76,27 @@ export function FeedTab({
             animate={{ opacity: 1, filter: "blur(0px)" }}
             exit={{ opacity: 0, filter: "blur(10px)" }}
             transition={{ duration: 0.3 }}
-            className="w-full pb-32 flex flex-col gap-4"
+            className="w-full h-[100dvh] overflow-y-auto snap-y snap-mandatory no-scrollbar flex flex-col"
         >
+            {headerElement}
             {/* STORIES BAR */}
-            <div className="w-full flex gap-4 px-4 py-4 overflow-x-auto no-scrollbar snap-start shrink-0">
+            <div className="w-full flex gap-4 px-4 pt-4 pb-4 overflow-x-auto no-scrollbar snap-start shrink-0">
                 {/* Current User Add Story */}
                 <div className="flex flex-col items-center gap-1.5 shrink-0 group">
                     <div 
                         onClick={onAddStoryClick}
-                        className="relative w-16 h-16 flex items-center justify-center cursor-pointer"
+                        className="relative w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center cursor-pointer transition-transform group-hover:scale-105"
                     >
-                        <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-cyan-500/20 via-purple-500/20 to-pink-500/20 border-2 border-dashed border-white/20 group-hover:border-cyan-400/50 group-hover:bg-white/5 transition-all duration-500" />
-                        
-                        <div className="relative z-10 w-12 h-12 rounded-full bg-[var(--card-bg)] backdrop-blur-md border border-white/10 flex items-center justify-center shadow-2xl group-hover:scale-110 group-active:scale-95 transition-all duration-300">
-                            <div className="absolute inset-0 bg-cyan-400/5 blur-md group-hover:bg-cyan-400/20 transition-all" />
-                            <Plus className="w-6 h-6 text-[var(--foreground)] group-hover:text-cyan-400" strokeWidth={2.5} />
+                        <img 
+                            src={user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200"} 
+                            className="w-full h-full rounded-full object-cover"
+                            alt="Hikayen"
+                        />
+                        <div className="absolute bottom-0 right-0 w-5 h-5 bg-cyan-500 rounded-full border-2 border-[var(--background)] flex items-center justify-center shadow-lg">
+                            <Plus className="w-3.5 h-3.5 text-white" strokeWidth={3} />
                         </div>
                     </div>
-                    <span className="text-[9px] text-[var(--secondary-text)] font-black uppercase tracking-[0.2em] group-hover:text-cyan-400 transition-colors">Hikaye</span>
+                    <span className="text-[10px] text-[var(--secondary-text)] font-medium tracking-wide">Hikayen</span>
                 </div>
 
                 {/* Real Database Stories */}
@@ -221,7 +226,7 @@ export function FeedTab({
                 />
             ) : (
                 posts.map((post, feedIdx) => (
-                    <div key={post.id} id={`post-${post.id}`} className="w-full relative flex flex-col items-center justify-center px-0 mb-8">
+                    <section key={post.id} id={`post-${post.id}`} className="h-[100dvh] w-full snap-start snap-always relative shrink-0 p-0 flex items-center justify-center">
                         <ImmersivePostCard
                             post={post}
                             currentUser={user}
@@ -238,7 +243,7 @@ export function FeedTab({
                             priority={feedIdx === 0}
                             isCommentsDisabled={isCommentsDisabled}
                         />
-                    </div>
+                    </section>
                 ))
             )}
 

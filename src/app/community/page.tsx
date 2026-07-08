@@ -1261,6 +1261,10 @@ export default function LegendaryLightDashboard() {
     const { storyGroups } = useStories();
     const [viewerStoryGroupIndex, setViewerStoryGroupIndex] = useState<number | null>(null);
     const [viewerStoryIndex, setViewerStoryIndex] = useState(0);
+
+    useEffect(() => {
+        window.dispatchEvent(new CustomEvent('moffi-toggle-nav', { detail: viewerStoryGroupIndex === null && selectedAnn === null }));
+    }, [viewerStoryGroupIndex, selectedAnn]);
     const [storyProgress, setStoryProgress] = useState(0);
     const [isStoryPaused, setIsStoryPaused] = useState(false);
     const storyPressStartTime = useRef<number>(0);

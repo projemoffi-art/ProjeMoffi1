@@ -36,7 +36,7 @@ const SightingMapSelector = dynamic(() => import('@/components/community/Sightin
 
 import AuthModal from '../../components/auth/AuthModal';
 import { useAuth } from '../../context/AuthContext';
-import { useStories } from '../../hooks/useStories';
+import { useUserStories } from '../../hooks/useUserStories';
 import { useTheme } from '../../context/ThemeContext';
 import { PetSettingsModal } from '../../components/profile/PetSettingsModal';
 import { SOSCommandCenter } from '../../components/profile/SOSCommandCenter';
@@ -77,6 +77,58 @@ import Image from 'next/image';
 import { useChat } from '@/context/ChatContext';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 
+
+const StoryProgressBar = ({ isActive, isCompleted, isPaused, onComplete, duration = 6000 }: { isActive: boolean, isCompleted: boolean, isPaused: boolean, onComplete: () => void, duration?: number }) => {
+    const [progress, setProgress] = useState(0);
+    const progressRef = useRef(progress);
+    progressRef.current = progress;
+    
+    const onCompleteRef = useRef(onComplete);
+    onCompleteRef.current = onComplete;
+
+    useEffect(() => {
+        if (isCompleted) return;
+        if (!isActive) {
+            setProgress(0);
+            return;
+        }
+        if (isPaused) return;
+
+        let animationFrameId: number;
+        let start = Date.now() - (progressRef.current / 100) * duration;
+
+        const animate = () => {
+            const now = Date.now();
+            const elapsed = now - start;
+            const p = (elapsed / duration) * 100;
+
+            if (p >= 100) {
+                setProgress(100);
+                onCompleteRef.current();
+            } else {
+                setProgress(p);
+                animationFrameId = requestAnimationFrame(animate);
+            }
+        };
+
+        animationFrameId = requestAnimationFrame(animate);
+
+        return () => {
+            cancelAnimationFrame(animationFrameId);
+        };
+    }, [isActive, isPaused, duration, isCompleted]);
+
+    return (
+        <div
+            className={cn(
+                "absolute top-0 left-0 bottom-0 bg-white",
+                isActive && "shadow-[0_0_10px_white]"
+            )}
+            style={{ width: isCompleted ? '100%' : `${isActive ? progress : 0}%` }}
+        />
+    );
+};
+
 export default function MoffiSocialMasterpiece() {
     const { user, logout, updateProfile, updateSettings } = useAuth();
     const { 
@@ -91,7 +143,7 @@ export default function MoffiSocialMasterpiece() {
         refreshInbox
     } = useChat();
     const { theme, setTheme } = useTheme(); // Restored
-    const { storyGroups, uploadStory } = useStories(); // Restored
+    const { storyGroups, uploadStory } = useUserStories(); // Restored
     const { pets: userPets, activePet, switchPet, updatePet } = usePet();
     const { isQuietModeActive } = useWellbeing();
 
@@ -387,7 +439,11 @@ export default function MoffiSocialMasterpiece() {
     };
     const [viewerStoryGroupIndex, setViewerStoryGroupIndex] = useState<number | null>(null);
     const [viewerStoryIndex, setViewerStoryIndex] = useState(0);
-    const [storyProgress, setStoryProgress] = useState(0);
+
+    useEffect(() => {
+        window.dispatchEvent(new CustomEvent('moffi-toggle-nav', { detail: viewerStoryGroupIndex === null }));
+    }, [viewerStoryGroupIndex]);
+    
     const [isStoryPaused, setIsStoryPaused] = useState(false);
     const storyPressStartTime = useRef<number>(0);
     const [postToDelete, setPostToDelete] = useState<number | null>(null);
@@ -731,7 +787,7 @@ export default function MoffiSocialMasterpiece() {
             if (res.success) {
                 showToast("Harika!", "Hikayen başarıyla paylaşıldı.", "success");
             } else {
-                showToast("Hata", "Hikaye yüklenemedi.", "error");
+                showToast("Hata", `Hikaye yüklenemedi: ${res.error || "Bilinmeyen hata"}`, "error");
             }
             setStoryPreview(null);
             setPendingStoryFile(null);
@@ -1144,11 +1200,11 @@ export default function MoffiSocialMasterpiece() {
     const closeStoryViewer = () => {
         setViewerStoryGroupIndex(null);
         setViewerStoryIndex(0);
-        setStoryProgress(0);
+        
     };
 
     const nextStory = () => {
-        setStoryProgress(0);
+        
         if (viewerStoryGroupIndex === null) return;
         const group = storyGroups[viewerStoryGroupIndex];
         if (viewerStoryIndex < group.stories.length - 1) {
@@ -1162,7 +1218,7 @@ export default function MoffiSocialMasterpiece() {
     };
 
     const prevStory = () => {
-        setStoryProgress(0);
+        
         if (viewerStoryGroupIndex === null) return;
         if (viewerStoryIndex > 0) {
             setViewerStoryIndex(prev => prev - 1);
@@ -1176,24 +1232,19 @@ export default function MoffiSocialMasterpiece() {
 
     useEffect(() => {
         if (viewerStoryGroupIndex === null) return;
-        if (isStoryPaused) return;
-
-        const intervalTime = 50;
-        const timer = setInterval(() => {
-            setStoryProgress(prev => {
-                if (prev >= 100) {
-                    clearInterval(timer);
-                    nextStory();
-                    return 0;
-                }
-                return prev + 1;
-            });
-        }, intervalTime);
-
-        return () => {
-            clearInterval(timer);
-        };
-    }, [viewerStoryGroupIndex, viewerStoryIndex, isStoryPaused, storyGroups]);
+        // Preload next story image for seamless transition
+        const group = storyGroups[viewerStoryGroupIndex];
+        if (group && viewerStoryIndex + 1 < group.stories.length) {
+            const img = new window.Image();
+            img.src = group.stories[viewerStoryIndex + 1].media_url;
+        } else if (viewerStoryGroupIndex + 1 < storyGroups.length) {
+            const nextGroup = storyGroups[viewerStoryGroupIndex + 1];
+            if (nextGroup && nextGroup.stories.length > 0) {
+                const img = new window.Image();
+                img.src = nextGroup.stories[0].media_url;
+            }
+        }
+    }, [viewerStoryGroupIndex, viewerStoryIndex, storyGroups]);
 
     const formatTimeAgo = (dateStr?: string) => {
         if (!dateStr) return "Şimdi";
@@ -2061,150 +2112,19 @@ export default function MoffiSocialMasterpiece() {
                 <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-cyan-600/20 blur-[120px] rounded-full mix-blend-screen" />
             </div>
 
-            {/* DYNAMIC HEADER MANAGEMENT */}
-            {activeTab === 'feed' && (
-                <>
-                    <motion.header 
-                        id="community-main-header"
-                        style={{ 
-                            height: headerHeightTransform, 
-                            opacity: headerOpacity 
-                        }}
-                        className="fixed top-0 left-0 right-0 z-[150] px-6 flex flex-col justify-end bg-[var(--background)]/80 backdrop-blur-xl border-b border-white/5 transition-all duration-300 pb-4"
-                    >
-                        <div className="flex justify-between items-center w-full">
-                            <div className="flex items-center gap-2">
-                                <div className="relative w-10 h-10">
-                                    <motion.button
-                                        style={{ scale: iconScale }}
-                                        className="w-full h-full flex items-center justify-center hover:bg-white/5 rounded-full transition-all active:scale-90"
-                                    >
-                                        <Camera className="w-5 h-5 text-white/80" />
-                                    </motion.button>
-                                    <input 
-                                        type="file" 
-                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50" 
-                                        accept="image/*,video/*" 
-                                        onChange={handleCameraUpload} 
-                                    />
-                                </div>
-
-                                {/* VIEW MODE TOGGLE - PURE MINIMALIST */}
-                                <div className="flex items-center gap-1 ml-1">
-                                    <button 
-                                        onClick={() => setViewMode('immersive')}
-                                        className={cn(
-                                            "p-2 transition-all active:scale-90",
-                                            viewMode === 'immersive' ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] scale-110" : "text-gray-600 hover:text-gray-400"
-                                        )}
-                                    >
-                                        <List className="w-5 h-5" />
-                                    </button>
-                                    <button 
-                                        onClick={() => setViewMode('grid')}
-                                        className={cn(
-                                            "p-2 transition-all active:scale-90",
-                                            viewMode === 'grid' ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] scale-110" : "text-gray-600 hover:text-gray-400"
-                                        )}
-                                    >
-                                        <Grid3X3 className="w-5 h-5" />
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="flex gap-1 items-center">
-                                <motion.button 
-                                    style={{ scale: iconScale }}
-                                    onClick={() => setIsSpotlightOpen(true)}
-                                    className="p-2.5 hover:bg-white/5 rounded-full transition-colors"
-                                >
-                                    <Search className="w-5 h-5 text-white/80" />
-                                </motion.button>
-
-                                <motion.button 
-                                    style={{ scale: iconScale }}
-                                    onClick={() => setIsInboxOpen(true)} 
-                                    className="relative p-2.5 hover:bg-white/5 rounded-full transition-colors"
-                                >
-                                    <MessageCircle className="w-5 h-5 text-white/80" />
-                                    {unreadCount > 0 && (
-                                        <div className="absolute top-1 right-1 w-4 h-4 bg-cyan-400 rounded-full border-2 border-background flex items-center justify-center">
-                                            <span className="text-[8px] font-black text-black">{unreadCount}</span>
-                                        </div>
-                                    )}
-                                </motion.button>
-
-                                <motion.button 
-                                    style={{ scale: iconScale }}
-                                    onClick={() => setIsNotificationsOpen(true)} 
-                                    className="relative p-2.5 hover:bg-white/5 rounded-full transition-colors"
-                                >
-                                    <Bell className="w-5 h-5 text-white/80" />
-                                    {notifUnreadCount > 0 && (
-                                        <div className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-background flex items-center justify-center">
-                                            <span className="text-[8px] font-black text-white">{notifUnreadCount}</span>
-                                        </div>
-                                    )}
-                                </motion.button>
-
-                                <motion.button
-                                    style={{ scale: iconScale }}
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={() => {
-                                        if (user?.id) {
-                                            router.push(`/profile/${user.id}`);
-                                        }
-                                    }}
-                                    className="w-8 h-8 rounded-full overflow-hidden border border-white/10 shadow-sm cursor-pointer hover:border-white/30 transition-colors ml-1"
-                                >
-                                    <img src={user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100"} className="w-full h-full object-cover" alt="User Profile" />
-                                </motion.button>
-                            </div>
-                        </div>
-
-                        {/* NEW TOP TAB SWITCHER: Akış / Pati Radarı */}
-                        <div className="w-full mt-3 flex justify-center pb-1 shrink-0">
-                            <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 w-full max-w-[240px] shadow-inner backdrop-blur-md">
-                                <button 
-                                    onClick={() => setActiveTab('feed')}
-                                    className={cn(
-                                        "flex-1 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                        activeTab === 'feed' ? "bg-white text-black shadow-lg font-black" : "text-[var(--secondary-text)] hover:text-[var(--foreground)]"
-                                    )}
-                                >
-                                    Akış
-                                </button>
-                                <button 
-                                    onClick={() => {
-                                        setActiveTab('radar');
-                                        setRadarTabMode('lost');
-                                    }}
-                                    className={cn(
-                                        "flex-1 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                        activeTab === 'radar' ? "bg-white text-black shadow-lg font-black" : "text-[var(--secondary-text)] hover:text-[var(--foreground)]"
-                                    )}
-                                >
-                                    Pati Radarı
-                                </button>
-                            </div>
-                        </div>
-                    </motion.header>
-
-                    {/* Feed Header Spacing */}
-                    <motion.div 
-                        style={{ height: headerHeightTransform }} 
-                        className="shrink-0 transition-all duration-300" 
-                    />
-                </>
-            )}
-
-            {activeTab === 'radar' && (
-                <>
+            {/* MAIN IMMERSIVE CONTENT - Unified Scroll per tab */}
+            <main 
+                id="community-scroll-container"
+                ref={globalScrollRef}
+                onScroll={handleMainScroll}
+                className="flex-1 relative z-10 w-full overflow-y-auto no-scrollbar overscroll-contain"
+            >
+                {activeTab === 'radar' && (
                     <motion.header 
                         id="community-radar-header"
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="fixed top-0 left-0 right-0 z-[150] px-6 pt-12 pb-4 bg-[var(--background)]/85 backdrop-blur-xl border-b border-white/5 flex items-center justify-between transition-all duration-300"
+                        className="relative w-full z-[150] px-6 pt-10 pb-4 flex items-center justify-between transition-all duration-300"
                     >
                         {/* Back button */}
                         <button 
@@ -2240,23 +2160,59 @@ export default function MoffiSocialMasterpiece() {
                         {/* Right Spacer */}
                         <div className="w-10 h-10" />
                     </motion.header>
-
-                    {/* Radar Header Spacing */}
-                    <div className="h-[108px] shrink-0" />
-                </>
-            )}
-
-            {/* MAIN IMMERSIVE CONTENT - Unified Scroll per tab */}
-            <main 
-                id="community-scroll-container"
-                ref={globalScrollRef}
-                onScroll={handleMainScroll}
-                className="flex-1 relative z-10 w-full overflow-y-auto no-scrollbar overscroll-contain"
-            >
+                )}
                 <AnimatePresence>
                     {/* FEED TAB */}
                     {activeTab === 'feed' && (
                         <FeedTab
+                            headerElement={
+                                <motion.header 
+                                    id="community-main-header"
+                                    className="relative w-full z-[150] px-4 sm:px-6 flex flex-col transition-all duration-300 pb-2 pt-6 pointer-events-none"
+                                >
+                                    <div className="flex justify-between items-center w-full pointer-events-auto">
+                                        <div className="flex items-center gap-2">
+                                            <div className="relative w-9 h-9">
+                                                <motion.button
+                                                    style={{ scale: iconScale }}
+                                                    className="w-full h-full flex items-center justify-center hover:bg-white/10 rounded-full transition-all active:scale-90 bg-black/20 backdrop-blur-md border border-white/10 shadow-lg"
+                                                >
+                                                    <Camera className="w-4 h-4 text-white/90" />
+                                                </motion.button>
+                                                <input 
+                                                    type="file" 
+                                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50" 
+                                                    accept="image/*,video/*" 
+                                                    onChange={handleCameraUpload} 
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-1.5 items-center">
+                                            <motion.button 
+                                                style={{ scale: iconScale }}
+                                                onClick={() => setIsSpotlightOpen(true)}
+                                                className="p-2 hover:bg-white/10 rounded-full transition-colors bg-black/20 backdrop-blur-md border border-white/10 shadow-lg"
+                                            >
+                                                <Search className="w-4 h-4 text-white/90" />
+                                            </motion.button>
+
+                                            <motion.button
+                                                style={{ scale: iconScale }}
+                                                whileTap={{ scale: 0.9 }}
+                                                onClick={() => {
+                                                    if (user?.id) {
+                                                        router.push(`/profile/${user.id}`);
+                                                    }
+                                                }}
+                                                className="w-8 h-8 rounded-full overflow-hidden border border-white/20 shadow-lg cursor-pointer hover:border-white/50 transition-colors ml-1"
+                                            >
+                                                <img src={user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100"} className="w-full h-full object-cover" alt="User Profile" />
+                                            </motion.button>
+                                        </div>
+                                    </div>
+                                </motion.header>
+                            }
                             user={user}
                             activePet={activePet}
                             isSosAlertDismissed={isSosAlertDismissed}
@@ -4635,22 +4591,19 @@ export default function MoffiSocialMasterpiece() {
                             <div className="absolute top-4 left-4 right-4 z-10 flex gap-1 h-0.5">
                                 {storyGroups[viewerStoryGroupIndex].stories.map((_, idx) => (
                                     <div key={idx} className="flex-1 bg-white/20 overflow-hidden rounded-full relative">
-                                        <div
-                                            className={cn(
-                                                "absolute top-0 left-0 bottom-0 bg-white",
-                                                idx === viewerStoryIndex && "shadow-[0_0_10px_white]"
-                                            )}
-                                            style={{
-                                                width: idx < viewerStoryIndex ? '100%' : idx === viewerStoryIndex ? `${storyProgress}%` : '0%',
-                                                transition: idx === viewerStoryIndex && !isStoryPaused ? 'width 50ms linear' : 'none'
-                                            }}
+                                                                                <StoryProgressBar 
+                                            isActive={idx === viewerStoryIndex} 
+                                            isCompleted={idx < viewerStoryIndex}
+                                            isPaused={isStoryPaused} 
+                                            onComplete={() => nextStory()} 
+                                            duration={6000} 
                                         />
                                     </div>
                                 ))}
                             </div>
 
                             {/* Top Header */}
-                            <div className="absolute top-8 left-4 right-4 z-10 flex justify-between items-center text-[var(--foreground)] drop-shadow-md">
+                            <div className="absolute top-8 left-4 right-4 z-30 flex justify-between items-center text-[var(--foreground)] drop-shadow-md">
                                 <div className="flex items-center gap-3">
                                     <img src={(storyGroups[viewerStoryGroupIndex].user_id === user?.id ? (user?.avatar || storyGroups[viewerStoryGroupIndex].author_avatar) : storyGroups[viewerStoryGroupIndex].author_avatar) || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200"} className="w-8 h-8 rounded-full border border-white/40 object-cover" />
                                     <span className="font-bold text-sm tracking-wide">{storyGroups[viewerStoryGroupIndex].author_name}</span>
@@ -4664,7 +4617,7 @@ export default function MoffiSocialMasterpiece() {
                                 <img
                                     key={storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].id}
                                     src={storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].media_url}
-                                    className="w-full h-full object-cover animate-in fade-in zoom-in-95 duration-300"
+                                    className="w-full h-full object-cover"
                                 />
 
                                 {/* Gradients */}
