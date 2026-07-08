@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const supabaseAdmin = (supabaseUrl && supabaseKey)
@@ -14,22 +17,55 @@ const supabaseAdmin = (supabaseUrl && supabaseKey)
  */
 export async function POST(req: Request) {
     try {
-        const { adId, reportedBy, reason, details } = await req.json();
+        const { adId, reason, details } = await req.json();
 
         if (!adId || !reason) {
             return NextResponse.json({ error: "adId and reason required" }, { status: 400 });
         }
 
-        if (!supabaseAdmin) {
-            return NextResponse.json({ error: "Server misconfiguration: Service role key missing" }, { status: 500 });
+        if (!supabaseAdmin || !supabaseUrl || !supabaseAnonKey) {
+            return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
         }
 
-        // Save report to adoption_reports table
+        // KİMLİK DOĞRULAMA (Kimliği belirsiz kişilerin şikayet etmesi engellendi)
+        const cookieStore = cookies();
+        const supabase = createServerClient(
+            supabaseUrl,
+            supabaseAnonKey,
+            {
+                cookies: {
+                    get(name: string) { return cookieStore.get(name)?.value; },
+                    set() {},
+                    remove() {}
+                },
+            }
+        );
+
+        const { data: { user }, error: authErr } = await supabase.auth.getUser();
+        
+        if (authErr || !user) {
+            console.error("[Adoption Report] Yetkisiz şikayet denemesi.");
+            return NextResponse.json({ error: "Oturum bulunamadı. Şikayet etmek için giriş yapmalısınız." }, { status: 401 });
+        }
+
+        // KULLANICI BAŞINA TEK ŞİKAYET KONTROLÜ (Brigading/Spam engellendi)
+        const { data: existingReport } = await supabaseAdmin
+            .from("adoption_reports")
+            .select("id")
+            .eq("ad_id", adId)
+            .eq("reported_by", user.id)
+            .single();
+
+        if (existingReport) {
+            return NextResponse.json({ error: "Bu ilanı zaten şikayet ettiniz." }, { status: 429 });
+        }
+
+        // Şikayeti kaydet
         const { error: reportError } = await supabaseAdmin
             .from("adoption_reports")
             .insert({
                 ad_id: adId,
-                reported_by: reportedBy || null,
+                reported_by: user.id, // Sadece doğrulanmış kullanıcı ID'si
                 reason,
                 details: details || null,
                 status: "pending",
