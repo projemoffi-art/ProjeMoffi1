@@ -59,14 +59,10 @@ export async function POST(req: Request) {
                 if (deal.max_uses && deal.current_uses >= deal.max_uses) {
                     return NextResponse.json({ error: 'Kupon limiti dolmuş.' }, { status: 400 });
                 }
-                // Ideally this should use an RPC function, but simple update for now:
-                // Note: RLS might block this if user is not business, so we need SERVICE_ROLE_KEY to increment securely.
                 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
                 if (supabaseServiceRoleKey) {
                     const adminSupabase = createServerClient(supabaseUrl, supabaseServiceRoleKey, { cookies: {} as any });
                     await adminSupabase.rpc('increment_deal_uses', { deal_id_param: deal_id }); 
-                    // Fallback to update if RPC not created yet:
-                    await adminSupabase.from('business_deals').update({ current_uses: deal.current_uses + 1 }).eq('id', deal_id);
                 }
             }
         }
