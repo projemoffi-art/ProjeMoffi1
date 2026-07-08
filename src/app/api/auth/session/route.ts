@@ -9,13 +9,11 @@ const supabaseAdmin = (supabaseUrl && supabaseKey)
     ? createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } })
     : null;
 
-const SESSION_SECRET = process.env.SESSION_SECRET;
-
-if (!SESSION_SECRET) {
-    throw new Error("SESSION_SECRET environment variable is required but missing.");
-}
-
 function signRole(role: string, userId: string): string {
+    const SESSION_SECRET = process.env.SESSION_SECRET;
+    if (!SESSION_SECRET) {
+        throw new Error("SESSION_SECRET environment variable is required but missing.");
+    }
     const payload = JSON.stringify({ role, userId });
     const base64Payload = Buffer.from(payload).toString("base64");
     const signature = crypto
