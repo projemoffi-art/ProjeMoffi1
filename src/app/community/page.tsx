@@ -2250,7 +2250,9 @@ export default function LegendaryLightDashboard() {
                     <div className="grid grid-cols-2 gap-3.5">
                         <QuickAccessBtn icon={Radio} title="Kayıp & Sahiplen" subtitle="İlan Merkezi" color="text-red-500" delay={0.1} onClick={() => router.push('/topluluk?tab=radar')} />
                         <QuickAccessBtn icon={Compass} title="Topluluk" subtitle="Moffi Kaşif Dünyası" color="text-blue-500" delay={0.2} onClick={() => router.push('/topluluk')} />
-                        <QuickAccessBtn icon={ShoppingBag} title="Moffi Market" subtitle="Online Alışveriş" color="text-rose-500" delay={0.3} onClick={() => window.open('https://moffi.net', '_blank')} />
+                        <QuickAccessBtn icon={Stethoscope} title="Moffi Vet" subtitle="Sağlık Asistanı" color="text-indigo-500" delay={0.3} onClick={() => router.push('/vet')} />
+                        <QuickAccessBtn icon={Syringe} title="Aşı & Takvim" subtitle="Sağlık Geçmişi" color="text-emerald-500" delay={0.4} onClick={() => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'health' } }))} />
+                        <QuickAccessBtn icon={ShoppingBag} title="Moffi Market" subtitle="Online Alışveriş" color="text-rose-500" delay={0.5} onClick={() => window.open('https://moffi.net', '_blank')} />
                         <QuickAccessBtn icon={Scissors} title="Bakım Merkezi" subtitle="Mama, Su ve Sağlık Hub" color="text-teal-600" delay={0.6} onClick={() => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'nutrition' } }))} />
                     </div>
                 </section>
