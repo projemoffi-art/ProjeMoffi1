@@ -62,13 +62,13 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const ADMIN_EMAIL = "admin@moffipet.com";
+const ADMIN_EMAIL = process.env.NODE_ENV !== 'production' ? "admin@moffipet.com" : null;
 
 const MOCK_USER_BASE = (email: string, name?: string): User => ({
     id: `user-${email.split('@')[0] || 'guest'}-${Date.now()}`,
     username: name || email.split('@')[0] || 'moffi_user',
     email: email,
-    role: email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? 'admin' : 'user',
+    role: (ADMIN_EMAIL && email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) ? 'admin' : 'user',
     avatar: undefined,
     bio: "Moffi Dünyasına yeni katıldı! 🐾",
     is_prime: false,

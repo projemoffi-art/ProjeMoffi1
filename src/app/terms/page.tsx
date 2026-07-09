@@ -52,7 +52,7 @@ export default function TermsPage() {
                     </h1>
                     <div className="flex items-center gap-4 text-gray-500">
                         <div className="h-px w-12 bg-gray-800" />
-                        <p className="text-[10px] font-black uppercase tracking-widest">{t('legal.last_updated')}: 06.05.2024</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest">{t('legal.last_updated')}: 09.07.2026</p>
                     </div>
                 </div>
 
@@ -100,7 +100,7 @@ export default function TermsPage() {
 
                 {/* Footer Footer */}
                 <div className="mt-40 pt-20 border-t border-card-border text-center">
-                    <p className="text-[10px] text-foreground font-black uppercase tracking-[0.5em] mb-10">{t('company.name')} Ecosystem © 2024</p>
+                    <p className="text-[10px] text-foreground font-black uppercase tracking-[0.5em] mb-10">{t('company.name')} Ecosystem © 2026</p>
                 </div>
             </motion.div>
         </div>

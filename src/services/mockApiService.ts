@@ -1218,7 +1218,7 @@ export class MockApiService implements IApiService {
     async uploadMedia(file: File, bucket: 'posts' | 'stories' | 'avatars' | 'sounds'): Promise<string> { 
         // 1. Check if Supabase is available
         const { supabase } = await import('../lib/supabase');
-        const isEnabled = process.env.NEXT_PUBLIC_DATA_SOURCE === 'supabase' || true; // Force cloud storage for media if available
+        const isEnabled = true; // Force cloud storage for media if available
 
         if (supabase && isEnabled) {
             try {

@@ -24,6 +24,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     const [email, setEmail] = useState('');
     const [name, setName] = useState('');
     const [password, setPassword] = useState('');
+    const [isAgeConsent, setIsAgeConsent] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
     
@@ -62,11 +63,22 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
         setErrorMsg('');
+        
+        if (!isAgeConsent) {
+            setErrorMsg('Lütfen yaş ve kullanım şartlarını kabul edin.');
+            return;
+        }
+
         setIsLoading(true);
 
         try {
             const { success, error } = await signup(name || email.split('@')[0], email, password);
-            if (error) throw new Error(error);
+            if (error) {
+                let msg = error;
+                if (msg.includes('user already registered')) msg = 'Bu e-posta zaten kullanımda. Giriş yapmayı denemek ister misin? 🔓';
+                if (msg.includes('Password should be')) msg = 'Şifre en az 6 karakter olmalı! 🔑';
+                throw new Error(msg);
+            }
             if (success) {
                 setStep('success');
                 setTimeout(() => {
@@ -317,6 +329,23 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                                                     className="w-full bg-white/5 border border-card-border rounded-2xl py-5 px-6 text-sm text-white placeholder-gray-700 focus:border-cyan-500/50 outline-none transition-all"
                                                 />
                                             </div>
+
+                                            {step === 'register' && (
+                                                <div className="flex items-start gap-3 mt-4">
+                                                    <div className="flex items-center h-5">
+                                                        <input 
+                                                            id="ageConsent" 
+                                                            type="checkbox" 
+                                                            checked={isAgeConsent}
+                                                            onChange={(e) => setIsAgeConsent(e.target.checked)}
+                                                            className="w-4 h-4 border border-card-border rounded bg-white/5 checked:bg-cyan-500 checked:border-cyan-500 focus:ring-cyan-500/50 focus:ring-offset-gray-900 transition-all cursor-pointer"
+                                                        />
+                                                    </div>
+                                                    <label htmlFor="ageConsent" className="text-[10px] text-gray-500 leading-tight cursor-pointer">
+                                                        En az 13 yaşında olduğumu, <a href="/terms" target="_blank" className="text-cyan-500 hover:underline">Kullanım Şartları</a>'nı ve <a href="/privacy" target="_blank" className="text-cyan-500 hover:underline">Gizlilik ile KVKK Aydınlatma Metni</a>'ni okuyup kabul ettiğimi onaylıyorum.
+                                                    </label>
+                                                </div>
+                                            )}
 
                                             {errorMsg && (
                                                 <motion.div 
