@@ -1,5 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
 const API_KEY = process.env.GEMINI_API_KEY || "";
 const genAI = API_KEY ? new GoogleGenerativeAI(API_KEY) : null;
@@ -13,6 +15,25 @@ export async function POST(req: Request) {
                 { error: "API Key not configured" },
                 { status: 500 }
             );
+        }
+
+        // KİMLİK DOĞRULAMA (Spam / Maliyet Engeli)
+        const cookieStore = cookies();
+        const supabase = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            {
+                cookies: {
+                    get(name: string) { return cookieStore.get(name)?.value; },
+                    set() {},
+                    remove() {}
+                }
+            }
+        );
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
         // Upgraded to Gemini 2.5 Flash Lite for stable quota and high availability
