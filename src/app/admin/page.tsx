@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
+import { apiService } from "@/services/apiService";
 import {
     Users, Plus, Zap, MessageSquare, AlertCircle,
     TrendingUp, Globe, Sparkles, Store, Dog, Building2, Map, Activity, Shield, Megaphone,
@@ -18,11 +19,6 @@ const GlassCard = ({ children, className, glowColor = "rgba(99, 102, 241, 0.1)" 
         "relative overflow-hidden bg-black/40 backdrop-blur-3xl border border-card-border rounded-[2.5rem] shadow-2xl",
         className
     )}>
-        {/* Ambient Glow */}
-        <div 
-            className="absolute -top-24 -right-24 w-64 h-64 blur-[100px] pointer-events-none rounded-full"
-            style={{ backgroundColor: glowColor }}
-        />
         <div className="relative z-10">{children}</div>
     </div>
 );
@@ -74,16 +70,39 @@ const StatPulse = ({ label, value, icon: Icon, color, trend, delay = 0 }: any) =
 );
 
 export default function MoffiCoreDashboard() {
-    const { user } = useAuth();
-    const [currentTime, setCurrentTime] = useState(new Date());
+    const { user, getAllUsers } = useAuth();
+    const [currentTime, setCurrentTime] = useState<Date | null>(null);
     const [stats, setStats] = useState({
-        users: 1240,
-        posts: 854,
-        feedbacks: 42,
-        sos: 3
+        users: 0,
+        posts: 0,
+        feedbacks: 0,
+        sos: 0
     });
 
     useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const [users, posts, lostPets, feedbacks] = await Promise.all([
+                    getAllUsers(),
+                    apiService.getFeedContent(),
+                    apiService.getLostPets(),
+                    apiService.getFeedbacks()
+                ]);
+                
+                setStats({
+                    users: users.length,
+                    posts: posts.length,
+                    feedbacks: feedbacks.length,
+                    sos: lostPets.length
+                });
+            } catch (error) {
+                console.error("Error fetching admin stats:", error);
+            }
+        };
+
+        fetchStats();
+
+        setCurrentTime(new Date());
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         
         // Real-time Moderation Listener (Cross-Tab Radio)
@@ -116,8 +135,6 @@ export default function MoffiCoreDashboard() {
         <div className="space-y-12 pb-32 max-w-7xl mx-auto px-4 lg:px-0">
             {/* --- CORE CONTROL HEADER --- */}
             <div className="relative group">
-                <div className="absolute -inset-10 bg-gradient-to-r from-indigo-500/10 via-cyan-500/10 to-purple-500/10 blur-[80px] opacity-50 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                
                 <div className="relative flex flex-col lg:flex-row lg:items-end justify-between gap-10">
                     <div className="space-y-6">
                         <div className="flex items-center gap-4 flex-wrap">
@@ -130,7 +147,7 @@ export default function MoffiCoreDashboard() {
                                 <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Admin Authorization: Valid</span>
                             </div>
                             <div className="text-[10px] font-mono text-white/20 uppercase tracking-widest">
-                                {currentTime.toLocaleTimeString()} • {currentTime.toLocaleDateString()}
+                                {currentTime ? `${currentTime.toLocaleTimeString()} • ${currentTime.toLocaleDateString()}` : "SYNCING TIMESTREAM..."}
                             </div>
                         </div>
 
@@ -155,7 +172,7 @@ export default function MoffiCoreDashboard() {
                         <motion.button 
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
-                            className="px-8 py-5 bg-card text-black rounded-[2rem] font-black text-sm shadow-[0_20px_60px_rgba(255,255,255,0.2)] flex items-center gap-3 transition-all hover:pr-10 group"
+                            className="px-8 py-5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-[2rem] font-black text-sm shadow-[0_20px_60px_rgba(99,102,241,0.2)] flex items-center gap-3 transition-all hover:pr-10 group"
                         >
                             <Megaphone className="w-5 h-5 transition-transform group-hover:-rotate-12" />
                             System Broadcast
@@ -265,7 +282,7 @@ export default function MoffiCoreDashboard() {
                             <div className="mt-16 space-y-4">
                                 <motion.button 
                                     whileHover={{ y: -5 }}
-                                    className="w-full py-5 bg-card text-black rounded-[1.5rem] font-black text-xs uppercase tracking-widest shadow-2xl transition-all"
+                                    className="w-full py-5 bg-white/10 hover:bg-white/20 border border-white/10 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest shadow-2xl transition-all"
                                 >
                                     Live SOS Interface
                                 </motion.button>

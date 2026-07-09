@@ -360,6 +360,9 @@ export interface IApiService {
     // Global Arena (Leaderboard)
     getLeaderboard(role: 'user' | 'business', limit?: number): Promise<any[]>;
     getUserRank(userId: string): Promise<number>;
+
+    // Feedbacks
+    getFeedbacks(): Promise<SystemFeedback[]>;
 }
 
 export interface SystemAnnouncement {
@@ -373,4 +376,14 @@ export interface SystemAnnouncement {
     cta_value: string;
     expires_at: string;
     created_at?: string;
+}
+
+export interface SystemFeedback {
+    id: string;
+    user_id: string;
+    username?: string;
+    content: string;
+    severity: 'low' | 'medium' | 'high';
+    status: 'new' | 'reviewed' | 'resolved';
+    created_at: string;
 }

@@ -1,7 +1,7 @@
 import { 
     Pet, Post, UserProfile, LostPet, AdoptionPet, LostPetSighting,
     ShopCategory, ShopProduct, ShopCartItem, ShopOrder, IApiService,
-    SystemAnnouncement
+    SystemAnnouncement, SystemFeedback
 } from './types';
 import { 
     MOCK_PETS, MOCK_LOST_PETS, MOCK_ADOPTIONS, 
@@ -1596,6 +1596,14 @@ export class MockApiService implements IApiService {
 
     async getUserRank(userId: string): Promise<number> {
         return 6;
+    }
+
+    async getFeedbacks(): Promise<SystemFeedback[]> {
+        return [
+            { id: 'f1', user_id: 'u1', username: 'Ali Veli', content: 'Uygulama çok yavaş açılıyor.', severity: 'medium', status: 'new', created_at: new Date().toISOString() },
+            { id: 'f2', user_id: 'u2', username: 'Ayşe Yılmaz', content: 'Harika bir sistem, teşekkürler.', severity: 'low', status: 'reviewed', created_at: new Date().toISOString() },
+            { id: 'f3', user_id: 'u3', username: 'Moffi Kliniği', content: 'KYB onayım hala bekliyor, yardım edin.', severity: 'high', status: 'new', created_at: new Date().toISOString() }
+        ];
     }
 }
 // Singleton instance for components that haven't migrated to the central services/apiService.ts yet

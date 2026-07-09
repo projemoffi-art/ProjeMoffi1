@@ -78,7 +78,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     if (!isAdmin) {
         return (
-            <div className="min-h-screen flex items-center justify-center p-6 text-center">
+            <div className="dark min-h-screen flex items-center justify-center p-6 text-center bg-[#050508] text-white">
                 <div className="max-w-md w-full bg-[#0A0A0E] border border-card-border p-10 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 blur-[50px] rounded-full" />
 
@@ -126,7 +126,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
 
     return (
-        <div className="min-h-screen flex font-sans selection:bg-indigo-500/30">
+        <div className="dark h-screen overflow-hidden flex font-sans selection:bg-indigo-500/30 bg-[#050508] text-white">
             {/* Mobile Sidebar Overlay */}
             {sidebarOpen && (
                 <div className="fixed inset-0 bg-black/80 z-40 lg:hidden backdrop-blur-md" onClick={() => setSidebarOpen(false)} />
@@ -134,7 +134,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
             {/* Sidebar (Command Center Style) */}
             <aside className={cn(
-                "fixed top-0 left-0 h-screen bg-[#0A0A0E] border-r border-card-border z-50 transition-all duration-300 flex flex-col overflow-hidden",
+                "fixed top-0 left-0 h-screen bg-[#0A0A0E] border-r border-card-border z-50 transition-all duration-300 flex flex-col",
                 sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
                 collapsed ? "lg:w-20" : "lg:w-72",
                 "w-72" // Mobile width
@@ -144,23 +144,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <div className="w-10 h-10 bg-gradient-to-tr from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-[0_0_20px_rgba(99,102,241,0.3)] flex-shrink-0 animate-pulse">
                         M
                     </div>
-                    {(!collapsed || (typeof window !== 'undefined' && window.innerWidth < 1024)) && (
-                        <div className={cn("flex flex-col", collapsed && "lg:hidden")}>
-                            <span className="font-black text-white text-lg leading-none tracking-tighter">MOFFI</span>
-                            <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mt-1">COMMAND</span>
-                        </div>
-                    )}
+                    <div className={cn("flex flex-col", collapsed && "lg:hidden")}>
+                        <span className="font-black text-white text-lg leading-none tracking-tighter">MOFFI</span>
+                        <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mt-1">COMMAND</span>
+                    </div>
                 </div>
 
                 {/* Navigation */}
                 <nav className="flex-1 px-4 py-4 space-y-8 overflow-y-auto no-scrollbar">
                     {MENU_GROUPS.map((group) => (
                         <div key={group.group} className="space-y-4">
-                            {(!collapsed || (typeof window !== 'undefined' && window.innerWidth < 1024)) && (
-                                <h3 className="px-4 text-[10px] font-black text-gray-600 uppercase tracking-[0.2em] mb-2">
-                                    {group.group}
-                                </h3>
-                            )}
+                            <h3 className={cn("px-4 text-[10px] font-black text-gray-600 uppercase tracking-[0.2em] mb-2", collapsed && "lg:hidden")}>
+                                {group.group}
+                            </h3>
                             <div className="space-y-1">
                                 {group.items.map((item) => {
                                     const isActive = pathname === item.path;
@@ -231,14 +227,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Main Content Area */}
             <main className={
                 cn(
-                    "flex-1 min-w-0 transition-all duration-500 relative",
+                    "flex-1 min-w-0 h-screen overflow-y-auto transition-all duration-500 relative",
                     collapsed ? "lg:ml-20" : "lg:ml-72"
                 )}>
-                {/* Background Blobs for Atmosphere */}
-                <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
-                    <div className="absolute top-[-10%] right-[0%] w-[40%] h-[40%] bg-indigo-600/5 blur-[120px] rounded-full" />
-                    <div className="absolute bottom-[-10%] left-[10%] w-[30%] h-[30%] bg-purple-600/5 blur-[120px] rounded-full" />
-                </div>
+                {/* Removed Background Blobs to fix fog cloud visual issue */}
 
                 {/* Mobile Header */}
                 <header className="lg:hidden bg-[#0A0A0E]/80 backdrop-blur-xl h-16 border-b border-card-border flex items-center px-6 justify-between sticky top-0 z-[100]">

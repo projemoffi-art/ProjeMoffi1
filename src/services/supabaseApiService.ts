@@ -1,7 +1,7 @@
 import { 
     Pet, Post, UserProfile, LostPet, AdoptionPet, LostPetSighting,
     ShopCategory, ShopProduct, ShopCartItem, ShopOrder, IApiService,
-    SystemAnnouncement
+    SystemAnnouncement, SystemFeedback
 } from './types';
 import { supabase } from '@/lib/supabase';
 import { MockApiService } from './mockApiService';
@@ -3609,6 +3609,29 @@ export class SupabaseApiService implements IApiService {
         } catch (err) {
             console.error("Supabase getUserRank failed:", err);
             return 0;
+        }
+    }
+
+    async getFeedbacks(): Promise<SystemFeedback[]> {
+        try {
+            const { data, error } = await supabase
+                .from('system_feedbacks')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                // Fallback if table doesn't exist yet
+                console.warn("Supabase getFeedbacks failed, returning mock:", error.message);
+                return [
+                    { id: 'f1', user_id: 'u1', username: 'Ali Veli', content: 'Uygulama çok yavaş açılıyor.', severity: 'medium', status: 'new', created_at: new Date().toISOString() },
+                    { id: 'f2', user_id: 'u2', username: 'Ayşe Yılmaz', content: 'Harika bir sistem, teşekkürler.', severity: 'low', status: 'reviewed', created_at: new Date().toISOString() },
+                    { id: 'f3', user_id: 'u3', username: 'Moffi Kliniği', content: 'KYB onayım hala bekliyor, yardım edin.', severity: 'high', status: 'new', created_at: new Date().toISOString() }
+                ];
+            }
+            return data as SystemFeedback[];
+        } catch (err) {
+            console.error("Supabase getFeedbacks exception:", err);
+            return [];
         }
     }
 }

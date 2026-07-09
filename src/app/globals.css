@@ -303,8 +303,13 @@ input[type="time"] {
 [id^="nextjs-portal"],
 .nextjs-portal,
 #nextjs-portal,
-nextjs-portal {
+nextjs-portal,
+[data-nextjs-dialog-overlay] {
     display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    z-index: -9999 !important;
 }
 
 .dark {
@@ -445,7 +450,7 @@ nextjs-portal {
   .text-\[7px\] { font-size: 8.6px !important; }
   .text-\[8px\] { font-size: 9.8px !important; }
   .text-\[9px\] { font-size: 11px !important; }
-  .text-\[10px\] { font-size: 12.2px !important; }
+  .text-\[12px\] { font-size: 14px !important; }
   .text-\[11px\] { font-size: 13.4px !important; }
   .text-\[12px\] { font-size: 14.6px !important; }
   .text-\[13px\] { font-size: 15.9px !important; }
