@@ -111,23 +111,6 @@ export async function middleware(request: NextRequest) {
                 }
             }
 
-            // Bakım Modu Kontrolü
-            const { data: settingsData } = await supabase
-                .from('platform_settings')
-                .select('value')
-                .eq('key', 'general')
-                .single();
-
-            if (settingsData && settingsData.value && settingsData.value.maintenanceMode === true) {
-                // Sadece adminler bakım modunu geçebilir
-                if (role !== 'admin' && pathname !== '/maintenance') {
-                    return NextResponse.redirect(new URL("/maintenance", request.url));
-                }
-            } else if (pathname === '/maintenance') {
-                // Bakım modu bittiyse ve kullanıcı bakım sayfasındaysa anasayfaya yönlendir
-                return NextResponse.redirect(new URL("/", request.url));
-            }
-
         } catch (e) {
             console.error("[Middleware] Supabase SSR authentication error:", e);
         }
@@ -146,6 +129,35 @@ export async function middleware(request: NextRequest) {
             } else {
                 console.warn(`[Middleware] Tampered or invalid session cookie detected for ${pathname}`);
             }
+        }
+    }
+
+    // Bakım Modu Kontrolü (Roller tamamen belli olduktan sonra yapılır)
+    if (isSupabaseEnabled) {
+        try {
+            const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+                cookies: {
+                    getAll() { return request.cookies.getAll(); },
+                    setAll() { } // Readonly
+                }
+            });
+            const { data: settingsData } = await supabase
+                .from('platform_settings')
+                .select('value')
+                .eq('key', 'general')
+                .single();
+
+            if (settingsData && settingsData.value && settingsData.value.maintenanceMode === true) {
+                // Sadece adminler bakım modunu geçebilir
+                if (role !== 'admin' && pathname !== '/maintenance') {
+                    return NextResponse.redirect(new URL("/maintenance", request.url));
+                }
+            } else if (pathname === '/maintenance') {
+                // Bakım modu bittiyse ve kullanıcı bakım sayfasındaysa anasayfaya yönlendir
+                return NextResponse.redirect(new URL("/", request.url));
+            }
+        } catch (e) {
+            console.error("[Middleware] Platform settings lookup failed:", e);
         }
     }
 
