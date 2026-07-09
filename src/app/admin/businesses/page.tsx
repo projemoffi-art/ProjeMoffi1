@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Building2, Search, CheckCircle2, Shield, MoreHorizontal, Loader2 } from "lucide-react";
+import { Building2, Search, CheckCircle2, Shield, Loader2, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { useState, useEffect } from "react";
@@ -74,13 +74,16 @@ export default function BusinessesPage() {
                     </div>
                 </div>
 
+                <div className="flex items-center gap-2 mb-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl text-blue-400 text-xs font-bold">
+                    <Info className="w-4 h-4 flex-shrink-0" />
+                    <p>Not: İşletme başvuru onayı veya red işlemleri detaylı inceleme gerektirdiği için 'Kullanıcılar' panelindeki KYB Modal'ı üzerinden yapılmaktadır.</p>
+                </div>
+
                 <div className="w-full text-left border-collapse">
-                    <div className="grid grid-cols-5 text-[10px] font-black text-white/40 uppercase tracking-widest pb-4 border-b border-white/10">
+                    <div className="grid grid-cols-4 text-[10px] font-black text-white/40 uppercase tracking-widest pb-4 border-b border-white/10">
                         <div className="col-span-2">İşletme Adı</div>
                         <div>Kategori</div>
                         <div>Abonelik</div>
-                        <div className="text-right">İşlem</div>
-                    </div>
                     </div>
                     {isLoading ? (
                         <div className="flex justify-center items-center py-10">
@@ -98,7 +101,7 @@ export default function BusinessesPage() {
                             const status = biz.kybStatus === 'approved' ? 'active' : biz.kybStatus === 'pending' ? 'pending' : 'suspended';
                             
                             return (
-                                <div key={biz.id} className="grid grid-cols-5 items-center py-4 border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer group">
+                                <div key={biz.id} className="grid grid-cols-4 items-center py-4 border-b border-white/5 hover:bg-white/5 transition-colors group">
                                     <div className="col-span-2 flex items-center gap-4">
                                         <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
                                             <Shield className="w-4 h-4 text-white/40" />
@@ -121,11 +124,6 @@ export default function BusinessesPage() {
                                         )}>
                                             {tier}
                                         </span>
-                                    </div>
-                                    <div className="flex justify-end">
-                                        <button className="p-2 text-white/40 hover:text-white transition-colors">
-                                            <MoreHorizontal className="w-5 h-5" />
-                                        </button>
                                     </div>
                                 </div>
                             );

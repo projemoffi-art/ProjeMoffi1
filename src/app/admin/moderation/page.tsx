@@ -8,6 +8,7 @@ import {
     ChevronRight, Filter, Info, Trash2, Check, AlertTriangle, MousePointer2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
 
 type AdStatus = "pending" | "active" | "removed" | "all";
 
@@ -43,74 +44,54 @@ export default function ModerationMatrix() {
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
-        // MOCK: Simulate data fetch
-        setTimeout(() => {
-            const mockAds = [
-                { id: "ad-1", name: "Pamuk", breed: "Golden", status: "pending", author_name: "MoffiOfficial", created_at: new Date().toISOString(), location: "İstanbul", desc: "Çok uysal bir Golden, yeni yuvasını bekliyor." },
-                { id: "ad-2", name: "Milo", breed: "Tekir", status: "active", author_name: "Ayşe", created_at: new Date().toISOString(), location: "İzmir", desc: "Sokakta bulduğumuz Milo'yu sahiplendirmek istiyoruz." },
-                { id: "ad-3", name: "Zeytin", breed: "Siyam", status: "removed", author_name: "Can", created_at: new Date().toISOString(), location: "Ankara", desc: "Siyam kedisi Zeytin için ilan." }
-            ];
-            
-            // Read from local storage
-            let storedReports = [];
-            if (typeof window !== 'undefined') {
-                const stored = localStorage.getItem('moffi_reports');
-                if (stored) {
-                    storedReports = JSON.parse(stored);
-                } else {
-                    // Seed initial reports
-                    const defaultReports = [
-                        {
-                            id: "rep-post-1",
-                            targetType: "post",
-                            targetId: "post-mock-1",
-                            content: "Cocker Spaniel cinsi köpeğimi aşı masrafları karşılığında 5000 TL'ye sahiplendiriyorum. İlgilenenler acil ulaşsın.",
-                            authorName: "Kemal34",
-                            reportedBy: "Mehmet",
-                            reason: "fee_request",
-                            details: "Açıkça para talep ediliyor, platform kurallarına aykırı.",
-                            status: "pending",
-                            created_at: new Date().toISOString()
-                        },
-                        {
-                            id: "rep-comment-1",
-                            targetType: "comment",
-                            targetId: 102,
-                            postId: "post-mock-2",
-                            content: "Sizin yapacağınız işi s...yim, rezil herifler!",
-                            authorName: "ÖfkeliPati",
-                            reportedBy: "Selin",
-                            reason: "toxic",
-                            details: "Küfür ve hakaret içeriyor.",
-                            status: "pending",
-                            created_at: new Date().toISOString()
-                        },
-                        {
-                            id: "rep-post-2",
-                            targetType: "post",
-                            targetId: "post-mock-3",
-                            content: "KOLAY YOLDAN PARA KAZANMAK İSTER MİSİNİZ? AŞAĞIDAKİ WHATSAPP LİNKİNE TIKLAYIN wa.me/905320000000 HEDİYELERİ KAÇIRMAYIN!!!",
-                            authorName: "SpamBot",
-                            reportedBy: "Ali",
-                            reason: "spam",
-                            details: "Tamamen spam reklam içeriyor.",
-                            status: "pending",
-                            created_at: new Date().toISOString()
-                        }
-                    ];
-                    localStorage.setItem('moffi_reports', JSON.stringify(defaultReports));
-                    storedReports = defaultReports;
-                }
-            }
-            
-            setAds(mockAds);
-            setReports(storedReports);
+        try {
+            const { data: adsData, error: adsError } = await supabase
+                .from('adoption_pets')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (adsError) throw adsError;
+
+            const { data: reportsData, error: reportsError } = await supabase
+                .from('adoption_reports')
+                .select('*, adoption_pets(name, breed)')
+                .order('created_at', { ascending: false });
+
+            if (reportsError) throw reportsError;
+
+            // Map data to UI expectations if necessary
+            const realAds = (adsData || []).map(ad => ({
+                id: ad.id,
+                name: ad.name,
+                breed: ad.breed,
+                status: ad.status || 'pending',
+                author_name: ad.user_id ? 'User' : 'Unknown', // Ideally join users table, mock for now
+                created_at: ad.created_at,
+                location: ad.location || 'Bilinmiyor',
+                desc: ad.description || ''
+            }));
+
+            const realReports = (reportsData || []).map(r => ({
+                id: r.id,
+                targetType: 'post',
+                targetId: r.ad_id,
+                content: `İlan: ${(r as any).adoption_pets?.name || 'Bilinmiyor'} (${(r as any).adoption_pets?.breed || 'Bilinmiyor'})`,
+                authorName: 'System', 
+                reportedBy: r.reported_by || 'Anonim',
+                reason: r.reason,
+                details: r.details,
+                status: r.status || 'pending',
+                created_at: r.created_at
+            }));
+
+            setAds(realAds);
+            setReports(realReports);
             
             // Recalculate stats
-            const pendingAdsCount = mockAds.filter(a => a.status === 'pending').length;
-            const activeAdsCount = mockAds.filter(a => a.status === 'active').length;
-            const removedAdsCount = mockAds.filter(a => a.status === 'removed').length;
-            const pendingReportsCount = storedReports.filter(r => r.status === 'pending').length;
+            const pendingAdsCount = realAds.filter(a => a.status === 'pending').length;
+            const activeAdsCount = realAds.filter(a => a.status === 'active').length;
+            const removedAdsCount = realAds.filter(a => a.status === 'removed').length;
+            const pendingReportsCount = realReports.filter(r => r.status === 'pending').length;
             
             setStats({
                 pending: pendingAdsCount,
@@ -118,76 +99,58 @@ export default function ModerationMatrix() {
                 removed: removedAdsCount,
                 reports: pendingReportsCount
             });
+        } catch (err) {
+            console.error("Error fetching moderation data:", err);
+            showToast("Veri çekme hatası", "error");
+        } finally {
             setIsLoading(false);
-        }, 800);
+        }
     }, []);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
     const handleAction = async (adId: string, newStatus: "active" | "removed") => {
-        setAds(prev => prev.map(a => a.id === adId ? { ...a, status: newStatus } : a));
-        // Update stats
-        setStats(prev => ({
-            ...prev,
-            pending: Math.max(0, prev.pending - (ads.find(a => a.id === adId)?.status === 'pending' ? 1 : 0)),
-            [newStatus]: prev[newStatus] + 1
-        }));
-        showToast(newStatus === "active" ? "Protocol Synced: Ad Approved" : "Protocol Synced: Ad Removed");
-        setSelectedAd(null);
+        try {
+            await supabase.from('adoption_pets').update({ status: newStatus }).eq('id', adId);
+            
+            setAds(prev => prev.map(a => a.id === adId ? { ...a, status: newStatus } : a));
+            // Update stats
+            setStats(prev => ({
+                ...prev,
+                pending: Math.max(0, prev.pending - (ads.find(a => a.id === adId)?.status === 'pending' ? 1 : 0)),
+                [newStatus]: prev[newStatus] + 1
+            }));
+            showToast(newStatus === "active" ? "Protocol Synced: Ad Approved" : "Protocol Synced: Ad Removed");
+            setSelectedAd(null);
+        } catch (err) {
+            console.error("Failed to update ad status", err);
+            showToast("Hata oluştu", "error");
+        }
     };
 
     const handleReportAction = async (reportId: string, action: 'removed' | 'dismissed') => {
         let reportToProcess = reports.find(r => r.id === reportId);
         if (!reportToProcess) return;
 
-        // If 'removed', remove the content from the platform
-        if (action === 'removed') {
-            if (reportToProcess.targetType === 'post') {
-                try {
-                    const { apiService } = await import("@/services/apiService");
-                    await apiService.deletePost(reportToProcess.targetId);
-                } catch (err) {
-                    console.error("Failed to delete post via apiService, trying fallback", err);
-                    try {
-                        const savedPosts = JSON.parse(localStorage.getItem('feed_posts') || '[]');
-                        const updatedPosts = savedPosts.filter((p: any) => String(p.id) !== String(reportToProcess.targetId));
-                        localStorage.setItem('feed_posts', JSON.stringify(updatedPosts));
-                        window.dispatchEvent(new Event('moffi_posts_changed'));
-                    } catch {}
-                }
-            } else if (reportToProcess.targetType === 'comment') {
-                try {
-                    const savedPosts = JSON.parse(localStorage.getItem('feed_posts') || '[]');
-                    const updatedPosts = savedPosts.map((p: any) => {
-                        if (String(p.id) === String(reportToProcess.postId)) {
-                            const updatedComments = (p.commentsList || []).filter((c: any) => Number(c.id) !== Number(reportToProcess.targetId));
-                            return { ...p, commentsList: updatedComments };
-                        }
-                        return p;
-                    });
-                    localStorage.setItem('feed_posts', JSON.stringify(updatedPosts));
-                    window.dispatchEvent(new Event('moffi_posts_changed'));
-                } catch (err) {
-                    console.error("Failed to delete comment from local posts", err);
-                }
-            }
+        try {
+            await supabase.from('adoption_reports').update({ status: action }).eq('id', reportId);
+
+            // Update the report status
+            const updatedReports = reports.map(r => r.id === reportId ? { ...r, status: action } : r);
+            setReports(updatedReports);
+
+            // Recalculate stats
+            setStats(prev => ({
+                ...prev,
+                reports: Math.max(0, prev.reports - (reportToProcess.status === 'pending' ? 1 : 0))
+            }));
+
+            showToast(action === 'removed' ? "İçerik Yayından Kaldırıldı" : "Rapor Yoksayıldı");
+            setSelectedReport(null);
+        } catch (err) {
+            console.error("Failed to update report status", err);
+            showToast("Hata oluştu", "error");
         }
-
-        // Update the report status
-        const updatedReports = reports.map(r => r.id === reportId ? { ...r, status: action } : r);
-        setReports(updatedReports);
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('moffi_reports', JSON.stringify(updatedReports));
-        }
-
-        // Recalculate stats
-        setStats(prev => ({
-            ...prev,
-            reports: Math.max(0, prev.reports - (reportToProcess.status === 'pending' ? 1 : 0))
-        }));
-
-        showToast(action === 'removed' ? "İçerik Yayından Kaldırıldı" : "Rapor Yoksayıldı");
-        setSelectedReport(null);
     };
 
     const filteredAds = ads.filter(ad => {

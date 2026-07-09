@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import {
     Sliders, Percent, Banknote, Shield, ToggleLeft, ToggleRight,
@@ -29,6 +30,19 @@ export default function AdminPlatformSettingsPage() {
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
 
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function loadSettings() {
+            const { data, error } = await supabase.from('platform_settings').select('value').eq('key', 'general').single();
+            if (data && data.value) {
+                setSettings({ ...DEFAULT_SETTINGS, ...data.value });
+            }
+            setLoading(false);
+        }
+        loadSettings();
+    }, []);
+
     const update = <K extends keyof typeof settings>(key: K, value: typeof settings[K]) => {
         setSettings(prev => ({ ...prev, [key]: value }));
         setSaved(false);
@@ -42,9 +56,19 @@ export default function AdminPlatformSettingsPage() {
         setSaved(false);
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         setSaving(true);
-        setTimeout(() => { setSaving(false); setSaved(true); }, 1200);
+        const { error } = await supabase
+            .from('platform_settings')
+            .upsert({ key: 'general', value: settings });
+        
+        setSaving(false);
+        if (!error) {
+            setSaved(true);
+            setTimeout(() => setSaved(false), 3000);
+        } else {
+            alert('Ayarlar kaydedilirken hata oluştu.');
+        }
     };
 
     return (

@@ -13,14 +13,47 @@ const GlassCard = ({ children, className }: any) => (
     </div>
 );
 
-const MOCK_PARKS = [
-    { name: "Yoğurtçu Parkı", active: 24, status: "high" },
-    { name: "Moda Sahili", active: 15, status: "medium" },
-    { name: "Caddebostan Sahil", active: 42, status: "high" },
-    { name: "Maçka Parkı", active: 8, status: "low" },
-];
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+
+interface Park {
+    id: string;
+    name: string;
+    latitude: number;
+    longitude: number;
+    type: string;
+    active: number;
+    status: 'low' | 'medium' | 'high';
+}
 
 export default function ActivityPage() {
+    const [parks, setParks] = useState<Park[]>([]);
+
+    useEffect(() => {
+        async function loadData() {
+            const { data: locations } = await supabase.from('activity_locations').select('*');
+            if (locations) {
+                const parksWithCounts = await Promise.all(locations.map(async (loc: any) => {
+                    const { data: count } = await supabase.rpc('get_active_users_at_location', {
+                        loc_lat: loc.latitude,
+                        loc_lng: loc.longitude,
+                        radius_km: 2.0 // 2km yarıçap
+                    });
+                    
+                    const activeCount = count || 0;
+                    let status: 'low' | 'medium' | 'high' = 'low';
+                    if (activeCount > 20) status = 'high';
+                    else if (activeCount > 5) status = 'medium';
+
+                    return { ...loc, active: activeCount, status };
+                }));
+                
+                parksWithCounts.sort((a, b) => b.active - a.active);
+                setParks(parksWithCounts);
+            }
+        }
+        loadData();
+    }, []);
     return (
         <div className="space-y-12 pb-32 max-w-7xl mx-auto px-4 lg:px-0">
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
@@ -56,8 +89,8 @@ export default function ActivityPage() {
                     <GlassCard className="p-6">
                         <h4 className="text-white font-black uppercase tracking-widest mb-6">Aktif Bölgeler</h4>
                         <div className="space-y-4">
-                            {MOCK_PARKS.map((park, i) => (
-                                <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
+                            {parks.map((park) => (
+                                <div key={park.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
                                     <div className="flex items-center gap-3">
                                         <div className={cn("w-2 h-2 rounded-full", park.status === 'high' ? "bg-rose-500" : park.status === 'medium' ? "bg-amber-500" : "bg-emerald-500")} />
                                         <span className="text-sm font-bold text-white">{park.name}</span>

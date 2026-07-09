@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { MOCK_TRANSACTIONS, MOCK_ORDERS, MOCK_APPLICATIONS } from "@/data/mockBusinessRegistry";
+import { useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import {
     Wallet, TrendingUp, TrendingDown, DollarSign, Building2,
@@ -10,36 +10,67 @@ import {
 import { motion } from "framer-motion";
 
 export default function AdminPlatformFinancePage() {
-    const allTx = MOCK_TRANSACTIONS;
-    const allOrders = MOCK_ORDERS;
-    const approvedBiz = MOCK_APPLICATIONS.filter(a => a.status === 'approved');
+    const [orders, setOrders] = useState<any[]>([]);
+    const [activeBusinesses, setActiveBusinesses] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchFinanceData = async () => {
+            try {
+                // Fetch orders
+                const { data: ordersData } = await supabase
+                    .from('orders')
+                    .select('*, order_items(*)')
+                    .order('created_at', { ascending: false });
+                
+                // Fetch approved businesses
+                const { data: profilesData } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('kybStatus', 'approved');
+
+                setOrders(ordersData || []);
+                setActiveBusinesses(profilesData || []);
+            } catch (err) {
+                console.error("Error fetching finance data:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchFinanceData();
+    }, []);
 
     const summary = useMemo(() => {
-        const totalGMV = allOrders.filter(o => o.status !== 'cancelled').reduce((s, o) => s + o.totalAmount, 0);
-        const totalCommission = Math.abs(allTx.filter(t => t.type === 'commission').reduce((s, t) => s + t.amount, 0));
-        const totalPayouts = Math.abs(allTx.filter(t => t.type === 'payout').reduce((s, t) => s + t.amount, 0));
-        const totalRefunds = Math.abs(allTx.filter(t => t.type === 'refund').reduce((s, t) => s + t.amount, 0));
-        const platformRevenue = totalCommission - totalRefunds * 0.1; // Commission minus refund commissions
-        const pendingPayouts = allTx.filter(t => t.type === 'sale' && t.status === 'pending').reduce((s, t) => s + t.amount, 0) * 0.9;
-        return { totalGMV, totalCommission, totalPayouts, totalRefunds, platformRevenue, pendingPayouts, activeBiz: approvedBiz.length };
-    }, [allTx, allOrders, approvedBiz]);
+        const totalGMV = orders.filter(o => o.status !== 'cancelled').reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
+        // Varsayılan hesaplamalar (gerçek transaction tablosu gelene kadar)
+        const totalCommission = totalGMV * 0.10; // %10 komisyon varsayımı
+        const totalRefunds = orders.filter(o => o.status === 'cancelled').reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
+        const platformRevenue = totalCommission; 
+        const totalPayouts = totalGMV - totalCommission; 
+        const pendingPayouts = orders.filter(o => o.status === 'pending').reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0) * 0.9;
+        
+        return { 
+            totalGMV, 
+            totalCommission, 
+            totalPayouts, 
+            totalRefunds, 
+            platformRevenue, 
+            pendingPayouts, 
+            activeBiz: activeBusinesses.length 
+        };
+    }, [orders, activeBusinesses]);
 
-    // Per-business breakdown
+    // Per-business breakdown (orders tablosunda işletme id yoksa genel gösteriyoruz, varsa eşleştirilebilir)
     const businessBreakdown = useMemo(() => {
         const map = new Map<string, { name: string; orders: number; gmv: number; commission: number; payouts: number }>();
-        MOCK_APPLICATIONS.filter(a => a.status === 'approved').forEach(a => {
-            map.set(a.id, { name: a.businessName, orders: 0, gmv: 0, commission: 0, payouts: 0 });
+        activeBusinesses.forEach(biz => {
+            map.set(biz.id, { name: biz.username || biz.email || 'İşletme', orders: 0, gmv: 0, commission: 0, payouts: 0 });
         });
-        allOrders.forEach(o => {
-            const biz = map.get(o.businessId);
-            if (biz && o.status !== 'cancelled') { biz.orders++; biz.gmv += o.totalAmount; biz.commission += o.commission; }
-        });
-        allTx.filter(t => t.type === 'payout').forEach(t => {
-            const biz = map.get(t.businessId);
-            if (biz) biz.payouts += Math.abs(t.amount);
-        });
+        
+        // Şimdilik işletme bağlantısı olmadığı için siparişleri genel gösteriyoruz veya rastgele atayabiliriz.
+        // Gerçek implementasyonda order_items içindeki product'ın satıcısına göre dağıtılmalı.
         return Array.from(map.values()).sort((a, b) => b.gmv - a.gmv);
-    }, [allOrders, allTx]);
+    }, [activeBusinesses, orders]);
 
     return (
         <div>

@@ -110,6 +110,24 @@ export async function middleware(request: NextRequest) {
                     console.error("[Middleware] Database profile role lookup failed:", dbError);
                 }
             }
+
+            // Bakım Modu Kontrolü
+            const { data: settingsData } = await supabase
+                .from('platform_settings')
+                .select('value')
+                .eq('key', 'general')
+                .single();
+
+            if (settingsData && settingsData.value && settingsData.value.maintenanceMode === true) {
+                // Sadece adminler bakım modunu geçebilir
+                if (role !== 'admin' && pathname !== '/maintenance') {
+                    return NextResponse.redirect(new URL("/maintenance", request.url));
+                }
+            } else if (pathname === '/maintenance') {
+                // Bakım modu bittiyse ve kullanıcı bakım sayfasındaysa anasayfaya yönlendir
+                return NextResponse.redirect(new URL("/", request.url));
+            }
+
         } catch (e) {
             console.error("[Middleware] Supabase SSR authentication error:", e);
         }
@@ -163,7 +181,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
     matcher: [
-        "/admin/:path*",
-        "/business/:path*"
+        "/((?!api|_next/static|_next/image|favicon.ico|images).*)",
     ]
 };

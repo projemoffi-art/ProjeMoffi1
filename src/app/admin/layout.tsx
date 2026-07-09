@@ -36,7 +36,6 @@ const MENU_GROUPS = [
         group: "COMMERCE",
         items: [
             { title: "Market & Mağaza", icon: Store, path: "/admin/market" },
-            { title: "Sahiplendirme", icon: PawPrint, path: "/admin/adoption" },
             { title: "Moffi Studio", icon: Palette, path: "/admin/studio" },
         ]
     },

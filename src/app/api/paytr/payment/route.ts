@@ -127,6 +127,18 @@ export async function POST(req: Request) {
         let orderId = "mock-order-" + Math.floor(Math.random() * 1000000);
 
         if (!isMock && supabaseAdmin) {
+            // Fetch platform settings for commission
+            let commissionRate = 10;
+            const { data: settingsData } = await supabaseAdmin
+                .from('platform_settings')
+                .select('value')
+                .eq('key', 'general')
+                .single();
+            if (settingsData && settingsData.value && typeof settingsData.value.commissionRate === 'number') {
+                commissionRate = settingsData.value.commissionRate;
+            }
+            const commissionAmount = Number(((amount * commissionRate) / 100).toFixed(2));
+
             // 1. Create a pending order in the Supabase database
             const fullAddress = `${address.name} ${address.surname}, Tel: ${address.phone}, Adres: ${address.detail}`;
             const { data: order, error: orderErr } = await supabaseAdmin
@@ -135,7 +147,9 @@ export async function POST(req: Request) {
                     user_id: userId,
                     total_amount: amount,
                     shipping_address: fullAddress,
-                    status: "pending"
+                    status: "pending",
+                    commission_rate: commissionRate,
+                    commission_amount: commissionAmount
                 })
                 .select()
                 .single();

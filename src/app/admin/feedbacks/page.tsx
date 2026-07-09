@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useEffect, useState } from "react";
 import { Star, MessageSquare, Clock, Search, Trash2, CheckCircle, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
 
 export default function AdminFeedbacksPage() {
     const { user } = useAuth();
@@ -13,37 +14,36 @@ export default function AdminFeedbacksPage() {
     const [filterCategory, setFilterCategory] = useState<string>("all");
 
     useEffect(() => {
-        // MOCK: Initial mock data
-        const mockFeedbacks = [
-            {
-                id: "fb-1",
-                rating: 5,
-                category: "positive",
-                comment: "Harika bir uygulama, tasarımı çok kaliteli!",
-                created_at: new Date().toISOString(),
-                profiles: { username: "MoffiOfficial", avatar_url: "https://images.unsplash.com/photo-1628157588553-5eeea00af15c?q=80&w=200" }
-            },
-            {
-                id: "fb-2",
-                rating: 2,
-                category: "bug",
-                comment: "Giriş yaparken hata alıyorum.",
-                created_at: new Date().toISOString(),
-                profiles: { username: "Milo_Admin", avatar_url: "https://images.unsplash.com/photo-1543852786-1cf6624b9987?q=80&w=200" }
+        const fetchFeedbacks = async () => {
+            try {
+                const { data } = await supabase
+                    .from('app_feedbacks')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                setFeedbacks(data || []);
+            } catch (err) {
+                console.error("Error fetching feedbacks:", err);
+            } finally {
+                setLoading(false);
             }
-        ];
-        setFeedbacks(mockFeedbacks);
-        setLoading(false);
+        };
+        fetchFeedbacks();
     }, []);
 
-    const deleteFeedback = (id: string) => {
+    const deleteFeedback = async (id: string) => {
         if (!confirm("Bu geri bildirimi silmek istediğinize emin misiniz?")) return;
-        setFeedbacks(feedbacks.filter(f => f.id !== id));
+        try {
+            await supabase.from('app_feedbacks').delete().eq('id', id);
+            setFeedbacks(feedbacks.filter(f => f.id !== id));
+        } catch (err) {
+            console.error("Failed to delete feedback:", err);
+            alert("Silme işlemi başarısız oldu.");
+        }
     };
 
     const filteredFeedbacks = feedbacks.filter(f => {
-        const matchesSearch = (f.profiles?.username || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (f.comment || "").toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = (f.email || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (f.message || "").toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCategory = filterCategory === "all" || f.category === filterCategory;
         return matchesSearch && matchesCategory;
     });
@@ -136,7 +136,7 @@ export default function AdminFeedbacksPage() {
                                 <div className="flex items-center gap-4">
                                     <div className="relative">
                                         <img
-                                            src={fb.profiles?.avatar_url || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200"}
+                                            src={"https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200"}
                                             className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-md"
                                         />
                                         <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-card rounded-lg flex items-center justify-center shadow-moffi-card">
@@ -144,7 +144,7 @@ export default function AdminFeedbacksPage() {
                                         </div>
                                     </div>
                                     <div>
-                                        <h4 className="font-black text-foreground">@{fb.profiles?.username || 'Anonim'}</h4>
+                                        <h4 className="font-black text-foreground">@{fb.email ? fb.email.split('@')[0] : 'Anonim'}</h4>
                                         <p className="text-xs text-gray-400 font-medium flex items-center gap-1">
                                             <Clock className="w-3 h-3" />
                                             {new Date(fb.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -160,7 +160,7 @@ export default function AdminFeedbacksPage() {
 
                             <div className="bg-gray-50/50 rounded-3xl p-6 border border-card-border group-hover:bg-indigo-50/30 transition-colors h-32 overflow-y-auto no-scrollbar">
                                 <p className="text-foreground leading-relaxed font-medium">
-                                    {fb.comment || <span className="italic text-gray-400">Yorum yapılmadı.</span>}
+                                    {fb.message || <span className="italic text-gray-400">Yorum yapılmadı.</span>}
                                 </p>
                             </div>
 
