@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
     Search, MapPin, Star, Calendar, CreditCard,
@@ -58,8 +58,9 @@ function validateLuhn(cardNumber: string): boolean {
     return sum % 10 === 0;
 }
 
-export default function VetPage() {
+function VetPageContent() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { activePet } = usePet();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
@@ -232,10 +233,9 @@ export default function VetPage() {
 
     // Deep Linking query parameter listener
     useEffect(() => {
-        if (typeof window !== 'undefined' && !isLoading && allClinics.length > 0) {
-            const params = new URLSearchParams(window.location.search);
-            const openModal = params.get('open');
-            const targetClinicId = params.get('clinicId');
+        if (!isLoading && allClinics.length > 0 && searchParams) {
+            const openModal = searchParams.get('open');
+            const targetClinicId = searchParams.get('clinicId');
             
             if (openModal === 'vaccine') {
                 setActiveModal('vaccine');
@@ -251,7 +251,7 @@ export default function VetPage() {
                 }
             }
         }
-    }, [isLoading, allClinics]);
+    }, [isLoading, allClinics, searchParams]);
 
     // Appointment Form States
     const [selectedDate, setSelectedDate] = useState<string>("");
@@ -1498,5 +1498,17 @@ export default function VetPage() {
                     <PhoneCall className="w-5 h-5 animate-pulse" />
                 </motion.button>
         </div>
+    );
+}
+
+export default function VetPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-[#f8f9fc] dark:bg-[#09090b] flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full border-4 border-indigo-500 border-t-transparent animate-spin" />
+            </div>
+        }>
+            <VetPageContent />
+        </Suspense>
     );
 }
