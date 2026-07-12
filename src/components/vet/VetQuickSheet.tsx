@@ -11,7 +11,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useVet } from "@/hooks/useVet";
 import { useVaccineSchedule } from "@/hooks/useVaccineSchedule";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useTheme } from "@/context/ThemeContext";
 
 interface VetQuickSheetProps {
@@ -23,6 +23,16 @@ interface VetQuickSheetProps {
 export function VetQuickSheet({ isOpen, onClose, petId = "pet-1" }: VetQuickSheetProps) {
     const { theme } = useTheme();
     const router = useRouter();
+    const pathname = usePathname();
+
+    const handleOpenModal = (modalName: string) => {
+        if (pathname === '/vet') {
+            window.dispatchEvent(new CustomEvent('openVetModal', { detail: modalName }));
+        } else {
+            router.push(`/vet?open=${modalName}`);
+        }
+        onClose();
+    };
     const { featuredClinics, isLoading: isVetLoading } = useVet();
     const { schedule, isLoading: isVaccineLoading } = useVaccineSchedule(petId);
 
@@ -150,7 +160,7 @@ export function VetQuickSheet({ isOpen, onClose, petId = "pet-1" }: VetQuickShee
                             {/* 3. QUICK ACTION GRID */}
                             <section className="grid grid-cols-2 gap-4">
                                 <button
-                                    onClick={() => { router.push('/vet?open=vaccine'); onClose(); }}
+                                    onClick={() => handleOpenModal('vaccine')}
                                     className="bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-[1.8rem] p-5 text-left flex flex-col justify-between h-32 hover:bg-zinc-100 dark:hover:bg-black/10 dark:bg-white/10 transition-all group"
                                 >
                                     <div className="w-10 h-10 bg-indigo-500/20 text-indigo-400 rounded-xl flex items-center justify-center border border-indigo-500/20 group-hover:scale-110 transition-transform">
@@ -159,7 +169,7 @@ export function VetQuickSheet({ isOpen, onClose, petId = "pet-1" }: VetQuickShee
                                     <span className="text-sm font-black text-zinc-900 dark:text-white uppercase italic leading-none">Aşı Karnesi</span>
                                 </button>
                                 <button
-                                    onClick={() => { router.push('/vet?open=appointment'); onClose(); }}
+                                    onClick={() => handleOpenModal('appointment')}
                                     className="bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-[1.8rem] p-5 text-left flex flex-col justify-between h-32 hover:bg-zinc-100 dark:hover:bg-black/10 dark:bg-white/10 transition-all group"
                                 >
                                     <div className="w-10 h-10 bg-blue-500/20 text-blue-400 rounded-xl flex items-center justify-center border border-blue-500/20 group-hover:scale-110 transition-transform">

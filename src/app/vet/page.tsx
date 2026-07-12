@@ -254,6 +254,22 @@ function VetPageContent() {
         }
     }, [isLoading, allClinics, searchParams]);
 
+    // Fast local event listener for instant modal opening without Next.js router latency
+    useEffect(() => {
+        const handleOpenModal = (e: Event) => {
+            const customEvent = e as CustomEvent;
+            if (customEvent.detail) {
+                if (customEvent.detail === 'appointment') {
+                    setActiveModal('clinicList');
+                } else {
+                    setActiveModal(customEvent.detail as any);
+                }
+            }
+        };
+        window.addEventListener('openVetModal', handleOpenModal);
+        return () => window.removeEventListener('openVetModal', handleOpenModal);
+    }, []);
+
     // Appointment Form States
     const [selectedDate, setSelectedDate] = useState<string>("");
     const [selectedTime, setSelectedTime] = useState<string | null>(null);
