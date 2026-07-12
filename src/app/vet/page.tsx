@@ -241,6 +241,8 @@ function VetPageContent() {
                 setActiveModal('vaccine');
             } else if (openModal === 'appointment') {
                 setActiveModal('clinicList');
+            } else if (openModal === 'nutrition') {
+                setActiveNutritionModal(true);
             }
 
             // Only check for targetClinicId if clinics are loaded
@@ -261,6 +263,8 @@ function VetPageContent() {
             if (customEvent.detail) {
                 if (customEvent.detail === 'appointment') {
                     setActiveModal('clinicList');
+                } else if (customEvent.detail === 'nutrition') {
+                    setActiveNutritionModal(true);
                 } else {
                     setActiveModal(customEvent.detail as any);
                 }

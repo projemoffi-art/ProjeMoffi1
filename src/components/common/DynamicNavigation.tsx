@@ -200,13 +200,11 @@ export function DynamicNavigation() {
             const profileViews = ['wallet', 'passport', 'family', 'orders', 'appointments', 'routes', 'bookmarks', 'identity'];
 
             if (id === 'carehub' || id === 'nutrition') {
-                if (pathname !== '/community') {
-                    router.push('/community');
-                    setTimeout(() => {
-                        window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: id === 'nutrition' ? 'nutrition' : 'health' } }));
-                    }, 500);
+                const openParam = id === 'nutrition' ? 'nutrition' : 'vaccine';
+                if (pathname === '/vet') {
+                    window.dispatchEvent(new CustomEvent('openVetModal', { detail: openParam }));
                 } else {
-                    window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: id === 'nutrition' ? 'nutrition' : 'health' } }));
+                    router.push(`/vet?open=${openParam}`);
                 }
             } else if (id === 'feed' || id === 'radar') {
                 router.push(`/topluluk?tab=${id}`);
