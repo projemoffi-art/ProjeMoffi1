@@ -556,6 +556,32 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
     const [checkedItems, setCheckedItems] = React.useState({ poopBag: false, water: false, leash: false });
     const checklistComplete = checkedItems.poopBag && checkedItems.water && checkedItems.leash;
 
+    // Hold-to-Start Apple Watch Style Logic
+    const [isHolding, setIsHolding] = React.useState(false);
+    const holdProgress = useMotionValue(0);
+    const holdTransform = useTransform(holdProgress, [0, 100], [251.2, 0]); // 2 * pi * 40
+
+    React.useEffect(() => {
+        let controls: any;
+        if (isHolding) {
+            controls = animate(holdProgress, 100, {
+                duration: 1.2,
+                ease: 'linear',
+                onComplete: () => {
+                    handleStartWalk();
+                    setIsHolding(false);
+                    setTimeout(() => holdProgress.set(0), 500);
+                }
+            });
+        } else {
+            controls = animate(holdProgress, 0, {
+                duration: 0.3,
+                ease: 'easeOut'
+            });
+        }
+        return () => controls?.stop();
+    }, [isHolding, holdProgress]);
+
     // Load checklist from localStorage
     React.useEffect(() => {
         const savedChecklist = localStorage.getItem('moffi_walk_checklist');
@@ -848,51 +874,49 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                                             </div>
                                         </div>
 
-                                        {/* Taktil Sürgülü Buton (Swipe to Start - Pill container with heavy drop-shadow) */}
-                                        <div 
-                                            ref={sliderTrackRef} 
-                                            className="relative w-full h-14 bg-card rounded-full flex items-center p-1 overflow-hidden shadow-moffi-card border-0"
-                                        >
-                                            {/* Dinamik dolgu */}
-                                            <motion.div 
-                                                className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-orange-500/10 to-orange-500/20 rounded-l-full"
-                                                style={{ width: sliderFillWidth }}
-                                            />
+                                        {/* HOLD TO START (Apple Watch Style) */}
+                                        <div className="flex flex-col items-center justify-center mt-6 mb-2">
+                                            <div className="relative w-32 h-32 flex items-center justify-center">
+                                                <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" viewBox="0 0 100 100">
+                                                    <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-slate-100 dark:text-white/5" />
+                                                    <motion.circle 
+                                                        cx="50" cy="50" r="40" 
+                                                        stroke="url(#gradient-ring)" 
+                                                        strokeWidth="5" 
+                                                        fill="transparent" 
+                                                        strokeDasharray="251.2"
+                                                        strokeDashoffset={holdTransform}
+                                                        strokeLinecap="round"
+                                                        className="drop-shadow-[0_0_8px_rgba(249,115,22,0.8)]"
+                                                    />
+                                                    <defs>
+                                                        <linearGradient id="gradient-ring" x1="0%" y1="0%" x2="100%" y2="100%">
+                                                            <stop offset="0%" stopColor="#f97316" />
+                                                            <stop offset="100%" stopColor="#ec4899" />
+                                                        </linearGradient>
+                                                    </defs>
+                                                </svg>
 
-                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                <span className={cn(
-                                                    "text-[10px] font-black uppercase tracking-[0.2em] select-none",
-                                                    checklistComplete ? "text-slate-600 dark:text-slate-300 animate-pulse" : "text-slate-400/80"
-                                                )}>
-                                                    {checklistComplete ? "Kaydır ve Başlat 🐾" : "Önce Hazırlık Kontrolü"}
-                                                </span>
+                                                <motion.button
+                                                    whileTap={{ scale: checklistComplete ? 0.9 : 1 }}
+                                                    onPointerDown={() => checklistComplete && setIsHolding(true)}
+                                                    onPointerUp={() => setIsHolding(false)}
+                                                    onPointerLeave={() => setIsHolding(false)}
+                                                    className={cn(
+                                                        "w-20 h-20 rounded-full flex flex-col items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.12)] border-0 z-10 select-none transition-colors",
+                                                        checklistComplete 
+                                                            ? "bg-slate-900 text-white cursor-pointer" 
+                                                            : "bg-slate-200 dark:bg-white/10 text-slate-400 cursor-not-allowed"
+                                                    )}
+                                                >
+                                                    <span className={cn("text-[9px] font-black uppercase tracking-[0.2em] text-center", checklistComplete && !isHolding && "animate-pulse")}>
+                                                        {checklistComplete ? "BASILI\nTUT" : "HAZIRLIK"}
+                                                    </span>
+                                                </motion.button>
                                             </div>
-
-                                            <motion.div
-                                                drag={checklistComplete ? "x" : false}
-                                                dragConstraints={{ left: 0, right: maxDrag }}
-                                                dragElastic={0.05}
-                                                dragMomentum={false}
-                                                onDrag={(_, info) => {
-                                                    if (dragX.get() >= maxDrag - 10) {
-                                                        handleStartWalk();
-                                                    }
-                                                }}
-                                                onDragEnd={() => {
-                                                    if (dragX.get() < maxDrag - 10) {
-                                                        animate(dragX, 0, { type: "spring", stiffness: 320, damping: 22 });
-                                                    }
-                                                }}
-                                                style={{ x: dragX }}
-                                                className={cn(
-                                                    "w-12 h-12 rounded-full flex items-center justify-center text-xl shadow-[0_4px_16px_rgba(0,0,0,0.1)] select-none z-10 border-0",
-                                                    checklistComplete 
-                                                        ? "bg-slate-900 text-white cursor-grab active:cursor-grabbing hover:bg-slate-800" 
-                                                        : "bg-slate-200 dark:bg-white/10 text-slate-400 cursor-not-allowed"
-                                                )}
-                                            >
-                                                🐾
-                                            </motion.div>
+                                            <span className="text-[8.5px] font-black uppercase tracking-widest text-slate-400 mt-3">
+                                                {checklistComplete ? "Yürüyüşü başlatmak için halkanın dolmasını bekle" : "Önce hazırlık kontrolünü tamamla"}
+                                            </span>
                                         </div>
                                     </div>
                                 )}
