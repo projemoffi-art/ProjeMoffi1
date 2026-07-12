@@ -169,7 +169,7 @@ export function PharmacyModal({ isOpen, onClose }: PharmacyModalProps) {
                                         <button className="flex-1 h-14 bg-zinc-900 dark:bg-card text-white dark:text-black rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-zinc-800 dark:hover:bg-white/90 active:scale-95 transition-all shadow-xl">
                                             <Navigation className="w-4 h-4" /> YOL TARİFİ
                                         </button>
-                                        <button className="w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all active:scale-95">
+                                        <button className="w-14 h-14 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-2xl flex items-center justify-center hover:bg-indigo-500 hover:text-white transition-all active:scale-95">
                                             <Phone className="w-6 h-6 fill-current" />
                                         </button>
                                     </div>

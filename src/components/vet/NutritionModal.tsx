@@ -99,14 +99,14 @@ export function NutritionModal({ isOpen, onClose, petId }: NutritionModalProps) 
                         className="w-full max-w-xl bg-white dark:bg-[#0F0F16] sm:rounded-[3rem] rounded-t-[3rem] border border-zinc-200 dark:border-card-border shadow-2xl overflow-hidden relative flex flex-col max-h-[90vh]"
                     >
                         {/* HEADER */}
-                        <div className="p-8 border-b border-zinc-200 dark:border-card-border flex justify-between items-center bg-gradient-to-r from-emerald-500/[0.03] to-transparent">
+                        <div className="p-8 border-b border-zinc-200 dark:border-card-border flex justify-between items-center bg-gradient-to-r from-indigo-500/[0.03] to-transparent">
                             <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center border border-emerald-500/20 dark:border-emerald-500/30 shadow-lg">
-                                    <Utensils className="w-6 h-6 text-emerald-500 dark:text-emerald-400" />
+                                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 dark:bg-indigo-500/20 flex items-center justify-center border border-indigo-500/20 dark:border-indigo-500/30 shadow-lg">
+                                    <Utensils className="w-6 h-6 text-indigo-500 dark:text-indigo-400" />
                                 </div>
                                 <div>
                                     <h2 className="text-xl font-black text-zinc-850 dark:text-white italic uppercase tracking-tighter">Beslenme Planı</h2>
-                                    <p className="text-[10px] text-emerald-600/60 dark:text-emerald-400/40 font-bold uppercase tracking-[0.2em]">Kişiselleştirilmiş Diyet</p>
+                                    <p className="text-[10px] text-indigo-600/60 dark:text-indigo-400/40 font-bold uppercase tracking-[0.2em]">Kişiselleştirilmiş Diyet</p>
                                 </div>
                             </div>
                             <button onClick={onClose} className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-white/5 flex items-center justify-center hover:bg-zinc-200/50 dark:hover:bg-black/10 dark:bg-white/10 transition-all border border-zinc-200 dark:border-card-border cursor-pointer">
@@ -121,10 +121,10 @@ export function NutritionModal({ isOpen, onClose, petId }: NutritionModalProps) 
                                 <motion.div 
                                     initial={{ scale: 0.9, opacity: 0 }}
                                     animate={{ scale: 1, opacity: 1 }}
-                                    className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl flex items-center gap-3"
+                                    className="bg-indigo-500/10 border border-indigo-500/20 p-4 rounded-2xl flex items-center gap-3"
                                 >
-                                    <Sparkles className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
-                                    <span className="text-sm font-black text-emerald-800 dark:text-emerald-100 uppercase italic">{successMessage}</span>
+                                    <Sparkles className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
+                                    <span className="text-sm font-black text-indigo-800 dark:text-indigo-100 uppercase italic">{successMessage}</span>
                                 </motion.div>
                             )}
 
@@ -138,7 +138,7 @@ export function NutritionModal({ isOpen, onClose, petId }: NutritionModalProps) 
                                     <p className="text-xs font-black text-zinc-555 dark:text-white/40 uppercase tracking-widest leading-loose max-w-[200px] text-center">Beslenme planı henüz tanımlanmamış</p>
                                     <button 
                                         onClick={() => setIsEditing(true)}
-                                        className="mt-2 text-emerald-500 dark:text-emerald-400 font-black text-[10px] uppercase tracking-widest flex items-center gap-2 py-3 px-6 rounded-full border border-emerald-500/35 bg-emerald-500/5 hover:bg-emerald-500/10 transition-all cursor-pointer"
+                                        className="mt-2 text-indigo-500 dark:text-indigo-400 font-black text-[10px] uppercase tracking-widest flex items-center gap-2 py-3 px-6 rounded-full border border-indigo-500/35 bg-indigo-500/5 hover:bg-indigo-500/10 transition-all cursor-pointer"
                                     >
                                         <Plus className="w-4 h-4" /> PLAN OLUŞTUR
                                     </button>
@@ -150,7 +150,7 @@ export function NutritionModal({ isOpen, onClose, petId }: NutritionModalProps) 
                                             <label className="text-[9px] font-black text-zinc-450 dark:text-white/30 uppercase tracking-widest ml-1">Mama / Yiyecek Adı</label>
                                             <input 
                                                 required
-                                                className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-card-border rounded-2xl px-5 py-4 text-sm font-bold text-zinc-800 dark:text-white outline-none focus:border-emerald-500/50 transition-all"
+                                                className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-card-border rounded-2xl px-5 py-4 text-sm font-bold text-zinc-800 dark:text-white outline-none focus:border-indigo-500/50 transition-all"
                                                 value={formData.foodName}
                                                 onChange={e => setFormData({...formData, foodName: e.target.value})}
                                             />
@@ -160,7 +160,7 @@ export function NutritionModal({ isOpen, onClose, petId }: NutritionModalProps) 
                                                 <label className="text-[9px] font-black text-zinc-450 dark:text-white/30 uppercase tracking-widest ml-1">Günlük Miktar (Gr)</label>
                                                 <input 
                                                     type="number"
-                                                    className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-card-border rounded-2xl px-5 py-4 text-sm font-bold text-zinc-800 dark:text-white outline-none focus:border-emerald-500/50 transition-all"
+                                                    className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-card-border rounded-2xl px-5 py-4 text-sm font-bold text-zinc-800 dark:text-white outline-none focus:border-indigo-500/50 transition-all"
                                                     value={formData.amountGrams}
                                                     onChange={e => setFormData({...formData, amountGrams: parseInt(e.target.value)})}
                                                 />
@@ -169,7 +169,7 @@ export function NutritionModal({ isOpen, onClose, petId }: NutritionModalProps) 
                                                 <label className="text-[9px] font-black text-zinc-450 dark:text-white/30 uppercase tracking-widest ml-1">Öğün Sayısı</label>
                                                 <input 
                                                     type="number"
-                                                    className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-card-border rounded-2xl px-5 py-4 text-sm font-bold text-zinc-800 dark:text-white outline-none focus:border-emerald-500/50 transition-all"
+                                                    className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-card-border rounded-2xl px-5 py-4 text-sm font-bold text-zinc-800 dark:text-white outline-none focus:border-indigo-500/50 transition-all"
                                                     value={formData.mealsPerDay}
                                                     onChange={e => setFormData({...formData, mealsPerDay: parseInt(e.target.value)})}
                                                 />
@@ -182,7 +182,7 @@ export function NutritionModal({ isOpen, onClose, petId }: NutritionModalProps) 
                                                 <input 
                                                     type="number"
                                                     step="0.1"
-                                                    className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-card-border rounded-2xl pl-12 pr-5 py-4 text-sm font-bold text-zinc-800 dark:text-white outline-none focus:border-emerald-500/50 transition-all"
+                                                    className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-card-border rounded-2xl pl-12 pr-5 py-4 text-sm font-bold text-zinc-800 dark:text-white outline-none focus:border-indigo-500/50 transition-all"
                                                     value={formData.targetWeight}
                                                     onChange={e => setFormData({...formData, targetWeight: parseFloat(e.target.value)})}
                                                 />
@@ -191,7 +191,7 @@ export function NutritionModal({ isOpen, onClose, petId }: NutritionModalProps) 
                                         <div className="space-y-2">
                                             <label className="text-[9px] font-black text-zinc-450 dark:text-white/30 uppercase tracking-widest ml-1">Notlar & Alerjiler</label>
                                             <textarea 
-                                                className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-card-border rounded-2xl px-5 py-4 text-sm font-bold text-zinc-800 dark:text-white outline-none focus:border-emerald-500/50 transition-all resize-none h-24"
+                                                className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-card-border rounded-2xl px-5 py-4 text-sm font-bold text-zinc-800 dark:text-white outline-none focus:border-indigo-500/50 transition-all resize-none h-24"
                                                 value={formData.notes}
                                                 onChange={e => setFormData({...formData, notes: e.target.value})}
                                             />
@@ -207,7 +207,7 @@ export function NutritionModal({ isOpen, onClose, petId }: NutritionModalProps) 
                                         </button>
                                         <button 
                                             type="submit" 
-                                            className="flex-[2] py-4 rounded-2xl bg-emerald-500 text-black font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-500/20 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
+                                            className="flex-[2] py-4 rounded-2xl bg-indigo-500 text-black font-black text-[10px] uppercase tracking-widest shadow-xl shadow-indigo-500/20 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
                                         >
                                             KAYDET VE GÜNCELLE
                                         </button>
@@ -216,14 +216,14 @@ export function NutritionModal({ isOpen, onClose, petId }: NutritionModalProps) 
                             ) : (
                                 <div className="space-y-8">
                                     {/* Main Diet Card */}
-                                    <div className="bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20 p-8 rounded-[2.8rem] relative overflow-hidden group">
-                                        <div className="absolute top-[-20%] right-[-10%] w-32 h-32 bg-emerald-500/10 blur-[40px] rounded-full" />
+                                    <div className="bg-gradient-to-br from-indigo-500/10 to-transparent border border-indigo-500/20 p-8 rounded-[2.8rem] relative overflow-hidden group">
+                                        <div className="absolute top-[-20%] right-[-10%] w-32 h-32 bg-indigo-500/10 blur-[40px] rounded-full" />
                                         
                                         <div className="flex justify-between items-start mb-10">
                                             <div>
                                                 <h3 className="text-3xl font-black text-zinc-800 dark:text-white tracking-tighter italic uppercase leading-none mb-3">{plan?.foodName}</h3>
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-[10px] font-black bg-emerald-500/20 text-emerald-500 dark:text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/20 uppercase tracking-widest">Günlük Diyet</span>
+                                                    <span className="text-[10px] font-black bg-indigo-500/20 text-indigo-500 dark:text-indigo-400 px-3 py-1 rounded-full border border-indigo-500/20 uppercase tracking-widest">Günlük Diyet</span>
                                                 </div>
                                             </div>
                                             <button 
@@ -292,10 +292,10 @@ export function NutritionModal({ isOpen, onClose, petId }: NutritionModalProps) 
                         {/* FOOTER TIPS */}
                         <div className="p-8 bg-zinc-50/50 dark:bg-black/40 border-t border-zinc-200 dark:border-card-border flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <Activity className="w-5 h-5 text-emerald-500 dark:text-emerald-400 animate-pulse" />
+                                <Activity className="w-5 h-5 text-indigo-500 dark:text-indigo-400 animate-pulse" />
                                 <span className="text-[10px] font-black text-zinc-450 dark:text-white/40 uppercase tracking-widest">Metabolizma Analizi: Normal</span>
                             </div>
-                            <button className="text-[10px] font-black text-emerald-500 dark:text-emerald-400 flex items-center gap-1.5 hover:translate-x-1 transition-transform uppercase tracking-widest cursor-pointer">DİYETİSYENE SOR <ChevronRight className="w-3 h-3" /></button>
+                            <button className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 flex items-center gap-1.5 hover:translate-x-1 transition-transform uppercase tracking-widest cursor-pointer">DİYETİSYENE SOR <ChevronRight className="w-3 h-3" /></button>
                         </div>
                     </motion.div>
                 </div>

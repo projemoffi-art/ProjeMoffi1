@@ -134,10 +134,10 @@ export function MedicationModal({ isOpen, onClose, petId }: MedicationModalProps
                                 <motion.div 
                                     initial={{ scale: 0.9, opacity: 0 }}
                                     animate={{ scale: 1, opacity: 1 }}
-                                    className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl flex items-center gap-3"
+                                    className="bg-indigo-500/10 border border-indigo-500/20 p-4 rounded-2xl flex items-center gap-3"
                                 >
-                                    <Sparkles className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
-                                    <span className="text-sm font-black text-emerald-800 dark:text-emerald-100 uppercase italic">{successMessage}</span>
+                                    <Sparkles className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
+                                    <span className="text-sm font-black text-indigo-800 dark:text-indigo-100 uppercase italic">{successMessage}</span>
                                 </motion.div>
                             )}
 
@@ -167,7 +167,7 @@ export function MedicationModal({ isOpen, onClose, petId }: MedicationModalProps
                                                 className={cn(
                                                     "p-6 rounded-[2.2rem] border transition-all flex items-center justify-between group",
                                                     taken 
-                                                        ? "bg-emerald-500/[0.03] border-emerald-500/20" 
+                                                        ? "bg-indigo-500/[0.03] border-indigo-500/20" 
                                                         : "bg-white dark:bg-white/[0.02] border-zinc-205 dark:border-card-border hover:border-zinc-300 dark:hover:border-zinc-700"
                                                 )}
                                             >
@@ -175,10 +175,10 @@ export function MedicationModal({ isOpen, onClose, petId }: MedicationModalProps
                                                     <div className={cn(
                                                         "w-14 h-14 rounded-2xl flex items-center justify-center border transition-all",
                                                         taken 
-                                                            ? "bg-emerald-500/10 border-emerald-500/20" 
+                                                            ? "bg-indigo-500/10 border-indigo-500/20" 
                                                             : "bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-card-border shadow-inner"
                                                     )}>
-                                                        {taken ? <CheckCircle2 className="w-7 h-7 text-emerald-500 dark:text-emerald-400" /> : <Pill className="w-7 h-7 text-zinc-400 dark:text-white/20" />}
+                                                        {taken ? <CheckCircle2 className="w-7 h-7 text-indigo-500 dark:text-indigo-400" /> : <Pill className="w-7 h-7 text-zinc-400 dark:text-white/20" />}
                                                     </div>
                                                     <div className="text-left">
                                                         <h4 className="text-zinc-850 dark:text-white font-black text-lg tracking-tight leading-none mb-1.5">{med.name}</h4>
@@ -193,7 +193,7 @@ export function MedicationModal({ isOpen, onClose, petId }: MedicationModalProps
                                                 <div className="text-right">
                                                     {taken ? (
                                                         <div className="flex flex-col items-end">
-                                                            <span className="text-[9px] font-black text-emerald-500 dark:text-emerald-400 uppercase tracking-widest mb-1">BUGÜN ALINDI</span>
+                                                            <span className="text-[9px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-widest mb-1">BUGÜN ALINDI</span>
                                                             <span className="text-[9px] font-bold text-zinc-400 dark:text-white/20 uppercase">SAAT: {new Date(med.lastLog!).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
                                                         </div>
                                                     ) : (

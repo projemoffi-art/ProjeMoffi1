@@ -123,7 +123,7 @@ export function VaccineModal({ isOpen, onClose }: VaccineModalProps) {
                                         {/* Timeline Dot with Glow */}
                                         <div className={cn(
                                             "absolute -left-[32px] top-3 w-4 h-4 rounded-full border-2 z-10 shadow-2xl",
-                                            isCompleted ? "bg-emerald-500 border-emerald-900 shadow-emerald-500/20" :
+                                            isCompleted ? "bg-indigo-500 border-indigo-900 shadow-indigo-500/20" :
                                                 isOverdue ? "bg-[#FF3B30] border-red-900 shadow-red-500/20" : 
                                                 "bg-blue-500 border-blue-900 shadow-blue-500/20 animate-pulse"
                                         )} />
@@ -132,7 +132,7 @@ export function VaccineModal({ isOpen, onClose }: VaccineModalProps) {
                                             onClick={() => { setSelectedRichRecord(item); setSelectedDefId(null); }}
                                             className={cn(
                                                 "bg-white dark:bg-[#1C1C1E] p-6 rounded-[2.5rem] border transition-all active:scale-[0.98] cursor-pointer group hover:bg-zinc-50 dark:hover:bg-[#252528]",
-                                                isCompleted ? "border-zinc-200 dark:border-emerald-500/10" :
+                                                isCompleted ? "border-zinc-200 dark:border-indigo-500/10" :
                                                     isOverdue ? "border-zinc-200 dark:border-red-500/20 shadow-[0_15px_40px_rgba(255,59,48,0.05)]" : 
                                                     "border-zinc-200 dark:border-blue-500/20 shadow-[0_15px_40px_rgba(0,122,255,0.05)]"
                                             )}
@@ -145,7 +145,7 @@ export function VaccineModal({ isOpen, onClose }: VaccineModalProps) {
                                                     </p>
                                                 </div>
                                                 {isCompleted ? (
-                                                    <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20">
+                                                    <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/20">
                                                         <CheckCircle2 className="w-5 h-5" />
                                                     </div>
                                                 ) : isOverdue ? (
@@ -169,7 +169,7 @@ export function VaccineModal({ isOpen, onClose }: VaccineModalProps) {
                                             )}
 
                                             {isCompleted && item.vetName && (
-                                                <div className="flex items-center gap-2 text-[9px] font-black text-emerald-400 mt-2 uppercase tracking-widest">
+                                                <div className="flex items-center gap-2 text-[9px] font-black text-indigo-400 mt-2 uppercase tracking-widest">
                                                     <ShieldCheck className="w-4 h-4" /> DOĞRULANMIŞ: {item.vetName}
                                                 </div>
                                             )}
@@ -262,8 +262,8 @@ export function VaccineModal({ isOpen, onClose }: VaccineModalProps) {
                                             <div className="text-[9px] font-black text-zinc-400 dark:text-white/30 uppercase tracking-widest mb-1">SIKLIK</div>
                                             <div className="text-lg font-black text-zinc-900 dark:text-white italic">{activeDefinition.frequencyMonths} AY</div>
                                         </div>
-                                        <div className="bg-emerald-500/5 border border-emerald-500/10 p-6 rounded-[2.5rem] flex flex-col items-center text-center">
-                                            <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-3 border border-emerald-500/10">
+                                        <div className="bg-indigo-500/5 border border-indigo-500/10 p-6 rounded-[2.5rem] flex flex-col items-center text-center">
+                                            <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-400 mb-3 border border-indigo-500/10">
                                                 <Calendar className="w-5 h-5" />
                                             </div>
                                             <div className="text-[9px] font-black text-zinc-400 dark:text-white/30 uppercase tracking-widest mb-1">MİN. YAŞ</div>

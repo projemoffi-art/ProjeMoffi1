@@ -673,7 +673,7 @@ export default function VetPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-[#f8f9fc] via-[#f1f3f7] to-[#f8f9fc] dark:from-[#09090b] dark:via-[#0d0d11] dark:to-[#09090b] pb-32 font-sans relative text-zinc-800 dark:text-[#fafafa] selection:bg-emerald-500/30 transition-colors duration-300">
+        <div className="min-h-screen bg-gradient-to-b from-[#f8f9fc] via-[#f1f3f7] to-[#f8f9fc] dark:from-[#09090b] dark:via-[#0d0d11] dark:to-[#09090b] pb-32 font-sans relative text-zinc-800 dark:text-[#fafafa] selection:bg-indigo-500/30 transition-colors duration-300">
             {/* Minimal solid design - no cheap floating background blobs */}
 
             {/* HEADER */}
@@ -694,7 +694,7 @@ export default function VetPage() {
                                 <ChevronLeft className="w-5 h-5" />
                             </button>
                             <div>
-                                <span className="text-[9px] font-black text-emerald-500 dark:text-emerald-400 uppercase tracking-[0.2em] block mb-0.5">Moffi Health</span>
+                                <span className="text-[9px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-[0.2em] block mb-0.5">Moffi Health</span>
                                 <h1 className="text-2xl font-black text-zinc-800 dark:text-[#fafafa] tracking-tighter leading-none uppercase italic">
                                     Veterinerlik Portalı
                                 </h1>
@@ -711,7 +711,7 @@ export default function VetPage() {
                         <input
                             type="text"
                             placeholder="Klinik, veteriner veya uzmanlık alanı ara..."
-                            className="w-full h-12 pl-11 pr-4 bg-white dark:bg-[#18181b] rounded-xl border border-zinc-250 dark:border-[#27272a] outline-none font-bold text-xs text-zinc-800 dark:text-[#fafafa] placeholder:text-zinc-400 dark:placeholder:text-[#fafafa]/20 focus:border-emerald-500 transition-all text-left shadow-sm dark:shadow-none"
+                            className="w-full h-12 pl-11 pr-4 bg-white dark:bg-[#18181b] rounded-xl border border-zinc-250 dark:border-[#27272a] outline-none font-bold text-xs text-zinc-800 dark:text-[#fafafa] placeholder:text-zinc-400 dark:placeholder:text-[#fafafa]/20 focus:border-indigo-500 transition-all text-left shadow-sm dark:shadow-none"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -738,7 +738,7 @@ export default function VetPage() {
                                 className={cn(
                                     "px-4 py-2 rounded-lg border flex items-center gap-1.5 whitespace-nowrap transition-all font-bold text-[10px] uppercase tracking-wider shrink-0",
                                     activeCategory === cat.id 
-                                        ? "bg-emerald-500 text-black border-emerald-500 font-black shadow-lg shadow-emerald-500/10" 
+                                        ? "bg-indigo-500 text-black border-indigo-500 font-black shadow-lg shadow-indigo-500/10" 
                                         : "bg-white dark:bg-[#18181b] text-zinc-500 dark:text-[#a1a1aa] border-zinc-200 dark:border-[#27272a] hover:border-zinc-350 dark:hover:border-[#3f3f46] hover:text-zinc-850 dark:hover:text-[#fafafa]"
                                 )}
                             >
@@ -756,7 +756,7 @@ export default function VetPage() {
                 {activePet && (
                     <div className="bg-white dark:bg-[#121215] border border-zinc-200 dark:border-[#27272a] p-4 rounded-2xl flex items-center justify-between text-left shadow-sm dark:shadow-none transition-colors duration-300">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 text-indigo-600 dark:text-indigo-400">
                                 <Activity className="w-5 h-5" />
                             </div>
                             <div>
@@ -769,9 +769,9 @@ export default function VetPage() {
                                 onClick={() => setIsLogModalOpen(true)}
                                 className="bg-zinc-100 dark:bg-[#18181b] border border-zinc-200 dark:border-[#27272a] hover:bg-zinc-200/50 dark:hover:bg-[#27272a] text-zinc-650 dark:text-zinc-300 px-3 py-1.5 rounded-xl flex items-center gap-1 transition-all text-[8px] font-black uppercase tracking-wider cursor-pointer"
                             >
-                                <History className="w-3.5 h-3.5 text-emerald-500" /> Paylaşım Logları
+                                <History className="w-3.5 h-3.5 text-indigo-500" /> Paylaşım Logları
                             </button>
-                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse" />
                         </div>
                     </div>
                 )}
@@ -794,13 +794,13 @@ export default function VetPage() {
                     <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between pointer-events-none">
                         <div>
                             <div className="font-black text-sm text-zinc-800 dark:text-[#fafafa] flex items-center gap-1.5">
-                                <MapPin className="w-4 h-4 text-emerald-500 dark:text-emerald-400" /> {allClinics.length} Yakın Klinik
+                                <MapPin className="w-4 h-4 text-indigo-500 dark:text-indigo-400" /> {allClinics.length} Yakın Klinik
                             </div>
                             <div className="text-[8px] text-zinc-500 dark:text-[#fafafa]/40 font-bold uppercase tracking-wider mt-0.5">Bulunduğunuz Konum Civarı</div>
                         </div>
                         <button 
                             onClick={() => setIsExplorerOpen(true)}
-                            className="bg-emerald-500 text-black px-4 py-2 rounded-lg text-[9px] font-black pointer-events-auto hover:bg-emerald-400 transition-all shadow-md uppercase tracking-wider"
+                            className="bg-indigo-500 text-black px-4 py-2 rounded-lg text-[9px] font-black pointer-events-auto hover:bg-indigo-400 transition-all shadow-md uppercase tracking-wider"
                         >
                             Haritada Keşfet
                         </button>
@@ -831,17 +831,17 @@ export default function VetPage() {
                                 className={cn(
                                     "bg-gradient-to-br from-white to-zinc-50/55 dark:from-[#121215] dark:to-[#16161b] rounded-2xl p-4 border transition-all duration-300 group relative overflow-hidden text-left",
                                     clinic.isPremium 
-                                        ? "border-emerald-500/30 shadow-[0_0_25px_rgba(16,185,129,0.04)]" 
+                                        ? "border-indigo-500/30 shadow-[0_0_25px_rgba(16,185,129,0.04)]" 
                                         : "border-zinc-200 dark:border-[#27272a]/60 hover:border-zinc-350 dark:hover:border-zinc-700 shadow-sm dark:shadow-none"
                                 )}
                             >
                                 {clinic.isPremium && (
-                                    <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-emerald-500 to-teal-500" />
+                                    <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-indigo-500 to-blue-500" />
                                 )}
 
                                 <div className="flex gap-4">
                                     {/* Small cover image for clinical listing */}
-                                    <div className="w-24 h-24 rounded-xl overflow-hidden border border-zinc-200 dark:border-[#27272a]/60 shrink-0 cursor-pointer relative group-hover:border-emerald-500/30 transition-all duration-300" onClick={() => setDetailClinicId(clinic.id)}>
+                                    <div className="w-24 h-24 rounded-xl overflow-hidden border border-zinc-200 dark:border-[#27272a]/60 shrink-0 cursor-pointer relative group-hover:border-indigo-500/30 transition-all duration-300" onClick={() => setDetailClinicId(clinic.id)}>
                                         <img src={clinic.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                         <div className="absolute inset-0 bg-black/10 dark:bg-black/15 group-hover:bg-black/5 transition-colors" />
                                     </div>
@@ -850,7 +850,7 @@ export default function VetPage() {
                                     <div className="flex-1 flex flex-col justify-between text-left">
                                         <div>
                                             <div className="flex items-center justify-between">
-                                                <h3 className="font-black text-zinc-800 dark:text-[#fafafa] text-sm tracking-tight leading-none group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors duration-300">{clinic.name}</h3>
+                                                <h3 className="font-black text-zinc-800 dark:text-[#fafafa] text-sm tracking-tight leading-none group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors duration-300">{clinic.name}</h3>
                                                 <div className="flex items-center gap-1 bg-yellow-500/10 border border-yellow-500/25 px-2 py-0.5 rounded-full text-yellow-500">
                                                     <Star className="w-3 h-3 fill-current" />
                                                     <span className="text-[9px] font-black">{clinic.rating}</span>
@@ -875,7 +875,7 @@ export default function VetPage() {
                                             </button>
                                             <button
                                                 onClick={() => openAppointment(clinic)}
-                                                className="bg-gradient-to-r from-emerald-500 to-teal-500 text-black px-4 py-1.5 rounded-lg font-black text-[9px] uppercase tracking-wider hover:from-emerald-400 hover:to-teal-400 transition-all shadow-md active:scale-95 duration-200"
+                                                className="bg-gradient-to-r from-indigo-500 to-blue-500 text-black px-4 py-1.5 rounded-lg font-black text-[9px] uppercase tracking-wider hover:from-indigo-400 hover:to-blue-400 transition-all shadow-md active:scale-95 duration-200"
                                             >
                                                 Randevu Seç
                                             </button>
@@ -893,7 +893,7 @@ export default function VetPage() {
                 {/* 1. APPOINTMENT SLOTS MODAL */}
                 {activeModal === 'appointment' && selectedClinic && (
                     <motion.div key="appointment-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[140] bg-black/50 dark:bg-black/85 flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm">
-                        <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 220 }} className="w-full max-w-md bg-gradient-to-b from-white to-zinc-50 dark:from-[#0b0c0f] dark:to-[#121318] rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl overflow-hidden h-[85vh] flex flex-col border border-zinc-200 dark:border-[#27272a] text-zinc-800 dark:text-[#fafafa] relative border-t border-t-emerald-500/20">
+                        <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 220 }} className="w-full max-w-md bg-gradient-to-b from-white to-zinc-50 dark:from-[#0b0c0f] dark:to-[#121318] rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl overflow-hidden h-[85vh] flex flex-col border border-zinc-200 dark:border-[#27272a] text-zinc-800 dark:text-[#fafafa] relative border-t border-t-indigo-500/20">
                             <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1 bg-zinc-200 dark:bg-[#27272a] rounded-full sm:hidden" />
                             
                             <div className="flex justify-between items-center mb-6 mt-2 sm:mt-0">
@@ -903,12 +903,12 @@ export default function VetPage() {
 
                             {/* SCROLLABLE BODY CONTAINER */}
                             <div className="flex-1 overflow-y-auto pr-1 no-scrollbar space-y-6 text-left momentum-scroll overscroll-contain pb-6">
-                                <div className="flex items-center gap-4 p-4 bg-zinc-50 dark:bg-[#18181b] rounded-2xl border border-zinc-200 dark:border-[#27272a] relative overflow-hidden pl-5 border-l-2 border-l-emerald-500">
+                                <div className="flex items-center gap-4 p-4 bg-zinc-50 dark:bg-[#18181b] rounded-2xl border border-zinc-200 dark:border-[#27272a] relative overflow-hidden pl-5 border-l-2 border-l-indigo-500">
                                     <img src={selectedClinic.imageUrl} className="w-16 h-16 rounded-xl object-cover shrink-0 border border-zinc-200 dark:border-[#27272a]" />
                                     <div className="text-left">
                                         <div className="font-black text-sm text-zinc-850 dark:text-[#fafafa] leading-snug mb-0.5">{selectedClinic.name}</div>
                                         <div className="text-[9px] text-zinc-400 dark:text-[#a1a1aa] font-bold uppercase tracking-wider flex items-center gap-1">
-                                            <MapPin className="w-3.5 h-3.5 text-emerald-500" /> {selectedClinic.distance} mesafede
+                                            <MapPin className="w-3.5 h-3.5 text-indigo-500" /> {selectedClinic.distance} mesafede
                                         </div>
                                     </div>
                                 </div>
@@ -931,7 +931,7 @@ export default function VetPage() {
                                                 className={cn(
                                                     "px-4 py-3 rounded-xl min-w-[85px] text-center border transition-all flex flex-col items-center snap-start shrink-0",
                                                     selectedDate === day.key 
-                                                        ? "bg-emerald-500 text-black border-emerald-500 shadow-lg shadow-emerald-500/10 font-black" 
+                                                        ? "bg-indigo-500 text-black border-indigo-500 shadow-lg shadow-indigo-500/10 font-black" 
                                                         : "border-zinc-200 dark:border-[#27272a] bg-zinc-50 dark:bg-[#18181b] text-zinc-500 dark:text-[#a1a1aa] hover:border-zinc-350 dark:hover:border-[#3f3f46] hover:text-zinc-850 dark:hover:text-[#fafafa]"
                                                 )}
                                             >
@@ -956,7 +956,7 @@ export default function VetPage() {
                                                 className={cn(
                                                     "py-2.5 text-xs font-bold rounded-lg border transition-all text-center",
                                                     selectedTime === time 
-                                                        ? "bg-emerald-500 text-black border-emerald-500 font-black" 
+                                                        ? "bg-indigo-500 text-black border-indigo-500 font-black" 
                                                         : "border-zinc-200 dark:border-[#27272a] bg-zinc-50 dark:bg-[#18181b] text-zinc-500 dark:text-[#a1a1aa] hover:border-zinc-350 dark:hover:border-[#3f3f46] hover:text-zinc-800 dark:hover:text-[#fafafa]"
                                                 )}
                                             >
@@ -969,7 +969,7 @@ export default function VetPage() {
                                 {/* DATA SHARING CONSENT PANEL */}
                                 <div className="bg-zinc-50 dark:bg-[#18181b] border border-zinc-200 dark:border-[#27272a]/80 rounded-2xl p-4 text-left">
                                     <div className="text-[8px] font-black text-zinc-400 dark:text-[#a1a1aa] uppercase tracking-widest mb-3.5 flex items-center gap-1.5">
-                                        <Syringe className="w-3.5 h-3.5 text-emerald-500" /> TIBBİ VERİ PAYLAŞIM TERCİHLERİ
+                                        <Syringe className="w-3.5 h-3.5 text-indigo-500" /> TIBBİ VERİ PAYLAŞIM TERCİHLERİ
                                     </div>
                                     
                                     <div className="space-y-2.5">
@@ -977,11 +977,11 @@ export default function VetPage() {
                                         <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-100/50 dark:bg-[#121215]/50 border border-zinc-200/50 dark:border-[#27272a]/40 opacity-70 cursor-not-allowed select-none transition-all">
                                             <div className="flex flex-col text-left">
                                                 <span className="text-xs font-bold text-zinc-800 dark:text-[#fafafa] flex items-center gap-1.5">
-                                                    Temel Bilgiler <span className="text-[7px] text-emerald-400 font-black uppercase tracking-wider bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">ZORUNLU</span>
+                                                    Temel Bilgiler <span className="text-[7px] text-indigo-400 font-black uppercase tracking-wider bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20">ZORUNLU</span>
                                                 </span>
                                                 <p className="text-[9px] text-zinc-500 dark:text-[#a1a1aa] mt-0.5 font-semibold">İsim, Tür, Irk, Yaş ve Kilo verileri.</p>
                                             </div>
-                                            <div className="w-9 h-5 rounded-full p-0.5 bg-emerald-500/30 flex items-center">
+                                            <div className="w-9 h-5 rounded-full p-0.5 bg-indigo-500/30 flex items-center">
                                                 <div className="bg-zinc-100 dark:bg-black/60 w-4 h-4 rounded-full translate-x-4" />
                                             </div>
                                         </div>
@@ -997,7 +997,7 @@ export default function VetPage() {
                                             </div>
                                             <div className={cn(
                                                 "w-9 h-5 rounded-full p-0.5 transition-colors duration-250 flex items-center",
-                                                shareVaccines ? "bg-emerald-500" : "bg-zinc-250 dark:bg-[#27272a]"
+                                                shareVaccines ? "bg-indigo-500" : "bg-zinc-250 dark:bg-[#27272a]"
                                             )}>
                                                 <div className={cn(
                                                     "bg-white dark:bg-black w-4 h-4 rounded-full shadow-md transform transition-transform duration-250",
@@ -1017,7 +1017,7 @@ export default function VetPage() {
                                             </div>
                                             <div className={cn(
                                                 "w-9 h-5 rounded-full p-0.5 transition-colors duration-250 flex items-center",
-                                                shareNotes ? "bg-emerald-500" : "bg-zinc-250 dark:bg-[#27272a]"
+                                                shareNotes ? "bg-indigo-500" : "bg-zinc-250 dark:bg-[#27272a]"
                                             )}>
                                                 <div className={cn(
                                                     "bg-white dark:bg-black w-4 h-4 rounded-full shadow-md transform transition-transform duration-250",
@@ -1037,7 +1037,7 @@ export default function VetPage() {
                                             </div>
                                             <div className={cn(
                                                 "w-9 h-5 rounded-full p-0.5 transition-colors duration-250 flex items-center",
-                                                shareOwner ? "bg-emerald-500" : "bg-zinc-250 dark:bg-[#27272a]"
+                                                shareOwner ? "bg-indigo-500" : "bg-zinc-250 dark:bg-[#27272a]"
                                             )}>
                                                 <div className={cn(
                                                     "bg-white dark:bg-black w-4 h-4 rounded-full shadow-md transform transition-transform duration-250",
@@ -1054,7 +1054,7 @@ export default function VetPage() {
                                 <button
                                     onClick={handleProceedToPayment}
                                     disabled={!selectedTime}
-                                    className="w-full bg-emerald-500 text-black py-4 rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/10 disabled:opacity-20 transition-all active:scale-95"
+                                    className="w-full bg-indigo-500 text-black py-4 rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-indigo-500/10 disabled:opacity-20 transition-all active:scale-95"
                                 >
                                     Ödeme Aşamasına Geç
                                 </button>
@@ -1066,12 +1066,12 @@ export default function VetPage() {
                 {/* STRIPE/PAYTR SECURE PAYMENT MODAL */}
                 {activeModal === 'payment' && tempAppointmentData && (
                     <motion.div key="payment-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[150] bg-black/60 dark:bg-black/90 flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm">
-                        <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 220 }} className="w-full max-w-md bg-gradient-to-b from-white to-zinc-50 dark:from-[#0b0c0f] dark:to-[#121318] rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl overflow-hidden h-[85vh] flex flex-col border border-zinc-200 dark:border-[#27272a] text-zinc-800 dark:text-[#fafafa] relative border-t border-t-emerald-500/20">
+                        <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 220 }} className="w-full max-w-md bg-gradient-to-b from-white to-zinc-50 dark:from-[#0b0c0f] dark:to-[#121318] rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl overflow-hidden h-[85vh] flex flex-col border border-zinc-200 dark:border-[#27272a] text-zinc-800 dark:text-[#fafafa] relative border-t border-t-indigo-500/20">
                             <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1 bg-zinc-200 dark:bg-[#27272a] rounded-full sm:hidden" />
                             
                             <div className="flex justify-between items-center mb-5 mt-2 sm:mt-0">
                                 <div className="text-left">
-                                    <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest block mb-0.5">PayTR / Stripe Secure</span>
+                                    <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest block mb-0.5">PayTR / Stripe Secure</span>
                                     <h2 className="text-lg font-black tracking-tight uppercase">Güvenli Ödeme</h2>
                                 </div>
                                 <button onClick={() => setActiveModal('appointment')} className="w-8 h-8 bg-zinc-100 dark:bg-[#18181b] rounded-full flex items-center justify-center border border-zinc-200 dark:border-[#27272a] hover:bg-zinc-150 dark:hover:bg-[#27272a] text-zinc-700 dark:text-white transition-all"><ChevronLeft className="w-4 h-4" /></button>
@@ -1091,7 +1091,7 @@ export default function VetPage() {
                                     </div>
                                     <div className="border-t border-zinc-200 dark:border-[#27272a] pt-2 mt-2 flex justify-between items-center">
                                         <span className="text-xs font-black text-zinc-700 dark:text-[#fafafa]">Ödenecek Tutar</span>
-                                        <span className="text-lg font-black text-emerald-500 dark:text-emerald-400">₺{tempAppointmentData.clinic.price || 350}</span>
+                                        <span className="text-lg font-black text-indigo-500 dark:text-indigo-400">₺{tempAppointmentData.clinic.price || 350}</span>
                                     </div>
                                 </div>
 
@@ -1143,7 +1143,7 @@ export default function VetPage() {
                                         <input
                                             type="text"
                                             placeholder="Ad Soyad"
-                                            className="w-full h-11 px-4 bg-zinc-50 dark:bg-[#18181b] rounded-xl border border-zinc-200 dark:border-[#27272a] outline-none font-bold text-xs text-zinc-800 dark:text-[#fafafa] placeholder:text-zinc-400 dark:placeholder:text-[#fafafa]/10 focus:border-emerald-500 transition-all"
+                                            className="w-full h-11 px-4 bg-zinc-50 dark:bg-[#18181b] rounded-xl border border-zinc-200 dark:border-[#27272a] outline-none font-bold text-xs text-zinc-800 dark:text-[#fafafa] placeholder:text-zinc-400 dark:placeholder:text-[#fafafa]/10 focus:border-indigo-500 transition-all"
                                             value={cardholderName}
                                             onChange={(e) => setCardholderName(e.target.value)}
                                             disabled={isPaymentProcessing}
@@ -1161,7 +1161,7 @@ export default function VetPage() {
                                                     "w-full h-11 pl-4 pr-12 bg-zinc-50 dark:bg-[#18181b] rounded-xl border outline-none font-mono font-bold text-xs text-zinc-800 dark:text-[#fafafa] placeholder:text-zinc-400 dark:placeholder:text-[#fafafa]/10 transition-all",
                                                     isLuhnInvalid
                                                         ? "border-red-500 focus:border-red-500"
-                                                        : "border-zinc-200 dark:border-[#27272a] focus:border-emerald-500"
+                                                        : "border-zinc-200 dark:border-[#27272a] focus:border-indigo-500"
                                                 )}
                                                 value={cardNumber}
                                                 onChange={(e) => {
@@ -1194,7 +1194,7 @@ export default function VetPage() {
                                                     "w-full h-11 px-4 bg-zinc-50 dark:bg-[#18181b] rounded-xl border outline-none font-mono font-bold text-xs text-zinc-800 dark:text-[#fafafa] placeholder:text-zinc-400 dark:placeholder:text-[#fafafa]/10 transition-all text-center",
                                                     isExpiryInvalid
                                                         ? "border-red-500 focus:border-red-500"
-                                                        : "border-zinc-200 dark:border-[#27272a] focus:border-emerald-500"
+                                                        : "border-zinc-200 dark:border-[#27272a] focus:border-indigo-500"
                                                 )}
                                                 value={cardExpiry}
                                                 onChange={(e) => {
@@ -1218,7 +1218,7 @@ export default function VetPage() {
                                                 type="text"
                                                 maxLength={3}
                                                 placeholder="123"
-                                                className="w-full h-11 px-4 bg-zinc-50 dark:bg-[#18181b] rounded-xl border border-zinc-200 dark:border-[#27272a] outline-none font-mono font-bold text-xs text-zinc-800 dark:text-[#fafafa] placeholder:text-zinc-400 dark:placeholder:text-[#fafafa]/10 focus:border-emerald-500 transition-all text-center"
+                                                className="w-full h-11 px-4 bg-zinc-50 dark:bg-[#18181b] rounded-xl border border-zinc-200 dark:border-[#27272a] outline-none font-mono font-bold text-xs text-zinc-800 dark:text-[#fafafa] placeholder:text-zinc-400 dark:placeholder:text-[#fafafa]/10 focus:border-indigo-500 transition-all text-center"
                                                 value={cardCvc}
                                                 onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, ""))}
                                                 disabled={isPaymentProcessing}
@@ -1240,7 +1240,7 @@ export default function VetPage() {
                                 <button
                                     onClick={confirmAppointment}
                                     disabled={isPaymentProcessing || !cardholderName || !cardNumber || !cardExpiry || !cardCvc || isLuhnInvalid || isExpiryInvalid}
-                                    className="w-full bg-emerald-500 text-black py-4 rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/10 disabled:opacity-20 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                    className="w-full bg-indigo-500 text-black py-4 rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-indigo-500/10 disabled:opacity-20 transition-all active:scale-95 flex items-center justify-center gap-2"
                                 >
                                     {isPaymentProcessing ? (
                                         <>
@@ -1374,8 +1374,8 @@ export default function VetPage() {
                 {/* SUCCESS TOAST */}
                 {activeModal === 'success' && (
                     <motion.div key="success-toast" initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -50, opacity: 0 }} className="fixed top-8 inset-x-0 flex justify-center z-[300] pointer-events-none">
-                        <div className="bg-white dark:bg-[#121215] text-zinc-850 dark:text-[#fafafa] px-6 py-3 rounded-full shadow-2xl font-black text-xs flex items-center gap-2 border border-zinc-200 dark:border-emerald-500/30 transition-colors duration-300">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" /> {successMessage}
+                        <div className="bg-white dark:bg-[#121215] text-zinc-850 dark:text-[#fafafa] px-6 py-3 rounded-full shadow-2xl font-black text-xs flex items-center gap-2 border border-zinc-200 dark:border-indigo-500/30 transition-colors duration-300">
+                            <CheckCircle2 className="w-4 h-4 text-indigo-500 dark:text-indigo-400" /> {successMessage}
                         </div>
                     </motion.div>
                 )}
@@ -1405,7 +1405,7 @@ export default function VetPage() {
                             <h3 className="bg-white/90 dark:bg-[#121215]/90 backdrop-blur-md px-5 py-3.5 rounded-xl border border-zinc-200 dark:border-[#27272a] text-zinc-850 dark:text-[#fafafa] font-black text-sm uppercase tracking-wider pointer-events-auto shadow-md dark:shadow-none">Klinik Keşfi</h3>
                             <button 
                                 onClick={() => setIsExplorerOpen(false)}
-                                className="w-12 h-12 bg-emerald-500 text-black rounded-full flex items-center justify-center shadow-2xl pointer-events-auto hover:bg-emerald-400 transition-all active:scale-90"
+                                className="w-12 h-12 bg-indigo-500 text-black rounded-full flex items-center justify-center shadow-2xl pointer-events-auto hover:bg-indigo-400 transition-all active:scale-90"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -1421,12 +1421,12 @@ export default function VetPage() {
                 {/* TRANSPARENCY LOGS MODAL */}
                 {isLogModalOpen && (
                     <motion.div key="log-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[250] bg-black/60 dark:bg-black/90 flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm">
-                        <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 220 }} className="w-full max-w-md bg-gradient-to-b from-white to-zinc-50 dark:from-[#0b0c0f] dark:to-[#121318] rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl overflow-hidden h-[70vh] flex flex-col border border-zinc-200 dark:border-[#27272a] text-zinc-850 dark:text-[#fafafa] relative border-t border-t-emerald-500/20">
+                        <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 220 }} className="w-full max-w-md bg-gradient-to-b from-white to-zinc-50 dark:from-[#0b0c0f] dark:to-[#121318] rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl overflow-hidden h-[70vh] flex flex-col border border-zinc-200 dark:border-[#27272a] text-zinc-850 dark:text-[#fafafa] relative border-t border-t-indigo-500/20">
                             <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1 bg-zinc-200 dark:bg-[#27272a] rounded-full sm:hidden" />
                             
                             <div className="flex justify-between items-center mb-5 mt-2 sm:mt-0">
                                 <div className="text-left">
-                                    <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest block mb-0.5">Şeffaf Paylaşım Günlüğü</span>
+                                    <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest block mb-0.5">Şeffaf Paylaşım Günlüğü</span>
                                     <h2 className="text-lg font-black tracking-tight uppercase">Veri Paylaşım Geçmişi</h2>
                                 </div>
                                 <button onClick={() => setIsLogModalOpen(false)} className="w-8 h-8 bg-zinc-100 dark:bg-[#18181b] rounded-full flex items-center justify-center border border-zinc-200 dark:border-[#27272a] hover:bg-zinc-150 dark:hover:bg-[#27272a] text-zinc-700 dark:text-white transition-all cursor-pointer"><X className="w-4 h-4" /></button>
@@ -1446,7 +1446,7 @@ export default function VetPage() {
                                             </p>
                                             <div className="flex flex-wrap gap-1.5 pt-1">
                                                 {log.sharedFields.map((field: string) => (
-                                                    <span key={field} className="text-[8px] font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20 uppercase tracking-wider">
+                                                    <span key={field} className="text-[8px] font-black bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded border border-indigo-500/20 uppercase tracking-wider">
                                                         {field}
                                                     </span>
                                                 ))}

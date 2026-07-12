@@ -131,7 +131,7 @@ export function ClinicDetailDrawer({ clinicId, onClose, onBookAppointment }: Cli
                                         onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(clinic.name + " " + clinic.address)}`, '_blank')}
                                         className="flex flex-col items-center justify-center gap-2 py-4 bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-2xl hover:bg-zinc-200/50 dark:hover:bg-black/10 dark:bg-white/10 transition-all active:scale-95"
                                     >
-                                        <Navigation className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
+                                        <Navigation className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
                                         <span className="text-[9px] font-black text-zinc-600 dark:text-white/60 uppercase tracking-widest">Yol Tarifi</span>
                                     </button>
                                     <button 
@@ -189,7 +189,7 @@ export function ClinicDetailDrawer({ clinicId, onClose, onBookAppointment }: Cli
                                                         <p className="text-[10px] font-black text-zinc-400 dark:text-white/40 uppercase tracking-widest mb-1">Çalışma Durumu</p>
                                                         <p className="text-sm font-bold text-zinc-850 dark:text-white/90 flex items-center gap-2">
                                                             {clinic.isOpenNow ? (
-                                                                <span className="text-emerald-500 dark:text-emerald-400 flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" /> ŞU AN AÇIK</span>
+                                                                <span className="text-indigo-500 dark:text-indigo-400 flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-indigo-500 dark:bg-indigo-400 animate-pulse" /> ŞU AN AÇIK</span>
                                                             ) : (
                                                                 <span className="text-red-500 dark:text-red-400 flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-red-500 dark:bg-red-400" /> ŞU AN KAPALI</span>
                                                             )}
@@ -205,7 +205,7 @@ export function ClinicDetailDrawer({ clinicId, onClose, onBookAppointment }: Cli
                                                 <div className="grid grid-cols-2 gap-3">
                                                     {clinic.features?.map((feature: string) => (
                                                         <div key={feature} className="flex items-center gap-3 p-4 bg-white dark:bg-white/5 rounded-2xl border border-zinc-200 dark:border-card-border group hover:bg-zinc-100/50 dark:hover:bg-black/10 dark:bg-white/10 transition-all cursor-default">
-                                                            <ShieldCheck className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                                                            <ShieldCheck className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
                                                             <span className="text-xs font-black text-zinc-700 dark:text-white/80 uppercase tracking-tight">{feature}</span>
                                                         </div>
                                                     ))}

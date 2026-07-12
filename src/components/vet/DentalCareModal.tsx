@@ -82,7 +82,7 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
     };
 
     const getResultFeedback = () => {
-        if (totalScore === 0) return { title: "Mükemmel Gülüş! 🦷✨", desc: "Mochi'nin diş sağlığı harika görünüyor. Rutin bakıma devam!", color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" };
+        if (totalScore === 0) return { title: "Mükemmel Gülüş! 🦷✨", desc: "Mochi'nin diş sağlığı harika görünüyor. Rutin bakıma devam!", color: "text-indigo-500", bg: "bg-indigo-500/10", border: "border-indigo-500/20" };
         if (totalScore <= 3) return { title: "Dikkatli Olalım 🤔", desc: "Ufak belirtiler var. Fırçalama sıklığını artırmalı ve takip etmelisin.", color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" };
         return { title: "Veteriner Kontrolü Şart 🚨", desc: "Diş taşı veya diş eti hastalığı riski yüksek. Lütfen randevu al.", color: "text-[#FF3B30]", bg: "bg-[#FF3B30]/10", border: "border-red-500/20" };
     };
@@ -115,7 +115,7 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
                 <div className="p-8 pb-4 bg-white/80 dark:bg-[#111111]/80 backdrop-blur-3xl z-30 sticky top-0 border-b border-zinc-200 dark:border-card-border">
                     <div className="flex justify-between items-center mb-8 mt-2 sm:mt-0">
                         <div className="flex items-center gap-4">
-                            <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 dark:text-emerald-400 flex items-center justify-center shadow-2xl">
+                            <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 dark:text-indigo-400 flex items-center justify-center shadow-2xl">
                                 <Smile className="w-8 h-8" />
                             </div>
                             <div>
@@ -143,7 +143,7 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
                             onClick={() => setActiveTab('timer')}
                             className={cn(
                                 "flex-1 py-3.5 rounded-[1.4rem] text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer",
-                                activeTab === 'timer' ? "bg-emerald-500 text-white shadow-md dark:shadow-2xl" : "text-zinc-500 dark:text-white/30 hover:text-zinc-700 dark:hover:text-black/60 dark:text-white/60"
+                                activeTab === 'timer' ? "bg-indigo-500 text-white shadow-md dark:shadow-2xl" : "text-zinc-500 dark:text-white/30 hover:text-zinc-700 dark:hover:text-black/60 dark:text-white/60"
                             )}
                         >
                             <HeartPulse className="w-3.5 h-3.5" /> FIRÇALA
@@ -189,11 +189,11 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
                                                 <button
                                                     key={idx}
                                                     onClick={() => handleAnswer(opt.score)}
-                                                    className="w-full bg-white dark:bg-[#1C1C1E] p-6 rounded-[2.5rem] border border-zinc-200 dark:border-card-border hover:border-emerald-500/30 group transition-all shadow-sm dark:shadow-xl flex items-center gap-5 text-left active:scale-[0.98] cursor-pointer"
+                                                    className="w-full bg-white dark:bg-[#1C1C1E] p-6 rounded-[2.5rem] border border-zinc-200 dark:border-card-border hover:border-indigo-500/30 group transition-all shadow-sm dark:shadow-xl flex items-center gap-5 text-left active:scale-[0.98] cursor-pointer"
                                                 >
                                                     <span className="text-4xl group-hover:scale-125 transition-transform">{opt.icon}</span>
                                                     <span className="font-black text-zinc-700 dark:text-white/70 uppercase tracking-tight text-lg">{opt.label}</span>
-                                                    <ChevronRight className="ml-auto w-6 h-6 text-zinc-300 dark:text-white/10 group-hover:text-emerald-500 transition-colors" />
+                                                    <ChevronRight className="ml-auto w-6 h-6 text-zinc-300 dark:text-white/10 group-hover:text-indigo-500 transition-colors" />
                                                 </button>
                                             ))}
                                         </div>
@@ -234,7 +234,7 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
                                         stroke="currentColor" strokeWidth="10" fill="transparent"
                                         strokeDasharray={2 * Math.PI * 130}
                                         strokeDashoffset={2 * Math.PI * 130 * (1 - timeLeft / 120)}
-                                        className="text-emerald-500 transition-all duration-1000 ease-linear"
+                                        className="text-indigo-500 transition-all duration-1000 ease-linear"
                                         strokeLinecap="round"
                                     />
                                 </svg>
@@ -242,7 +242,7 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
                                     <div className="text-7xl font-black text-zinc-850 dark:text-white tracking-tighter italic leading-none">
                                         {formatTime(timeLeft)}
                                     </div>
-                                    <div className="text-emerald-500 font-black text-[10px] uppercase tracking-[0.4em] mt-4 animate-pulse">
+                                    <div className="text-indigo-500 font-black text-[10px] uppercase tracking-[0.4em] mt-4 animate-pulse">
                                         {isTimerRunning ? "FIRÇALAMAYA DEVAM! 🦷" : "SÜRE DOLDU!"}
                                     </div>
                                 </div>
@@ -253,7 +253,7 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
                                     onClick={() => setIsTimerRunning(!isTimerRunning)}
                                     className={cn(
                                         "w-24 h-24 rounded-full flex items-center justify-center shadow-lg transition-all hover:scale-105 active:scale-90 border-4 border-zinc-100 dark:border-card-border cursor-pointer",
-                                        isTimerRunning ? "bg-[#FF9500] text-white" : "bg-emerald-500 text-white"
+                                        isTimerRunning ? "bg-[#FF9500] text-white" : "bg-indigo-500 text-white"
                                     )}
                                 >
                                     {isTimerRunning ? <Pause className="w-10 h-10 fill-current" /> : <Play className="w-10 h-10 fill-current ml-1" />}
@@ -267,7 +267,7 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
                             </div>
 
                             <p className="mt-12 text-[10px] text-zinc-400 dark:text-white/20 font-black uppercase tracking-[0.2em] max-w-[80%] leading-relaxed">
-                                GÜNLÜK 2 DAKİKA FIRÇALAMA PLAK OLUŞUMUNU <span className="text-emerald-500/50">%80</span> AZALTIR.
+                                GÜNLÜK 2 DAKİKA FIRÇALAMA PLAK OLUŞUMUNU <span className="text-indigo-500/50">%80</span> AZALTIR.
                             </p>
                         </div>
                     )}
@@ -276,7 +276,7 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
                     {activeTab === 'guide' && (
                         <div className="space-y-6">
                             <div className="bg-white dark:bg-[#1C1C1E] p-8 rounded-[3rem] border border-zinc-200 dark:border-card-border shadow-sm dark:shadow-2xl relative overflow-hidden group">
-                                <div className="absolute -right-10 -top-10 w-40 h-40 bg-emerald-500/5 rounded-full blur-3xl group-hover:bg-emerald-500/10 transition-colors" />
+                                <div className="absolute -right-10 -top-10 w-40 h-40 bg-indigo-500/5 rounded-full blur-3xl group-hover:bg-indigo-500/10 transition-colors" />
                                 <h3 className="text-lg font-black text-zinc-850 dark:text-white italic tracking-tight uppercase mb-6 z-10 relative">Fırçalama Tekniği 101</h3>
                                 <div className="space-y-5 relative z-10">
                                     {[
@@ -285,7 +285,7 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
                                         "Dairesel hareketlerle yüzeyleri fırçalayın."
                                     ].map((step, i) => (
                                         <div key={i} className="flex gap-4 items-start">
-                                            <span className="bg-emerald-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 shadow-lg shadow-emerald-500/20">{i + 1}</span>
+                                            <span className="bg-indigo-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 shadow-lg shadow-indigo-500/20">{i + 1}</span>
                                             <p className="text-sm font-bold text-zinc-650 dark:text-white/60 uppercase tracking-tight">{step}</p>
                                         </div>
                                     ))}
