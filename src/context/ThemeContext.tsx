@@ -54,6 +54,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         }
     }, []);
 
+    // Load Accessibility Settings from user profile
+    useEffect(() => {
+        if (user?.settings?.accessibility) {
+            const acc = user.settings.accessibility;
+            if (acc.fontSize) setFontSizeState(acc.fontSize);
+            if (acc.colorBlindMode) setColorBlindModeState(acc.colorBlindMode);
+            if (acc.boldText !== undefined) setBoldTextState(acc.boldText);
+            if (acc.highContrast !== undefined) setHighContrastState(acc.highContrast);
+            if (acc.reduceMotion !== undefined) setReduceMotionState(acc.reduceMotion);
+            if (acc.reduceTransparency !== undefined) setReduceTransparencyState(acc.reduceTransparency);
+            if (acc.seniorMode !== undefined) setSeniorModeState(acc.seniorMode);
+        }
+    }, [user?.settings?.accessibility]);
 
     const pathname = usePathname();
 

@@ -34,12 +34,9 @@ html, body {
   --color-emergency: var(--emergency);
   --color-brand-purple: var(--brand-purple);
 
-  --font-sans: var(--font-poppins);
+  --font-sans: var(--font-jakarta);
   --font-serif: var(--font-playfair);
-  --font-mono: var(--font-inter);
-  --font-pacifico: var(--font-pacifico);
-  --font-satisfy: var(--font-satisfy);
-  --font-playfair: var(--font-playfair);
+  --font-mono: var(--font-jakarta);
 
   --radius-xl: 1rem;
   --radius-2xl: 1.5rem;
@@ -55,12 +52,7 @@ html, body {
 .theme-gold { --accent: #F59E0B; }
 .theme-rose { --accent: #F43F5E; }
 
-/* SMART FONT INHERITANCE: Overrides --font-sans globally when a theme font is active */
-.font-serif { --font-sans: var(--font-playfair) !important; font-family: var(--font-playfair) !important; }
-.font-mono { --font-sans: var(--font-inter) !important; font-family: var(--font-inter) !important; }
-.font-pacifico { --font-sans: var(--font-pacifico) !important; font-family: var(--font-pacifico) !important; }
-.font-satisfy { --font-sans: var(--font-satisfy) !important; font-family: var(--font-satisfy) !important; }
-.font-playfair { --font-sans: var(--font-playfair) !important; font-family: var(--font-playfair) !important; }
+
 
 @utility animate-nebula-glow {
   animation: nebula-glow 8s infinite alternate ease-in-out;
@@ -101,12 +93,12 @@ html, body {
   }
 
   /* --- ACCESSIBILITY MODIFIERS --- */
-  .font-size-small { font-size: 1.05rem !important; }
-  .font-size-medium { font-size: 1.15rem !important; }
-  .font-size-large { font-size: 1.44rem !important; }
+  .font-size-small { font-size: 105% !important; }
+  .font-size-medium { font-size: 115% !important; }
+  .font-size-large { font-size: 140% !important; }
 
   /* Bold Text: Force weight on text elements */
-  .bold-text p, .bold-text span, .bold-text button, .bold-text h1, .bold-text h2, .bold-text h3 { 
+  .bold-text * { 
     font-weight: 700 !important; 
   }
   
@@ -119,10 +111,15 @@ html, body {
   }
 
   /* Reduce Transparency: Kill blur effects for performance/clarity */
-  .reduce-transparency * {
+  .reduce-transparency {
+    --glass-bg: var(--card-bg);
+  }
+  .reduce-transparency .glass-panel,
+  .reduce-transparency .premium-card,
+  .reduce-transparency [class*="backdrop-blur"] {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    background-color: rgba(0,0,0,0.9) !important;
+    background-color: var(--card-bg) !important;
   }
 
   /* High Contrast: Sharpen colors and borders */
@@ -135,13 +132,25 @@ html, body {
   }
 
   /* High Fidelity Color Blind Filters */
-  .cb-protanopia { filter: saturate(0.8) hue-rotate(-20deg) contrast(1.1); }
-  .cb-deuteranopia { filter: saturate(0.7) hue-rotate(10deg) contrast(1.1); }
-  .cb-tritanopia { filter: sepia(0.3) saturate(1.5) hue-rotate(50deg); }
+  html.cb-protanopia, html.cb-deuteranopia, html.cb-tritanopia {
+    filter: none !important;
+  }
+  html.cb-protanopia::after,
+  html.cb-deuteranopia::after,
+  html.cb-tritanopia::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2147483647; /* Max z-index to cover everything including modals */
+  }
+  html.cb-protanopia::after { backdrop-filter: saturate(0.8) hue-rotate(-20deg) contrast(1.1); }
+  html.cb-deuteranopia::after { backdrop-filter: saturate(0.7) hue-rotate(10deg) contrast(1.1); }
+  html.cb-tritanopia::after { backdrop-filter: sepia(0.3) saturate(1.5) hue-rotate(50deg); }
 
   /* Senior Mode: Accessibility scaling and simplifications */
   .senior-mode {
-    font-size: 1.35rem !important;
+    font-size: 135% !important;
   }
   .senior-mode p, 
   .senior-mode span, 
@@ -202,7 +211,7 @@ html, body {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-poppins), var(--font-inter), sans-serif;
+  font-family: var(--font-jakarta), sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.5s ease, color 0.5s ease, font-size 0.3s ease;
