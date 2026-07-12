@@ -16,6 +16,7 @@ import { usePet } from "@/context/PetContext";
 import { useWeather } from "@/context/WeatherContext";
 import { useQuestEngine } from "@/context/QuestEngineContext";
 import { QuestBentoCard } from "@/components/quests/QuestBentoCard";
+import { WeatherSphereEffect } from "@/components/walk/WeatherSphereEffect";
 
 // Dynamic Import for Leaflet Map
 const GoogleLiveMap = dynamic(() => import('@/components/walk/LiveMap'), {
@@ -113,9 +114,29 @@ export default function WalkPage() {
                 </div>
             </div>
 
-            <main className="px-5 mt-4 space-y-5">
+            {/* ── MAIN SCROLLABLE CONTENT ── */}
+            <div className="px-5 mt-6 space-y-6">
 
-                {/* 2. WEATHER WIDGET - GERÇEK VERİ */}
+                {/* DYNAMIC WEATHER SPHERE FROM CONTROLS */}
+                {weather && (
+                    <div className="relative w-full h-[220px] rounded-[2rem] overflow-hidden shadow-lg border border-card-border mb-6">
+                        <WeatherSphereEffect 
+                            condition={weather.condition} 
+                            temp={weather.temp}
+                            windSpeed={weather.windSpeed || 5}
+                        />
+                        {/* Overlay text on top of weather sphere */}
+                        <div className="absolute top-6 left-6 z-20 flex flex-col items-start bg-black/15 backdrop-blur-[2px] border border-white/10 p-3 rounded-2xl shadow-[0_8px_16px_rgba(0,0,0,0.1)]">
+                            <span className="text-2xl filter drop-shadow-md mb-2">{weatherLoading ? '⏳' : (weather?.emoji || '☀️')}</span>
+                            <div className="flex flex-col">
+                                <span className="text-white font-black text-2xl drop-shadow-md leading-none">{weatherLoading ? '...' : weather?.temp + '°C'}</span>
+                                <span className="text-white/95 font-bold text-[9px] uppercase tracking-wider drop-shadow-md mt-1.5 leading-none max-w-[80px] break-words">{weatherLoading ? 'Yükleniyor...' : weather?.condition}</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                
+                {/* 1. WEEKLY WALK OVERVIEW (APPLE FITNESS STYLE) */}
                 <div className={`bg-gradient-to-r border rounded-2xl p-3.5 flex items-center justify-between shadow-sm backdrop-blur-md animate-in fade-in slide-in-from-top-4 duration-300 ${
                     !weather || weather.badgeColor === 'emerald'
                         ? 'from-emerald-500/10 to-teal-500/10 dark:from-emerald-500/5 dark:to-teal-500/5 border-emerald-500/20 dark:border-emerald-500/10'
@@ -316,7 +337,7 @@ export default function WalkPage() {
 
                 {/* 7. GLOBAL LEADERBOARD (Embedded) */}
                 <LeaderboardSection />
-            </main>
+            </div>
         </div>
     );
 }
