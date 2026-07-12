@@ -62,13 +62,13 @@ function FlashChallengeModal({ event, onAccept, onDismiss }: {
                 <motion.div
                     animate={{ scale: [1, 1.3, 1], opacity: [0.15, 0.3, 0.15] }}
                     transition={{ duration: 2, repeat: Infinity }}
-                    className="absolute -right-16 -top-16 w-48 h-48 bg-white/20 rounded-full blur-3xl pointer-events-none"
+                    className="absolute -right-16 -top-16 w-48 h-48 bg-black/20 dark:bg-white/20 rounded-full blur-3xl pointer-events-none"
                 />
 
                 {/* TOP RIGHT CLOSE BUTTON */}
                 <button
                     onClick={onDismiss}
-                    className="absolute top-4 left-4 w-8 h-8 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center text-white/70 hover:text-white transition-all z-50"
+                    className="absolute top-4 left-4 w-8 h-8 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center text-black/70 dark:text-white/70 hover:text-white transition-all z-50"
                 >
                     ✕
                 </button>
@@ -88,7 +88,7 @@ function FlashChallengeModal({ event, onAccept, onDismiss }: {
                             />
                         </svg>
                         <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-[9px] font-black text-white/90 font-mono">
+                            <span className="text-[9px] font-black text-black/90 dark:text-white/90 font-mono">
                                 {formatCountdown(secsLeft)}
                             </span>
                         </div>
@@ -111,11 +111,11 @@ function FlashChallengeModal({ event, onAccept, onDismiss }: {
                         transition={{ duration: 0.8, repeat: Infinity }}
                         className="w-1.5 h-1.5 bg-red-400 rounded-full"
                     />
-                    <span className="text-[9px] font-black text-white/80 uppercase tracking-widest">CANLI GÖREV</span>
+                    <span className="text-[9px] font-black text-black/80 dark:text-white/80 uppercase tracking-widest">CANLI GÖREV</span>
                 </div>
 
                 <h2 className="text-2xl font-black text-white mb-2 leading-tight">{event.title}</h2>
-                <p className="text-sm text-white/70 font-semibold mb-5 leading-relaxed">{event.body}</p>
+                <p className="text-sm text-black/70 dark:text-white/70 font-semibold mb-5 leading-relaxed">{event.body}</p>
 
                 {/* Reward chips */}
                 {event.reward && (
@@ -143,7 +143,7 @@ function FlashChallengeModal({ event, onAccept, onDismiss }: {
                     </motion.button>
                     <button
                         onClick={onDismiss}
-                        className="w-12 h-12 bg-black/20 hover:bg-black/30 rounded-2xl flex items-center justify-center text-white/50 hover:text-white/80 transition-all self-end"
+                        className="w-12 h-12 bg-black/20 hover:bg-black/30 rounded-2xl flex items-center justify-center text-black/50 dark:text-white/50 hover:text-black/80 dark:text-white/80 transition-all self-end"
                     >
                         ✕
                     </button>
@@ -195,9 +195,9 @@ function EventToastCard({ event, onDismiss }: { event: LiveEvent; onDismiss: () 
                 <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-1">
                         <p className="text-[10px] font-black text-white leading-tight">{event.title}</p>
-                        <button onClick={onDismiss} className="text-white/20 hover:text-white/50 text-[10px] shrink-0 mt-0.5 transition-colors">✕</button>
+                        <button onClick={onDismiss} className="text-black/30 dark:text-white/20 hover:text-black/50 dark:text-white/50 text-[10px] shrink-0 mt-0.5 transition-colors">✕</button>
                     </div>
-                    <p className="text-[8px] text-white/40 font-semibold mt-0.5 leading-tight">{event.body}</p>
+                    <p className="text-[8px] text-black/50 dark:text-white/40 font-semibold mt-0.5 leading-tight">{event.body}</p>
 
                     {event.reward && (
                         <div className="flex items-center gap-1.5 mt-1.5">

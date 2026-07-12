@@ -510,24 +510,6 @@ export class MockApiService implements IApiService {
         await this.saveData('cart', []);
     }
 
-    async createOrder(order: Partial<ShopOrder>): Promise<ShopOrder> {
-        const orders = await this.getOrders();
-        const newOrder: ShopOrder = {
-            id: `order-${Date.now()}`,
-            userId: 'user-milo',
-            items: order.items || [],
-            totalPrice: order.totalPrice || 0,
-            shippingAddress: order.shippingAddress || '',
-            status: 'pending',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            ...order
-        };
-        await this.saveData('orders', [newOrder, ...orders]);
-        await this.clearCart();
-        return newOrder;
-    }
-
     async getOrders(): Promise<ShopOrder[]> {
         return await this.loadData<ShopOrder[]>('orders') || [];
     }

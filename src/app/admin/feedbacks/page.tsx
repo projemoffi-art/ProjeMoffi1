@@ -63,14 +63,14 @@ export default function AdminFeedbacksPage() {
 
                 <div className="flex items-center gap-3">
                     <div className="bg-card p-4 rounded-2xl border border-card-border shadow-moffi-card text-center min-w-[120px]">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Ort. Puan</p>
+                        <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Ort. Puan</p>
                         <div className="flex items-center justify-center gap-1">
                             <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
                             <span className="text-2xl font-black text-foreground">{averageRating}</span>
                         </div>
                     </div>
                     <div className="bg-card p-4 rounded-2xl border border-card-border shadow-moffi-card text-center min-w-[120px]">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Toplam Yorum</p>
+                        <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Toplam Yorum</p>
                         <span className="text-2xl font-black text-foreground">{feedbacks.length}</span>
                     </div>
                 </div>
@@ -79,7 +79,7 @@ export default function AdminFeedbacksPage() {
             {/* Filters */}
             <div className="flex flex-col md:flex-row gap-4">
                 <div className="relative flex-1">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 dark:text-gray-400" />
                     <input
                         type="text"
                         placeholder="Kullanıcı adı veya yorum içeriğinde ara..."
@@ -116,7 +116,7 @@ export default function AdminFeedbacksPage() {
             ) : filteredFeedbacks.length === 0 ? (
                 <div className="text-center py-32 bg-card rounded-[3rem] border border-dashed border-card-border">
                     <MessageSquare className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-                    <h3 className="text-xl font-bold text-gray-400">Henüz geri bildirim bulunamadı.</h3>
+                    <h3 className="text-xl font-bold text-gray-500 dark:text-gray-400">Henüz geri bildirim bulunamadı.</h3>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -145,7 +145,7 @@ export default function AdminFeedbacksPage() {
                                     </div>
                                     <div>
                                         <h4 className="font-black text-foreground">@{fb.email ? fb.email.split('@')[0] : 'Anonim'}</h4>
-                                        <p className="text-xs text-gray-400 font-medium flex items-center gap-1">
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium flex items-center gap-1">
                                             <Clock className="w-3 h-3" />
                                             {new Date(fb.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
                                         </p>
@@ -160,7 +160,7 @@ export default function AdminFeedbacksPage() {
 
                             <div className="bg-gray-50/50 rounded-3xl p-6 border border-card-border group-hover:bg-indigo-50/30 transition-colors h-32 overflow-y-auto no-scrollbar">
                                 <p className="text-foreground leading-relaxed font-medium">
-                                    {fb.message || <span className="italic text-gray-400">Yorum yapılmadı.</span>}
+                                    {fb.message || <span className="italic text-gray-500 dark:text-gray-400">Yorum yapılmadı.</span>}
                                 </p>
                             </div>
 

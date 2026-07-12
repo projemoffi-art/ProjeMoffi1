@@ -104,7 +104,7 @@ export default function RootLayout({
                                 <ClientAuthWrapper>
                                   <GlobalIdentitySync />
                                   <GlobalAuraBackground />
-                                  <div className="min-h-screen relative overflow-hidden pb-24">
+                                  <div className="min-h-screen relative pb-24">
                                     <ErrorBoundary>
                                       <RootOnboardingWrapper>
                                         {children}

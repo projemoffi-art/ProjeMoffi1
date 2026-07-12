@@ -208,7 +208,7 @@ export default function FeaturedPetsManager() {
             </AnimatePresence>
 
             {/* HEADER */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-black/5 dark:border-white/5 pb-6">
                 <div>
                     <h1 className="text-3xl font-black tracking-tighter uppercase flex items-center gap-3">
                         <Trophy className="w-8 h-8 text-yellow-400" /> Günün 5 Yıldız Patisi
@@ -217,7 +217,7 @@ export default function FeaturedPetsManager() {
                         Moffi Evreni'nde günün en aktif 5 evcil hayvanını yönetin. Admin müdahale etmediğinde sistem en aktif 5 adayı otomatik yayınlar.
                     </p>
                 </div>
-                <div className="flex items-center gap-3 bg-zinc-900/40 border border-white/5 rounded-2xl px-4 py-2.5 text-xs">
+                <div className="flex items-center gap-3 bg-zinc-900/40 border border-black/5 dark:border-white/5 rounded-2xl px-4 py-2.5 text-xs">
                     <Calendar className="w-4 h-4 text-indigo-400" />
                     <span className="font-bold text-zinc-300">Tarih:</span>
                     <span className="font-black text-indigo-400 tracking-wider uppercase">
@@ -249,7 +249,7 @@ export default function FeaturedPetsManager() {
                                         className={`border rounded-3xl bg-gradient-to-br from-zinc-950 to-zinc-900/60 p-4 md:p-5 relative overflow-hidden transition-all flex flex-col md:flex-row gap-4 items-center ${
                                             slot.status === 'published' 
                                                 ? "border-purple-500/20 shadow-lg shadow-purple-500/[0.02]" 
-                                                : "border-white/5"
+                                                : "border-black/5 dark:border-white/5"
                                         }`}
                                     >
                                         {/* Badge showing slot number */}
@@ -258,7 +258,7 @@ export default function FeaturedPetsManager() {
                                         </div>
 
                                         {/* Pet Avatar image */}
-                                        <div className="w-20 h-20 rounded-2xl overflow-hidden border border-white/10 shadow-inner relative flex-shrink-0 bg-zinc-800">
+                                        <div className="w-20 h-20 rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 shadow-inner relative flex-shrink-0 bg-zinc-800">
                                             <img src={slot.media_url} className="w-full h-full object-cover" alt={slot.pet?.name || 'Star'} />
                                         </div>
 
@@ -288,7 +288,7 @@ export default function FeaturedPetsManager() {
                                         <div className="flex-shrink-0 flex items-center gap-2">
                                             <button 
                                                 onClick={() => handleEditSlot(slot)}
-                                                className="p-2.5 bg-zinc-900 border border-white/5 text-zinc-300 hover:text-indigo-400 hover:border-indigo-500/30 rounded-xl transition-all cursor-pointer"
+                                                className="p-2.5 bg-zinc-900 border border-black/5 dark:border-white/5 text-zinc-300 hover:text-indigo-400 hover:border-indigo-500/30 rounded-xl transition-all cursor-pointer"
                                                 title="Düzenle"
                                             >
                                                 <Edit3 className="w-4 h-4" />
@@ -321,13 +321,13 @@ export default function FeaturedPetsManager() {
                                         className={`border rounded-3xl p-4 bg-zinc-900/20 backdrop-blur-sm cursor-pointer transition-all flex items-center gap-4 group ${
                                             selectedPet?.id === cand.id 
                                                 ? "border-indigo-500 bg-indigo-500/5 shadow-lg shadow-indigo-500/5" 
-                                                : "border-white/5 hover:border-white/10 hover:bg-zinc-900/40"
+                                                : "border-black/5 dark:border-white/5 hover:border-black/10 dark:border-white/10 hover:bg-zinc-900/40"
                                         }`}
                                     >
                                         <span className="text-zinc-600 font-black text-sm group-hover:text-indigo-400 transition-colors w-5">
                                             #{idx + 1}
                                         </span>
-                                        <div className="w-14 h-14 rounded-2xl overflow-hidden border border-white/5 relative flex-shrink-0 bg-zinc-800">
+                                        <div className="w-14 h-14 rounded-2xl overflow-hidden border border-black/5 dark:border-white/5 relative flex-shrink-0 bg-zinc-800">
                                             <img src={cand.image} className="w-full h-full object-cover" alt={cand.name} />
                                         </div>
                                         <div className="flex-grow min-w-0">
@@ -349,7 +349,7 @@ export default function FeaturedPetsManager() {
                     {/* RIGHT COLUMN: MANUAL SEARCH & PUBLISHING FORM */}
                     <div className="space-y-6">
                         {/* 1. MANUAL SEARCH CONSOLE */}
-                        <div className="border border-white/5 rounded-[2rem] bg-zinc-900/20 backdrop-blur-xl p-5 space-y-4 shadow-xl">
+                        <div className="border border-black/5 dark:border-white/5 rounded-[2rem] bg-zinc-900/20 backdrop-blur-xl p-5 space-y-4 shadow-xl">
                             <h3 className="text-xs font-black uppercase tracking-wider text-zinc-400 flex items-center gap-2">
                                 <Search className="w-4 h-4 text-indigo-400" /> Tüm Patilerde Ara (Joker Arama)
                             </h3>
@@ -359,13 +359,13 @@ export default function FeaturedPetsManager() {
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     placeholder="Evcil hayvan adı, cins veya sahip ara..."
-                                    className="w-full bg-black/40 border border-white/5 rounded-2xl pl-12 pr-4 py-3.5 text-xs text-white placeholder-zinc-500 focus:border-indigo-500 focus:outline-none transition-colors"
+                                    className="w-full bg-black/40 border border-black/5 dark:border-white/5 rounded-2xl pl-12 pr-4 py-3.5 text-xs text-white placeholder-zinc-500 focus:border-indigo-500 focus:outline-none transition-colors"
                                 />
                                 <Search className="w-4.5 h-4.5 text-zinc-500 absolute left-4 top-1/2 -translate-y-1/2" />
                             </div>
 
                             {searchResults.length > 0 && (
-                                <div className="bg-zinc-950 border border-white/5 rounded-2xl max-h-56 overflow-y-auto divide-y divide-white/5 custom-scrollbar animate-fadeIn">
+                                <div className="bg-zinc-950 border border-black/5 dark:border-white/5 rounded-2xl max-h-56 overflow-y-auto divide-y divide-white/5 custom-scrollbar animate-fadeIn">
                                     {searchResults.map(pet => (
                                         <div 
                                             key={pet.id} 
@@ -373,7 +373,7 @@ export default function FeaturedPetsManager() {
                                                 handleSelectPet(pet, 1);
                                                 setSearchQuery("");
                                             }}
-                                            className="p-3 hover:bg-white/5 cursor-pointer flex items-center gap-3 transition-colors"
+                                            className="p-3 hover:bg-black/5 dark:bg-white/5 cursor-pointer flex items-center gap-3 transition-colors"
                                         >
                                             <div className="w-9 h-9 rounded-xl overflow-hidden bg-zinc-800 flex-shrink-0">
                                                 <img src={pet.image || pet.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200"} className="w-full h-full object-cover" alt={pet.name} />
@@ -391,7 +391,7 @@ export default function FeaturedPetsManager() {
                         </div>
 
                         {/* 2. FEATURE/PUBLISHING FORM */}
-                        <div className="border border-white/5 rounded-[2rem] bg-zinc-900/20 backdrop-blur-xl p-5 shadow-xl">
+                        <div className="border border-black/5 dark:border-white/5 rounded-[2rem] bg-zinc-900/20 backdrop-blur-xl p-5 shadow-xl">
                             <h3 className="text-xs font-black uppercase tracking-wider text-zinc-400 flex items-center gap-2 mb-4">
                                 <Eye className="w-4 h-4 text-indigo-400" /> Yıldız Pati Atama Formu
                             </h3>
@@ -399,7 +399,7 @@ export default function FeaturedPetsManager() {
                             {selectedPet ? (
                                 <form onSubmit={handlePublish} className="space-y-4">
                                     {/* Selected pet preview */}
-                                    <div className="p-3 bg-white/5 rounded-2xl border border-white/5 flex items-center gap-3">
+                                    <div className="p-3 bg-black/5 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/5 flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-xl overflow-hidden bg-zinc-800 flex-shrink-0">
                                             <img src={selectedPet.image || selectedPet.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200"} className="w-full h-full object-cover" alt="Selected" />
                                         </div>
@@ -413,7 +413,7 @@ export default function FeaturedPetsManager() {
 
                                     {/* Target Slot Selection */}
                                     <div className="space-y-1">
-                                        <label className="text-[9px] font-black text-white/30 uppercase tracking-widest">Hedef Sıralama (Slot)</label>
+                                        <label className="text-[9px] font-black text-black/40 dark:text-white/30 uppercase tracking-widest">Hedef Sıralama (Slot)</label>
                                         <div className="grid grid-cols-5 gap-2">
                                             {[1, 2, 3, 4, 5].map((num) => (
                                                 <button
@@ -423,7 +423,7 @@ export default function FeaturedPetsManager() {
                                                     className={`py-2 rounded-xl text-xs font-black border transition-all cursor-pointer ${
                                                         targetRank === num
                                                             ? "bg-indigo-500/20 border-indigo-500 text-indigo-300"
-                                                            : "bg-black/20 border-white/5 text-zinc-500 hover:border-white/10"
+                                                            : "bg-black/20 border-black/5 dark:border-white/5 text-zinc-500 hover:border-black/10 dark:border-white/10"
                                                     }`}
                                                 >
                                                     #{num}
@@ -434,46 +434,46 @@ export default function FeaturedPetsManager() {
 
                                     {/* Form Fields */}
                                     <div className="space-y-1">
-                                        <label className="text-[9px] font-black text-white/30 uppercase tracking-widest">Başlık</label>
+                                        <label className="text-[9px] font-black text-black/40 dark:text-white/30 uppercase tracking-widest">Başlık</label>
                                         <input 
                                             type="text"
                                             value={title}
                                             onChange={(e) => setTitle(e.target.value)}
                                             required
-                                            className="w-full bg-black/40 border border-white/5 rounded-xl p-3 text-xs text-white focus:border-indigo-500 focus:outline-none"
+                                            className="w-full bg-black/40 border border-black/5 dark:border-white/5 rounded-xl p-3 text-xs text-white focus:border-indigo-500 focus:outline-none"
                                         />
                                     </div>
 
                                     <div className="space-y-1">
-                                        <label className="text-[9px] font-black text-white/30 uppercase tracking-widest">Açıklama / Tebrik Mesajı</label>
+                                        <label className="text-[9px] font-black text-black/40 dark:text-white/30 uppercase tracking-widest">Açıklama / Tebrik Mesajı</label>
                                         <textarea 
                                             value={description}
                                             onChange={(e) => setDescription(e.target.value)}
                                             required
                                             rows={4}
-                                            className="w-full bg-black/40 border border-white/5 rounded-xl p-3 text-xs text-white focus:border-indigo-500 focus:outline-none resize-none"
+                                            className="w-full bg-black/40 border border-black/5 dark:border-white/5 rounded-xl p-3 text-xs text-white focus:border-indigo-500 focus:outline-none resize-none"
                                         />
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-1">
-                                            <label className="text-[9px] font-black text-white/30 uppercase tracking-widest">Rozet</label>
+                                            <label className="text-[9px] font-black text-black/40 dark:text-white/30 uppercase tracking-widest">Rozet</label>
                                             <input 
                                                 type="text"
                                                 value={badge}
                                                 onChange={(e) => setBadge(e.target.value)}
                                                 required
-                                                className="w-full bg-black/40 border border-white/5 rounded-xl p-3 text-xs text-white focus:border-indigo-500 focus:outline-none"
+                                                className="w-full bg-black/40 border border-black/5 dark:border-white/5 rounded-xl p-3 text-xs text-white focus:border-indigo-500 focus:outline-none"
                                             />
                                         </div>
                                         <div className="space-y-1">
-                                            <label className="text-[9px] font-black text-white/30 uppercase tracking-widest">Görsel URL</label>
+                                            <label className="text-[9px] font-black text-black/40 dark:text-white/30 uppercase tracking-widest">Görsel URL</label>
                                             <input 
                                                 type="text"
                                                 value={mediaUrl}
                                                 onChange={(e) => setMediaUrl(e.target.value)}
                                                 required
-                                                className="w-full bg-black/40 border border-white/5 rounded-xl p-3 text-xs text-white focus:border-indigo-500 focus:outline-none truncate"
+                                                className="w-full bg-black/40 border border-black/5 dark:border-white/5 rounded-xl p-3 text-xs text-white focus:border-indigo-500 focus:outline-none truncate"
                                             />
                                         </div>
                                     </div>
@@ -494,7 +494,7 @@ export default function FeaturedPetsManager() {
                                     </button>
                                 </form>
                             ) : (
-                                <div className="text-center py-10 border border-dashed border-white/5 rounded-2xl text-zinc-600 text-[10px] font-bold uppercase tracking-wider">
+                                <div className="text-center py-10 border border-dashed border-black/5 dark:border-white/5 rounded-2xl text-zinc-600 text-[10px] font-bold uppercase tracking-wider">
                                     Lütfen soldaki adaylardan veya arama sonuçlarından bir evcil hayvan seçin.
                                 </div>
                             )}

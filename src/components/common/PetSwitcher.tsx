@@ -15,7 +15,7 @@ export function PetSwitcher({ className, onAddPet }: PetSwitcherProps) {
     const { pets, activePet, switchPet } = usePet();
 
     return (
-        <div className={cn("flex items-center gap-3 p-1 bg-white/5 backdrop-blur-xl border border-card-border rounded-full w-fit", className)}>
+        <div className={cn("flex items-center gap-3 p-1 bg-black/5 dark:bg-white/5 backdrop-blur-xl border border-card-border rounded-full w-fit", className)}>
             <div className="flex -space-x-1 px-1">
                 {pets.map((pet) => {
                     const isActive = activePet?.id === pet.id;
@@ -38,7 +38,7 @@ export function PetSwitcher({ className, onAddPet }: PetSwitcherProps) {
                                     <img src={pet.image} alt={pet.name} className="w-full h-full object-cover" />
                                 ) : (
                                     <div className="w-full h-full bg-gradient-to-tr from-gray-100 to-gray-250 dark:from-zinc-800 dark:to-zinc-900 flex items-center justify-center">
-                                        <span className="text-gray-400 dark:text-zinc-500 text-xs font-black select-none uppercase font-sans">
+                                        <span className="text-gray-500 dark:text-gray-400 dark:text-zinc-500 text-xs font-black select-none uppercase font-sans">
                                             {pet.name ? pet.name[0] : '🐾'}
                                         </span>
                                     </div>
@@ -62,10 +62,10 @@ export function PetSwitcher({ className, onAddPet }: PetSwitcherProps) {
 
             {onAddPet && (
                 <>
-                    <div className="w-[1px] h-6 bg-white/10 mx-1" />
+                    <div className="w-[1px] h-6 bg-black/10 dark:bg-white/10 mx-1" />
                     <button 
                         onClick={onAddPet}
-                        className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/40 hover:bg-white/20 hover:text-white transition-all active:scale-90"
+                        className="w-10 h-10 rounded-full bg-black/10 dark:bg-white/10 flex items-center justify-center text-black/50 dark:text-white/40 hover:bg-black/20 dark:bg-white/20 hover:text-white transition-all active:scale-90"
                     >
                         <Plus className="w-5 h-5" />
                     </button>

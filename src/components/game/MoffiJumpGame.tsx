@@ -205,8 +205,8 @@ export default function MoffiJumpGame({ onGameOver, onClose }: GameProps) {
 
             {/* BACKGROUND DECOR */}
             <div className="absolute bottom-0 left-0 right-0 h-32 bg-[#DED895] border-t-4 border-[#543847]" />
-            <div className="absolute bottom-20 left-10 w-20 h-20 bg-white/20 rounded-full blur-xl" />
-            <div className="absolute top-20 right-10 w-32 h-32 bg-white/20 rounded-full blur-xl" />
+            <div className="absolute bottom-20 left-10 w-20 h-20 bg-black/20 dark:bg-white/20 rounded-full blur-xl" />
+            <div className="absolute top-20 right-10 w-32 h-32 bg-black/20 dark:bg-white/20 rounded-full blur-xl" />
 
             {/* HUD */}
             <div className="absolute top-6 left-6 z-20 flex gap-4">
@@ -296,12 +296,12 @@ export default function MoffiJumpGame({ onGameOver, onClose }: GameProps) {
             {gameState === 'gameover' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm z-30">
                     <div className="bg-card p-8 rounded-3xl shadow-2xl text-center max-w-sm mx-4 animate-in fade-in zoom-in duration-300">
-                        <div className="text-gray-400 font-bold mb-2 uppercase tracking-widest text-xs">Oyun Bitti</div>
+                        <div className="text-gray-500 dark:text-gray-400 font-bold mb-2 uppercase tracking-widest text-xs">Oyun Bitti</div>
                         <h2 className="text-5xl font-black text-[#5B4D9D] mb-6">{score}</h2>
 
                         <div className="grid grid-cols-2 gap-4 mb-8 w-full">
                             <div className="bg-gray-50 p-3 rounded-xl border border-card-border">
-                                <div className="text-xs text-gray-400 font-bold uppercase">Skor</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase">Skor</div>
                                 <div className="text-xl font-black text-foreground">{score}</div>
                             </div>
                             <div className="bg-yellow-50 p-3 rounded-xl border border-yellow-100">

@@ -98,7 +98,7 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ isOpen, 
           </div>
 
           {/* Right: Timeline & Info */}
-          <div className="w-full md:w-1/2 flex flex-col p-8 overflow-y-auto custom-scrollbar bg-black">
+          <div className="w-full md:w-1/2 flex flex-col p-8 overflow-y-auto custom-scrollbar bg-white dark:bg-black">
             <div className="flex items-center justify-between mb-8">
               <div>
                 <p className="text-xs text-[var(--text-tertiary)] font-bold uppercase tracking-widest">Sipariş Takibi</p>
@@ -106,7 +106,7 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ isOpen, 
               </div>
               <button 
                 onClick={onClose}
-                className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-[var(--text-secondary)] hover:bg-white/10 transition-all"
+                className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-[var(--text-secondary)] hover:bg-black/10 dark:bg-white/10 transition-all"
               >
                 <X size={20} />
               </button>
@@ -115,7 +115,7 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ isOpen, 
             {/* Steps Timeline */}
             <div className="space-y-0 relative flex-1">
               {/* Connecting Line */}
-              <div className="absolute left-[21px] top-6 bottom-6 w-[2px] bg-white/5" />
+              <div className="absolute left-[21px] top-6 bottom-6 w-[2px] bg-black/5 dark:bg-white/5" />
               <div 
                 className="absolute left-[21px] top-6 w-[2px] bg-[var(--moffi-blue)] transition-all duration-1000"
                 style={{ height: `${(currentStepIndex / (steps.length - 1)) * 90}%` }}
@@ -138,7 +138,7 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ isOpen, 
                       )}
                     </div>
                     <div>
-                      <p className={`font-bold transition-all ${isActive ? 'text-white text-lg' : 'text-gray-400 text-sm'}`}>
+                      <p className={`font-bold transition-all ${isActive ? 'text-white text-lg' : 'text-gray-500 dark:text-gray-400 text-sm'}`}>
                         {step.label}
                       </p>
                       <p className="text-xs text-[var(--text-tertiary)]">{step.sub}</p>
@@ -156,7 +156,7 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ isOpen, 
 
             {/* Actions */}
             <div className="mt-8 pt-8 border-t border-card-border flex gap-3">
-              <button className="flex-1 h-12 bg-white/5 hover:bg-white/10 rounded-2xl text-white text-sm font-bold transition-all flex items-center justify-center gap-2">
+              <button className="flex-1 h-12 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:bg-white/10 rounded-2xl text-white text-sm font-bold transition-all flex items-center justify-center gap-2">
                 <Share2 size={16} />
                 SİPARİŞİ PAYLAŞ
               </button>

@@ -110,7 +110,7 @@ export default function AdminPlatformSettingsPage() {
                                     %{settings.commissionRate}
                                 </div>
                             </div>
-                            <p className="text-[10px] text-gray-400 mt-1">Tüm işletme satışlarından kesilecek oran</p>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">Tüm işletme satışlarından kesilecek oran</p>
                         </div>
                     </div>
                 </SettingsCard>
@@ -126,7 +126,7 @@ export default function AdminPlatformSettingsPage() {
                                 onChange={e => update('minPayoutAmount', Number(e.target.value))}
                                 className="w-full bg-gray-50 border border-card-border rounded-xl px-4 py-3 text-sm font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-200"
                             />
-                            <p className="text-[10px] text-gray-400 mt-1">İşletmelerin çekim yapabilmesi için gereken minimum bakiye</p>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">İşletmelerin çekim yapabilmesi için gereken minimum bakiye</p>
                         </div>
                     </div>
                 </SettingsCard>
@@ -203,7 +203,7 @@ function SettingsCard({ title, icon: Icon, children }: { title: string; icon: ty
     return (
         <div className="bg-card rounded-2xl border border-card-border shadow-moffi-card p-6">
             <div className="flex items-center gap-2 mb-5">
-                <Icon className="w-4 h-4 text-gray-400" />
+                <Icon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                 <h3 className="font-bold text-foreground text-sm">{title}</h3>
             </div>
             {children}
@@ -218,7 +218,7 @@ function ToggleRow({ label, description, enabled, onToggle, danger }: {
         <div className="flex items-center justify-between">
             <div>
                 <div className={cn("text-sm font-medium", danger ? "text-red-700" : "text-foreground")}>{label}</div>
-                <div className="text-[10px] text-gray-400 mt-0.5">{description}</div>
+                <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">{description}</div>
             </div>
             <button onClick={onToggle} className="transition">
                 {enabled

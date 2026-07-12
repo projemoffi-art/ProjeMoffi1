@@ -64,12 +64,12 @@ export function WaterTracker() {
                     <h3 className="font-black text-[16px] text-gray-800 dark:text-white flex items-center gap-2">
                         <Droplets className="w-5 h-5 text-blue-500" /> Su Takibi
                     </h3>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-0.5">Günlük Hidrasyon Koçu</p>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mt-0.5">Günlük Hidrasyon Koçu</p>
                 </div>
                 {water > 0 && (
                     <button 
                         onClick={resetWater}
-                        className="p-1.5 rounded-full hover:bg-gray-105 dark:hover:bg-white/10 text-gray-400 hover:text-red-500 transition-colors"
+                        className="p-1.5 rounded-full hover:bg-gray-105 dark:hover:bg-black/10 dark:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-red-500 transition-colors"
                         title="Sıfırla"
                     >
                         <RotateCcw className="w-4 h-4" />
@@ -102,8 +102,8 @@ export function WaterTracker() {
                         )}
                     </AnimatePresence>
 
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest relative z-10">Tüketilen</span>
-                    <h4 className="text-3xl font-black text-gray-800 dark:text-white mt-1 relative z-10">{water} <span className="text-xs text-gray-400 font-bold">ML</span></h4>
+                    <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest relative z-10">Tüketilen</span>
+                    <h4 className="text-3xl font-black text-gray-800 dark:text-white mt-1 relative z-10">{water} <span className="text-xs text-gray-500 dark:text-gray-400 font-bold">ML</span></h4>
                     <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 mt-1 relative z-10">Hedef: {targetWater} ML ({percent}%)</span>
                 </div>
             </div>

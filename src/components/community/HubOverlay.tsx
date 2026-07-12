@@ -118,10 +118,10 @@ export function HubOverlay({
                                     </div>
                                     <div className="text-left">
                                         <h4 className="text-sm font-black text-white leading-none uppercase tracking-wide">Yeni Gönderi Paylaş</h4>
-                                        <p className="text-[10px] text-white/40 font-bold mt-1 uppercase tracking-wider">Topluluk akışında fotoğraf paylaş</p>
+                                        <p className="text-[10px] text-black/50 dark:text-white/40 font-bold mt-1 uppercase tracking-wider">Topluluk akışında fotoğraf paylaş</p>
                                     </div>
                                 </div>
-                                <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-white/50 group-hover:translate-x-0.5 transition-all" />
+                                <ChevronRight className="w-4 h-4 text-black/30 dark:text-white/20 group-hover:text-black/50 dark:text-white/50 group-hover:translate-x-0.5 transition-all" />
                             </motion.button>
 
                             {/* 2. KAYIP / SOS İLANI VER */}
@@ -138,10 +138,10 @@ export function HubOverlay({
                                     </div>
                                     <div className="text-left">
                                         <h4 className="text-sm font-black text-white leading-none uppercase tracking-wide">Kayıp / SOS İlanı Ver</h4>
-                                        <p className="text-[10px] text-white/40 font-bold mt-1 uppercase tracking-wider">Kayıp alarmı gönder ve haritada pinle</p>
+                                        <p className="text-[10px] text-black/50 dark:text-white/40 font-bold mt-1 uppercase tracking-wider">Kayıp alarmı gönder ve haritada pinle</p>
                                     </div>
                                 </div>
-                                <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-white/50 group-hover:translate-x-0.5 transition-all" />
+                                <ChevronRight className="w-4 h-4 text-black/30 dark:text-white/20 group-hover:text-black/50 dark:text-white/50 group-hover:translate-x-0.5 transition-all" />
                             </motion.button>
 
                             {/* 3. SAHİPLENDİRME İLANI VER */}
@@ -158,10 +158,10 @@ export function HubOverlay({
                                     </div>
                                     <div className="text-left">
                                         <h4 className="text-sm font-black text-white leading-none uppercase tracking-wide">Sahiplendirme İlanı</h4>
-                                        <p className="text-[10px] text-white/40 font-bold mt-1 uppercase tracking-wider">Dostlarımıza ömürlük yeni bir yuva bul</p>
+                                        <p className="text-[10px] text-black/50 dark:text-white/40 font-bold mt-1 uppercase tracking-wider">Dostlarımıza ömürlük yeni bir yuva bul</p>
                                     </div>
                                 </div>
-                                <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-white/50 group-hover:translate-x-0.5 transition-all" />
+                                <ChevronRight className="w-4 h-4 text-black/30 dark:text-white/20 group-hover:text-black/50 dark:text-white/50 group-hover:translate-x-0.5 transition-all" />
                             </motion.button>
                         </motion.div>
 

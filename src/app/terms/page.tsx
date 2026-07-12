@@ -26,7 +26,7 @@ export default function TermsPage() {
                 <div className="flex justify-between items-center mb-16">
                     <button 
                         onClick={() => router.back()}
-                        className="flex items-center gap-3 px-6 py-3 bg-white/5 border border-card-border rounded-2xl hover:bg-white/10 transition-all group"
+                        className="flex items-center gap-3 px-6 py-3 bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl hover:bg-black/10 dark:bg-white/10 transition-all group"
                     >
                         <ArrowLeft className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
                         <span className="text-[10px] font-black uppercase tracking-widest">{t('legal.back_to_app')}</span>
@@ -34,7 +34,7 @@ export default function TermsPage() {
 
                     <button 
                         onClick={() => setLanguage(language === 'tr' ? 'en' : 'tr')}
-                        className="flex items-center gap-3 px-6 py-3 bg-white/5 border border-card-border rounded-2xl hover:bg-white/10 transition-all"
+                        className="flex items-center gap-3 px-6 py-3 bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl hover:bg-black/10 dark:bg-white/10 transition-all"
                     >
                         <Globe className="w-4 h-4 text-cyan-400" />
                         <span className="text-[10px] font-black uppercase tracking-widest">{language === 'tr' ? 'English' : 'Türkçe'}</span>
@@ -57,7 +57,7 @@ export default function TermsPage() {
                 </div>
 
                 {/* Content */}
-                <div className="space-y-16 text-gray-400 leading-relaxed text-sm md:text-base">
+                <div className="space-y-16 text-gray-500 dark:text-gray-400 leading-relaxed text-sm md:text-base">
                     <section className="space-y-6">
                         <h2 className="text-2xl font-black text-white uppercase italic tracking-tight">1. Giriş / Introduction</h2>
                         <p>
@@ -85,7 +85,7 @@ export default function TermsPage() {
                         </ul>
                     </section>
 
-                    <section className="space-y-6 p-10 bg-white/5 border border-card-border rounded-[3rem] relative overflow-hidden">
+                    <section className="space-y-6 p-10 bg-black/5 dark:bg-white/5 border border-card-border rounded-[3rem] relative overflow-hidden">
                         <div className="absolute top-0 right-0 p-8">
                             <ShieldCheck className="w-12 h-12 text-cyan-400/20" />
                         </div>

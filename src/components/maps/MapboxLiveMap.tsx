@@ -105,7 +105,7 @@ export default function MapboxLiveMap({
 
     if (!MAPBOX_TOKEN) {
         return (
-            <div className="w-full h-full bg-[#050508] relative flex flex-col items-center justify-center text-center p-12">
+            <div className="w-full h-full bg-background dark:bg-[#050508] relative flex flex-col items-center justify-center text-center p-12">
                 <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:20px_20px]" />
                 
                 <div className="relative z-10 space-y-8 max-w-sm">
@@ -117,16 +117,16 @@ export default function MapboxLiveMap({
                         <h3 className="text-white font-black text-2xl tracking-tight uppercase italic drop-shadow-lg">
                             Mapbox Bağlantısı Bekleniyor
                         </h3>
-                        <p className="text-white/40 text-[11px] font-black uppercase tracking-[0.3em] leading-loose">
+                        <p className="text-black/50 dark:text-white/40 text-[11px] font-black uppercase tracking-[0.3em] leading-loose">
                             Premium 3D harita deneyimi için Mapbox Access Token gereklidir. <br/>
                             <span className="text-indigo-400">.env.local</span> dosyasına ekleyelim kral.
                         </p>
                     </div>
 
                     <div className="pt-8">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-card-border rounded-full">
+                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-black/5 dark:bg-white/5 border border-card-border rounded-full">
                             <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse" />
-                            <span className="text-[9px] font-black text-white/60 tracking-widest uppercase">Radar Taranıyor...</span>
+                            <span className="text-[9px] font-black text-black/60 dark:text-white/60 tracking-widest uppercase">Radar Taranıyor...</span>
                         </div>
                     </div>
                 </div>
@@ -274,13 +274,13 @@ export default function MapboxLiveMap({
                         <div className="bg-black/60 backdrop-blur-xl border border-card-border rounded-2xl p-1 flex flex-col gap-1 shadow-2xl pointer-events-auto">
                             <button 
                                 onClick={() => setMapStyle(STYLES.night)}
-                                className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all", mapStyle === STYLES.night ? "bg-card text-black" : "text-white/40 hover:text-white")}
+                                className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all", mapStyle === STYLES.night ? "bg-card text-black" : "text-black/50 dark:text-white/40 hover:text-white")}
                             >
                                 <Zap className="w-5 h-5" />
                             </button>
                             <button 
                                 onClick={() => setMapStyle(STYLES.hybrid)}
-                                className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all", mapStyle === STYLES.hybrid ? "bg-card text-black" : "text-white/40 hover:text-white")}
+                                className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all", mapStyle === STYLES.hybrid ? "bg-card text-black" : "text-black/50 dark:text-white/40 hover:text-white")}
                             >
                                 <Layers className="w-5 h-5" />
                             </button>

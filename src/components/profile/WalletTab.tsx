@@ -40,7 +40,7 @@ export function WalletTab() {
             title: "Sağlık Patisi", 
             sub: "Premium Sadakat Kartı", 
             color: "from-emerald-500 via-emerald-600 to-teal-900", 
-            icon: <ShieldCheck className="w-8 h-8 text-white/80" />,
+            icon: <ShieldCheck className="w-8 h-8 text-black/80 dark:text-white/80" />,
             value: "SILVER" 
         }
     ];
@@ -123,12 +123,12 @@ export function WalletTab() {
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-white/40 animate-pulse" />
-                                                <p className="text-[9px] sm:text-[10px] font-black text-white/50 uppercase tracking-[0.3em] sm:tracking-[0.4em]">{card.sub}</p>
+                                                <p className="text-[9px] sm:text-[10px] font-black text-black/50 dark:text-white/50 uppercase tracking-[0.3em] sm:tracking-[0.4em]">{card.sub}</p>
                                             </div>
                                             <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tighter uppercase italic leading-none drop-shadow-lg">{card.title}</h3>
                                         </div>
-                                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/10 backdrop-blur-3xl rounded-2xl sm:rounded-[1.8rem] flex items-center justify-center border border-card-border shadow-2xl relative group-hover:scale-110 transition-transform">
-                                            <div className="absolute inset-0 bg-white/5 rounded-2xl sm:rounded-[1.8rem] animate-pulse" />
+                                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-black/10 dark:bg-white/10 backdrop-blur-3xl rounded-2xl sm:rounded-[1.8rem] flex items-center justify-center border border-card-border shadow-2xl relative group-hover:scale-110 transition-transform">
+                                            <div className="absolute inset-0 bg-black/5 dark:bg-white/5 rounded-2xl sm:rounded-[1.8rem] animate-pulse" />
                                             {React.cloneElement(card.icon as React.ReactElement, { className: "w-6 h-6 sm:w-8 sm:h-8" })}
                                         </div>
                                     </div>
@@ -137,17 +137,17 @@ export function WalletTab() {
                                         <div className="space-y-2 sm:space-y-3">
                                             <div className="flex items-center gap-1">
                                                  {[1,2,3,4].map(i => (
-                                                     <div key={i} className="w-1 h-3 sm:w-1.5 sm:h-4 bg-white/20 rounded-full" />
+                                                     <div key={i} className="w-1 h-3 sm:w-1.5 sm:h-4 bg-black/20 dark:bg-white/20 rounded-full" />
                                                  ))}
                                             </div>
                                             <div className="flex items-center gap-2 sm:gap-3">
                                                 <div className="w-8 h-5 sm:w-10 sm:h-7 bg-gradient-to-br from-zinc-400 to-zinc-600 rounded-md opacity-40 shadow-inner" />
-                                                <p className="text-[9px] sm:text-[11px] font-black text-white/40 font-mono tracking-[0.2em] sm:tracking-[0.35em]">**** 2024</p>
+                                                <p className="text-[9px] sm:text-[11px] font-black text-black/50 dark:text-white/40 font-mono tracking-[0.2em] sm:tracking-[0.35em]">**** 2024</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
                                             <p className="text-3xl sm:text-4xl font-black text-white italic tracking-tighter drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]">{card.value}</p>
-                                            <p className="text-[7px] sm:text-[8px] font-black text-white/30 uppercase tracking-[0.3em] mt-1">Sizin Dünyanız</p>
+                                            <p className="text-[7px] sm:text-[8px] font-black text-black/40 dark:text-white/30 uppercase tracking-[0.3em] mt-1">Sizin Dünyanız</p>
                                         </div>
                                     </div>
                                 </div>
@@ -198,18 +198,18 @@ export function WalletTab() {
                         <div className="w-2 h-8 bg-orange-500 rounded-full" />
                         <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase">Son İşlemler</h3>
                     </div>
-                    <div className="px-5 py-2 bg-white/5 rounded-2xl border border-card-border backdrop-blur-xl">
+                    <div className="px-5 py-2 bg-black/5 dark:bg-white/5 rounded-2xl border border-card-border backdrop-blur-xl">
                          <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">Nisan 2024</span>
                     </div>
                 </div>
 
                 <div className="space-y-4 px-1 sm:px-2">
                     {transactions.map(tx => (
-                        <div key={tx.id} className="bg-white/[0.02] border border-card-border p-4 sm:p-7 rounded-[2rem] sm:rounded-[3rem] flex items-center justify-between group hover:bg-white/5 transition-all cursor-pointer relative overflow-hidden">
+                        <div key={tx.id} className="bg-white/[0.02] border border-card-border p-4 sm:p-7 rounded-[2rem] sm:rounded-[3rem] flex items-center justify-between group hover:bg-black/5 dark:bg-white/5 transition-all cursor-pointer relative overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                             <div className="flex items-center gap-4 sm:gap-6 relative z-10">
                                 <div className="w-12 h-12 sm:w-16 sm:h-16 bg-black/40 rounded-xl sm:rounded-2xl flex items-center justify-center transition-transform group-hover:rotate-12 shadow-2xl border border-card-border">
-                                    <div className="text-white/80 scale-75 sm:scale-100">{tx.icon}</div>
+                                    <div className="text-black/80 dark:text-white/80 scale-75 sm:scale-100">{tx.icon}</div>
                                 </div>
                                 <div className="text-left">
                                     <h4 className="text-white font-black text-sm sm:text-base uppercase tracking-tight italic">{tx.label}</h4>
@@ -227,7 +227,7 @@ export function WalletTab() {
                                     )}>
                                         {tx.amount > 0 ? `+${tx.amount.toLocaleString()}` : tx.amount.toLocaleString()}
                                     </p>
-                                    <span className="text-[9px] sm:text-[10px] font-black text-white/30 tracking-tighter uppercase">PC</span>
+                                    <span className="text-[9px] sm:text-[10px] font-black text-black/40 dark:text-white/30 tracking-tighter uppercase">PC</span>
                                 </div>
                                 <p className="text-[8px] sm:text-[9px] font-black text-white/10 uppercase tracking-[0.3em] mt-1">Tamamlandı</p>
                             </div>

@@ -56,7 +56,7 @@ const StatPulse = ({ label, value, icon: Icon, color, trend, delay = 0 }: any) =
                         className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]"
                     />
                 </div>
-                <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] mt-2 translate-y-0 group-hover:text-white/50 transition-colors">{label}</p>
+                <p className="text-[10px] font-black text-black/40 dark:text-white/30 uppercase tracking-[0.3em] mt-2 translate-y-0 group-hover:text-black/50 dark:text-white/50 transition-colors">{label}</p>
             </div>
 
             {/* SCAN LINE EFFECT */}
@@ -142,11 +142,11 @@ export default function MoffiCoreDashboard() {
                                 <Radio className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
                                 <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">Core Active</span>
                             </div>
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-card-border rounded-full">
-                                <Fingerprint className="w-3.5 h-3.5 text-white/40" />
-                                <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Admin Authorization: Valid</span>
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-black/5 dark:bg-white/5 border border-card-border rounded-full">
+                                <Fingerprint className="w-3.5 h-3.5 text-black/50 dark:text-white/40" />
+                                <span className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest">Admin Authorization: Valid</span>
                             </div>
-                            <div className="text-[10px] font-mono text-white/20 uppercase tracking-widest">
+                            <div className="text-[10px] font-mono text-black/30 dark:text-white/20 uppercase tracking-widest">
                                 {currentTime ? `${currentTime.toLocaleTimeString()} • ${currentTime.toLocaleDateString()}` : "SYNCING TIMESTREAM..."}
                             </div>
                         </div>
@@ -162,7 +162,7 @@ export default function MoffiCoreDashboard() {
                                     Core Center
                                 </span>
                             </motion.h1>
-                            <p className="text-white/40 font-medium text-lg mt-4 max-w-xl">
+                            <p className="text-black/50 dark:text-white/40 font-medium text-lg mt-4 max-w-xl">
                                 Ecosystem synchronization and planetary synchronization protocol active. All systems within nominal parameters.
                             </p>
                         </div>
@@ -177,9 +177,9 @@ export default function MoffiCoreDashboard() {
                             <Megaphone className="w-5 h-5 transition-transform group-hover:-rotate-12" />
                             System Broadcast
                         </motion.button>
-                        <div className="w-16 h-16 rounded-[1.5rem] bg-white/5 border border-card-border flex items-center justify-center backdrop-blur-xl relative group cursor-help">
-                            <Activity className="w-6 h-6 text-white/40" />
-                            <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 rounded-[1.5rem] transition-opacity" />
+                        <div className="w-16 h-16 rounded-[1.5rem] bg-black/5 dark:bg-white/5 border border-card-border flex items-center justify-center backdrop-blur-xl relative group cursor-help">
+                            <Activity className="w-6 h-6 text-black/50 dark:text-white/40" />
+                            <div className="absolute inset-0 bg-black/10 dark:bg-white/10 opacity-0 group-hover:opacity-100 rounded-[1.5rem] transition-opacity" />
                         </div>
                     </div>
                 </div>
@@ -228,7 +228,7 @@ export default function MoffiCoreDashboard() {
                         <div className="flex items-center justify-between mb-12">
                             <div className="space-y-2">
                                 <h2 className="text-3xl font-black text-white tracking-tighter uppercase">Moderation Matrix</h2>
-                                <p className="text-white/30 text-xs font-bold uppercase tracking-[0.2em]">Synchronization Level: 99.8%</p>
+                                <p className="text-black/40 dark:text-white/30 text-xs font-bold uppercase tracking-[0.2em]">Synchronization Level: 99.8%</p>
                             </div>
                             <div className="flex gap-1">
                                 {[1,2,3,4].map(i => <motion.div key={i} animate={{ height: [4, 12, 4] }} transition={{ duration: 1, repeat: Infinity, delay: i * 0.1 }} className="w-1 bg-cyan-500/30 rounded-full" />)}
@@ -243,20 +243,20 @@ export default function MoffiCoreDashboard() {
                                 { title: "Nexus Metrics", desc: "Deep dive into behavioral trend analysis.", icon: TrendingUp, action: "Analyze", href: "/admin/analytics" }
                             ].map((item, i) => (
                                 <Link href={item.href || '#'} key={i} className="group/item">
-                                    <div className="bg-white/[0.03] border border-card-border p-6 rounded-[2rem] hover:bg-white/[0.08] hover:border-card-border transition-all active:scale-[0.97]">
+                                    <div className="bg-white/[0.03] border border-card-border p-4 sm:p-6 rounded-[2rem] hover:bg-white/[0.08] hover:border-card-border transition-all active:scale-[0.97]">
                                         <div className="flex items-center gap-5 mb-5">
-                                            <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-card-border group-hover/item:bg-white/10 group-hover/item:border-card-border transition-all">
-                                                <item.icon className="w-5 h-5 text-white/60 group-hover/item:text-white" />
+                                            <div className="w-12 h-12 rounded-2xl bg-black/5 dark:bg-white/5 flex items-center justify-center border border-card-border group-hover/item:bg-black/10 dark:bg-white/10 group-hover/item:border-card-border transition-all">
+                                                <item.icon className="w-5 h-5 text-black/60 dark:text-white/60 group-hover/item:text-white" />
                                             </div>
                                             <div className="flex flex-col">
                                                 <h4 className="font-black text-white text-[15px] uppercase tracking-wide">{item.title}</h4>
-                                                <span className="text-[10px] text-white/20 font-bold uppercase tracking-widest">Sub-Module 0{i+1}</span>
+                                                <span className="text-[10px] text-black/30 dark:text-white/20 font-bold uppercase tracking-widest">Sub-Module 0{i+1}</span>
                                             </div>
                                         </div>
-                                        <p className="text-xs text-white/30 mb-8 leading-relaxed font-medium">{item.desc}</p>
+                                        <p className="text-xs text-black/40 dark:text-white/30 mb-8 leading-relaxed font-medium">{item.desc}</p>
                                         <div className="flex items-center justify-between">
                                             <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">{item.action} Matrix</span>
-                                            <Plus className="w-4 h-4 text-white/20 group-hover/item:rotate-90 group-hover/item:text-white transition-all" />
+                                            <Plus className="w-4 h-4 text-black/30 dark:text-white/20 group-hover/item:rotate-90 group-hover/item:text-white transition-all" />
                                         </div>
                                     </div>
                                 </Link>
@@ -267,14 +267,14 @@ export default function MoffiCoreDashboard() {
 
                 {/* --- MODULE: SYSTEM STATUS --- */}
                 <div className="flex flex-col gap-8">
-                    <GlassCard className="flex-1 bg-gradient-to-br from-indigo-900/40 via-purple-900/20 to-black p-10 group" glowColor="rgba(139, 92, 246, 0.2)">
+                    <GlassCard className="flex-1 bg-gradient-to-br from-indigo-900/40 via-purple-900/20 to-black p-5 sm:p-10 group" glowColor="rgba(139, 92, 246, 0.2)">
                         <div className="h-full flex flex-col justify-between">
                             <div>
-                                <div className="w-16 h-16 bg-white/5 backdrop-blur-xl rounded-[1.5rem] flex items-center justify-center mb-10 border border-card-border group-hover:scale-110 group-hover:rotate-3 transition-transform">
+                                <div className="w-16 h-16 bg-black/5 dark:bg-white/5 backdrop-blur-xl rounded-[1.5rem] flex items-center justify-center mb-10 border border-card-border group-hover:scale-110 group-hover:rotate-3 transition-transform">
                                     <Sparkles className="w-8 h-8 text-white" />
                                 </div>
                                 <h3 className="text-4xl font-black text-white tracking-tighter leading-none mb-4 uppercase">Care Protocol</h3>
-                                <p className="text-white/40 text-sm leading-relaxed font-medium">
+                                <p className="text-black/50 dark:text-white/40 text-sm leading-relaxed font-medium">
                                     Manage veterinary verifications, health credentials, and priority medical signals.
                                 </p>
                             </div>
@@ -282,13 +282,13 @@ export default function MoffiCoreDashboard() {
                             <div className="mt-16 space-y-4">
                                 <motion.button 
                                     whileHover={{ y: -5 }}
-                                    className="w-full py-5 bg-white/10 hover:bg-white/20 border border-white/10 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest shadow-2xl transition-all"
+                                    className="w-full py-5 bg-black/10 dark:bg-white/10 hover:bg-black/20 dark:bg-white/20 border border-black/10 dark:border-white/10 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest shadow-2xl transition-all"
                                 >
                                     Live SOS Interface
                                 </motion.button>
                                 <motion.button 
                                     whileHover={{ y: -5 }}
-                                    className="w-full py-5 bg-white/5 border border-card-border rounded-[1.5rem] font-black text-xs text-white/60 uppercase tracking-widest hover:bg-white/10 transition-all"
+                                    className="w-full py-5 bg-black/5 dark:bg-white/5 border border-card-border rounded-[1.5rem] font-black text-xs text-black/60 dark:text-white/60 uppercase tracking-widest hover:bg-black/10 dark:bg-white/10 transition-all"
                                 >
                                     Vet Credentials (8)
                                 </motion.button>
@@ -302,11 +302,11 @@ export default function MoffiCoreDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 
                 {/* --- MODULE: MARKET NODE --- */}
-                <GlassCard className="p-10" glowColor="rgba(245, 158, 11, 0.05)">
+                <GlassCard className="p-5 sm:p-10" glowColor="rgba(245, 158, 11, 0.05)">
                     <div className="flex items-center justify-between mb-10">
                         <div className="space-y-1">
                             <h2 className="text-3xl font-black text-white tracking-tighter uppercase">Market Node</h2>
-                            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Commerce Synchronization active</p>
+                            <p className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-widest">Commerce Synchronization active</p>
                         </div>
                         <div className="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center border border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.1)]">
                             <Store className="w-7 h-7 text-amber-500" />
@@ -322,26 +322,26 @@ export default function MoffiCoreDashboard() {
                             <motion.div 
                                 key={i} 
                                 whileHover={{ x: 5 }}
-                                className="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-card-border hover:border-card-border transition-all cursor-pointer group"
+                                className="flex items-center justify-between p-4 sm:p-6 bg-black/5 dark:bg-white/5 rounded-2xl border border-card-border hover:border-card-border transition-all cursor-pointer group"
                             >
                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center transition-colors group-hover:bg-white/10">
+                                    <div className="w-10 h-10 rounded-xl bg-black/5 dark:bg-white/5 flex items-center justify-center transition-colors group-hover:bg-black/10 dark:bg-white/10">
                                         <item.icon className={cn("w-5 h-5", item.color)} />
                                     </div>
-                                    <span className="font-black text-white/80 text-sm uppercase tracking-wide group-hover:text-white transition-colors">{item.title}</span>
+                                    <span className="font-black text-black/80 dark:text-white/80 text-sm uppercase tracking-wide group-hover:text-white transition-colors">{item.title}</span>
                                 </div>
-                                <span className="text-[10px] font-black text-white/20 uppercase tracking-widest group-hover:text-cyan-400 transition-colors">{item.val}</span>
+                                <span className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-widest group-hover:text-cyan-400 transition-colors">{item.val}</span>
                             </motion.div>
                         ))}
                     </div>
                 </GlassCard>
 
                 {/* --- MODULE: EXPLORATION MATRIX --- */}
-                <GlassCard className="p-10" glowColor="rgba(34, 197, 94, 0.05)">
+                <GlassCard className="p-5 sm:p-10" glowColor="rgba(34, 197, 94, 0.05)">
                     <div className="flex items-center justify-between mb-10">
                         <div className="space-y-1">
                             <h2 className="text-3xl font-black text-white tracking-tighter uppercase">Quest Matrix</h2>
-                            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Active route monitoring protocol</p>
+                            <p className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-widest">Active route monitoring protocol</p>
                         </div>
                         <div className="w-14 h-14 bg-green-500/10 rounded-2xl flex items-center justify-center border border-green-500/20 shadow-[0_0_20px_rgba(34,197,94,0.1)]">
                             <Map className="w-7 h-7 text-green-500" />
@@ -349,16 +349,16 @@ export default function MoffiCoreDashboard() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-white/5 border border-card-border p-8 rounded-[2.5rem] hover:bg-white/[0.08] transition-all">
-                            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-3">Live Reroutes</p>
+                        <div className="bg-black/5 dark:bg-white/5 border border-card-border p-4 sm:p-8 rounded-[2.5rem] hover:bg-white/[0.08] transition-all">
+                            <p className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-widest mb-3">Live Reroutes</p>
                             <h4 className="text-5xl font-black text-white tracking-tighter">42</h4>
                             <div className="flex items-center gap-2 mt-2">
                                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                                 <span className="text-[10px] text-green-500 font-bold uppercase">Active Pathing</span>
                             </div>
                         </div>
-                        <div className="bg-white/5 border border-card-border p-8 rounded-[2.5rem] hover:bg-white/[0.08] transition-all">
-                            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-3">Pending Quests</p>
+                        <div className="bg-black/5 dark:bg-white/5 border border-card-border p-4 sm:p-8 rounded-[2.5rem] hover:bg-white/[0.08] transition-all">
+                            <p className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-widest mb-3">Pending Quests</p>
                             <h4 className="text-5xl font-black text-white tracking-tighter">7</h4>
                             <div className="flex items-center gap-2 mt-2">
                                 <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />

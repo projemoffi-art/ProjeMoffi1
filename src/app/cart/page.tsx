@@ -33,7 +33,7 @@ export default function CartPage() {
             <header className="sticky top-0 z-40 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-b border-card-border dark:border-card-border px-6 h-16 flex items-center justify-between">
                 <button
                     onClick={() => router.back()}
-                    className="p-2 -ml-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition"
+                    className="p-2 -ml-2 hover:bg-gray-100 dark:hover:bg-black/10 dark:bg-white/10 rounded-full transition"
                 >
                     <ArrowLeft className="w-5 h-5 text-foreground dark:text-white" />
                 </button>
@@ -112,13 +112,13 @@ export default function CartPage() {
                     </AnimatePresence>
 
                     {cartItems.length === 0 && (
-                        <div className="text-center py-20 text-gray-400">
+                        <div className="text-center py-20 text-gray-500 dark:text-gray-400">
                             <ShoppingBag className="w-16 h-16 mx-auto mb-4 opacity-20" />
                             <p className="font-bold">Sepetin Bomboş</p>
                             <p className="text-sm mt-2">Hadi harika bir şeyler tasarlayalım.</p>
                             <button
                                 onClick={() => router.push('/studio')}
-                                className="mt-6 px-6 py-3 bg-black text-white rounded-xl font-bold text-sm"
+                                className="mt-6 px-6 py-3 bg-white dark:bg-black text-white rounded-xl font-bold text-sm"
                             >
                                 Stüdyoya Dön
                             </button>
@@ -161,7 +161,7 @@ export default function CartPage() {
                         </button>
 
                         {/* Trust Badges */}
-                        <div className="flex items-center justify-center gap-4 text-[10px] font-bold text-gray-400 uppercase tracking-wide">
+                        <div className="flex items-center justify-center gap-4 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                             <span className="flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> Güvenli Ödeme</span>
                             <span className="flex items-center gap-1"><Truck className="w-3 h-3" /> Hızlı Kargo</span>
                         </div>

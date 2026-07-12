@@ -36,7 +36,7 @@ export function StudioWelcome({ onStart }: { onStart: () => void }) {
                     className="w-48 h-48 object-cover rounded-2xl shadow-2xl relative z-10 rotate-[-5deg] group-hover:rotate-0 group-hover:scale-105 transition-all duration-500"
                     alt="Hero"
                 />
-                <div className="absolute bottom-6 right-6 bg-black text-white p-3 rounded-full z-20 shadow-lg group-hover:scale-110 transition-transform">
+                <div className="absolute bottom-6 right-6 bg-white dark:bg-black text-white p-3 rounded-full z-20 shadow-lg group-hover:scale-110 transition-transform">
                     <ArrowRight className="w-5 h-5" />
                 </div>
             </div>
@@ -60,14 +60,14 @@ export function StudioWelcome({ onStart }: { onStart: () => void }) {
 
             {/* Previous Designs */}
             <div>
-                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Son Tasarımlar</h3>
+                <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">Son Tasarımlar</h3>
                 <div className="flex gap-4">
                     {RECENT_DESIGNS.map(design => (
                         <div key={design.id} className="w-20 h-20 rounded-2xl overflow-hidden relative shadow-md border-2 border-white dark:border-gray-700">
                             <img src={design.img} className="w-full h-full object-cover" />
                         </div>
                     ))}
-                    <button onClick={onStart} className="w-20 h-20 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 flex items-center justify-center text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                    <button onClick={onStart} className="w-20 h-20 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
                         <span className="text-xs font-bold">+ Yeni</span>
                     </button>
                 </div>

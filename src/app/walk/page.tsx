@@ -20,7 +20,7 @@ import { QuestBentoCard } from "@/components/quests/QuestBentoCard";
 // Dynamic Import for Leaflet Map
 const GoogleLiveMap = dynamic(() => import('@/components/walk/LiveMap'), {
     ssr: false,
-    loading: () => <div className="w-full h-full bg-[#242f3e] animate-pulse rounded-[2rem] flex items-center justify-center text-white/20 font-bold">Harita Yükleniyor...</div>
+    loading: () => <div className="w-full h-full bg-[#242f3e] animate-pulse rounded-[2rem] flex items-center justify-center text-black/30 dark:text-white/20 font-bold">Harita Yükleniyor...</div>
 });
 
 export default function WalkPage() {
@@ -72,7 +72,7 @@ export default function WalkPage() {
                             <h1 className="text-base font-black text-foreground dark:text-white">
                                 {weatherLoading ? "Konum Alınıyor..." : (weather?.city || "Konum Bulunamadı")}
                             </h1>
-                            <ChevronRight className="w-4 h-4 text-gray-400" />
+                            <ChevronRight className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                         </div>
                     </div>
                 </div>
@@ -171,7 +171,7 @@ export default function WalkPage() {
                                 alt={activePet?.name || 'Moffi'}
                             />
                         ) : (
-                            <span className="text-gray-400 dark:text-zinc-500 text-xl font-black select-none uppercase font-sans">
+                            <span className="text-gray-500 dark:text-gray-400 dark:text-zinc-500 text-xl font-black select-none uppercase font-sans">
                                 {activePet?.name ? activePet.name[0] : '🐾'}
                             </span>
                         )}
@@ -180,7 +180,7 @@ export default function WalkPage() {
                         <h4 className="text-foreground dark:text-white font-black text-sm uppercase tracking-tight truncate leading-none">
                             {activePet?.name || 'Dostun'}
                         </h4>
-                        <p className="text-[10px] font-bold text-gray-400 truncate mt-1.5 uppercase tracking-wider">
+                        <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 truncate mt-1.5 uppercase tracking-wider">
                             {activePet?.breed || 'Dostunuz'}
                         </p>
                     </div>
@@ -194,7 +194,7 @@ export default function WalkPage() {
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-1.5">
                                     <Footprints className="w-3 h-3 text-orange-500" />
-                                    <span className="text-[9px] font-black text-gray-400 dark:text-white/40 uppercase tracking-widest">Mesafe</span>
+                                    <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 dark:text-white/40 uppercase tracking-widest">Mesafe</span>
                                 </div>
                                 <span className="text-[8px] font-black text-orange-500 font-mono">{Math.round(progressPercent)}%</span>
                             </div>
@@ -203,7 +203,7 @@ export default function WalkPage() {
                                     ? (walkData.distance >= 1000 ? (walkData.distance / 1000).toFixed(2) : Math.floor(walkData.distance))
                                     : walkStats ? (walkStats.totalDistanceKm ?? 0).toFixed(1) : '0'
                                 }
-                                <span className="text-[9px] font-normal text-gray-400 dark:text-white/30 ml-0.5">
+                                <span className="text-[9px] font-normal text-gray-500 dark:text-gray-400 dark:text-white/30 ml-0.5">
                                     /{dailyGoal.distance}km
                                 </span>
                             </div>
@@ -218,13 +218,13 @@ export default function WalkPage() {
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-1.5">
                                     <Timer className="w-3 h-3 text-indigo-500" />
-                                    <span className="text-[9px] font-black text-gray-400 dark:text-white/40 uppercase tracking-widest">Süre</span>
+                                    <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 dark:text-white/40 uppercase tracking-widest">Süre</span>
                                 </div>
                                 <span className="text-[8px] font-black text-indigo-500 font-mono">{Math.round(durationPercent)}%</span>
                             </div>
                             <div className="text-base font-black text-foreground dark:text-white leading-none mb-1">
                                 {Math.floor(walkData.time / 60)}
-                                <span className="text-[9px] font-normal text-gray-400 dark:text-white/30 ml-0.5">
+                                <span className="text-[9px] font-normal text-gray-500 dark:text-gray-400 dark:text-white/30 ml-0.5">
                                     /{dailyGoal.duration}dk
                                 </span>
                             </div>
@@ -242,7 +242,7 @@ export default function WalkPage() {
                 {/* 6. WEEKLY ACTIVITY SUMMARY - GERÇEK VERİ */}
                 <div className="bg-white/95 dark:bg-[#1A1A1A]/80 p-4 rounded-[1.25rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none border border-slate-100 dark:border-white/5 space-y-3 backdrop-blur-xl">
                     <div className="flex items-center justify-between">
-                        <h4 className="text-[10px] font-black text-gray-400 dark:text-white/45 uppercase tracking-widest flex items-center gap-1.5">
+                        <h4 className="text-[10px] font-black text-gray-500 dark:text-gray-400 dark:text-white/45 uppercase tracking-widest flex items-center gap-1.5">
                             <Trophy className="w-3.5 h-3.5 text-purple-500" /> Son 7 Gün
                         </h4>
                         {walkStats && (
@@ -289,7 +289,7 @@ export default function WalkPage() {
                                             />
                                         </div>
                                         <span className={`text-[8px] font-black uppercase ${
-                                            isToday ? 'text-purple-500 dark:text-purple-400' : 'text-gray-400 dark:text-white/30'
+                                            isToday ? 'text-purple-500 dark:text-purple-400' : 'text-gray-500 dark:text-gray-400 dark:text-white/30'
                                         }`}>{day}</span>
                                     </div>
                                 );
@@ -300,15 +300,15 @@ export default function WalkPage() {
                         <div className="grid grid-cols-3 gap-2 pt-1 border-t border-card-border/50 dark:border-white/[0.03]">
                             <div className="text-center">
                                 <div className="text-[10px] font-black text-foreground dark:text-white">{(walkStats.totalDistanceKm ?? 0).toFixed(1)} km</div>
-                                <div className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">Toplam</div>
+                                <div className="text-[8px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Toplam</div>
                             </div>
                             <div className="text-center">
                                 <div className="text-[10px] font-black text-foreground dark:text-white">{(walkStats.longestWalkKm ?? 0).toFixed(1)} km</div>
-                                <div className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">En Uzun</div>
+                                <div className="text-[8px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">En Uzun</div>
                             </div>
                             <div className="text-center">
                                 <div className="text-[10px] font-black text-foreground dark:text-white">{walkStats.bestStreak} gün</div>
-                                <div className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">En İyi Seri</div>
+                                <div className="text-[8px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">En İyi Seri</div>
                             </div>
                         </div>
                     )}

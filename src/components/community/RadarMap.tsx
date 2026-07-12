@@ -63,7 +63,7 @@ export default function RadarMap({ lostPets, onPetClick, userPos }: RadarMapProp
     };
 
     return (
-        <div className="w-full h-full rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl relative bg-[#1A1A1A]">
+        <div className="w-full h-full rounded-[2.5rem] overflow-hidden border border-black/10 dark:border-white/10 shadow-2xl relative bg-card dark:bg-[#1A1A1A]">
             <MapContainer
                 center={defaultCenter}
                 zoom={13}

@@ -270,8 +270,8 @@ const ProfilePersonalizationView = ({ user, setView, updateSettings }: ViewProps
                                         <div className={cn(
                                             "w-10 h-10 rounded-full flex items-center justify-center border-2 relative shrink-0",
                                             frame.id === 'minimal' ? "border-foreground/10 bg-background" :
-                                            frame.id === 'glass' ? "border-white/40 bg-white/10 backdrop-blur-md" :
-                                            frame.id === 'neon' ? "border-[#00FFFF] shadow-[0_0_15px_rgba(0,255,255,0.6)] bg-black" :
+                                            frame.id === 'glass' ? "border-white/40 bg-black/10 dark:bg-white/10 backdrop-blur-md" :
+                                            frame.id === 'neon' ? "border-[#00FFFF] shadow-[0_0_15px_rgba(0,255,255,0.6)] bg-white dark:bg-black" :
                                             "border-gray-500 bg-gray-900 shadow-[inset_0_4px_10px_rgba(255,255,255,0.2)]"
                                         )}>
                                             <User className={cn("w-4 h-4", frame.id === 'neon' ? "text-[#00FFFF]" : "text-secondary")} />
@@ -914,7 +914,7 @@ const HiddenWordsView = ({ user, setView, newWord, setNewWord, handleAddWord, ha
             </h3>
             <div className="py-2">
                 <div className="flex gap-2 mb-4">
-                    <input type="text" value={newWord} onChange={(e) => setNewWord?.(e.target.value)} placeholder="Yeni kelime..." className="flex-1 bg-white/5 border border-card-border rounded-xl px-4 py-2 text-white text-[12px] outline-none focus:border-indigo-500/30" onKeyDown={(e) => e.key === 'Enter' && handleAddWord?.()} />
+                    <input type="text" value={newWord} onChange={(e) => setNewWord?.(e.target.value)} placeholder="Yeni kelime..." className="flex-1 bg-black/5 dark:bg-white/5 border border-card-border rounded-xl px-4 py-2 text-white text-[12px] outline-none focus:border-indigo-500/30" onKeyDown={(e) => e.key === 'Enter' && handleAddWord?.()} />
                     <button onClick={handleAddWord} className="w-9 h-9 rounded-xl bg-indigo-500 flex items-center justify-center text-white active:scale-95 transition-all"><Plus className="w-4 h-4" /></button>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
@@ -927,7 +927,7 @@ const HiddenWordsView = ({ user, setView, newWord, setNewWord, handleAddWord, ha
                 </div>
             </div>
         </div>
-        <button onClick={() => setView('main')} className="mt-6 w-full py-3 rounded-xl bg-white/5 text-white/40 font-black text-[11px] uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-2"><ArrowLeft className="w-3 h-3" /> Geri Dön</button>
+        <button onClick={() => setView('main')} className="mt-6 w-full py-3 rounded-xl bg-black/5 dark:bg-white/5 text-black/50 dark:text-white/40 font-black text-[11px] uppercase tracking-widest hover:bg-black/10 dark:bg-white/10 transition-all flex items-center justify-center gap-2"><ArrowLeft className="w-3 h-3" /> Geri Dön</button>
     </motion.div>
 );
 
@@ -941,13 +941,13 @@ const StorySettingsView = ({ user, setView, updateSettings }: ViewProps) => (
                 <div className="py-2">
                     <div className="space-y-2">
                         {[{ id: 'all', label: 'Herkes' }, { id: 'followers', label: 'Takipçiler' }, { id: 'close_friends', label: 'Yakın Arkadaşlar' }].map((opt) => (
-                            <button key={opt.id} onClick={() => updateSettings('content', { stories: { ...user?.settings?.content?.stories, visibility: opt.id } })} className={cn("w-full p-4 rounded-xl border text-left transition-all font-bold text-[12px] uppercase justify-between flex items-center", user?.settings?.content?.stories?.visibility === opt.id ? "bg-cyan-500/10 border-cyan-500/30 text-white" : "bg-white/5 border-card-border text-gray-600")}>{opt.label} {user?.settings?.content?.stories?.visibility === opt.id && <Check className="w-3 h-3" />}</button>
+                            <button key={opt.id} onClick={() => updateSettings('content', { stories: { ...user?.settings?.content?.stories, visibility: opt.id } })} className={cn("w-full p-4 rounded-xl border text-left transition-all font-bold text-[12px] uppercase justify-between flex items-center", user?.settings?.content?.stories?.visibility === opt.id ? "bg-cyan-500/10 border-cyan-500/30 text-white" : "bg-black/5 dark:bg-white/5 border-card-border text-gray-600")}>{opt.label} {user?.settings?.content?.stories?.visibility === opt.id && <Check className="w-3 h-3" />}</button>
                         ))}
                     </div>
                 </div>
             </div>
         </div>
-        <button onClick={() => setView('main')} className="mt-6 w-full py-3 rounded-xl bg-white/5 text-white/40 font-black text-[11px] uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-2"><ArrowLeft className="w-3 h-3" /> Geri Dön</button>
+        <button onClick={() => setView('main')} className="mt-6 w-full py-3 rounded-xl bg-black/5 dark:bg-white/5 text-black/50 dark:text-white/40 font-black text-[11px] uppercase tracking-widest hover:bg-black/10 dark:bg-white/10 transition-all flex items-center justify-center gap-2"><ArrowLeft className="w-3 h-3" /> Geri Dön</button>
     </motion.div>
 );
 
@@ -1021,31 +1021,31 @@ const PasswordChangeView = ({ setView, changePassword }: ViewProps) => {
                     <div className="w-8 h-8 rounded-xl bg-orange-500/10 flex items-center justify-center">
                         <Lock className="w-4 h-4 text-orange-400" />
                     </div>
-                    <h3 className="text-[13px] font-black text-white uppercase tracking-widest leading-none">Şifre Değiştir</h3>
+                    <h3 className="text-[13px] font-black text-foreground dark:text-white uppercase tracking-widest leading-none">Şifre Değiştir</h3>
                 </div>
 
                 <div className="space-y-4">
-                    <div className="bg-white/5 rounded-3xl p-4 border border-card-border">
-                        <label className="text-[10px] font-black text-white/20 uppercase tracking-widest block mb-2 px-1">Mevcut Şifre</label>
+                    <div className="bg-black/5 dark:bg-white/5 rounded-3xl p-4 border border-card-border">
+                        <label className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-widest block mb-2 px-1">Mevcut Şifre</label>
                         <input 
                             type="password" 
                             value={oldPass}
                             onChange={e => setOldPass(e.target.value)}
-                            className="w-full bg-transparent text-sm font-bold text-white outline-none px-1"
+                            className="w-full bg-transparent text-sm font-bold text-foreground dark:text-white outline-none px-1"
                             placeholder="••••••••"
                         />
                     </div>
-                    <div className="bg-white/5 rounded-3xl p-4 border border-card-border">
-                        <label className="text-[10px] font-black text-white/20 uppercase tracking-widest block mb-2 px-1">Yeni Şifre</label>
+                    <div className="bg-black/5 dark:bg-white/5 rounded-3xl p-4 border border-card-border">
+                        <label className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-widest block mb-2 px-1">Yeni Şifre</label>
                         <input 
                             type="password" 
                             value={newPass}
                             onChange={e => setNewPass(e.target.value)}
-                            className="w-full bg-transparent text-sm font-bold text-white outline-none px-1"
+                            className="w-full bg-transparent text-sm font-bold text-foreground dark:text-white outline-none px-1"
                             placeholder="••••••••"
                         />
                     </div>
-                    <p className="text-[10px] text-white/20 font-medium leading-relaxed px-4">
+                    <p className="text-[10px] text-black/30 dark:text-white/20 font-medium leading-relaxed px-4">
                         Şifreniz en az 8 karakterden oluşmalı ve büyük/küçük harf içermelidir.
                     </p>
                 </div>
@@ -1058,7 +1058,7 @@ const PasswordChangeView = ({ setView, changePassword }: ViewProps) => {
                     {loading ? <Activity className="w-4 h-4 animate-spin mx-auto" /> : 'Şifreyi Güncelle'}
                 </button>
             </div>
-            <button onClick={() => setView('main')} className="mt-8 w-full py-4 rounded-3xl bg-white/[0.05] text-white/40 font-black text-[12px] uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-2"><ArrowLeft className="w-3 h-3" /> Vazgeç ve Geri Dön</button>
+            <button onClick={() => setView('main')} className="mt-8 w-full py-4 rounded-3xl bg-white/[0.05] text-black/50 dark:text-white/40 font-black text-[12px] uppercase tracking-widest hover:bg-black/10 dark:bg-white/10 transition-all flex items-center justify-center gap-2"><ArrowLeft className="w-3 h-3" /> Vazgeç ve Geri Dön</button>
         </motion.div>
     );
 };
@@ -1213,7 +1213,7 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
                         transition={{ type: "spring", damping: 28, stiffness: 180 }} 
                         className="fixed inset-x-0 bottom-0 h-[94%] bg-background/85 backdrop-blur-2xl z-[9999] rounded-t-[3.5rem] p-3 flex flex-col shadow-2xl border-t border-card-border overflow-hidden transform-gpu will-change-transform"
                     >
-                        <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-8 cursor-pointer" onClick={onClose} />
+                        <div className="w-12 h-1.5 bg-black/10 dark:bg-white/10 rounded-full mx-auto mb-8 cursor-pointer" onClick={onClose} />
                         
                         <div className="flex items-center justify-between mb-8 px-4">
                             <div className="flex items-center gap-3">
@@ -1683,7 +1683,7 @@ const AccountSettingsView = ({ user, setView, updateSettings }: ViewProps) => {
                     {activeTab === 'verification' && (
                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
                             <div className="p-5 rounded-2xl bg-foreground/[0.02] border border-card-border text-center space-y-3 opacity-70">
-                                <div className="w-12 h-12 rounded-full bg-gray-200/50 flex items-center justify-center mx-auto text-gray-400">
+                                <div className="w-12 h-12 rounded-full bg-gray-200/50 flex items-center justify-center mx-auto text-gray-500 dark:text-gray-400">
                                     <ShieldCheck className="w-6 h-6 stroke-[3]" />
                                 </div>
                                 <div>

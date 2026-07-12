@@ -28,7 +28,7 @@ export function CommunityHeader({
                 
                 <div className="flex items-center gap-2">
                     <button onClick={onSearchClick} className="p-2 rounded-full hover:bg-foreground/10 transition-colors">
-                        <Search className="w-5 h-5 text-foreground/60" />
+                        <Search className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                     </button>
                     
                     {/* CUTE FEEDBACK BUTTON */}
@@ -49,7 +49,7 @@ export function CommunityHeader({
                     </motion.button>
 
                     <button onClick={onNotificationsClick} className="p-2 rounded-full hover:bg-foreground/10 transition-colors relative">
-                        <Bell className="w-5 h-5 text-foreground/60" />
+                        <Bell className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                         {unreadNotifications > 0 && (
                             <div className="absolute top-1.5 right-1.5 w-4 h-4 bg-accent rounded-full flex items-center justify-center text-[9px] font-black text-white border-2 border-background">
                                 {unreadNotifications}
@@ -57,7 +57,7 @@ export function CommunityHeader({
                         )}
                     </button>
                     <button onClick={onCameraClick} className="p-2 rounded-full hover:bg-foreground/10 transition-colors">
-                        <Camera className="w-5 h-5 text-foreground/60" />
+                        <Camera className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                     </button>
                 </div>
             </header>

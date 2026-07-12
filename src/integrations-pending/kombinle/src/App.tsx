@@ -1156,7 +1156,7 @@ export default function App() {
               </div>
 
               {/* Floating Style Point badge */}
-              <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl text-[10px] font-black tracking-wide flex items-center gap-1.5 z-10 shadow-lg">
+              <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md border border-black/10 dark:border-white/10 px-3 py-1.5 rounded-xl text-[10px] font-black tracking-wide flex items-center gap-1.5 z-10 shadow-lg">
                 <Sparkles className="w-3.5 h-3.5 text-purple-400" />
                 <span>COMBIN SCORE: <span className="text-purple-400">{currentSP} SP</span></span>
               </div>
@@ -1259,7 +1259,7 @@ export default function App() {
                     }}
                     className={`item-card ${bodyColor === color.value ? 'selected' : ''}`}
                   >
-                    <div className={`w-10 h-10 rounded-full ${color.color} border-2 border-white/20`} />
+                    <div className={`w-10 h-10 rounded-full ${color.color} border-2 border-black/20 dark:border-white/20`} />
                     <span className="item-label mt-1">{color.label}</span>
                   </div>
                 ))}
@@ -1283,12 +1283,12 @@ export default function App() {
 
               {/* Text input to name output */}
               <div className="flex flex-col gap-1.5 mt-2">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Kombin Adı</label>
+                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">Kombin Adı</label>
                 <input 
                   type="text" 
                   value={activeOutfitName}
                   onChange={(e) => setActiveOutfitName(e.target.value)}
-                  className="w-full bg-white/3 border border-white/10 px-3 py-2 rounded-xl text-xs font-bold text-white focus:outline-none focus:border-purple-500"
+                  className="w-full bg-white/3 border border-black/10 dark:border-white/10 px-3 py-2 rounded-xl text-xs font-bold text-white focus:outline-none focus:border-purple-500"
                   placeholder="Kombinine havalı bir isim ver..."
                 />
               </div>
@@ -1331,7 +1331,7 @@ export default function App() {
           <div className="battle-container animate-fade-in">
             <div className="battle-header">
               <h2>⚔️ Tarz Düellosu Arenası</h2>
-              <p className="text-xs text-gray-400">Diğer kullanıcıların kombinlerini oyla, kazananı seç ve MoffiCoin kazan!</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Diğer kullanıcıların kombinlerini oyla, kazananı seç ve MoffiCoin kazan!</p>
             </div>
 
             {battleCompetitors.length === 2 && (
@@ -1418,13 +1418,13 @@ export default function App() {
           <div className="lookbook-view-container flex flex-col gap-4">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-black text-gradient uppercase tracking-wider">📂 Benim Albümüm ({lookbook.length})</h2>
-              <span className="text-[10px] text-gray-400 font-bold">Kombinlerin Polaroid Kartlarda Saklanıyor</span>
+              <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold">Kombinlerin Polaroid Kartlarda Saklanıyor</span>
             </div>
 
             {lookbook.length === 0 ? (
-              <div className="text-center py-12 bg-white/2 border border-dashed border-white/10 rounded-3xl">
+              <div className="text-center py-12 bg-white/2 border border-dashed border-black/10 dark:border-white/10 rounded-3xl">
                 <span className="text-3xl opacity-50 block">📸</span>
-                <p className="text-xs text-gray-400 font-bold mt-2">Henüz kaydedilmiş bir kombin fotoğrafı yok!</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-bold mt-2">Henüz kaydedilmiş bir kombin fotoğrafı yok!</p>
                 <button 
                   onClick={() => setView('styling')}
                   className="mt-4 bg-purple-600 text-white font-black text-[10.5px] px-4 py-2 rounded-xl"
@@ -1480,7 +1480,7 @@ export default function App() {
                     <div className="flex flex-col gap-1.5 text-left">
                       <span className={`quest-tag ${quest.tag}`}>{quest.tag}</span>
                       <h4 className="text-sm font-black text-white">{quest.title}</h4>
-                      <p className="text-xs text-gray-400 font-semibold leading-normal">{quest.desc}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold leading-normal">{quest.desc}</p>
                     </div>
 
                     <div className="flex flex-col gap-1 text-left">
@@ -1492,7 +1492,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/5">
+                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-black/5 dark:border-white/5">
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] font-bold text-amber-400">🪙 {quest.rewardCoins}</span>
                         <span className="text-[10px] font-bold text-purple-400">⚡ {quest.rewardXp} XP</span>
@@ -1541,7 +1541,7 @@ export default function App() {
                     sp: 410
                   }
                 ].map(post => (
-                  <div key={post.id} className="bg-zinc-900/40 border border-white/5 p-4 rounded-3xl flex gap-4 items-center">
+                  <div key={post.id} className="bg-zinc-900/40 border border-black/5 dark:border-white/5 p-4 rounded-3xl flex gap-4 items-center">
                     <div className="w-[120px] aspect-ratio-[10/12] bg-black/40 rounded-2xl overflow-hidden relative flex items-center justify-center p-2 shrink-0 shadow-inner">
                       <div className={`absolute inset-0 backdrop-${post.bg} opacity-30 z-0`} />
                       <MascotSVG apparel={post.apparel as ApparelState} bodyColor={post.color} customStyle={{ zIndex: 1 }} />
@@ -1552,10 +1552,10 @@ export default function App() {
                         <h4 className="text-sm font-black text-white mt-0.5">{post.name}</h4>
                       </div>
                       <div className="flex gap-2">
-                        <span className="text-[9px] bg-white/5 border border-white/10 px-2 py-0.5 rounded-md font-bold text-gray-300">{post.sp} SP</span>
+                        <span className="text-[9px] bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 px-2 py-0.5 rounded-md font-bold text-gray-300">{post.sp} SP</span>
                         <span className="text-[9px] bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-md font-bold text-purple-300">Tema Uyumlu</span>
                       </div>
-                      <div className="flex justify-between items-center border-t border-white/5 pt-2 mt-2">
+                      <div className="flex justify-between items-center border-t border-black/5 dark:border-white/5 pt-2 mt-2">
                         <button className="flex items-center gap-1.5 text-pink-400 text-xs font-black bg-pink-500/10 border border-pink-500/25 px-2.5 py-1 rounded-xl active:scale-95 transition-all">
                           <Heart className="w-3.5 h-3.5" fill="currentColor" />
                           <span>{post.likes} Beğeni</span>
@@ -1585,7 +1585,7 @@ export default function App() {
               )}
             </div>
 
-            <p className="text-xs text-gray-400 font-semibold mb-4 leading-normal">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-4 leading-normal">
               Eşyanız gardıroba yerleştirildi. Hemen süsleme stüdyosuna giderek deneyebilirsin!
             </p>
             
@@ -1632,7 +1632,7 @@ export default function App() {
             <h3 className="text-red-400 text-xl font-black">❌ Görev Tamamlanamadı!</h3>
             <div className="modal-chest-open">😔🧣</div>
             <p className="text-xs text-gray-300 font-bold mt-2">Tasarımın, görevin beklediği tarzı yansıtmıyor.</p>
-            <p className="text-xs text-gray-400 mt-2">Lütfen istenen hedeflerden en az 2 tanesini giydiğinden emin ol ve tekrar dene!</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Lütfen istenen hedeflerden en az 2 tanesini giydiğinden emin ol ve tekrar dene!</p>
             <button 
               onClick={() => setIsQuestFailModal(false)}
               className="btn-action primary w-full mt-4"
@@ -1703,21 +1703,21 @@ export default function App() {
                 <div className="w-8 h-8 rounded-xl bg-purple-500/10 border border-purple-500/25 flex items-center justify-center text-purple-400 shrink-0 text-sm">🎨</div>
                 <div className="flex flex-col text-left">
                   <h4 className="text-xs font-black text-white">1. Tarzını Tasarla</h4>
-                  <p className="text-[10px] text-gray-400">Atölyede petine takım elbiseler, bereler ve vizörler giydir, tarz skorunu (SP) yükselt.</p>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400">Atölyede petine takım elbiseler, bereler ve vizörler giydir, tarz skorunu (SP) yükselt.</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 rounded-xl bg-pink-500/10 border border-pink-500/25 flex items-center justify-center text-pink-400 shrink-0 text-sm">⚔️</div>
                 <div className="flex flex-col text-left">
                   <h4 className="text-xs font-black text-white">2. Düellolara Katıl</h4>
-                  <p className="text-[10px] text-gray-400">Tasarımlarını Arenaya gönder. Diğer kullanıcılar tarafından oylansın, tarz liginde zirveye tırman.</p>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400">Tasarımlarını Arenaya gönder. Diğer kullanıcılar tarafından oylansın, tarz liginde zirveye tırman.</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-amber-400 shrink-0 text-sm">🪙</div>
                 <div className="flex flex-col text-left">
                   <h4 className="text-xs font-black text-white">3. MoffiCoin Kazan</h4>
-                  <p className="text-[10px] text-gray-400">Kazandığın MoffiCoin'leri **Moffi Shop**'ta biriktirip, gerçek hayattaki pet mamanı indirimli al!</p>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400">Kazandığın MoffiCoin'leri **Moffi Shop**'ta biriktirip, gerçek hayattaki pet mamanı indirimli al!</p>
                 </div>
               </div>
             </div>

@@ -90,12 +90,27 @@ export async function POST(req: Request) {
             // GERÇEK ÜRÜNLERİ SUPABASE'DEN ÇEK
             const { data: realProducts, error: dbErr } = await supabaseAdmin
                 .from('products')
-                .select('id, price, name')
+                .select('id, price, name, stock, owner_id')
                 .in('id', productIds);
                 
             if (dbErr || !realProducts) {
-                console.error("Ürün fiyatları doğrulanamadı:", dbErr);
+                console.error("Ürün bilgileri doğrulanamadı:", dbErr);
                 return NextResponse.json({ error: "Sipariş güvenliği doğrulanamadı." }, { status: 400 });
+            }
+
+            // Aktif pending rezervasyonlarını getir
+            const { data: pendingItems, error: pendingErr } = await supabaseAdmin
+                .from('order_items')
+                .select('product_id, quantity, orders!inner(status, expires_at)')
+                .in('product_id', productIds)
+                .eq('orders.status', 'pending')
+                .gt('orders.expires_at', new Date().toISOString());
+
+            const pendingQuantities: Record<string, number> = {};
+            if (pendingItems) {
+                pendingItems.forEach((pi: any) => {
+                    pendingQuantities[pi.product_id] = (pendingQuantities[pi.product_id] || 0) + pi.quantity;
+                });
             }
             
             for (const item of items) {
@@ -106,13 +121,21 @@ export async function POST(req: Request) {
                 
                 const realProduct = realProducts.find(p => p.id === item.productId);
                 if (!realProduct) continue;
+
+                // Dinamik stok kontrolü
+                const availableStock = realProduct.stock - (pendingQuantities[item.productId] || 0);
+                if (item.quantity > availableStock) {
+                    console.warn(`[PayTR] Yetersiz stok tespiti: ${realProduct.name}. İstenen: ${item.quantity}, Mevcut: ${availableStock}`);
+                    return NextResponse.json({ error: `Yetersiz stok: "${realProduct.name}" için mevcut stok aşıldı.` }, { status: 400 });
+                }
                 
                 const itemPrice = Number(realProduct.price);
                 calculatedAmount += itemPrice * item.quantity;
                 secureItems.push({
                     ...item,
                     price: itemPrice,
-                    name: realProduct.name
+                    name: realProduct.name,
+                    business_id: realProduct.owner_id || null
                 });
             }
         }
@@ -138,6 +161,7 @@ export async function POST(req: Request) {
                 commissionRate = settingsData.value.commissionRate;
             }
             const commissionAmount = Number(((amount * commissionRate) / 100).toFixed(2));
+            const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
             // 1. Create a pending order in the Supabase database
             const fullAddress = `${address.name} ${address.surname}, Tel: ${address.phone}, Adres: ${address.detail}`;
@@ -149,7 +173,8 @@ export async function POST(req: Request) {
                     shipping_address: fullAddress,
                     status: "pending",
                     commission_rate: commissionRate,
-                    commission_amount: commissionAmount
+                    commission_amount: commissionAmount,
+                    expires_at: expiresAt
                 })
                 .select()
                 .single();
@@ -164,7 +189,8 @@ export async function POST(req: Request) {
                 order_id: order.id,
                 product_id: item.productId,
                 quantity: item.quantity,
-                price_at_purchase: item.price
+                price_at_purchase: item.price,
+                business_id: item.business_id || null
             }));
 
             const { error: itemsErr } = await supabaseAdmin

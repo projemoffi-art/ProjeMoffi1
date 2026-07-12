@@ -170,7 +170,7 @@ export const TodayForYouEngine = () => {
                             {/* Dismiss Button */}
                             <button
                                 onClick={(e) => dismissCard(e, card.id)}
-                                className="absolute top-3 right-3 w-6 h-6 bg-gray-100/50 dark:bg-zinc-700/50 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors z-10 opacity-0 group-hover:opacity-100"
+                                className="absolute top-3 right-3 w-6 h-6 bg-gray-100/50 dark:bg-zinc-700/50 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-red-500 transition-colors z-10 opacity-0 group-hover:opacity-100"
                             >
                                 <X className="w-3.5 h-3.5" />
                             </button>
@@ -185,7 +185,7 @@ export const TodayForYouEngine = () => {
                             </div>
                             <div>
                                 <h4 className="text-[12px] font-black text-gray-800 dark:text-white leading-tight pr-4">{card.title}</h4>
-                                <p className="text-[10px] text-gray-400 font-semibold mt-1">{card.subtitle}</p>
+                                <p className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold mt-1">{card.subtitle}</p>
                             </div>
                         </motion.div>
                     ))}

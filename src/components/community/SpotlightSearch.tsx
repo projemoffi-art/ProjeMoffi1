@@ -136,7 +136,7 @@ export function SpotlightSearch({ isOpen, onClose, onNavigate }: SpotlightSearch
                                     transition={{ duration: 3, repeat: Infinity }}
                                     className={cn(
                                         "w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-xl",
-                                        isAIMode ? "bg-cyan-500 text-white shadow-cyan-500/40" : "bg-white/5 text-secondary"
+                                        isAIMode ? "bg-cyan-500 text-white shadow-cyan-500/40" : "bg-black/5 dark:bg-white/5 text-secondary"
                                     )}
                                 >
                                     {isAIMode ? <Sparkles className="w-6 h-6" /> : <Search className="w-6 h-6" />}
@@ -157,7 +157,7 @@ export function SpotlightSearch({ isOpen, onClose, onNavigate }: SpotlightSearch
                                         }
                                     }}
                                     placeholder={isAIMode ? "Moffi AI'a sor..." : "Pati, hizmet veya döküman ara..."}
-                                    className="flex-1 bg-transparent border-none text-[var(--foreground)] text-2xl focus:outline-none placeholder:text-white/20 font-black tracking-tight"
+                                    className="flex-1 bg-transparent border-none text-[var(--foreground)] text-2xl focus:outline-none placeholder:text-black/30 dark:text-white/20 font-black tracking-tight"
                                 />
                                 <div className="flex items-center gap-3">
                                     {!isAIMode && (
@@ -166,13 +166,13 @@ export function SpotlightSearch({ isOpen, onClose, onNavigate }: SpotlightSearch
                                                 if (query) handleAISearch(query);
                                                 else setIsAIMode(true);
                                             }}
-                                            className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-card-border rounded-xl flex items-center gap-2 transition-all group"
+                                            className="px-4 py-2 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:bg-white/10 border border-card-border rounded-xl flex items-center gap-2 transition-all group"
                                         >
                                             <Sparkles className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform" />
                                             <span className="text-[10px] font-black uppercase tracking-widest text-cyan-400">AI Modu</span>
                                         </button>
                                     )}
-                                    <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/40 hover:text-white transition-colors">
+                                    <button onClick={onClose} className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-black/50 dark:text-white/40 hover:text-white transition-colors">
                                         <X className="w-5 h-5" />
                                     </button>
                                 </div>
@@ -187,7 +187,7 @@ export function SpotlightSearch({ isOpen, onClose, onNavigate }: SpotlightSearch
                                         transition={{ delay: idx * 0.1 }}
                                         key={idx}
                                         onClick={() => handleAISearch(chip.label)}
-                                        className="px-4 py-2 bg-white/[0.03] hover:bg-cyan-500/10 border border-card-border hover:border-cyan-500/30 rounded-full text-[11px] font-black text-white/40 hover:text-cyan-400 transition-all flex items-center gap-2 whitespace-nowrap active:scale-95"
+                                        className="px-4 py-2 bg-white/[0.03] hover:bg-cyan-500/10 border border-card-border hover:border-cyan-500/30 rounded-full text-[11px] font-black text-black/50 dark:text-white/40 hover:text-cyan-400 transition-all flex items-center gap-2 whitespace-nowrap active:scale-95"
                                     >
                                         {chip.icon}
                                         <span>{chip.label}</span>
@@ -219,7 +219,7 @@ export function SpotlightSearch({ isOpen, onClose, onNavigate }: SpotlightSearch
                                                 </div>
                                                 <div className="text-center">
                                                     <p className="text-lg font-black text-white uppercase tracking-widest animate-pulse">Analiz Ediliyor...</p>
-                                                    <p className="text-[10px] text-white/30 font-bold uppercase mt-2 tracking-[0.2em]">Moffi Ecosystem Intelligence v2.4</p>
+                                                    <p className="text-[10px] text-black/40 dark:text-white/30 font-bold uppercase mt-2 tracking-[0.2em]">Moffi Ecosystem Intelligence v2.4</p>
                                                 </div>
                                             </div>
                                         ) : aiResponse && (
@@ -235,7 +235,7 @@ export function SpotlightSearch({ isOpen, onClose, onNavigate }: SpotlightSearch
                                                             </div>
                                                             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-cyan-400">Yapay Zeka Önerisi</span>
                                                         </div>
-                                                        <p className="text-xl font-medium text-white/90 leading-relaxed italic">
+                                                        <p className="text-xl font-medium text-black/90 dark:text-white/90 leading-relaxed italic">
                                                             "{aiResponse}"
                                                         </p>
                                                     </div>
@@ -249,7 +249,7 @@ export function SpotlightSearch({ isOpen, onClose, onNavigate }: SpotlightSearch
                                                         </div>
                                                         <div className="text-left">
                                                             <p className="text-sm font-black text-white uppercase tracking-wider">Randevu Al</p>
-                                                            <p className="text-[10px] text-white/30 font-bold uppercase mt-0.5">En Yakın Klinikler</p>
+                                                            <p className="text-[10px] text-black/40 dark:text-white/30 font-bold uppercase mt-0.5">En Yakın Klinikler</p>
                                                         </div>
                                                     </button>
                                                     <button onClick={() => onNavigate('link', 'market')} className="p-6 bg-white/[0.02] hover:bg-white/[0.05] border border-card-border rounded-3xl flex items-center gap-4 transition-all group">
@@ -258,7 +258,7 @@ export function SpotlightSearch({ isOpen, onClose, onNavigate }: SpotlightSearch
                                                         </div>
                                                         <div className="text-left">
                                                             <p className="text-sm font-black text-white uppercase tracking-wider">M+ Market</p>
-                                                            <p className="text-[10px] text-white/30 font-bold uppercase mt-0.5">%15 İndirimli Ürünler</p>
+                                                            <p className="text-[10px] text-black/40 dark:text-white/30 font-bold uppercase mt-0.5">%15 İndirimli Ürünler</p>
                                                         </div>
                                                     </button>
                                                 </div>
@@ -280,12 +280,12 @@ export function SpotlightSearch({ isOpen, onClose, onNavigate }: SpotlightSearch
                                                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                                                     className="w-8 h-8 border-2 border-card-border border-t-white rounded-full"
                                                 />
-                                                <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Supabase taranıyor...</p>
+                                                <p className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-widest">Supabase taranıyor...</p>
                                             </div>
                                         ) : displayResults.length > 0 ? (
                                             displayResults.map((cat, i) => (
                                                 <div key={i} className="mb-8">
-                                                    <h4 className="px-6 text-[10px] font-black text-white/20 uppercase tracking-[0.4em] mb-4">{cat.category}</h4>
+                                                    <h4 className="px-6 text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-[0.4em] mb-4">{cat.category}</h4>
                                                     <div className="space-y-1">
                                                         {cat.items.map((item) => (
                                                             <button
@@ -294,15 +294,15 @@ export function SpotlightSearch({ isOpen, onClose, onNavigate }: SpotlightSearch
                                                                 className="w-full p-5 rounded-[2rem] hover:bg-white/[0.03] border border-transparent hover:border-card-border flex items-center justify-between group transition-all active:scale-[0.98]"
                                                             >
                                                                 <div className="flex items-center gap-5">
-                                                                    <div className="w-12 h-12 rounded-2xl bg-white/5 border border-card-border flex items-center justify-center text-white/40 group-hover:text-cyan-400 group-hover:border-cyan-500/30 group-hover:bg-cyan-500/10 transition-all shadow-lg">
+                                                                    <div className="w-12 h-12 rounded-2xl bg-black/5 dark:bg-white/5 border border-card-border flex items-center justify-center text-black/50 dark:text-white/40 group-hover:text-cyan-400 group-hover:border-cyan-500/30 group-hover:bg-cyan-500/10 transition-all shadow-lg">
                                                                         {item.icon}
                                                                     </div>
                                                                     <div className="text-left">
-                                                                        <span className="text-base font-black text-white/60 group-hover:text-white transition-colors uppercase tracking-tight">{item.label}</span>
-                                                                        <p className="text-[9px] text-white/20 font-black uppercase tracking-widest mt-0.5">{item.type}</p>
+                                                                        <span className="text-base font-black text-black/60 dark:text-white/60 group-hover:text-white transition-colors uppercase tracking-tight">{item.label}</span>
+                                                                        <p className="text-[9px] text-black/30 dark:text-white/20 font-black uppercase tracking-widest mt-0.5">{item.type}</p>
                                                                     </div>
                                                                 </div>
-                                                                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
+                                                                <div className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
                                                                     <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1 transition-transform" />
                                                                 </div>
                                                             </button>
@@ -312,12 +312,12 @@ export function SpotlightSearch({ isOpen, onClose, onNavigate }: SpotlightSearch
                                             ))
                                         ) : (
                                             <div className="py-24 flex flex-col items-center gap-6 opacity-40">
-                                                <div className="w-20 h-20 rounded-3xl bg-white/5 flex items-center justify-center border border-card-border">
-                                                    <Zap className="w-10 h-10 text-white/40" />
+                                                <div className="w-20 h-20 rounded-3xl bg-black/5 dark:bg-white/5 flex items-center justify-center border border-card-border">
+                                                    <Zap className="w-10 h-10 text-black/50 dark:text-white/40" />
                                                 </div>
                                                 <div className="text-center space-y-2">
                                                     <p className="text-xl font-black uppercase tracking-[0.2em] text-white">Bulamadık Kral...</p>
-                                                    <p className="text-xs text-white/30 font-bold uppercase tracking-widest px-12 leading-relaxed">
+                                                    <p className="text-xs text-black/40 dark:text-white/30 font-bold uppercase tracking-widest px-12 leading-relaxed">
                                                         Aradığın pati veya hizmet şu an radarımızda değil.<br/>
                                                         Yapay zeka ile derinlemesine aramaya ne dersin?
                                                     </p>
@@ -339,12 +339,12 @@ export function SpotlightSearch({ isOpen, onClose, onNavigate }: SpotlightSearch
                         <div className="px-10 py-6 bg-white/[0.02] border-t border-card-border flex items-center justify-between">
                             <div className="flex gap-8">
                                 <div className="flex items-center gap-3">
-                                    <kbd className="px-2 py-1 bg-white/5 border border-card-border rounded text-[10px] text-white/40 font-black">ESC</kbd>
-                                    <span className="text-[10px] text-white/20 font-black uppercase tracking-widest">Kapat</span>
+                                    <kbd className="px-2 py-1 bg-black/5 dark:bg-white/5 border border-card-border rounded text-[10px] text-black/50 dark:text-white/40 font-black">ESC</kbd>
+                                    <span className="text-[10px] text-black/30 dark:text-white/20 font-black uppercase tracking-widest">Kapat</span>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <kbd className="px-2 py-1 bg-white/5 border border-card-border rounded text-[10px] text-white/40 font-black">ENTER</kbd>
-                                    <span className="text-[10px] text-white/20 font-black uppercase tracking-widest">AI Danış</span>
+                                    <kbd className="px-2 py-1 bg-black/5 dark:bg-white/5 border border-card-border rounded text-[10px] text-black/50 dark:text-white/40 font-black">ENTER</kbd>
+                                    <span className="text-[10px] text-black/30 dark:text-white/20 font-black uppercase tracking-widest">AI Danış</span>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">

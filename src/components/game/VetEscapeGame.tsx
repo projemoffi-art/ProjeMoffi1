@@ -332,7 +332,7 @@ export default function VetEscapeGame({ onClose, onGameOver }: any) {
     if (!levelData) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] bg-black font-sans text-white select-none overflow-hidden touch-none">
+        <div className="fixed inset-0 z-[100] bg-white dark:bg-black font-sans text-white select-none overflow-hidden touch-none">
 
             <div className="absolute inset-0 z-10">
                 <Canvas shadows dpr={[1, 1.5]}>
@@ -369,7 +369,7 @@ export default function VetEscapeGame({ onClose, onGameOver }: any) {
             <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start pointer-events-none z-20">
                 <div className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-card-border flex items-center gap-3">
                     <div className="bg-purple-500/20 p-1.5 rounded-full"><Footprints className="text-purple-400 w-4 h-4" /></div>
-                    <div className="flex flex-col"><span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">GÖREV</span><span className="font-bold text-sm">{hasKey ? "ÇIKIŞA GİT" : "ANAHTARI BUL"}</span></div>
+                    <div className="flex flex-col"><span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">GÖREV</span><span className="font-bold text-sm">{hasKey ? "ÇIKIŞA GİT" : "ANAHTARI BUL"}</span></div>
                 </div>
                 <div className="flex gap-2">
                     <button onClick={toggleCamera} className="pointer-events-auto flex items-center gap-2 bg-gray-800/80 hover:bg-gray-700 px-4 py-2 rounded-full transition border border-card-border backdrop-blur-md">
@@ -402,7 +402,7 @@ export default function VetEscapeGame({ onClose, onGameOver }: any) {
             {gameState === 'playing' && cameraMode === 'follow' && (
                 <>
                     {/* CUSTOM JOYSTICK WITH CUTE DOG STICK */}
-                    <div className="absolute bottom-12 left-12 z-50 rounded-full bg-white/5 backdrop-blur-sm shadow-xl border border-card-border">
+                    <div className="absolute bottom-12 left-12 z-50 rounded-full bg-black/5 dark:bg-white/5 backdrop-blur-sm shadow-xl border border-card-border">
                         <div className="relative">
                             <NippleJoystick
                                 size={120}

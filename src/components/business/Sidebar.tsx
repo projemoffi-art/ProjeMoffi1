@@ -48,7 +48,7 @@ export function BusinessSidebar({ isMobileOpen = false, onMobileClose }: Sidebar
                 </div>
                 <div className="flex flex-col">
                     <span className="font-black tracking-tight text-lg text-foreground dark:text-white leading-none">MoffiBusiness</span>
-                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1">İşletme Portalı</span>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mt-1">İşletme Portalı</span>
                 </div>
                 {isMobile && onMobileClose && (
                     <button 
@@ -75,10 +75,10 @@ export function BusinessSidebar({ isMobileOpen = false, onMobileClose }: Sidebar
                                 "flex items-center gap-4 px-4 py-3.5 rounded-2xl text-sm font-bold transition-all relative group",
                                 isActive 
                                     ? "text-white bg-gradient-to-r from-indigo-600 to-violet-600 shadow-md shadow-indigo-500/10" 
-                                    : "text-gray-500 dark:text-gray-400 hover:text-foreground dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5"
+                                    : "text-gray-500 dark:text-gray-400 hover:text-foreground dark:hover:text-white hover:bg-gray-50 dark:hover:bg-black/5 dark:bg-white/5"
                             )}
                         >
-                            <Icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", isActive ? "text-white" : "text-gray-400 dark:text-gray-500 group-hover:text-foreground dark:group-hover:text-white")} />
+                            <Icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", isActive ? "text-white" : "text-gray-500 dark:text-gray-400 dark:text-gray-500 group-hover:text-foreground dark:group-hover:text-white")} />
                             <span className={cn(isMobile ? "block" : "hidden lg:block")}>{item.name}</span>
 
                             {/* Tooltip for Collapsed Mode */}
@@ -96,9 +96,9 @@ export function BusinessSidebar({ isMobileOpen = false, onMobileClose }: Sidebar
             <div className="border-t border-zinc-200/80 dark:border-card-border/40 pt-4 space-y-1.5">
                 <Link
                     href="/vet"
-                    className="flex items-center gap-4 px-4 py-3 rounded-2xl text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-foreground dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 transition-all group"
+                    className="flex items-center gap-4 px-4 py-3 rounded-2xl text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-foreground dark:hover:text-white hover:bg-gray-50 dark:hover:bg-black/5 dark:bg-white/5 transition-all group"
                 >
-                    <ArrowLeftRight className="w-5 h-5 text-gray-400 dark:text-gray-500 group-hover:scale-110" />
+                    <ArrowLeftRight className="w-5 h-5 text-gray-500 dark:text-gray-400 dark:text-gray-500 group-hover:scale-110" />
                     <span className={cn(isMobile ? "block" : "hidden lg:block")}>{t("business.sidebar.client_mode")}</span>
                 </Link>
                 <button
@@ -134,7 +134,7 @@ export function BusinessSidebar({ isMobileOpen = false, onMobileClose }: Sidebar
                             animate={{ opacity: 0.4 }}
                             exit={{ opacity: 0 }}
                             onClick={onMobileClose}
-                            className="fixed inset-0 bg-black z-50 md:hidden"
+                            className="fixed inset-0 bg-white dark:bg-black z-50 md:hidden"
                         />
                         {/* Slider Drawer */}
                         <motion.div

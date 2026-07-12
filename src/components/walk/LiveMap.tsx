@@ -366,7 +366,7 @@ export default function LiveMap({
                 {/* 1. SEARCH BAR */}
                 <div className="shadow-xl relative z-[5001] pointer-events-auto">
                     <div className={cn("bg-card dark:bg-[#1A1A1A] rounded-2xl flex items-center p-3 transition-all border border-transparent", isSearchFocused ? "ring-2 ring-[#5B4D9D] border-[#5B4D9D]" : "border-card-border dark:border-card-border")}>
-                        <Search className="w-5 h-5 text-gray-400 mr-3" />
+                        <Search className="w-5 h-5 text-gray-500 dark:text-gray-400 mr-3" />
                         <input
                             type="text"
                             placeholder="Mekan veya adres ara..."
@@ -388,15 +388,15 @@ export default function LiveMap({
                                 <button
                                     key={i}
                                     onClick={() => handleSelectAddress(result.lat, result.lon, result.display_name)}
-                                    className="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-white/5 border-b last:border-0 border-card-border dark:border-card-border transition-colors"
+                                    className="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-black/5 dark:bg-white/5 border-b last:border-0 border-card-border dark:border-card-border transition-colors"
                                 >
-                                    <div className="mt-1 min-w-[16px]"><MapPin className="w-4 h-4 text-gray-400" /></div>
+                                    <div className="mt-1 min-w-[16px]"><MapPin className="w-4 h-4 text-gray-500 dark:text-gray-400" /></div>
                                     <div className="text-sm text-foreground dark:text-gray-200 line-clamp-2">
                                         {result.display_name}
                                     </div>
                                 </button>
                             ))}
-                            <div className="bg-gray-50 dark:bg-black/50 px-4 py-2 text-[10px] text-center text-gray-400 font-bold uppercase tracking-wider">
+                            <div className="bg-gray-50 dark:bg-black/50 px-4 py-2 text-[10px] text-center text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">
                                 Nominatim ile sonuçlar
                             </div>
                         </div>

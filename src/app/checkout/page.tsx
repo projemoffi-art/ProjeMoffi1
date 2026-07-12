@@ -76,7 +76,7 @@ export default function CheckoutPage() {
                 </motion.div>
                 <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter uppercase mb-6 relative z-10">Sipariş Alındı!</h1>
                 <p className="text-emerald-400 font-bold mb-2">Ödeme Başarılı - Üretim Başlıyor</p>
-                <p className="text-gray-400 max-w-sm mb-12 relative z-10 leading-relaxed font-medium">Satın aldığınız kurgusal POD tasarımları başarıyla sisteme aktarıldı. Gerçek baskı testlerini aşınca elinizde olacak.</p>
+                <p className="text-gray-500 dark:text-gray-400 max-w-sm mb-12 relative z-10 leading-relaxed font-medium">Satın aldığınız kurgusal POD tasarımları başarıyla sisteme aktarıldı. Gerçek baskı testlerini aşınca elinizde olacak.</p>
                 <button 
                     onClick={() => router.push('/studio')}
                     className="px-10 py-5 rounded-[2rem] bg-card text-black font-black uppercase tracking-widest text-sm hover:scale-105 transition-all shadow-[0_0_30px_rgba(255,255,255,0.3)] relative z-10"
@@ -90,8 +90,8 @@ export default function CheckoutPage() {
     if (cart.length === 0) {
         return (
             <main className="min-h-screen flex flex-col items-center justify-center text-center p-6">
-                <div className="w-32 h-32 bg-white/5 border border-card-border rounded-full flex items-center justify-center mb-8">
-                    <ShoppingBag className="w-12 h-12 text-white/20" />
+                <div className="w-32 h-32 bg-black/5 dark:bg-white/5 border border-card-border rounded-full flex items-center justify-center mb-8">
+                    <ShoppingBag className="w-12 h-12 text-black/30 dark:text-white/20" />
                 </div>
                 <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase mb-4">Sepetiniz Boş</h1>
                 <p className="text-gray-500 max-w-sm mx-auto mb-10">Moffi Stüdyo'da yeni tasarımlar yaratarak tarzınızı sokağa taşıyabilirsiniz.</p>
@@ -116,7 +116,7 @@ export default function CheckoutPage() {
             <header className="relative z-10 max-w-6xl mx-auto flex items-center justify-between mb-12">
                 <button 
                     onClick={() => router.back()}
-                    className="w-12 h-12 bg-white/5 border border-card-border rounded-2xl flex items-center justify-center hover:bg-white/10 transition-all group"
+                    className="w-12 h-12 bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl flex items-center justify-center hover:bg-black/10 dark:bg-white/10 transition-all group"
                 >
                     <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
                 </button>
@@ -132,7 +132,7 @@ export default function CheckoutPage() {
                 <div className="lg:col-span-7 flex flex-col gap-10">
                     <div>
                         <h1 className="text-4xl lg:text-5xl font-black italic tracking-tighter uppercase mb-2">Kasa</h1>
-                        <p className="text-gray-400 font-medium">Sipariş verilerini tamamla ve üretim bandına gönder.</p>
+                        <p className="text-gray-500 dark:text-gray-400 font-medium">Sipariş verilerini tamamla ve üretim bandına gönder.</p>
                     </div>
 
                     {errors.length > 0 && (
@@ -185,12 +185,12 @@ export default function CheckoutPage() {
                         <div className="flex flex-col gap-6 mb-8 mt-4">
                             {cart.map((item, idx) => (
                                 <div key={idx} className="flex gap-4 p-4 rounded-3xl bg-black/30 border border-card-border relative overflow-hidden group">
-                                    <div className="w-24 h-24 rounded-2xl bg-white/10 relative shrink-0 overflow-hidden border border-card-border flex items-center justify-center p-2">
+                                    <div className="w-24 h-24 rounded-2xl bg-black/10 dark:bg-white/10 relative shrink-0 overflow-hidden border border-card-border flex items-center justify-center p-2">
                                         {/* Fallback pattern in case image is missing */}
                                         {item.garmentImage ? (
                                             <img src={item.garmentImage} className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-50" alt="Garment" />
                                         ) : (
-                                            <ShoppingBag className="w-8 h-8 text-white/20 absolute" />
+                                            <ShoppingBag className="w-8 h-8 text-black/30 dark:text-white/20 absolute" />
                                         )}
                                         
                                         {item.printDesign && (
@@ -209,14 +209,14 @@ export default function CheckoutPage() {
                                         <div className="flex items-center gap-2 mt-1">
                                             <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 rounded font-black text-[10px] uppercase">BEDEN: {item.size}</span>
                                         </div>
-                                        <p className="mt-3 font-mono font-black text-white/80">{Number(item.price).toLocaleString('tr-TR')} ₺</p>
+                                        <p className="mt-3 font-mono font-black text-black/80 dark:text-white/80">{Number(item.price).toLocaleString('tr-TR')} ₺</p>
                                     </div>
                                 </div>
                             ))}
                         </div>
 
                         <div className="space-y-4 pt-8 border-t border-card-border mb-8">
-                            <div className="flex justify-between text-gray-400 text-sm font-semibold"><span>Ara Toplam</span><span>{cartTotal.toLocaleString('tr-TR')} ₺</span></div>
+                            <div className="flex justify-between text-gray-500 dark:text-gray-400 text-sm font-semibold"><span>Ara Toplam</span><span>{cartTotal.toLocaleString('tr-TR')} ₺</span></div>
                             <div className="flex justify-between text-white text-xl font-black tracking-widest pt-4 uppercase"><span>Toplam</span><span>{cartTotal.toLocaleString('tr-TR')} ₺</span></div>
                         </div>
 

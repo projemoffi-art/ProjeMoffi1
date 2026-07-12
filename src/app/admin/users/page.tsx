@@ -87,7 +87,7 @@ export default function AdminUsersPage() {
             <div className="p-6 border-b border-card-border flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <h2 className="text-xl font-bold text-foreground">Kullanıcı Listesi ({filteredUsers.length})</h2>
                 <div className="relative">
-                    <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Search className="w-5 h-5 text-gray-500 dark:text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                         type="text"
                         placeholder="İsim veya e-posta ara..."
@@ -118,7 +118,7 @@ export default function AdminUsersPage() {
                                             {u.avatar ? (
                                                 <Image src={u.avatar} fill alt="" className="object-cover" />
                                             ) : (
-                                                <span className="absolute inset-0 flex items-center justify-center font-bold text-gray-400 text-sm">
+                                                <span className="absolute inset-0 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 text-sm">
                                                     {u.username.charAt(0).toUpperCase()}
                                                 </span>
                                             )}
@@ -162,7 +162,7 @@ export default function AdminUsersPage() {
                                         {u.role === 'business' && (
                                             <button
                                                 onClick={() => setSelectedKybUser(u)}
-                                                className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                                className="p-2 text-gray-500 dark:text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                                                 title="Belge İncele / KYB"
                                             >
                                                 <FileText className="w-4 h-4" />
@@ -171,7 +171,7 @@ export default function AdminUsersPage() {
                                         {u.role === 'business' && !u.businessApproved && u.kybStatus !== 'rejected' && (
                                             <button
                                                 onClick={() => handleApprove(u.id, u.username)}
-                                                className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                                className="p-2 text-gray-500 dark:text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                                                 title="İşletmeyi Onayla"
                                             >
                                                 <Check className="w-4 h-4" />
@@ -179,7 +179,7 @@ export default function AdminUsersPage() {
                                         )}
                                         <button
                                             onClick={() => handleReset(u.email)}
-                                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                            className="p-2 text-gray-500 dark:text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                             title="Şifre Sıfırla"
                                         >
                                             <KeyRound className="w-4 h-4" />
@@ -187,7 +187,7 @@ export default function AdminUsersPage() {
                                         {u.email !== 'admin@moffipet.com' && (
                                             <button
                                                 onClick={() => handleDelete(u.id, u.email)}
-                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                className="p-2 text-gray-500 dark:text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                                 title="Kullanıcıyı Sil"
                                             >
                                                 <Trash2 className="w-4 h-4" />
@@ -202,7 +202,7 @@ export default function AdminUsersPage() {
             </div>
 
             {filteredUsers.length === 0 && (
-                                                <div className="p-10 text-center text-gray-400">
+                                                <div className="p-10 text-center text-gray-500 dark:text-gray-400">
                                                     Kullanıcı bulunamadı.
                                                 </div>
                                             )}
@@ -255,27 +255,27 @@ export default function AdminUsersPage() {
                                                                 </p>
                                                                 <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[11px]">
                                                                     <div>
-                                                                        <span className="font-bold text-gray-400 dark:text-zinc-500 uppercase text-[9px] block">HEKİM ADI SOYADI</span>
+                                                                        <span className="font-bold text-gray-500 dark:text-gray-400 dark:text-zinc-500 uppercase text-[9px] block">HEKİM ADI SOYADI</span>
                                                                         <span className="font-semibold text-gray-900 dark:text-white">{selectedKybUser.ownerName || selectedKybUser.username}</span>
                                                                     </div>
                                                                     <div>
-                                                                        <span className="font-bold text-gray-400 dark:text-zinc-500 uppercase text-[9px] block">KLİNİK UNVANI</span>
+                                                                        <span className="font-bold text-gray-500 dark:text-gray-400 dark:text-zinc-500 uppercase text-[9px] block">KLİNİK UNVANI</span>
                                                                         <span className="font-semibold text-gray-900 dark:text-white">{selectedKybUser.businessName || 'Moffi Kliniği'}</span>
                                                                     </div>
                                                                     <div>
-                                                                        <span className="font-bold text-gray-400 dark:text-zinc-500 uppercase text-[9px] block">VERGİ DAİRESİ & NO</span>
+                                                                        <span className="font-bold text-gray-500 dark:text-gray-400 dark:text-zinc-500 uppercase text-[9px] block">VERGİ DAİRESİ & NO</span>
                                                                         <span className="font-semibold text-gray-900 dark:text-white">Kadıköy V.D. / {selectedKybUser.taxId || '8765432109'}</span>
                                                                     </div>
                                                                     <div>
-                                                                        <span className="font-bold text-gray-400 dark:text-zinc-500 uppercase text-[9px] block">DİPLOMA VE TESCİL NO</span>
+                                                                        <span className="font-bold text-gray-500 dark:text-gray-400 dark:text-zinc-500 uppercase text-[9px] block">DİPLOMA VE TESCİL NO</span>
                                                                         <span className="font-semibold text-gray-900 dark:text-white">DIP-{selectedKybUser.id.split('-')[1]?.toUpperCase() || '76543210'}</span>
                                                                     </div>
                                                                     <div className="col-span-2">
-                                                                        <span className="font-bold text-gray-400 dark:text-zinc-500 uppercase text-[9px] block">BANKA HESAP IBAN</span>
+                                                                        <span className="font-bold text-gray-500 dark:text-gray-400 dark:text-zinc-500 uppercase text-[9px] block">BANKA HESAP IBAN</span>
                                                                         <span className="font-mono text-gray-900 dark:text-white text-[10px]">{selectedKybUser.iban || 'Belirtilmedi'}</span>
                                                                     </div>
                                                                     <div className="col-span-2">
-                                                                        <span className="font-bold text-gray-400 dark:text-zinc-500 uppercase text-[9px] block">KLİNİK ADRESİ</span>
+                                                                        <span className="font-bold text-gray-500 dark:text-gray-400 dark:text-zinc-500 uppercase text-[9px] block">KLİNİK ADRESİ</span>
                                                                         <span className="font-semibold text-gray-900 dark:text-white">{selectedKybUser.address || 'Belirtilmedi'}</span>
                                                                     </div>
                                                                 </div>
@@ -290,7 +290,7 @@ export default function AdminUsersPage() {
                                                                             <div key={i} className="bg-gray-900 dark:bg-gray-100" style={{ width: `${w}px`, height: '100%' }} />
                                                                         ))}
                                                                     </div>
-                                                                    <span className="text-[7px] font-mono tracking-widest text-gray-400 dark:text-zinc-500">
+                                                                    <span className="text-[7px] font-mono tracking-widest text-gray-500 dark:text-gray-400 dark:text-zinc-500">
                                                                         *MOFFI-KYB-{selectedKybUser.id.substring(0,8).toUpperCase()}*
                                                                     </span>
                                                                 </div>
@@ -300,7 +300,7 @@ export default function AdminUsersPage() {
                                                                     <div className="w-10 h-10 rounded-full border-2 border-dashed border-amber-600 flex items-center justify-center bg-amber-500/10 rotate-12">
                                                                         <span className="text-[7px] font-black text-amber-600 tracking-widest uppercase">MOFFI SEAL</span>
                                                                     </div>
-                                                                    <div className="text-right text-[8px] text-gray-400 dark:text-zinc-500">
+                                                                    <div className="text-right text-[8px] text-gray-500 dark:text-gray-400 dark:text-zinc-500">
                                                                         <div className="font-bold">E-İmza Yetkilisi</div>
                                                                         <div>T.C. Sağlık İşleri Dir.</div>
                                                                     </div>
@@ -366,7 +366,7 @@ export default function AdminUsersPage() {
                                                         {/* Control actions */}
                                                         {!showRejectInput && (
                                                             <div className="flex items-center justify-between border-t border-zinc-100 dark:border-zinc-800 pt-6">
-                                                                <div className="text-xs text-gray-400 dark:text-zinc-500 font-medium">
+                                                                <div className="text-xs text-gray-500 dark:text-gray-400 dark:text-zinc-500 font-medium">
                                                                     Karar Durumu: <span className="font-bold text-gray-700 dark:text-zinc-300 uppercase">{selectedKybUser.kybStatus || 'PENDING'}</span>
                                                                 </div>
                                                                 <div className="flex gap-2">

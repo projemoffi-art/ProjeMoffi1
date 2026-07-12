@@ -31,7 +31,7 @@ function getDistKm(lat1: number, lon1: number, lat2: number, lon2: number) {
 
 import { MOCK_MARKS } from "@/data/mockMarks";
 
-const LiveMap = dynamic(() => import('@/components/walk/LiveMap'), { ssr: false, loading: () => <div className="bg-[#1A1A1A] w-full h-full flex items-center justify-center text-white font-bold">Harita Yükleniyor...</div> });
+const LiveMap = dynamic(() => import('@/components/walk/LiveMap'), { ssr: false, loading: () => <div className="bg-card dark:bg-[#1A1A1A] w-full h-full flex items-center justify-center text-white font-bold">Harita Yükleniyor...</div> });
 
 function TrackingContent() {
     const router = useRouter();
@@ -177,19 +177,19 @@ function TrackingContent() {
     };
 
     return (
-        <div className="h-screen w-full bg-black relative overflow-hidden flex flex-col font-sans">
+        <div className="h-screen w-full bg-white dark:bg-black relative overflow-hidden flex flex-col font-sans">
 
             {/* BACK BUTTON */}
             <button
                 onClick={() => router.back()}
-                className="absolute top-4 left-4 z-[60] w-10 h-10 bg-white/10 backdrop-blur-md border border-card-border rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-colors shadow-lg active:scale-95"
+                className="absolute top-4 left-4 z-[60] w-10 h-10 bg-black/10 dark:bg-white/10 backdrop-blur-md border border-card-border rounded-full flex items-center justify-center text-white hover:bg-black/20 dark:bg-white/20 transition-colors shadow-lg active:scale-95"
             >
                 <ChevronLeft className="w-6 h-6" />
             </button>
 
             {/* Segmented Tab Switcher */}
             <div className="absolute top-4 left-16 right-4 z-[60]">
-                <div className="bg-black/40 backdrop-blur-md p-1 rounded-2xl flex gap-1 border border-white/10 overflow-hidden">
+                <div className="bg-black/40 backdrop-blur-md p-1 rounded-2xl flex gap-1 border border-black/10 dark:border-white/10 overflow-hidden">
                     {(['controls', 'stats', 'map'] as const).map((tab) => {
                         const label = {
                             controls: 'Yürüyüş',
@@ -209,7 +209,7 @@ function TrackingContent() {
                                 }}
                                 className={cn(
                                     "flex-1 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-xl transition-all relative cursor-pointer border-0 z-10",
-                                    isActive ? "text-slate-800 bg-white shadow-sm" : "text-white/60 hover:text-white bg-transparent"
+                                    isActive ? "text-slate-800 bg-white shadow-sm" : "text-black/60 dark:text-white/60 hover:text-white bg-transparent"
                                 )}
                             >
                                 {label}
@@ -231,12 +231,12 @@ function TrackingContent() {
                             <div className="flex flex-col gap-1 pt-0.5">
                                 <span className={cn(
                                     "px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest flex items-center justify-center gap-1 border transition-colors w-fit",
-                                    (walkData.isPaused || !walkData.isActive) ? "bg-gray-500/20 border-gray-500/30 text-gray-400" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
+                                    (walkData.isPaused || !walkData.isActive) ? "bg-gray-500/20 border-gray-500/30 text-gray-500 dark:text-gray-400" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
                                 )}>
                                     <Heart className={cn("w-2.5 h-2.5 fill-current", walkData.isActive && !walkData.isPaused && "animate-pulse")} /> 
                                     {(walkData.isPaused || !walkData.isActive) ? "PAUSE" : "CANLI"}
                                 </span>
-                                <div className="flex items-center gap-1 text-xs font-black tabular-nums tracking-tight text-white/90">
+                                <div className="flex items-center gap-1 text-xs font-black tabular-nums tracking-tight text-black/90 dark:text-white/90">
                                     <div className="flex items-center justify-center w-4 h-4 bg-red-500/20 rounded-full">
                                         <Activity className="w-2.5 h-2.5 text-red-500" />
                                     </div>
@@ -261,7 +261,7 @@ function TrackingContent() {
                             </span>
                         </div>
                         <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-1 text-[10px] font-black tabular-nums text-white/60">
+                            <div className="flex items-center gap-1 text-[10px] font-black tabular-nums text-black/60 dark:text-white/60">
                                 <Zap className="w-2.5 h-2.5 text-yellow-400 fill-yellow-400" /> {walkData.speed.toFixed(1)} <span className="text-[8px] opacity-40 uppercase">km/h</span>
                             </div>
                             <div className="flex items-center gap-1 text-[10px] font-black tabular-nums text-orange-400">
@@ -349,21 +349,21 @@ function TrackingContent() {
                             className="flex flex-col gap-2.5 mb-1"
                         >
                             {/* Widget 1: Health */}
-                            <button className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-xl border border-card-border flex items-center justify-center shadow-lg group active:scale-90 transition-transform">
+                            <button className="w-9 h-9 rounded-xl bg-black/10 dark:bg-white/10 backdrop-blur-xl border border-card-border flex items-center justify-center shadow-lg group active:scale-90 transition-transform">
                                 <div className="w-6.5 h-6.5 rounded-lg bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow-md">
                                     <Heart className="w-3.5 h-3.5 text-white fill-white/20" />
                                 </div>
                             </button>
 
                             {/* Widget 2: Environment */}
-                            <button className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-xl border border-card-border flex items-center justify-center shadow-lg group active:scale-90 transition-transform">
+                            <button className="w-9 h-9 rounded-xl bg-black/10 dark:bg-white/10 backdrop-blur-xl border border-card-border flex items-center justify-center shadow-lg group active:scale-90 transition-transform">
                                 <div className="w-6.5 h-6.5 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-md">
                                     <Droplets className="w-3.5 h-3.5 text-white" />
                                 </div>
                             </button>
 
                             {/* Widget 3: Social/Community */}
-                            <button className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-xl border border-card-border flex items-center justify-center shadow-lg group active:scale-90 transition-transform">
+                            <button className="w-9 h-9 rounded-xl bg-black/10 dark:bg-white/10 backdrop-blur-xl border border-card-border flex items-center justify-center shadow-lg group active:scale-90 transition-transform">
                                 <div className="w-6.5 h-6.5 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-md">
                                     <MessageSquarePlus className="w-3.5 h-3.5 text-white" />
                                 </div>
@@ -372,7 +372,7 @@ function TrackingContent() {
                             {/* Widget 4: Danger/SOS */}
                             <button 
                                 onClick={() => setActiveSidebar('danger')}
-                                className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-xl border border-card-border flex items-center justify-center shadow-lg group active:scale-90 transition-transform"
+                                className="w-9 h-9 rounded-xl bg-black/10 dark:bg-white/10 backdrop-blur-xl border border-card-border flex items-center justify-center shadow-lg group active:scale-90 transition-transform"
                             >
                                 <div className="w-6.5 h-6.5 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-md">
                                     <AlertOctagon className="w-3.5 h-3.5 text-white animate-pulse" />
@@ -400,15 +400,15 @@ function TrackingContent() {
                 <div className="bg-black/40 backdrop-blur-xl border border-card-border rounded-2xl p-3 flex flex-col gap-1.5 shadow-2xl min-w-[90px]">
                     <div className="flex items-center gap-1.5">
                         <span className="text-[10px]">🐕</span>
-                        <span className="text-[8px] font-black text-white/80 uppercase tracking-wider">{activePet?.name || 'Moffi'}</span>
+                        <span className="text-[8px] font-black text-black/80 dark:text-white/80 uppercase tracking-wider">{activePet?.name || 'Moffi'}</span>
                     </div>
                     <div className="space-y-1">
                         <div className="flex justify-between items-center gap-3">
-                            <span className="text-[7px] font-bold text-white/50 uppercase">Keyif</span>
+                            <span className="text-[7px] font-bold text-black/50 dark:text-white/50 uppercase">Keyif</span>
                             <span className="text-[8px] font-black text-emerald-400 font-mono">%98</span>
                         </div>
                         <div className="flex justify-between items-center gap-3">
-                            <span className="text-[7px] font-bold text-white/50 uppercase">Su</span>
+                            <span className="text-[7px] font-bold text-black/50 dark:text-white/50 uppercase">Su</span>
                             <span className="text-[8px] font-black text-blue-400 font-mono">%85</span>
                         </div>
                     </div>
@@ -418,7 +418,7 @@ function TrackingContent() {
             {/* BOTTOM CONTROLS */}
             <div className="absolute bottom-0 left-0 right-0 z-[50] p-6 pb-10 bg-gradient-to-t from-black via-black/80 to-transparent">
                 <div className="flex items-center justify-between gap-6 max-w-xs mx-auto">
-                    <button onClick={() => setActiveModal('camera')} className="w-10 h-10 rounded-full bg-white/10 backdrop-blur border border-card-border flex items-center justify-center text-white active:scale-90 transition-transform">
+                    <button onClick={() => setActiveModal('camera')} className="w-10 h-10 rounded-full bg-black/10 dark:bg-white/10 backdrop-blur border border-card-border flex items-center justify-center text-white active:scale-90 transition-transform">
                         <Camera className="w-4.5 h-4.5" />
                     </button>
                     <div className="relative">
@@ -435,7 +435,7 @@ function TrackingContent() {
                             </button>
                         ) : (
                             <div className="flex gap-3">
-                                <button onClick={() => setShowStopConfirm(false)} className="w-12 h-12 rounded-full bg-white/20 text-white flex items-center justify-center active:scale-90 transition-transform"><ChevronLeft className="w-5 h-5" /></button>
+                                <button onClick={() => setShowStopConfirm(false)} className="w-12 h-12 rounded-full bg-black/20 dark:bg-white/20 text-white flex items-center justify-center active:scale-90 transition-transform"><ChevronLeft className="w-5 h-5" /></button>
                                 <button onClick={handleFinish} className="w-12 h-12 rounded-full bg-red-500 text-white flex items-center justify-center animate-pulse active:scale-90 transition-transform"><Square className="w-5 h-5 fill-current" /></button>
                             </div>
                         )}
@@ -445,7 +445,7 @@ function TrackingContent() {
                             </button>
                         )}
                     </div>
-                    <button onClick={() => setActiveModal('music')} className="w-10 h-10 rounded-full bg-white/10 backdrop-blur border border-card-border flex items-center justify-center text-white active:scale-90 transition-transform">
+                    <button onClick={() => setActiveModal('music')} className="w-10 h-10 rounded-full bg-black/10 dark:bg-white/10 backdrop-blur border border-card-border flex items-center justify-center text-white active:scale-90 transition-transform">
                         <Music className="w-4.5 h-4.5" />
                     </button>
                 </div>
@@ -462,38 +462,38 @@ function TrackingContent() {
                         className="fixed inset-x-6 bottom-28 z-[70] bg-[#121212]/80 backdrop-blur-xl border border-card-border p-5 rounded-[2.5rem] shadow-2xl flex flex-col gap-4 max-w-sm mx-auto"
                     >
                         <div className="flex justify-between items-center">
-                            <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">Çalan Şarkı</span>
-                            <button onClick={() => setActiveModal(null)} className="w-6 h-6 bg-white/5 rounded-full flex items-center justify-center border border-card-border hover:bg-white/10 transition-colors">
-                                <X className="w-3.5 h-3.5 text-white/50" />
+                            <span className="text-[9px] font-black text-black/40 dark:text-white/30 uppercase tracking-[0.2em]">Çalan Şarkı</span>
+                            <button onClick={() => setActiveModal(null)} className="w-6 h-6 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center border border-card-border hover:bg-black/10 dark:bg-white/10 transition-colors">
+                                <X className="w-3.5 h-3.5 text-black/50 dark:text-white/50" />
                             </button>
                         </div>
 
                         <div className="flex items-center gap-4">
                             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center shadow-lg relative overflow-hidden shrink-0">
                                 <div className="absolute inset-0 bg-black/10 flex items-center justify-center">
-                                    <Music className="w-6 h-6 text-white/40 animate-pulse" />
+                                    <Music className="w-6 h-6 text-black/50 dark:text-white/40 animate-pulse" />
                                 </div>
                             </div>
                             <div className="min-w-0">
                                 <h4 className="text-white font-black text-sm truncate">Walking in the Park 🐾</h4>
-                                <p className="text-white/40 text-[9px] font-bold mt-0.5 uppercase tracking-wider">Moffi Playlists</p>
+                                <p className="text-black/50 dark:text-white/40 text-[9px] font-bold mt-0.5 uppercase tracking-wider">Moffi Playlists</p>
                             </div>
                         </div>
 
                         <div className="space-y-1.5 mt-1">
-                            <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden relative">
+                            <div className="w-full h-1 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden relative">
                                 <div className="h-full bg-purple-500 rounded-full w-[45%]" />
                             </div>
-                            <div className="flex justify-between text-[8px] font-mono text-white/30">
+                            <div className="flex justify-between text-[8px] font-mono text-black/40 dark:text-white/30">
                                 <span>1:24</span>
                                 <span>3:12</span>
                             </div>
                         </div>
 
                         <div className="flex justify-center items-center gap-8 py-1">
-                            <button className="text-white/50 hover:text-white transition-colors active:scale-95"><SkipBack className="w-4.5 h-4.5" /></button>
+                            <button className="text-black/50 dark:text-white/50 hover:text-white transition-colors active:scale-95"><SkipBack className="w-4.5 h-4.5" /></button>
                             <button className="w-10 h-10 bg-card text-black rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all"><Play className="w-4.5 h-4.5 fill-current translate-x-0.5" /></button>
-                            <button className="text-white/50 hover:text-white transition-colors active:scale-95"><SkipForward className="w-4.5 h-4.5" /></button>
+                            <button className="text-black/50 dark:text-white/50 hover:text-white transition-colors active:scale-95"><SkipForward className="w-4.5 h-4.5" /></button>
                         </div>
                     </motion.div>
                 )}
@@ -504,7 +504,7 @@ function TrackingContent() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] bg-black flex flex-col justify-between p-6"
+                        className="fixed inset-0 z-[100] bg-white dark:bg-black flex flex-col justify-between p-6"
                     >
                         {/* Camera Top Info */}
                         <div className="flex justify-between items-center relative z-10 pt-8">
@@ -517,7 +517,7 @@ function TrackingContent() {
                                     setCapturedPhoto(null); 
                                     setActiveModal(null); 
                                 }} 
-                                className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center border border-card-border text-white"
+                                className="w-8 h-8 bg-black/10 dark:bg-white/10 rounded-full flex items-center justify-center border border-card-border text-white"
                             >
                                 <X className="w-4 h-4" />
                             </button>
@@ -537,7 +537,7 @@ function TrackingContent() {
                             ) : (
                                 <div className="absolute inset-0 w-full h-full bg-gradient-to-tr from-gray-850 to-gray-950 flex flex-col items-center justify-center gap-2">
                                     <span className="text-gray-500 text-5xl select-none">🐾</span>
-                                    <span className="text-gray-400 text-xs font-black uppercase tracking-widest font-sans">{activePet?.name || 'Moffi'}</span>
+                                    <span className="text-gray-500 dark:text-gray-400 text-xs font-black uppercase tracking-widest font-sans">{activePet?.name || 'Moffi'}</span>
                                 </div>
                             )}
 
@@ -562,7 +562,7 @@ function TrackingContent() {
                                         <div className="flex justify-between items-end bg-gradient-to-t from-black/50 via-black/20 to-transparent p-3 -mx-5 -mb-5 rounded-b-[2.5rem] font-sans">
                                             <div>
                                                 <div className="text-white text-xs font-black uppercase tracking-wider">{activePet?.name || 'Moffi'}</div>
-                                                <div className="text-white/60 text-[8px] font-bold mt-0.5">{new Date().toLocaleDateString('tr-TR')}</div>
+                                                <div className="text-black/60 dark:text-white/60 text-[8px] font-bold mt-0.5">{new Date().toLocaleDateString('tr-TR')}</div>
                                             </div>
                                             <div className="text-right">
                                                 <div className="text-white text-lg font-black italic">{(walkData.distance / 1000).toFixed(2)} KM</div>
@@ -580,9 +580,9 @@ function TrackingContent() {
                                         </div>
                                         <div className="bg-gradient-to-t from-black/80 via-black/30 to-transparent -mx-5 -mb-5 p-5 rounded-b-[2.5rem] flex flex-col gap-1 font-sans">
                                             <div className="text-white text-4xl font-black italic tracking-tighter leading-none font-mono">
-                                                {(walkData.distance / 1000).toFixed(2)} <span className="text-xs uppercase font-normal tracking-wide not-italic text-white/70">KM</span>
+                                                {(walkData.distance / 1000).toFixed(2)} <span className="text-xs uppercase font-normal tracking-wide not-italic text-black/70 dark:text-white/70">KM</span>
                                             </div>
-                                            <div className="flex justify-between items-center text-white/80 text-[10px] font-bold tracking-tight mt-1 font-mono">
+                                            <div className="flex justify-between items-center text-black/80 dark:text-white/80 text-[10px] font-bold tracking-tight mt-1 font-mono">
                                                 <span>⏱️ {formatTime(walkData.time)}</span>
                                                 <span className="text-orange-400 font-black not-italic font-sans">MOFFI RUN PRO</span>
                                             </div>
@@ -600,16 +600,16 @@ function TrackingContent() {
                                         <div className="bg-black/45 backdrop-blur-md border border-card-border rounded-2xl p-3.5 flex justify-between items-center w-full shadow-2xl font-sans">
                                             <div>
                                                 <div className="text-white font-black text-xs uppercase tracking-tight">{activePet?.name || 'Moffi'}</div>
-                                                <div className="text-white/60 text-[8px] font-bold uppercase mt-0.5">{activePet?.breed || 'Dostun'}</div>
+                                                <div className="text-black/60 dark:text-white/60 text-[8px] font-bold uppercase mt-0.5">{activePet?.breed || 'Dostun'}</div>
                                             </div>
                                             <div className="flex gap-4 text-right font-mono">
                                                 <div>
                                                     <div className="text-white text-[9px] font-black">{Math.floor(walkData.distance / 12)}</div>
-                                                    <div className="text-white/40 text-[7px] font-bold uppercase font-sans">KCAL</div>
+                                                    <div className="text-black/50 dark:text-white/40 text-[7px] font-bold uppercase font-sans">KCAL</div>
                                                 </div>
                                                 <div>
                                                     <div className="text-white text-[9px] font-black">{walkData.speed.toFixed(1)}</div>
-                                                    <div className="text-white/40 text-[7px] font-bold uppercase font-sans">KM/H</div>
+                                                    <div className="text-black/50 dark:text-white/40 text-[7px] font-bold uppercase font-sans">KM/H</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -633,7 +633,7 @@ function TrackingContent() {
                                     <div className="text-white font-black text-sm uppercase tracking-widest">
                                         Fotoğraf Galeriye Kaydedildi! 📸
                                     </div>
-                                    <div className="text-white/40 text-[8px] font-bold uppercase tracking-widest mt-1">
+                                    <div className="text-black/50 dark:text-white/40 text-[8px] font-bold uppercase tracking-widest mt-1">
                                         +5 PP ÖDÜL KAZANILDI!
                                     </div>
                                 </motion.div>
@@ -656,7 +656,7 @@ function TrackingContent() {
                                                 "px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all border whitespace-nowrap cursor-pointer",
                                                 selectedTemplate === t.id 
                                                     ? "bg-card text-black border-white shadow-lg scale-105" 
-                                                    : "bg-white/10 text-white/80 border-card-border hover:bg-white/20"
+                                                    : "bg-black/10 dark:bg-white/10 text-black/80 dark:text-white/80 border-card-border hover:bg-black/20 dark:bg-white/20"
                                             )}
                                         >
                                             {t.emoji} {t.label}
@@ -669,7 +669,7 @@ function TrackingContent() {
                                 <div className="flex justify-center gap-6 w-full max-w-xs px-6 font-sans">
                                     <button 
                                         onClick={() => setCapturedPhoto(null)}
-                                        className="flex-1 py-3.5 bg-white/10 border border-white/15 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all cursor-pointer"
+                                        className="flex-1 py-3.5 bg-black/10 dark:bg-white/10 border border-white/15 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all cursor-pointer"
                                     >
                                         Tekrar Çek
                                     </button>
@@ -763,7 +763,7 @@ function TrackingContent() {
 
 export default function TrackingPage() {
     return (
-        <Suspense fallback={<div className="h-screen w-full bg-black flex items-center justify-center text-white">Yükleniyor...</div>}>
+        <Suspense fallback={<div className="h-screen w-full bg-white dark:bg-black flex items-center justify-center text-white">Yükleniyor...</div>}>
             <TrackingContent />
         </Suspense>
     );

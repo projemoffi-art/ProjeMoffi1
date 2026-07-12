@@ -52,7 +52,7 @@ export function OrderSummary({ product, designState, onEdit }: { product: any, d
 
             {/* Actions */}
             <div className="flex flex-col gap-3 mt-auto">
-                <button className="w-full bg-black dark:bg-card text-white dark:text-black py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg hover:scale-[1.02] transition">
+                <button className="w-full bg-white dark:bg-black dark:bg-card text-white dark:text-black py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg hover:scale-[1.02] transition">
                     <CreditCard className="w-5 h-5" /> Sepete Ekle
                 </button>
                 <button className="w-full bg-[#F0F0F5] dark:bg-gray-800 text-foreground dark:text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-700 transition">

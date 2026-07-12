@@ -136,11 +136,11 @@ export default function VetPage() {
     const [clinicSettings, setClinicSettings] = useState<any>(null);
 
     useEffect(() => {
-        if (!isSupabaseEnabled) return;
+        if (!isSupabaseEnabled || !selectedClinic?.id) return;
         
         const loadDbAppointments = async () => {
             try {
-                const list = await apiService.getClinicAppointments('biz_vet1');
+                const list = await apiService.getClinicAppointments(selectedClinic.id);
                 setDbAppointments(list);
             } catch (e) {
                 console.error("Failed to load DB appointments for slot filtering:", e);
@@ -149,7 +149,7 @@ export default function VetPage() {
 
         const loadClinicSettings = async () => {
             try {
-                const settings = await apiService.getClinicSettings('biz_vet1');
+                const settings = await apiService.getClinicSettings(selectedClinic.id);
                 if (settings) {
                     setClinicSettings(settings);
                 }
@@ -175,7 +175,7 @@ export default function VetPage() {
             channel.removeEventListener('message', handleMessage);
             channel.close();
         };
-    }, []);
+    }, [selectedClinic?.id]);
 
     // Load sharing preferences from localStorage on mount
     useEffect(() => {
@@ -447,7 +447,7 @@ export default function VetPage() {
             time: selectedTime,
             type: 'general',
             sharedPassport,
-            petInfo: activePet ? { name: activePet.name, image: activePet.avatar_url || activePet.image } : undefined
+            petInfo: activePet ? { id: activePet.id, name: activePet.name, image: activePet.avatar_url || activePet.image } : undefined
         });
 
         setPaymentError("");
@@ -558,8 +558,8 @@ export default function VetPage() {
         try {
             await completeAppointmentBooking();
             setShowOtpModal(false);
-        } catch (error) {
-            setOtpError("Ödeme doğrulanamadı. Lütfen tekrar deneyin.");
+        } catch (error: any) {
+            setOtpError(error?.message || "Ödeme doğrulanamadı. Lütfen tekrar deneyin.");
         } finally {
             setIsOtpProcessing(false);
         }
@@ -1100,7 +1100,7 @@ export default function VetPage() {
                                     <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] mix-blend-overlay" />
                                     <div className="flex justify-between items-start z-10">
                                         <div className="font-mono text-xs font-bold tracking-widest">TEST CARD</div>
-                                        <div className="w-12 h-6 flex items-center justify-center bg-white/5 backdrop-blur-sm rounded border border-white/10 px-1">
+                                        <div className="w-12 h-6 flex items-center justify-center bg-black/5 dark:bg-white/5 backdrop-blur-sm rounded border border-black/10 dark:border-white/10 px-1">
                                             {cardNumber.startsWith("4") ? (
                                                 <svg className="w-8 h-3 text-cyan-400" viewBox="0 0 24 8" fill="currentColor">
                                                     <path d="M2.38 0h1.59l-2.5 7.96H0L2.38 0zm6.81.02a3.87 3.87 0 00-1.42.27l-.29-1.37a5.53 5.53 0 012.06-.38c1.98 0 3.37.97 3.37 2.65 0 2.27-3.13 2.39-3.13 3.42 0 .31.29.6 1.02.6a3.52 3.52 0 001.6-.37l.29 1.4a5.05 5.05 0 01-2.15.42c-2.02 0-3.41-.98-3.41-2.65 0-2.28 3.16-2.45 3.16-3.45 0-.32-.3-.59-.97-.59zm6.65 5.4l.79-2.19.46 2.19h-1.25zm2.14-5.42h1.49l-1.43 7.96h-1.5l-.26-1.25h-2.1l-.49 1.25h-1.63L17.98.02z" />

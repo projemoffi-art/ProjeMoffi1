@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { BusinessSidebar } from "@/components/business/Sidebar";
-import { MOCK_ORDERS } from "@/data/mockBusinessRegistry";
 import { useAuth } from "@/context/AuthContext";
-import { BusinessOrder, OrderStatus } from "@/types/business";
+import { OrderStatus } from "@/types/business";
 import { cn } from "@/lib/utils";
 import {
     ClipboardList, Search, Menu, X, Package, Truck, CheckCircle, XCircle,
@@ -12,9 +11,10 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDragScroll } from "@/hooks/useDragScroll";
+import { supabase } from "@/lib/supabase";
 
-const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; bg: string; icon: typeof Clock }> = {
-    pending: { label: 'Bekliyor', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200', icon: Clock },
+const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: typeof Clock }> = {
+    awaiting_payment: { label: 'Ödeme Bekliyor', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200', icon: Clock },
     preparing: { label: 'Hazırlanıyor', color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200', icon: Package },
     shipped: { label: 'Kargoda', color: 'text-indigo-700', bg: 'bg-indigo-50 border-indigo-200', icon: Truck },
     delivered: { label: 'Teslim Edildi', color: 'text-green-700', bg: 'bg-green-50 border-green-200', icon: CheckCircle },
@@ -22,18 +22,86 @@ const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; bg: str
     returned: { label: 'İade', color: 'text-foreground', bg: 'bg-gray-50 border-card-border', icon: RotateCcw },
 };
 
-const STATUS_FLOW: OrderStatus[] = ['pending', 'preparing', 'shipped', 'delivered'];
+const STATUS_FLOW: string[] = ['awaiting_payment', 'preparing', 'shipped', 'delivered'];
 
 export default function BusinessOrdersPage() {
     const { user } = useAuth();
     const statusScroll = useDragScroll();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
+    const [statusFilter, setStatusFilter] = useState<string | 'all'>('all');
     const [search, setSearch] = useState('');
-    const [detailModal, setDetailModal] = useState<BusinessOrder | null>(null);
+    const [detailModal, setDetailModal] = useState<any | null>(null);
 
-    const businessId = user?.businessId || 'biz_paws1';
-    const allOrders = MOCK_ORDERS.filter(o => o.businessId === businessId);
+    const [allOrders, setAllOrders] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const fetchOrders = async () => {
+        if (!user?.id) return;
+        setIsLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('order_items')
+                .select(`
+                    id, 
+                    quantity,
+                    price_at_purchase,
+                    status,
+                    products(name, images),
+                    orders!inner(id, status, total_amount, created_at, shipping_address, user_id,
+                        profiles!fk_orders_user_id(full_name, email)
+                    )
+                `)
+                .eq('business_id', user.id)
+                .order('created_at', { ascending: false, referencedTable: 'orders' });
+
+            if (error) throw error;
+
+            if (data) {
+                const groupedOrders = new Map();
+                data.forEach((item: any) => {
+                    const orderId = item.orders.id;
+                    if (!groupedOrders.has(orderId)) {
+                        groupedOrders.set(orderId, {
+                            id: orderId,
+                            businessId: user.id,
+                            customerName: item.orders.profiles?.full_name || "Müşteri",
+                            customerEmail: item.orders.profiles?.email || "-",
+                            items: [],
+                            totalAmount: 0,
+                            orderStatus: item.orders.status, // ödeme durumu ('paid', vb)
+                            status: item.status || 'awaiting_payment',
+                            shippingAddress: item.orders.shipping_address || '',
+                            trackingNumber: '', 
+                            notes: '', 
+                            orderedAt: item.orders.created_at
+                        });
+                    }
+                    const orderGroup = groupedOrders.get(orderId);
+                    
+                    const itemTotal = Number(item.price_at_purchase) * item.quantity;
+                    orderGroup.totalAmount += itemTotal;
+                    
+                    orderGroup.items.push({
+                        itemId: item.id,
+                        productName: item.products?.name || "Bilinmeyen Ürün",
+                        quantity: item.quantity,
+                        price: item.price_at_purchase,
+                        status: item.status || 'awaiting_payment'
+                    });
+                });
+                
+                setAllOrders(Array.from(groupedOrders.values()));
+            }
+        } catch (err) {
+            console.error("Siparişler çekilemedi:", err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (user?.id) fetchOrders();
+    }, [user?.id]);
 
     const filtered = useMemo(() => {
         let result = [...allOrders];
@@ -42,7 +110,7 @@ export default function BusinessOrdersPage() {
             o.customerName.toLowerCase().includes(search.toLowerCase()) ||
             o.id.toLowerCase().includes(search.toLowerCase())
         );
-        return result.sort((a, b) => new Date(b.orderedAt).getTime() - new Date(a.orderedAt).getTime());
+        return result;
     }, [allOrders, statusFilter, search]);
 
     const statusCounts = useMemo(() => {
@@ -96,8 +164,9 @@ export default function BusinessOrdersPage() {
                 {/* Search */}
                 <div className="bg-card rounded-2xl border border-card-border shadow-moffi-card p-4 mb-6">
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
                         <input
+                            type="text"
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             placeholder="Sipariş no veya müşteri adı ara..."
@@ -107,16 +176,20 @@ export default function BusinessOrdersPage() {
                 </div>
 
                 {/* Orders */}
-                {filtered.length === 0 ? (
+                {isLoading ? (
+                    <div className="bg-card rounded-2xl border border-card-border p-16 flex items-center justify-center">
+                        <Loader2 className="w-8 h-8 animate-spin text-gray-500 dark:text-gray-400" />
+                    </div>
+                ) : filtered.length === 0 ? (
                     <div className="bg-card rounded-2xl border border-card-border p-16 text-center">
                         <ClipboardList className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                         <h3 className="font-bold text-foreground mb-1">Sipariş bulunamadı</h3>
-                        <p className="text-sm text-gray-400">Bu kategoride henüz sipariş yok.</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Bu kategoride henüz sipariş yok.</p>
                     </div>
                 ) : (
                     <div className="space-y-3">
                         {filtered.map(order => {
-                            const statusInfo = STATUS_CONFIG[order.status];
+                            const statusInfo = STATUS_CONFIG[order.status] || STATUS_CONFIG['pending'];
                             const StatusIcon = statusInfo.icon;
                             return (
                                 <div
@@ -128,31 +201,31 @@ export default function BusinessOrdersPage() {
                                         {/* Order ID + Customer */}
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 mb-1">
-                                                <span className="text-xs font-mono text-gray-400">#{order.id.slice(-4).toUpperCase()}</span>
+                                                <span className="text-xs font-mono text-gray-500 dark:text-gray-400">#{order.id.slice(0, 8).toUpperCase()}</span>
                                                 <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1", statusInfo.bg, statusInfo.color)}>
                                                     <StatusIcon className="w-3 h-3" /> {statusInfo.label}
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <User className="w-3.5 h-3.5 text-gray-400" />
+                                                <User className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
                                                 <span className="font-bold text-foreground text-sm">{order.customerName}</span>
                                             </div>
                                         </div>
 
                                         {/* Items */}
                                         <div className="flex items-center gap-2 flex-shrink-0">
-                                            {order.items.slice(0, 3).map((item, i) => (
+                                            {order.items.slice(0, 3).map((item: any, i: number) => (
                                                 <div key={i} className="bg-gray-100 rounded-lg px-2 py-1 text-[10px] font-medium text-gray-600 max-w-[120px] truncate">
                                                     {item.quantity}x {item.productName.split(' ').slice(0, 2).join(' ')}
                                                 </div>
                                             ))}
-                                            {order.items.length > 3 && <span className="text-[10px] text-gray-400">+{order.items.length - 3}</span>}
+                                            {order.items.length > 3 && <span className="text-[10px] text-gray-500 dark:text-gray-400">+{order.items.length - 3}</span>}
                                         </div>
 
                                         {/* Amount */}
                                         <div className="text-right flex-shrink-0">
                                             <div className="text-lg font-black text-foreground">₺{order.totalAmount.toLocaleString('tr-TR')}</div>
-                                            <div className="text-[10px] text-gray-400">{new Date(order.orderedAt).toLocaleDateString('tr-TR')}</div>
+                                            <div className="text-[10px] text-gray-500 dark:text-gray-400">{new Date(order.orderedAt).toLocaleDateString('tr-TR')}</div>
                                         </div>
 
                                         <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-indigo-500 transition hidden md:block" />
@@ -166,7 +239,17 @@ export default function BusinessOrdersPage() {
 
             {/* Detail Modal */}
             <AnimatePresence>
-                {detailModal && <OrderDetailModal order={detailModal} onClose={() => setDetailModal(null)} />}
+                {detailModal && (
+                    <OrderDetailModal 
+                        order={detailModal} 
+                        onClose={() => setDetailModal(null)} 
+                        onStatusUpdate={async (newStatus) => {
+                            // Update local state manually so it feels instant
+                            setAllOrders(prev => prev.map(o => o.id === detailModal.id ? { ...o, status: newStatus } : o));
+                            setDetailModal((prev: any) => prev ? { ...prev, status: newStatus } : null);
+                        }}
+                    />
+                )}
             </AnimatePresence>
         </div>
     );
@@ -176,16 +259,31 @@ export default function BusinessOrdersPage() {
 // Order Detail Modal
 // ==================
 
-function OrderDetailModal({ order, onClose }: { order: BusinessOrder; onClose: () => void }) {
+function OrderDetailModal({ order, onClose, onStatusUpdate }: { order: any; onClose: () => void; onStatusUpdate: (status: string) => void }) {
     const [updating, setUpdating] = useState(false);
     const [trackingNumber, setTrackingNumber] = useState(order.trackingNumber || '');
-    const statusInfo = STATUS_CONFIG[order.status];
+    const statusInfo = STATUS_CONFIG[order.status] || STATUS_CONFIG['pending'];
 
     const nextStatus = STATUS_FLOW[STATUS_FLOW.indexOf(order.status) + 1] || null;
 
-    const handleAdvanceStatus = () => {
+    const handleAdvanceStatus = async () => {
+        if (!nextStatus || order.orderStatus !== 'paid') return;
         setUpdating(true);
-        setTimeout(() => { setUpdating(false); onClose(); }, 1000);
+        try {
+            const itemIds = order.items.map((i: any) => i.itemId);
+            const { error } = await supabase
+                .from('order_items')
+                .update({ status: nextStatus })
+                .in('id', itemIds);
+                
+            if (error) throw error;
+            onStatusUpdate(nextStatus);
+        } catch (err) {
+            console.error("Durum güncellenirken hata:", err);
+            alert("Sipariş durumu güncellenemedi.");
+        } finally {
+            setUpdating(false);
+        }
     };
 
     return (
@@ -202,18 +300,18 @@ function OrderDetailModal({ order, onClose }: { order: BusinessOrder; onClose: (
                 {/* Header */}
                 <div className="p-6 border-b border-card-border flex items-center justify-between">
                     <div>
-                        <h2 className="text-lg font-black text-foreground">Sipariş #{order.id.slice(-4).toUpperCase()}</h2>
+                        <h2 className="text-lg font-black text-foreground">Sipariş #{order.id.slice(0, 8).toUpperCase()}</h2>
                         <span className={cn("text-xs font-bold px-2 py-0.5 rounded-full border inline-flex items-center gap-1 mt-1", statusInfo.bg, statusInfo.color)}>
                             {statusInfo.label}
                         </span>
                     </div>
-                    <button onClick={onClose} className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><X className="w-4 h-4" /></button>
+                    <button onClick={onClose} className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 dark:text-gray-400"><X className="w-4 h-4" /></button>
                 </div>
 
                 <div className="p-6 space-y-5">
                     {/* Customer */}
                     <div>
-                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Müşteri</h4>
+                        <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Müşteri</h4>
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm">
                                 {order.customerName.charAt(0)}
@@ -227,26 +325,26 @@ function OrderDetailModal({ order, onClose }: { order: BusinessOrder; onClose: (
 
                     {/* Address */}
                     <div>
-                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Teslimat Adresi</h4>
+                        <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Teslimat Adresi</h4>
                         <div className="flex items-start gap-2 bg-gray-50 rounded-xl p-3">
-                            <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                            <MapPin className="w-4 h-4 text-gray-500 dark:text-gray-400 mt-0.5 flex-shrink-0" />
                             <span className="text-sm text-foreground">{order.shippingAddress}</span>
                         </div>
                     </div>
 
                     {/* Items */}
                     <div>
-                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Ürünler</h4>
+                        <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Ürünler</h4>
                         <div className="space-y-2">
-                            {order.items.map((item, i) => (
+                            {order.items.map((item: any, i: number) => (
                                 <div key={i} className="flex items-center justify-between bg-gray-50 rounded-xl p-3">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-gray-200 flex items-center justify-center text-gray-400">
+                                        <div className="w-8 h-8 rounded-lg bg-gray-200 flex items-center justify-center text-gray-500 dark:text-gray-400">
                                             <Package className="w-4 h-4" />
                                         </div>
                                         <div>
                                             <span className="text-sm font-medium text-foreground">{item.productName}</span>
-                                            <span className="text-xs text-gray-400 ml-2">x{item.quantity}</span>
+                                            <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">x{item.quantity}</span>
                                         </div>
                                     </div>
                                     <span className="font-bold text-foreground text-sm">₺{(item.price * item.quantity).toLocaleString('tr-TR')}</span>
@@ -265,7 +363,7 @@ function OrderDetailModal({ order, onClose }: { order: BusinessOrder; onClose: (
                     {/* Tracking Number */}
                     {(order.status === 'preparing' || order.status === 'shipped') && (
                         <div>
-                            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Kargo Takip No</h4>
+                            <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Kargo Takip No</h4>
                             <input
                                 value={trackingNumber}
                                 onChange={e => setTrackingNumber(e.target.value)}
@@ -285,19 +383,19 @@ function OrderDetailModal({ order, onClose }: { order: BusinessOrder; onClose: (
 
                 {/* Actions */}
                 <div className="p-6 border-t border-card-border flex justify-between items-center">
-                    <div className="text-[10px] text-gray-400">
+                    <div className="text-[10px] text-gray-500 dark:text-gray-400">
                         {new Date(order.orderedAt).toLocaleString('tr-TR')}
                     </div>
                     {nextStatus && order.status !== 'cancelled' && order.status !== 'returned' && (
                         <button
                             onClick={handleAdvanceStatus}
-                            disabled={updating}
-                            className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-200 hover:-translate-y-0.5 transition-all flex items-center gap-2"
+                            disabled={updating || order.orderStatus !== 'paid'}
+                            className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-200 hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {updating ? <><Loader2 className="w-4 h-4 animate-spin" /> Güncelleniyor</> : (
                                 <>
                                     <ArrowRightLeft className="w-4 h-4" />
-                                    {STATUS_CONFIG[nextStatus].label} Yap
+                                    {order.orderStatus === 'paid' ? `${STATUS_CONFIG[nextStatus].label} Yap` : 'Ödeme Bekleniyor'}
                                 </>
                             )}
                         </button>

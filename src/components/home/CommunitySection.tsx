@@ -20,7 +20,7 @@ export function CommunitySection() {
                     <div key={post.id} className="min-w-[140px] flex flex-col gap-2">
                         <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 border border-card-border">
                             {/* Placeholder for actual image */}
-                            <div className="absolute inset-0 bg-gray-200 flex items-center justify-center text-gray-400 text-xs">
+                            <div className="absolute inset-0 bg-gray-200 flex items-center justify-center text-gray-500 dark:text-gray-400 text-xs">
                                 Pet Image
                             </div>
 

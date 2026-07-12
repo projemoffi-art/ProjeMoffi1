@@ -86,10 +86,10 @@ function LoadingMiniGame({ onComplete }: MiniGameProps) {
                 <h3 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-purple-300 animate-pulse">
                     Moffi AI Model v1.0
                 </h3>
-                <p className="text-white/60 text-xs mt-2 uppercase tracking-[0.2em]">Stil Hesaplanıyor...</p>
+                <p className="text-black/60 dark:text-white/60 text-xs mt-2 uppercase tracking-[0.2em]">Stil Hesaplanıyor...</p>
             </div>
 
-            <div className="absolute top-24 bg-white/10 border border-card-border rounded-full px-4 py-1 flex items-center gap-2">
+            <div className="absolute top-24 bg-black/10 dark:bg-white/10 border border-card-border rounded-full px-4 py-1 flex items-center gap-2">
                 <Zap className="w-4 h-4 text-yellow-400 fill-current" />
                 <span className="text-white font-bold font-mono text-lg">{score * 150}</span>
             </div>
@@ -99,7 +99,7 @@ function LoadingMiniGame({ onComplete }: MiniGameProps) {
                     <button
                         key={bubble.id}
                         onClick={() => popBubble(bubble.id)}
-                        className="absolute w-16 h-16 rounded-full bg-gradient-to-br from-white/20 to-white/5 border border-white/30 backdrop-blur-md flex items-center justify-center text-white shadow-[0_0_30px_rgba(255,255,255,0.3)] animate-bounce hover:scale-110 active:scale-90 transition-all cursor-pointer"
+                        className="absolute w-16 h-16 rounded-full bg-gradient-to-br from-white/20 to-white/5 border border-black/30 dark:border-white/30 backdrop-blur-md flex items-center justify-center text-white shadow-[0_0_30px_rgba(255,255,255,0.3)] animate-bounce hover:scale-110 active:scale-90 transition-all cursor-pointer"
                         style={{ left: `${bubble.x}%`, top: `${bubble.y}%`, animationDuration: '3s' }}
                     >
                         <bubble.icon className="w-8 h-8 drop-shadow-lg" />
@@ -110,7 +110,7 @@ function LoadingMiniGame({ onComplete }: MiniGameProps) {
             <div className="absolute bottom-10 w-64 h-2 bg-gray-800 rounded-full overflow-hidden border border-card-border">
                 <div className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 animate-[width_5s_linear_forwards]" style={{ width: '0%' }} />
             </div>
-            <div className="absolute bottom-14 text-xs text-white/40 font-mono">
+            <div className="absolute bottom-14 text-xs text-black/50 dark:text-white/40 font-mono">
                 %{(score * 5) + Math.floor(Math.random() * 10)} PROCESSING
             </div>
         </div>
@@ -228,7 +228,7 @@ export default function AIDressingPage() {
                 </button>
 
                 <div className="flex flex-col items-center pointer-events-auto">
-                    <span className="text-[10px] uppercase font-bold text-gray-400 tracking-widest bg-white/80 dark:bg-black/60 px-2 py-0.5 rounded-full backdrop-blur">Stage</span>
+                    <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest bg-white/80 dark:bg-black/60 px-2 py-0.5 rounded-full backdrop-blur">Stage</span>
                     <h1 className="text-sm font-black text-foreground dark:text-white mt-0.5">Zeytin</h1>
                 </div>
 
@@ -302,7 +302,7 @@ export default function AIDressingPage() {
                     ) : (
                         <button
                             onClick={() => fileInputRef.current?.click()}
-                            className="w-full h-full rounded-[2.5rem] border-4 border-dashed border-gray-300 dark:border-gray-800 bg-white/20 dark:bg-white/5 flex flex-col items-center justify-center gap-4 hover:bg-white/40 dark:hover:bg-white/10 transition"
+                            className="w-full h-full rounded-[2.5rem] border-4 border-dashed border-gray-300 dark:border-gray-800 bg-black/20 dark:bg-white/20 dark:bg-white/5 flex flex-col items-center justify-center gap-4 hover:bg-white/40 dark:hover:bg-black/10 dark:bg-white/10 transition"
                         >
                             <div className="w-20 h-20 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
                                 <Camera className="w-8 h-8 text-indigo-500" />
@@ -331,7 +331,7 @@ export default function AIDressingPage() {
                                     "w-10 h-10 rounded-full backdrop-blur-md border flex items-center justify-center transition-all shadow-lg active:scale-95",
                                     tool.active
                                         ? "bg-indigo-600 border-indigo-500 text-white"
-                                        : "bg-white/80 dark:bg-black/40 border-white/40 dark:border-card-border text-gray-600 dark:text-gray-300 hover:bg-card dark:hover:bg-black hover:text-indigo-600"
+                                        : "bg-white/80 dark:bg-black/40 border-white/40 dark:border-card-border text-gray-600 dark:text-gray-300 hover:bg-card dark:hover:bg-white dark:bg-black hover:text-indigo-600"
                                 )}
                             >
                                 <tool.icon className="w-4 h-4" />
@@ -353,7 +353,7 @@ export default function AIDressingPage() {
                         {selectedOutfit && !isGenerating && !generatedResult && (
                             <button
                                 onClick={handleGenerate}
-                                className="bg-black dark:bg-card text-white dark:text-black px-6 py-2 rounded-full font-bold text-xs flex items-center gap-2 shadow-lg hover:scale-105 transition-transform"
+                                className="bg-white dark:bg-black dark:bg-card text-white dark:text-black px-6 py-2 rounded-full font-bold text-xs flex items-center gap-2 shadow-lg hover:scale-105 transition-transform"
                             >
                                 <Sparkles className="w-3 h-3" /> AI ile Dene
                             </button>

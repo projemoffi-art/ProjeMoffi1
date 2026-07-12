@@ -63,7 +63,7 @@ export function OrdersTab({ orders: initialOrders }: { orders: any[] }) {
                         <div key={order.id} className="bg-[#12121A] border border-card-border rounded-[2.5rem] overflow-hidden group transition-all">
                             <div 
                                 onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
-                                className="p-6 flex items-center justify-between cursor-pointer hover:bg-white/5"
+                                className="p-6 flex items-center justify-between cursor-pointer hover:bg-black/5 dark:bg-white/5"
                             >
                                 <div className="flex items-center gap-5">
                                     <div className="w-16 h-16 rounded-2xl overflow-hidden border border-card-border bg-gray-900 shrink-0 flex items-center justify-center text-2xl font-black text-white">
@@ -100,7 +100,7 @@ export function OrdersTab({ orders: initialOrders }: { orders: any[] }) {
                                 <div className="px-8 pb-8 pt-2 border-t border-card-border bg-black/20">
                                     {/* Timeline */}
                                     <div className="mb-8 pt-4">
-                                        <div className="relative h-1 bg-white/5 rounded-full overflow-hidden">
+                                        <div className="relative h-1 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
                                             <motion.div 
                                                 initial={{ width: 0 }}
                                                 animate={{ width: `${sim.progress}%` }}
@@ -120,7 +120,7 @@ export function OrdersTab({ orders: initialOrders }: { orders: any[] }) {
                                         {order.items.map((item, idx) => (
                                             <div key={idx} className="flex items-center justify-between py-2 border-b border-card-border last:border-0">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center font-black text-[10px] text-white">
+                                                    <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center font-black text-[10px] text-white">
                                                         {item.quantity}x
                                                     </div>
                                                     <span className="text-xs font-bold text-gray-300">{item.product.name}</span>
@@ -138,7 +138,7 @@ export function OrdersTab({ orders: initialOrders }: { orders: any[] }) {
                                                 <p className="text-[10px] font-bold text-white truncate max-w-[200px]">{order.shippingAddress}</p>
                                             </div>
                                         </div>
-                                        <button className="px-4 py-2 bg-white/5 border border-card-border rounded-xl text-[9px] font-black text-white uppercase hover:bg-white/10 transition-all">Detaylar</button>
+                                        <button className="px-4 py-2 bg-black/5 dark:bg-white/5 border border-card-border rounded-xl text-[9px] font-black text-white uppercase hover:bg-black/10 dark:bg-white/10 transition-all">Detaylar</button>
                                     </div>
                                 </div>
                             )}

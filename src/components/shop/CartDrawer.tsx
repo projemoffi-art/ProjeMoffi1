@@ -46,7 +46,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, onCheck
               </div>
               <button
                 onClick={onClose}
-                className="w-10 h-10 rounded-full hover:bg-white/5 flex items-center justify-center transition-all text-white/50 hover:text-white"
+                className="w-10 h-10 rounded-full hover:bg-black/5 dark:bg-white/5 flex items-center justify-center transition-all text-black/50 dark:text-white/50 hover:text-white"
               >
                 <X size={20} />
               </button>
@@ -67,7 +67,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, onCheck
                     layout
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="bg-white/5 border border-card-border rounded-2xl p-4 flex gap-4 group"
+                    className="bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl p-4 flex gap-4 group"
                   >
                     <div className="w-20 h-20 bg-black/40 rounded-xl flex items-center justify-center text-3xl border border-card-border relative overflow-hidden">
                        <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent" />
@@ -85,14 +85,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, onCheck
                         <div className="flex items-center gap-3 bg-black/40 rounded-lg p-1 border border-card-border">
                           <button 
                             onClick={() => updateQuantity(item.productId, Math.max(1, item.quantity - 1))}
-                            className="p-1 hover:bg-white/10 rounded transition-all text-white/50"
+                            className="p-1 hover:bg-black/10 dark:bg-white/10 rounded transition-all text-black/50 dark:text-white/50"
                           >
                             <Minus size={14} />
                           </button>
                           <span className="text-xs font-bold w-4 text-center">{item.quantity}</span>
                           <button 
                              onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                            className="p-1 hover:bg-white/10 rounded transition-all text-white/50"
+                            className="p-1 hover:bg-black/10 dark:bg-white/10 rounded transition-all text-black/50 dark:text-white/50"
                           >
                             <Plus size={14} />
                           </button>

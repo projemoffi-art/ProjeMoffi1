@@ -113,7 +113,7 @@ export default function BusinessRegisterPage() {
                     ) : (
                         <>
                             <p className="text-gray-500 mb-2">İşletmeniz incelendikten sonra paneliniz aktif olacaktır.</p>
-                            <p className="text-xs text-gray-400">Yönlendiriliyorsunuz...</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Yönlendiriliyorsunuz...</p>
                             <div className="mt-6 w-full h-1 bg-gray-100 rounded-full overflow-hidden">
                                 <motion.div
                                     initial={{ width: 0 }}
@@ -133,7 +133,7 @@ export default function BusinessRegisterPage() {
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 flex flex-col">
             {/* Header */}
             <header className="px-6 py-4 flex items-center justify-between">
-                <button onClick={() => router.push('/')} className="text-gray-400 hover:text-gray-600 text-sm font-medium flex items-center gap-1">
+                <button onClick={() => router.push('/')} className="text-gray-500 dark:text-gray-400 hover:text-gray-600 text-sm font-medium flex items-center gap-1">
                     <ArrowLeft className="w-4 h-4" /> Ana Sayfa
                 </button>
                 <div className="flex items-center gap-2">
@@ -153,11 +153,11 @@ export default function BusinessRegisterPage() {
                                 "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300",
                                 i < step ? "bg-indigo-600 text-white" :
                                     i === step ? "bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300" :
-                                        "bg-gray-100 text-gray-400"
+                                        "bg-gray-100 text-gray-500 dark:text-gray-400"
                             )}>
                                 {i < step ? <CheckCircle className="w-4 h-4" /> : i + 1}
                             </div>
-                            <span className={cn("text-xs font-medium hidden sm:block", i <= step ? "text-foreground" : "text-gray-400")}>{s.label}</span>
+                            <span className={cn("text-xs font-medium hidden sm:block", i <= step ? "text-foreground" : "text-gray-500 dark:text-gray-400")}>{s.label}</span>
                             {i < STEPS.length - 1 && <div className={cn("w-8 sm:w-16 h-0.5 mx-1", i < step ? "bg-indigo-600" : "bg-gray-200")} />}
                         </div>
                     ))}
@@ -296,7 +296,7 @@ export default function BusinessRegisterPage() {
                                 "px-6 py-3 rounded-2xl font-bold text-sm flex items-center gap-2 transition-all shadow-lg",
                                 canProceed()
                                     ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-indigo-200 hover:-translate-y-0.5"
-                                    : "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
+                                    : "bg-gray-200 text-gray-500 dark:text-gray-400 cursor-not-allowed shadow-none"
                             )}
                         >
                             İleri <ArrowRight className="w-4 h-4" />
@@ -309,7 +309,7 @@ export default function BusinessRegisterPage() {
                                 "px-8 py-3 rounded-2xl font-bold text-sm flex items-center gap-2 transition-all shadow-lg",
                                 canProceed() && !loading
                                     ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:shadow-green-200 hover:-translate-y-0.5"
-                                    : "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
+                                    : "bg-gray-200 text-gray-500 dark:text-gray-400 cursor-not-allowed shadow-none"
                             )}
                         >
                             {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Gönderiliyor...</> : <><CheckCircle className="w-4 h-4" /> Başvuru Gönder</>}
@@ -328,13 +328,13 @@ export default function BusinessRegisterPage() {
 function InputField({ icon: Icon, label, value, onChange, placeholder, type = 'text', multiline = false }: {
     icon: typeof Building2; label: string; value: string; onChange: (v: string) => void; placeholder: string; type?: string; multiline?: boolean;
 }) {
-    const baseClass = "w-full bg-gray-50 border border-card-border rounded-xl px-4 py-3 pl-11 text-sm text-foreground placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition";
+    const baseClass = "w-full bg-gray-50 border border-card-border rounded-xl px-4 py-3 pl-11 text-sm text-foreground placeholder:text-gray-500 dark:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition";
 
     return (
         <div>
             <label className="text-xs font-bold text-gray-600 mb-1.5 block">{label}</label>
             <div className="relative">
-                <Icon className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400" />
+                <Icon className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-500 dark:text-gray-400" />
                 {multiline ? (
                     <textarea
                         value={value}
@@ -360,7 +360,7 @@ function InputField({ icon: Icon, label, value, onChange, placeholder, type = 't
 function SummaryRow({ label, value }: { label: string; value: string }) {
     return (
         <div className="flex justify-between items-start py-2 border-b border-card-border last:border-0">
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{label}</span>
+            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{label}</span>
             <span className="text-sm font-medium text-foreground text-right max-w-[60%]">{value}</span>
         </div>
     );

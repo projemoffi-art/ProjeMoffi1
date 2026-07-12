@@ -75,6 +75,32 @@ export async function POST(req: NextRequest) {
                 }
             }
             
+            // --- B1: Send Order Confirmation Email ---
+            try {
+                if (order && order.user_id) {
+                    const { sendEmail, getOrderConfirmationHtml } = await import("@/lib/notifications/email");
+                    const { data: userData, error: userErr } = await supabaseAdmin.auth.admin.getUserById(order.user_id);
+                    
+                    if (!userErr && userData?.user?.email) {
+                        const { data: items } = await supabaseAdmin.from("order_items").select("quantity, price_at_purchase, products(name)").eq("order_id", merchant_oid);
+                        const mappedItems = (items || []).map((i: any) => ({
+                            name: i.products?.name || "Ürün",
+                            quantity: i.quantity,
+                            price: Number(i.price_at_purchase)
+                        }));
+                        
+                        await sendEmail({
+                            to: userData.user.email,
+                            subject: "Moffi - Siparişiniz Onaylandı 🎉",
+                            html: getOrderConfirmationHtml(merchant_oid, Number(total_amount), mappedItems)
+                        });
+                    }
+                }
+            } catch (emailErr) {
+                console.error("[PAYTR WEBHOOK] Failed to send confirmation email:", emailErr);
+            }
+            // --- END B1 ---
+            
             console.log(`[PAYTR WEBHOOK] Successfully processed order success: ${merchant_oid}`);
         } else {
             // Update order status to 'failed'

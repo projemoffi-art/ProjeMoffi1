@@ -106,7 +106,7 @@ export default function BusinessDashboard() {
                                 <Wallet className="w-4 h-4 text-indigo-600" />
                             </div>
                             <div className="flex flex-col">
-                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Bakiye</span>
+                                <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Bakiye</span>
                                 <span className="text-sm font-black text-foreground">₺4,250.00</span>
                             </div>
                         </div>
@@ -176,14 +176,14 @@ export default function BusinessDashboard() {
                     <div className="space-y-6">
                         {/* Proximity Card */}
                         <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[2rem] p-6 text-white shadow-2xl shadow-indigo-300 relative overflow-hidden flex flex-col justify-between h-[240px]">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10" />
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-black/10 dark:bg-white/10 rounded-full blur-2xl -mr-10 -mt-10" />
 
                             <div>
                                 <div className="flex justify-between items-start mb-4">
-                                    <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center border border-card-border">
+                                    <div className="w-10 h-10 bg-black/20 dark:bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center border border-card-border">
                                         <MapIcon className="w-5 h-5 text-white" />
                                     </div>
-                                    <span className="bg-white/20 backdrop-blur-md px-2 py-1 rounded text-[10px] font-bold border border-card-border animate-pulse">Canlı</span>
+                                    <span className="bg-black/20 dark:bg-white/20 backdrop-blur-md px-2 py-1 rounded text-[10px] font-bold border border-card-border animate-pulse">Canlı</span>
                                 </div>
                                 <h3 className="text-lg font-bold mb-2">Yakınlık Bildirimi</h3>
                                 <p className="text-indigo-100 text-sm opacity-90 leading-relaxed font-medium">
@@ -210,10 +210,10 @@ export default function BusinessDashboard() {
                                             <div className="text-xs font-bold text-foreground">@{u.username}</div>
                                             <div className="text-[10px] text-gray-500">MoffiPet'e katıldı</div>
                                         </div>
-                                        <span className="text-[10px] font-bold text-gray-400">Yeni</span>
+                                        <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">Yeni</span>
                                     </div>
                                 )) : (
-                                    <div className="text-xs text-gray-400 text-center py-4">Henüz yeni üye yok.</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 text-center py-4">Henüz yeni üye yok.</div>
                                 )}
                             </div>
                         </div>
@@ -260,7 +260,7 @@ function StatCard({ title, value, trend, icon: Icon, color }: StatCardProps) {
             </div>
             <div>
                 <h3 className="text-3xl font-black text-foreground tracking-tight leading-none mb-2">{value}</h3>
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{title}</p>
+                <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{title}</p>
             </div>
         </div>
     );

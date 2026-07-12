@@ -96,6 +96,7 @@ export interface LostPet {
     pet_id?: string;
     name: string;
     img: string;
+    images?: string[];
     location: string;
     last_seen_location?: string;
     reward_enabled?: boolean;
@@ -185,6 +186,7 @@ export interface ShopProduct extends Partial<Product> {
     isRecentlyBought?: boolean;
     isVetApproved?: boolean;
     description?: string;
+    ownerId?: string;
 }
 
 export interface ShopCartItem {
@@ -246,7 +248,7 @@ export interface IApiService {
     updateCartItem(productId: string, quantity: number): Promise<void>;
     removeFromCart(productId: string): Promise<void>;
     clearCart(): Promise<void>;
-    createOrder(order: Partial<ShopOrder>): Promise<ShopOrder>;
+
     getOrders(): Promise<ShopOrder[]>;
 
     // Subscriptions & Advanced Features

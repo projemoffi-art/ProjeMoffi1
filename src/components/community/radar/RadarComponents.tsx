@@ -7,6 +7,9 @@ import {
     Share2, Phone, MessageCircle, AlertCircle, Clock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import dynamic from 'next/dynamic';
+
+const MapLocationPicker = dynamic(() => import('@/components/common/MapLocationPicker').then(mod => mod.MapLocationPicker), { ssr: false });
 
 // 1. ADD LOST PET (SOS) MODAL
 interface AddLostPetModalProps {
@@ -18,6 +21,8 @@ interface AddLostPetModalProps {
     setLostPetBreed: (val: string) => void;
     lostPetLocation: string;
     setLostPetLocation: (val: string) => void;
+    lostPetCoords: [number, number];
+    setLostPetCoords: (val: [number, number]) => void;
     lostPetDesc: string;
     setLostPetDesc: (val: string) => void;
     lostPetPhotos: { file: File, preview: string }[];
@@ -37,6 +42,8 @@ export function AddLostPetModal({
     setLostPetBreed,
     lostPetLocation,
     setLostPetLocation,
+    lostPetCoords,
+    setLostPetCoords,
     lostPetDesc,
     setLostPetDesc,
     lostPetPhotos,
@@ -86,8 +93,15 @@ export function AddLostPetModal({
                                 <input value={lostPetBreed} onChange={e => setLostPetBreed(e.target.value)} type="text" placeholder="Örn: Golden Retriever" className="w-full mt-1.5 bg-foreground/5 border border-glass-border rounded-2xl py-4 px-5 text-foreground outline-none focus:border-red-500 transition-colors" />
                             </div>
                             <div>
-                                <label className="text-[11px] font-black text-secondary uppercase tracking-widest ml-1">Son Görüldüğü Yer</label>
-                                <input value={lostPetLocation} onChange={e => setLostPetLocation(e.target.value)} type="text" placeholder="Örn: Kadıköy Moda Sahili" className="w-full mt-1.5 bg-foreground/5 border border-glass-border rounded-2xl py-4 px-5 text-foreground outline-none focus:border-red-500 transition-colors" />
+                                <label className="text-[11px] font-black text-secondary uppercase tracking-widest ml-1 mb-1.5 block">Son Göründüğü Yer (Harita)</label>
+                                <MapLocationPicker 
+                                    coords={lostPetCoords} 
+                                    onChange={(coords, address) => {
+                                        setLostPetCoords(coords);
+                                        if (address) setLostPetLocation(address);
+                                    }} 
+                                    height="220px" 
+                                />
                             </div>
                             <div>
                                 <label className="text-[11px] font-black text-secondary uppercase tracking-widest ml-1">Detaylar / Not</label>
@@ -105,7 +119,7 @@ export function AddLostPetModal({
                                 {lostPetPhotos.length > 0 ? (
                                     <div className="grid grid-cols-4 gap-3">
                                         {lostPetPhotos.map((photo, idx) => (
-                                            <div key={idx} className="aspect-square rounded-xl bg-white/5 border border-card-border relative overflow-hidden group">
+                                            <div key={idx} className="aspect-square rounded-xl bg-black/5 dark:bg-white/5 border border-card-border relative overflow-hidden group">
                                                 <img src={photo.preview} className="w-full h-full object-cover" />
                                                 <button onClick={() => setLostPetPhotos((prev: any[]) => prev.filter((_, i) => i !== idx))} className="absolute top-1 right-1 w-5 h-5 bg-black/60 rounded-full flex items-center justify-center"><X className="w-3 h-3" /></button>
                                             </div>
@@ -161,7 +175,7 @@ export function LostPetDetailModal({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: "100%" }}
                 transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                className="fixed inset-0 z-[130] bg-black text-white flex flex-col pt-safe"
+                className="fixed inset-0 z-[130] bg-white dark:bg-black text-white flex flex-col pt-safe"
             >
                 <div className="relative w-full h-[55vh] shrink-0 overflow-hidden">
                     <img src={pet.media_url || pet.avatar} className="w-full h-full object-cover opacity-90" />
@@ -185,7 +199,7 @@ export function LostPetDetailModal({
                 <div className="flex-1 bg-background overflow-y-auto no-scrollbar pb-32">
                     <div className="p-6 space-y-8 max-w-lg mx-auto">
                         <div className="flex gap-4">
-                            <div className="flex-1 bg-white/5 border border-card-border rounded-2xl p-4 flex flex-col items-center gap-1.5">
+                            <div className="flex-1 bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl p-4 flex flex-col items-center gap-1.5">
                                 <MapPin className="w-6 h-6 text-red-400" />
                                 <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Son Konumu</span>
                                 <span className="text-sm font-bold text-gray-200">{pet.last_location || "Bilinmiyor"}</span>
@@ -194,7 +208,7 @@ export function LostPetDetailModal({
 
                         <div className="space-y-4">
                             <h3 className="text-[11px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">İlan Detayları</h3>
-                            <div className="bg-white/5 border border-card-border rounded-3xl p-6 relative overflow-hidden">
+                            <div className="bg-black/5 dark:bg-white/5 border border-card-border rounded-3xl p-6 relative overflow-hidden">
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 blur-3xl rounded-full" />
                                 <p className="text-gray-300 text-base leading-relaxed font-medium relative z-10">{pet.description || "Açıklama belirtilmemiş."}</p>
                             </div>
@@ -202,7 +216,7 @@ export function LostPetDetailModal({
 
                         <div className="bg-red-500/5 border border-red-500/10 rounded-3xl p-5 flex items-start gap-4">
                             <AlertCircle className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
-                            <p className="text-[11px] text-gray-400 leading-relaxed font-medium">Bu bir S.O.S (Acil Durum) ilanıdır. Dostumuzu görenlerin en yakın emniyet birimine veya sahibine aşağıdaki butonlarla ulaşması rica olunur.</p>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed font-medium">Bu bir S.O.S (Acil Durum) ilanıdır. Dostumuzu görenlerin en yakın emniyet birimine veya sahibine aşağıdaki butonlarla ulaşması rica olunur.</p>
                         </div>
                     </div>
                 </div>

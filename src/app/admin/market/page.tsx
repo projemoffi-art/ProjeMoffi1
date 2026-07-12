@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
 
 const getImgUrl = (url: string) => {
     if (!url) return "";
@@ -36,6 +37,7 @@ export default function AdminMarketPage() {
     const [orders, setOrders] = useState<ShopOrder[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [businesses, setBusinesses] = useState<any[]>([]);
 
     // Modal state for adding a product
     const [showAddModal, setShowAddModal] = useState(false);
@@ -54,7 +56,8 @@ export default function AdminMarketPage() {
         stockCount: "10",
         tag: "",
         isVetApproved: false,
-        isPrimeOnly: false
+        isPrimeOnly: false,
+        ownerId: ""
     });
 
     // Modal state for editing a product
@@ -74,7 +77,8 @@ export default function AdminMarketPage() {
         stockCount: "10",
         tag: "",
         isVetApproved: false,
-        isPrimeOnly: false
+        isPrimeOnly: false,
+        ownerId: ""
     });
 
     // Search and filter states
@@ -89,12 +93,14 @@ export default function AdminMarketPage() {
         setIsLoading(true);
         setError(null);
         try {
-            const [fetchedProducts, fetchedOrders] = await Promise.all([
+            const [fetchedProducts, fetchedOrders, businessData] = await Promise.all([
                 apiService.getProducts(),
-                apiService.getAllOrders()
+                apiService.getAllOrders(),
+                supabase.from('profiles').select('id, full_name, username, role').in('role', ['business', 'admin']).then(res => res.data || [])
             ]);
             setProducts(fetchedProducts);
             setOrders(fetchedOrders);
+            setBusinesses(businessData);
         } catch (err: any) {
             console.error("Failed to load admin market data:", err);
             setError("Veriler yüklenirken bir hata oluştu.");
@@ -107,6 +113,10 @@ export default function AdminMarketPage() {
         e.preventDefault();
         if (!newProduct.name || !newProduct.price) {
             alert("Lütfen ürün adı ve fiyatı girin.");
+            return;
+        }
+        if (!newProduct.ownerId) {
+            alert("Lütfen bir satıcı seçin.");
             return;
         }
 
@@ -140,7 +150,8 @@ export default function AdminMarketPage() {
                 stockCount: stockNum,
                 isPrimeOnly: newProduct.isPrimeOnly,
                 isVetApproved: newProduct.isVetApproved,
-                tag: newProduct.tag || undefined
+                tag: newProduct.tag || undefined,
+                ownerId: newProduct.ownerId || undefined
             });
 
             setProducts(prev => [created, ...prev]);
@@ -159,7 +170,8 @@ export default function AdminMarketPage() {
                 stockCount: "10",
                 tag: "",
                 isVetApproved: false,
-                isPrimeOnly: false
+                isPrimeOnly: false,
+                ownerId: ""
             });
         } catch (err: any) {
             console.error("Failed to add product:", err);
@@ -192,7 +204,8 @@ export default function AdminMarketPage() {
             stockCount: String(product.stockCount || 10),
             tag: product.tag || "",
             isVetApproved: !!product.isVetApproved,
-            isPrimeOnly: !!product.isPrimeOnly
+            isPrimeOnly: !!product.isPrimeOnly,
+            ownerId: product.ownerId || ""
         });
         setShowEditModal(true);
     };
@@ -202,6 +215,10 @@ export default function AdminMarketPage() {
         if (!editingProduct) return;
         if (!editForm.name || !editForm.price) {
             alert("Lütfen ürün adı ve fiyatı girin.");
+            return;
+        }
+        if (!editForm.ownerId) {
+            alert("Lütfen bir satıcı seçin.");
             return;
         }
 
@@ -235,7 +252,8 @@ export default function AdminMarketPage() {
                 stockCount: stockNum,
                 isPrimeOnly: editForm.isPrimeOnly,
                 isVetApproved: editForm.isVetApproved,
-                tag: editForm.tag || null as any
+                tag: editForm.tag || null as any,
+                ownerId: editForm.ownerId || undefined
             });
 
             setProducts(prev => prev.map(p => p.id === editingProduct.id ? updated : p));
@@ -303,7 +321,7 @@ export default function AdminMarketPage() {
                         </div>
                         <h1 className="text-3xl font-black text-white uppercase tracking-tighter italic">Market & Mağaza Modülü</h1>
                     </div>
-                    <p className="text-gray-400 text-sm">
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">
                         Moffi PetShop ürün listesini, stok durumlarını ve müşteri siparişlerini buradan yönetebilirsiniz.
                     </p>
                 </div>
@@ -311,7 +329,7 @@ export default function AdminMarketPage() {
                 <div className="flex items-center gap-3">
                     <button 
                         onClick={loadData}
-                        className="p-3 bg-white/5 border border-card-border hover:bg-white/10 rounded-xl text-white transition-colors"
+                        className="p-3 bg-black/5 dark:bg-white/5 border border-card-border hover:bg-black/10 dark:bg-white/10 rounded-xl text-white transition-colors"
                         title="Verileri Yenile"
                     >
                         <RefreshCw className="w-5 h-5" />
@@ -368,7 +386,7 @@ export default function AdminMarketPage() {
             ) : activeTab === 'products' ? (
                 <div className="space-y-6">
                     {/* Filter and Search Bar */}
-                    <div className="flex flex-col md:flex-row gap-4 bg-white/5 p-4 rounded-3xl border border-card-border">
+                    <div className="flex flex-col md:flex-row gap-4 bg-black/5 dark:bg-white/5 p-4 rounded-3xl border border-card-border">
                         <div className="relative flex-1">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                             <input
@@ -411,7 +429,7 @@ export default function AdminMarketPage() {
                                 return (
                                     <div 
                                         key={product.id}
-                                        className="bg-black/30 border border-card-border rounded-[2rem] overflow-hidden flex flex-col hover:border-white/10 transition-all group"
+                                        className="bg-black/30 border border-card-border rounded-[2rem] overflow-hidden flex flex-col hover:border-black/10 dark:border-white/10 transition-all group"
                                     >
                                         <div className="relative h-44 bg-gradient-to-br from-white/5 to-transparent flex items-center justify-center overflow-hidden">
                                             {isUrl ? (
@@ -419,7 +437,7 @@ export default function AdminMarketPage() {
                                                     <img 
                                                         src={getImgUrl(firstImg)} 
                                                         alt={product.name} 
-                                                        className="w-full h-full object-cover bg-white/5 group-hover:scale-110 transition-all duration-300" 
+                                                        className="w-full h-full object-cover bg-black/5 dark:bg-white/5 group-hover:scale-110 transition-all duration-300" 
                                                         onError={(e) => {
                                                             e.currentTarget.style.display = 'none';
                                                             const fallback = e.currentTarget.nextSibling as HTMLElement;
@@ -436,7 +454,7 @@ export default function AdminMarketPage() {
                                             <div className="absolute top-4 right-4 flex items-center gap-2">
                                                 <button
                                                     onClick={() => handleStartEdit(product)}
-                                                    className="w-9 h-9 bg-white/5 hover:bg-amber-500 text-white hover:text-black border border-card-border rounded-xl flex items-center justify-center transition-all active:scale-90"
+                                                    className="w-9 h-9 bg-black/5 dark:bg-white/5 hover:bg-amber-500 text-white hover:text-black border border-card-border rounded-xl flex items-center justify-center transition-all active:scale-90"
                                                     title="Ürünü Düzenle"
                                                 >
                                                     <Edit2 className="w-4 h-4" />
@@ -511,7 +529,7 @@ export default function AdminMarketPage() {
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2.5">
                                                 <span className="text-sm font-black text-white uppercase tracking-tight">Sipariş ID:</span>
-                                                <span className="text-xs font-mono text-gray-400">{order.id}</span>
+                                                <span className="text-xs font-mono text-gray-500 dark:text-gray-400">{order.id}</span>
                                             </div>
                                             <p className="text-[10px] text-gray-500 font-medium">
                                                 Tarih: {new Date(order.createdAt).toLocaleString('tr-TR')}
@@ -555,9 +573,9 @@ export default function AdminMarketPage() {
                                                 {(order.items || []).map((item, idx) => (
                                                     <div 
                                                         key={idx}
-                                                        className="flex items-center gap-4 bg-white/5 p-3 rounded-xl border border-card-border"
+                                                        className="flex items-center gap-4 bg-black/5 dark:bg-white/5 p-3 rounded-xl border border-card-border"
                                                     >
-                                                        <div className="w-12 h-12 bg-white/5 rounded-lg flex items-center justify-center text-3xl overflow-hidden shrink-0">
+                                                        <div className="w-12 h-12 bg-black/5 dark:bg-white/5 rounded-lg flex items-center justify-center text-3xl overflow-hidden shrink-0">
                                                             {item.product?.image && (item.product.image.startsWith("http") || item.product.image.startsWith("/") || item.product.image.includes(".") || item.product.image.length > 4) ? (
                                                                 <>
                                                                     <img 
@@ -589,10 +607,10 @@ export default function AdminMarketPage() {
                                         </div>
 
                                         {/* Delivery Info */}
-                                        <div className="bg-white/5 border border-card-border p-5 rounded-[1.5rem] flex flex-col justify-between">
+                                        <div className="bg-black/5 dark:bg-white/5 border border-card-border p-5 rounded-[1.5rem] flex flex-col justify-between">
                                             <div>
                                                 <span className="text-[10px] text-gray-500 font-black uppercase tracking-wider block mb-2">Teslimat Adresi</span>
-                                                <p className="text-xs text-white/80 leading-relaxed font-medium">
+                                                <p className="text-xs text-black/80 dark:text-white/80 leading-relaxed font-medium">
                                                     {order.shippingAddress || "Adres belirtilmemiş."}
                                                 </p>
                                             </div>
@@ -637,15 +655,15 @@ export default function AdminMarketPage() {
                                         type="button"
                                         disabled={isSubmitting}
                                         onClick={() => setShowAddModal(false)} 
-                                        className="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
+                                        className="w-8 h-8 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center hover:bg-black/10 dark:bg-white/10 transition-colors"
                                     >
-                                        <X className="w-4 h-4 text-gray-400" />
+                                        <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                                     </button>
                                 </div>
 
                                 <div className="p-6 space-y-4 overflow-y-auto no-scrollbar flex-1">
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Ürün Adı *</label>
+                                        <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Ürün Adı *</label>
                                         <input
                                             type="text"
                                             required
@@ -658,8 +676,26 @@ export default function AdminMarketPage() {
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4">
+
                                         <div className="space-y-1">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Satış Fiyatı (TL) *</label>
+                                            <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Satıcı Seçimi</label>
+                                            <select
+                                                value={newProduct.ownerId}
+                                                disabled={isSubmitting}
+                                                onChange={e => setNewProduct(prev => ({ ...prev, ownerId: e.target.value }))}
+                                                className="w-full h-11 px-3 bg-black/40 border border-card-border rounded-xl text-xs text-white outline-none cursor-pointer focus:border-amber-500/30 transition-all font-medium"
+                                            >
+                                                <option value="">Satıcı Seçin (Zorunlu Değil)</option>
+                                                {businesses.map(b => (
+                                                    <option key={b.id} value={b.id}>
+                                                        {b.role === 'admin' ? 'Moffi Merkezi' : (b.full_name || b.username)}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Satış Fiyatı (TL) *</label>
                                             <input
                                                 type="number"
                                                 required
@@ -673,7 +709,7 @@ export default function AdminMarketPage() {
                                             />
                                         </div>
                                         <div className="space-y-1">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Eski Fiyat (Üstü Çizili)</label>
+                                            <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Eski Fiyat (Üstü Çizili)</label>
                                             <input
                                                 type="number"
                                                 min="0.01"
@@ -689,7 +725,7 @@ export default function AdminMarketPage() {
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-1">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Stok Adedi</label>
+                                            <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Stok Adedi</label>
                                             <input
                                                 type="number"
                                                 min="0"
@@ -701,7 +737,8 @@ export default function AdminMarketPage() {
                                             />
                                         </div>
                                         <div className="space-y-1">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Kategori</label>
+                                            <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Kategori</label>
+                                            
                                             <select
                                                 value={newProduct.category}
                                                 disabled={isSubmitting}
@@ -715,10 +752,27 @@ export default function AdminMarketPage() {
                                                 <option value="accessory">Aksesuar</option>
                                             </select>
                                         </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Satıcı</label>
+                                            <select
+                                                value={newProduct.ownerId}
+                                                disabled={isSubmitting}
+                                                onChange={e => setNewProduct(prev => ({ ...prev, ownerId: e.target.value }))}
+                                                className="w-full h-11 px-3 bg-black/40 border border-card-border rounded-xl text-xs text-white outline-none cursor-pointer focus:border-amber-500/30 transition-all font-medium"
+                                            >
+                                                <option value="">Satıcı Seçin</option>
+                                                {businesses.map(b => (
+                                                    <option key={b.id} value={b.id}>
+                                                        {b.role === 'admin' ? 'Moffi Merkezi' : (b.full_name || b.username)}
+                                                    </option>
+                                                ))}
+                                            </select>
+
+                                        </div>
                                     </div>
 
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Görsel Türü</label>
+                                        <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Görsel Türü</label>
                                         <div className="flex gap-2">
                                             {(['emoji', 'url', 'upload'] as const).map(type => (
                                                 <button
@@ -730,7 +784,7 @@ export default function AdminMarketPage() {
                                                         "flex-1 h-9 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border",
                                                         newProduct.imageType === type
                                                             ? 'bg-amber-500 text-black border-amber-600'
-                                                            : 'bg-white/5 text-white border-card-border hover:bg-white/10'
+                                                            : 'bg-black/5 dark:bg-white/5 text-white border-card-border hover:bg-black/10 dark:bg-white/10'
                                                     )}
                                                 >
                                                     {type === 'emoji' ? 'Emoji' : type === 'url' ? 'Görsel URL' : 'Fotoğraf Yükle'}
@@ -741,7 +795,7 @@ export default function AdminMarketPage() {
 
                                     {newProduct.imageType === 'emoji' && (
                                         <div className="space-y-1">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Görsel Emojisi</label>
+                                            <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Görsel Emojisi</label>
                                             <select
                                                 value={newProduct.imageEmoji}
                                                 disabled={isSubmitting}
@@ -764,7 +818,7 @@ export default function AdminMarketPage() {
 
                                     {newProduct.imageType === 'url' && (
                                         <div className="space-y-1">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Resim URL'si (Çoklu ise virgülle ayırın)</label>
+                                            <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Resim URL'si (Çoklu ise virgülle ayırın)</label>
                                             <input
                                                 type="text"
                                                 required
@@ -785,7 +839,7 @@ export default function AdminMarketPage() {
                                                     const trimmed = url.trim();
                                                     if (!trimmed) return null;
                                                     return (
-                                                        <div key={idx} className="w-16 h-16 rounded-xl overflow-hidden border border-card-border bg-white/5 relative">
+                                                        <div key={idx} className="w-16 h-16 rounded-xl overflow-hidden border border-card-border bg-black/5 dark:bg-white/5 relative">
                                                             <img src={getImgUrl(trimmed)} alt="Önizleme" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                                                         </div>
                                                     );
@@ -796,7 +850,7 @@ export default function AdminMarketPage() {
 
                                      {newProduct.imageType === 'upload' && (
                                          <div className="space-y-1">
-                                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Resim Dosyası Seçin (Çoklu seçebilirsiniz)</label>
+                                             <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Resim Dosyası Seçin (Çoklu seçebilirsiniz)</label>
                                              <input
                                                  type="file"
                                                  accept="image/*"
@@ -806,7 +860,7 @@ export default function AdminMarketPage() {
                                                      const files = Array.from(e.target.files || []);
                                                      setNewProduct(prev => ({ ...prev, imageFiles: files, imageFile: files[0] || null }));
                                                  }}
-                                                 className="w-full h-11 p-2 bg-black/40 border border-card-border rounded-xl text-xs text-white file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-black file:bg-white/10 file:text-white file:uppercase hover:file:bg-white/20 transition-all outline-none"
+                                                 className="w-full h-11 p-2 bg-black/40 border border-card-border rounded-xl text-xs text-white file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-black file:bg-black/10 dark:bg-white/10 file:text-white file:uppercase hover:file:bg-black/20 dark:bg-white/20 transition-all outline-none"
                                              />
                                          </div>
                                      )}
@@ -818,7 +872,7 @@ export default function AdminMarketPage() {
                                                  {Array.from(newProduct.imageFiles).map((file, idx) => {
                                                      const previewUrl = URL.createObjectURL(file);
                                                      return (
-                                                         <div key={idx} className="w-16 h-16 rounded-xl overflow-hidden border border-card-border bg-white/5 relative">
+                                                         <div key={idx} className="w-16 h-16 rounded-xl overflow-hidden border border-card-border bg-black/5 dark:bg-white/5 relative">
                                                              <img src={previewUrl} alt="Önizleme" className="w-full h-full object-cover" />
                                                              <button
                                                                  type="button"
@@ -841,7 +895,7 @@ export default function AdminMarketPage() {
                                          </div>
                                      )}
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Özel Kampanya Etiketi (Rozet)</label>
+                                        <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Özel Kampanya Etiketi (Rozet)</label>
                                         <input
                                             type="text"
                                             disabled={isSubmitting}
@@ -853,7 +907,7 @@ export default function AdminMarketPage() {
                                     </div>
 
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Ürün Açıklaması</label>
+                                        <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Ürün Açıklaması</label>
                                         <textarea
                                             value={newProduct.description}
                                             disabled={isSubmitting}
@@ -865,7 +919,7 @@ export default function AdminMarketPage() {
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-card-border">
+                                        <div className="flex items-center justify-between p-3 bg-black/5 dark:bg-white/5 rounded-2xl border border-card-border">
                                             <div className="flex flex-col">
                                                 <span className="text-[10px] font-black text-white uppercase tracking-tight">Vet Onaylı</span>
                                             </div>
@@ -879,7 +933,7 @@ export default function AdminMarketPage() {
                                             </button>
                                         </div>
 
-                                        <div className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-card-border">
+                                        <div className="flex items-center justify-between p-3 bg-black/5 dark:bg-white/5 rounded-2xl border border-card-border">
                                             <div className="flex flex-col">
                                                 <span className="text-[10px] font-black text-white uppercase tracking-tight">Prime Özel</span>
                                             </div>
@@ -937,15 +991,15 @@ export default function AdminMarketPage() {
                                         type="button"
                                         disabled={isSubmitting}
                                         onClick={() => setShowEditModal(false)} 
-                                        className="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
+                                        className="w-8 h-8 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center hover:bg-black/10 dark:bg-white/10 transition-colors"
                                     >
-                                        <X className="w-4 h-4 text-gray-400" />
+                                        <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                                     </button>
                                 </div>
 
                                 <div className="p-6 space-y-4 overflow-y-auto no-scrollbar flex-1">
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Ürün Adı *</label>
+                                        <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Ürün Adı *</label>
                                         <input
                                             type="text"
                                             required
@@ -959,7 +1013,7 @@ export default function AdminMarketPage() {
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-1">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Satış Fiyatı (TL) *</label>
+                                            <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Satış Fiyatı (TL) *</label>
                                             <input
                                                 type="number"
                                                 required
@@ -973,7 +1027,7 @@ export default function AdminMarketPage() {
                                             />
                                         </div>
                                         <div className="space-y-1">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Eski Fiyat (Üstü Çizili)</label>
+                                            <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Eski Fiyat (Üstü Çizili)</label>
                                             <input
                                                 type="number"
                                                 min="0.01"
@@ -989,7 +1043,7 @@ export default function AdminMarketPage() {
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-1">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Stok Adedi</label>
+                                            <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Stok Adedi</label>
                                             <input
                                                 type="number"
                                                 min="0"
@@ -1001,7 +1055,8 @@ export default function AdminMarketPage() {
                                             />
                                         </div>
                                         <div className="space-y-1">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Kategori</label>
+                                            <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Kategori</label>
+                                            
                                             <select
                                                 value={editForm.category}
                                                 disabled={isSubmitting}
@@ -1015,10 +1070,27 @@ export default function AdminMarketPage() {
                                                 <option value="accessory">Aksesuar</option>
                                             </select>
                                         </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Satıcı</label>
+                                            <select
+                                                value={editForm.ownerId}
+                                                disabled={isSubmitting}
+                                                onChange={e => setEditForm(prev => ({ ...prev, ownerId: e.target.value }))}
+                                                className="w-full h-11 px-3 bg-black/40 border border-card-border rounded-xl text-xs text-white outline-none cursor-pointer focus:border-amber-500/30 transition-all font-medium"
+                                            >
+                                                <option value="">Satıcı Seçin</option>
+                                                {businesses.map(b => (
+                                                    <option key={b.id} value={b.id}>
+                                                        {b.role === 'admin' ? 'Moffi Merkezi' : (b.full_name || b.username)}
+                                                    </option>
+                                                ))}
+                                            </select>
+
+                                        </div>
                                     </div>
 
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Görsel Türü</label>
+                                        <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Görsel Türü</label>
                                         <div className="flex gap-2">
                                             {(['emoji', 'url', 'upload'] as const).map(type => (
                                                 <button
@@ -1030,7 +1102,7 @@ export default function AdminMarketPage() {
                                                         "flex-1 h-9 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border",
                                                         editForm.imageType === type
                                                             ? 'bg-amber-500 text-black border-amber-600'
-                                                            : 'bg-white/5 text-white border-card-border hover:bg-white/10'
+                                                            : 'bg-black/5 dark:bg-white/5 text-white border-card-border hover:bg-black/10 dark:bg-white/10'
                                                     )}
                                                 >
                                                     {type === 'emoji' ? 'Emoji' : type === 'url' ? 'Görsel URL' : 'Fotoğraf Yükle'}
@@ -1041,7 +1113,7 @@ export default function AdminMarketPage() {
 
                                     {editForm.imageType === 'emoji' && (
                                         <div className="space-y-1">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Görsel Emojisi</label>
+                                            <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Görsel Emojisi</label>
                                             <select
                                                 value={editForm.imageEmoji}
                                                 disabled={isSubmitting}
@@ -1064,7 +1136,7 @@ export default function AdminMarketPage() {
 
                                     {editForm.imageType === 'url' && (
                                         <div className="space-y-1">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Resim URL'si (Çoklu ise virgülle ayırın)</label>
+                                            <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Resim URL'si (Çoklu ise virgülle ayırın)</label>
                                             <input
                                                 type="text"
                                                 required
@@ -1079,7 +1151,7 @@ export default function AdminMarketPage() {
 
                                     {editForm.imageType === 'upload' && (
                                         <div className="space-y-1">
-                                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Resim Dosyası Seçin (Çoklu seçebilirsiniz. Boş bırakırsanız mevcut görsel korunur)</label>
+                                             <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Resim Dosyası Seçin (Çoklu seçebilirsiniz. Boş bırakırsanız mevcut görsel korunur)</label>
                                             <input
                                                 type="file"
                                                 accept="image/*"
@@ -1089,13 +1161,13 @@ export default function AdminMarketPage() {
                                                      const files = Array.from(e.target.files || []);
                                                      setEditForm(prev => ({ ...prev, imageFiles: files, imageFile: files[0] || null }));
                                                  }}
-                                                className="w-full h-11 p-2 bg-black/40 border border-card-border rounded-xl text-xs text-white file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-black file:bg-white/10 file:text-white file:uppercase hover:file:bg-white/20 transition-all outline-none"
+                                                className="w-full h-11 p-2 bg-black/40 border border-card-border rounded-xl text-xs text-white file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-black file:bg-black/10 dark:bg-white/10 file:text-white file:uppercase hover:file:bg-black/20 dark:bg-white/20 transition-all outline-none"
                                             />
                                         </div>
                                     )}
 
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Özel Kampanya Etiketi (Rozet)</label>
+                                        <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Özel Kampanya Etiketi (Rozet)</label>
                                         <input
                                             type="text"
                                             disabled={isSubmitting}
@@ -1107,7 +1179,7 @@ export default function AdminMarketPage() {
                                     </div>
 
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Ürün Açıklaması</label>
+                                        <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Ürün Açıklaması</label>
                                         <textarea
                                             value={editForm.description}
                                             disabled={isSubmitting}
@@ -1119,7 +1191,7 @@ export default function AdminMarketPage() {
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-card-border">
+                                        <div className="flex items-center justify-between p-3 bg-black/5 dark:bg-white/5 rounded-2xl border border-card-border">
                                             <div className="flex flex-col">
                                                 <span className="text-[10px] font-black text-white uppercase tracking-tight">Vet Onaylı</span>
                                             </div>
@@ -1133,7 +1205,7 @@ export default function AdminMarketPage() {
                                             </button>
                                         </div>
 
-                                        <div className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-card-border">
+                                        <div className="flex items-center justify-between p-3 bg-black/5 dark:bg-white/5 rounded-2xl border border-card-border">
                                             <div className="flex flex-col">
                                                 <span className="text-[10px] font-black text-white uppercase tracking-tight">Prime Özel</span>
                                             </div>

@@ -65,7 +65,7 @@ export function SubscriptionManagementModal() {
                 >
                     {/* Header */}
                     <div className="bg-gradient-to-br from-green-500 to-emerald-700 p-8 text-center relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 blur-3xl rounded-full" />
+                        <div className="absolute top-0 right-0 w-40 h-40 bg-black/10 dark:bg-white/10 blur-3xl rounded-full" />
                         <button 
                             onClick={() => setIsOpen(false)}
                             className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/20 flex items-center justify-center text-white hover:bg-black/40 transition-colors z-10"
@@ -73,7 +73,7 @@ export function SubscriptionManagementModal() {
                             <X className="w-4 h-4" />
                         </button>
                         
-                        <div className="w-20 h-20 bg-white/20 rounded-3xl mx-auto flex items-center justify-center mb-4 backdrop-blur-md shadow-lg border border-white/20">
+                        <div className="w-20 h-20 bg-black/20 dark:bg-white/20 rounded-3xl mx-auto flex items-center justify-center mb-4 backdrop-blur-md shadow-lg border border-black/20 dark:border-white/20">
                             <Crown className="w-10 h-10 text-white drop-shadow-md" />
                         </div>
                         

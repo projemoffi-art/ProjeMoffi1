@@ -201,14 +201,14 @@ export function SeniorDashboard() {
     };
 
     return (
-        <div className="min-h-screen bg-black text-white p-6 font-sans relative flex flex-col justify-between pb-24 select-none">
+        <div className="min-h-screen bg-white dark:bg-black text-white p-6 font-sans relative flex flex-col justify-between pb-24 select-none">
             {/* Header */}
-            <div className="flex justify-between items-center border-b-2 border-white/10 pb-4 mb-4">
+            <div className="flex justify-between items-center border-b-2 border-black/10 dark:border-white/10 pb-4 mb-4">
                 <div className="flex items-center gap-3">
                     <span className="text-[32px]">🐾</span>
                     <div>
                         <h2 className="text-[20px] font-black text-amber-400 leading-none">Moffi Kolay Arayüz</h2>
-                        <p className="text-[12px] text-white/60 font-bold uppercase mt-1">Göz Dostu & Basit</p>
+                        <p className="text-[12px] text-black/60 dark:text-white/60 font-bold uppercase mt-1">Göz Dostu & Basit</p>
                     </div>
                 </div>
 
@@ -216,7 +216,7 @@ export function SeniorDashboard() {
                     {/* Speak Stop Button */}
                     <button 
                         onClick={() => stop()}
-                        className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20 active:scale-95"
+                        className="w-12 h-12 bg-black/10 dark:bg-white/10 rounded-2xl flex items-center justify-center border border-black/20 dark:border-white/20 active:scale-95"
                         title="Sesi Sustur"
                         {...getSpeakProps("Sesi susturmak için dokunun")}
                     >
@@ -249,7 +249,7 @@ export function SeniorDashboard() {
                             className="space-y-6"
                         >
                             {/* Pet Status Summary */}
-                            <div className="bg-white/5 border-2 border-white/15 rounded-[2.5rem] p-6 text-center space-y-4">
+                            <div className="bg-black/5 dark:bg-white/5 border-2 border-white/15 rounded-[2.5rem] p-6 text-center space-y-4">
                                 <div className="w-28 h-28 bg-amber-500/10 rounded-full mx-auto flex items-center justify-center border-2 border-amber-500/30">
                                     <span className="text-[64px]" role="img" aria-label="dog">
                                         {activePet?.type || "🐶"}
@@ -264,17 +264,17 @@ export function SeniorDashboard() {
 
                                 {/* Status Progress Bars */}
                                 <div className="grid grid-cols-2 gap-3 pt-2 text-left">
-                                    <div className="bg-white/5 p-4 rounded-3xl border border-white/10 flex items-center gap-3">
+                                    <div className="bg-black/5 dark:bg-white/5 p-4 rounded-3xl border border-black/10 dark:border-white/10 flex items-center gap-3">
                                         <Flame className="w-8 h-8 text-amber-500 shrink-0" />
                                         <div>
-                                            <p className="text-[11px] font-black text-white/50 uppercase leading-none">Beslenme</p>
+                                            <p className="text-[11px] font-black text-black/50 dark:text-white/50 uppercase leading-none">Beslenme</p>
                                             <p className="text-[18px] font-black text-white mt-1">{foodCurrent} kcal</p>
                                         </div>
                                     </div>
-                                    <div className="bg-white/5 p-4 rounded-3xl border border-white/10 flex items-center gap-3">
+                                    <div className="bg-black/5 dark:bg-white/5 p-4 rounded-3xl border border-black/10 dark:border-white/10 flex items-center gap-3">
                                         <Droplets className="w-8 h-8 text-sky-400 shrink-0" />
                                         <div>
-                                            <p className="text-[11px] font-black text-white/50 uppercase leading-none">Su Tüketimi</p>
+                                            <p className="text-[11px] font-black text-black/50 dark:text-white/50 uppercase leading-none">Su Tüketimi</p>
                                             <p className="text-[18px] font-black text-white mt-1">{waterCurrent} ml</p>
                                         </div>
                                     </div>
@@ -337,7 +337,7 @@ export function SeniorDashboard() {
                                 {/* Feed Button */}
                                 <button 
                                     onClick={handleFeed}
-                                    className="p-8 bg-amber-500 text-black border-2 border-white/20 rounded-[3rem] flex items-center justify-between active:scale-95 w-full text-left"
+                                    className="p-8 bg-amber-500 text-black border-2 border-black/20 dark:border-white/20 rounded-[3rem] flex items-center justify-between active:scale-95 w-full text-left"
                                     {...getSpeakProps("Mama vermek için bu büyük sarı butona dokunun")}
                                 >
                                     <div className="flex items-center gap-5">
@@ -353,7 +353,7 @@ export function SeniorDashboard() {
                                 {/* Water Button */}
                                 <button 
                                     onClick={handleWater}
-                                    className="p-8 bg-sky-500 text-black border-2 border-white/20 rounded-[3rem] flex items-center justify-between active:scale-95 w-full text-left"
+                                    className="p-8 bg-sky-500 text-black border-2 border-black/20 dark:border-white/20 rounded-[3rem] flex items-center justify-between active:scale-95 w-full text-left"
                                     {...getSpeakProps("Su vermek için bu büyük mavi butona dokunun")}
                                 >
                                     <div className="flex items-center gap-5">
@@ -369,7 +369,7 @@ export function SeniorDashboard() {
 
                             <button 
                                 onClick={() => setActiveSection("home")}
-                                className="w-full py-6 bg-white/10 rounded-[2.5rem] border border-white/20 font-black text-[16px] uppercase active:scale-95"
+                                className="w-full py-6 bg-black/10 dark:bg-white/10 rounded-[2.5rem] border border-black/20 dark:border-white/20 font-black text-[16px] uppercase active:scale-95"
                                 {...getSpeakProps("Ana menüye geri dönmek için dokunun")}
                             >
                                 Ana Menüye Dön
@@ -394,10 +394,10 @@ export function SeniorDashboard() {
                                     { name: "Kadıköy Merkez Hayvan Hastanesi", dist: "1.2 km mesafede", phone: "0216 333 44 55" },
                                     { name: "Pati Acil Veteriner Kliniği (7/24)", dist: "2.1 km mesafede", phone: "0216 999 88 77" }
                                 ].map((vet, idx) => (
-                                    <div key={idx} className="bg-white/5 border border-white/10 p-5 rounded-[2.5rem] flex items-center justify-between gap-4">
+                                    <div key={idx} className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 p-5 rounded-[2.5rem] flex items-center justify-between gap-4">
                                         <div>
                                             <h3 className="text-[16px] font-black text-white">{vet.name}</h3>
-                                            <p className="text-[12px] text-white/50 font-bold uppercase mt-1">{vet.dist}</p>
+                                            <p className="text-[12px] text-black/50 dark:text-white/50 font-bold uppercase mt-1">{vet.dist}</p>
                                         </div>
                                         <button 
                                             onClick={() => triggerCall(vet.name)}
@@ -412,7 +412,7 @@ export function SeniorDashboard() {
 
                             <button 
                                 onClick={() => setActiveSection("home")}
-                                className="w-full py-6 bg-white/10 rounded-[2.5rem] border border-white/20 font-black text-[16px] uppercase active:scale-95"
+                                className="w-full py-6 bg-black/10 dark:bg-white/10 rounded-[2.5rem] border border-black/20 dark:border-white/20 font-black text-[16px] uppercase active:scale-95"
                                 {...getSpeakProps("Ana menüye geri dönmek için dokunun")}
                             >
                                 Ana Menüye Dön
@@ -438,7 +438,7 @@ export function SeniorDashboard() {
                                         <p className="text-[14px] text-emerald-400 font-black uppercase">Yürüyüş Süresi</p>
                                         <h3 className="text-[48px] font-black tracking-tight mt-1">{formatTime(walkSeconds)}</h3>
                                     </div>
-                                    <p className="text-[13px] text-white/70 font-bold uppercase">Haritada güvenli rotada ilerliyorsunuz.</p>
+                                    <p className="text-[13px] text-black/70 dark:text-white/70 font-bold uppercase">Haritada güvenli rotada ilerliyorsunuz.</p>
                                     <button 
                                         onClick={() => { setIsWalking(false); speak("Yürüyüş tamamlandı. Harika bir iş çıkardınız!"); }}
                                         className="w-full py-7 bg-red-500 text-white rounded-[2.5rem] font-black text-[18px] uppercase active:scale-95 border-2 border-red-400"
@@ -448,15 +448,15 @@ export function SeniorDashboard() {
                                     </button>
                                 </div>
                             ) : (
-                                <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 space-y-6">
+                                <div className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-[2.5rem] p-8 space-y-6">
                                     <span className="text-[64px]">🌳</span>
                                     <div>
                                         <h3 className="text-[20px] font-black uppercase">Temiz Hava Zamanı</h3>
-                                        <p className="text-[12px] text-white/50 font-bold uppercase mt-2">Dostunuzla beraber yürüyüş kaydı başlatın.</p>
+                                        <p className="text-[12px] text-black/50 dark:text-white/50 font-bold uppercase mt-2">Dostunuzla beraber yürüyüş kaydı başlatın.</p>
                                     </div>
                                     <button 
                                         onClick={() => { setIsWalking(true); speak("Yürüyüş kaydı başlatıldı. Keyifli yürüyüşler dilerim."); }}
-                                        className="w-full py-7 bg-emerald-500 text-black rounded-[2.5rem] font-black text-[18px] uppercase active:scale-95 border-2 border-white/20"
+                                        className="w-full py-7 bg-emerald-500 text-black rounded-[2.5rem] font-black text-[18px] uppercase active:scale-95 border-2 border-black/20 dark:border-white/20"
                                         {...getSpeakProps("Yürüyüşü başlatmak için bu büyük yeşil butona dokunun")}
                                     >
                                         Yürüyüşü Başlat
@@ -466,7 +466,7 @@ export function SeniorDashboard() {
 
                             <button 
                                 onClick={() => { setIsWalking(false); setActiveSection("home"); }}
-                                className="w-full py-6 bg-white/10 rounded-[2.5rem] border border-white/20 font-black text-[16px] uppercase active:scale-95"
+                                className="w-full py-6 bg-black/10 dark:bg-white/10 rounded-[2.5rem] border border-black/20 dark:border-white/20 font-black text-[16px] uppercase active:scale-95"
                                 {...getSpeakProps("Ana menüye geri dönmek için dokunun")}
                             >
                                 Ana Menüye Dön
@@ -484,7 +484,7 @@ export function SeniorDashboard() {
                             className="space-y-6"
                         >
                             <h2 className="text-[24px] font-black text-red-500 uppercase text-center mb-2">Acil Hızlı Arama</h2>
-                            <p className="text-[12px] text-white/60 text-center font-bold uppercase -mt-2">Tek dokunuşla yakınlarınıza haber verin.</p>
+                            <p className="text-[12px] text-black/60 dark:text-white/60 text-center font-bold uppercase -mt-2">Tek dokunuşla yakınlarınıza haber verin.</p>
                             
                             <div className="space-y-4">
                                 <button 
@@ -520,7 +520,7 @@ export function SeniorDashboard() {
 
                             <button 
                                 onClick={() => setActiveSection("home")}
-                                className="w-full py-6 bg-white/10 rounded-[2.5rem] border border-white/20 font-black text-[16px] uppercase active:scale-95"
+                                className="w-full py-6 bg-black/10 dark:bg-white/10 rounded-[2.5rem] border border-black/20 dark:border-white/20 font-black text-[16px] uppercase active:scale-95"
                                 {...getSpeakProps("Ana menüye geri dönmek için dokunun")}
                             >
                                 Ana Menüye Dön
@@ -531,10 +531,10 @@ export function SeniorDashboard() {
             </div>
 
             {/* Bottom Controls / Exit */}
-            <div className="border-t-2 border-white/10 pt-4 flex gap-4">
+            <div className="border-t-2 border-black/10 dark:border-white/10 pt-4 flex gap-4">
                 <button
                     onClick={() => { setSeniorMode(false); speak("Standart arayüze geçiş yapılıyor."); }}
-                    className="flex-1 py-6 bg-white/10 hover:bg-white/15 text-white border border-white/20 rounded-[2.5rem] font-black text-[14px] uppercase active:scale-95 flex items-center justify-center gap-2"
+                    className="flex-1 py-6 bg-black/10 dark:bg-white/10 hover:bg-white/15 text-white border border-black/20 dark:border-white/20 rounded-[2.5rem] font-black text-[14px] uppercase active:scale-95 flex items-center justify-center gap-2"
                     {...getSpeakProps("Kolay moddan çıkıp normal moda dönmek için dokunun")}
                 >
                     <RefreshCw className="w-5 h-5 text-amber-500" /> Normal Moda Dön
@@ -551,19 +551,19 @@ export function SeniorDashboard() {
                         className="fixed inset-0 bg-red-600 z-[99999] flex flex-col justify-between p-8 text-white text-center"
                     >
                         <div className="pt-16 space-y-4">
-                            <div className="w-32 h-32 bg-white/10 rounded-full mx-auto flex items-center justify-center border-4 border-white/30 animate-pulse">
+                            <div className="w-32 h-32 bg-black/10 dark:bg-white/10 rounded-full mx-auto flex items-center justify-center border-4 border-black/30 dark:border-white/30 animate-pulse">
                                 <Phone className="w-16 h-16 text-white" />
                             </div>
                             <div>
                                 <h1 className="text-[32px] font-black tracking-tight uppercase leading-none">{ringingContact}</h1>
-                                <p className="text-[16px] text-white/70 font-bold uppercase tracking-widest mt-3 animate-bounce">ARANIYOR...</p>
+                                <p className="text-[16px] text-black/70 dark:text-white/70 font-bold uppercase tracking-widest mt-3 animate-bounce">ARANIYOR...</p>
                             </div>
                         </div>
 
                         <div className="pb-16">
                             <button 
                                 onClick={cancelCall}
-                                className="w-full py-8 bg-black hover:bg-black/90 text-white rounded-[3rem] border-4 border-white/20 font-black text-[22px] uppercase active:scale-95 shadow-2xl flex items-center justify-center gap-4"
+                                className="w-full py-8 bg-white dark:bg-black hover:bg-black/90 text-white rounded-[3rem] border-4 border-black/20 dark:border-white/20 font-black text-[22px] uppercase active:scale-95 shadow-2xl flex items-center justify-center gap-4"
                             >
                                 <X className="w-8 h-8 text-red-500" /> ARAMAYI KAPAT
                             </button>

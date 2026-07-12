@@ -172,7 +172,7 @@ export default function PostCreationWizard({ isOpen, onClose, user, userPets, on
                                 if (step === 1) onClose();
                                 else setStep((prev) => prev - 1 as 1 | 2);
                             }}
-                            className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center transition-all active:scale-90"
+                            className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center transition-all active:scale-90"
                         >
                             {step === 1 ? <X className="w-5 h-5 text-white" /> : <ChevronLeft className="w-6 h-6 text-white" />}
                         </button>
@@ -201,7 +201,7 @@ export default function PostCreationWizard({ isOpen, onClose, user, userPets, on
                         {step === 1 ? (
                             <>
                                 {/* Step 1: Preview (Top) */}
-                                <div className="w-full aspect-square bg-black relative flex items-center justify-center overflow-hidden border-b border-card-border">
+                                <div className="w-full aspect-square bg-white dark:bg-black relative flex items-center justify-center overflow-hidden border-b border-card-border">
                                     {mediaURL ? (
                                         <motion.img 
                                             key={mediaURL}
@@ -211,7 +211,7 @@ export default function PostCreationWizard({ isOpen, onClose, user, userPets, on
                                             className="w-full h-full object-cover" 
                                         />
                                     ) : (
-                                        <div className="flex flex-col items-center gap-4 text-white/20">
+                                        <div className="flex flex-col items-center gap-4 text-black/30 dark:text-white/20">
                                             <ImageIcon size={48} strokeWidth={1} />
                                             <span className="text-xs font-bold uppercase tracking-widest">Fotoğraf Seçilmedi</span>
                                         </div>
@@ -221,10 +221,10 @@ export default function PostCreationWizard({ isOpen, onClose, user, userPets, on
                                 {/* Step 1: Gallery Grid (Bottom) */}
                                 <div className="flex-1 flex flex-col bg-[#000000]">
                                     <div className="px-6 py-4 flex justify-between items-center border-b border-card-border">
-                                        <span className="text-[11px] font-black text-white/40 uppercase tracking-[0.2em]">Galeri</span>
+                                        <span className="text-[11px] font-black text-black/50 dark:text-white/40 uppercase tracking-[0.2em]">Galeri</span>
                                         <button 
                                             onClick={() => fileInputRef.current?.click()}
-                                            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 text-[10px] font-black text-cyan-400 uppercase tracking-widest hover:bg-white/10 transition-all"
+                                            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/5 dark:bg-white/5 text-[10px] font-black text-cyan-400 uppercase tracking-widest hover:bg-black/10 dark:bg-white/10 transition-all"
                                         >
                                             <Camera size={12} /> Fotoğraf Ekle
                                         </button>
@@ -232,12 +232,12 @@ export default function PostCreationWizard({ isOpen, onClose, user, userPets, on
 
                                     {!hasGalleryPermission && galleryPhotos.length === 0 ? (
                                         <div className="flex-1 flex flex-col items-center justify-center p-12 text-center gap-6">
-                                            <div className="w-20 h-20 rounded-[2rem] bg-white/5 flex items-center justify-center text-white/20">
+                                            <div className="w-20 h-20 rounded-[2rem] bg-black/5 dark:bg-white/5 flex items-center justify-center text-black/30 dark:text-white/20">
                                                 <ImageIcon size={32} />
                                             </div>
                                             <div className="space-y-2">
                                                 <h3 className="text-white font-bold">Galerinize Erişelim</h3>
-                                                <p className="text-xs text-white/40 leading-relaxed">Paylaşmak istediğiniz anıları seçmek için galerinizden fotoğraf yükleyin.</p>
+                                                <p className="text-xs text-black/50 dark:text-white/40 leading-relaxed">Paylaşmak istediğiniz anıları seçmek için galerinizden fotoğraf yükleyin.</p>
                                             </div>
                                             <button 
                                                 onClick={() => fileInputRef.current?.click()}
@@ -274,7 +274,7 @@ export default function PostCreationWizard({ isOpen, onClose, user, userPets, on
                             </>
                         ) : step === 2 ? (
                             <>
-                                <div className="w-full h-[45vh] bg-black relative flex items-center justify-center overflow-hidden border-b border-card-border">
+                                <div className="w-full h-[45vh] bg-white dark:bg-black relative flex items-center justify-center overflow-hidden border-b border-card-border">
                                     <motion.div 
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
@@ -324,7 +324,7 @@ export default function PostCreationWizard({ isOpen, onClose, user, userPets, on
                                     </motion.div>
                                 </div>
 
-                                <div className="flex-1 overflow-y-auto bg-black flex flex-col">
+                                <div className="flex-1 overflow-y-auto bg-white dark:bg-black flex flex-col">
                                     <div className="px-6 py-6 flex items-center justify-around border-b border-card-border">
                                         <ToolBtn icon={Palette} label="Ayar" active={activeTool === 'adjust'} onClick={() => setActiveTool(activeTool === 'adjust' ? null : 'adjust')} />
                                         <ToolBtn icon={Maximize} label="Oran" active={activeTool === 'ratio'} onClick={() => setActiveTool(activeTool === 'ratio' ? null : 'ratio')} />
@@ -345,11 +345,11 @@ export default function PostCreationWizard({ isOpen, onClose, user, userPets, on
                                             {activeTool === 'ratio' && (
                                                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="grid grid-cols-4 gap-3">
                                                     {(['original', '1:1', '4:5', '16:9'] as const).map(ratio => (
-                                                        <button key={ratio} onClick={() => setAspectRatio(ratio)} className={cn("py-4 rounded-2xl border flex flex-col items-center gap-2 transition-all", aspectRatio === ratio ? "bg-cyan-500/10 border-cyan-500 text-cyan-400" : "bg-white/5 border-transparent text-white/40")}>
+                                                        <button key={ratio} onClick={() => setAspectRatio(ratio)} className={cn("py-4 rounded-2xl border flex flex-col items-center gap-2 transition-all", aspectRatio === ratio ? "bg-cyan-500/10 border-cyan-500 text-cyan-400" : "bg-black/5 dark:bg-white/5 border-transparent text-black/50 dark:text-white/40")}>
                                                             <span className="text-[10px] font-black uppercase">{ratio}</span>
                                                         </button>
                                                     ))}
-                                                    <button onClick={() => setRotation(r => (r + 90) % 360)} className="py-4 rounded-2xl bg-white/5 border-transparent text-white/40 flex flex-col items-center gap-2">
+                                                    <button onClick={() => setRotation(r => (r + 90) % 360)} className="py-4 rounded-2xl bg-black/5 dark:bg-white/5 border-transparent text-black/50 dark:text-white/40 flex flex-col items-center gap-2">
                                                         <RotateCcw size={16} />
                                                         <span className="text-[10px] font-black uppercase">Döndür</span>
                                                     </button>
@@ -360,7 +360,7 @@ export default function PostCreationWizard({ isOpen, onClose, user, userPets, on
                                                     <input 
                                                         type="text" value={postText} onChange={(e) => setPostText(e.target.value)} 
                                                         placeholder="Buraya bir şeyler yaz..."
-                                                        className="w-full bg-white/5 border border-card-border rounded-2xl px-6 py-4 text-white outline-none focus:border-cyan-500"
+                                                        className="w-full bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl px-6 py-4 text-white outline-none focus:border-cyan-500"
                                                     />
                                                     <div className="flex gap-3">
                                                         {['#ffffff', '#000000', '#facc15', '#ef4444', '#22d3ee'].map(c => (
@@ -409,7 +409,7 @@ export default function PostCreationWizard({ isOpen, onClose, user, userPets, on
                                                         <div className={cn("w-14 h-14 rounded-full border-2 p-0.5", taggedPetIds.includes(pet.id) ? "border-cyan-500" : "border-card-border")}>
                                                             <img src={pet.avatar} className="w-full h-full rounded-full object-cover" />
                                                         </div>
-                                                        <span className="text-[10px] text-white/40 font-bold">{pet.name}</span>
+                                                        <span className="text-[10px] text-black/50 dark:text-white/40 font-bold">{pet.name}</span>
                                                     </button>
                                                 ))}
                                             </div>
@@ -418,7 +418,7 @@ export default function PostCreationWizard({ isOpen, onClose, user, userPets, on
                                         <Section title="Ruh Hali" icon={Heart}>
                                             <div className="flex flex-wrap gap-2">
                                                 {MOOD_OPTIONS.map(m => (
-                                                    <button key={m} onClick={() => setMood(mood === m ? null : m)} className={cn("px-4 py-2 rounded-full text-xs font-bold transition-all", mood === m ? "bg-card text-black" : "bg-white/5 text-white/40")}>
+                                                    <button key={m} onClick={() => setMood(mood === m ? null : m)} className={cn("px-4 py-2 rounded-full text-xs font-bold transition-all", mood === m ? "bg-card text-black" : "bg-black/5 dark:bg-white/5 text-black/50 dark:text-white/40")}>
                                                         {m}
                                                     </button>
                                                 ))}
@@ -440,7 +440,7 @@ export default function PostCreationWizard({ isOpen, onClose, user, userPets, on
                                         disabled={isPublishing}
                                         className={cn(
                                             "w-full py-5 rounded-[2rem] font-black text-white flex items-center justify-center gap-3 shadow-2xl transition-all active:scale-95",
-                                            isPublishing ? "bg-white/10" : "bg-gradient-to-r from-cyan-400 to-purple-600 shadow-cyan-500/20"
+                                            isPublishing ? "bg-black/10 dark:bg-white/10" : "bg-gradient-to-r from-cyan-400 to-purple-600 shadow-cyan-500/20"
                                         )}
                                     >
                                         {isPublishing ? (
@@ -465,10 +465,10 @@ export default function PostCreationWizard({ isOpen, onClose, user, userPets, on
 function ToolBtn({ icon: Icon, label, active, onClick }: any) {
     return (
         <button onClick={onClick} className="flex flex-col items-center gap-2 group">
-            <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-all", active ? "bg-cyan-500 text-black scale-110" : "bg-white/5 text-white/40 group-hover:bg-white/10")}>
+            <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-all", active ? "bg-cyan-500 text-black scale-110" : "bg-black/5 dark:bg-white/5 text-black/50 dark:text-white/40 group-hover:bg-black/10 dark:bg-white/10")}>
                 <Icon size={20} />
             </div>
-            <span className={cn("text-[9px] font-black uppercase tracking-widest", active ? "text-cyan-400" : "text-white/20")}>{label}</span>
+            <span className={cn("text-[9px] font-black uppercase tracking-widest", active ? "text-cyan-400" : "text-black/30 dark:text-white/20")}>{label}</span>
         </button>
     );
 }
@@ -477,12 +477,12 @@ function Slider({ label, value, min, max, onChange }: any) {
     return (
         <div className="space-y-3">
             <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                <span className="text-white/20">{label}</span>
+                <span className="text-black/30 dark:text-white/20">{label}</span>
                 <span className="text-cyan-400">{Math.round(value)}%</span>
             </div>
             <input 
                 type="range" min={min} max={max} value={value} onChange={(e) => onChange(parseFloat(e.target.value))}
-                className="w-full h-1 bg-white/10 rounded-full appearance-none accent-cyan-500 cursor-pointer"
+                className="w-full h-1 bg-black/10 dark:bg-white/10 rounded-full appearance-none accent-cyan-500 cursor-pointer"
             />
         </div>
     );
@@ -491,7 +491,7 @@ function Slider({ label, value, min, max, onChange }: any) {
 function Section({ title, icon: Icon, children }: any) {
     return (
         <div className="space-y-3">
-            <div className="flex items-center gap-2 text-[10px] font-black text-white/20 uppercase tracking-widest px-1">
+            <div className="flex items-center gap-2 text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-widest px-1">
                 <Icon size={12} />
                 <span>{title}</span>
             </div>
@@ -502,10 +502,10 @@ function Section({ title, icon: Icon, children }: any) {
 
 function ToggleRow({ icon: Icon, label, value, onClick }: any) {
     return (
-        <button onClick={onClick} className="w-full flex items-center justify-between p-4 bg-white/[0.03] border border-card-border rounded-2xl hover:bg-white/5 transition-all">
+        <button onClick={onClick} className="w-full flex items-center justify-between p-4 bg-white/[0.03] border border-card-border rounded-2xl hover:bg-black/5 dark:bg-white/5 transition-all">
             <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/40"><Icon size={16} /></div>
-                <span className="text-xs font-bold text-white/80">{label}</span>
+                <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center text-black/50 dark:text-white/40"><Icon size={16} /></div>
+                <span className="text-xs font-bold text-black/80 dark:text-white/80">{label}</span>
             </div>
             <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">{value}</span>
         </button>

@@ -86,11 +86,11 @@ export function DiaryModal({ isOpen, onClose }: DiaryModalProps) {
                                     </div>
                                     <div>
                                         <h2 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none">Pati Günlüğü</h2>
-                                        <p className="text-[10px] text-white/30 font-bold uppercase tracking-[0.3em] mt-1.5">Unutulmaz Anılar</p>
+                                        <p className="text-[10px] text-black/40 dark:text-white/30 font-bold uppercase tracking-[0.3em] mt-1.5">Unutulmaz Anılar</p>
                                     </div>
                                 </div>
-                                <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
-                                    <X className="w-5 h-5 text-white/40" />
+                                <button onClick={onClose} className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center hover:bg-black/10 dark:bg-white/10 transition-colors">
+                                    <X className="w-5 h-5 text-black/50 dark:text-white/40" />
                                 </button>
                             </div>
 
@@ -98,18 +98,18 @@ export function DiaryModal({ isOpen, onClose }: DiaryModalProps) {
                             <div className="relative mb-8">
                                 <button 
                                     onClick={() => setShowPetSelector(!showPetSelector)}
-                                    className="w-full flex items-center justify-between p-4 bg-white/[0.03] border border-card-border rounded-3xl hover:bg-white/5 transition-all group"
+                                    className="w-full flex items-center justify-between p-4 bg-white/[0.03] border border-card-border rounded-3xl hover:bg-black/5 dark:bg-white/5 transition-all group"
                                 >
                                     <div className="flex items-center gap-4">
                                         <div className="w-10 h-10 rounded-xl overflow-hidden border-2 border-card-border group-hover:border-yellow-500/30 transition-colors">
                                             <img src={selectedPet?.avatar} alt="" className="w-full h-full object-cover" />
                                         </div>
                                         <div className="text-left">
-                                            <p className="text-[9px] text-white/30 font-black uppercase tracking-widest">Anı Sahibi</p>
+                                            <p className="text-[9px] text-black/40 dark:text-white/30 font-black uppercase tracking-widest">Anı Sahibi</p>
                                             <p className="text-sm font-black text-white">{selectedPet?.name}</p>
                                         </div>
                                     </div>
-                                    <ChevronDown className={cn("w-5 h-5 text-white/20 transition-transform", showPetSelector && "rotate-180")} />
+                                    <ChevronDown className={cn("w-5 h-5 text-black/30 dark:text-white/20 transition-transform", showPetSelector && "rotate-180")} />
                                 </button>
 
                                 <AnimatePresence>
@@ -124,7 +124,7 @@ export function DiaryModal({ isOpen, onClose }: DiaryModalProps) {
                                                 <button 
                                                     key={pet.id}
                                                     onClick={() => { setSelectedPetId(pet.id); setShowPetSelector(false); }}
-                                                    className="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-2xl transition-all"
+                                                    className="w-full flex items-center gap-3 p-3 hover:bg-black/5 dark:bg-white/5 rounded-2xl transition-all"
                                                 >
                                                     <img src={pet.avatar} className="w-8 h-8 rounded-lg object-cover" alt="" />
                                                     <span className="text-sm font-bold text-white flex-1 text-left">{pet.name}</span>
@@ -138,7 +138,7 @@ export function DiaryModal({ isOpen, onClose }: DiaryModalProps) {
 
                             {/* Mood Grid */}
                             <div className="mb-8">
-                                <p className="text-[9px] text-white/30 font-black uppercase tracking-widest mb-4 px-1">Bugün Nasıl Hissediyor?</p>
+                                <p className="text-[9px] text-black/40 dark:text-white/30 font-black uppercase tracking-widest mb-4 px-1">Bugün Nasıl Hissediyor?</p>
                                 <div className="grid grid-cols-3 gap-2">
                                     {moods.map((m) => (
                                         <button 
@@ -146,7 +146,7 @@ export function DiaryModal({ isOpen, onClose }: DiaryModalProps) {
                                             onClick={() => setMood(m.label)}
                                             className={cn(
                                                 "py-3 rounded-2xl border text-[11px] font-black uppercase tracking-tighter transition-all",
-                                                mood === m.label ? "bg-card text-black border-transparent shadow-lg" : "bg-white/[0.02] border-card-border text-white/40 hover:bg-white/5"
+                                                mood === m.label ? "bg-card text-black border-transparent shadow-lg" : "bg-white/[0.02] border-card-border text-black/50 dark:text-white/40 hover:bg-black/5 dark:bg-white/5"
                                             )}
                                         >
                                             {m.label}
@@ -164,10 +164,10 @@ export function DiaryModal({ isOpen, onClose }: DiaryModalProps) {
                                     className="w-full h-40 bg-white/[0.02] border border-card-border rounded-[2.5rem] p-6 text-sm text-white focus:outline-none focus:border-yellow-500/50 transition-all placeholder:text-white/10 resize-none font-medium leading-relaxed"
                                 />
                                 <div className="absolute bottom-6 right-6 flex gap-2">
-                                    <button className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/20 hover:text-white hover:bg-white/10 transition-all">
+                                    <button className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-black/30 dark:text-white/20 hover:text-white hover:bg-black/10 dark:bg-white/10 transition-all">
                                         <Camera className="w-4 h-4" />
                                     </button>
-                                    <button className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/20 hover:text-white hover:bg-white/10 transition-all">
+                                    <button className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-black/30 dark:text-white/20 hover:text-white hover:bg-black/10 dark:bg-white/10 transition-all">
                                         <MapPin className="w-4 h-4" />
                                     </button>
                                 </div>
@@ -180,7 +180,7 @@ export function DiaryModal({ isOpen, onClose }: DiaryModalProps) {
                                     disabled={isSaving || !memory.trim()}
                                     className={cn(
                                         "flex-1 py-5 rounded-[2.5rem] font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center gap-3 transition-all",
-                                        memory.trim() ? "bg-yellow-500 text-black shadow-[0_15px_40px_rgba(234,179,8,0.3)] hover:scale-[1.02] active:scale-95" : "bg-white/5 text-white/20 cursor-not-allowed"
+                                        memory.trim() ? "bg-yellow-500 text-black shadow-[0_15px_40px_rgba(234,179,8,0.3)] hover:scale-[1.02] active:scale-95" : "bg-black/5 dark:bg-white/5 text-black/30 dark:text-white/20 cursor-not-allowed"
                                     )}
                                 >
                                     {isSaving ? (

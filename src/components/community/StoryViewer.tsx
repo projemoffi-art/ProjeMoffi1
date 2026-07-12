@@ -39,7 +39,7 @@ export function StoryViewer({
                 initial={{ opacity: 0, scale: 1.1 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
-                className="fixed inset-0 z-[1000] bg-black flex items-center justify-center"
+                className="fixed inset-0 z-[1000] bg-white dark:bg-black flex items-center justify-center"
             >
                 <div className="relative w-full h-full max-w-lg overflow-hidden md:rounded-3xl">
                     {/* Media Content */}
@@ -78,7 +78,7 @@ export function StoryViewer({
                             </div>
                             <div>
                                 <h4 className="text-white font-bold text-sm drop-shadow-md">{group.user}</h4>
-                                <p className="text-white/60 text-[10px] font-medium">{formatTimeAgo(story.time)}</p>
+                                <p className="text-black/60 dark:text-white/60 text-[10px] font-medium">{formatTimeAgo(story.time)}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
@@ -93,7 +93,7 @@ export function StoryViewer({
                             <input
                                 type="text"
                                 placeholder="Mesaj gönder..."
-                                className="bg-transparent border-none outline-none w-full text-white placeholder:text-white/70 text-sm"
+                                className="bg-transparent border-none outline-none w-full text-white placeholder:text-black/70 dark:text-white/70 text-sm"
                                 onClick={(e) => e.stopPropagation()}
                             />
                         </div>

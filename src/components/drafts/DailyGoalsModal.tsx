@@ -132,12 +132,12 @@ export function DailyGoalsModal({
                             </div>
 
                             <h3 className="text-xl font-black tracking-tight">{petName}'in Günlük Hedefleri</h3>
-                            <p className="text-[11px] font-bold text-gray-400 mt-1 uppercase tracking-wider">Bugünün Özet Durumu</p>
+                            <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-wider">Bugünün Özet Durumu</p>
 
                             {/* Overall progress ring representation or bar */}
                             <div className="w-full mt-6 p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-between">
                                 <div className="text-left">
-                                    <span className="text-xs font-black text-gray-400 block uppercase tracking-wider">Toplam Başarı</span>
+                                    <span className="text-xs font-black text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Toplam Başarı</span>
                                     <span className="text-2xl font-black text-gray-800 dark:text-white mt-1 block">%{averageProgress} Tamamlandı</span>
                                 </div>
                                 <div className="text-right">
@@ -167,7 +167,7 @@ export function DailyGoalsModal({
                                                     </div>
                                                     <span className="text-[11.5px] font-black text-gray-700 dark:text-white/80">{goal.title}</span>
                                                 </div>
-                                                <span className="text-[11px] font-bold text-gray-400">
+                                                <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400">
                                                     <strong className="text-gray-700 dark:text-white">{goal.current}</strong> / {goal.target}
                                                 </span>
                                             </div>
@@ -200,7 +200,7 @@ export function DailyGoalsModal({
                                 })}
                             </div>
 
-                            <p className="text-[9.5px] text-gray-400 mt-6 font-bold uppercase tracking-wider">
+                            <p className="text-[9.5px] text-gray-500 dark:text-gray-400 mt-6 font-bold uppercase tracking-wider">
                                 Hedefler biyolojik ve sağlık verilerine dayanmaktadır.
                             </p>
                         </div>

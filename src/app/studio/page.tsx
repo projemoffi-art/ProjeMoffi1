@@ -240,7 +240,7 @@ export default function ProductionStudio() {
                 <div className="flex items-center gap-6">
                     <button 
                         onClick={() => router.push('/community')}
-                        className="w-12 h-12 rounded-2xl bg-white/5 border border-card-border flex items-center justify-center hover:bg-white/10 transition-all active:scale-95"
+                        className="w-12 h-12 rounded-2xl bg-black/5 dark:bg-white/5 border border-card-border flex items-center justify-center hover:bg-black/10 dark:bg-white/10 transition-all active:scale-95"
                     >
                         <ChevronLeft className="w-6 h-6" />
                     </button>
@@ -251,7 +251,7 @@ export default function ProductionStudio() {
                 </div>
 
                 <div className="relative flex items-center gap-3">
-                    <button onClick={() => setIsShareMenuOpen(!isShareMenuOpen)} className="px-6 py-3 rounded-xl bg-white/5 border border-card-border text-xs font-bold hover:bg-white/10 transition-all flex items-center gap-2 active:scale-95">
+                    <button onClick={() => setIsShareMenuOpen(!isShareMenuOpen)} className="px-6 py-3 rounded-xl bg-black/5 dark:bg-white/5 border border-card-border text-xs font-bold hover:bg-black/10 dark:bg-white/10 transition-all flex items-center gap-2 active:scale-95">
                         <Share2 className="w-4 h-4" /> Paylaş
                     </button>
                     
@@ -264,7 +264,7 @@ export default function ProductionStudio() {
                                 className="absolute top-16 right-[180px] w-64 bg-[card] backdrop-blur-3xl border border-card-border rounded-2xl p-4 shadow-[0_0_50px_rgba(0,0,0,0.8)] z-50 flex flex-col gap-2"
                             >
                                 <div className="flex items-center justify-between px-2 mb-2">
-                                    <h4 className="text-[10px] uppercase tracking-widest text-white/50 font-black">Paylaşım Ağı</h4>
+                                    <h4 className="text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50 font-black">Paylaşım Ağı</h4>
                                     <button onClick={() => setIsShareMenuOpen(false)} className="text-zinc-500 hover:text-white"><X className="w-3 h-3" /></button>
                                 </div>
                                 <button onClick={handleShareToCommunity} className="w-full text-left px-4 py-4 rounded-xl hover:bg-cyan-500/10 hover:text-cyan-400 transition-colors flex items-center gap-4 text-sm font-bold border border-transparent hover:border-cyan-500/30 group">
@@ -276,8 +276,8 @@ export default function ProductionStudio() {
                                         <span className="text-[9px] text-zinc-500 tracking-wider">Topluluk ile buluştur</span>
                                     </div>
                                 </button>
-                                <button onClick={handleShareToDevice} className="w-full text-left px-4 py-4 rounded-xl hover:bg-white/5 hover:text-white transition-colors flex items-center gap-4 text-sm font-bold text-zinc-400 group border border-transparent hover:border-card-border">
-                                    <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <button onClick={handleShareToDevice} className="w-full text-left px-4 py-4 rounded-xl hover:bg-black/5 dark:bg-white/5 hover:text-white transition-colors flex items-center gap-4 text-sm font-bold text-zinc-400 group border border-transparent hover:border-card-border">
+                                    <div className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
                                         <Smartphone className="w-4 h-4 text-white" />
                                     </div>
                                     <div className="flex flex-col">
@@ -316,7 +316,7 @@ export default function ProductionStudio() {
                     <ToolbarIcon icon={Palette} active={activePanel === 'color'} label="Kumaş" onClick={() => setActivePanel(p => p === 'color' ? null : 'color')} />
                     <ToolbarIcon icon={Box} active={activePanel === 'model'} label="Model" onClick={() => setActivePanel(p => p === 'model' ? null : 'model')} />
                     
-                    <div className="w-8 h-px bg-white/10 my-2 hidden lg:block" />
+                    <div className="w-8 h-px bg-black/10 dark:bg-white/10 my-2 hidden lg:block" />
                     
                     <ToolbarIcon icon={Type} active={activePanel === 'text'} label="Yazı" onClick={() => setActivePanel(p => p === 'text' ? null : 'text')} />
                     <ToolbarIcon icon={Sliders} active={activePanel === 'layout'} label="Boyut" onClick={() => setActivePanel(p => p === 'layout' ? null : 'layout')} />
@@ -349,7 +349,7 @@ export default function ProductionStudio() {
                                     <h4 className="text-xs font-black uppercase tracking-widest text-white mb-4">Ürün Tipi</h4>
                                     <div className="flex flex-col gap-2">
                                         {models.map(m => (
-                                            <button key={m} onClick={() => setSelectedModel(m)} className={cn("text-xs font-bold p-3 rounded-xl text-left transition-all", selectedModel === m ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/50" : "bg-white/5 border border-card-border text-zinc-400 hover:bg-white/10")}>{m}</button>
+                                            <button key={m} onClick={() => setSelectedModel(m)} className={cn("text-xs font-bold p-3 rounded-xl text-left transition-all", selectedModel === m ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/50" : "bg-black/5 dark:bg-white/5 border border-card-border text-zinc-400 hover:bg-black/10 dark:bg-white/10")}>{m}</button>
                                         ))}
                                     </div>
                                 </div>
@@ -379,24 +379,24 @@ export default function ProductionStudio() {
                                     
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="flex flex-col gap-2">
-                                            <span className="text-[10px] text-white/40 uppercase font-black tracking-widest">Renk</span>
-                                            <div className="flex items-center gap-3 bg-white/5 p-2 rounded-xl border border-card-border">
+                                            <span className="text-[10px] text-black/50 dark:text-white/40 uppercase font-black tracking-widest">Renk</span>
+                                            <div className="flex items-center gap-3 bg-black/5 dark:bg-white/5 p-2 rounded-xl border border-card-border">
                                                 <input type="color" value={textColor} onChange={e => setTextColor(e.target.value)} className="w-6 h-6 rounded-full cursor-pointer bg-transparent border-0 p-0" />
                                                 <span className="text-[10px] font-mono text-zinc-400">{textColor}</span>
                                             </div>
                                         </div>
                                         <div className="flex flex-col gap-2">
-                                            <span className="text-[10px] text-white/40 uppercase font-black tracking-widest flex justify-between">Boyut <span className="text-cyan-400">{textSize}px</span></span>
+                                            <span className="text-[10px] text-black/50 dark:text-white/40 uppercase font-black tracking-widest flex justify-between">Boyut <span className="text-cyan-400">{textSize}px</span></span>
                                             <input type="range" min="12" max="64" value={textSize} onChange={e => setTextSize(parseInt(e.target.value))} className="w-full accent-cyan-500 mt-2" />
                                         </div>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="flex flex-col gap-2">
-                                            <span className="text-[10px] text-white/40 uppercase font-black tracking-widest">Font Stili</span>
+                                            <span className="text-[10px] text-black/50 dark:text-white/40 uppercase font-black tracking-widest">Font Stili</span>
                                             <div className="flex flex-col gap-1">
                                                 {fonts.map(font => (
-                                                    <button key={font.name} onClick={() => setTextFont(font.class)} className={cn("text-[10px] py-2 border rounded-lg transition-all", textFont === font.class ? "border-cyan-500 bg-cyan-500/10 text-cyan-400 font-bold" : "border-card-border text-white/50 hover:bg-white/5")}>{font.name}</button>
+                                                    <button key={font.name} onClick={() => setTextFont(font.class)} className={cn("text-[10px] py-2 border rounded-lg transition-all", textFont === font.class ? "border-cyan-500 bg-cyan-500/10 text-cyan-400 font-bold" : "border-card-border text-black/50 dark:text-white/50 hover:bg-black/5 dark:bg-white/5")}>{font.name}</button>
                                                 ))}
                                             </div>
                                         </div>
@@ -410,12 +410,12 @@ export default function ProductionStudio() {
                                             Konum (Baskı Bölgesi) <span className="text-cyan-400 text-[10px]">{printPosition.toUpperCase()}</span>
                                         </h4>
                                         <div className="grid grid-cols-2 gap-2">
-                                            <button onClick={() => setPrintPosition('top-left')} className={cn("py-2 text-[9px] font-bold rounded-lg border transition-all", printPosition === 'top-left' ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400' : 'border-card-border text-white/50 hover:bg-white/5')}>Sol Üst (Cep)</button>
-                                            <button onClick={() => setPrintPosition('top-right')} className={cn("py-2 text-[9px] font-bold rounded-lg border transition-all", printPosition === 'top-right' ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400' : 'border-card-border text-white/50 hover:bg-white/5')}>Sağ Üst</button>
-                                            <button onClick={() => setPrintPosition('bottom-left')} className={cn("py-2 text-[9px] font-bold rounded-lg border transition-all", printPosition === 'bottom-left' ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400' : 'border-card-border text-white/50 hover:bg-white/5')}>Sol Alt</button>
-                                            <button onClick={() => setPrintPosition('bottom-right')} className={cn("py-2 text-[9px] font-bold rounded-lg border transition-all", printPosition === 'bottom-right' ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400' : 'border-card-border text-white/50 hover:bg-white/5')}>Sağ Alt</button>
+                                            <button onClick={() => setPrintPosition('top-left')} className={cn("py-2 text-[9px] font-bold rounded-lg border transition-all", printPosition === 'top-left' ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400' : 'border-card-border text-black/50 dark:text-white/50 hover:bg-black/5 dark:bg-white/5')}>Sol Üst (Cep)</button>
+                                            <button onClick={() => setPrintPosition('top-right')} className={cn("py-2 text-[9px] font-bold rounded-lg border transition-all", printPosition === 'top-right' ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400' : 'border-card-border text-black/50 dark:text-white/50 hover:bg-black/5 dark:bg-white/5')}>Sağ Üst</button>
+                                            <button onClick={() => setPrintPosition('bottom-left')} className={cn("py-2 text-[9px] font-bold rounded-lg border transition-all", printPosition === 'bottom-left' ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400' : 'border-card-border text-black/50 dark:text-white/50 hover:bg-black/5 dark:bg-white/5')}>Sol Alt</button>
+                                            <button onClick={() => setPrintPosition('bottom-right')} className={cn("py-2 text-[9px] font-bold rounded-lg border transition-all", printPosition === 'bottom-right' ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400' : 'border-card-border text-black/50 dark:text-white/50 hover:bg-black/5 dark:bg-white/5')}>Sağ Alt</button>
                                         </div>
-                                        <button onClick={() => setPrintPosition('center')} className={cn("w-full mt-2 py-3 text-[10px] font-black uppercase tracking-widest rounded-lg border transition-all", printPosition === 'center' ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.2)]' : 'border-card-border text-white/50 hover:bg-white/5')}>
+                                        <button onClick={() => setPrintPosition('center')} className={cn("w-full mt-2 py-3 text-[10px] font-black uppercase tracking-widest rounded-lg border transition-all", printPosition === 'center' ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.2)]' : 'border-card-border text-black/50 dark:text-white/50 hover:bg-black/5 dark:bg-white/5')}>
                                             Ana Merkez Göğüs
                                         </button>
                                     </div>
@@ -440,7 +440,7 @@ export default function ProductionStudio() {
                                         <button 
                                             key={filter.name} 
                                             onClick={() => setPrintFilter(filter.value)} 
-                                            className={cn("text-xs font-bold p-3 rounded-xl text-left transition-all", printFilter === filter.value ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/50" : "bg-white/5 border border-card-border text-zinc-400 hover:bg-white/10")}
+                                            className={cn("text-xs font-bold p-3 rounded-xl text-left transition-all", printFilter === filter.value ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/50" : "bg-black/5 dark:bg-white/5 border border-card-border text-zinc-400 hover:bg-black/10 dark:bg-white/10")}
                                         >
                                             {filter.name}
                                         </button>
@@ -587,7 +587,7 @@ export default function ProductionStudio() {
 
                     {/* AI COMMANDS & UPLOAD */}
                     <div className="flex flex-col gap-4">
-                        <h4 className="text-[11px] font-black text-white/30 uppercase tracking-[0.2em] flex items-center justify-between">
+                        <h4 className="text-[11px] font-black text-black/40 dark:text-white/30 uppercase tracking-[0.2em] flex items-center justify-between">
                             <span>Tasarım Oluştur</span>
                         </h4>
                         <div className="relative group">
@@ -595,7 +595,7 @@ export default function ProductionStudio() {
                                 value={activePrompt}
                                 onChange={(e) => setActivePrompt(e.target.value)}
                                 placeholder="Yapay zeka ile tasarla (Örn: Neo-noir bir kedi)..."
-                                className="w-full h-24 bg-white/5 border border-card-border rounded-2xl p-4 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/50 resize-none transition-all placeholder:text-zinc-600"
+                                className="w-full h-24 bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl p-4 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/50 resize-none transition-all placeholder:text-zinc-600"
                             />
                         </div>
                         <div className="grid grid-cols-5 gap-2">
@@ -604,17 +604,17 @@ export default function ProductionStudio() {
                                 disabled={isGenerating || !activePrompt}
                                 className="col-span-3 h-12 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl flex items-center justify-center gap-2 group active:scale-[0.98] transition-all disabled:opacity-50"
                             >
-                                <Zap className="w-4 h-4 text-white/90 group-hover:scale-110 transition-transform" />
+                                <Zap className="w-4 h-4 text-black/90 dark:text-white/90 group-hover:scale-110 transition-transform" />
                                 <span className="text-white font-black uppercase text-[10px] sm:text-xs tracking-widest">AI ile Üret</span>
                             </button>
 
                             <input type="file" id="upload-image" accept="image/*" className="hidden" onChange={handleFileUpload} />
                             <button 
                                 onClick={() => document.getElementById('upload-image')?.click()}
-                                className="col-span-2 h-12 bg-white/5 border border-card-border hover:bg-white/10 rounded-xl flex items-center justify-center gap-2 transition-colors group"
+                                className="col-span-2 h-12 bg-black/5 dark:bg-white/5 border border-card-border hover:bg-black/10 dark:bg-white/10 rounded-xl flex items-center justify-center gap-2 transition-colors group"
                             >
-                                <Upload className="w-4 h-4 text-white/50 group-hover:text-cyan-400" />
-                                <span className="text-white font-bold text-[10px] sm:text-xs text-white/70 group-hover:text-cyan-400 uppercase">Yükle</span>
+                                <Upload className="w-4 h-4 text-black/50 dark:text-white/50 group-hover:text-cyan-400" />
+                                <span className="text-white font-bold text-[10px] sm:text-xs text-black/70 dark:text-white/70 group-hover:text-cyan-400 uppercase">Yükle</span>
                             </button>
                         </div>
                         
@@ -626,7 +626,7 @@ export default function ProductionStudio() {
                     {/* GALLERY / RECENT HISTORY */}
                     {history.length > 0 && (
                         <div className="flex flex-col gap-3">
-                            <h4 className="text-[11px] font-black text-white/30 uppercase tracking-[0.2em]">Son Üretimler</h4>
+                            <h4 className="text-[11px] font-black text-black/40 dark:text-white/30 uppercase tracking-[0.2em]">Son Üretimler</h4>
                             <div className="flex gap-2 p-1 overflow-x-auto no-scrollbar">
                                 {history.map((url, idx) => (
                                     <button 
@@ -644,7 +644,7 @@ export default function ProductionStudio() {
                     {/* KOLEKSİYON (GARDIROP) */}
                     {wardrobe.length > 0 && (
                         <div className="flex flex-col gap-3">
-                            <h4 className="text-[11px] font-black text-white/30 uppercase tracking-[0.2em]">Koleksiyonum (Gardırop)</h4>
+                            <h4 className="text-[11px] font-black text-black/40 dark:text-white/30 uppercase tracking-[0.2em]">Koleksiyonum (Gardırop)</h4>
                             <div className="grid grid-cols-4 gap-2">
                                 {wardrobe.slice(0, 4).map((item) => (
                                     <button 
@@ -708,7 +708,7 @@ export default function ProductionStudio() {
                                         <h3 className="text-xl font-black italic tracking-tighter uppercase">Üretim Onayı</h3>
                                         <p className="text-[10px] text-cyan-500 font-bold tracking-widest uppercase">Lojistik Verisi Sağlanıyor</p>
                                     </div>
-                                    <button onClick={() => setIsCheckoutModalOpen(false)} className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors">
+                                    <button onClick={() => setIsCheckoutModalOpen(false)} className="w-10 h-10 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center hover:bg-black/10 dark:bg-white/10 transition-colors">
                                         <X className="w-5 h-5 text-zinc-500" />
                                     </button>
                                 </div>
@@ -716,7 +716,7 @@ export default function ProductionStudio() {
                                 {/* Content */}
                                 <div className="p-6 flex flex-col gap-6">
                                     {/* Preview Banner */}
-                                    <div className="p-4 bg-white/5 border border-card-border rounded-2xl flex items-center gap-4">
+                                    <div className="p-4 bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl flex items-center gap-4">
                                         <div className="w-16 h-16 bg-black/50 rounded-xl border border-card-border overflow-hidden p-2 flex items-center justify-center">
                                             <img src={printDesign!} className="w-full h-full object-contain mix-blend-screen" />
                                         </div>
@@ -731,13 +731,13 @@ export default function ProductionStudio() {
 
                                     {/* Sizes */}
                                     <div>
-                                        <h4 className="text-xs font-black text-white/50 uppercase tracking-widest mb-3">Beden Seçimi <span className="text-red-500">*</span></h4>
+                                        <h4 className="text-xs font-black text-black/50 dark:text-white/50 uppercase tracking-widest mb-3">Beden Seçimi <span className="text-red-500">*</span></h4>
                                         <div className="flex items-center gap-2">
                                             {sizes.map(size => (
                                                 <button 
                                                     key={size}
                                                     onClick={() => setSelectedSize(size)}
-                                                    className={cn("flex-1 h-12 rounded-xl border-2 font-bold transition-all text-sm", selectedSize === size ? "bg-cyan-500 text-black border-cyan-500 shadow-[0_0_15px_rgba(34,211,238,0.3)]" : "bg-white/5 border-transparent text-zinc-400 hover:bg-white/10 hover:text-white")}
+                                                    className={cn("flex-1 h-12 rounded-xl border-2 font-bold transition-all text-sm", selectedSize === size ? "bg-cyan-500 text-black border-cyan-500 shadow-[0_0_15px_rgba(34,211,238,0.3)]" : "bg-black/5 dark:bg-white/5 border-transparent text-zinc-400 hover:bg-black/10 dark:bg-white/10 hover:text-white")}
                                                 >
                                                     {size}
                                                 </button>
@@ -783,7 +783,7 @@ function ToolbarIcon({ icon: Icon, active, label, onClick }: any) {
 
 function CanvasActionIcon({ icon: Icon }: any) {
     return (
-        <button className="w-10 h-10 rounded-xl bg-black/40 backdrop-blur-md border border-card-border flex items-center justify-center hover:bg-white/10 transition-all text-white/60 hover:text-white">
+        <button className="w-10 h-10 rounded-xl bg-black/40 backdrop-blur-md border border-card-border flex items-center justify-center hover:bg-black/10 dark:bg-white/10 transition-all text-black/60 dark:text-white/60 hover:text-white">
             <Icon className="w-5 h-5" />
         </button>
     );
@@ -791,7 +791,7 @@ function CanvasActionIcon({ icon: Icon }: any) {
 
 function OptionRow({ icon: Icon, label, onClick }: any) {
     return (
-        <button onClick={onClick} className="w-full flex items-center justify-between p-4 rounded-xl hover:bg-white/5 transition-all text-zinc-400 hover:text-white group">
+        <button onClick={onClick} className="w-full flex items-center justify-between p-4 rounded-xl hover:bg-black/5 dark:bg-white/5 transition-all text-zinc-400 hover:text-white group">
             <div className="flex items-center gap-3 text-sm font-bold">
                 <Icon className="w-5 h-5 opacity-50 group-hover:opacity-100" />
                 <span>{label}</span>

@@ -145,7 +145,7 @@ export default function ProfileTabs({ userId, isOwnProfile, themeColor = 'cyan',
                                             key={post.id}
                                             whileHover={{ scale: 0.98 }}
                                             onClick={() => setSelectedPostIndex(index)}
-                                            className="aspect-square rounded-2xl sm:rounded-[2.5rem] overflow-hidden bg-white/5 border border-card-border relative group cursor-pointer"
+                                            className="aspect-square rounded-2xl sm:rounded-[2.5rem] overflow-hidden bg-black/5 dark:bg-white/5 border border-card-border relative group cursor-pointer"
                                         >
                                             <img src={post.media_url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={post.caption} />
                                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">

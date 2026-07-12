@@ -791,6 +791,7 @@ export class SupabaseApiService implements IApiService {
                 name: item.pet_name,
                 img: item.img_url || petInfo?.avatar_url || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=400",
                 image_url: item.img_url || petInfo?.avatar_url,
+                images: item.images,
                 location: item.location_text || 'Moffi Radar',
                 last_seen_location: item.location_text,
                 reward_enabled: hasReward,
@@ -825,6 +826,7 @@ export class SupabaseApiService implements IApiService {
                 user_id: user.id,
                 pet_name: data.name,
                 img_url: data.img,
+                images: data.images,
                 location_text: data.location,
                 description: data.description,
                 pet_type: data.type,
@@ -840,6 +842,7 @@ export class SupabaseApiService implements IApiService {
             id: inserted.id,
             name: inserted.pet_name,
             img: inserted.img_url,
+            images: inserted.images,
             location: inserted.location_text,
             description: inserted.description,
             type: inserted.pet_type,
@@ -847,7 +850,9 @@ export class SupabaseApiService implements IApiService {
             time: 'Şimdi',
             user_id: inserted.user_id,
             latitude: inserted.latitude,
-            longitude: inserted.longitude
+            longitude: inserted.longitude,
+            created_at: inserted.created_at,
+            author_name: 'Siz'
         } as LostPet;
     }
 
@@ -974,14 +979,20 @@ export class SupabaseApiService implements IApiService {
             name: item.pet_name,
             img: item.img_url || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=400",
             image_url: item.img_url,
+            images: item.images,
             location: item.location_text || 'Moffi Radar',
             dist: '0 km',
             time: this.formatTimeAgo(item.created_at),
             description: item.description || '',
             type: item.pet_type || 'cat',
+            breed: item.pet_breed || 'Bilinmiyor',
+            age: item.pet_age || '',
+            gender: item.gender || '',
             owner: item.owner_name || 'Moffi Üyesi',
             phone: item.phone || '',
-            user_id: item.user_id
+            user_id: item.user_id,
+            author_name: item.owner_name || 'Moffi Üyesi',
+            created_at: item.created_at
         }));
     }
 
@@ -995,9 +1006,12 @@ export class SupabaseApiService implements IApiService {
                 user_id: user.id,
                 pet_name: data.name,
                 img_url: data.img,
+                images: data.images,
                 description: data.description,
                 pet_type: data.type || 'cat',
-                pet_breed: data.description?.split(',')[0], // Extract breed if possible
+                pet_breed: data.breed || data.description?.split(',')[0],
+                pet_age: data.age,
+                gender: data.gender,
                 owner_name: data.owner
             })
             .select()
@@ -1008,13 +1022,19 @@ export class SupabaseApiService implements IApiService {
             id: inserted.id,
             name: inserted.pet_name,
             img: inserted.img_url,
+            images: inserted.images,
             description: inserted.description,
             type: inserted.pet_type,
+            breed: inserted.pet_breed,
+            age: inserted.pet_age,
+            gender: inserted.gender,
             dist: '0 km',
             time: 'Şimdi',
             owner: inserted.owner_name,
             phone: '',
-            user_id: inserted.user_id
+            user_id: inserted.user_id,
+            author_name: inserted.owner_name,
+            created_at: inserted.created_at
         } as AdoptionPet;
     }
 
@@ -1403,7 +1423,8 @@ export class SupabaseApiService implements IApiService {
             rating: Number(p.rating) || 4.5,
             reviews: Number(p.review_count) || 0,
             isVetApproved: p.is_vet_approved || false,
-            tag: p.tag || undefined
+            tag: p.tag || undefined,
+            ownerId: p.owner_id || undefined
         }));
     }
 
@@ -1477,77 +1498,6 @@ export class SupabaseApiService implements IApiService {
             .from('cart_items')
             .delete()
             .eq('user_id', user.id);
-    }
-
-    async createOrder(orderData: Partial<ShopOrder>): Promise<ShopOrder> {
-        const user = await this.getSessionUser();
-        if (!user) throw new Error("Giriş gerekli");
-
-        const cart = await this.getCart();
-        if (cart.length === 0) throw new Error("Sepet boş");
-
-        const allProducts = await this.getProducts();
-        const cartWithProducts = cart.map(item => {
-            const product = allProducts.find(p => p.id === item.productId);
-            return { product: product!, quantity: item.quantity };
-        });
-
-        const saved = typeof window !== 'undefined' ? localStorage.getItem('moffi_product_subscriptions') : null;
-        let localIds: string[] = [];
-        if (saved) {
-            try { localIds = JSON.parse(saved); } catch (e) {}
-        }
-
-        const totalAmount = orderData.totalPrice !== undefined 
-            ? orderData.totalPrice 
-            : cartWithProducts.reduce((sum, item) => {
-                const isSubscribed = localIds.includes(item.product.id);
-                const price = isSubscribed ? item.product.price * 0.90 : item.product.price;
-                return sum + (price * item.quantity);
-            }, 0);
-
-        // 1. Create Order
-        const { data: order, error: orderErr } = await supabase
-            .from('orders')
-            .insert({
-                user_id: user.id,
-                total_amount: totalAmount,
-                shipping_address: orderData.shippingAddress || 'Dijital Teslimat',
-                status: 'pending'
-            })
-            .select()
-            .single();
-
-        if (orderErr) throw orderErr;
-
-        // 2. Create Order Items
-        const orderItems = cartWithProducts.map(item => {
-            const isSubscribed = localIds.includes(item.product.id);
-            const price = isSubscribed ? item.product.price * 0.90 : item.product.price;
-            return {
-                order_id: order.id,
-                product_id: item.product.id,
-                quantity: item.quantity,
-                price_at_purchase: price
-            };
-        });
-
-        const { error: itemsErr } = await supabase.from('order_items').insert(orderItems);
-        if (itemsErr) throw itemsErr;
-
-        // 3. Clear Cart
-        await this.clearCart();
-
-        return {
-            id: order.id,
-            userId: order.user_id,
-            items: cartWithProducts,
-            totalPrice: Number(order.total_amount),
-            status: order.status as any,
-            createdAt: order.created_at,
-            updatedAt: order.updated_at || order.created_at,
-            shippingAddress: order.shipping_address
-        };
     }
 
     async getOrders(): Promise<ShopOrder[]> {
@@ -2014,73 +1964,47 @@ export class SupabaseApiService implements IApiService {
     }
 
     async getNearbyClinics(lat: number, lng: number, radiusKm: number = 10): Promise<any[]> {
-        // 1. Try to fetch optimized results via database-side Haversine RPC
-        try {
-            const { data: rpcData, error: rpcError } = await supabase
-                .rpc('get_nearby_clinics', {
-                    user_lat: lat,
-                    user_lng: lng,
-                    radius_km: radiusKm
-                });
-
-            if (!rpcError && rpcData && rpcData.length > 0) {
-                return rpcData.map((c: any) => ({
-                    id: c.id,
-                    name: c.name,
-                    imageUrl: c.image_url,
-                    rating: c.rating,
-                    reviewCount: c.review_count,
-                    address: c.address,
-                    location: { lat: c.lat, lng: c.lng },
-                    is_premium: c.is_premium,
-                    isOpenNow: c.is_open_now,
-                    features: c.features || [],
-                    phone: c.phone,
-                    distance: c.distance_km ? `${c.distance_km.toFixed(1)} km` : '1.0 km'
-                }));
-            }
-            if (rpcError) {
-                console.warn('get_nearby_clinics RPC not found or failed, falling back to client-side filter:', rpcError);
-            }
-        } catch (e) {
-            console.warn('Failed to execute clinic distance RPC, using client fallback:', e);
-        }
-
-        // 2. Client-side fallback: Fetch all clinics and filter using Haversine approximation
+        // Since we are no longer using the clinics table, we fetch approved businesses from profiles
         const { data, error } = await supabase
-            .from('clinics')
+            .from('profiles')
             .select('*')
-            .order('rating', { ascending: false });
+            .eq('role', 'business')
+            .eq('business_approved', true);
 
         if (error || !data) return this.mockApi.getNearbyClinics(lat, lng, radiusKm);
 
-        return data.map(clinic => {
-            if (!clinic.lat || !clinic.lng) return { ...clinic, calculated_distance: 1.0 };
-            const dLat = (clinic.lat - lat) * (Math.PI / 180);
-            const dLng = (clinic.lng - lng) * (Math.PI / 180);
-            const a = Math.sin(dLat/2)**2 + Math.cos(lat * Math.PI/180) * Math.cos(clinic.lat * Math.PI/180) * Math.sin(dLng/2)**2;
-            const distKm = 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return { ...clinic, calculated_distance: distKm };
+        return data.map(profile => {
+            // Temporary static coordinates or fallback logic since profiles don't have lat/lng yet
+            const pLat = lat + (Math.random() - 0.5) * 0.05; 
+            const pLng = lng + (Math.random() - 0.5) * 0.05;
+            
+            const distKm = 6371 * Math.acos(
+                Math.sin(lat * Math.PI / 180) * Math.sin(pLat * Math.PI / 180) +
+                Math.cos(lat * Math.PI / 180) * Math.cos(pLat * Math.PI / 180) * Math.cos((pLng - lng) * Math.PI / 180)
+            );
+
+            return {
+                id: profile.id,
+                name: profile.business_name || profile.full_name || 'Veteriner Kliniği',
+                imageUrl: profile.avatar_url || 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&q=80',
+                rating: 0, // B14 TODO: Fetch real ratings
+                reviewCount: 0,
+                address: profile.business_address || 'Adres bilgisi girilmedi',
+                location: { lat: pLat, lng: pLng },
+                is_premium: false,
+                isOpenNow: true,
+                features: ['Genel Muayene', 'Aşı'],
+                phone: profile.phone || '',
+                distance: `${distKm.toFixed(1)} km`,
+                calculated_distance: distKm
+            };
         }).filter(c => c.calculated_distance <= radiusKm)
-        .map(c => ({
-            id: c.id,
-            name: c.name,
-            imageUrl: c.image_url,
-            rating: c.rating,
-            reviewCount: c.review_count,
-            address: c.address,
-            location: { lat: c.lat, lng: c.lng },
-            is_premium: c.is_premium,
-            isOpenNow: c.is_open_now,
-            features: c.features || [],
-            phone: c.phone,
-            distance: `${c.calculated_distance.toFixed(1)} km`
-        }));
+        .sort((a, b) => a.calculated_distance - b.calculated_distance);
     }
 
     async getClinicDetails(clinicId: string): Promise<any> {
         const { data, error } = await supabase
-            .from('clinics')
+            .from('profiles')
             .select('*')
             .eq('id', clinicId)
             .single();
@@ -2089,16 +2013,24 @@ export class SupabaseApiService implements IApiService {
 
         return {
             id: data.id,
-            name: data.name,
-            imageUrl: data.image_url,
-            rating: data.rating,
-            reviewCount: data.review_count,
-            address: data.address,
-            location: { lat: data.lat, lng: data.lng },
-            is_premium: data.is_premium,
-            isOpenNow: data.is_open_now,
-            features: data.features || [],
-            phone: data.phone,
+            name: data.business_name || data.full_name || 'Veteriner Kliniği',
+            imageUrl: data.avatar_url || 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&q=80',
+            rating: 0,
+            reviewCount: 0,
+            about: 'Klinik detay bilgisi',
+            address: data.business_address || 'Adres bilgisi girilmedi',
+            location: { lat: 40.985, lng: 29.030 }, // Static fallback
+            phone: data.phone || '',
+            email: 'iletisim@moffi.com', // Profiles table doesn't have email natively
+            website: 'www.moffi.com',
+            isOpenNow: true,
+            workingHours: {
+                weekdays: '09:00 - 18:00',
+                weekend: '10:00 - 15:00'
+            },
+            services: ['Genel Muayene', 'Aşı', 'Cerrahi', 'Laboratuvar', 'Röntgen'],
+            veterinarians: [],
+            gallery: [data.avatar_url].filter(Boolean),
             doctors: [], // Future: doctors table
             reviews: []  // Future: clinic_reviews table
         };
@@ -2107,6 +2039,25 @@ export class SupabaseApiService implements IApiService {
     async createAppointment(dto: any): Promise<any> {
         const user = await this.getSessionUser();
         if (!user) throw new Error('Giriş gerekli');
+
+        const clinicId = dto.clinicId || null;
+        const appointmentDate = dto.appointmentDate || dto.date;
+
+        if (clinicId && appointmentDate) {
+            // Check for double booking
+            const { data: existing, error: checkErr } = await supabase
+                .from('appointments')
+                .select('id')
+                .eq('clinic_id', clinicId)
+                .eq('appointment_date', appointmentDate)
+                .in('status', ['pending', 'confirmed']);
+
+            if (checkErr) {
+                console.error("Error checking appointments:", checkErr);
+            } else if (existing && existing.length > 0) {
+                throw new Error("Bu saat dolu, lütfen başka bir saat seçin.");
+            }
+        }
 
         const { data, error } = await supabase
             .from('appointments')
@@ -2918,7 +2869,8 @@ export class SupabaseApiService implements IApiService {
                 is_prime_only: product.isPrimeOnly || false,
                 stock: product.stockCount || 10,
                 is_vet_approved: product.isVetApproved || false,
-                tag: product.tag || null
+                tag: product.tag || null,
+                owner_id: product.ownerId || null
             })
             .select()
             .single();
@@ -2939,7 +2891,8 @@ export class SupabaseApiService implements IApiService {
             rating: Number(data.rating) || 5.0,
             reviews: Number(data.review_count) || 0,
             isVetApproved: data.is_vet_approved || false,
-            tag: data.tag || undefined
+            tag: data.tag || undefined,
+            ownerId: data.owner_id || undefined
         };
     }
 
@@ -2955,6 +2908,7 @@ export class SupabaseApiService implements IApiService {
         if (product.stockCount !== undefined) updatePayload.stock = product.stockCount;
         if (product.isVetApproved !== undefined) updatePayload.is_vet_approved = product.isVetApproved;
         if (product.tag !== undefined) updatePayload.tag = product.tag;
+        if (product.ownerId !== undefined) updatePayload.owner_id = product.ownerId;
 
         const { data, error } = await supabase
             .from('products')
@@ -2979,7 +2933,8 @@ export class SupabaseApiService implements IApiService {
             rating: Number(data.rating) || 5.0,
             reviews: Number(data.review_count) || 0,
             isVetApproved: data.is_vet_approved || false,
-            tag: data.tag || undefined
+            tag: data.tag || undefined,
+            ownerId: data.owner_id || undefined
         };
     }
 
@@ -3438,18 +3393,19 @@ export class SupabaseApiService implements IApiService {
 
             if (adviceError) throw adviceError;
 
-            // Fetch all clinics to do a safe client-side join (avoiding text vs uuid type casting join errors)
-            const { data: clinics, error: clinicError } = await supabase
-                .from('clinics')
-                .select('*');
+            // Fetch all profiles to do a safe client-side join
+            const { data: profiles, error: profileError } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('role', 'business');
 
-            const clinicsList = clinics || [];
+            const profilesList = profiles || [];
 
             // Map database rows to expected model
             return (advices || []).map(item => {
                 if (item.clinic_id) {
-                    const matchedClinic = clinicsList.find(c => String(c.id) === String(item.clinic_id));
-                    if (matchedClinic) {
+                    const matchedProfile = profilesList.find(p => String(p.id) === String(item.clinic_id));
+                    if (matchedProfile) {
                         return {
                             id: item.id,
                             clinic_id: item.clinic_id,
@@ -3458,8 +3414,9 @@ export class SupabaseApiService implements IApiService {
                             media_url: item.media_url,
                             created_at: item.created_at,
                             clinic: {
-                                name: matchedClinic.name,
-                                imageUrl: matchedClinic.image_url || '/images/moffi_pet_trio.png'
+                                name: matchedProfile.business_name || matchedProfile.full_name || "Veteriner Kliniği",
+                                imageUrl: matchedProfile.avatar_url || "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&q=80",
+                                rating: 4.8 // Fallback rating
                             }
                         };
                     } else if (item.clinic_id === 'biz_vet1') {

@@ -40,7 +40,7 @@ export function PublicPassportTab({ pet }: PublicPassportTabProps) {
                     <div className="flex gap-6 items-center text-left">
                         <img src={pet.avatar_url || pet.avatar} className="w-24 h-24 rounded-[2.5rem] object-cover border-4 border-[#0A0A0E] shadow-2xl scale-110" />
                         <div className="ml-4">
-                            <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.4em] mb-1">Public Pet ID</p>
+                            <p className="text-[10px] font-black text-black/40 dark:text-white/30 uppercase tracking-[0.4em] mb-1">Public Pet ID</p>
                             <h1 className="text-5xl font-black text-white tracking-tighter leading-none italic uppercase">{pet.name}</h1>
                         </div>
                     </div>
@@ -71,7 +71,7 @@ export function PublicPassportTab({ pet }: PublicPassportTabProps) {
             </div>
 
             {/* Restricted Info Notice */}
-            <div className="bg-white/5 border border-card-border rounded-[2.5rem] p-8 text-center space-y-4">
+            <div className="bg-black/5 dark:bg-white/5 border border-card-border rounded-[2.5rem] p-8 text-center space-y-4">
                 <div className="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center mx-auto text-indigo-400">
                     <Fingerprint className="w-6 h-6" />
                 </div>
@@ -81,7 +81,7 @@ export function PublicPassportTab({ pet }: PublicPassportTabProps) {
                         Bu kullanıcının detaylı tıbbi verileri ve iletişim bilgileri gizlilik gereği sadece sahibi tarafından görülebilir.
                     </p>
                 </div>
-                <button className="px-6 py-2 bg-white/5 border border-card-border rounded-xl text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 transition-colors">
+                <button className="px-6 py-2 bg-black/5 dark:bg-white/5 border border-card-border rounded-xl text-[10px] font-black uppercase tracking-widest text-white hover:bg-black/10 dark:bg-white/10 transition-colors">
                     Mesaj Gönder
                 </button>
             </div>

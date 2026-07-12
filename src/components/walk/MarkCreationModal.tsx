@@ -47,7 +47,7 @@ export function MarkCreationModal({ isOpen, onClose, onSubmit }: MarkCreationMod
                         <h2 className="text-xl font-black text-foreground dark:text-white">İşaret Bırak</h2>
                         <p className="text-xs text-gray-500 dark:text-gray-400">Diğer Moffi'lere bir not bırakın.</p>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-full transition-colors">
+                    <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-black/5 dark:bg-white/5 rounded-full transition-colors">
                         <X className="w-5 h-5 text-gray-500" />
                     </button>
                 </div>
@@ -65,7 +65,7 @@ export function MarkCreationModal({ isOpen, onClose, onSubmit }: MarkCreationMod
                                     "flex flex-col items-center gap-2 p-2 rounded-2xl border transition-all",
                                     selectedType === type.id
                                         ? "border-[#5B4D9D] bg-[#5B4D9D]/5"
-                                        : "border-card-border dark:border-card-border hover:bg-gray-50 dark:hover:bg-white/5"
+                                        : "border-card-border dark:border-card-border hover:bg-gray-50 dark:hover:bg-black/5 dark:bg-white/5"
                                 )}
                             >
                                 <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-colors", type.color)}>
@@ -109,7 +109,7 @@ export function MarkCreationModal({ isOpen, onClose, onSubmit }: MarkCreationMod
                             maxLength={80}
                             className="w-full bg-gray-50 dark:bg-white/5 border border-card-border dark:border-card-border rounded-xl p-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#5B4D9D]"
                         />
-                        <div className="text-right mt-1 text-[10px] text-gray-400 font-bold">{message.length}/80</div>
+                        <div className="text-right mt-1 text-[10px] text-gray-500 dark:text-gray-400 font-bold">{message.length}/80</div>
                     </div>
 
                     {/* Submit */}

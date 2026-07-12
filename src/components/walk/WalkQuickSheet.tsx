@@ -1518,7 +1518,7 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                                                             <span className="text-lg leading-none">{route.icon}</span>
                                                             <div>
                                                                 <div className={cn("text-[10px] font-black leading-none", isSelected ? "text-white" : "text-slate-800 dark:text-slate-100")}>{route.name}</div>
-                                                                <div className={cn("text-[8px] font-bold mt-1 leading-none", isSelected ? "text-white/60" : "text-slate-400")}>{route.distance} km</div>
+                                                                <div className={cn("text-[8px] font-bold mt-1 leading-none", isSelected ? "text-black/60 dark:text-white/60" : "text-slate-400")}>{route.distance} km</div>
                                                             </div>
                                                         </button>
                                                     );

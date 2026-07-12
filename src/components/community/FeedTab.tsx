@@ -76,7 +76,7 @@ export function FeedTab({
             animate={{ opacity: 1, filter: "blur(0px)" }}
             exit={{ opacity: 0, filter: "blur(10px)" }}
             transition={{ duration: 0.3 }}
-            className="w-full h-[100dvh] overflow-y-auto snap-y snap-mandatory no-scrollbar flex flex-col"
+            className="w-full h-full overflow-y-auto snap-y snap-mandatory no-scrollbar flex flex-col"
         >
             {/* Header and Stories Combined Snap Block */}
             <div className="w-full flex flex-col snap-start shrink-0">
@@ -87,7 +87,7 @@ export function FeedTab({
                 <div className="flex flex-col items-center gap-1.5 shrink-0 group">
                     <div 
                         onClick={onAddStoryClick}
-                        className="relative w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center cursor-pointer transition-transform group-hover:scale-105"
+                        className="relative w-16 h-16 rounded-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 flex items-center justify-center cursor-pointer transition-transform group-hover:scale-105"
                     >
                         <img 
                             src={user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200"} 
@@ -110,7 +110,7 @@ export function FeedTab({
                     >
                         <div className={cn(
                             "w-16 h-16 rounded-full p-[2.5px] transition-transform group-hover:scale-105",
-                            group.hasUnseen ? "bg-gradient-to-tr from-cyan-400 via-blue-500 to-purple-600" : "bg-white/10"
+                            group.hasUnseen ? "bg-gradient-to-tr from-cyan-400 via-blue-500 to-purple-600" : "bg-black/10 dark:bg-white/10"
                         )}>
                             <div className="w-full h-full bg-[var(--background)] rounded-full border-2 border-[var(--background)] overflow-hidden relative">
                                 <img 
@@ -186,7 +186,7 @@ export function FeedTab({
                                 </button>
                                 <button 
                                     onClick={() => setIsSosAlertDismissed(true)}
-                                    className="p-1.5 hover:bg-red-500/10 rounded-lg text-white/30 hover:text-red-400 transition-colors cursor-pointer shrink-0"
+                                    className="p-1.5 hover:bg-red-500/10 rounded-lg text-black/40 dark:text-white/30 hover:text-red-400 transition-colors cursor-pointer shrink-0"
                                     title="Alarm Kartını Kapat (Kayıp modu aktif kalır)"
                                 >
                                     <X className="w-3.5 h-3.5" />
@@ -200,22 +200,22 @@ export function FeedTab({
             {isLoading ? (
                 Array(3).fill(0).map((_, i) => (
                     <div key={i} className="w-full relative flex flex-col items-center justify-center px-4 shrink-0" style={{ height: "calc(100vh - 180px)" }}>
-                        <div className="relative w-full h-full max-w-lg mx-auto rounded-[3rem] overflow-hidden bg-[var(--card-bg)] border border-white/10 shadow-2xl animate-pulse">
+                        <div className="relative w-full h-full max-w-lg mx-auto rounded-[3rem] overflow-hidden bg-[var(--card-bg)] border border-black/10 dark:border-white/10 shadow-2xl animate-pulse">
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
                             <div className="absolute inset-0 bg-[var(--card-bg)] overflow-hidden">
                                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-shimmer" />
                             </div>
                             <div className="absolute bottom-8 left-8 right-8 space-y-4">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 rounded-full bg-white/10" />
+                                    <div className="w-12 h-12 rounded-full bg-black/10 dark:bg-white/10" />
                                     <div className="space-y-2">
-                                        <div className="h-4 w-24 bg-white/10 rounded-full" />
-                                        <div className="h-3 w-16 bg-white/10 rounded-full" />
+                                        <div className="h-4 w-24 bg-black/10 dark:bg-white/10 rounded-full" />
+                                        <div className="h-3 w-16 bg-black/10 dark:bg-white/10 rounded-full" />
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <div className="h-3 w-full bg-white/10 rounded-full" />
-                                    <div className="h-3 w-4/5 bg-white/10 rounded-full" />
+                                    <div className="h-3 w-full bg-black/10 dark:bg-white/10 rounded-full" />
+                                    <div className="h-3 w-4/5 bg-black/10 dark:bg-white/10 rounded-full" />
                                 </div>
                             </div>
                         </div>
@@ -229,7 +229,7 @@ export function FeedTab({
                 />
             ) : (
                 posts.map((post, feedIdx) => (
-                    <section key={post.id} id={`post-${post.id}`} className="h-[100dvh] w-full snap-start snap-always relative shrink-0 p-0 flex items-center justify-center">
+                    <section key={post.id} id={`post-${post.id}`} className="h-full w-full snap-start snap-always relative shrink-0 p-0 flex items-center justify-center">
                         <ImmersivePostCard
                             post={post}
                             currentUser={user}

@@ -9,7 +9,7 @@ import { apiService } from "@/services/apiService";
 
 const GlassCard = ({ children, className }: any) => (
     <div className={cn(
-        "relative overflow-hidden bg-[#0A0A0E]/80 backdrop-blur-3xl border border-card-border rounded-[2.5rem] shadow-2xl",
+        "relative overflow-hidden bg-background dark:bg-[#0A0A0E]/80 backdrop-blur-3xl border border-card-border rounded-[2.5rem] shadow-2xl",
         className
     )}>
         {children}
@@ -71,19 +71,19 @@ export default function AnalyticsPage() {
                     >
                         Analizler
                     </motion.h1>
-                    <p className="text-white/40 font-medium text-lg max-w-xl">
+                    <p className="text-black/50 dark:text-white/40 font-medium text-lg max-w-xl">
                         Platform metrikleri, büyüme oranları ve kullanıcı etkileşim yoğunlukları.
                     </p>
                 </div>
 
-                <div className="flex bg-white/5 border border-white/10 rounded-2xl p-1">
+                <div className="flex bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-2xl p-1">
                     {['24h', '7d', '30d', 'All Time'].map(t => (
                         <button
                             key={t}
                             onClick={() => setTimeframe(t)}
                             className={cn(
                                 "px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
-                                timeframe === t ? "bg-indigo-500 text-white shadow-lg" : "text-white/40 hover:text-white"
+                                timeframe === t ? "bg-indigo-500 text-white shadow-lg" : "text-black/50 dark:text-white/40 hover:text-white"
                             )}
                         >
                             {t}
@@ -100,14 +100,14 @@ export default function AnalyticsPage() {
                 ].map((stat, i) => (
                     <GlassCard key={i} className="p-8">
                         <div className="flex items-start justify-between mb-8">
-                            <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
+                            <div className="w-12 h-12 rounded-xl bg-black/5 dark:bg-white/5 flex items-center justify-center border border-black/10 dark:border-white/10">
                                 <stat.icon className={cn("w-6 h-6", stat.color)} />
                             </div>
                             {stat.trend && <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-[10px] font-black">{stat.trend}</span>}
                         </div>
-                        <h4 className="text-white/40 text-xs font-bold uppercase tracking-widest mb-1">{stat.title}</h4>
+                        <h4 className="text-black/50 dark:text-white/40 text-xs font-bold uppercase tracking-widest mb-1">{stat.title}</h4>
                         <div className="text-4xl font-black text-white">
-                            {isLoading ? <Loader2 className="w-8 h-8 animate-spin text-white/40 mt-1" /> : stat.val}
+                            {isLoading ? <Loader2 className="w-8 h-8 animate-spin text-black/50 dark:text-white/40 mt-1" /> : stat.val}
                         </div>
                     </GlassCard>
                 ))}
@@ -115,7 +115,7 @@ export default function AnalyticsPage() {
 
             <GlassCard className="p-8 h-[400px] flex flex-col">
                 <h3 className="text-white font-black uppercase tracking-widest mb-8">Platform Etkileşim Trendi</h3>
-                <div className="flex-1 border-b border-l border-white/10 flex items-end justify-between p-4 gap-2">
+                <div className="flex-1 border-b border-l border-black/10 dark:border-white/10 flex items-end justify-between p-4 gap-2">
                     {chartData.map((height, i) => (
                         <motion.div
                             key={i}

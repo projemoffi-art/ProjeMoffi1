@@ -93,7 +93,7 @@ export function ClinicDetailDrawer({ clinicId, onClose, onBookAppointment }: Cli
                                     
                                     <button 
                                         onClick={onClose}
-                                        className="absolute top-6 left-6 w-10 h-10 bg-black/40 backdrop-blur-md rounded-full border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-all active:scale-90"
+                                        className="absolute top-6 left-6 w-10 h-10 bg-black/40 backdrop-blur-md rounded-full border border-black/10 dark:border-white/10 flex items-center justify-center text-white hover:bg-black/10 dark:bg-white/10 transition-all active:scale-90"
                                     >
                                         <X className="w-5 h-5" />
                                     </button>
@@ -129,14 +129,14 @@ export function ClinicDetailDrawer({ clinicId, onClose, onBookAppointment }: Cli
                                     </button>
                                     <button 
                                         onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(clinic.name + " " + clinic.address)}`, '_blank')}
-                                        className="flex flex-col items-center justify-center gap-2 py-4 bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-2xl hover:bg-zinc-200/50 dark:hover:bg-white/10 transition-all active:scale-95"
+                                        className="flex flex-col items-center justify-center gap-2 py-4 bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-2xl hover:bg-zinc-200/50 dark:hover:bg-black/10 dark:bg-white/10 transition-all active:scale-95"
                                     >
                                         <Navigation className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
                                         <span className="text-[9px] font-black text-zinc-600 dark:text-white/60 uppercase tracking-widest">Yol Tarifi</span>
                                     </button>
                                     <button 
                                         onClick={() => { if (clinicId) openChat(clinicId); }}
-                                        className="flex flex-col items-center justify-center gap-2 py-4 bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-2xl hover:bg-zinc-200/50 dark:hover:bg-white/10 transition-all active:scale-95"
+                                        className="flex flex-col items-center justify-center gap-2 py-4 bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-2xl hover:bg-zinc-200/50 dark:hover:bg-black/10 dark:bg-white/10 transition-all active:scale-95"
                                     >
                                         <MessageSquare className="w-5 h-5 text-blue-500 dark:text-blue-400" />
                                         <span className="text-[9px] font-black text-zinc-600 dark:text-white/60 uppercase tracking-widest">Mesaj At</span>
@@ -155,7 +155,7 @@ export function ClinicDetailDrawer({ clinicId, onClose, onBookAppointment }: Cli
                                             onClick={() => setActiveTab(tab.id as any)}
                                             className={cn(
                                                 "flex-1 flex items-center justify-center gap-2 py-5 text-[10px] font-black uppercase tracking-widest transition-all relative cursor-pointer",
-                                                activeTab === tab.id ? "text-zinc-850 dark:text-white" : "text-zinc-400 dark:text-white/20 hover:text-zinc-700 dark:hover:text-white/40"
+                                                activeTab === tab.id ? "text-zinc-850 dark:text-white" : "text-zinc-400 dark:text-white/20 hover:text-zinc-700 dark:hover:text-black/50 dark:text-white/40"
                                             )}
                                         >
                                             <tab.icon className={cn("w-3.5 h-3.5", activeTab === tab.id ? "text-[#5B4D9D]" : "")} />
@@ -204,7 +204,7 @@ export function ClinicDetailDrawer({ clinicId, onClose, onBookAppointment }: Cli
                                                 <h3 className="text-[10px] font-black text-zinc-400 dark:text-white/30 uppercase tracking-[0.3em] px-1">Sunulan Hizmetler</h3>
                                                 <div className="grid grid-cols-2 gap-3">
                                                     {clinic.features?.map((feature: string) => (
-                                                        <div key={feature} className="flex items-center gap-3 p-4 bg-white dark:bg-white/5 rounded-2xl border border-zinc-200 dark:border-card-border group hover:bg-zinc-100/50 dark:hover:bg-white/10 transition-all cursor-default">
+                                                        <div key={feature} className="flex items-center gap-3 p-4 bg-white dark:bg-white/5 rounded-2xl border border-zinc-200 dark:border-card-border group hover:bg-zinc-100/50 dark:hover:bg-black/10 dark:bg-white/10 transition-all cursor-default">
                                                             <ShieldCheck className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                                                             <span className="text-xs font-black text-zinc-700 dark:text-white/80 uppercase tracking-tight">{feature}</span>
                                                         </div>

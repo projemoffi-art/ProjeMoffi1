@@ -614,7 +614,7 @@ export function QuestCarousel({ quests, onManualComplete }: QuestCarouselProps) 
     return (
         <div className="flex flex-col items-center w-full select-none">
             {/* Card slider frame */}
-            <div className="relative w-full max-w-[310px] h-[360px] flex items-center justify-center overflow-visible my-4">
+            <div className="relative w-full max-w-[310px] sm:max-w-[340px] h-auto min-h-[360px] flex flex-col items-center justify-center overflow-visible my-4">
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={currentQuest.id}
@@ -1371,7 +1371,7 @@ export function QuestPanel({ isOpen, onClose }: QuestPanelProps) {
                                         className={cn(
                                             "w-9 h-9 rounded-full flex items-center justify-center border transition-all active:scale-90 cursor-pointer", 
                                             isDark 
-                                                ? "bg-white/5 border-purple-500/25 hover:bg-white/10 text-purple-300" 
+                                                ? "bg-black/5 dark:bg-white/5 border-purple-500/25 hover:bg-black/10 dark:bg-white/10 text-purple-300" 
                                                 : "bg-[#ede5cc] border-[#c0a684] hover:bg-[#e7dec4] text-[#624730]"
                                         )}
                                     >
@@ -1456,7 +1456,7 @@ export function QuestPanel({ isOpen, onClose }: QuestPanelProps) {
                                                 ? 'bg-purple-500/20 text-purple-300 border-purple-500/30 shadow-[0_0_12px_rgba(168,85,247,0.25)]'
                                                 : 'bg-[#fdfbf7] text-[#624730] border-[#c0a684] shadow-md shadow-[#9c8b74]/8'
                                             : isDark
-                                                ? 'border-transparent text-purple-400/35 hover:text-purple-300 hover:bg-white/5'
+                                                ? 'border-transparent text-purple-400/35 hover:text-purple-300 hover:bg-black/5 dark:bg-white/5'
                                                 : 'border-transparent text-[#8d6e53] hover:text-[#624730] hover:bg-[#ede5cc]/50'
                                     )}
                                 >

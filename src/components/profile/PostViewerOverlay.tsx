@@ -47,7 +47,7 @@ export function PostViewerOverlay({ posts, initialIndex, onClose }: PostViewerOv
                 initial={{ opacity: 0, scale: 1.1 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 1.1 }}
-                className="fixed inset-0 z-[2000] bg-black flex flex-col"
+                className="fixed inset-0 z-[2000] bg-white dark:bg-black flex flex-col"
             >
                 {/* Immersive Header - Ultra Minimal */}
                 <div className="absolute top-0 inset-x-0 z-[2100] p-6 flex items-center justify-between pointer-events-none">
@@ -67,7 +67,7 @@ export function PostViewerOverlay({ posts, initialIndex, onClose }: PostViewerOv
                 {/* SCROLLABLE FEED CONTAINER */}
                 <div 
                     ref={scrollContainerRef}
-                    className="flex-1 overflow-y-scroll no-scrollbar snap-y snap-mandatory scroll-smooth bg-black"
+                    className="flex-1 overflow-y-scroll no-scrollbar snap-y snap-mandatory scroll-smooth bg-white dark:bg-black"
                 >
                     {posts.map((post, index) => (
                         <div 

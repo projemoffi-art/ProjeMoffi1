@@ -65,7 +65,7 @@ export function VaccineModal({ isOpen, onClose }: VaccineModalProps) {
                                 </p>
                             </div>
                         </div>
-                        <button onClick={onClose} className="w-11 h-11 rounded-full bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-card-border flex items-center justify-center text-zinc-500 dark:text-white/40 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-white/10 transition-all">
+                        <button onClick={onClose} className="w-11 h-11 rounded-full bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-card-border flex items-center justify-center text-zinc-500 dark:text-white/40 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-black/10 dark:bg-white/10 transition-all">
                             <X className="w-5 h-5" />
                         </button>
                     </div>
@@ -76,7 +76,7 @@ export function VaccineModal({ isOpen, onClose }: VaccineModalProps) {
                             onClick={() => setActiveTab('calendar')}
                             className={cn(
                                 "flex-1 py-3.5 rounded-[1.4rem] text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 relative overflow-hidden",
-                                activeTab === 'calendar' ? "bg-white dark:bg-card text-zinc-950 dark:text-black shadow-2xl" : "text-zinc-400 dark:text-white/30 hover:text-zinc-950 dark:hover:text-white/60"
+                                activeTab === 'calendar' ? "bg-white dark:bg-card text-zinc-950 dark:text-black shadow-2xl" : "text-zinc-400 dark:text-white/30 hover:text-zinc-950 dark:hover:text-black/60 dark:text-white/60"
                             )}
                         >
                             <Calendar className="w-4 h-4" /> TAKVİMİM
@@ -85,7 +85,7 @@ export function VaccineModal({ isOpen, onClose }: VaccineModalProps) {
                             onClick={() => setActiveTab('guide')}
                             className={cn(
                                 "flex-1 py-3.5 rounded-[1.4rem] text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 relative overflow-hidden",
-                                activeTab === 'guide' ? "bg-[#5B4D9D] text-white shadow-2xl" : "text-zinc-400 dark:text-white/30 hover:text-zinc-950 dark:hover:text-white/60"
+                                activeTab === 'guide' ? "bg-[#5B4D9D] text-white shadow-2xl" : "text-zinc-400 dark:text-white/30 hover:text-zinc-950 dark:hover:text-black/60 dark:text-white/60"
                             )}
                         >
                             <Info className="w-4 h-4" /> AŞI REHBERİ
@@ -201,13 +201,13 @@ export function VaccineModal({ isOpen, onClose }: VaccineModalProps) {
                                         <h3 className="text-base font-black text-zinc-900 dark:text-white tracking-tight uppercase italic mb-1">{def.name}</h3>
                                         <p className="text-[10px] text-zinc-400 dark:text-white/30 font-bold line-clamp-2 uppercase tracking-tighter leading-relaxed">{def.description}</p>
                                     </div>
-                                    <ChevronRight className="w-6 h-6 text-zinc-300 dark:text-white/10 group-hover:text-zinc-950 dark:group-hover:text-white/40 transition-colors" />
+                                    <ChevronRight className="w-6 h-6 text-zinc-300 dark:text-white/10 group-hover:text-zinc-950 dark:group-hover:text-black/50 dark:text-white/40 transition-colors" />
                                 </motion.div>
                             ))}
 
                             <div className="mt-8 p-10 rounded-[3rem] bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-card-border text-center relative overflow-hidden group">
                                 <div className="absolute inset-0 bg-gradient-to-br from-zinc-200/20 to-transparent dark:from-white/5 dark:to-transparent pointer-events-none" />
-                                <FileText className="w-8 h-8 mx-auto mb-4 text-zinc-400 dark:text-white/20 group-hover:text-zinc-650 dark:group-hover:text-white/40 transition-colors" />
+                                <FileText className="w-8 h-8 mx-auto mb-4 text-zinc-400 dark:text-white/20 group-hover:text-zinc-650 dark:group-hover:text-black/50 dark:text-white/40 transition-colors" />
                                 <p className="text-[10px] font-black text-zinc-400 dark:text-white/30 uppercase tracking-widest mb-1">KAYNAK: {ruleset.source}</p>
                                 <p className="text-[9px] font-black text-zinc-300 dark:text-white/10 uppercase tracking-[0.2em]">{ruleset.lastUpdated} Güncellemesi</p>
                             </div>
@@ -275,7 +275,7 @@ export function VaccineModal({ isOpen, onClose }: VaccineModalProps) {
                                         <h4 className="text-[10px] font-black text-zinc-400 dark:text-white/30 uppercase tracking-[0.3em] mb-4 px-2 italic">KATEGORİLER</h4>
                                         <div className="flex flex-wrap gap-2 px-1">
                                             {activeDefinition.tags.map(p => (
-                                                <span key={p} className="bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-card-border text-zinc-500 dark:text-white/40 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-white/10 transition-all cursor-default">
+                                                <span key={p} className="bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-card-border text-zinc-500 dark:text-white/40 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-black/10 dark:bg-white/10 transition-all cursor-default">
                                                     {p}
                                                 </span>
                                             ))}

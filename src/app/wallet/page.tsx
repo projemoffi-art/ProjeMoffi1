@@ -195,7 +195,7 @@ export default function WalletPage() {
                         <div>
                             <div className="flex justify-between items-end mb-4">
                                 <h2 className="text-lg font-black text-foreground dark:text-white">İşlem Geçmişi</h2>
-                                <button className="text-xs font-bold text-gray-400">Tümünü Gör</button>
+                                <button className="text-xs font-bold text-gray-500 dark:text-gray-400">Tümünü Gör</button>
                             </div>
                             <div className="space-y-4">
                                 {transactions.map((t) => (
@@ -214,14 +214,14 @@ export default function WalletPage() {
                                                         <span className="ml-2 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-green-500/10 text-green-500 rounded border border-green-500/20">İade Edildi</span>
                                                     )}
                                                 </h3>
-                                                <p className="text-xs text-gray-400 font-medium">{t.merchant} • {new Date(t.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}</p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{t.merchant} • {new Date(t.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
                                             <div className={cn("font-black text-sm", t.status === 'refunded' ? "text-green-500" : "text-foreground dark:text-white")}>
                                                 {t.status === 'refunded' ? '+₺' : '-₺'}{t.amount}
                                             </div>
-                                            <div className="text-[10px] font-bold text-gray-400 uppercase">{t.category}</div>
+                                            <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase">{t.category}</div>
                                         </div>
                                     </div>
                                 ))}
@@ -259,7 +259,7 @@ export default function WalletPage() {
                         <div className="bg-card dark:bg-[card] rounded-[2rem] p-6 shadow-moffi-card border border-card-border dark:border-card-border">
                             <div className="flex justify-between items-center mb-6">
                                 <h3 className="font-bold text-foreground dark:text-white flex items-center gap-2">
-                                    <Clock className="w-4 h-4 text-gray-400" /> Coin Geçmişi
+                                    <Clock className="w-4 h-4 text-gray-500 dark:text-gray-400" /> Coin Geçmişi
                                 </h3>
                                 <button className="w-8 h-8 rounded-full bg-background dark:bg-card/5 flex items-center justify-center hover:bg-gray-100 transition-colors">
                                     <ChevronRight className="w-4 h-4 text-gray-500" />
@@ -277,7 +277,7 @@ export default function WalletPage() {
                                         <div className="flex justify-between items-start">
                                             <div>
                                                 <h4 className="font-bold text-sm text-foreground dark:text-white leading-none mb-1">{t.title}</h4>
-                                                <p className="text-[10px] font-bold text-gray-400 uppercase">{t.source} • {t.date}</p>
+                                                <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase">{t.source} • {t.date}</p>
                                             </div>
                                             <div className={cn("text-sm font-black", t.type === 'earn' ? "text-green-500" : "text-red-500")}>
                                                 {t.type === 'earn' ? '+' : '-'}{t.amount} PC
@@ -294,7 +294,7 @@ export default function WalletPage() {
 
             {/* Floating Action Button */}
             <div className="fixed bottom-6 right-6 z-40">
-                <button className="w-14 h-14 bg-black dark:bg-card text-white dark:text-black rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform">
+                <button className="w-14 h-14 bg-white dark:bg-black dark:bg-card text-white dark:text-black rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform">
                     <Plus className="w-6 h-6" />
                 </button>
             </div>

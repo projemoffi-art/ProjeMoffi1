@@ -122,7 +122,7 @@ export function AddPetModal({
                         exit={{ y: "100%", opacity: 0 }}
                         transition={{ type: "spring", damping: 26, stiffness: 280 }}
                         className={cn(
-                            "w-full max-w-md bg-white/90 backdrop-blur-2xl border border-white/20 shadow-[0_32px_80px_rgba(0,0,0,0.12)] relative flex flex-col",
+                            "w-full max-w-md bg-white/90 backdrop-blur-2xl border border-black/20 dark:border-white/20 shadow-[0_32px_80px_rgba(0,0,0,0.12)] relative flex flex-col",
                             "rounded-t-[40px] sm:rounded-[36px] p-6",
                             "pb-safe sm:pb-8 max-h-[92vh] overflow-y-auto no-scrollbar"
                         )}
@@ -172,7 +172,7 @@ export function AddPetModal({
                                     
                                     {/* PHOTO GALLERY SECTION */}
                                     <div className="bg-white/60 rounded-[28px] p-5 border border-gray-200/80 shadow-sm space-y-3">
-                                        <label className="text-[10px] text-gray-400 font-black uppercase tracking-wider ml-1">Fotoğraflar (En Fazla 5)</label>
+                                        <label className="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider ml-1">Fotoğraflar (En Fazla 5)</label>
                                         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
                                             {newPetPhotos.map((photo, index) => (
                                                 <div key={index} className="relative shrink-0 w-20 h-20 rounded-2xl overflow-hidden border border-gray-100 shadow-sm group">
@@ -196,7 +196,7 @@ export function AddPetModal({
                                                     <div className="w-7 h-7 bg-green-50/80 rounded-xl flex items-center justify-center mb-1 group-hover:scale-110 transition-all duration-300">
                                                         <Plus className="w-4.5 h-4.5 text-[#527958]" />
                                                     </div>
-                                                    <span className="text-[8.5px] text-gray-400 font-black uppercase tracking-wider text-center">Ekle</span>
+                                                    <span className="text-[8.5px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider text-center">Ekle</span>
                                                     <input
                                                         type="file"
                                                         id="add-pet-photos"
@@ -225,7 +225,7 @@ export function AddPetModal({
                                         
                                         {/* İsim Girişi */}
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] text-gray-400 font-black uppercase tracking-wider ml-1">İsim</label>
+                                            <label className="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider ml-1">İsim</label>
                                             <input 
                                                 type="text" 
                                                 value={newPetName} 
@@ -237,7 +237,7 @@ export function AddPetModal({
 
                                         {/* Tür Seçimi - Horizontal Segmented Control */}
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] text-gray-400 font-black uppercase tracking-wider ml-1">Tür</label>
+                                            <label className="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider ml-1">Tür</label>
                                             <div className="flex bg-[#F1F3F2] p-1 rounded-2xl border border-gray-250/30">
                                                 {[
                                                     { emoji: '🐶', label: 'Köpek' },
@@ -265,7 +265,7 @@ export function AddPetModal({
 
                                         <div className="grid grid-cols-3 gap-3">
                                             <div className="space-y-1.5 col-span-1">
-                                                <label className="text-[10px] text-gray-400 font-black uppercase tracking-wider ml-1">Irkı</label>
+                                                <label className="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider ml-1">Irkı</label>
                                                 <input 
                                                     type="text" 
                                                     value={newPetBreed} 
@@ -275,7 +275,7 @@ export function AddPetModal({
                                                 />
                                             </div>
                                             <div className="space-y-1.5 col-span-1">
-                                                <label className="text-[10px] text-gray-400 font-black uppercase tracking-wider ml-1">Yaş</label>
+                                                <label className="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider ml-1">Yaş</label>
                                                 <input 
                                                     type="text" 
                                                     value={newPetAge} 
@@ -285,7 +285,7 @@ export function AddPetModal({
                                                 />
                                             </div>
                                             <div className="space-y-1.5 col-span-1">
-                                                <label className="text-[10px] text-gray-400 font-black uppercase tracking-wider ml-1">Kilo (KG)</label>
+                                                <label className="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider ml-1">Kilo (KG)</label>
                                                 <input 
                                                     type="text" 
                                                     value={newPetWeight} 
@@ -312,7 +312,7 @@ export function AddPetModal({
                                                                 "flex-1 py-2 rounded-xl text-xs font-black transition-all cursor-pointer",
                                                                 newPetGender === g 
                                                                     ? "bg-white text-gray-800 shadow-sm" 
-                                                                    : "text-gray-400 hover:text-gray-600"
+                                                                    : "text-gray-500 dark:text-gray-400 hover:text-gray-600"
                                                             )}
                                                         >
                                                             {g}
@@ -334,7 +334,7 @@ export function AddPetModal({
                                                                 "flex-1 py-2 rounded-xl text-xs font-black transition-all cursor-pointer",
                                                                 newPetNeutered === val 
                                                                     ? "bg-white text-gray-800 shadow-sm" 
-                                                                    : "text-gray-400 hover:text-gray-600"
+                                                                    : "text-gray-500 dark:text-gray-400 hover:text-gray-600"
                                                             )}
                                                         >
                                                             {val}
@@ -356,7 +356,7 @@ export function AddPetModal({
                                                                 "flex-1 py-2 rounded-xl text-xs font-black transition-all cursor-pointer",
                                                                 newPetSize === sz 
                                                                     ? "bg-white text-gray-800 shadow-sm" 
-                                                                    : "text-gray-400 hover:text-gray-600"
+                                                                    : "text-gray-500 dark:text-gray-400 hover:text-gray-600"
                                                             )}
                                                         >
                                                             {sz}
@@ -398,7 +398,7 @@ export function AddPetModal({
                                         
                                         {/* Sağlık Durumu - Segmented Buttons */}
                                         <div className="space-y-2">
-                                            <label className="text-[10px] text-gray-400 font-black uppercase tracking-wider block ml-1">Sağlık Durumu</label>
+                                            <label className="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider block ml-1">Sağlık Durumu</label>
                                             <div className="grid grid-cols-2 gap-2 bg-[#F1F3F2] p-1 rounded-2xl border border-gray-250/30">
                                                 {[
                                                     { value: 'Mükemmel', label: 'Mükemmel 🌟' },
@@ -414,7 +414,7 @@ export function AddPetModal({
                                                             "py-2 rounded-xl text-xs font-black transition-all cursor-pointer",
                                                             newPetHealthStatus === h.value 
                                                                 ? "bg-white text-gray-800 shadow-sm scale-[1.01]" 
-                                                                : "text-gray-400 hover:text-gray-600"
+                                                                : "text-gray-500 dark:text-gray-400 hover:text-gray-600"
                                                         )}
                                                     >
                                                         {h.label}
@@ -424,7 +424,7 @@ export function AddPetModal({
                                         </div>
 
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] text-gray-400 font-black uppercase tracking-wider ml-1">Alerjiler & Kronik Hastalıklar</label>
+                                            <label className="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider ml-1">Alerjiler & Kronik Hastalıklar</label>
                                             <textarea 
                                                 value={newPetHealth} 
                                                 onChange={e => setNewPetHealth(e.target.value)} 
@@ -434,7 +434,7 @@ export function AddPetModal({
                                         </div>
 
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] text-gray-400 font-black uppercase tracking-wider ml-1">Ayırt Edici Özellikleri</label>
+                                            <label className="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider ml-1">Ayırt Edici Özellikleri</label>
                                             <textarea 
                                                 value={newPetFeatures} 
                                                 onChange={e => setNewPetFeatures(e.target.value)} 
@@ -444,7 +444,7 @@ export function AddPetModal({
                                         </div>
 
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] text-gray-400 font-black uppercase tracking-wider ml-1">Karakter Özellikleri</label>
+                                            <label className="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider ml-1">Karakter Özellikleri</label>
                                             <textarea 
                                                 value={newPetCharacter} 
                                                 onChange={e => setNewPetCharacter(e.target.value)} 
@@ -470,7 +470,7 @@ export function AddPetModal({
                                     
                                     <div className="bg-white/60 rounded-[28px] p-5 border border-gray-200/80 shadow-sm space-y-4">
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] text-gray-400 font-black uppercase tracking-wider ml-1">Mikroçip Numarası</label>
+                                            <label className="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider ml-1">Mikroçip Numarası</label>
                                             <div className="relative">
                                                 <input 
                                                     type="text" 
@@ -479,7 +479,7 @@ export function AddPetModal({
                                                     placeholder="TR-000000000" 
                                                     className="w-full bg-white/60 focus:bg-white border border-gray-200/80 rounded-2xl pl-12 pr-5 py-4 text-foreground outline-none focus:ring-4 focus:ring-[#527958]/10 focus:border-[#527958] transition-all font-mono tracking-widest text-sm" 
                                                 />
-                                                <ShieldAlert className="absolute left-4.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400/80" />
+                                                <ShieldAlert className="absolute left-4.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 dark:text-gray-400/80" />
                                             </div>
                                         </div>
                                     </div>
@@ -489,7 +489,7 @@ export function AddPetModal({
                                         <span className="text-[10px] text-foreground font-black uppercase tracking-wider block ml-1">Günlük Hedefler</span>
                                         <div className="grid grid-cols-3 gap-3">
                                             <div className="space-y-1.5">
-                                                <label className="text-[9px] text-gray-400 font-bold uppercase tracking-wider ml-1">Aktivite (%)</label>
+                                                <label className="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider ml-1">Aktivite (%)</label>
                                                 <input 
                                                     type="number" 
                                                     min="0" 
@@ -501,7 +501,7 @@ export function AddPetModal({
                                                 />
                                             </div>
                                             <div className="space-y-1.5">
-                                                <label className="text-[9px] text-gray-400 font-bold uppercase tracking-wider ml-1">Su (ML)</label>
+                                                <label className="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider ml-1">Su (ML)</label>
                                                 <input 
                                                     type="number" 
                                                     min="0" 
@@ -512,7 +512,7 @@ export function AddPetModal({
                                                 />
                                             </div>
                                             <div className="space-y-1.5">
-                                                <label className="text-[9px] text-gray-400 font-bold uppercase tracking-wider ml-1">Beslenme (KCAL)</label>
+                                                <label className="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider ml-1">Beslenme (KCAL)</label>
                                                 <input 
                                                     type="number" 
                                                     min="0" 
@@ -529,12 +529,12 @@ export function AddPetModal({
                                     <div className="bg-white/60 border border-gray-200/80 rounded-[28px] p-5 shadow-sm relative overflow-hidden group">
                                         <div className="flex justify-between items-center mb-3 relative z-10">
                                             <div className="flex items-center gap-3">
-                                                <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center transition-all shadow-inner", newPetShowPhone ? "bg-green-50 text-[#527958] border border-green-100" : "bg-gray-100 text-gray-400 border border-gray-200/50")}>
+                                                <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center transition-all shadow-inner", newPetShowPhone ? "bg-green-50 text-[#527958] border border-green-100" : "bg-gray-100 text-gray-500 dark:text-gray-400 border border-gray-200/50")}>
                                                     <PhoneCall className="w-5 h-5" />
                                                 </div>
                                                 <div>
                                                     <span className="font-black text-foreground text-sm tracking-tight block leading-none">Telefonu Göster</span>
-                                                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mt-1.5 leading-none">SOS Arama Yetkisi</p>
+                                                    <p className="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mt-1.5 leading-none">SOS Arama Yetkisi</p>
                                                 </div>
                                             </div>
                                             <div
@@ -560,7 +560,7 @@ export function AddPetModal({
                                         className="w-full py-5 bg-gradient-to-r from-[#527958] to-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:opacity-95 transition-all disabled:opacity-50 shadow-lg shadow-green-950/15 cursor-pointer"
                                     >
                                         {isSaving ? (
-                                            <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                            <div className="w-5 h-5 border-2 border-black/20 dark:border-white/20 border-t-white rounded-full animate-spin" />
                                         ) : (
                                             <>
                                                 <Sparkles className="w-5 h-5 animate-pulse" />

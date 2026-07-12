@@ -25,7 +25,7 @@ export function MacroChart({ macros = { protein: 30, fat: 20, carbs: 50 } }: Mac
                     <h3 className="font-black text-[16px] text-gray-800 dark:text-white flex items-center gap-2">
                         Makro Dengesi 📊
                     </h3>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-0.5">Bugünkü Besin Dağılımı</p>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mt-0.5">Bugünkü Besin Dağılımı</p>
                 </div>
             </div>
 
@@ -35,7 +35,7 @@ export function MacroChart({ macros = { protein: 30, fat: 20, carbs: 50 } }: Mac
                         <div className="flex justify-between items-center text-xs">
                             <div className="flex flex-col">
                                 <span className="font-black text-gray-850 dark:text-white">{macro.label}</span>
-                                <span className="text-[8.5px] text-gray-400 font-bold mt-0.5">{macro.desc}</span>
+                                <span className="text-[8.5px] text-gray-500 dark:text-gray-400 font-bold mt-0.5">{macro.desc}</span>
                             </div>
                             <span className="font-bold text-gray-500">
                                 <strong className="text-gray-800 dark:text-white">{macro.grams}</strong> ({macro.percent}%)

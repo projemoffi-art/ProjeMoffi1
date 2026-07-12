@@ -158,7 +158,6 @@ export function QuestRewardEngine() {
     const [particles, setParticles] = useState<Particle[]>([]);
     const [petEmotion, setPetEmotion] = useState<PetEmotion>('happy');
     const [showPetEmote, setShowPetEmote] = useState(false);
-    const [streakDanger, setStreakDanger] = useState(false);
     const [showMysteryBox, setShowMysteryBox] = useState(false);
     const [mysteryContent, setMysteryContent] = useState<MysteryBoxContent | null>(null);
     const [mysteryOpened, setMysteryOpened] = useState(false);
@@ -166,7 +165,6 @@ export function QuestRewardEngine() {
     const [levelUpData, setLevelUpData] = useState<LevelUpData | null>(null);
     const [showAllComplete, setShowAllComplete] = useState(false);
     const [countdown, setCountdown] = useState(getSecondsUntilMidnight());
-    const [showStreakAlert, setShowStreakAlert] = useState(false);
 
     // Refs for tracking changes
     const prevCompletedRef = useRef(completedCount);
@@ -179,28 +177,11 @@ export function QuestRewardEngine() {
         const interval = setInterval(() => {
             const secs = getSecondsUntilMidnight();
             setCountdown(secs);
-
-            // Seri tehlikesi: son 2 saat + hiç yürüyüş yoksa
-            if (secs < 7200 && currentStreak > 0) {
-                const todayWalked = dailyQuests.some(q => q.type === 'distance' && q.current > 0);
-                if (!todayWalked) {
-                    setStreakDanger(true);
-                }
-            }
         }, 1000);
         return () => clearInterval(interval);
     }, [currentStreak, dailyQuests]);
 
-    // ── Streak uyarısı ────────────────────────────────────────────────────────
-    useEffect(() => {
-        if (streakDanger) {
-            setShowStreakAlert(true);
-            const t = setTimeout(() => setShowStreakAlert(false), 8000);
-            return () => clearTimeout(t);
-        }
-    }, [streakDanger]);
-
-    // ── Görev tamamlama detectoru ─────────────────────────────────────────────
+    // ── 🎈 Görev tamamlama detectoru 🎈─────────────────────────────────────────────
     useEffect(() => {
         if (completedCount > prevCompletedRef.current) {
             const diff = completedCount - prevCompletedRef.current;
@@ -348,48 +329,6 @@ export function QuestRewardEngine() {
                 )}
             </AnimatePresence>
 
-            {/* ── STREAK DRAMA ALERT ── */}
-            <AnimatePresence>
-                {showStreakAlert && currentStreak > 0 && (
-                    <motion.div
-                        initial={{ opacity: 0, x: '100%' }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: '100%' }}
-                        transition={{ type: 'spring', damping: 20, stiffness: 200 }}
-                        className="fixed top-20 right-4 z-[9001] max-w-[240px]"
-                    >
-                        <div className="bg-red-500/95 backdrop-blur-xl border border-red-400/50 rounded-2xl p-3 shadow-2xl shadow-red-500/30">
-                            <div className="flex items-start gap-2.5">
-                                <motion.span
-                                    animate={{ scale: [1, 1.2, 1] }}
-                                    transition={{ duration: 0.5, repeat: Infinity }}
-                                    className="text-2xl shrink-0"
-                                >
-                                    🔥
-                                </motion.span>
-                                <div>
-                                    <p className="text-[10px] font-black text-white uppercase tracking-widest">
-                                        {currentStreak} Günlük Serin Tehlikede!
-                                    </p>
-                                    <p className="text-[9px] text-white/70 mt-0.5">
-                                        {formatCountdown(countdown)} kaldı — bugün yürü!
-                                    </p>
-                                    <button
-                                        onClick={() => {
-                                            window.dispatchEvent(new CustomEvent('open-walk-panel'));
-                                            setShowStreakAlert(false);
-                                        }}
-                                        className="mt-1.5 w-full bg-white/20 hover:bg-white/30 transition-all rounded-lg py-1 text-[8px] font-black text-white uppercase tracking-wider"
-                                    >
-                                        Şimdi Yürüyüşe Çık →
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
             {/* ── MYSTERY BOX ── */}
             <AnimatePresence>
                 {showMysteryBox && mysteryContent && (
@@ -433,19 +372,19 @@ export function QuestRewardEngine() {
                                 {!mysteryOpened ? (
                                     <div>
                                         <p className="text-xs font-black text-white mt-2">Tıkla ve Aç!</p>
-                                        <p className="text-[8px] text-white/30 font-semibold mt-0.5">Görev ödülü seni bekliyor</p>
+                                        <p className="text-[8px] text-black/40 dark:text-white/30 font-semibold mt-0.5">Görev ödülü seni bekliyor</p>
                                     </div>
                                 ) : (
                                     <div>
                                         <p className={`text-base font-black mt-2 ${mysteryContent.color}`}>{mysteryContent.value}</p>
-                                        <p className="text-[9px] text-white/50 font-bold">{mysteryContent.label}</p>
+                                        <p className="text-[9px] text-black/50 dark:text-white/50 font-bold">{mysteryContent.label}</p>
                                     </div>
                                 )}
 
                                 {!mysteryOpened && (
                                     <button
                                         onClick={() => setShowMysteryBox(false)}
-                                        className="mt-2 text-[7px] text-white/20 hover:text-white/40 transition-all uppercase tracking-widest"
+                                        className="mt-2 text-[7px] text-black/30 dark:text-white/20 hover:text-black/50 dark:text-white/40 transition-all uppercase tracking-widest"
                                     >
                                         Kapat
                                     </button>
@@ -484,13 +423,13 @@ export function QuestRewardEngine() {
                             <p className="text-lg font-black text-purple-300 mb-6">{levelUpData.newTitle}</p>
 
                             <div className="flex items-center justify-center gap-4 mb-6">
-                                <div className="bg-white/5 border border-card-border rounded-2xl px-4 py-2">
+                                <div className="bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl px-4 py-2">
                                     <div className="text-xl font-black text-orange-400">{totalPatiPuan.toLocaleString()}</div>
-                                    <div className="text-[7px] text-white/30 uppercase tracking-widest">Total PP</div>
+                                    <div className="text-[7px] text-black/40 dark:text-white/30 uppercase tracking-widest">Total PP</div>
                                 </div>
-                                <div className="bg-white/5 border border-card-border rounded-2xl px-4 py-2">
+                                <div className="bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl px-4 py-2">
                                     <div className="text-xl font-black text-yellow-400">+{todayEarned.pp}</div>
-                                    <div className="text-[7px] text-white/30 uppercase tracking-widest">Bugün</div>
+                                    <div className="text-[7px] text-black/40 dark:text-white/30 uppercase tracking-widest">Bugün</div>
                                 </div>
                             </div>
 
@@ -565,7 +504,7 @@ export function QuestRewardEngine() {
                                     className="w-1.5 h-1.5 bg-card rounded-full"
                                 />
                                 <span className="text-[9px] font-black text-white font-mono">{formatCountdown(countdown)}</span>
-                                <span className="text-[7px] text-white/60 uppercase tracking-widest">kaldı</span>
+                                <span className="text-[7px] text-black/60 dark:text-white/60 uppercase tracking-widest">kaldı</span>
                             </div>
                         </div>
                     </motion.div>

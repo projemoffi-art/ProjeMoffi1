@@ -122,7 +122,7 @@ export default function ProfilePage() {
             const newState = !isFollowing;
             if (isFollowing) {
                 await apiService.unfollowUser(id);
-                showToast("Takibi bıraktınız", "Sparkles", "text-white/60");
+                showToast("Takibi bıraktınız", "Sparkles", "text-black/60 dark:text-white/60");
             } else {
                 await apiService.followUser(id);
                 showToast("Takip ediliyor ✨", "Sparkles", "text-emerald-400");
@@ -388,7 +388,7 @@ export default function ProfilePage() {
                     <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center shadow-2xl shadow-emerald-500/30">
                         <Loader2 className="w-8 h-8 text-white animate-spin" />
                     </div>
-                    <p className="text-white/40 text-xs font-black uppercase tracking-widest">Profil Yükleniyor</p>
+                    <p className="text-black/50 dark:text-white/40 text-xs font-black uppercase tracking-widest">Profil Yükleniyor</p>
                 </motion.div>
             </div>
         );
@@ -496,18 +496,18 @@ export default function ProfilePage() {
                                 animate={{ y: 0 }}
                                 exit={{ y: "100%" }}
                                 transition={{ type: "spring", damping: 25, stiffness: 220 }}
-                                className="relative w-full max-w-lg bg-[#0E0E15]/95 backdrop-blur-2xl border-t border-white/10 rounded-t-[3rem] p-6 max-h-[75vh] flex flex-col z-10 overflow-hidden shadow-[0_-15px_40px_rgba(0,0,0,0.6)]"
+                                className="relative w-full max-w-lg bg-[#0E0E15]/95 backdrop-blur-2xl border-t border-black/10 dark:border-white/10 rounded-t-[3rem] p-6 max-h-[75vh] flex flex-col z-10 overflow-hidden shadow-[0_-15px_40px_rgba(0,0,0,0.6)]"
                             >
                                 {/* Drag handle */}
-                                <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-4 shrink-0" />
+                                <div className="w-12 h-1.5 bg-black/10 dark:bg-white/10 rounded-full mx-auto mb-4 shrink-0" />
                                 
                                 {/* Header / Tabs */}
-                                <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-4 shrink-0">
+                                <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-4 mb-4 shrink-0">
                                     <div className="flex gap-4">
                                         <button
                                             onClick={() => openRelationsModal('followers')}
                                             className={`text-sm font-black uppercase tracking-wider transition-colors ${
-                                                relationsModalTab === 'followers' ? 'text-emerald-400' : 'text-white/40'
+                                                relationsModalTab === 'followers' ? 'text-emerald-400' : 'text-black/50 dark:text-white/40'
                                             }`}
                                         >
                                             Takipçiler
@@ -515,7 +515,7 @@ export default function ProfilePage() {
                                         <button
                                             onClick={() => openRelationsModal('following')}
                                             className={`text-sm font-black uppercase tracking-wider transition-colors ${
-                                                relationsModalTab === 'following' ? 'text-emerald-400' : 'text-white/40'
+                                                relationsModalTab === 'following' ? 'text-emerald-400' : 'text-black/50 dark:text-white/40'
                                             }`}
                                         >
                                             Takip Edilenler
@@ -523,7 +523,7 @@ export default function ProfilePage() {
                                     </div>
                                     <button
                                         onClick={() => setIsRelationsModalOpen(false)}
-                                        className="w-7 h-7 bg-white/5 border border-white/10 rounded-full flex items-center justify-center text-white/60 hover:text-white"
+                                        className="w-7 h-7 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-full flex items-center justify-center text-black/60 dark:text-white/60 hover:text-white"
                                     >
                                         <X className="w-3.5 h-3.5" />
                                     </button>
@@ -534,15 +534,15 @@ export default function ProfilePage() {
                                     {relationsLoading ? (
                                         <div className="flex flex-col items-center justify-center py-12 gap-3">
                                             <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
-                                            <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">Yükleniyor...</p>
+                                            <p className="text-black/50 dark:text-white/40 text-[10px] font-black uppercase tracking-widest">Yükleniyor...</p>
                                         </div>
                                     ) : relationsList.length === 0 ? (
                                         <div className="flex flex-col items-center justify-center py-12 text-center">
-                                            <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-white/30 mb-4">
+                                            <div className="w-16 h-16 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-2xl flex items-center justify-center text-black/40 dark:text-white/30 mb-4">
                                                 <User className="w-8 h-8" />
                                             </div>
-                                            <p className="text-white/60 text-sm font-black uppercase tracking-wider">Henüz Kimse Yok</p>
-                                            <p className="text-white/30 text-xs mt-1">Burada listelenecek herhangi bir kullanıcı bulunamadı.</p>
+                                            <p className="text-black/60 dark:text-white/60 text-sm font-black uppercase tracking-wider">Henüz Kimse Yok</p>
+                                            <p className="text-black/40 dark:text-white/30 text-xs mt-1">Burada listelenecek herhangi bir kullanıcı bulunamadı.</p>
                                         </div>
                                     ) : (
                                         <div className="space-y-3">
@@ -556,11 +556,11 @@ export default function ProfilePage() {
                                                             setIsRelationsModalOpen(false);
                                                             router.push(`/profile/${userItem.id}`);
                                                         }}
-                                                        className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all cursor-pointer active:scale-[0.98]"
+                                                        className="flex items-center justify-between p-3 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 hover:bg-black/10 dark:bg-white/10 transition-all cursor-pointer active:scale-[0.98]"
                                                     >
                                                         <div className="flex items-center gap-3">
                                                             {/* Avatar */}
-                                                            <div className="w-11 h-11 rounded-2xl overflow-hidden border border-white/10 shrink-0 bg-[#222]">
+                                                            <div className="w-11 h-11 rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 shrink-0 bg-[#222]">
                                                                 {userItem.avatar ? (
                                                                     <img src={userItem.avatar} className="w-full h-full object-cover" alt="" />
                                                                 ) : (
@@ -579,7 +579,7 @@ export default function ProfilePage() {
                                                                 </p>
                                                             </div>
                                                         </div>
-                                                        <ChevronRight className="w-4 h-4 text-white/30" />
+                                                        <ChevronRight className="w-4 h-4 text-black/40 dark:text-white/30" />
                                                     </div>
                                                 );
                                             })}
@@ -620,7 +620,7 @@ export default function ProfilePage() {
                 <motion.button
                     whileTap={{ scale: 0.9 }}
                     onClick={() => router.push('/community')}
-                    className="absolute top-4 left-4 w-10 h-10 bg-black/40 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-white/10 z-10"
+                    className="absolute top-4 left-4 w-10 h-10 bg-black/40 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-black/10 dark:border-white/10 z-10"
                 >
                     <ArrowLeft className="w-5 h-5" />
                 </motion.button>
@@ -679,7 +679,7 @@ export default function ProfilePage() {
                                         setEditCoverPreview(isPlaceholderUrl(currentUser?.cover_photo) ? null : (currentUser?.cover_photo || null));
                                         setIsEditing(true);
                                     }}
-                                    className="flex items-center gap-1.5 px-4 py-2.5 bg-white/8 border border-white/10 rounded-2xl text-white font-black text-[10px] uppercase tracking-widest hover:bg-white/12 transition-colors"
+                                    className="flex items-center gap-1.5 px-4 py-2.5 bg-white/8 border border-black/10 dark:border-white/10 rounded-2xl text-white font-black text-[10px] uppercase tracking-widest hover:bg-white/12 transition-colors"
                                 >
                                     <Edit3 className="w-3.5 h-3.5" />
                                     Düzenle
@@ -699,9 +699,9 @@ export default function ProfilePage() {
                                 disabled={followCheckLoading || followLoading}
                                 className={`px-6 py-2.5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg transition-all duration-300 flex items-center gap-2 ${
                                     followCheckLoading
-                                        ? "bg-emerald-500/50 text-white/50 cursor-not-allowed shadow-none"
+                                        ? "bg-emerald-500/50 text-black/50 dark:text-white/50 cursor-not-allowed shadow-none"
                                         : isFollowing
-                                        ? "bg-white/10 text-white border border-white/10 hover:bg-white/15 hover:border-white/20 shadow-none"
+                                        ? "bg-black/10 dark:bg-white/10 text-white border border-black/10 dark:border-white/10 hover:bg-white/15 hover:border-black/20 dark:border-white/20 shadow-none"
                                         : "bg-emerald-500 text-white shadow-emerald-500/30 hover:bg-emerald-600 hover:shadow-emerald-500/40"
                                 }`}
                             >
@@ -720,14 +720,14 @@ export default function ProfilePage() {
                 {/* Bio */}
                 <div className="mt-4">
                     {displayUser?.bio && (
-                        <p className="text-sm font-medium text-white/60 leading-relaxed max-w-sm ml-1">
+                        <p className="text-sm font-medium text-black/60 dark:text-white/60 leading-relaxed max-w-sm ml-1">
                             {displayUser.bio}
                         </p>
                     )}
                 </div>
 
                 {/* Stats */}
-                <div className="flex items-center gap-6 mt-5 pb-5 border-b border-white/5">
+                <div className="flex items-center gap-6 mt-5 pb-5 border-b border-black/5 dark:border-white/5">
                     {[
                         { value: pets.length || 0, label: 'Pati' },
                         { value: displayUser?.stats?.followers || displayUser?.stats?.pack || 0, label: 'Takipçi', type: 'followers' },
@@ -740,12 +740,12 @@ export default function ProfilePage() {
                                 className="text-center active:scale-95 transition-transform hover:opacity-85 focus:outline-none"
                             >
                                 <p className="text-white font-black text-xl leading-tight">{s.value}</p>
-                                <p className="text-white/40 text-[10px] font-black uppercase tracking-widest mt-0.5">{s.label}</p>
+                                <p className="text-black/50 dark:text-white/40 text-[10px] font-black uppercase tracking-widest mt-0.5">{s.label}</p>
                             </button>
                         ) : (
                             <div key={s.label} className="text-center">
                                 <p className="text-white font-black text-xl leading-tight">{s.value}</p>
-                                <p className="text-white/40 text-[10px] font-black uppercase tracking-widest mt-0.5">{s.label}</p>
+                                <p className="text-black/50 dark:text-white/40 text-[10px] font-black uppercase tracking-widest mt-0.5">{s.label}</p>
                             </div>
                         )
                     ))}
@@ -755,7 +755,7 @@ export default function ProfilePage() {
                 {pets.length > 0 && (
                     <div className="mt-6">
                         <div className="flex items-center justify-between mb-3">
-                            <h3 className="text-white/60 text-[10px] font-black uppercase tracking-widest">Patilerim</h3>
+                            <h3 className="text-black/60 dark:text-white/60 text-[10px] font-black uppercase tracking-widest">Patilerim</h3>
                             {isOwnProfile && (
                                 <button onClick={() => setIsAddPetOpen(true)} className="text-[9px] text-emerald-400 font-black uppercase tracking-widest border border-emerald-500/20 px-2 py-1 rounded-lg hover:bg-emerald-500/10 transition-colors">
                                     + Ekle
@@ -774,7 +774,7 @@ export default function ProfilePage() {
                                             : 'border-white/8 bg-white/3 hover:bg-white/6'
                                     }`}
                                 >
-                                    <div className="w-14 h-14 rounded-2xl overflow-hidden bg-white/5 border border-white/8">
+                                    <div className="w-14 h-14 rounded-2xl overflow-hidden bg-black/5 dark:bg-white/5 border border-white/8">
                                         {pet.image ? (
                                             <img src={pet.image} className="w-full h-full object-cover" alt={pet.name} />
                                         ) : (
@@ -803,7 +803,7 @@ export default function ProfilePage() {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}
                             className={`flex-1 flex items-center justify-center gap-2 py-3 text-[11px] font-black uppercase tracking-widest transition-colors relative ${
-                                activeTab === tab.id ? 'text-white' : 'text-white/30 hover:text-white/60'
+                                activeTab === tab.id ? 'text-white' : 'text-black/40 dark:text-white/30 hover:text-black/60 dark:text-white/60'
                             }`}
                         >
                             {tab.icon}
@@ -825,10 +825,10 @@ export default function ProfilePage() {
                         <motion.div key="pets" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-6 space-y-3">
                             {pets.length === 0 ? (
                                 <div className="text-center py-16">
-                                    <div className="w-16 h-16 rounded-[1.5rem] bg-white/5 border border-white/8 flex items-center justify-center mx-auto mb-4">
-                                        <PawPrint className="w-8 h-8 text-white/20" />
+                                    <div className="w-16 h-16 rounded-[1.5rem] bg-black/5 dark:bg-white/5 border border-white/8 flex items-center justify-center mx-auto mb-4">
+                                        <PawPrint className="w-8 h-8 text-black/30 dark:text-white/20" />
                                     </div>
-                                    <p className="text-white/40 font-black text-sm uppercase italic">Henüz Pati Yok</p>
+                                    <p className="text-black/50 dark:text-white/40 font-black text-sm uppercase italic">Henüz Pati Yok</p>
                                     {isOwnProfile && (
                                         <button onClick={() => setIsAddPetOpen(true)} className="mt-4 px-6 py-2.5 bg-emerald-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/30">
                                             İlk Patimi Ekle
@@ -849,9 +849,9 @@ export default function ProfilePage() {
                                         </div>
                                         <div className="flex-1">
                                             <p className="text-white font-black uppercase tracking-tight">{pet.name}</p>
-                                            <p className="text-white/40 text-xs font-bold mt-0.5">{pet.breed || 'Tür bilgisi yok'} • {pet.gender || ''}</p>
+                                            <p className="text-black/50 dark:text-white/40 text-xs font-bold mt-0.5">{pet.breed || 'Tür bilgisi yok'} • {pet.gender || ''}</p>
                                         </div>
-                                        <ChevronRight className="w-5 h-5 text-white/20" />
+                                        <ChevronRight className="w-5 h-5 text-black/30 dark:text-white/20" />
                                     </motion.div>
                                 ))
                             )}
@@ -932,18 +932,18 @@ export default function ProfilePage() {
                             animate={{ y: 0 }}
                             exit={{ y: "100%" }}
                             transition={{ type: "spring", damping: 25, stiffness: 220 }}
-                            className="relative w-full max-w-lg bg-[#0E0E15]/95 backdrop-blur-2xl border-t border-white/10 rounded-t-[3rem] p-6 max-h-[75vh] flex flex-col z-10 overflow-hidden shadow-[0_-15px_40px_rgba(0,0,0,0.6)]"
+                            className="relative w-full max-w-lg bg-[#0E0E15]/95 backdrop-blur-2xl border-t border-black/10 dark:border-white/10 rounded-t-[3rem] p-6 max-h-[75vh] flex flex-col z-10 overflow-hidden shadow-[0_-15px_40px_rgba(0,0,0,0.6)]"
                         >
                             {/* Drag handle */}
-                            <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-4 shrink-0" />
+                            <div className="w-12 h-1.5 bg-black/10 dark:bg-white/10 rounded-full mx-auto mb-4 shrink-0" />
                             
                             {/* Header / Tabs */}
-                            <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-4 shrink-0">
+                            <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-4 mb-4 shrink-0">
                                 <div className="flex gap-4">
                                     <button
                                         onClick={() => openRelationsModal('followers')}
                                         className={`text-sm font-black uppercase tracking-wider transition-colors ${
-                                            relationsModalTab === 'followers' ? 'text-emerald-400' : 'text-white/40'
+                                            relationsModalTab === 'followers' ? 'text-emerald-400' : 'text-black/50 dark:text-white/40'
                                         }`}
                                     >
                                         Takipçiler
@@ -951,7 +951,7 @@ export default function ProfilePage() {
                                     <button
                                         onClick={() => openRelationsModal('following')}
                                         className={`text-sm font-black uppercase tracking-wider transition-colors ${
-                                            relationsModalTab === 'following' ? 'text-emerald-400' : 'text-white/40'
+                                            relationsModalTab === 'following' ? 'text-emerald-400' : 'text-black/50 dark:text-white/40'
                                         }`}
                                     >
                                         Takip Edilenler
@@ -959,7 +959,7 @@ export default function ProfilePage() {
                                 </div>
                                 <button
                                     onClick={() => setIsRelationsModalOpen(false)}
-                                    className="w-7 h-7 bg-white/5 border border-white/10 rounded-full flex items-center justify-center text-white/60 hover:text-white"
+                                    className="w-7 h-7 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-full flex items-center justify-center text-black/60 dark:text-white/60 hover:text-white"
                                 >
                                     <X className="w-3.5 h-3.5" />
                                 </button>
@@ -970,15 +970,15 @@ export default function ProfilePage() {
                                 {relationsLoading ? (
                                     <div className="flex flex-col items-center justify-center py-12 gap-3">
                                         <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
-                                        <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">Yükleniyor...</p>
+                                        <p className="text-black/50 dark:text-white/40 text-[10px] font-black uppercase tracking-widest">Yükleniyor...</p>
                                     </div>
                                 ) : relationsList.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center py-12 text-center">
-                                        <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-white/30 mb-4">
+                                        <div className="w-16 h-16 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-2xl flex items-center justify-center text-black/40 dark:text-white/30 mb-4">
                                             <User className="w-8 h-8" />
                                         </div>
-                                        <p className="text-white/60 text-sm font-black uppercase tracking-wider">Henüz Kimse Yok</p>
-                                        <p className="text-white/30 text-xs mt-1">Burada listelenecek herhangi bir kullanıcı bulunamadı.</p>
+                                        <p className="text-black/60 dark:text-white/60 text-sm font-black uppercase tracking-wider">Henüz Kimse Yok</p>
+                                        <p className="text-black/40 dark:text-white/30 text-xs mt-1">Burada listelenecek herhangi bir kullanıcı bulunamadı.</p>
                                     </div>
                                 ) : (
                                     <div className="space-y-3">
@@ -992,11 +992,11 @@ export default function ProfilePage() {
                                                         setIsRelationsModalOpen(false);
                                                         router.push(`/profile/${userItem.id}`);
                                                     }}
-                                                    className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all cursor-pointer active:scale-[0.98]"
+                                                    className="flex items-center justify-between p-3 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 hover:bg-black/10 dark:bg-white/10 transition-all cursor-pointer active:scale-[0.98]"
                                                 >
                                                     <div className="flex items-center gap-3">
                                                         {/* Avatar */}
-                                                        <div className="w-11 h-11 rounded-2xl overflow-hidden border border-white/10 shrink-0 bg-[#222]">
+                                                        <div className="w-11 h-11 rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 shrink-0 bg-[#222]">
                                                             {userItem.avatar ? (
                                                                 <img src={userItem.avatar} className="w-full h-full object-cover" alt="" />
                                                             ) : (
@@ -1015,7 +1015,7 @@ export default function ProfilePage() {
                                                             </p>
                                                         </div>
                                                     </div>
-                                                    <ChevronRight className="w-4 h-4 text-white/30" />
+                                                    <ChevronRight className="w-4 h-4 text-black/40 dark:text-white/30" />
                                                 </div>
                                             );
                                         })}
@@ -1059,10 +1059,10 @@ function PostsGrid({ userId }: { userId: string }) {
 
     if (posts.length === 0) return (
         <div className="flex flex-col items-center py-16 text-center">
-            <div className="w-16 h-16 rounded-[1.5rem] bg-white/5 border border-white/8 flex items-center justify-center mb-4">
-                <ImageIcon className="w-8 h-8 text-white/20" />
+            <div className="w-16 h-16 rounded-[1.5rem] bg-black/5 dark:bg-white/5 border border-white/8 flex items-center justify-center mb-4">
+                <ImageIcon className="w-8 h-8 text-black/30 dark:text-white/20" />
             </div>
-            <p className="text-white/40 font-black text-sm uppercase italic">Henüz Gönderi Yok</p>
+            <p className="text-black/50 dark:text-white/40 font-black text-sm uppercase italic">Henüz Gönderi Yok</p>
         </div>
     );
 
@@ -1083,7 +1083,7 @@ function PostsGrid({ userId }: { userId: string }) {
                                 <img src={p.media_url || p.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="" />
                             ) : (
                                 <div className="w-full h-full bg-gradient-to-br from-emerald-500/10 to-purple-500/10 flex items-center justify-center">
-                                    <MessageCircle className="w-6 h-6 text-white/20" />
+                                    <MessageCircle className="w-6 h-6 text-black/30 dark:text-white/20" />
                                 </div>
                             )}
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100">
@@ -1105,16 +1105,16 @@ function PostsGrid({ userId }: { userId: string }) {
                             transition={{ type: 'spring', damping: 28, stiffness: 320 }}
                             className="fixed inset-x-4 top-20 bottom-20 z-[510] bg-[#111] rounded-[2.5rem] overflow-hidden flex flex-col border border-white/8 shadow-2xl"
                             onClick={e => e.stopPropagation()}>
-                            <div className="relative flex-1 bg-black">
+                            <div className="relative flex-1 bg-white dark:bg-black">
                                 <img src={selected.media_url || selected.image} className="w-full h-full object-contain" alt="" />
-                                <button onClick={() => setSelected(null)} className="absolute top-4 right-4 w-9 h-9 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/10">
+                                <button onClick={() => setSelected(null)} className="absolute top-4 right-4 w-9 h-9 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-black/10 dark:border-white/10">
                                     <X className="w-4 h-4" />
                                 </button>
                             </div>
                             {selected.desc && (
                                 <div className="p-5 shrink-0">
                                     <p className="text-white text-sm leading-relaxed">{selected.desc}</p>
-                                    <div className="flex items-center gap-4 mt-3 text-white/40 text-xs font-bold">
+                                    <div className="flex items-center gap-4 mt-3 text-black/50 dark:text-white/40 text-xs font-bold">
                                         <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5 text-red-400" />{selected.likes || 0}</span>
                                         <span className="flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5 text-cyan-400" />{selected.comments || 0}</span>
                                         <span className="ml-auto">{selected.time}</span>
@@ -1136,7 +1136,7 @@ function PostsGrid({ userId }: { userId: string }) {
                         onClick={() => setEnlargedImage(null)}
                     >
                         <button 
-                            className="absolute top-6 right-6 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white border border-white/20 transition-all z-10"
+                            className="absolute top-6 right-6 w-12 h-12 bg-black/10 dark:bg-white/10 hover:bg-black/20 dark:bg-white/20 rounded-full flex items-center justify-center text-white border border-black/20 dark:border-white/20 transition-all z-10"
                             onClick={() => setEnlargedImage(null)}
                         >
                             <X className="w-6 h-6" />

@@ -211,7 +211,7 @@ export default function FoodPage() {
                 <section>
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="font-bold text-lg text-foreground dark:text-white">Mochi'nin Menüsü</h3>
-                        <div className="text-xs font-bold text-gray-400 bg-gray-100 dark:bg-white/10 px-3 py-1.5 rounded-full flex items-center gap-1">
+                        <div className="text-xs font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-white/10 px-3 py-1.5 rounded-full flex items-center gap-1">
                             <Utensils className="w-3 h-3" /> Bugün
                         </div>
                     </div>

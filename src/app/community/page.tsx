@@ -350,7 +350,7 @@ function ThemeToggleButton() {
             whileTap={{ scale: 0.9 }}
             whileHover={{ scale: 1.05 }}
             onClick={() => setTheme(isDark ? 'light' : 'dark')}
-            className="relative w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:text-amber-500 dark:text-gray-400 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+            className="relative w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:text-amber-500 dark:text-gray-400 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-black/10 dark:bg-white/10 transition-colors cursor-pointer"
             title={isDark ? 'Gündüz moduna geç' : 'Gece moduna geç'}
         >
             <AnimatePresence mode="wait">
@@ -1469,7 +1469,7 @@ export default function LegendaryLightDashboard() {
                     <span className="text-xl">🐾</span>
                 </div>
                 <h3 className="text-sm font-black text-gray-805 animate-pulse">Moffi Dünyası Yükleniyor...</h3>
-                <p className="text-[10px] text-gray-400 font-semibold mt-1">Evcil hayvan verileri güvenli şekilde çekiliyor</p>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold mt-1">Evcil hayvan verileri güvenli şekilde çekiliyor</p>
             </div>
         );
     }
@@ -1493,7 +1493,7 @@ export default function LegendaryLightDashboard() {
                         </div>
                         <button 
                             onClick={() => setToastMsg(null)} 
-                            className="text-gray-400 hover:text-white font-bold text-sm shrink-0 px-1 cursor-pointer"
+                            className="text-gray-500 dark:text-gray-400 hover:text-white font-bold text-sm shrink-0 px-1 cursor-pointer"
                         >
                             ×
                         </button>
@@ -1522,7 +1522,7 @@ export default function LegendaryLightDashboard() {
                             </div>
                             <div className="flex flex-col text-left">
                                 <span className="text-[14px] font-black text-gray-905 tracking-tight leading-none">Moffi</span>
-                                <span className="text-[9px] font-bold text-gray-400 mt-0.5 leading-none">Süper App</span>
+                                <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 mt-0.5 leading-none">Süper App</span>
                             </div>
                         </div>
                     ) : (
@@ -1542,7 +1542,7 @@ export default function LegendaryLightDashboard() {
                                     )}
                                 </div>
                                 <div className="flex flex-col text-left">
-                                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest leading-none">TASMA DURUMU</span>
+                                    <span className="text-[8px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest leading-none">TASMA DURUMU</span>
                                     <span className="text-[10px] font-bold text-gray-700 mt-0.5 flex items-center gap-1.5 leading-none">
                                         {pet.collar.connected ? `Bağlı (%${pet.collar.battery})` : 'Bağlantı Yok'}
                                     </span>
@@ -1636,28 +1636,28 @@ export default function LegendaryLightDashboard() {
                                     <span className="text-base">📍</span>
                                     <div className="text-left">
                                         <span className="text-[9px] font-black text-gray-800 block leading-tight">Canlı Takip</span>
-                                        <span className="text-[7.5px] text-gray-400 font-semibold block leading-none mt-0.5">GPS & Konum</span>
+                                        <span className="text-[7.5px] text-gray-500 dark:text-gray-400 font-semibold block leading-none mt-0.5">GPS & Konum</span>
                                     </div>
                                 </div>
                                 <div className="bg-white/60 border border-gray-100/50 p-2.5 rounded-2xl flex items-center gap-2">
                                     <span className="text-base">📅</span>
                                     <div className="text-left">
                                         <span className="text-[9px] font-black text-gray-800 block leading-tight">Sağlık Takibi</span>
-                                        <span className="text-[7.5px] text-gray-400 font-semibold block leading-none mt-0.5">Aşı & Randevu</span>
+                                        <span className="text-[7.5px] text-gray-500 dark:text-gray-400 font-semibold block leading-none mt-0.5">Aşı & Randevu</span>
                                     </div>
                                 </div>
                                 <div className="bg-white/60 border border-gray-100/50 p-2.5 rounded-2xl flex items-center gap-2">
                                     <span className="text-base">🥣</span>
                                     <div className="text-left">
                                         <span className="text-[9px] font-black text-gray-800 block leading-tight">Beslenme</span>
-                                        <span className="text-[7.5px] text-gray-400 font-semibold block leading-none mt-0.5">Kalori & Su</span>
+                                        <span className="text-[7.5px] text-gray-500 dark:text-gray-400 font-semibold block leading-none mt-0.5">Kalori & Su</span>
                                     </div>
                                 </div>
                                 <div className="bg-white/60 border border-gray-100/50 p-2.5 rounded-2xl flex items-center gap-2">
                                     <span className="text-base">👗</span>
                                     <div className="text-left">
                                         <span className="text-[9px] font-black text-gray-800 block leading-tight">Gardırop</span>
-                                        <span className="text-[7.5px] text-gray-400 font-semibold block leading-none mt-0.5">AI Stil & Kombin</span>
+                                        <span className="text-[7.5px] text-gray-500 dark:text-gray-400 font-semibold block leading-none mt-0.5">AI Stil & Kombin</span>
                                     </div>
                                 </div>
                             </div>
@@ -1800,7 +1800,7 @@ export default function LegendaryLightDashboard() {
                                 <motion.button
                                     whileTap={{ scale: 0.9 }}
                                     onClick={() => setIsAddPetOpen(true)}
-                                    className="w-8 h-8 rounded-full bg-white/20 dark:bg-white/10 border border-black/10 dark:border-white/10 flex items-center justify-center text-gray-500 dark:text-white hover:bg-black/10 dark:hover:bg-white/20 transition-colors shrink-0 shadow-sm"
+                                    className="w-8 h-8 rounded-full bg-black/20 dark:bg-white/20 dark:bg-white/10 border border-black/10 dark:border-white/10 flex items-center justify-center text-gray-500 dark:text-white hover:bg-black/10 dark:hover:bg-black/20 dark:bg-white/20 transition-colors shrink-0 shadow-sm"
                                 >
                                     <Plus className="w-4.5 h-4.5" />
                                 </motion.button>
@@ -1834,7 +1834,7 @@ export default function LegendaryLightDashboard() {
                                             alt={pet.name} 
                                         />
                                     ) : (
-                                        <span className="text-gray-400 dark:text-zinc-500 text-3xl font-black select-none uppercase">
+                                        <span className="text-gray-500 dark:text-gray-400 dark:text-zinc-500 text-3xl font-black select-none uppercase">
                                             {pet.name ? pet.name[0] : '🐾'}
                                         </span>
                                     )}
@@ -1856,7 +1856,7 @@ export default function LegendaryLightDashboard() {
                                     </motion.h2>
                                     <button 
                                         onClick={() => setIsPetSettingsOpen(true)}
-                                        className="p-1.5 text-gray-400 hover:text-green-600 dark:hover:text-emerald-450 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer"
+                                        className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-green-600 dark:hover:text-emerald-450 rounded-full hover:bg-black/5 dark:hover:bg-black/10 dark:bg-white/10 transition-all cursor-pointer"
                                     >
                                         <Sliders className="w-4.5 h-4.5" />
                                     </button>
@@ -1865,7 +1865,7 @@ export default function LegendaryLightDashboard() {
                                     key={pet.breed}
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
-                                    className="text-[11px] font-semibold text-gray-400 dark:text-zinc-400 mt-0.5"
+                                    className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 dark:text-zinc-400 mt-0.5"
                                 >
                                     {pet.breed}
                                 </motion.p>
@@ -1877,7 +1877,7 @@ export default function LegendaryLightDashboard() {
                             layoutId="dressing-card-container"
                             onClick={() => setExpandedPanel('dressing')}
                             style={{ transform: "translateZ(25px)" }}
-                            className="mt-4 p-3 bg-black/5 dark:bg-white/5 rounded-2xl border border-black/10 dark:border-white/10 flex justify-between items-center cursor-pointer group hover:bg-black/10 dark:hover:bg-white/10 transition-colors duration-300 relative z-10 shadow-inner"
+                            className="mt-4 p-3 bg-black/5 dark:bg-white/5 rounded-2xl border border-black/10 dark:border-white/10 flex justify-between items-center cursor-pointer group hover:bg-black/10 dark:hover:bg-black/10 dark:bg-white/10 transition-colors duration-300 relative z-10 shadow-inner"
                         >
                             <div className="flex items-center gap-2.5">
                                 <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-950 flex items-center justify-center text-purple-650 dark:text-purple-400">
@@ -1921,7 +1921,7 @@ export default function LegendaryLightDashboard() {
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-[10px] font-bold text-gray-700 dark:text-zinc-300 tracking-tight">Günlük Hedefler</span>
-                                    <span className="text-[9px] font-semibold text-gray-400 dark:text-zinc-500 flex items-center gap-1.5 mt-0.5">
+                                    <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400 dark:text-zinc-500 flex items-center gap-1.5 mt-0.5">
                                         <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Gezi
                                         <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Su
                                         <span className="w-1.5 h-1.5 rounded-full bg-orange-500" /> Beslenme
@@ -1935,7 +1935,7 @@ export default function LegendaryLightDashboard() {
                                         <Heart className="w-3.5 h-3.5 text-green-600 dark:text-green-400" fill="currentColor" />
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="text-[8px] text-gray-400 dark:text-zinc-500 font-bold uppercase tracking-wider">Sağlık</span>
+                                        <span className="text-[8px] text-gray-500 dark:text-gray-400 dark:text-zinc-500 font-bold uppercase tracking-wider">Sağlık</span>
                                         <span className="text-[10px] font-black text-gray-750 dark:text-zinc-300">{pet.health}</span>
                                     </div>
                                 </div>
@@ -1944,7 +1944,7 @@ export default function LegendaryLightDashboard() {
                                         <span className="text-gray-500 dark:text-zinc-400 font-black text-[9px]">KG</span>
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="text-[8px] text-gray-400 dark:text-zinc-500 font-bold uppercase tracking-wider">Ağırlık</span>
+                                        <span className="text-[8px] text-gray-500 dark:text-gray-400 dark:text-zinc-500 font-bold uppercase tracking-wider">Ağırlık</span>
                                         <span className="text-[10px] font-black text-gray-750 dark:text-zinc-300">{pet.weight}</span>
                                     </div>
                                 </div>
@@ -1954,7 +1954,7 @@ export default function LegendaryLightDashboard() {
                         {/* Integrated Weekly Streak Grid */}
                         <div className="mt-4 pt-4 border-t border-black/10 dark:border-white/10 flex justify-between items-center relative z-10" style={{ transform: "translateZ(20px)" }}>
                             <div className="flex flex-col">
-                                <span className="text-[9px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest">İstikrar Serisi</span>
+                                <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 dark:text-zinc-500 uppercase tracking-widest">İstikrar Serisi</span>
                                 <span className="text-[10px] font-bold text-gray-600 dark:text-zinc-450 mt-0.5">Haftalık Gezi</span>
                             </div>
                             <div className="flex gap-1.5">
@@ -2000,7 +2000,7 @@ export default function LegendaryLightDashboard() {
                                 <h4 className="text-base font-black text-gray-800 mt-1">
                                     {activeSession ? `${pet.name} Yürüyor! 🐾` : 'Yürüyüşü Başlat'}
                                 </h4>
-                                <p className="text-[10px] font-semibold text-gray-400 mt-0.5">
+                                <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mt-0.5">
                                     {activeSession
                                         ? `GPS aktif • ${walkStats?.totalWalks || 0} toplam yürüyüş`
                                         : `${pet.name}'in günlük gezi hedefini tamamlayın`}
@@ -2050,7 +2050,7 @@ export default function LegendaryLightDashboard() {
                                     <circle cx="10" cy="30" r="5" fill="#D1D5DB" stroke="white" strokeWidth="2" />
                                 )}
                             </svg>
-                            <span className="absolute right-4 bottom-2.5 text-[9px] font-bold text-gray-400">
+                            <span className="absolute right-4 bottom-2.5 text-[9px] font-bold text-gray-500 dark:text-gray-400">
                                 {activeSession
                                     ? `${(activeSession.distanceKm || 0).toFixed(2)} / ${pet.ringProgress.activity > 0 ? (pet.ringProgress.activity / 28).toFixed(1) : '3.5'} KM`
                                     : 'GPS ile canlı takip'}
@@ -2061,20 +2061,20 @@ export default function LegendaryLightDashboard() {
                         <div className="flex justify-between items-center gap-3">
                             <div className="flex gap-4">
                                 <div>
-                                    <span className="text-[8px] font-bold text-gray-400 uppercase">Süre</span>
-                                    <h5 className={`text-[13px] font-black mt-0.5 ${activeSession ? 'text-green-700' : 'text-gray-400'}`}>
+                                    <span className="text-[8px] font-bold text-gray-500 dark:text-gray-400 uppercase">Süre</span>
+                                    <h5 className={`text-[13px] font-black mt-0.5 ${activeSession ? 'text-green-700' : 'text-gray-500 dark:text-gray-400'}`}>
                                         {activeSession ? formatWalkTime(walkElapsedSeconds) : '--:--'}
                                     </h5>
                                 </div>
                                 <div>
-                                    <span className="text-[8px] font-bold text-gray-400 uppercase">Mesafe</span>
-                                    <h5 className={`text-[13px] font-black mt-0.5 ${activeSession ? 'text-green-700' : 'text-gray-400'}`}>
+                                    <span className="text-[8px] font-bold text-gray-500 dark:text-gray-400 uppercase">Mesafe</span>
+                                    <h5 className={`text-[13px] font-black mt-0.5 ${activeSession ? 'text-green-700' : 'text-gray-500 dark:text-gray-400'}`}>
                                         {activeSession ? `${(activeSession.distanceKm || 0).toFixed(2)} KM` : '— KM'}
                                     </h5>
                                 </div>
                                 {walkStats && walkStats.totalWalks > 0 && (
                                     <div>
-                                        <span className="text-[8px] font-bold text-gray-400 uppercase">Toplam</span>
+                                        <span className="text-[8px] font-bold text-gray-500 dark:text-gray-400 uppercase">Toplam</span>
                                         <h5 className="text-[13px] font-black text-gray-700 mt-0.5">{walkStats.totalDistanceKm?.toFixed(1) || '0'} KM</h5>
                                     </div>
                                 )}
@@ -2110,7 +2110,7 @@ export default function LegendaryLightDashboard() {
                                             <span className="text-[10px] font-black text-gray-700 block">
                                                 {((w.distance_meters || 0) / 1000).toFixed(2)} KM
                                             </span>
-                                            <span className="text-[8px] font-semibold text-gray-400">
+                                            <span className="text-[8px] font-semibold text-gray-500 dark:text-gray-400">
                                                 {w.ended_at ? (() => {
                                                     try {
                                                         const d = new Date(w.ended_at);
@@ -2146,7 +2146,7 @@ export default function LegendaryLightDashboard() {
                                 <p className="text-[11px] text-gray-500 dark:text-gray-400 font-bold mt-1">Son 7 günlük hareket analizi</p>
                             </div>
                             <div className="text-right">
-                                <span className="text-[10px] font-black text-gray-400 block mb-1 tracking-widest">ORTALAMA</span>
+                                <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 block mb-1 tracking-widest">ORTALAMA</span>
                                 <span className="text-xl font-black text-gray-900 dark:text-gray-100">{Math.round(pet.weeklyData.reduce((a, b) => a + b, 0) / 7)} <span className="text-[11px] font-bold text-gray-500">dk/gün</span></span>
                             </div>
                         </div>
@@ -2182,7 +2182,7 @@ export default function LegendaryLightDashboard() {
                                             />
                                         </div>
                                         {/* Day Label */}
-                                        <span className={`text-[9px] font-black uppercase tracking-wider shrink-0 ${isCompleted ? 'text-gray-800 dark:text-gray-300' : 'text-gray-400 dark:text-gray-600'}`}>
+                                        <span className={`text-[9px] font-black uppercase tracking-wider shrink-0 ${isCompleted ? 'text-gray-800 dark:text-gray-300' : 'text-gray-500 dark:text-gray-400 dark:text-gray-600'}`}>
                                             {day}
                                         </span>
                                     </div>
@@ -2209,7 +2209,7 @@ export default function LegendaryLightDashboard() {
                     <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl group-hover:bg-indigo-500/30 transition-all duration-700 pointer-events-none" />
                     <div className="absolute bottom-0 left-0 w-64 h-64 bg-fuchsia-500/10 rounded-full blur-3xl group-hover:bg-fuchsia-500/20 transition-all duration-700 pointer-events-none" />
                     
-                    <div className="bg-slate-900/60 dark:bg-zinc-900/80 backdrop-blur-xl rounded-[28px] p-6 relative z-10 border border-white/10 h-full flex flex-col">
+                    <div className="bg-slate-900/60 dark:bg-zinc-900/80 backdrop-blur-xl rounded-[28px] p-6 relative z-10 border border-black/10 dark:border-white/10 h-full flex flex-col">
                         
                         <div className="flex items-center gap-2 mb-4">
                             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
@@ -2232,7 +2232,7 @@ export default function LegendaryLightDashboard() {
                                 { icon: ShoppingBag, title: "Moffi Market", desc: "Özel Fırsatlar" },
                                 { icon: Trophy, title: "Görev & Ödül", desc: "PatiPuan Kazan" }
                             ].map((feature, idx) => (
-                                <div key={idx} className="bg-white/5 border border-white/5 rounded-2xl p-3 flex flex-col gap-2 hover:bg-white/10 transition-colors cursor-default">
+                                <div key={idx} className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-3 flex flex-col gap-2 hover:bg-black/10 dark:bg-white/10 transition-colors cursor-default">
                                     <feature.icon className="w-5 h-5 text-indigo-400" />
                                     <div>
                                         <h5 className="text-[11px] font-bold text-white">{feature.title}</h5>
@@ -2283,7 +2283,7 @@ export default function LegendaryLightDashboard() {
                             <p className="text-[10px] font-semibold text-gray-500 mt-0.5 leading-snug">{pet.specialOffer.desc}</p>
                             
                             <div className="mt-2.5 flex items-center gap-2">
-                                <span className="text-[10px] font-bold text-gray-400 line-through">{pet.specialOffer.oldPrice}</span>
+                                <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 line-through">{pet.specialOffer.oldPrice}</span>
                                 <span className="text-xs font-black text-orange-600">{pet.specialOffer.newPrice}</span>
                             </div>
                         </div>
@@ -2301,18 +2301,26 @@ export default function LegendaryLightDashboard() {
             {/* 3D FLUID CARD MORPHING OVERLAYS */}
             <AnimatePresence>
                 {expandedPanel && (
-                    <>
-                        {/* Dim Backdrop with Blur */}
-                        <motion.div 
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setExpandedPanel(null)}
-                            className="fixed inset-0 bg-black/35 backdrop-blur-md z-[100] cursor-pointer"
-                        />
+                    <motion.div 
+                        key="dim-backdrop"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setExpandedPanel(null)}
+                        className="fixed inset-0 bg-black/35 backdrop-blur-md z-[100] cursor-pointer"
+                    />
+                )}
+            </AnimatePresence>
 
-                        {/* MORPHED FULL CONTAINER SHEET */}
-                        <div className={`fixed inset-0 z-[101] flex items-center justify-center pointer-events-none ${expandedPanel === 'profile' ? 'p-0' : 'p-4'}`}>
+            <AnimatePresence>
+                {expandedPanel && (
+                    <motion.div
+                        key="modal-wrapper"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0, transition: { duration: 0.1 } }}
+                        className={`fixed inset-0 z-[101] flex items-center justify-center pointer-events-none ${expandedPanel === 'profile' ? 'p-0' : 'p-4'}`}
+                    >
                             <motion.div
                                 layoutId={`${expandedPanel}-card-container`}
                                 transition={{ type: 'spring', damping: 22, stiffness: 180 }}
@@ -2345,7 +2353,7 @@ export default function LegendaryLightDashboard() {
                                     <div className="flex justify-between items-center px-6 pt-5 pb-3 bg-gray-50/50 border-b border-gray-100/50 shrink-0">
                                         <div className="flex items-center gap-1">
                                             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                                            <span className="text-[9px] font-black tracking-widest text-gray-400 uppercase">Moffi Smartwatch OS</span>
+                                            <span className="text-[9px] font-black tracking-widest text-gray-500 dark:text-gray-400 uppercase">Moffi Smartwatch OS</span>
                                         </div>
                                         <motion.button 
                                             whileTap={{ scale: 0.9 }}
@@ -2381,13 +2389,13 @@ export default function LegendaryLightDashboard() {
                                             {/* Bank Card Graphic */}
                                             <div className="bg-gradient-to-tr from-gray-950 to-gray-850 text-white p-5 rounded-[26px] border border-gray-800/80 shadow-md relative overflow-hidden">
                                                 <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-green-500/10 rounded-full blur-2xl" />
-                                                <span className="text-[8px] font-black tracking-widest text-gray-400 block">CARDMEMBERSHIP</span>
+                                                <span className="text-[8px] font-black tracking-widest text-gray-500 dark:text-gray-400 block">CARDMEMBERSHIP</span>
                                                 <h4 className="text-2xl font-black mt-4 tracking-tight flex items-baseline gap-1">
                                                     {totalPatiPuan.toLocaleString('tr-TR')} <span className="text-xs text-yellow-400 font-bold">{pet.wallet.currency}</span>
                                                 </h4>
                                                 <div className="flex justify-between items-end mt-6">
-                                                    <span className="text-[10px] text-gray-400 font-mono tracking-wider">{pet.wallet.cardNumber}</span>
-                                                    <span className="text-[9px] font-black bg-white/10 px-2 py-0.5 rounded uppercase tracking-wider">{pet.name} Pass</span>
+                                                    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-mono tracking-wider">{pet.wallet.cardNumber}</span>
+                                                    <span className="text-[9px] font-black bg-black/10 dark:bg-white/10 px-2 py-0.5 rounded uppercase tracking-wider">{pet.name} Pass</span>
                                                 </div>
                                             </div>
 
@@ -2395,7 +2403,7 @@ export default function LegendaryLightDashboard() {
                                             <div className="grid grid-cols-2 gap-3 mt-3">
                                                 <button 
                                                     disabled
-                                                    className="flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-100 p-3.5 rounded-2xl text-[11px] font-black text-gray-400 transition-all cursor-not-allowed shadow-sm relative overflow-hidden"
+                                                    className="flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-100 p-3.5 rounded-2xl text-[11px] font-black text-gray-500 dark:text-gray-400 transition-all cursor-not-allowed shadow-sm relative overflow-hidden"
                                                 >
                                                     <div className="absolute inset-0 bg-white/50 z-10" />
                                                     <Plus className="w-3.5 h-3.5" />
@@ -2404,7 +2412,7 @@ export default function LegendaryLightDashboard() {
                                                 </button>
                                                 <button 
                                                     disabled
-                                                    className="flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-100 p-3.5 rounded-2xl text-[11px] font-black text-gray-400 transition-all cursor-not-allowed shadow-sm relative overflow-hidden"
+                                                    className="flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-100 p-3.5 rounded-2xl text-[11px] font-black text-gray-500 dark:text-gray-400 transition-all cursor-not-allowed shadow-sm relative overflow-hidden"
                                                 >
                                                     <div className="absolute inset-0 bg-white/50 z-10" />
                                                     <ArrowUpRight className="w-3.5 h-3.5" />
@@ -2431,7 +2439,7 @@ export default function LegendaryLightDashboard() {
 
                                             {/* Transaction Feed */}
                                             <div>
-                                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2.5">Son Hesap Hareketleri</h4>
+                                                <h4 className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2.5">Son Hesap Hareketleri</h4>
                                                 <div className="flex flex-col gap-2">
                                                     {pet.wallet.transactions.map((tx) => (
                                                         <div key={tx.id} className="flex justify-between items-center p-3 rounded-xl bg-gray-50 border border-gray-100/50">
@@ -2443,7 +2451,7 @@ export default function LegendaryLightDashboard() {
                                                                 </div>
                                                                 <div>
                                                                     <h5 className="text-[10.5px] font-bold text-gray-800">{tx.title}</h5>
-                                                                    <span className="text-[8.5px] text-gray-400 font-semibold">{tx.date}</span>
+                                                                    <span className="text-[8.5px] text-gray-500 dark:text-gray-400 font-semibold">{tx.date}</span>
                                                                 </div>
                                                             </div>
                                                             <span className={`text-[11px] font-black ${
@@ -2481,13 +2489,13 @@ export default function LegendaryLightDashboard() {
 
                                             {/* Vaccine Checkboxes */}
                                             <div>
-                                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2.5">Aşılama Kayıtları</h4>
+                                                <h4 className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2.5">Aşılama Kayıtları</h4>
                                                 <div className="flex flex-col gap-2">
                                                     {pet.passport.vaccines.map((v, i) => (
                                                         <div key={i} className="flex justify-between items-center p-3 rounded-xl bg-gray-50 border border-gray-100/50">
                                                             <div>
                                                                 <h5 className="text-[11px] font-bold text-gray-850">{v.name}</h5>
-                                                                <span className="text-[8.5px] text-gray-400 font-semibold">Tarih: {v.date}</span>
+                                                                <span className="text-[8.5px] text-gray-500 dark:text-gray-400 font-semibold">Tarih: {v.date}</span>
                                                             </div>
                                                             <span className={`text-[10px] font-black uppercase tracking-wider ${v.color}`}>{v.status}</span>
                                                         </div>
@@ -2527,12 +2535,12 @@ export default function LegendaryLightDashboard() {
                                                 <div className="flex items-center gap-3">
                                                     <Battery className="w-8 h-8 text-green-600" />
                                                     <div>
-                                                        <span className="text-[9px] font-bold text-gray-400 block">KALAN BATARYA</span>
+                                                        <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 block">KALAN BATARYA</span>
                                                         <h4 className="text-base font-black text-gray-800 mt-0.5">%{pet.collar.battery}</h4>
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
-                                                    <span className="text-[9px] font-bold text-gray-400 block">SON SENKRONİZASYON</span>
+                                                    <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 block">SON SENKRONİZASYON</span>
                                                     <span className="text-[10.5px] font-bold text-gray-700 mt-0.5 block">{pet.collar.lastSync}</span>
                                                 </div>
                                             </div>
@@ -2549,7 +2557,7 @@ export default function LegendaryLightDashboard() {
                                             </div>
 
                                             {/* Alarm buzzer buttons */}
-                                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2.5">Uzaktan Akustik Komutlar</h4>
+                                            <h4 className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2.5">Uzaktan Akustik Komutlar</h4>
                                             <div className="grid grid-cols-2 gap-3">
                                                 <button className="flex items-center justify-center gap-1.5 p-3.5 bg-gray-50 hover:bg-gray-100 border border-gray-150 rounded-xl transition-all cursor-pointer text-xs font-bold text-gray-700">
                                                     <Volume2 className="w-4 h-4 text-gray-600" />
@@ -2596,9 +2604,9 @@ export default function LegendaryLightDashboard() {
                                         <div className="w-full bg-white dark:bg-zinc-950 rounded-[2.5rem] overflow-hidden shadow-2xl border border-gray-100 dark:border-white/5 relative flex flex-col h-[85vh]">
                                             {/* Header Image / Pattern */}
                                             <div className="h-44 shrink-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-fuchsia-600 relative overflow-hidden flex flex-col items-center justify-center">
-                                                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+                                                <div className="absolute top-0 right-0 w-64 h-64 bg-black/10 dark:bg-white/10 rounded-full blur-3xl pointer-events-none" />
                                                 <div className="relative z-10 text-center px-4 mt-4">
-                                                    <div className="w-14 h-14 mx-auto bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 mb-3 shadow-xl">
+                                                    <div className="w-14 h-14 mx-auto bg-black/20 dark:bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-black/20 dark:border-white/20 mb-3 shadow-xl">
                                                         <Sparkles className="w-7 h-7 text-white drop-shadow-md" />
                                                     </div>
                                                     <h2 className="text-xl font-black text-white tracking-tight drop-shadow-md leading-none">Moffi Süper Uygulaması</h2>
@@ -2674,7 +2682,7 @@ export default function LegendaryLightDashboard() {
 
                                             {/* Quests status lists */}
                                             
-                                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2.5">Günlük Görev Çizelgesi</h4>
+                                            <h4 className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2.5">Günlük Görev Çizelgesi</h4>
                                             <div className="flex flex-col gap-2.5">
                                                 {pet.quests.map((q) => (
                                                     <div key={q.id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100/50">
@@ -2712,8 +2720,8 @@ export default function LegendaryLightDashboard() {
                                             {/* Buy buttons */}
                                             <div className="flex justify-between items-center p-4 bg-gray-50 border border-gray-150 rounded-2xl">
                                                 <div className="flex flex-col">
-                                                    <span className="text-[9px] font-bold text-gray-400 uppercase">Toplam Fiyat</span>
-                                                    <span className="text-lg font-black text-orange-600">{pet.specialOffer.newPrice} <span className="text-[10px] text-gray-400 line-through font-bold">{pet.specialOffer.oldPrice}</span></span>
+                                                    <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase">Toplam Fiyat</span>
+                                                    <span className="text-lg font-black text-orange-600">{pet.specialOffer.newPrice} <span className="text-[10px] text-gray-500 dark:text-gray-400 line-through font-bold">{pet.specialOffer.oldPrice}</span></span>
                                                 </div>
                                                 
                                                 <button 
@@ -2757,7 +2765,7 @@ export default function LegendaryLightDashboard() {
                                                     </div>
                                                 </div>
 
-                                                <div className="grid grid-cols-2 gap-4 border-t border-b border-white/10 py-3 text-[10px] font-mono">
+                                                <div className="grid grid-cols-2 gap-4 border-t border-b border-black/10 dark:border-white/10 py-3 text-[10px] font-mono">
                                                     <div>
                                                         <span className="text-indigo-300 block text-[8px] font-sans font-bold">TARİH & SAAT</span>
                                                         <span className="font-bold text-white block mt-0.5">24 Mayıs 2026, 14:00</span>
@@ -2786,13 +2794,13 @@ export default function LegendaryLightDashboard() {
 
                                             {/* Nearby Events List */}
                                             <div className="flex flex-col gap-2.5">
-                                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Yakındaki Diğer Etkinlikler</h4>
+                                                <h4 className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest px-1">Yakındaki Diğer Etkinlikler</h4>
                                                 
                                                 <div className="flex flex-col gap-2">
                                                     <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100/50">
                                                         <div>
                                                             <h5 className="text-[11px] font-black text-gray-800">☕ Patili Yoga & Kahve</h5>
-                                                            <p className="text-[9px] text-gray-400 font-semibold mt-0.5">Moda Parkı • 28 Mayıs Cumartesi</p>
+                                                            <p className="text-[9px] text-gray-500 dark:text-gray-400 font-semibold mt-0.5">Moda Parkı • 28 Mayıs Cumartesi</p>
                                                         </div>
                                                         <button 
                                                             onClick={() => setToastMsg("🎟️ Patili Yoga bilet talebi alındı!")}
@@ -2805,7 +2813,7 @@ export default function LegendaryLightDashboard() {
                                                     <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100/50">
                                                         <div>
                                                             <h5 className="text-[11px] font-black text-gray-800">🌭 Sosis Arama Yarışması</h5>
-                                                            <p className="text-[9px] text-gray-400 font-semibold mt-0.5">Göztepe Parkı • 30 Mayıs Pazar</p>
+                                                            <p className="text-[9px] text-gray-500 dark:text-gray-400 font-semibold mt-0.5">Göztepe Parkı • 30 Mayıs Pazar</p>
                                                         </div>
                                                         <button 
                                                             onClick={() => setToastMsg("🎟️ Sosis Arama Yarışması bilet talebi alındı!")}
@@ -2900,7 +2908,7 @@ export default function LegendaryLightDashboard() {
                                                         };
                                                         input.click();
                                                     }}
-                                                    className="text-[9px] text-gray-400 font-bold bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer flex items-center gap-1"
+                                                    className="text-[9px] text-gray-500 dark:text-gray-400 font-bold bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 px-2.5 py-1 rounded-lg hover:bg-black/10 dark:bg-white/10 transition-colors cursor-pointer flex items-center gap-1"
                                                 >
                                                     📷 Fotoğraf Değiştir
                                                 </button>
@@ -2945,7 +2953,7 @@ export default function LegendaryLightDashboard() {
                                                 <>
                                             {/* 2. Moffi Pay & Contactless Collar Card (Pati-Kart) */}
                                             <div className="flex flex-col gap-3">
-                                                <span className="text-[10px] font-black tracking-widest text-gray-400 uppercase px-1">FINANSAL PORTFÖY & TEMASSIZ PATİ-KART</span>
+                                                <span className="text-[10px] font-black tracking-widest text-gray-500 dark:text-gray-400 uppercase px-1">FINANSAL PORTFÖY & TEMASSIZ PATİ-KART</span>
                                                 
                                                 {/* The Interactive Black/Gold Card */}
                                                 <div className="bg-gradient-to-tr from-gray-950 via-gray-900 to-gray-850 text-white p-5 rounded-[28px] border border-gray-800/80 shadow-[0_12px_30px_rgba(0,0,0,0.12)] relative overflow-hidden group">
@@ -2955,7 +2963,7 @@ export default function LegendaryLightDashboard() {
                                                             <CreditCard className="w-5 h-5 text-yellow-450" />
                                                             <span className="text-[9px] font-black text-gray-300 tracking-widest">MOFFI PATİ-KART (NFC)</span>
                                                         </div>
-                                                        <div className="flex items-center gap-1 bg-white/5 border border-white/10 px-2 py-0.5 rounded-lg">
+                                                        <div className="flex items-center gap-1 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 px-2 py-0.5 rounded-lg">
                                                             <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
                                                             <span className="text-[8px] font-black text-green-400 uppercase tracking-widest">Aktif</span>
                                                         </div>
@@ -2974,9 +2982,9 @@ export default function LegendaryLightDashboard() {
                                                         </div>
                                                     </div>
 
-                                                    <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-2">
+                                                    <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/5 flex items-center gap-2">
                                                         <span className="text-[12px] shrink-0">📶</span>
-                                                        <p className="text-[9px] text-gray-400 font-semibold leading-normal">
+                                                        <p className="text-[9px] text-gray-500 dark:text-gray-400 font-semibold leading-normal">
                                                             **Temassız Ödeme (NFC)** aktif! {pet.name} anlaşmalı pet-friendly kafe ve marketlerde ödemeyi tasmasındaki akıllı çiple patisini dokundurarak saniyeler içinde tamamlasın!
                                                         </p>
                                                     </div>
@@ -2985,7 +2993,7 @@ export default function LegendaryLightDashboard() {
                                                 <div className="grid grid-cols-2 gap-3">
                                                     <button 
                                                         disabled
-                                                        className="flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-100 p-3.5 rounded-2xl text-[11px] font-black text-gray-400 transition-all cursor-not-allowed shadow-sm relative overflow-hidden"
+                                                        className="flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-100 p-3.5 rounded-2xl text-[11px] font-black text-gray-500 dark:text-gray-400 transition-all cursor-not-allowed shadow-sm relative overflow-hidden"
                                                     >
                                                         <div className="absolute inset-0 bg-white/50 z-10" />
                                                         <Plus className="w-3.5 h-3.5" />
@@ -2994,7 +3002,7 @@ export default function LegendaryLightDashboard() {
                                                     </button>
                                                     <button 
                                                         disabled
-                                                        className="flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-100 p-3.5 rounded-2xl text-[11px] font-black text-gray-400 transition-all cursor-not-allowed shadow-sm relative overflow-hidden"
+                                                        className="flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-100 p-3.5 rounded-2xl text-[11px] font-black text-gray-500 dark:text-gray-400 transition-all cursor-not-allowed shadow-sm relative overflow-hidden"
                                                     >
                                                         <div className="absolute inset-0 bg-white/50 z-10" />
                                                         <ArrowUpRight className="w-3.5 h-3.5" />
@@ -3028,7 +3036,7 @@ export default function LegendaryLightDashboard() {
                                                             </div>
                                                             <div>
                                                                 <h4 className="text-[11.5px] font-black text-gray-800">Pati-Kart Güvenlik Kilidi</h4>
-                                                                <p className="text-[9.5px] text-gray-400 font-semibold mt-0.5">Tasmanın NFC ödemelerini geçici olarak kilitle</p>
+                                                                <p className="text-[9.5px] text-gray-500 dark:text-gray-400 font-semibold mt-0.5">Tasmanın NFC ödemelerini geçici olarak kilitle</p>
                                                             </div>
                                                         </div>
                                                         <button 
@@ -3062,7 +3070,7 @@ export default function LegendaryLightDashboard() {
                                                                     className={`flex-1 text-[9.5px] font-black py-2 rounded-xl transition-all cursor-pointer text-center relative ${
                                                                         dailySpendLimit === limit 
                                                                             ? 'bg-white text-gray-900 shadow-sm' 
-                                                                            : 'text-gray-400 hover:text-gray-650'
+                                                                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-650'
                                                                     }`}
                                                                 >
                                                                     {limit} P
@@ -3075,7 +3083,7 @@ export default function LegendaryLightDashboard() {
 
                                             {/* [V2_FEATURE_TASMA] - Akıllı Tasma OS & AI Çevirmen Gizlendi
                                             <div className="flex flex-col gap-3">
-                                                <span className="text-[10px] font-black tracking-widest text-gray-400 uppercase px-1">AKILLI TASMA (IoT) OS & AI SES ANALİZİ</span>
+                                                <span className="text-[10px] font-black tracking-widest text-gray-500 dark:text-gray-400 uppercase px-1">AKILLI TASMA (IoT) OS & AI SES ANALİZİ</span>
                                                 
                                                 <div className="bg-white border border-gray-100 rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-4">
                                                     <div className="flex justify-between items-center">
@@ -3085,7 +3093,7 @@ export default function LegendaryLightDashboard() {
                                                             </div>
                                                             <div>
                                                                 <h4 className="text-[11.5px] font-black text-gray-800">Moffi Link™ Akıllı Tasma</h4>
-                                                                <p className="text-[9.5px] text-gray-400 font-semibold mt-0.5">Sinyal Gücü: {pet.collar.signal} • GSM %88</p>
+                                                                <p className="text-[9.5px] text-gray-500 dark:text-gray-400 font-semibold mt-0.5">Sinyal Gücü: {pet.collar.signal} • GSM %88</p>
                                                             </div>
                                                         </div>
                                                         <span className="text-[9px] font-black text-green-700 bg-green-50 border border-green-200/60 px-2 py-0.5 rounded-full uppercase">
@@ -3095,11 +3103,11 @@ export default function LegendaryLightDashboard() {
 
                                                     <div className="grid grid-cols-2 gap-3.5 bg-gray-55 border border-gray-100/50 p-3 rounded-2xl text-center">
                                                         <div>
-                                                            <span className="text-[8px] font-bold text-gray-400 block uppercase">TASMA İÇİ SICAKLIK</span>
+                                                            <span className="text-[8px] font-bold text-gray-500 dark:text-gray-400 block uppercase">TASMA İÇİ SICAKLIK</span>
                                                             <span className="text-[12px] font-black text-gray-750 mt-1 block">🌡️ 24.2°C • İdeal</span>
                                                         </div>
                                                         <div className="border-l border-gray-200/70">
-                                                            <span className="text-[8px] font-bold text-gray-400 block uppercase">GÜVENLİK ÇİTİ (GPS)</span>
+                                                            <span className="text-[8px] font-bold text-gray-500 dark:text-gray-400 block uppercase">GÜVENLİK ÇİTİ (GPS)</span>
                                                             <span className="text-[12px] font-black text-green-600 mt-1 block">📍 Güvenli Çember</span>
                                                         </div>
                                                     </div>
@@ -3187,7 +3195,7 @@ export default function LegendaryLightDashboard() {
 
                                             {/* 4. Smart Food & Service Subscriptions (Abonelikler) */}
                                             <div className="flex flex-col gap-3">
-                                                <span className="text-[10px] font-black tracking-widest text-gray-400 uppercase px-1">MAMA & HİZMET ABONELİKLERİM</span>
+                                                <span className="text-[10px] font-black tracking-widest text-gray-500 dark:text-gray-400 uppercase px-1">MAMA & HİZMET ABONELİKLERİM</span>
                                                 
                                                 <div className="bg-white border border-gray-100 rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3">
                                                     {subscriptions.length > 0 ? subscriptions.map((sub: any, idx: number) => (
@@ -3198,17 +3206,17 @@ export default function LegendaryLightDashboard() {
                                                                 </div>
                                                                 <div>
                                                                     <h4 className="text-[11.5px] font-black text-gray-800">{sub.name}</h4>
-                                                                    <p className="text-[9.5px] text-gray-400 font-semibold mt-0.5">Aylık Düzenli Teslimat • %10 İndirimli</p>
+                                                                    <p className="text-[9.5px] text-gray-500 dark:text-gray-400 font-semibold mt-0.5">Aylık Düzenli Teslimat • %10 İndirimli</p>
                                                                 </div>
                                                             </div>
                                                             <div className="text-right">
                                                                 <span className="text-[11.5px] font-black text-orange-600 block">{(sub.price * 0.9).toLocaleString('tr-TR')} TL</span>
-                                                                <span className="text-[8px] font-bold text-gray-400 block uppercase font-sans">Abonelik</span>
+                                                                <span className="text-[8px] font-bold text-gray-500 dark:text-gray-400 block uppercase font-sans">Abonelik</span>
                                                             </div>
                                                         </div>
                                                     )) : (
                                                         <div className="text-center py-4 flex flex-col items-center">
-                                                            <p className="text-[10px] font-bold text-gray-400 mb-2.5">Henüz aktif bir aboneliğiniz bulunmuyor.</p>
+                                                            <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-2.5">Henüz aktif bir aboneliğiniz bulunmuyor.</p>
                                                             <button 
                                                                 onClick={() => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'petshop' }))}
                                                                 className="text-[10px] font-black text-indigo-650 bg-indigo-50 border border-indigo-100/50 hover:bg-indigo-100 px-4 py-2 rounded-xl transition-colors"
@@ -3222,7 +3230,7 @@ export default function LegendaryLightDashboard() {
 
                                             {/* 5. Health & Vaccine Passport Center */}
                                             <div className="flex flex-col gap-3">
-                                                <span className="text-[10px] font-black tracking-widest text-gray-400 uppercase px-1">MEDİKAL SAĞLIK & DİJİTAL PASAPORT</span>
+                                                <span className="text-[10px] font-black tracking-widest text-gray-500 dark:text-gray-400 uppercase px-1">MEDİKAL SAĞLIK & DİJİTAL PASAPORT</span>
                                                 
                                                 <div className="bg-white border border-gray-100 rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-4">
                                                     
@@ -3257,7 +3265,7 @@ export default function LegendaryLightDashboard() {
                                                                 <span className="absolute text-[8.5px] font-black text-emerald-700">80%</span>
                                                             </div>
                                                             <div>
-                                                                <span className="text-[8.5px] font-black text-gray-400 block uppercase">AŞILAMA TAMAMLIK ORANI</span>
+                                                                <span className="text-[8.5px] font-black text-gray-500 dark:text-gray-400 block uppercase">AŞILAMA TAMAMLIK ORANI</span>
                                                                 <h5 className="text-[11.5px] font-black text-gray-805 mt-0.5">Karma ve Kuduz Aşısı Aktif</h5>
                                                             </div>
                                                         </div>
@@ -3289,7 +3297,7 @@ export default function LegendaryLightDashboard() {
                                             {/* 7. Trendyol-Style Interactive Orders & Cart System */}
                                             <div className="flex flex-col gap-3">
                                                 <div className="flex justify-between items-center px-1">
-                                                    <span className="text-[10px] font-black tracking-widest text-gray-400 uppercase">SİPARİŞLERİM & SEPETİM</span>
+                                                    <span className="text-[10px] font-black tracking-widest text-gray-500 dark:text-gray-400 uppercase">SİPARİŞLERİM & SEPETİM</span>
                                                     <span className="text-[9.5px] font-black text-green-700 bg-green-50 border border-green-200/50 px-2 py-0.5 rounded-full">
                                                         {cartCount > 0 ? `${cartCount} Ürün` : 'Sepet Boş'}
                                                     </span>
@@ -3302,7 +3310,7 @@ export default function LegendaryLightDashboard() {
                                                         className={`flex-1 text-[9.5px] font-black py-2 rounded-xl transition-all cursor-pointer text-center ${
                                                             profileOrdersTab === 'active' 
                                                                 ? 'bg-white text-gray-900 shadow-sm' 
-                                                                : 'text-gray-400 hover:text-gray-600'
+                                                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-600'
                                                         }`}
                                                     >
                                                         Aktif Takip
@@ -3312,7 +3320,7 @@ export default function LegendaryLightDashboard() {
                                                         className={`flex-1 text-[9.5px] font-black py-2 rounded-xl transition-all cursor-pointer text-center ${
                                                             profileOrdersTab === 'past' 
                                                                 ? 'bg-white text-gray-900 shadow-sm' 
-                                                                : 'text-gray-400 hover:text-gray-600'
+                                                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-600'
                                                         }`}
                                                     >
                                                         Geçmiş
@@ -3322,7 +3330,7 @@ export default function LegendaryLightDashboard() {
                                                         className={`flex-1 text-[9.5px] font-black py-2 rounded-xl transition-all cursor-pointer text-center relative ${
                                                             profileOrdersTab === 'cart' 
                                                                 ? 'bg-white text-gray-900 shadow-sm' 
-                                                                : 'text-gray-400 hover:text-gray-600'
+                                                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-600'
                                                         }`}
                                                     >
                                                         Sepetim
@@ -3337,7 +3345,7 @@ export default function LegendaryLightDashboard() {
                                                         className={`flex-1 text-[9.5px] font-black py-2 rounded-xl transition-all cursor-pointer text-center ${
                                                             profileOrdersTab === 'settings' 
                                                                 ? 'bg-white text-gray-900 shadow-sm' 
-                                                                : 'text-gray-400 hover:text-gray-600'
+                                                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-600'
                                                         }`}
                                                     >
                                                         Ayarlar
@@ -3354,7 +3362,7 @@ export default function LegendaryLightDashboard() {
                                                                     <span className="text-[10px] font-black tracking-widest text-[#527958] uppercase">CANLI KURYE HARİTASI</span>
                                                                     <button 
                                                                         onClick={() => setShowLiveMap(false)}
-                                                                        className="text-[9.5px] font-black text-gray-400 hover:text-gray-650 cursor-pointer animate-none"
+                                                                        className="text-[9.5px] font-black text-gray-500 dark:text-gray-400 hover:text-gray-650 cursor-pointer animate-none"
                                                                     >
                                                                         Gizle ×
                                                                     </button>
@@ -3410,7 +3418,7 @@ export default function LegendaryLightDashboard() {
                                                             <div className="p-8 bg-white border border-gray-100 rounded-3xl text-center flex flex-col items-center justify-center gap-2">
                                                                 <span className="text-2xl">📦</span>
                                                                 <h5 className="text-xs font-black text-gray-800">Aktif Sipariş Yok</h5>
-                                                                <p className="text-[9.5px] text-gray-400 font-semibold">Şu an aktif takipte olan bir siparişiniz bulunmuyor.</p>
+                                                                <p className="text-[9.5px] text-gray-500 dark:text-gray-400 font-semibold">Şu an aktif takipte olan bir siparişiniz bulunmuyor.</p>
                                                             </div>
                                                         ) : (
                                                             activeOrders.map((ord) => (
@@ -3426,7 +3434,7 @@ export default function LegendaryLightDashboard() {
                                                                     <div className="flex justify-between items-start">
                                                                         <div>
                                                                             <h5 className="text-[12px] font-black text-gray-805 leading-tight">{ord.name}</h5>
-                                                                            <p className="text-[9.5px] text-gray-400 font-semibold mt-0.5">{ord.desc}</p>
+                                                                            <p className="text-[9.5px] text-gray-500 dark:text-gray-400 font-semibold mt-0.5">{ord.desc}</p>
                                                                         </div>
                                                                         <span className="text-[12px] font-black text-green-700 shrink-0">{ord.timeRemaining}</span>
                                                                     </div>
@@ -3443,7 +3451,7 @@ export default function LegendaryLightDashboard() {
                                                                         </div>
                                                                         <div className="flex-1 flex flex-col gap-1 items-center">
                                                                             <div className={`w-full h-1.5 rounded-full ${ord.progress >= 100 ? 'bg-green-600' : 'bg-gray-200'}`} />
-                                                                            <span className="text-[7.5px] font-black text-gray-400 uppercase">Teslimat</span>
+                                                                            <span className="text-[7.5px] font-black text-gray-500 dark:text-gray-400 uppercase">Teslimat</span>
                                                                         </div>
                                                                     </div>
 
@@ -3474,7 +3482,7 @@ export default function LegendaryLightDashboard() {
                                                         <div className="p-4 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3">
                                                             <div className="flex justify-between items-center pb-2 border-b border-gray-100">
                                                                 <div>
-                                                                    <span className="text-[9px] font-black text-gray-400">SİPARİŞ #928374</span>
+                                                                    <span className="text-[9px] font-black text-gray-500 dark:text-gray-400">SİPARİŞ #928374</span>
                                                                     <span className="text-[9.5px] text-gray-500 font-bold block mt-0.5">12 Mayıs 2026</span>
                                                                 </div>
                                                                 <span className="text-[9px] font-black text-green-700 bg-green-50 border border-green-200/55 px-2.5 py-0.5 rounded-full">
@@ -3487,7 +3495,7 @@ export default function LegendaryLightDashboard() {
                                                                 </div>
                                                                 <div className="flex-1">
                                                                     <h5 className="text-[11.5px] font-bold text-gray-800 leading-tight">Tahılsız Somonlu Kuru Köpek Maması (15kg)</h5>
-                                                                    <p className="text-[9.5px] text-gray-400 font-semibold mt-0.5">Moffi Premium Satıcı • 1,450 TL</p>
+                                                                    <p className="text-[9.5px] text-gray-500 dark:text-gray-400 font-semibold mt-0.5">Moffi Premium Satıcı • 1,450 TL</p>
                                                                 </div>
                                                             </div>
                                                             <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
@@ -3516,7 +3524,7 @@ export default function LegendaryLightDashboard() {
                                                                 </div>
                                                                 <div className="flex-1">
                                                                     <h5 className="text-[11.5px] font-bold text-gray-800 leading-tight">Moffi Link™ Akıllı Tasma v2 - Orman Yeşili</h5>
-                                                                    <p className="text-[9.5px] text-gray-400 font-semibold mt-0.5">Moffi Donanım A.Ş. • 2,490 TL</p>
+                                                                    <p className="text-[9.5px] text-gray-500 dark:text-gray-400 font-semibold mt-0.5">Moffi Donanım A.Ş. • 2,490 TL</p>
                                                                 </div>
                                                             </div>
                                                             <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
@@ -3538,7 +3546,7 @@ export default function LegendaryLightDashboard() {
                                                             <div className="p-8 bg-white border border-gray-100 rounded-3xl text-center flex flex-col items-center justify-center gap-2">
                                                                 <span className="text-3xl">🛒</span>
                                                                 <h5 className="text-xs font-black text-gray-800">Sepetiniz Boş</h5>
-                                                                <p className="text-[10px] text-gray-400 font-semibold max-w-[200px]">{pet.name || 'Petiniz'} için eklediğiniz ürünler burada görünür.</p>
+                                                                <p className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold max-w-[200px]">{pet.name || 'Petiniz'} için eklediğiniz ürünler burada görünür.</p>
                                                                 <button 
                                                                     onClick={() => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'petshop' }))}
                                                                     className="mt-2 bg-[#527958] text-white text-[10px] font-black px-4 py-2 rounded-xl"
@@ -3570,7 +3578,7 @@ export default function LegendaryLightDashboard() {
                                                                                         <h5 className="text-[11px] font-black text-gray-800 truncate">{product.name}</h5>
                                                                                         <span className="text-[9.5px] font-black text-orange-600 block mt-0.5">
                                                                                             {(price * item.quantity).toLocaleString('tr-TR')} TL 
-                                                                                            {isSubscribed && <span className="text-[8px] text-gray-400 line-through ml-1">{(product.price * item.quantity).toLocaleString('tr-TR')} TL</span>}
+                                                                                            {isSubscribed && <span className="text-[8px] text-gray-500 dark:text-gray-400 line-through ml-1">{(product.price * item.quantity).toLocaleString('tr-TR')} TL</span>}
                                                                                         </span>
                                                                                     </div>
                                                                                 </div>
@@ -3660,7 +3668,7 @@ export default function LegendaryLightDashboard() {
                                                             
                                                             {/* Address section */}
                                                             <div>
-                                                                <h5 className="text-[9.5px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">KAYITLI ADRESLERİM</h5>
+                                                                <h5 className="text-[9.5px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 px-1">KAYITLI ADRESLERİM</h5>
                                                                 <div className="flex flex-col gap-2">
                                                                     <div className="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex justify-between items-start">
                                                                         <div>
@@ -3683,21 +3691,21 @@ export default function LegendaryLightDashboard() {
 
                                                             {/* Payment section */}
                                                             <div className="pt-3 border-t border-gray-100">
-                                                                <h5 className="text-[9.5px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">KAYITLI KARTLARIM</h5>
+                                                                <h5 className="text-[9.5px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 px-1">KAYITLI KARTLARIM</h5>
                                                                 <div className="flex flex-col gap-2">
                                                                     <div className="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex justify-between items-center">
                                                                         <div className="flex items-center gap-2">
                                                                             <CreditCard className="w-4.5 h-4.5 text-gray-600" />
                                                                             <div>
                                                                                 <span className="text-[10px] font-black text-gray-800 block">Moffi Pati-Kart (NFC)</span>
-                                                                                <span className="text-[8.5px] text-gray-400 font-semibold">Bakiye: {totalPatiPuan.toLocaleString()} Patipuan</span>
+                                                                                <span className="text-[8.5px] text-gray-500 dark:text-gray-400 font-semibold">Bakiye: {totalPatiPuan.toLocaleString()} Patipuan</span>
                                                                             </div>
                                                                         </div>
                                                                         <span className="w-2 h-2 rounded-full bg-green-500" />
                                                                     </div>
                                                                     <div className="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex justify-between items-center">
                                                                         <div className="flex items-center gap-2">
-                                                                            <CreditCard className="w-4.5 h-4.5 text-gray-400" />
+                                                                            <CreditCard className="w-4.5 h-4.5 text-gray-500 dark:text-gray-400" />
                                                                             <div>
                                                                                 <span className="text-[10px] font-bold text-gray-700 block">Yapı Kredi Play Card</span>
                                                                                 <span className="text-[8.5px] text-gray-450 font-mono">•••• 4820</span>
@@ -3722,18 +3730,18 @@ export default function LegendaryLightDashboard() {
                                                                             <span className="text-[8px] text-gray-500">Adil kullanım koşullarını incele</span>
                                                                         </div>
                                                                     </div>
-                                                                    <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-emerald-500 transition-colors" />
+                                                                    <ChevronRight className="w-4 h-4 text-gray-500 dark:text-gray-400 group-hover:text-emerald-500 transition-colors" />
                                                                 </button>
                                                             </div>
 
                                                             <div className="pt-3 border-t border-gray-100">
-                                                                <h5 className="text-[9.5px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">SİPARİŞ & BİLDİRİM AYARLARI</h5>
+                                                                <h5 className="text-[9.5px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 px-1">SİPARİŞ & BİLDİRİM AYARLARI</h5>
                                                                 <div className="flex flex-col gap-2 text-[9.5px] font-bold text-gray-750">
                                                                     {/* [V2_FEATURE_TASMA] - Tasma & Anomali bildirim ayarları gizlendi
                                                                     <label className="flex justify-between items-center p-2.5 rounded-2xl bg-gray-50/70 cursor-pointer">
                                                                         <div className="flex flex-col gap-0.5">
                                                                             <span>Akıllı Tasma Geofence (Güvenli Çember)</span>
-                                                                            <span className="text-[8px] text-gray-400 font-medium">{pet.name} çember dışına çıkarsa anında bildirim gönder.</span>
+                                                                            <span className="text-[8px] text-gray-500 dark:text-gray-400 font-medium">{pet.name} çember dışına çıkarsa anında bildirim gönder.</span>
                                                                         </div>
                                                                         <input 
                                                                             type="checkbox" 
@@ -3748,7 +3756,7 @@ export default function LegendaryLightDashboard() {
                                                                     <label className="flex justify-between items-center p-2.5 rounded-2xl bg-gray-50/70 cursor-pointer">
                                                                         <div className="flex flex-col gap-0.5">
                                                                             <span>Düşük Pil Uyarısı</span>
-                                                                            <span className="text-[8px] text-gray-400 font-medium">Tasma şarjı %15 altına inerse bildirim gönder.</span>
+                                                                            <span className="text-[8px] text-gray-500 dark:text-gray-400 font-medium">Tasma şarjı %15 altına inerse bildirim gönder.</span>
                                                                         </div>
                                                                         <input 
                                                                             type="checkbox" 
@@ -3763,7 +3771,7 @@ export default function LegendaryLightDashboard() {
                                                                     <label className="flex justify-between items-center p-2.5 rounded-2xl bg-gray-50/70 cursor-pointer">
                                                                         <div className="flex flex-col gap-0.5">
                                                                             <span>Sağlık Anomalisi SMS Uyarısı</span>
-                                                                            <span className="text-[8px] text-gray-400 font-medium">Stres, kalp ritmi veya anormal havlama durumunda SMS gönder.</span>
+                                                                            <span className="text-[8px] text-gray-500 dark:text-gray-400 font-medium">Stres, kalp ritmi veya anormal havlama durumunda SMS gönder.</span>
                                                                         </div>
                                                                         <input 
                                                                             type="checkbox" 
@@ -3795,10 +3803,10 @@ export default function LegendaryLightDashboard() {
 
                                             {/* 8. Menu: Account Safety, OTP, and Support */}
                                             <div className="flex flex-col gap-3">
-                                                <span className="text-[10px] font-black tracking-widest text-gray-400 uppercase px-1">HESAP GÜVENLİĞİ & DESTEK</span>
+                                                <span className="text-[10px] font-black tracking-widest text-gray-500 dark:text-gray-400 uppercase px-1">HESAP GÜVENLİĞİ & DESTEK</span>
                                                 
                                                 <div className="flex flex-col gap-2">
-                                                    <button className="flex items-center justify-between p-4.5 rounded-3xl bg-white border border-gray-100 hover:bg-gray-50/80 transition-all text-left group cursor-pointer shadow-[0_2px_8px_rgba(0,0,0,0.005)]">
+                                                    <button onClick={() => setToastMsg("🔒 Güvenlik ve E-Posta ayarları çok yakında Moffi'de!")} className="flex items-center justify-between p-4.5 rounded-3xl bg-white border border-gray-100 hover:bg-gray-50/80 transition-all text-left group cursor-pointer shadow-[0_2px_8px_rgba(0,0,0,0.005)]">
                                                         <div className="flex items-center gap-3">
                                                             <Shield className="w-5 h-5 text-gray-500" />
                                                             <div>
@@ -3806,7 +3814,7 @@ export default function LegendaryLightDashboard() {
                                                                 <div className="text-[9px] text-gray-450 font-semibold mt-0.5">OTP şifresiz doğrulama durumu ve iki adımlı güvenlik</div>
                                                             </div>
                                                         </div>
-                                                        <ChevronRight className="w-4 h-4 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
+                                                        <ChevronRight className="w-4 h-4 text-gray-500 dark:text-gray-400 group-hover:translate-x-0.5 transition-transform" />
                                                     </button>
 
                                                     <button onClick={handleNfcScan} className="flex items-center justify-between p-4.5 rounded-3xl bg-white border border-gray-100 hover:bg-gray-50/80 transition-all text-left group cursor-pointer shadow-[0_2px_8px_rgba(0,0,0,0.005)]">
@@ -3817,7 +3825,7 @@ export default function LegendaryLightDashboard() {
                                                                 <div className="text-[9px] text-gray-450 font-semibold mt-0.5">FaceID/TouchID ile hızlı erişim ve NFC çip entegrasyonu</div>
                                                             </div>
                                                         </div>
-                                                        <ChevronRight className="w-4 h-4 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
+                                                        <ChevronRight className="w-4 h-4 text-gray-500 dark:text-gray-400 group-hover:translate-x-0.5 transition-transform" />
                                                     </button>
 
                                                     <button className="flex items-center justify-between p-4.5 rounded-3xl bg-white border border-gray-100 hover:bg-gray-50/80 transition-all text-left group cursor-pointer shadow-[0_2px_8px_rgba(0,0,0,0.005)]">
@@ -3828,7 +3836,7 @@ export default function LegendaryLightDashboard() {
                                                                 <div className="text-[9px] text-gray-450 font-semibold mt-0.5">Kullanım rehberleri, tasmamı bul desteği ve destek talepleri</div>
                                                             </div>
                                                         </div>
-                                                        <ChevronRight className="w-4 h-4 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
+                                                        <ChevronRight className="w-4 h-4 text-gray-500 dark:text-gray-400 group-hover:translate-x-0.5 transition-transform" />
                                                     </button>
                                                 </div>
                                             </div>
@@ -3839,8 +3847,7 @@ export default function LegendaryLightDashboard() {
                                 </motion.div>
 
                             </motion.div>
-                        </div>
-                    </>
+                        </motion.div>
                 )}
             </AnimatePresence>
 
@@ -3951,12 +3958,12 @@ export default function LegendaryLightDashboard() {
                                         </div>
                                         <div className="flex flex-col">
                                             <span className="text-[12px] font-black text-white leading-tight tracking-tight drop-shadow-sm">{activeGroup.author_name}</span>
-                                            <span className="text-[9px] font-semibold text-white/70 leading-none drop-shadow-sm">Duyuru Kanalı</span>
+                                            <span className="text-[9px] font-semibold text-black/70 dark:text-white/70 leading-none drop-shadow-sm">Duyuru Kanalı</span>
                                         </div>
                                     </div>
                                     <button 
                                         onClick={closeStoryViewer}
-                                        className="p-1.5 bg-white/10 hover:bg-white/20 text-white rounded-full cursor-pointer z-30 transition-colors"
+                                        className="p-1.5 bg-black/10 dark:bg-white/10 hover:bg-black/20 dark:bg-white/20 text-white rounded-full cursor-pointer z-30 transition-colors"
                                     >
                                         <X className="w-4.5 h-4.5" />
                                     </button>
@@ -3991,7 +3998,7 @@ export default function LegendaryLightDashboard() {
                                         )}
                                     </div>
                                     <h3 className="text-base font-black tracking-tight drop-shadow-sm leading-snug">{activeStory.title}</h3>
-                                    <p className="text-[11px] text-white/80 font-medium leading-relaxed drop-shadow-sm">{activeStory.description}</p>
+                                    <p className="text-[11px] text-black/80 dark:text-white/80 font-medium leading-relaxed drop-shadow-sm">{activeStory.description}</p>
                                 </div>
 
                                 {activeStory.ctaText && (
@@ -4030,7 +4037,7 @@ export default function LegendaryLightDashboard() {
                             initial={{ scale: 0.95, y: 20 }}
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.95, y: 20 }}
-                            className="bg-white/95 backdrop-blur-2xl border border-white/20 rounded-[2.5rem] max-w-md w-full overflow-hidden shadow-2xl p-6 flex flex-col gap-4 text-zinc-800"
+                            className="bg-white/95 backdrop-blur-2xl border border-black/20 dark:border-white/20 rounded-[2.5rem] max-w-md w-full overflow-hidden shadow-2xl p-6 flex flex-col gap-4 text-zinc-800"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {/* Header image/banner */}

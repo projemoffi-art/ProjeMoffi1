@@ -56,7 +56,7 @@ export function TagPairingModal({ isOpen, onClose, pet }: TagPairingModalProps) 
                         <div className="absolute -top-24 -right-24 w-48 h-48 bg-cyan-500/10 rounded-full blur-[80px]" />
                         <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-purple-500/10 rounded-full blur-[80px]" />
 
-                        <button onClick={onClose} className="absolute top-6 right-6 p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
+                        <button onClick={onClose} className="absolute top-6 right-6 p-2 rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:bg-white/10 transition-colors">
                             <X className="w-5 h-5 text-gray-500" />
                         </button>
 
@@ -75,7 +75,7 @@ export function TagPairingModal({ isOpen, onClose, pet }: TagPairingModalProps) 
                                     <div className="space-y-3">
                                         <button 
                                             onClick={() => handleStartPairing('nfc')}
-                                            className="w-full p-6 rounded-[2rem] bg-white/5 border border-card-border hover:border-cyan-500/50 hover:bg-white/10 transition-all flex items-center gap-4 group"
+                                            className="w-full p-6 rounded-[2rem] bg-black/5 dark:bg-white/5 border border-card-border hover:border-cyan-500/50 hover:bg-black/10 dark:bg-white/10 transition-all flex items-center gap-4 group"
                                         >
                                             <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 flex items-center justify-center text-cyan-400 group-hover:scale-110 transition-transform">
                                                 <Radio className="w-6 h-6" />
@@ -89,7 +89,7 @@ export function TagPairingModal({ isOpen, onClose, pet }: TagPairingModalProps) 
 
                                         <button 
                                             onClick={() => handleStartPairing('qr')}
-                                            className="w-full p-6 rounded-[2rem] bg-white/5 border border-card-border hover:border-purple-500/50 hover:bg-white/10 transition-all flex items-center gap-4 group"
+                                            className="w-full p-6 rounded-[2rem] bg-black/5 dark:bg-white/5 border border-card-border hover:border-purple-500/50 hover:bg-black/10 dark:bg-white/10 transition-all flex items-center gap-4 group"
                                         >
                                             <div className="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform">
                                                 <QrCode className="w-6 h-6" />
@@ -145,12 +145,12 @@ export function TagPairingModal({ isOpen, onClose, pet }: TagPairingModalProps) 
                                         Artık <span className="text-white font-bold">{pet.name}</span> dijital dünyada tamamen güvende. Künye her tarandığında anlık bildirim alacaksınız.
                                     </p>
 
-                                    <div className="bg-white/5 border border-card-border rounded-3xl p-4 mb-8 flex items-center gap-4 text-left">
+                                    <div className="bg-black/5 dark:bg-white/5 border border-card-border rounded-3xl p-4 mb-8 flex items-center gap-4 text-left">
                                         <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 shadow-lg bg-gray-900 flex items-center justify-center border border-card-border">
                                             {pet.avatar ? (
                                                 <img src={pet.avatar} className="w-full h-full object-cover" />
                                             ) : (
-                                                <span className="text-gray-400 text-lg font-black select-none uppercase font-sans">
+                                                <span className="text-gray-500 dark:text-gray-400 text-lg font-black select-none uppercase font-sans">
                                                     {pet.name ? pet.name[0] : '🐾'}
                                                 </span>
                                             )}

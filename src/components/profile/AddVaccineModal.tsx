@@ -74,7 +74,7 @@ export function AddVaccineModal({ isOpen, onClose, onAdd }: AddVaccineModalProps
                                     <p className="text-[10px] text-gray-500 font-bold uppercase mt-1.5 tracking-widest">Sağlık Karnesine İşle</p>
                                 </div>
                             </div>
-                            <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white transition-colors">
+                            <button onClick={onClose} className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-white transition-colors">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
@@ -90,7 +90,7 @@ export function AddVaccineModal({ isOpen, onClose, onAdd }: AddVaccineModalProps
                                         value={formData.name}
                                         onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
                                         placeholder="Örn: Karma Aşı, Kuduz..."
-                                        className="w-full bg-white/5 border border-card-border rounded-2xl pl-12 pr-6 py-4 text-sm text-white focus:border-emerald-500/50 focus:bg-white/10 outline-none transition-all placeholder:text-foreground"
+                                        className="w-full bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl pl-12 pr-6 py-4 text-sm text-white focus:border-emerald-500/50 focus:bg-black/10 dark:bg-white/10 outline-none transition-all placeholder:text-foreground"
                                     />
                                 </div>
                             </div>
@@ -104,7 +104,7 @@ export function AddVaccineModal({ isOpen, onClose, onAdd }: AddVaccineModalProps
                                             type="date"
                                             value={formData.date}
                                             onChange={e => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                                            className="w-full bg-white/5 border border-card-border rounded-2xl pl-12 pr-6 py-4 text-sm text-white focus:border-emerald-500/50 outline-none transition-all"
+                                            className="w-full bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl pl-12 pr-6 py-4 text-sm text-white focus:border-emerald-500/50 outline-none transition-all"
                                         />
                                     </div>
                                 </div>
@@ -113,7 +113,7 @@ export function AddVaccineModal({ isOpen, onClose, onAdd }: AddVaccineModalProps
                                     <select 
                                         value={formData.status}
                                         onChange={e => setFormData(prev => ({ ...prev, status: e.target.value }))}
-                                        className="w-full bg-white/5 border border-card-border rounded-2xl px-6 py-4 text-sm text-white focus:border-emerald-500/50 outline-none transition-all appearance-none"
+                                        className="w-full bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl px-6 py-4 text-sm text-white focus:border-emerald-500/50 outline-none transition-all appearance-none"
                                     >
                                         <option value="completed">Tamamlandı</option>
                                         <option value="pending">Planlandı</option>
@@ -129,7 +129,7 @@ export function AddVaccineModal({ isOpen, onClose, onAdd }: AddVaccineModalProps
                                         value={formData.vetName}
                                         onChange={e => setFormData(prev => ({ ...prev, vetName: e.target.value }))}
                                         placeholder="Hekim adı veya klinik..."
-                                        className="w-full bg-white/5 border border-card-border rounded-2xl pl-12 pr-6 py-4 text-sm text-white focus:border-emerald-500/50 outline-none transition-all placeholder:text-foreground"
+                                        className="w-full bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl pl-12 pr-6 py-4 text-sm text-white focus:border-emerald-500/50 outline-none transition-all placeholder:text-foreground"
                                     />
                                 </div>
                             </div>
@@ -146,7 +146,7 @@ export function AddVaccineModal({ isOpen, onClose, onAdd }: AddVaccineModalProps
                                         value={formData.batchNumber}
                                         onChange={e => setFormData(prev => ({ ...prev, batchNumber: e.target.value }))}
                                         placeholder="Örn: VAX-2024-X9..."
-                                        className="w-full bg-white/5 border border-emerald-500/20 rounded-2xl pl-12 pr-6 py-4 text-sm text-white focus:border-emerald-500/50 focus:bg-emerald-500/5 outline-none transition-all placeholder:text-foreground"
+                                        className="w-full bg-black/5 dark:bg-white/5 border border-emerald-500/20 rounded-2xl pl-12 pr-6 py-4 text-sm text-white focus:border-emerald-500/50 focus:bg-emerald-500/5 outline-none transition-all placeholder:text-foreground"
                                     />
                                 </div>
                                 <p className="text-[9px] text-gray-600 italic ml-4 leading-relaxed">

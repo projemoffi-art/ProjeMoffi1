@@ -258,7 +258,7 @@ export default function MoffiRunGame({
                                 {powerUp.type === 'MULTIPLIER' && <Star className="text-amber-400 w-7 h-7" />}
                                 {powerUp.type === 'ROCKET' && <Zap className="text-red-400 w-7 h-7" />}
                                 {powerUp.type === 'SNAIL' && <Snail className="text-green-400 w-7 h-7" />}
-                                <div className="text-xs font-bold text-white/60 uppercase">
+                                <div className="text-xs font-bold text-black/60 dark:text-white/60 uppercase">
                                     {Math.max(0, Math.ceil((powerUp.expiresAt - Date.now()) / 1000))}s
                                 </div>
                             </div>
@@ -289,12 +289,12 @@ export default function MoffiRunGame({
                         </motion.div>
 
                         {/* Daily Missions Preview */}
-                        <div className="bg-white/5 border border-card-border rounded-3xl p-5 mb-8 w-72">
-                            <p className="text-white/40 text-xs font-black uppercase tracking-widest mb-3">Günlük Görevler</p>
+                        <div className="bg-black/5 dark:bg-white/5 border border-card-border rounded-3xl p-5 mb-8 w-72">
+                            <p className="text-black/50 dark:text-white/40 text-xs font-black uppercase tracking-widest mb-3">Günlük Görevler</p>
                             {DAILY_MISSIONS.map(m => (
                                 <div key={m.id} className="flex justify-between items-center py-1.5">
-                                    <span className="text-white/70 text-sm">{m.desc}</span>
-                                    <span className="text-white/30 text-xs font-bold">0/{m.target}</span>
+                                    <span className="text-black/70 dark:text-white/70 text-sm">{m.desc}</span>
+                                    <span className="text-black/40 dark:text-white/30 text-xs font-bold">0/{m.target}</span>
                                 </div>
                             ))}
                         </div>
@@ -307,7 +307,7 @@ export default function MoffiRunGame({
                             OYNA
                         </motion.button>
 
-                        <button onPointerDown={onClose} className="mt-6 text-white/30 text-xs font-bold hover:text-white/60 transition-colors">
+                        <button onPointerDown={onClose} className="mt-6 text-black/40 dark:text-white/30 text-xs font-bold hover:text-black/60 dark:text-white/60 transition-colors">
                             KAPAT
                         </button>
                     </motion.div>
@@ -328,11 +328,11 @@ export default function MoffiRunGame({
 
                         <div className="flex gap-12 mb-10">
                             <div className="text-center">
-                                <p className="text-white/30 text-xs font-black uppercase tracking-widest mb-1">Mesafe</p>
+                                <p className="text-black/40 dark:text-white/30 text-xs font-black uppercase tracking-widest mb-1">Mesafe</p>
                                 <p className="text-5xl font-black text-white">{score}m</p>
                             </div>
                             <div className="text-center">
-                                <p className="text-white/30 text-xs font-black uppercase tracking-widest mb-1">Altın</p>
+                                <p className="text-black/40 dark:text-white/30 text-xs font-black uppercase tracking-widest mb-1">Altın</p>
                                 <p className="text-5xl font-black text-yellow-400">{coins}</p>
                             </div>
                         </div>
@@ -340,7 +340,7 @@ export default function MoffiRunGame({
                         {/* Mission Results */}
                         <div className="w-full max-w-xs mb-8">
                             {missions.map(m => (
-                                <div key={m.id} className={`flex justify-between items-center py-2 border-b border-card-border ${m.done ? 'text-green-400' : 'text-white/40'}`}>
+                                <div key={m.id} className={`flex justify-between items-center py-2 border-b border-card-border ${m.done ? 'text-green-400' : 'text-black/50 dark:text-white/40'}`}>
                                     <span className="text-sm font-bold">{m.done ? '✅' : '⬜️'} {m.desc}</span>
                                     <span className="text-xs">{Math.min(m.progress, m.target)}/{m.target}</span>
                                 </div>
@@ -354,7 +354,7 @@ export default function MoffiRunGame({
                         >
                             TEKRAR DENE
                         </motion.button>
-                        <button onPointerDown={onClose} className="text-white/30 text-xs font-bold uppercase tracking-widest hover:text-white/60">
+                        <button onPointerDown={onClose} className="text-black/40 dark:text-white/30 text-xs font-bold uppercase tracking-widest hover:text-black/60 dark:text-white/60">
                             Ana Menü
                         </button>
                     </motion.div>

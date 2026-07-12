@@ -385,11 +385,11 @@ export function ImmersivePostCard({
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true, amount: 0.1 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className="relative w-full h-[100dvh] max-w-lg mx-auto bg-black overflow-hidden group"
+            className="relative w-full h-full max-w-lg mx-auto bg-white dark:bg-black overflow-hidden group"
         >
             {/* MEDIA */}
             <div 
-                className={cn("absolute inset-0 bg-black cursor-pointer touch-pan-y", isZooming ? "z-[100] touch-none" : "z-0")} 
+                className={cn("absolute inset-0 bg-white dark:bg-black cursor-pointer touch-pan-y", isZooming ? "z-[100] touch-none" : "z-0")} 
                 onClick={() => {
                     const isVideo = post?.is_video || (post?.media && (/\.(mp4|webm|ogg|mov|avi|m4v|mkv|flv|wmv)$/i.test(post.media)));
                     if (isVideo) {
@@ -410,7 +410,7 @@ export function ImmersivePostCard({
                     className="w-full h-full relative"
                 >
                     {(post?.is_video || (post?.media && (/\.(mp4|webm|ogg|mov|avi|m4v|mkv|flv|wmv)$/i.test(post.media)) )) ? (
-                        <div className="w-full h-full relative bg-black flex items-center justify-center">
+                        <div className="w-full h-full relative bg-white dark:bg-black flex items-center justify-center">
                             <video
                                 ref={videoRef}
                                 src={mediaSrc}
@@ -458,7 +458,7 @@ export function ImmersivePostCard({
                                 </div>
                             )}
                             {!isVideoLoading && (
-                                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/20 overflow-hidden z-[100]">
+                                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-black/20 dark:bg-white/20 overflow-hidden z-[100]">
                                     <motion.div 
                                         className="h-full bg-card shadow-[0_0_5px_rgba(255,255,255,0.8)]"
                                         style={{ width: `${videoProgress}%` }}
@@ -501,7 +501,7 @@ export function ImmersivePostCard({
                     {post.mood && (
                         <div className="bg-card/40 backdrop-blur-xl border border-card-border px-3 py-1.5 rounded-full text-[10px] font-bold text-foreground flex items-center gap-1.5 shadow-lg relative overflow-hidden group/badge">
                             <span className="relative z-10">{post.mood}</span>
-                            <div className="absolute inset-0 bg-white/10 -translate-x-full group-hover/badge:translate-x-full transition-transform duration-700 pointer-events-none" />
+                            <div className="absolute inset-0 bg-black/10 dark:bg-white/10 -translate-x-full group-hover/badge:translate-x-full transition-transform duration-700 pointer-events-none" />
                         </div>
                     )}
                 </div>
@@ -530,7 +530,7 @@ export function ImmersivePostCard({
                                 onClick={() => setIsMoreOpen(false)}
                                 className="w-full flex flex-col items-center pt-5 pb-2 shrink-0 cursor-pointer group/handle"
                             >
-                                <div className="w-12 h-1.5 bg-white/20 rounded-full mb-1 group-hover/handle:bg-white/40 transition-colors" />
+                                <div className="w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full mb-1 group-hover/handle:bg-white/40 transition-colors" />
                             </div>
 
                             <div className="flex-1 overflow-y-auto no-scrollbar px-6 space-y-6 pb-32 overscroll-contain text-white">
@@ -538,7 +538,7 @@ export function ImmersivePostCard({
                                 <div className="flex flex-col bg-gradient-to-br from-accent/10 to-accent/5 rounded-[32px] border border-card-border overflow-hidden">
                                     <button 
                                         onClick={() => { setIsMoreOpen(false); alert('AI Akıllı Analiz başlatılıyor... ✨'); }}
-                                        className="w-full px-6 py-6 flex items-center justify-between active:bg-white/10 transition-all group"
+                                        className="w-full px-6 py-6 flex items-center justify-between active:bg-black/10 dark:bg-white/10 transition-all group"
                                     >
                                         <div className="flex items-center gap-5">
                                             <div className="p-3 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-2xl shadow-lg shadow-indigo-500/20 text-white">
@@ -568,7 +568,7 @@ export function ImmersivePostCard({
                                             </div>
                                             <div className="flex flex-col items-start">
                                                 <span className="text-white font-bold text-[17px]">Profili Görüntüle</span>
-                                                <span className="text-white/40 text-[12px]">Kullanıcı detaylarını incele</span>
+                                                <span className="text-black/50 dark:text-white/40 text-[12px]">Kullanıcı detaylarını incele</span>
                                             </div>
                                         </div>
                                         <ChevronRight className="w-5 h-5 text-white/10 group-active:translate-x-1 transition-transform" />
@@ -581,17 +581,17 @@ export function ImmersivePostCard({
                                         <div className="p-3 bg-orange-500/10 rounded-2xl border border-orange-500/20 text-orange-400">
                                             <Star className="w-6 h-6" />
                                         </div>
-                                        <span className="text-white/90 font-semibold text-[17px]">Favorilerime Ekle</span>
+                                        <span className="text-black/90 dark:text-white/90 font-semibold text-[17px]">Favorilerime Ekle</span>
                                     </button>
 
                                     <button 
                                         onClick={() => { setIsMoreOpen(false); alert('Bu hesap hakkında bilgiler...'); }}
                                         className="w-full px-6 py-5 flex items-center gap-5 active:bg-white/[0.07] transition-all"
                                     >
-                                        <div className="p-3 bg-white/5 rounded-2xl border border-card-border text-white/60">
+                                        <div className="p-3 bg-black/5 dark:bg-white/5 rounded-2xl border border-card-border text-black/60 dark:text-white/60">
                                             <Info className="w-6 h-6" />
                                         </div>
-                                        <span className="text-white/90 font-semibold text-[17px]">Bu Hesap Hakkında</span>
+                                        <span className="text-black/90 dark:text-white/90 font-semibold text-[17px]">Bu Hesap Hakkında</span>
                                     </button>
                                 </div>
 
@@ -607,7 +607,7 @@ export function ImmersivePostCard({
                                                 </div>
                                                 <div className="flex flex-col items-start text-left">
                                                     <span className="text-white font-semibold text-[17px]">Yorum Ayarları</span>
-                                                    <span className="text-white/40 text-[12px]">Gizlilik ve kapatma seçenekleri</span>
+                                                    <span className="text-black/50 dark:text-white/40 text-[12px]">Gizlilik ve kapatma seçenekleri</span>
                                                 </div>
                                             </div>
                                             <ChevronRight className="w-5 h-5 text-white/10 group-active:translate-x-1 transition-transform" />
@@ -640,10 +640,10 @@ export function ImmersivePostCard({
                                             onClick={() => { setIsMoreOpen(false); alert('Sessize alındı 🔇'); }}
                                             className="w-full px-6 py-5 flex items-center gap-5 active:bg-white/[0.07] transition-all"
                                         >
-                                            <div className="p-3 bg-white/5 rounded-2xl border border-card-border text-white/40">
+                                            <div className="p-3 bg-black/5 dark:bg-white/5 rounded-2xl border border-card-border text-black/50 dark:text-white/40">
                                                 <VolumeX className="w-6 h-6" />
                                             </div>
-                                            <span className="text-white/90 font-semibold text-[17px]">Sessize Al</span>
+                                            <span className="text-black/90 dark:text-white/90 font-semibold text-[17px]">Sessize Al</span>
                                         </button>
                                         <button 
                                             onClick={() => { setIsMoreOpen(false); alert('Şikayetiniz iletildi 🛡️'); }}
@@ -683,15 +683,15 @@ export function ImmersivePostCard({
                             <motion.div
                                 initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
                                 onClick={(e) => e.stopPropagation()}
-                                className="w-full max-w-sm bg-[#121316] border border-card-border rounded-[32px] p-6 flex flex-col gap-5 shadow-2xl text-white"
+                                className="w-full max-w-sm bg-card dark:bg-[#121316] border border-card-border rounded-[32px] p-6 flex flex-col gap-5 shadow-2xl text-white"
                             >
                                 <div className="flex items-center justify-between pb-3 border-b border-card-border">
                                     <div className="flex items-center gap-2">
                                         <MessageSquare className="w-5 h-5 text-cyan-400" />
                                         <h4 className="font-bold text-base">Yorum Ayarları</h4>
                                     </div>
-                                    <button onClick={() => setShowCommentSettings(false)} className="p-1 hover:bg-white/10 rounded-full transition-colors">
-                                        <X className="w-4 h-4 text-white/60" />
+                                    <button onClick={() => setShowCommentSettings(false)} className="p-1 hover:bg-black/10 dark:bg-white/10 rounded-full transition-colors">
+                                        <X className="w-4 h-4 text-black/60 dark:text-white/60" />
                                     </button>
                                 </div>
 
@@ -699,13 +699,13 @@ export function ImmersivePostCard({
                                     <div className="flex items-center justify-between">
                                         <div className="flex flex-col">
                                             <span className="font-bold text-sm">Yorumlara İzin Ver</span>
-                                            <span className="text-xs text-white/40">Kullanıcılar yorum yapabilsin</span>
+                                            <span className="text-xs text-black/50 dark:text-white/40">Kullanıcılar yorum yapabilsin</span>
                                         </div>
                                         <button
                                             onClick={() => setLocalAllowComments(!localAllowComments)}
                                             className={cn(
                                                 "w-12 h-6 rounded-full p-0.5 transition-colors duration-300 relative",
-                                                localAllowComments ? "bg-cyan-500" : "bg-white/10"
+                                                localAllowComments ? "bg-cyan-500" : "bg-black/10 dark:bg-white/10"
                                             )}
                                         >
                                             <div className={cn(
@@ -729,7 +729,7 @@ export function ImmersivePostCard({
                                                         "py-2.5 px-3 rounded-xl border text-xs font-bold transition-all",
                                                         localCommentPrivacy === item.id 
                                                             ? "bg-cyan-500/20 border-cyan-500 text-cyan-400" 
-                                                            : "bg-white/5 border-card-border text-white/60 hover:text-white"
+                                                            : "bg-black/5 dark:bg-white/5 border-card-border text-black/60 dark:text-white/60 hover:text-white"
                                                     )}
                                                 >
                                                     {item.label}
@@ -785,7 +785,7 @@ export function ImmersivePostCard({
                 >
                     <img 
                         src={(isOwner ? (currentUser?.avatar || post.avatar || post.author_avatar || post.user?.avatar) : (post.avatar || post.author_avatar || post.user?.avatar)) || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} 
-                        className="w-9 h-9 rounded-full border border-white/20 object-cover" 
+                        className="w-9 h-9 rounded-full border border-black/20 dark:border-white/20 object-cover" 
                         alt="Author"
                     />
                     <div>
@@ -795,13 +795,13 @@ export function ImmersivePostCard({
                             </span>
                             <BadgeCheck className="w-3.5 h-3.5 text-cyan-400 fill-black" />
                         </div>
-                        <span className="text-[8px] text-white/50 font-bold uppercase tracking-wider">Moffi Kullanıcısı</span>
+                        <span className="text-[8px] text-black/50 dark:text-white/50 font-bold uppercase tracking-wider">Moffi Kullanıcısı</span>
                     </div>
                 </div>
                 
 
 
-                <p className="text-[11px] text-white/90 leading-relaxed mt-1 line-clamp-2">
+                <p className="text-[11px] text-black/90 dark:text-white/90 leading-relaxed mt-1 line-clamp-2">
                     {filterContent(post.desc || post.caption || post.description || '')}
                 </p>
                 
@@ -822,7 +822,7 @@ export function ImmersivePostCard({
                     }}
                     className="flex flex-col items-center gap-1 group active:scale-90 transition"
                 >
-                    <Heart className={cn("w-8 h-8 drop-shadow-md transition-colors", post.isLiked ? "fill-red-500 text-red-500" : "text-white group-hover:text-white/80 fill-transparent")} />
+                    <Heart className={cn("w-8 h-8 drop-shadow-md transition-colors", post.isLiked ? "fill-red-500 text-red-500" : "text-white group-hover:text-black/80 dark:text-white/80 fill-transparent")} />
                     <span className="text-[11px] font-bold text-white drop-shadow-md">{post.likes ?? post.likes_count ?? 0}</span>
                 </button>
 
@@ -838,7 +838,7 @@ export function ImmersivePostCard({
                     }}
                     className="flex flex-col items-center gap-1 group active:scale-90 transition"
                 >
-                    <MessageCircle className={cn("w-8 h-8 drop-shadow-md transition-colors", allowComments === false ? "text-white/40 fill-transparent" : "text-white group-hover:text-white/80 fill-transparent")} />
+                    <MessageCircle className={cn("w-8 h-8 drop-shadow-md transition-colors", allowComments === false ? "text-black/50 dark:text-white/40 fill-transparent" : "text-white group-hover:text-black/80 dark:text-white/80 fill-transparent")} />
                     <span className="text-[11px] font-bold text-white drop-shadow-md">
                         {allowComments === false ? '-' : (post.comments ?? post.comments_count ?? 0)}
                     </span>
@@ -852,7 +852,7 @@ export function ImmersivePostCard({
                     }}
                     className="flex flex-col items-center gap-1 group active:scale-90 transition"
                 >
-                    <Share2 className="w-8 h-8 text-white drop-shadow-md group-hover:text-white/80 transition-colors" />
+                    <Share2 className="w-8 h-8 text-white drop-shadow-md group-hover:text-black/80 dark:text-white/80 transition-colors" />
                     <span className="text-[11px] font-bold text-white drop-shadow-md">Paylaş</span>
                 </button>
 
@@ -862,7 +862,7 @@ export function ImmersivePostCard({
                         onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
                         className="mt-2 active:scale-90 transition group"
                     >
-                        {isMuted ? <VolumeX className="w-6 h-6 text-white/70 drop-shadow-md group-hover:text-white/90" /> : <Volume2 className="w-6 h-6 text-white drop-shadow-md group-hover:text-white/80" />}
+                        {isMuted ? <VolumeX className="w-6 h-6 text-black/70 dark:text-white/70 drop-shadow-md group-hover:text-black/90 dark:text-white/90" /> : <Volume2 className="w-6 h-6 text-white drop-shadow-md group-hover:text-black/80 dark:text-white/80" />}
                     </button>
                 )}
             </div>
@@ -883,7 +883,7 @@ export function ImmersivePostCard({
                             onClick={() => setShowComments(false)}
                             className="w-full flex justify-center pt-2 pb-4 shrink-0 cursor-pointer group/handle"
                         >
-                            <div className="w-12 h-1.5 bg-white/20 rounded-full group-hover/handle:bg-white/40 transition-colors" />
+                            <div className="w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full group-hover/handle:bg-white/40 transition-colors" />
                         </div>
 
                         {/* HEADER */}
@@ -903,7 +903,7 @@ export function ImmersivePostCard({
                                 {isLoadingComments ? (
                                     <div className="flex flex-col items-center justify-center mt-20">
                                         <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mb-4" />
-                                        <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Yorumlar Yükleniyor...</p>
+                                        <p className="text-[10px] font-bold text-black/50 dark:text-white/40 uppercase tracking-widest">Yorumlar Yükleniyor...</p>
                                     </div>
                                 ) : comments && comments.length > 0 ? (
                                     comments.map((c: any) => (
@@ -992,7 +992,7 @@ export function ImmersivePostCard({
                                             <button
                                                 key={i}
                                                 onClick={() => setCommentInput(suggestion)}
-                                                className="whitespace-nowrap px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-card-border rounded-full text-[11px] font-bold text-white/90 transition-all active:scale-95"
+                                                className="whitespace-nowrap px-4 py-2 bg-black/10 dark:bg-white/10 hover:bg-black/20 dark:bg-white/20 backdrop-blur-md border border-card-border rounded-full text-[11px] font-bold text-black/90 dark:text-white/90 transition-all active:scale-95"
                                             >
                                                 {suggestion}
                                             </button>
@@ -1022,7 +1022,7 @@ export function ImmersivePostCard({
                                                 setEditingComment(null);
                                                 if (editingComment) setCommentInput('');
                                             }}
-                                            className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                                            className="p-1 hover:bg-black/10 dark:bg-white/10 rounded-full transition-colors"
                                         >
                                             <X className="w-3.5 h-3.5 text-cyan-400" />
                                         </button>
@@ -1040,8 +1040,8 @@ export function ImmersivePostCard({
                                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
                                             className="absolute bottom-full left-0 right-0 mb-4 bg-[#1a1b1e]/90 backdrop-blur-3xl border border-card-border rounded-2xl overflow-hidden shadow-2xl z-50 mx-2"
                                         >
-                                            <div className="p-3 border-b border-card-border bg-white/5">
-                                                <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Kişi Etiketle</span>
+                                            <div className="p-3 border-b border-card-border bg-black/5 dark:bg-white/5">
+                                                <span className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest">Kişi Etiketle</span>
                                             </div>
                                             <div className="max-h-48 overflow-y-auto no-scrollbar divide-y divide-white/5">
                                                 {MOCK_USERS.filter(u => u.username.includes(mentionSearch.slice(1))).map(u => (
@@ -1051,14 +1051,14 @@ export function ImmersivePostCard({
                                                              setCommentInput(prev => prev.replace(mentionSearch, `@${u.username} `));
                                                              setMentionSearch('');
                                                          }}
-                                                         className="w-full px-5 py-3 flex items-center gap-3 hover:bg-white/5 active:bg-white/10 transition-colors"
+                                                         className="w-full px-5 py-3 flex items-center gap-3 hover:bg-black/5 dark:bg-white/5 active:bg-black/10 dark:bg-white/10 transition-colors"
                                                      >
                                                          <div className="w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 font-bold text-xs">
                                                              {u.username[0].toUpperCase()}
                                                          </div>
                                                          <div className="flex flex-col items-start text-left">
                                                              <span className="text-sm font-bold text-white">@{u.username}</span>
-                                                             <span className="text-[10px] text-white/40">{u.name}</span>
+                                                             <span className="text-[10px] text-black/50 dark:text-white/40">{u.name}</span>
                                                          </div>
                                                      </button>
                                                  ))}
@@ -1067,11 +1067,11 @@ export function ImmersivePostCard({
                                     )}
                                 </AnimatePresence>
 
-                                <div className="flex items-center gap-3 relative bg-white/5 border border-card-border rounded-[2rem] py-2 px-2 shrink-0">
+                                <div className="flex items-center gap-3 relative bg-black/5 dark:bg-white/5 border border-card-border rounded-[2rem] py-2 px-2 shrink-0">
                                     <div className="flex items-center gap-1 shrink-0">
                                         <button
                                             onClick={() => alert('Fotoğraf seçimi yakında aktif! 📸')}
-                                            className="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center text-white/50 transition-colors"
+                                            className="w-8 h-8 rounded-full hover:bg-black/10 dark:bg-white/10 flex items-center justify-center text-black/50 dark:text-white/50 transition-colors"
                                         >
                                             <Plus className="w-4 h-4" />
                                         </button>
@@ -1099,7 +1099,7 @@ export function ImmersivePostCard({
                                             if (e.key === 'Enter') handleSendComment();
                                         }}
                                         placeholder={editingComment ? "Yorumu düzenle..." : (replyingTo ? "Yanıtınızı yazın..." : "Düşüncelerini bir pati ile paylaş...")}
-                                        className="w-full bg-transparent text-sm text-white pr-20 focus:outline-none placeholder:text-white/20"
+                                        className="w-full bg-transparent text-sm text-white pr-20 focus:outline-none placeholder:text-black/30 dark:text-white/20"
                                     />
 
                                     <div className="absolute right-2 flex items-center gap-1.5">
@@ -1107,7 +1107,7 @@ export function ImmersivePostCard({
                                             onClick={() => setShowGIFPicker(!showGIFPicker)}
                                             className={cn(
                                                 "w-8 h-8 rounded-full flex items-center justify-center font-black text-[10px] border transition-all",
-                                                showGIFPicker ? "bg-cyan-500 border-cyan-400 text-black" : "hover:bg-white/10 text-cyan-400 border-card-border"
+                                                showGIFPicker ? "bg-cyan-500 border-cyan-400 text-black" : "hover:bg-black/10 dark:bg-white/10 text-cyan-400 border-card-border"
                                             )}
                                         >
                                             GIF
@@ -1142,12 +1142,12 @@ export function ImmersivePostCard({
                             exit={{ y: "100%" }}
                             transition={{ type: "spring", damping: 25, stiffness: 350 }}
                             onClick={(e) => e.stopPropagation()}
-                            className="w-full bg-[#121318]/95 border-t border-white/10 rounded-t-[2.5rem] p-6 pb-8 flex flex-col items-center text-center shadow-2xl relative pointer-events-auto"
+                            className="w-full bg-[#121318]/95 border-t border-black/10 dark:border-white/10 rounded-t-[2.5rem] p-6 pb-8 flex flex-col items-center text-center shadow-2xl relative pointer-events-auto"
                         >
                             {/* Handle */}
                             <div 
                                 onClick={() => setActiveBadgeInfo(null)}
-                                className="w-12 h-1.5 bg-white/20 rounded-full mb-6 cursor-pointer hover:bg-white/40 transition-colors"
+                                className="w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full mb-6 cursor-pointer hover:bg-white/40 transition-colors"
                             />
 
                             {/* Icon & Glow */}
@@ -1180,7 +1180,7 @@ export function ImmersivePostCard({
                                 {activeBadgeInfo === 'walker' && 'ONAYLI GEZDİRİCİ'}
                                 {activeBadgeInfo === 'sos' && 'ACİL DURUM ORTAĞI'}
                             </h3>
-                            <p className="text-xs text-white/60 font-medium leading-relaxed max-w-xs mb-6">
+                            <p className="text-xs text-black/60 dark:text-white/60 font-medium leading-relaxed max-w-xs mb-6">
                                 {activeBadgeInfo === 'verified' && 'Bu profilin ve kimliğinin doğruluğu, Moffi moderasyon ekibi tarafından resmi belgelerle incelenmiş ve onaylanmıştır.'}
                                 {activeBadgeInfo === 'premium' && 'Moffi ekosistemindeki ayrıcalıklı özellikleri, özel avatarları ve gelişmiş akıllı araçları kullanan Moffi Premium üyesidir.'}
                                 {activeBadgeInfo === 'walker' && 'Moffi güvenli gezdirme eğitimi ve kimlik doğrulama süreçlerini tamamlamış, onaylı ve güvenilir köpek gezdiricisidir.'}
@@ -1295,7 +1295,7 @@ function CommentItem({
                                         const targetId = comment.userId || comment.user_id || comment.authorId;
                                         router.push(targetId ? `/profile/${targetId}` : '/profile');
                                     }}
-                                    className={cn("text-[13px] font-black truncate cursor-pointer hover:underline max-w-[140px] sm:max-w-[180px]", comment.isSystem ? "text-cyan-400" : "text-white/90")}
+                                    className={cn("text-[13px] font-black truncate cursor-pointer hover:underline max-w-[140px] sm:max-w-[180px]", comment.isSystem ? "text-cyan-400" : "text-black/90 dark:text-white/90")}
                                 >
                                     {comment.user || comment.author || comment.userName || 'Moffi Kullanıcısı'}
                                 </span>
@@ -1314,19 +1314,19 @@ function CommentItem({
                                 )}
 
                                 <div className="flex items-center gap-2 ml-auto shrink-0">
-                                    <span className="text-[9px] text-white/20 font-black uppercase tracking-tighter">{comment.time || "YENİ"}</span>
+                                    <span className="text-[9px] text-black/30 dark:text-white/20 font-black uppercase tracking-tighter">{comment.time || "YENİ"}</span>
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             setShowContextMenu(!showContextMenu);
                                         }}
-                                        className="p-1 hover:bg-white/10 rounded-full transition-colors opacity-40 hover:opacity-100 group-hover/comment:opacity-100"
+                                        className="p-1 hover:bg-black/10 dark:bg-white/10 rounded-full transition-colors opacity-40 hover:opacity-100 group-hover/comment:opacity-100"
                                     >
-                                        <MoreHorizontal className="w-3.5 h-3.5 text-white" />
+                                        <MoreHorizontal className="w-3.5 h-3.5 text-[#ffffff]" />
                                     </button>
                                 </div>
                             </div>
-                            <p className={cn("text-[13px] leading-relaxed font-medium font-sans break-words pl-0.5", comment.status === 'pending' ? "text-amber-400/80 italic" : "text-white/80")}>
+                            <p className={cn("text-[13px] leading-relaxed font-medium font-sans break-words pl-0.5", comment.status === 'pending' ? "text-amber-400/80 italic" : "text-black/80 dark:text-white/80")}>
                                 {comment.status === 'pending' ? "[İnceleniyor] " + filterContent(comment.text) : filterContent(comment.text)}
                             </p>
 
@@ -1353,7 +1353,7 @@ function CommentItem({
                             }}
                             className={cn(
                                 "flex items-center gap-1 text-[10px] font-black uppercase tracking-widest transition-all active:scale-95",
-                                isLikedLocal ? "text-red-500" : "text-white/40 hover:text-white/60"
+                                isLikedLocal ? "text-red-500" : "text-black/50 dark:text-white/40 hover:text-black/60 dark:text-white/60"
                             )}
                         >
                             {isLikedLocal ? <Heart className="w-3 h-3 fill-red-500" /> : <Heart className="w-3 h-3" />}
@@ -1361,7 +1361,7 @@ function CommentItem({
                         </button>
                         <button
                             onClick={() => onReply(comment)}
-                            className="flex items-center gap-1 text-[10px] text-white/40 font-black uppercase tracking-widest hover:text-white transition-all active:scale-95"
+                            className="flex items-center gap-1 text-[10px] text-black/50 dark:text-white/40 font-black uppercase tracking-widest hover:text-white transition-all active:scale-95"
                         >
                             <MessageSquare className="w-3 h-3" />
                             YANITLA
@@ -1385,7 +1385,7 @@ function CommentItem({
                             initial={{ opacity: 0, scale: 0.9, y: -10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                            className="absolute right-2 top-8 z-[70] min-w-[160px] bg-[#121316]/95 backdrop-blur-3xl border border-card-border rounded-2xl p-1.5 shadow-2xl"
+                            className="absolute right-2 top-8 z-[70] min-w-[160px] bg-card dark:bg-[#121316]/95 backdrop-blur-3xl border border-card-border rounded-2xl p-1.5 shadow-2xl"
                         >
                             {isCommentOwner && (
                                 <>
@@ -1394,10 +1394,10 @@ function CommentItem({
                                             onEdit(comment);
                                             setShowContextMenu(false);
                                         }}
-                                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/10 text-white transition-colors"
+                                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-black/10 dark:bg-white/10 text-white transition-colors"
                                     >
                                         <span className="text-[11px] font-bold">DÜZENLE</span>
-                                        <Edit2 className="w-3.5 h-3.5 text-white/40" />
+                                        <Edit2 className="w-3.5 h-3.5 text-black/50 dark:text-white/40" />
                                     </button>
                                     <button 
                                         onClick={() => {
@@ -1409,7 +1409,7 @@ function CommentItem({
                                         <span className="text-[11px] font-bold">SİL</span>
                                         <Trash2 className="w-3.5 h-3.5 opacity-60" />
                                     </button>
-                                    <div className="h-px bg-white/5 my-1 mx-2" />
+                                    <div className="h-px bg-black/5 dark:bg-white/5 my-1 mx-2" />
                                 </>
                             )}
                             <button 
@@ -1417,7 +1417,7 @@ function CommentItem({
                                     onReport(comment.id);
                                     setShowContextMenu(false);
                                 }}
-                                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/10 text-white/60 transition-colors"
+                                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-black/10 dark:bg-white/10 text-black/60 dark:text-white/60 transition-colors"
                             >
                                 <span className="text-[11px] font-bold">ŞİKAYET ET</span>
                                 <ShieldAlert className="w-3.5 h-3.5 opacity-40" />
@@ -1435,7 +1435,7 @@ function CommentItem({
                             onClick={() => setShowReplies(true)}
                             className="flex items-center gap-2 text-[10px] font-black text-cyan-400/80 hover:text-cyan-400 transition-colors py-1 group"
                         >
-                            <div className="w-5 h-px bg-white/10 group-hover:bg-cyan-400/30" />
+                            <div className="w-5 h-px bg-black/10 dark:bg-white/10 group-hover:bg-cyan-400/30" />
                             {comment.replies.length} YANITA BAK
                         </button>
                     ) : (
@@ -1456,9 +1456,9 @@ function CommentItem({
                             ))}
                             <button
                                 onClick={() => setShowReplies(false)}
-                                className="flex items-center gap-2 text-[10px] font-black text-white/20 hover:text-white transition-colors py-1"
+                                className="flex items-center gap-2 text-[10px] font-black text-black/30 dark:text-white/20 hover:text-white transition-colors py-1"
                             >
-                                <div className="w-5 h-px bg-white/10" />
+                                <div className="w-5 h-px bg-black/10 dark:bg-white/10" />
                                 YANITLARI GİZLE
                             </button>
                         </div>

@@ -17,7 +17,7 @@ const LiveMap = dynamic(() => import('@/components/walk/LiveMap'), {
     loading: () => (
         <div className="w-full h-full bg-[#111] flex flex-col items-center justify-center gap-4">
             <div className="w-12 h-12 border-4 border-card-border border-t-accent rounded-full animate-spin" />
-            <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.5em]">Moffi Maps Yükleniyor...</p>
+            <p className="text-[10px] font-black text-black/40 dark:text-white/30 uppercase tracking-[0.5em]">Moffi Maps Yükleniyor...</p>
         </div>
     )
 });
@@ -80,7 +80,7 @@ export function MoffiMapsModal({ isOpen, onClose }: MoffiMapsModalProps) {
 
                                 <div className="flex-1 bg-black/60 backdrop-blur-xl border border-card-border rounded-2xl p-0.5 shadow-2xl flex items-center">
                                     <div className="p-3">
-                                        <Search className="w-4 h-4 text-white/40" />
+                                        <Search className="w-4 h-4 text-black/50 dark:text-white/40" />
                                     </div>
                                     <input 
                                         type="text" 
@@ -90,7 +90,7 @@ export function MoffiMapsModal({ isOpen, onClose }: MoffiMapsModalProps) {
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                     />
                                     {searchQuery && (
-                                        <button className="p-3 text-white/40" onClick={() => setSearchQuery("")}>
+                                        <button className="p-3 text-black/50 dark:text-white/40" onClick={() => setSearchQuery("")}>
                                             <X className="w-4 h-4" />
                                         </button>
                                     )}
@@ -111,7 +111,7 @@ export function MoffiMapsModal({ isOpen, onClose }: MoffiMapsModalProps) {
                                             "px-4 py-2.5 rounded-xl backdrop-blur-xl border transition-all flex items-center gap-2 whitespace-nowrap active:scale-95 shadow-lg",
                                             activeFilter === f.id 
                                                 ? "bg-accent border-accent text-white" 
-                                                : "bg-black/60 border-card-border text-white/60 hover:bg-black/80"
+                                                : "bg-black/60 border-card-border text-black/60 dark:text-white/60 hover:bg-black/80"
                                         )}
                                     >
                                         <f.icon className={cn("w-3.5 h-3.5", activeFilter === f.id ? "text-white" : f.color)} />

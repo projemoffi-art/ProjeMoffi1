@@ -238,32 +238,6 @@ export function LiveEventsProvider({ children }: { children: React.ReactNode }) 
             });
         }
 
-        // 3. Streak tehlikesi event
-        if (currentStreak > 3) {
-            const secondsUntilMidnight = (() => {
-                const now = new Date();
-                const midnight = new Date();
-                midnight.setHours(23, 59, 59, 999);
-                return Math.max(0, Math.floor((midnight.getTime() - now.getTime()) / 1000));
-            })();
-
-            if (secondsUntilMidnight < 10800 && completedCount === 0) { // Son 3 saat
-                events.push({
-                    id: `streak_danger_${Math.floor(now / 3600000)}`,
-                    type: 'friend_passed',
-                    title: `🔥 ${currentStreak} Günlük Serin Tehlikede!`,
-                    body: `Gece yarısına ${Math.floor(secondsUntilMidnight / 60)} dk kaldı. Seriyi kurtarmak için yürü!`,
-                    cta: 'Seriyi Kurtar',
-                    urgency: 'critical',
-                    expiresAt: now + secondsUntilMidnight * 1000,
-                    icon: '🔥',
-                    color: 'from-red-500 to-orange-600',
-                    ctaRoute: '/walk',
-                    actionKey: 'open-walk-panel',
-                });
-            }
-        }
-
         // 4. Mahalle yarışı güncellemesi
         if (neighborhoodRank <= 5) {
             events.push({

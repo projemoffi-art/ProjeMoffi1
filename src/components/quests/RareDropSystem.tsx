@@ -284,13 +284,13 @@ export function RareDropSystem() {
                                         <motion.p
                                             animate={{ opacity: secsLeft < 300 ? [1, 0.4, 1] : 1 }}
                                             transition={{ duration: 1, repeat: secsLeft < 300 ? Infinity : 0 }}
-                                            className={`text-[9px] font-black font-mono ${secsLeft < 300 ? 'text-red-400' : 'text-white/50'}`}
+                                            className={`text-[9px] font-black font-mono ${secsLeft < 300 ? 'text-red-400' : 'text-black/50 dark:text-white/50'}`}
                                         >
                                             ⏰ {formatTime(secsLeft)}
                                         </motion.p>
                                         <button 
                                             onClick={(e) => { e.stopPropagation(); setActiveDrops(prev => prev.filter(d => d.id !== drop.id)); }}
-                                            className="text-white/30 hover:text-white/80 transition-colors -mt-2 -mr-1"
+                                            className="text-black/40 dark:text-white/30 hover:text-black/80 dark:text-white/80 transition-colors -mt-2 -mr-1"
                                         >
                                             ✕
                                         </button>
@@ -298,17 +298,17 @@ export function RareDropSystem() {
                                 </div>
 
                                 {/* Description */}
-                                <p className="text-[8px] text-white/50 font-semibold mb-2 leading-tight">{drop.description}</p>
+                                <p className="text-[8px] text-black/50 dark:text-white/50 font-semibold mb-2 leading-tight">{drop.description}</p>
 
                                 {/* Slot bar */}
                                 <div className="mb-2">
                                     <div className="flex items-center justify-between mb-1">
-                                        <span className="text-[7px] text-white/40 font-bold">{drop.claimedCount} kişi aldı</span>
-                                        <span className={`text-[7px] font-black ${remainSlots < 10 ? 'text-red-400' : 'text-white/40'}`}>
+                                        <span className="text-[7px] text-black/50 dark:text-white/40 font-bold">{drop.claimedCount} kişi aldı</span>
+                                        <span className={`text-[7px] font-black ${remainSlots < 10 ? 'text-red-400' : 'text-black/50 dark:text-white/40'}`}>
                                             {remainSlots} slot kaldı
                                         </span>
                                     </div>
-                                    <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                                    <div className="h-1 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
                                         <motion.div
                                             initial={{ width: 0 }}
                                             animate={{ width: `${pct}%` }}
@@ -322,7 +322,7 @@ export function RareDropSystem() {
                                 <div className="flex items-center gap-2">
                                     <div className="flex-1">
                                         <span className="text-[8px] font-black text-orange-400">+{drop.reward.pp} PP</span>
-                                        <span className="text-[8px] text-white/30 mx-1">·</span>
+                                        <span className="text-[8px] text-black/40 dark:text-white/30 mx-1">·</span>
                                         <span className="text-[8px] font-black text-blue-400">+{drop.reward.xp} XP</span>
                                     </div>
                                     <motion.button

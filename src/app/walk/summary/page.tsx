@@ -227,7 +227,7 @@ function WalkSummaryContent() {
                                 <moodStyle.icon className="w-4 h-4 fill-white" />
                             </div>
                             <div className="flex flex-col leading-none">
-                                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Ruh Hali</span>
+                                <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-0.5">Ruh Hali</span>
                                 <span className={cn("text-xs font-black tracking-wide", moodStyle.text)}>{moodStyle.label}</span>
                             </div>
                         </motion.div>
@@ -254,7 +254,7 @@ function WalkSummaryContent() {
                                     <Footprints className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                                 </div>
                                 <span className="text-3xl font-black text-foreground dark:text-white tracking-tighter drop-shadow-sm">{stats.steps}</span>
-                                <span className="text-[10px] font-bold text-gray-400/80 uppercase tracking-widest">Adım</span>
+                                <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400/80 uppercase tracking-widest">Adım</span>
                             </div>
 
                             {/* Time */}
@@ -263,9 +263,9 @@ function WalkSummaryContent() {
                                     <Timer className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                                 </div>
                                 <span className="text-3xl font-black text-foreground dark:text-white tracking-tighter leading-none flex items-baseline drop-shadow-sm">
-                                    {stats.time}<span className="text-sm font-bold text-gray-400/80 ml-0.5">dk</span>
+                                    {stats.time}<span className="text-sm font-bold text-gray-500 dark:text-gray-400/80 ml-0.5">dk</span>
                                 </span>
-                                <span className="text-[10px] font-bold text-gray-400/80 uppercase tracking-widest">Süre</span>
+                                <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400/80 uppercase tracking-widest">Süre</span>
                             </div>
 
                             {/* KM */}
@@ -275,7 +275,7 @@ function WalkSummaryContent() {
                                 </div>
                                 <div className="flex flex-col items-center leading-none">
                                     <span className="text-3xl font-black text-foreground dark:text-white tracking-tighter drop-shadow-sm">{stats.km}</span>
-                                    <span className="text-[10px] font-bold text-gray-400/80 uppercase tracking-widest mt-1">KM</span>
+                                    <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400/80 uppercase tracking-widest mt-1">KM</span>
                                 </div>
                             </div>
                         </div>
@@ -296,16 +296,16 @@ function WalkSummaryContent() {
                         className="group relative w-full h-16 bg-gradient-to-br from-[#2D3342] to-[#0F1218] rounded-[2rem] border border-card-border shadow-[0_8px_0_#0B0D11,0_20px_40px_rgba(0,0,0,0.4)] active:shadow-none active:translate-y-2 transition-all flex items-center justify-center gap-3 overflow-hidden"
                     >
                         {/* Shimmer / Ripple Hint */}
-                        <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="absolute inset-0 bg-black/5 dark:bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
 
                         {/* Glowing Icon Frame */}
                         <div className="relative w-10 h-10 rounded-full bg-gradient-to-br from-white/10 to-transparent border border-card-border flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.15)] group-hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] transition-shadow duration-500">
-                            <div className="absolute inset-0 rounded-full bg-white/20 blur-md opacity-50 group-hover:opacity-100 transition-opacity" />
+                            <div className="absolute inset-0 rounded-full bg-black/20 dark:bg-white/20 blur-md opacity-50 group-hover:opacity-100 transition-opacity" />
                             <Play className="relative z-10 w-5 h-5 text-white fill-white ml-0.5" />
                         </div>
 
                         {/* Text */}
-                        <span className="text-lg font-black text-white/90 tracking-wide uppercase drop-shadow-md">
+                        <span className="text-lg font-black text-black/90 dark:text-white/90 tracking-wide uppercase drop-shadow-md">
                             Walk Replay
                         </span>
                     </motion.button>
@@ -318,7 +318,7 @@ function WalkSummaryContent() {
                             className="flex-1 h-12 rounded-full relative group overflow-hidden shadow-[0_8px_20px_rgba(225,48,108,0.2)] hover:shadow-[0_12px_25px_rgba(225,48,108,0.3)] transition-all"
                         >
                             <div className="absolute inset-0 bg-gradient-to-tr from-[#FFBE0B] via-[#FF006E] to-[#8338EC] group-hover:scale-110 transition-transform duration-500" />
-                            <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-20 transition-opacity" />
+                            <div className="absolute inset-0 bg-black/20 dark:bg-white/20 opacity-0 group-hover:opacity-20 transition-opacity" />
                             <div className="relative flex items-center justify-center gap-2 text-white">
                                 <Instagram className="w-5 h-5 drop-shadow-md" />
                                 <span className="text-sm font-bold tracking-wide text-shadow-sm">Story</span>
@@ -340,7 +340,7 @@ function WalkSummaryContent() {
 
                     <button
                         onClick={() => router.push('/walk')}
-                        className="mt-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs font-bold transition-colors"
+                        className="mt-2 text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs font-bold transition-colors"
                     >
                         Kapat ve Ana Ekrana Dön
                     </button>

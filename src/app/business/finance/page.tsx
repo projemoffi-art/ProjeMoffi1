@@ -132,17 +132,17 @@ export default function BusinessFinancePage() {
                         <div className="flex items-center justify-between mb-6">
                             <div>
                                 <h3 className="font-bold text-foreground">Aylık Gelir</h3>
-                                <p className="text-xs text-gray-400 mt-0.5">Son 6 ay</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Son 6 ay</p>
                             </div>
                             <div className="bg-gray-50 p-1 rounded-xl flex">
                                 <button className="px-3 py-1 bg-card rounded-lg text-xs font-bold text-foreground shadow-moffi-card border border-card-border/50">Aylık</button>
-                                <button className="px-3 py-1 text-xs font-bold text-gray-400">Haftalık</button>
+                                <button className="px-3 py-1 text-xs font-bold text-gray-500 dark:text-gray-400">Haftalık</button>
                             </div>
                         </div>
                         <div className="flex items-end gap-3 h-40">
                             {monthlyData.map((d, i) => (
                                 <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                                    <span className="text-[10px] font-bold text-gray-400">₺{(d.amount / 1000).toFixed(1)}K</span>
+                                    <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">₺{(d.amount / 1000).toFixed(1)}K</span>
                                     <div className="w-full bg-gray-100 rounded-xl overflow-hidden" style={{ height: '100%' }}>
                                         <motion.div
                                             initial={{ height: 0 }}
@@ -161,18 +161,18 @@ export default function BusinessFinancePage() {
                     {/* Pending + Commissions */}
                     <div className="space-y-4">
                         <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-5 text-white shadow-lg">
-                            <Clock className="w-8 h-8 text-white/70 mb-3" />
+                            <Clock className="w-8 h-8 text-black/70 dark:text-white/70 mb-3" />
                             <div className="text-2xl font-black">₺{summary.pendingRevenue.toLocaleString('tr-TR')}</div>
-                            <div className="text-xs text-white/80 font-medium mt-1">Bekleyen Gelir</div>
-                            <p className="text-[10px] text-white/60 mt-2">Teslim edilmemiş siparişlerden</p>
+                            <div className="text-xs text-black/80 dark:text-white/80 font-medium mt-1">Bekleyen Gelir</div>
+                            <p className="text-[10px] text-black/60 dark:text-white/60 mt-2">Teslim edilmemiş siparişlerden</p>
                         </div>
                         <div className="bg-card rounded-2xl border border-card-border shadow-moffi-card p-5">
                             <div className="flex items-center gap-2 mb-3">
-                                <BarChart3 className="w-4 h-4 text-gray-400" />
+                                <BarChart3 className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Komisyon Oranı</span>
                             </div>
                             <div className="text-3xl font-black text-foreground">%10</div>
-                            <p className="text-xs text-gray-400 mt-1">Platform standart oran</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Platform standart oran</p>
                             <div className="mt-3 h-2 bg-gray-100 rounded-full overflow-hidden">
                                 <div className="h-full w-[10%] bg-red-400 rounded-full" />
                             </div>
@@ -208,7 +208,7 @@ export default function BusinessFinancePage() {
                     </div>
 
                     {filtered.length === 0 ? (
-                        <div className="p-12 text-center text-gray-400 text-sm">Bu kategoride işlem bulunamadı.</div>
+                        <div className="p-12 text-center text-gray-500 dark:text-gray-400 text-sm">Bu kategoride işlem bulunamadı.</div>
                     ) : (
                         <div className="divide-y divide-gray-50">
                             {filtered.map(tx => {
@@ -224,7 +224,7 @@ export default function BusinessFinancePage() {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="font-medium text-foreground text-sm truncate">{tx.description}</div>
-                                            <div className="text-[10px] text-gray-400 mt-0.5">
+                                            <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
                                                 {new Date(tx.date).toLocaleString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                             </div>
                                         </div>
@@ -234,7 +234,7 @@ export default function BusinessFinancePage() {
                                             </div>
                                             <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded",
                                                 tx.status === 'completed' ? "text-green-600 bg-green-50" :
-                                                    tx.status === 'pending' ? "text-amber-600 bg-amber-50" : "text-gray-400 bg-gray-50"
+                                                    tx.status === 'pending' ? "text-amber-600 bg-amber-50" : "text-gray-500 dark:text-gray-400 bg-gray-50"
                                             )}>
                                                 {tx.status === 'completed' ? 'Tamamlandı' : tx.status === 'pending' ? 'Bekliyor' : 'İptal'}
                                             </span>
@@ -281,7 +281,7 @@ function RevenueCard({ icon: Icon, label, value, color, trend, highlight }: {
                 )}
             </div>
             <div className={cn("text-xl font-black tracking-tight", highlight ? "text-foreground" : "text-foreground")}>₺{value.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</div>
-            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-1">{label}</div>
+            <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mt-1">{label}</div>
         </div>
     );
 }

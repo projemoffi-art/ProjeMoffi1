@@ -208,7 +208,7 @@ export function MoffiAssistant() {
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0, opacity: 0 }}
                         onClick={() => setIsOpen(true)}
-                        className="fixed bottom-24 right-5 z-[99999] w-[42px] h-[42px] bg-gradient-to-tr from-zinc-900 to-black border border-white/10 rounded-full shadow-2xl flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-all group"
+                        className="fixed bottom-24 right-5 z-[99999] w-[42px] h-[42px] bg-gradient-to-tr from-zinc-900 to-black border border-black/10 dark:border-white/10 rounded-full shadow-2xl flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-all group"
                     >
                         <Sparkles className="w-5 h-5 text-white group-hover:animate-pulse" />
                         <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-background animate-pulse" />
@@ -226,7 +226,7 @@ export function MoffiAssistant() {
                     >
                         <div className="p-6 bg-gradient-to-br from-white/[0.05] to-transparent border-b border-card-border flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                                <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg", isPro ? "bg-violet-600" : "bg-black")}>
+                                <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg", isPro ? "bg-violet-600" : "bg-white dark:bg-black")}>
                                     {isPro ? <Crown className="w-5 h-5 text-white" /> : <Bot className="w-5 h-5 text-white" />}
                                 </div>
                                 <div className="text-left">
@@ -242,33 +242,33 @@ export function MoffiAssistant() {
                                     <Stethoscope className="w-3.5 h-3.5" />
                                     <span>VetLine</span>
                                 </button>
-                                <button onClick={clearChat} className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-secondary hover:text-red-400 transition-colors"><Trash2 className="w-4 h-4" /></button>
-                                <button onClick={() => { setIsOpen(false); }} className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-foreground hover:bg-white/10 transition-all border border-card-border"><X className="w-5 h-5" /></button>
+                                <button onClick={clearChat} className="w-9 h-9 rounded-xl bg-black/5 dark:bg-white/5 flex items-center justify-center text-secondary hover:text-red-400 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                <button onClick={() => { setIsOpen(false); }} className="w-9 h-9 rounded-xl bg-black/5 dark:bg-white/5 flex items-center justify-center text-foreground hover:bg-black/10 dark:bg-white/10 transition-all border border-card-border"><X className="w-5 h-5" /></button>
                             </div>
                         </div>
 
                         <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar bg-card/10">
                             {messages.map((m) => (
                                 <div key={m.id} className={cn("flex gap-3", m.role === 'user' ? "flex-row-reverse" : "flex-row")}>
-                                    <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border border-card-border", m.role === 'user' ? "bg-accent text-white" : "bg-white/5 text-secondary")}>
+                                    <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border border-card-border", m.role === 'user' ? "bg-accent text-white" : "bg-black/5 dark:bg-white/5 text-secondary")}>
                                         {m.role === 'user' ? <UserIcon className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                                     </div>
-                                    <div className={cn("max-w-[80%] p-4 rounded-3xl text-[13px] font-medium leading-relaxed", m.role === 'user' ? "bg-foreground text-background font-bold" : "bg-white/5 text-foreground/90 border border-card-border")}>
+                                    <div className={cn("max-w-[80%] p-4 rounded-3xl text-[13px] font-medium leading-relaxed", m.role === 'user' ? "bg-foreground text-background font-bold" : "bg-black/5 dark:bg-white/5 text-foreground/90 border border-card-border")}>
                                         {m.content}
                                     </div>
                                 </div>
                             ))}
                             {isTyping && (
                                 <div className="flex gap-3">
-                                    <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center border border-card-border"><Bot className="w-4 h-4 text-secondary animate-bounce" /></div>
-                                    <div className="bg-white/5 p-4 rounded-3xl border border-card-border flex gap-1"><div className="w-1 h-1 bg-white/40 rounded-full animate-bounce [animation-delay:-0.3s]" /><div className="w-1 h-1 bg-white/40 rounded-full animate-bounce [animation-delay:-0.15s]" /><div className="w-1 h-1 bg-white/40 rounded-full animate-bounce" /></div>
+                                    <div className="w-8 h-8 rounded-xl bg-black/5 dark:bg-white/5 flex items-center justify-center border border-card-border"><Bot className="w-4 h-4 text-secondary animate-bounce" /></div>
+                                    <div className="bg-black/5 dark:bg-white/5 p-4 rounded-3xl border border-card-border flex gap-1"><div className="w-1 h-1 bg-white/40 rounded-full animate-bounce [animation-delay:-0.3s]" /><div className="w-1 h-1 bg-white/40 rounded-full animate-bounce [animation-delay:-0.15s]" /><div className="w-1 h-1 bg-white/40 rounded-full animate-bounce" /></div>
                                 </div>
                             )}
                         </div>
 
                         <div className="p-6 bg-white/[0.02] border-t border-card-border">
                             <form onSubmit={handleSend} className="relative flex items-center">
-                                <input value={input} onChange={e => setInput(e.target.value)} placeholder="Bir şeyler sor..." className="w-full bg-white/5 border border-card-border hover:border-card-border focus:border-accent/40 rounded-[2rem] pl-6 pr-14 py-4 text-[13px] text-foreground outline-none transition-all font-medium placeholder:text-secondary/30" />
+                                <input value={input} onChange={e => setInput(e.target.value)} placeholder="Bir şeyler sor..." className="w-full bg-black/5 dark:bg-white/5 border border-card-border hover:border-card-border focus:border-accent/40 rounded-[2rem] pl-6 pr-14 py-4 text-[13px] text-foreground outline-none transition-all font-medium placeholder:text-secondary/30" />
                                 <button type="submit" disabled={!input.trim() || isTyping} className="absolute right-2 w-11 h-11 rounded-full bg-foreground text-background flex items-center justify-center hover:scale-105 active:scale-95 transition-all"><Send className="w-5 h-5" /></button>
                             </form>
                         </div>

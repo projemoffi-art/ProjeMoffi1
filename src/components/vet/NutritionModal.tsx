@@ -109,7 +109,7 @@ export function NutritionModal({ isOpen, onClose, petId }: NutritionModalProps) 
                                     <p className="text-[10px] text-emerald-600/60 dark:text-emerald-400/40 font-bold uppercase tracking-[0.2em]">Kişiselleştirilmiş Diyet</p>
                                 </div>
                             </div>
-                            <button onClick={onClose} className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-white/5 flex items-center justify-center hover:bg-zinc-200/50 dark:hover:bg-white/10 transition-all border border-zinc-200 dark:border-card-border cursor-pointer">
+                            <button onClick={onClose} className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-white/5 flex items-center justify-center hover:bg-zinc-200/50 dark:hover:bg-black/10 dark:bg-white/10 transition-all border border-zinc-200 dark:border-card-border cursor-pointer">
                                 <X className="w-5 h-5 text-zinc-500 dark:text-white/40" />
                             </button>
                         </div>
@@ -201,7 +201,7 @@ export function NutritionModal({ isOpen, onClose, petId }: NutritionModalProps) 
                                         <button 
                                             type="button" 
                                             onClick={() => setIsEditing(false)}
-                                            className="flex-1 py-4 rounded-2xl bg-zinc-100 border border-zinc-200 text-zinc-500 hover:bg-zinc-200/50 dark:bg-white/5 dark:border-card-border dark:text-white/40 dark:hover:bg-white/10 transition-all cursor-pointer"
+                                            className="flex-1 py-4 rounded-2xl bg-zinc-100 border border-zinc-200 text-zinc-500 hover:bg-zinc-200/50 dark:bg-white/5 dark:border-card-border dark:text-white/40 dark:hover:bg-black/10 dark:bg-white/10 transition-all cursor-pointer"
                                         >
                                             İPTAL
                                         </button>
@@ -228,7 +228,7 @@ export function NutritionModal({ isOpen, onClose, petId }: NutritionModalProps) 
                                             </div>
                                             <button 
                                                 onClick={() => setIsEditing(true)}
-                                                className="w-12 h-12 rounded-2xl bg-white/40 backdrop-blur-md dark:bg-white/5 border border-zinc-200/50 dark:border-card-border flex items-center justify-center text-zinc-550 dark:text-white/40 hover:text-zinc-800 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/10 transition-all cursor-pointer"
+                                                className="w-12 h-12 rounded-2xl bg-white/40 backdrop-blur-md dark:bg-white/5 border border-zinc-200/50 dark:border-card-border flex items-center justify-center text-zinc-550 dark:text-white/40 hover:text-zinc-800 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-black/10 dark:bg-white/10 transition-all cursor-pointer"
                                             >
                                                 <Edit3 className="w-5 h-5" />
                                             </button>

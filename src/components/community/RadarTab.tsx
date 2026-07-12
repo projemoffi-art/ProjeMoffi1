@@ -11,7 +11,7 @@ import { PetSwitcher } from '../common/PetSwitcher';
 const RadarMap = dynamic(() => import('@/components/community/RadarMap'), {
     ssr: false,
     loading: () => (
-        <div className="w-full h-[380px] rounded-[2.5rem] bg-[var(--card-bg)] border border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)]">
+        <div className="w-full h-[380px] rounded-[2.5rem] bg-[var(--card-bg)] border border-black/10 dark:border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)]">
             <Activity className="w-8 h-8 mb-2 animate-spin text-cyan-400" />
             <p className="text-xs font-bold uppercase tracking-wider">Harita Yükleniyor...</p>
         </div>
@@ -25,8 +25,8 @@ interface RadarTabProps {
     userCoords: [number, number] | undefined;
     
     // Filters and view modes
-    filterPetType: 'all' | 'dog' | 'cat';
-    setFilterPetType: (val: 'all' | 'dog' | 'cat') => void;
+    selectedCategory: string;
+    setSelectedCategory: (val: string) => void;
     filterDistance: 'all' | number;
     setFilterDistance: (val: 'all' | number) => void;
     radarViewMode: 'list' | 'map';
@@ -48,8 +48,8 @@ export function RadarTab({
     isLoading,
     userCoords,
     
-    filterPetType,
-    setFilterPetType,
+    selectedCategory,
+    setSelectedCategory,
     filterDistance,
     setFilterDistance,
     radarViewMode,
@@ -71,7 +71,25 @@ export function RadarTab({
             exit={{ opacity: 0, scale: 0.98 }}
             className="w-full pb-32 bg-[var(--background)] flex flex-col items-center"
         >
-            <div className="w-full max-w-md mx-auto relative">
+            {/* HORIZONTAL FILTER PILLS */}
+            <div className="w-full overflow-x-auto no-scrollbar px-6 mb-6 pb-2 flex gap-3 snap-x">
+                {["Tümü", "Kediler", "Köpekler", "Kuşlar", "Diğer"].map((pill) => (
+                    <button
+                        key={pill}
+                        onClick={() => setSelectedCategory(pill)}
+                        className={cn(
+                            "snap-start whitespace-nowrap px-4 py-2 rounded-full text-[13px] font-bold transition-all active:scale-95",
+                            selectedCategory === pill
+                                ? "bg-white text-black shadow-lg shadow-white/20"
+                                : "bg-card dark:bg-[#1C1C1E] text-[#8E8E93] border border-[var(--card-border)] hover:bg-black/10 dark:bg-white/10 hover:text-[var(--foreground)]"
+                        )}
+                    >
+                        {pill}
+                    </button>
+                ))}
+            </div>
+
+            <div className="w-full max-w-md mx-auto relative px-2">
 
 
                 {/* Pet Switcher for Radar Context */}
@@ -84,19 +102,9 @@ export function RadarTab({
                         {/* Advanced Filters */}
                         <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 shrink-0">
                             <select 
-                                value={filterPetType}
-                                onChange={(e) => setFilterPetType(e.target.value as any)}
-                                className="px-3 py-1.5 rounded-full bg-[var(--card-bg)] border border-white/10 text-[10px] font-black uppercase tracking-wider text-[var(--foreground)] outline-none focus:border-cyan-500 transition-colors"
-                            >
-                                <option value="all">🐾 Tüm Türler</option>
-                                <option value="dog">🐶 Köpek</option>
-                                <option value="cat">🐱 Kedi</option>
-                            </select>
-
-                            <select 
                                 value={filterDistance}
                                 onChange={(e) => setFilterDistance(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                                className="px-3 py-1.5 rounded-full bg-[var(--card-bg)] border border-white/10 text-[10px] font-black uppercase tracking-wider text-[var(--foreground)] outline-none focus:border-cyan-500 transition-colors"
+                                className="px-3 py-1.5 rounded-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 text-[10px] font-black uppercase tracking-wider text-[var(--foreground)] outline-none focus:border-cyan-500 transition-colors"
                             >
                                 <option value="all">📍 Tüm Mesafeler</option>
                                 <option value="1">1 km Yakınında</option>
@@ -106,7 +114,7 @@ export function RadarTab({
                         </div>
 
                         {/* View Mode Toggle */}
-                        <div className="flex bg-[var(--card-bg)] p-0.5 rounded-2xl border border-white/5 shadow-md self-end sm:self-auto shrink-0">
+                        <div className="flex bg-[var(--card-bg)] p-0.5 rounded-2xl border border-black/5 dark:border-white/5 shadow-md self-end sm:self-auto shrink-0">
                             <button 
                                 onClick={() => setRadarViewMode('list')}
                                 className={cn(
@@ -136,7 +144,7 @@ export function RadarTab({
                                     + İlan Ekle
                                 </button>
                             </div>
-                            <div className="w-full rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl relative" style={{ height: "380px" }}>
+                            <div className="w-full rounded-[2.5rem] overflow-hidden border border-black/10 dark:border-white/10 shadow-2xl relative" style={{ height: "380px" }}>
                                 <RadarMap 
                                     lostPets={lostPets} 
                                     onPetClick={(pet) => setSelectedLostPet(pet)} 
@@ -157,83 +165,68 @@ export function RadarTab({
                             {isLoading ? (
                                 <div className="space-y-4 px-6 pb-10">
                                     {Array(3).fill(0).map((_, i) => (
-                                        <div key={i} className="w-full h-24 rounded-3xl bg-[var(--card-bg)] animate-pulse border border-white/5" />
+                                        <div key={i} className="w-full h-24 rounded-3xl bg-[var(--card-bg)] animate-pulse border border-black/5 dark:border-white/5" />
                                     ))}
                                 </div>
                             ) : lostPets.length > 0 ? (
-                                <div className="space-y-4 px-6 pb-10">
+                                <div className="columns-2 gap-3 sm:gap-4 px-6 pb-10 w-full">
                                     {lostPets.map((pet) => (
                                         <div 
                                             key={pet.id} 
                                             className={cn(
-                                                "w-full rounded-3xl p-4 flex flex-col gap-3 cursor-pointer transition-all active:scale-[0.98] relative group overflow-hidden border",
+                                                "break-inside-avoid mb-3 sm:mb-4 flex flex-col rounded-3xl cursor-pointer transition-all active:scale-[0.98] relative group overflow-hidden border shadow-sm hover:shadow-md",
                                                 pet.reward_enabled 
-                                                    ? "bg-amber-500/5 border-amber-500/30 hover:bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.15)]" 
-                                                    : "bg-red-500/5 border-red-500/20 hover:bg-red-500/10"
+                                                    ? "bg-amber-500/5 border-amber-500/30" 
+                                                    : "bg-red-500/5 border-red-500/20"
                                             )}
                                             onClick={() => setSelectedLostPet(pet)}
                                         >
-                                            {/* Apple style blur background for red/gold accent */}
-                                            <div className={cn(
-                                                "absolute top-0 right-0 w-32 h-32 blur-[40px] -mr-10 -mt-10 rounded-full pointer-events-none",
-                                                pet.reward_enabled ? "bg-amber-500/10" : "bg-red-500/10"
-                                            )} />
-
-                                            {user?.id === pet.user_id && (
-                                                <button 
-                                                    onClick={(e) => { e.stopPropagation(); onDeleteSOS(pet.id); }} 
-                                                    className={cn(
-                                                        "absolute right-3 top-3 px-3 py-1.5 rounded-full bg-[var(--card-bg)] text-[10px] font-bold uppercase transition-transform hover:scale-105 active:scale-95 flex items-center gap-1 z-10 shadow-lg",
-                                                        pet.reward_enabled ? "border-amber-500/30 text-amber-400" : "border-red-500/30 text-red-400"
-                                                    )}
-                                                >
-                                                    <Trash2 className="w-3 h-3" /> Sil
-                                                </button>
-                                            )}
-
-                                            <div className="flex gap-4 items-center">
+                                            {/* Masonry Image Container */}
+                                            <div className="w-full relative aspect-[4/5] bg-white dark:bg-black">
+                                                {pet.img ? (
+                                                    <img src={pet.img} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt={pet.name} />
+                                                ) : (
+                                                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-500/10">
+                                                        <ShieldAlert className={cn("w-8 h-8", pet.reward_enabled ? "text-amber-500" : "text-red-500")} />
+                                                    </div>
+                                                )}
+                                                
+                                                {/* Overlay Gradient for Text Readability */}
+                                                <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
+                                                
+                                                {/* SOS Badge */}
                                                 <div className={cn(
-                                                    "w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 border shadow-inner overflow-hidden",
-                                                    pet.reward_enabled ? "bg-amber-500/20 border-amber-500/30" : "bg-red-500/20 border-red-500/30"
+                                                    "absolute top-2.5 right-2.5 px-2 py-1 rounded-lg backdrop-blur-md text-[9px] font-black uppercase tracking-wider shadow-lg flex items-center gap-1",
+                                                    pet.reward_enabled ? "bg-amber-500/90 text-black" : "bg-red-500/90 text-white"
                                                 )}>
-                                                    {pet.img ? (
-                                                        <img src={pet.img} className="w-full h-full object-cover" alt={pet.name} />
-                                                    ) : (
-                                                        <div className="flex flex-col items-center">
-                                                            <ShieldAlert className={cn("w-6 h-6", pet.reward_enabled ? "text-amber-500" : "text-red-500")} />
-                                                            <span className={cn("text-[8px] font-black mt-1", pet.reward_enabled ? "text-amber-500" : "text-red-500")}>SOS</span>
-                                                        </div>
-                                                    )}
+                                                    <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", pet.reward_enabled ? "bg-white dark:bg-black" : "bg-white")} />
+                                                    SOS
                                                 </div>
-                                                <div className="flex-1 overflow-hidden">
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-2">
-                                                            <p className={cn("font-black text-lg tracking-tight truncate", pet.reward_enabled ? "text-amber-500" : "text-red-500")}>{pet.name}</p>
-                                                            <span className={cn("px-1.5 py-0.5 rounded-full text-[10px] font-bold border", pet.reward_enabled ? "bg-amber-500/20 border-amber-500/30 text-amber-500" : "bg-red-500/20 border-red-500/30 text-red-500")}>Kayıp</span>
-                                                        </div>
+
+                                                {user?.id === pet.user_id && (
+                                                    <button 
+                                                        onClick={(e) => { e.stopPropagation(); onDeleteSOS(pet.id); }} 
+                                                        className={cn(
+                                                            "absolute top-2.5 left-2.5 w-7 h-7 rounded-full backdrop-blur-md border flex items-center justify-center transition-all z-10",
+                                                            pet.reward_enabled ? "bg-amber-500/20 border-amber-500/30 text-amber-500 hover:bg-amber-500 hover:text-black" : "bg-red-500/20 border-red-500/30 text-red-500 hover:bg-red-500 hover:text-white"
+                                                        )}
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                )}
+
+                                                {/* Pet Name on Image */}
+                                                <div className="absolute bottom-2.5 left-2.5 right-2.5 z-10">
+                                                    <div className="flex items-center gap-1.5 mb-0.5">
+                                                        <h4 className="text-white font-black text-sm tracking-tight truncate drop-shadow-md">{pet.name}</h4>
                                                         {pet.reward_enabled && pet.reward && (
-                                                            <span className="px-2 py-0.5 rounded-lg bg-orange-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg -mt-1">ÖDÜL</span>
+                                                            <span className="px-1.5 py-0.5 rounded-md bg-orange-500 text-white text-[8px] font-black uppercase tracking-widest shadow-lg shrink-0">ÖDÜL</span>
                                                         )}
                                                     </div>
-                                                    <p className="text-[var(--secondary-text)] text-xs font-medium truncate">{pet.type || "Bilinmiyor"}</p>
-                                                    <p className={cn("text-[10px] mt-1.5 flex items-center gap-1 font-black", pet.reward_enabled ? "text-amber-400/80" : "text-red-400/80")}><MapPin className="w-3 h-3 text-cyan-400" /> {pet.last_seen_location || pet.location}</p>
+                                                    <p className={cn("font-bold text-[10px] truncate drop-shadow-md flex items-center gap-1", pet.reward_enabled ? "text-amber-400" : "text-red-400")}>
+                                                        <MapPin className="w-2.5 h-2.5" /> {pet.last_seen_location || pet.location}
+                                                    </p>
                                                 </div>
-                                                <ChevronRight className={cn("w-5 h-5", pet.reward_enabled ? "text-amber-500/50" : "text-red-500/50")} />
-                                            </div>
-                                            <p className="text-[var(--foreground)]/70 text-[11px] mt-1 leading-snug line-clamp-2 px-1 font-medium italic">"{pet.description || "Lütfen görünce acil dönüş yapın."}"</p>
-                                            
-                                            <div className="mt-2 flex gap-2">
-                                                <button 
-                                                    onClick={(e) => { e.stopPropagation(); /* Logic handled by parent select/click */ setSelectedLostPet(pet); }}
-                                                    className="flex-1 py-3 rounded-2xl bg-white text-black text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg"
-                                                >
-                                                    İletişime Geç
-                                                </button>
-                                                <button 
-                                                    className="px-4 py-3 rounded-2xl bg-white/10 text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all border border-white/5"
-                                                >
-                                                    Konum Paylaş
-                                                </button>
                                             </div>
                                         </div>
                                     ))}

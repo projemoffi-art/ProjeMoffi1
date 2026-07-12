@@ -122,7 +122,7 @@ export function MedicationModal({ isOpen, onClose, petId }: MedicationModalProps
                                     <p className="text-[10px] text-zinc-400 dark:text-white/30 font-bold uppercase tracking-[0.2em]">Günlük Hatırlatıcılar</p>
                                 </div>
                             </div>
-                            <button onClick={onClose} className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-white/5 flex items-center justify-center hover:bg-zinc-200/50 dark:hover:bg-white/10 transition-all border border-zinc-200 dark:border-card-border cursor-pointer">
+                            <button onClick={onClose} className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-white/5 flex items-center justify-center hover:bg-zinc-200/50 dark:hover:bg-black/10 dark:bg-white/10 transition-all border border-zinc-200 dark:border-card-border cursor-pointer">
                                 <X className="w-5 h-5 text-zinc-500 dark:text-white/40" />
                             </button>
                         </div>
@@ -279,7 +279,7 @@ export function MedicationModal({ isOpen, onClose, petId }: MedicationModalProps
                                     {!showAddForm && medications.length > 0 && (
                                         <button 
                                             onClick={() => setShowAddForm(true)}
-                                            className="w-full py-6 border border-dashed border-zinc-200 dark:border-card-border rounded-[2.2rem] flex items-center justify-center gap-2 hover:bg-zinc-50 dark:hover:bg-white/5 transition-all group cursor-pointer"
+                                            className="w-full py-6 border border-dashed border-zinc-200 dark:border-card-border rounded-[2.2rem] flex items-center justify-center gap-2 hover:bg-zinc-50 dark:hover:bg-black/5 dark:bg-white/5 transition-all group cursor-pointer"
                                         >
                                             <Plus className="w-5 h-5 text-zinc-400 dark:text-white/20 group-hover:text-[#8E7EF4] transition-colors" />
                                             <span className="text-[10px] font-black text-zinc-500 dark:text-white/30 uppercase tracking-widest">YENİ İLAÇ EKLE</span>

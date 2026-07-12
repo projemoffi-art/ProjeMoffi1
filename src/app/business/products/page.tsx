@@ -86,7 +86,7 @@ export default function BusinessProductsPage() {
                 {/* Filters */}
                 <div className="bg-card rounded-2xl border border-card-border shadow-moffi-card p-4 mb-6 flex flex-col md:flex-row gap-3 items-stretch md:items-center">
                     <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
                         <input
                             value={search}
                             onChange={e => setSearch(e.target.value)}
@@ -111,10 +111,10 @@ export default function BusinessProductsPage() {
                         {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                     </select>
                     <div className="flex bg-gray-100 rounded-xl p-1 self-center">
-                        <button onClick={() => setViewMode('grid')} className={cn("p-2 rounded-lg transition", viewMode === 'grid' ? "bg-card shadow-moffi-card" : "text-gray-400")}>
+                        <button onClick={() => setViewMode('grid')} className={cn("p-2 rounded-lg transition", viewMode === 'grid' ? "bg-card shadow-moffi-card" : "text-gray-500 dark:text-gray-400")}>
                             <LayoutGrid className="w-4 h-4" />
                         </button>
-                        <button onClick={() => setViewMode('list')} className={cn("p-2 rounded-lg transition", viewMode === 'list' ? "bg-card shadow-moffi-card" : "text-gray-400")}>
+                        <button onClick={() => setViewMode('list')} className={cn("p-2 rounded-lg transition", viewMode === 'list' ? "bg-card shadow-moffi-card" : "text-gray-500 dark:text-gray-400")}>
                             <List className="w-4 h-4" />
                         </button>
                     </div>
@@ -125,7 +125,7 @@ export default function BusinessProductsPage() {
                     <div className="bg-card rounded-2xl border border-card-border p-16 text-center">
                         <Package className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                         <h3 className="font-bold text-foreground mb-1">Ürün bulunamadı</h3>
-                        <p className="text-sm text-gray-400">Filtrelerinizi değiştirin veya yeni ürün ekleyin.</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Filtrelerinizi değiştirin veya yeni ürün ekleyin.</p>
                     </div>
                 ) : viewMode === 'grid' ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -164,7 +164,7 @@ export default function BusinessProductsPage() {
                                             <span className={cn("text-[10px] font-bold px-2 py-1 rounded-full border", STATUS_CONFIG[product.status].bg, STATUS_CONFIG[product.status].color)}>{STATUS_CONFIG[product.status].label}</span>
                                         </td>
                                         <td className="p-4 text-center">
-                                            <button onClick={() => setEditModal(product)} className="text-gray-400 hover:text-indigo-600 transition"><Edit3 className="w-4 h-4" /></button>
+                                            <button onClick={() => setEditModal(product)} className="text-gray-500 dark:text-gray-400 hover:text-indigo-600 transition"><Edit3 className="w-4 h-4" /></button>
                                         </td>
                                     </tr>
                                 ))}
@@ -204,7 +204,7 @@ function MiniStat({ icon: Icon, label, value, color }: { icon: typeof Package; l
                 <Icon className="w-4 h-4" />
             </div>
             <div className="text-2xl font-black text-foreground">{value}</div>
-            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-1">{label}</div>
+            <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mt-1">{label}</div>
         </div>
     );
 }
@@ -228,16 +228,16 @@ function ProductCard({ product, onEdit }: { product: BusinessProduct; onEdit: ()
                 </div>
             </div>
             <div className="p-4">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{CATEGORY_LABELS[product.category]}</span>
+                <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{CATEGORY_LABELS[product.category]}</span>
                 <h3 className="font-bold text-foreground text-sm mt-1 line-clamp-1">{product.name}</h3>
                 <div className="flex items-center justify-between mt-3">
                     <div className="flex items-center gap-2">
                         <span className="text-lg font-black text-foreground">₺{product.price}</span>
                         {product.originalPrice && (
-                            <span className="text-xs text-gray-400 line-through">₺{product.originalPrice}</span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400 line-through">₺{product.originalPrice}</span>
                         )}
                     </div>
-                    <span className={cn("text-xs font-bold", product.stock === 0 ? "text-red-500" : product.stock <= 10 ? "text-amber-500" : "text-gray-400")}>
+                    <span className={cn("text-xs font-bold", product.stock === 0 ? "text-red-500" : product.stock <= 10 ? "text-amber-500" : "text-gray-500 dark:text-gray-400")}>
                         Stok: {product.stock}
                     </span>
                 </div>
@@ -278,7 +278,7 @@ function ProductModal({ product, onClose }: { product: BusinessProduct | null; o
             >
                 <div className="p-6 border-b border-card-border flex items-center justify-between">
                     <h2 className="text-lg font-black text-foreground">{isEdit ? 'Ürünü Düzenle' : 'Yeni Ürün Ekle'}</h2>
-                    <button onClick={onClose} className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+                    <button onClick={onClose} className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
                 </div>
                 <div className="p-6 space-y-4">
                     <div>

@@ -72,7 +72,7 @@ export function GlobalToast() {
                             initial={{ opacity: 0, y: -20, scale: 0.9, x: 20 }}
                             animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
                             exit={{ opacity: 0, scale: 0.85, x: 20, transition: { duration: 0.2 } }}
-                            className="pointer-events-auto bg-black/60 dark:bg-zinc-950/80 backdrop-blur-xl border border-white/10 dark:border-zinc-800/80 shadow-2xl p-4.5 rounded-2xl flex items-start gap-3.5 relative overflow-hidden animate-in fade-in"
+                            className="pointer-events-auto bg-black/60 dark:bg-zinc-950/80 backdrop-blur-xl border border-black/10 dark:border-white/10 dark:border-zinc-800/80 shadow-2xl p-4.5 rounded-2xl flex items-start gap-3.5 relative overflow-hidden animate-in fade-in"
                             style={{
                                 boxShadow: "0 10px 30px -10px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)"
                             }}
@@ -83,7 +83,7 @@ export function GlobalToast() {
                             {/* Left active colored line indicator */}
                             <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#6366f1]" />
 
-                            <div className={`flex-shrink-0 w-9 h-9 rounded-xl bg-white/5 dark:bg-white/5 border border-white/5 flex items-center justify-center ${accentColorClass}`}>
+                            <div className={`flex-shrink-0 w-9 h-9 rounded-xl bg-black/5 dark:bg-white/5 dark:bg-white/5 border border-black/5 dark:border-white/5 flex items-center justify-center ${accentColorClass}`}>
                                 <IconComponent className="w-4.5 h-4.5" />
                             </div>
 
@@ -95,7 +95,7 @@ export function GlobalToast() {
 
                             <button 
                                 onClick={() => removeToast(toast.id)}
-                                className="flex-shrink-0 w-5 h-5 rounded-full hover:bg-white/10 dark:hover:bg-white/5 flex items-center justify-center text-gray-400 hover:text-white transition-colors cursor-pointer"
+                                className="flex-shrink-0 w-5 h-5 rounded-full hover:bg-black/10 dark:bg-white/10 dark:hover:bg-black/5 dark:bg-white/5 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-white transition-colors cursor-pointer"
                             >
                                 <X className="w-3.5 h-3.5" />
                             </button>

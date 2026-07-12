@@ -12,6 +12,7 @@ import { usePet } from "@/context/PetContext";
 import { useAuth } from "@/context/AuthContext";
 import { showToast } from "@/lib/utils";
 import { apiService, isSupabaseEnabled } from "@/services/apiService";
+import { sendAppointmentConfirmationEmail } from "@/actions/sendAppointmentEmail";
 
 // MOCK APPOINTMENTS (Initial State)
 const INITIAL_APPOINTMENTS = [
@@ -98,8 +99,13 @@ export default function BusinessAppointmentsPage() {
     const [vetAdviceBadge, setVetAdviceBadge] = useState("Genel Sağlık 🩺");
 
     const fetchAppointmentsFromDb = async () => {
+        if (!user?.id) {
+            console.warn("Klinik ID'si bulunamadı, kullanıcı oturumu yüklenmemiş olabilir.");
+            return;
+        }
         try {
-            const list = await apiService.getClinicAppointments('biz_vet1');
+            const clinicId = user.id;
+            const list = await apiService.getClinicAppointments(clinicId);
             const mapped = list.map((item: any) => {
                 let time = "00:00";
                 let dateStr = "Bugün";
@@ -130,6 +136,7 @@ export default function BusinessAppointmentsPage() {
 
                 return {
                     id: item.id,
+                    userId: item.user_id,
                     petName: item.pet?.name || "Milo",
                     ownerName: item.user?.full_name || item.user?.username || "Pati Sahibi",
                     time: time,
@@ -156,7 +163,7 @@ export default function BusinessAppointmentsPage() {
                     clinicName: item.clinic_name
                 };
             });
-
+            // Test mock kaldırıldı
             const confirmed = mapped.filter((a: any) => a.status === 'confirmed' || a.status === 'completed');
             const pending = mapped.filter((a: any) => a.status === 'pending');
 
@@ -172,9 +179,12 @@ export default function BusinessAppointmentsPage() {
         if (typeof window === 'undefined') return;
         
         const loadSettings = async () => {
+            if (!user?.id) return;
+            
             if (isSupabaseEnabled) {
                 try {
-                    const settings = await apiService.getClinicSettings('biz_vet1');
+                    const clinicId = user.id;
+                    const settings = await apiService.getClinicSettings(clinicId);
                     if (settings) {
                         if (settings.workingDays) setWorkingDays(settings.workingDays);
                         if (settings.startTime) setStartTime(settings.startTime);
@@ -205,8 +215,10 @@ export default function BusinessAppointmentsPage() {
             }
 
             try {
-                const advices = await apiService.getVetAdvices();
-                const myAdvice = advices.find((item: any) => item.clinic_id === 'biz_vet1');
+                const clinicId = user?.id;
+                if (!clinicId) return;
+                const { data: advices } = await supabase.from('vet_advice').select('*');
+                const myAdvice = advices.find((item: any) => item.clinic_id === clinicId);
                 if (myAdvice) {
                     setVetAdviceText(myAdvice.content);
                     setVetAdviceBadge(myAdvice.badge);
@@ -217,7 +229,7 @@ export default function BusinessAppointmentsPage() {
         };
 
         loadSettings();
-    }, []);
+    }, [user?.id]);
 
     // Load confirmed appointments
     useEffect(() => {
@@ -237,7 +249,7 @@ export default function BusinessAppointmentsPage() {
         } catch (e) {
             console.error("Storage Load Error:", e);
         }
-    }, []);
+    }, [user?.id]);
 
     // Fetch new appointments from Server (realtime / polling)
     useEffect(() => {
@@ -307,6 +319,22 @@ export default function BusinessAppointmentsPage() {
                 const channel = new BroadcastChannel('moffi_appointments_channel');
                 channel.postMessage({ type: 'APPOINTMENT_ACTION', appointmentId: id, action: action, petName: target.petName });
                 channel.close();
+
+                // --- B1: Send Appointment Confirmation Email ---
+                if (action === 'accept' && target.userId) {
+                    try {
+                        await sendAppointmentConfirmationEmail({
+                            userId: target.userId,
+                            clinicName: user?.user_metadata?.business_name || user?.email || "Moffi Kliniği",
+                            date: target.date || "Belirtilmedi",
+                            time: target.time || "Belirtilmedi",
+                            petName: target.petName
+                        });
+                    } catch (emailErr) {
+                        console.error("Failed to send appointment confirmation email:", emailErr);
+                    }
+                }
+                // --- END B1 ---
 
                 await fetchAppointmentsFromDb();
                 return;
@@ -614,6 +642,11 @@ export default function BusinessAppointmentsPage() {
     };
 
     const handleSaveSettings = async () => {
+        if (!user?.id) {
+            showToast("Oturumunuz doğrulanamadı, lütfen sayfayı yenileyin.", "AlertTriangle", "text-amber-500 font-bold");
+            return;
+        }
+
         const settings = {
             workingDays,
             startTime,
@@ -625,7 +658,8 @@ export default function BusinessAppointmentsPage() {
 
         if (isSupabaseEnabled) {
             try {
-                await apiService.saveClinicSettings('biz_vet1', settings);
+                const clinicId = user.id;
+                await apiService.saveClinicSettings(clinicId, settings);
             } catch (e) {
                 console.error("Failed to save clinic settings to Supabase:", e);
                 showToast("Vardiya ayarları veritabanına kaydedilemedi! ❌", "AlertTriangle", "text-red-500 font-bold");
@@ -640,6 +674,10 @@ export default function BusinessAppointmentsPage() {
     };
 
     const handleSaveAdvice = async () => {
+        if (!user?.id) {
+            showToast("Oturumunuz doğrulanamadı, lütfen sayfayı yenileyin.", "AlertTriangle", "text-amber-500 font-bold");
+            return;
+        }
         if (!vetAdviceText.trim()) {
             showToast("Lütfen bir tavsiye metni girin! ⚠️", "AlertTriangle", "text-amber-500 font-bold");
             return;
@@ -647,7 +685,8 @@ export default function BusinessAppointmentsPage() {
         setIsSavingAdvice(true);
         try {
             if (isSupabaseEnabled) {
-                await apiService.saveClinicAdvice('biz_vet1', vetAdviceText.trim(), vetAdviceBadge.trim());
+                const clinicId = user.id;
+                await apiService.saveClinicAdvice(clinicId, vetAdviceText.trim(), vetAdviceBadge.trim());
             } else {
                 localStorage.setItem('moffi_clinic_advice', JSON.stringify({ content: vetAdviceText.trim(), badge: vetAdviceBadge.trim() }));
             }
@@ -698,19 +737,19 @@ export default function BusinessAppointmentsPage() {
                 <div className="flex gap-4 mb-8 border-b border-zinc-200 dark:border-[#27272a] pb-px">
                     <button 
                         onClick={() => setActiveTab('appointments')}
-                        className={`pb-4 px-2 font-black text-xs uppercase tracking-wider transition-all border-b-2 -mb-px ${activeTab === 'appointments' ? 'border-[#5B4D9D] text-[#5B4D9D]' : 'border-transparent text-gray-400 hover:text-foreground dark:hover:text-white'}`}
+                        className={`pb-4 px-2 font-black text-xs uppercase tracking-wider transition-all border-b-2 -mb-px ${activeTab === 'appointments' ? 'border-[#5B4D9D] text-[#5B4D9D]' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-foreground dark:hover:text-white'}`}
                     >
                         Randevu Akışı
                     </button>
                     <button 
                         onClick={() => setActiveTab('advice')}
-                        className={`pb-4 px-2 font-black text-xs uppercase tracking-wider transition-all border-b-2 -mb-px ${activeTab === 'advice' ? 'border-[#5B4D9D] text-[#5B4D9D]' : 'border-transparent text-gray-400 hover:text-foreground dark:hover:text-white'}`}
+                        className={`pb-4 px-2 font-black text-xs uppercase tracking-wider transition-all border-b-2 -mb-px ${activeTab === 'advice' ? 'border-[#5B4D9D] text-[#5B4D9D]' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-foreground dark:hover:text-white'}`}
                     >
                         Günün Tavsiyesi 🩺
                     </button>
                     <button 
                         onClick={() => setActiveTab('shifts')}
-                        className={`pb-4 px-2 font-black text-xs uppercase tracking-wider transition-all border-b-2 -mb-px ${activeTab === 'shifts' ? 'border-[#5B4D9D] text-[#5B4D9D]' : 'border-transparent text-gray-400 hover:text-foreground dark:hover:text-white'}`}
+                        className={`pb-4 px-2 font-black text-xs uppercase tracking-wider transition-all border-b-2 -mb-px ${activeTab === 'shifts' ? 'border-[#5B4D9D] text-[#5B4D9D]' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-foreground dark:hover:text-white'}`}
                     >
                         Vardiya & Takvim Ayarları
                     </button>
@@ -728,7 +767,7 @@ export default function BusinessAppointmentsPage() {
                                 <div className="text-4xl font-black text-foreground dark:text-white">{appointments.length + pendingRequests.length}</div>
                             </div>
                             <div className="bg-[#5B4D9D] p-6 rounded-3xl shadow-xl shadow-purple-500/20 text-white">
-                                <div className="text-white/60 text-xs font-bold uppercase mb-2">Bekleyen Onay</div>
+                                <div className="text-black/60 dark:text-white/60 text-xs font-bold uppercase mb-2">Bekleyen Onay</div>
                                 <div className="text-4xl font-black">{pendingRequests.length}</div>
                             </div>
                             <div className="bg-card dark:bg-[#121212] p-6 rounded-3xl border border-card-border dark:border-card-border shadow-moffi-card">
@@ -746,10 +785,10 @@ export default function BusinessAppointmentsPage() {
                             </div>
 
                             <div className="space-y-4">
-                                {appointments.length === 0 && <div className="text-center text-gray-400 py-10">Bugün için planlanmış randevu yok.</div>}
+                                {appointments.length === 0 && <div className="text-center text-gray-500 dark:text-gray-400 py-10">Bugün için planlanmış randevu yok.</div>}
                                 {appointments.map((apt) => (
-                                    <div key={apt.id} className="group flex items-center gap-6 p-4 rounded-2xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors border border-transparent hover:border-card-border dark:hover:border-card-border">
-                                        <div className="font-mono font-bold text-gray-400 min-w-[3rem] text-right">{apt.time || "--:--"}</div>
+                                    <div key={apt.id} className="group flex items-center gap-6 p-4 rounded-2xl hover:bg-gray-50 dark:hover:bg-black/5 dark:bg-white/5 transition-colors border border-transparent hover:border-card-border dark:hover:border-card-border">
+                                        <div className="font-mono font-bold text-gray-500 dark:text-gray-400 min-w-[3rem] text-right">{apt.time || "--:--"}</div>
                                         <div className="relative">
                                             <div className="w-16 h-16 rounded-2xl bg-gray-200 overflow-hidden">
                                                 <img src={apt.image} className="w-full h-full object-cover" />
@@ -773,7 +812,7 @@ export default function BusinessAppointmentsPage() {
                                         </div>
                                         <button 
                                             onClick={() => startConsultation(apt)}
-                                            className="px-4 py-2 rounded-xl bg-card dark:bg-white/5 border border-card-border text-sm font-bold hover:bg-black hover:text-white dark:hover:bg-indigo-600 transition-colors"
+                                            className="px-4 py-2 rounded-xl bg-card dark:bg-white/5 border border-card-border text-sm font-bold hover:bg-white dark:bg-black hover:text-white dark:hover:bg-indigo-600 transition-colors"
                                         >
                                             {apt.status === 'completed' ? 'Muayene Detayı' : 'Muayene Et'}
                                         </button>
@@ -795,7 +834,7 @@ export default function BusinessAppointmentsPage() {
                                     {pendingRequests.length === 0 ? (
                                         <div className="text-center py-12 bg-gray-50 dark:bg-white/5 rounded-3xl border border-dashed border-card-border dark:border-card-border">
                                             <CheckCircle2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                                            <p className="text-gray-400 font-bold text-sm">Bekleyen istek yok</p>
+                                            <p className="text-gray-500 dark:text-gray-400 font-bold text-sm">Bekleyen istek yok</p>
                                         </div>
                                     ) : (
                                         <div className="space-y-4">
@@ -820,12 +859,12 @@ export default function BusinessAppointmentsPage() {
                                                         <span className="font-bold">Not:</span> {req.type || "Rutin Kontrol"}
                                                     </div>
                                                     {req.sharedPassport && (
-                                                         <div className="bg-white/5 border border-indigo-500/10 p-3.5 rounded-2xl mb-4 text-left space-y-2 mt-2">
+                                                         <div className="bg-black/5 dark:bg-white/5 border border-indigo-500/10 p-3.5 rounded-2xl mb-4 text-left space-y-2 mt-2">
                                                              <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest block">Tıbbi Pasaport Önizleme</span>
                                                              {checkAccessGranted(req) ? (
                                                                  <>
                                                                      {req.sharedPassport.basic && (
-                                                                         <div className="text-[10px] text-gray-400 flex flex-wrap gap-x-3 gap-y-1">
+                                                                         <div className="text-[10px] text-gray-500 dark:text-gray-400 flex flex-wrap gap-x-3 gap-y-1">
                                                                              <span>🐾 <strong>Irk:</strong> {req.sharedPassport.basic.breed}</span>
                                                                              <span>⚖️ <strong>Kilo:</strong> {req.sharedPassport.basic.weight}</span>
                                                                              <span>🎂 <strong>Yaş:</strong> {req.sharedPassport.basic.age || '2.1'}</span>
@@ -833,7 +872,7 @@ export default function BusinessAppointmentsPage() {
                                                                      )}
                                                                      {req.sharedPassport.vaccines && req.sharedPassport.vaccines.length > 0 && (
                                                                          <div className="text-[9px] text-gray-500 border-t border-card-border pt-1.5 mt-1">
-                                                                             <strong className="text-gray-400">Son Aşılar:</strong> {req.sharedPassport.vaccines.slice(0, 2).map((v: any) => v.definition?.name || v.name || 'Karma Aşı').join(", ")}
+                                                                             <strong className="text-gray-500 dark:text-gray-400">Son Aşılar:</strong> {req.sharedPassport.vaccines.slice(0, 2).map((v: any) => v.definition?.name || v.name || 'Karma Aşı').join(", ")}
                                                                          </div>
                                                                      )}
                                                                      {req.sharedPassport.healthNotes && (
@@ -881,7 +920,7 @@ export default function BusinessAppointmentsPage() {
 
                         {/* Working Days Selectors */}
                         <div className="space-y-4">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">ÇALIŞMA GÜNLERİ</label>
+                            <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">ÇALIŞMA GÜNLERİ</label>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                 {[
                                     { key: 'Monday', label: 'Pazartesi' },
@@ -898,7 +937,7 @@ export default function BusinessAppointmentsPage() {
                                         className={`flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer select-none transition-all ${
                                             workingDays[day.key] 
                                                 ? 'bg-[#5B4D9D]/5 border-[#5B4D9D] text-[#5B4D9D] font-bold' 
-                                                : 'bg-[#F8F9FC] dark:bg-white/5 border-zinc-200 dark:border-card-border text-gray-400 hover:border-zinc-350 dark:hover:border-[#3f3f46]'
+                                                : 'bg-[#F8F9FC] dark:bg-white/5 border-zinc-200 dark:border-card-border text-gray-500 dark:text-gray-400 hover:border-zinc-350 dark:hover:border-[#3f3f46]'
                                         }`}
                                     >
                                         <span className="text-xs">{day.label}</span>
@@ -913,7 +952,7 @@ export default function BusinessAppointmentsPage() {
                         {/* Hours Inputs */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-zinc-150 dark:border-white/5 text-left">
                             <div className="space-y-4">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">ÇALIŞMA SAATLERİ</label>
+                                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">ÇALIŞMA SAATLERİ</label>
                                 <div className="flex gap-4">
                                     <div className="flex-1 space-y-1.5">
                                         <label className="text-[9px] font-bold text-gray-500">Açılış</label>
@@ -939,7 +978,7 @@ export default function BusinessAppointmentsPage() {
                             </div>
 
                             <div className="space-y-4">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">ÖĞLE ARASI TATİLİ</label>
+                                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">ÖĞLE ARASI TATİLİ</label>
                                 <div className="flex gap-4">
                                     <div className="flex-1 space-y-1.5">
                                         <label className="text-[9px] font-bold text-gray-500">Başlangıç</label>
@@ -967,7 +1006,7 @@ export default function BusinessAppointmentsPage() {
 
                         {/* Slot Duration Select */}
                         <div className="space-y-4 pt-4 border-t border-zinc-150 dark:border-white/5 max-w-xs text-left">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">RANDEVU MUAYENE SÜRESI</label>
+                            <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">RANDEVU MUAYENE SÜRESI</label>
                             <select 
                                 value={slotDuration}
                                 onChange={e => setSlotDuration(Number(e.target.value))}
@@ -1007,7 +1046,7 @@ export default function BusinessAppointmentsPage() {
                         <div className="space-y-6">
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Tavsiye Kategorisi</label>
+                                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">Tavsiye Kategorisi</label>
                                     <select 
                                         value={vetAdviceBadge}
                                         onChange={e => setVetAdviceBadge(e.target.value)}
@@ -1022,7 +1061,7 @@ export default function BusinessAppointmentsPage() {
                                 </div>
 
                                 <div className="space-y-2 sm:col-span-2">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Tavsiye Açıklaması</label>
+                                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">Tavsiye Açıklaması</label>
                                     <textarea
                                         value={vetAdviceText}
                                         onChange={e => setVetAdviceText(e.target.value.slice(0, 150))}
@@ -1030,9 +1069,9 @@ export default function BusinessAppointmentsPage() {
                                         rows={3}
                                         className="w-full bg-[#F8F9FC] dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-2xl px-4 py-3 text-xs focus:border-[#5B4D9D] focus:ring-1 focus:ring-[#5B4D9D] outline-none text-foreground dark:text-white transition-all resize-none shadow-sm"
                                     />
-                                    <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold mt-1.5 px-1">
+                                    <div className="flex justify-between items-center text-[10px] text-gray-500 dark:text-gray-400 font-bold mt-1.5 px-1">
                                         <span>En fazla 150 karakter yazabilirsiniz</span>
-                                        <span className={vetAdviceText.length >= 135 ? "text-red-500 font-black" : "text-gray-400"}>
+                                        <span className={vetAdviceText.length >= 135 ? "text-red-500 font-black" : "text-gray-500 dark:text-gray-400"}>
                                             {vetAdviceText.length}/150
                                         </span>
                                     </div>
@@ -1042,7 +1081,7 @@ export default function BusinessAppointmentsPage() {
 
                         {/* Interactive Preview - Story Layout Mockup */}
                         <div className="pt-6 border-t border-zinc-150 dark:border-white/5 space-y-4">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">HİKAYE ÖNİZLEME (KULLANICININ EKRANINDA BÖYLE GÖRÜNECEK)</label>
+                            <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">HİKAYE ÖNİZLEME (KULLANICININ EKRANINDA BÖYLE GÖRÜNECEK)</label>
                             
                             <div className="flex justify-center">
                                 <div className="w-[280px] h-[450px] rounded-[2.2rem] bg-zinc-950 text-white relative overflow-hidden shadow-2xl border-4 border-zinc-900 flex flex-col justify-between p-6">
@@ -1053,7 +1092,7 @@ export default function BusinessAppointmentsPage() {
 
                                     {/* Top Bar (Clinic Info) */}
                                     <div className="z-20 flex items-center gap-3">
-                                        <div className="w-9 h-9 rounded-full border border-white/20 overflow-hidden bg-white/10 flex items-center justify-center">
+                                        <div className="w-9 h-9 rounded-full border border-black/20 dark:border-white/20 overflow-hidden bg-black/10 dark:bg-white/10 flex items-center justify-center">
                                             <img src="/images/moffi_pet_trio.png" className="w-full h-full object-cover" />
                                         </div>
                                         <div className="text-left">
@@ -1191,7 +1230,7 @@ export default function BusinessAppointmentsPage() {
 
                                         {selectedApt.consultationData?.vaccines?.length > 0 && (
                                             <div className="bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-card-border p-4 rounded-3xl">
-                                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Uygulanan Aşılar</span>
+                                                <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-2">Uygulanan Aşılar</span>
                                                 <div className="space-y-3">
                                                     {selectedApt.consultationData.vaccines.map((v: any, index: number) => (
                                                         <div key={index} className="flex justify-between items-center text-sm border-b border-zinc-200 dark:border-white/5 pb-2 last:border-b-0 last:pb-0">
@@ -1211,7 +1250,7 @@ export default function BusinessAppointmentsPage() {
 
                                         {selectedApt.consultationData?.medications?.length > 0 && (
                                             <div className="bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-card-border p-4 rounded-3xl">
-                                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Yazılan Reçete</span>
+                                                <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-2">Yazılan Reçete</span>
                                                 <div className="space-y-3">
                                                     {selectedApt.consultationData.medications.map((m: any, index: number) => (
                                                         <div key={index} className="flex justify-between items-center text-sm border-b border-zinc-200 dark:border-white/5 pb-2 last:border-b-0 last:pb-0">

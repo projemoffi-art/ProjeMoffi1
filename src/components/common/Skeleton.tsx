@@ -9,7 +9,7 @@ interface SkeletonProps {
 export function Skeleton({ className }: SkeletonProps) {
     return (
         <div className={cn(
-            "animate-pulse bg-white/5 rounded-2xl relative overflow-hidden",
+            "animate-pulse bg-black/5 dark:bg-white/5 rounded-2xl relative overflow-hidden",
             className
         )}>
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />

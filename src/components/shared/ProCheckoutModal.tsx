@@ -102,8 +102,8 @@ export function ProCheckoutModal({ isOpen, onClose, onSuccess }: ProCheckoutModa
                                     <p className="text-[9px] text-indigo-400 font-bold uppercase tracking-widest">Premium Yükseltme</p>
                                 </div>
                             </div>
-                            <button onClick={onClose} className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-all border border-card-border">
-                                <X className="w-4 h-4 text-white/50" />
+                            <button onClick={onClose} className="p-2 bg-black/5 dark:bg-white/5 rounded-full hover:bg-black/10 dark:bg-white/10 transition-all border border-card-border">
+                                <X className="w-4 h-4 text-black/50 dark:text-white/50" />
                             </button>
                         </div>
 
@@ -122,10 +122,10 @@ export function ProCheckoutModal({ isOpen, onClose, onSuccess }: ProCheckoutModa
                                             <div className="w-full aspect-[1.6/1] bg-gradient-to-br from-[#1C1C26] via-[#12121A] to-[#0A0A0F] rounded-3xl p-8 border border-card-border shadow-2xl relative overflow-hidden group-hover:rotate-x-2 transition-transform duration-500">
                                                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-[60px] rounded-full" />
                                                 <div className="flex justify-between items-start mb-12">
-                                                    <div className="w-12 h-10 bg-white/5 rounded-lg border border-card-border flex items-center justify-center">
+                                                    <div className="w-12 h-10 bg-black/5 dark:bg-white/5 rounded-lg border border-card-border flex items-center justify-center">
                                                         <div className="w-8 h-6 bg-yellow-500/20 rounded border border-yellow-500/20" />
                                                     </div>
-                                                    <CreditCard className="w-8 h-8 text-white/20" />
+                                                    <CreditCard className="w-8 h-8 text-black/30 dark:text-white/20" />
                                                 </div>
                                                 <div className="space-y-6">
                                                     <div className="text-2xl font-black text-white tracking-[0.2em] h-8 font-mono">
@@ -133,11 +133,11 @@ export function ProCheckoutModal({ isOpen, onClose, onSuccess }: ProCheckoutModa
                                                     </div>
                                                     <div className="flex justify-between items-end">
                                                         <div>
-                                                            <p className="text-[10px] text-white/20 font-black uppercase tracking-widest mb-1">Kart Sahibi</p>
+                                                            <p className="text-[10px] text-black/30 dark:text-white/20 font-black uppercase tracking-widest mb-1">Kart Sahibi</p>
                                                             <p className="text-sm font-black text-white uppercase tracking-wider h-5">{cardData.name || 'MOFFI USER'}</p>
                                                         </div>
                                                         <div className="text-right">
-                                                            <p className="text-[10px] text-white/20 font-black uppercase tracking-widest mb-1">EXP</p>
+                                                            <p className="text-[10px] text-black/30 dark:text-white/20 font-black uppercase tracking-widest mb-1">EXP</p>
                                                             <p className="text-sm font-black text-white tracking-widest h-5">{cardData.expiry || 'MM/YY'}</p>
                                                         </div>
                                                     </div>
@@ -153,34 +153,34 @@ export function ProCheckoutModal({ isOpen, onClose, onSuccess }: ProCheckoutModa
                                         {/* Form Fields */}
                                         <div className="grid grid-cols-1 gap-6">
                                             <div className="space-y-2">
-                                                <label className="text-[10px] text-white/30 font-black uppercase tracking-widest ml-1">Kart Üzerindeki İsim</label>
+                                                <label className="text-[10px] text-black/40 dark:text-white/30 font-black uppercase tracking-widest ml-1">Kart Üzerindeki İsim</label>
                                                 <input 
                                                     type="text"
                                                     value={cardData.name}
                                                     onChange={(e) => setCardData({...cardData, name: e.target.value})}
-                                                    className="w-full bg-white/5 border border-card-border rounded-2xl py-4 px-5 text-white font-bold outline-none focus:border-indigo-500/50 transition-all placeholder:text-white/10 uppercase"
+                                                    className="w-full bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl py-4 px-5 text-white font-bold outline-none focus:border-indigo-500/50 transition-all placeholder:text-white/10 uppercase"
                                                     placeholder="AD SOYAD"
                                                 />
                                             </div>
 
                                             <div className="space-y-2">
-                                                <label className="text-[10px] text-white/30 font-black uppercase tracking-widest ml-1">Kart Numarası</label>
+                                                <label className="text-[10px] text-black/40 dark:text-white/30 font-black uppercase tracking-widest ml-1">Kart Numarası</label>
                                                 <div className="relative">
                                                     <input 
                                                         type="text"
                                                         maxLength={16}
                                                         value={cardData.number}
                                                         onChange={(e) => setCardData({...cardData, number: e.target.value.replace(/\D/g, '')})}
-                                                        className="w-full bg-white/5 border border-card-border rounded-2xl py-4 px-5 text-white font-mono font-bold text-lg outline-none focus:border-indigo-500/50 transition-all"
+                                                        className="w-full bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl py-4 px-5 text-white font-mono font-bold text-lg outline-none focus:border-indigo-500/50 transition-all"
                                                         placeholder="0000 0000 0000 0000"
                                                     />
-                                                    <Lock className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+                                                    <Lock className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/30 dark:text-white/20" />
                                                 </div>
                                             </div>
 
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div className="space-y-2">
-                                                    <label className="text-[10px] text-white/30 font-black uppercase tracking-widest ml-1">Son Kullanma</label>
+                                                    <label className="text-[10px] text-black/40 dark:text-white/30 font-black uppercase tracking-widest ml-1">Son Kullanma</label>
                                                     <input 
                                                         type="text"
                                                         maxLength={5}
@@ -190,18 +190,18 @@ export function ProCheckoutModal({ isOpen, onClose, onSuccess }: ProCheckoutModa
                                                             if (val.length >= 2) val = val.substring(0,2) + '/' + val.substring(2);
                                                             setCardData({...cardData, expiry: val});
                                                         }}
-                                                        className="w-full bg-white/5 border border-card-border rounded-2xl py-4 px-5 text-white font-bold outline-none focus:border-indigo-500/50 transition-all"
+                                                        className="w-full bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl py-4 px-5 text-white font-bold outline-none focus:border-indigo-500/50 transition-all"
                                                         placeholder="AA/YY"
                                                     />
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <label className="text-[10px] text-white/30 font-black uppercase tracking-widest ml-1">CVC / CVV</label>
+                                                    <label className="text-[10px] text-black/40 dark:text-white/30 font-black uppercase tracking-widest ml-1">CVC / CVV</label>
                                                     <input 
                                                         type="text"
                                                         maxLength={3}
                                                         value={cardData.cvc}
                                                         onChange={(e) => setCardData({...cardData, cvc: e.target.value.replace(/\D/g, '')})}
-                                                        className="w-full bg-white/5 border border-card-border rounded-2xl py-4 px-5 text-white font-bold outline-none focus:border-indigo-500/50 transition-all"
+                                                        className="w-full bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl py-4 px-5 text-white font-bold outline-none focus:border-indigo-500/50 transition-all"
                                                         placeholder="123"
                                                     />
                                                 </div>
@@ -210,7 +210,7 @@ export function ProCheckoutModal({ isOpen, onClose, onSuccess }: ProCheckoutModa
 
                                         <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-2xl p-4 flex items-start gap-4">
                                             <ShieldCheck className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
-                                            <p className="text-[10px] text-white/50 leading-relaxed font-bold uppercase tracking-tight">
+                                            <p className="text-[10px] text-black/50 dark:text-white/50 leading-relaxed font-bold uppercase tracking-tight">
                                                 Ödemeleriniz uçtan uca şifrelenmektedir. Moffi kart bilgilerinizi asla saklamaz ve <span className="text-white">PCIDSS</span> uyumludur.
                                             </p>
                                         </div>
@@ -220,7 +220,7 @@ export function ProCheckoutModal({ isOpen, onClose, onSuccess }: ProCheckoutModa
                                             disabled={!isFormValid}
                                             className={cn(
                                                 "w-full py-6 rounded-[2.5rem] flex items-center justify-center gap-3 transition-all active:scale-95 group shadow-2xl shadow-indigo-500/20",
-                                                isFormValid ? "bg-card text-black font-black uppercase tracking-[0.2em]" : "bg-white/5 border border-card-border text-white/20 cursor-not-allowed"
+                                                isFormValid ? "bg-card text-black font-black uppercase tracking-[0.2em]" : "bg-black/5 dark:bg-white/5 border border-card-border text-black/30 dark:text-white/20 cursor-not-allowed"
                                             )}
                                         >
                                             {isFormValid ? (
@@ -245,7 +245,7 @@ export function ProCheckoutModal({ isOpen, onClose, onSuccess }: ProCheckoutModa
                                         <div className="relative">
                                             <Loader2 className="w-20 h-20 text-indigo-500 animate-spin" />
                                             <div className="absolute inset-x-0 -bottom-12 flex flex-col items-center">
-                                                <div className="w-32 h-1 bg-white/5 rounded-full overflow-hidden">
+                                                <div className="w-32 h-1 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
                                                     <motion.div 
                                                         animate={{ x: ["-100%", "100%"] }}
                                                         transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
@@ -256,11 +256,11 @@ export function ProCheckoutModal({ isOpen, onClose, onSuccess }: ProCheckoutModa
                                         </div>
                                         <div className="space-y-3">
                                             <h4 className="text-2xl font-black text-white italic uppercase tracking-tighter">İşlem Yapılıyor</h4>
-                                            <p className="text-[10px] text-white/30 font-black uppercase tracking-[0.3em]">Bankanızdan onay bekleniyor...</p>
+                                            <p className="text-[10px] text-black/40 dark:text-white/30 font-black uppercase tracking-[0.3em]">Bankanızdan onay bekleniyor...</p>
                                         </div>
-                                        <div className="bg-white/5 px-6 py-3 rounded-2xl flex items-center gap-3 border border-card-border">
+                                        <div className="bg-black/5 dark:bg-white/5 px-6 py-3 rounded-2xl flex items-center gap-3 border border-card-border">
                                             <Lock className="w-4 h-4 text-indigo-400" />
-                                            <span className="text-[9px] font-black text-white/50 uppercase tracking-widest">3D SECURE ACTIVE</span>
+                                            <span className="text-[9px] font-black text-black/50 dark:text-white/50 uppercase tracking-widest">3D SECURE ACTIVE</span>
                                         </div>
                                     </motion.div>
                                 )}
@@ -293,17 +293,17 @@ export function ProCheckoutModal({ isOpen, onClose, onSuccess }: ProCheckoutModa
                                                     <Crown className="w-3 h-3 text-white" />
                                                     <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Moffi Pro Active</span>
                                                 </div>
-                                                <p className="text-[11px] text-white/40 font-bold uppercase tracking-widest max-w-[280px]">Tüm kilitler açıldı. Artık Moffi ekosisteminde sınırın yok.</p>
+                                                <p className="text-[11px] text-black/50 dark:text-white/40 font-bold uppercase tracking-widest max-w-[280px]">Tüm kilitler açıldı. Artık Moffi ekosisteminde sınırın yok.</p>
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
-                                            <div className="bg-white/5 p-4 rounded-2xl border border-card-border flex flex-col items-center">
+                                            <div className="bg-black/5 dark:bg-white/5 p-4 rounded-2xl border border-card-border flex flex-col items-center">
                                                 <Sparkles className="w-4 h-4 text-orange-400 mb-2" />
-                                                <span className="text-[8px] font-black text-white/40 uppercase">Premium Aura</span>
+                                                <span className="text-[8px] font-black text-black/50 dark:text-white/40 uppercase">Premium Aura</span>
                                             </div>
-                                            <div className="bg-white/5 p-4 rounded-2xl border border-card-border flex flex-col items-center">
+                                            <div className="bg-black/5 dark:bg-white/5 p-4 rounded-2xl border border-card-border flex flex-col items-center">
                                                 <BellRing className="w-4 h-4 text-cyan-400 mb-2" />
-                                                <span className="text-[8px] font-black text-white/40 uppercase">Öncelikli SOS</span>
+                                                <span className="text-[8px] font-black text-black/50 dark:text-white/40 uppercase">Öncelikli SOS</span>
                                             </div>
                                         </div>
                                     </motion.div>

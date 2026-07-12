@@ -42,7 +42,7 @@ export default function WalkHistoryPage() {
                         onClick={() => setActiveTab('list')}
                         className={cn(
                             "flex-1 py-3 rounded-xl text-xs font-bold transition-all relative z-10",
-                            activeTab === 'list' ? "bg-card text-foreground shadow-moffi-card" : "text-gray-400 hover:text-gray-600"
+                            activeTab === 'list' ? "bg-card text-foreground shadow-moffi-card" : "text-gray-500 dark:text-gray-400 hover:text-gray-600"
                         )}
                     >
                         Yürüyüşlerim
@@ -51,7 +51,7 @@ export default function WalkHistoryPage() {
                         onClick={() => setActiveTab('stats')}
                         className={cn(
                             "flex-1 py-3 rounded-xl text-xs font-bold transition-all relative z-10",
-                            activeTab === 'stats' ? "bg-card text-foreground shadow-moffi-card" : "text-gray-400 hover:text-gray-600"
+                            activeTab === 'stats' ? "bg-card text-foreground shadow-moffi-card" : "text-gray-500 dark:text-gray-400 hover:text-gray-600"
                         )}
                     >
                         İstatistikler
@@ -89,7 +89,7 @@ export default function WalkHistoryPage() {
                                         </div>
                                         <div>
                                             <div className="text-lg font-black text-foreground">{walk.steps}</div>
-                                            <div className="text-[10px] font-bold text-gray-400 uppercase">Adım</div>
+                                            <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase">Adım</div>
                                         </div>
                                     </div>
 
@@ -101,7 +101,7 @@ export default function WalkHistoryPage() {
                                         </div>
                                         <div>
                                             <div className="text-lg font-black text-foreground">{walk.duration}</div>
-                                            <div className="text-[10px] font-bold text-gray-400 uppercase">Süre</div>
+                                            <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase">Süre</div>
                                         </div>
                                     </div>
 
@@ -113,7 +113,7 @@ export default function WalkHistoryPage() {
                                         </div>
                                         <div>
                                             <div className="text-lg font-black text-foreground">{walk.distance}</div>
-                                            <div className="text-[10px] font-bold text-gray-400 uppercase">Mesafe</div>
+                                            <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase">Mesafe</div>
                                         </div>
                                     </div>
                                 </div>

@@ -85,7 +85,7 @@ export default function ProfileHeader({ user, isFollowingInitial, userId, onMess
                 {user.isOwnProfile && (
                     <button 
                         onClick={() => window.dispatchEvent(new CustomEvent('open-moffi-settings'))}
-                        className="absolute top-6 right-6 p-3 bg-white/10 backdrop-blur-xl rounded-2xl border border-card-border text-white hover:bg-white/20 transition-all active:scale-90"
+                        className="absolute top-6 right-6 p-3 bg-black/10 dark:bg-white/10 backdrop-blur-xl rounded-2xl border border-card-border text-white hover:bg-black/20 dark:bg-white/20 transition-all active:scale-90"
                     >
                         <Settings className="w-5 h-5" />
                     </button>
@@ -97,8 +97,8 @@ export default function ProfileHeader({ user, isFollowingInitial, userId, onMess
                 <div className="flex justify-between items-end mb-6">
                     <div className={cn(
                         "w-32 h-32 sm:w-40 sm:h-40 rounded-[2.5rem] relative overflow-hidden transition-all duration-500",
-                        frameStyle === 'glass' ? "border-4 border-white/40 shadow-[0_8px_32px_rgba(255,255,255,0.15)] bg-white/10 backdrop-blur-md" :
-                        frameStyle === 'neon' ? "border-[6px] border-[#00FFFF] shadow-[0_0_30px_rgba(0,255,255,0.8)] bg-black" :
+                        frameStyle === 'glass' ? "border-4 border-white/40 shadow-[0_8px_32px_rgba(255,255,255,0.15)] bg-black/10 dark:bg-white/10 backdrop-blur-md" :
+                        frameStyle === 'neon' ? "border-[6px] border-[#00FFFF] shadow-[0_0_30px_rgba(0,255,255,0.8)] bg-white dark:bg-black" :
                         frameStyle === 'metal' ? "border-[6px] border-gray-400 bg-gradient-to-br from-gray-300 via-gray-600 to-gray-900 shadow-[inset_0_0_20px_rgba(0,0,0,0.8),_0_10px_25px_rgba(0,0,0,0.5)]" :
                         "border-[6px] border-background bg-card shadow-moffi-card"
                     )}>

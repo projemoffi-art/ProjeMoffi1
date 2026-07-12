@@ -138,12 +138,12 @@ export default function AdvisorChat({ isOpen, onClose, isSmartEnabled = true }: 
                                     <h3 className="text-sm font-black text-foreground dark:text-white uppercase tracking-tighter italic">Beslenme Danışmanı</h3>
                                     <div className="flex items-center gap-1.5">
                                         <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Canlı Destek · Çevrimiçi</span>
+                                        <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Canlı Destek · Çevrimiçi</span>
                                     </div>
                                 </div>
                             </div>
                             <button onClick={onClose} className="w-10 h-10 bg-gray-50 dark:bg-white/5 rounded-full flex items-center justify-center">
-                                <X className="w-5 h-5 text-gray-400" />
+                                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                             </button>
                         </div>
 
@@ -203,7 +203,7 @@ export default function AdvisorChat({ isOpen, onClose, isSmartEnabled = true }: 
                                     <Send className="w-5 h-5" />
                                 </button>
                             </div>
-                            <p className="flex items-center gap-1.5 text-[9px] font-black text-gray-400 mt-3 uppercase tracking-widest justify-center">
+                            <p className="flex items-center gap-1.5 text-[9px] font-black text-gray-500 dark:text-gray-400 mt-3 uppercase tracking-widest justify-center">
                                 <Info className="w-3 h-3" />
                                 Öneriler {petName}'nun güncel sağlık verilerine dayalıdır
                             </p>

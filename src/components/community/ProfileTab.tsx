@@ -130,7 +130,7 @@ function RealPostsGallery({ userId, onPostClick }: { userId?: string; onPostClic
         return (
             <div className="grid grid-cols-3 gap-0.5 px-0">
                 {Array(9).fill(0).map((_, i) => (
-                    <div key={i} className="aspect-square bg-white/5 animate-pulse relative overflow-hidden">
+                    <div key={i} className="aspect-square bg-black/5 dark:bg-white/5 animate-pulse relative overflow-hidden">
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_1.5s_infinite]" />
                     </div>
                 ))}
@@ -145,8 +145,8 @@ function RealPostsGallery({ userId, onPostClick }: { userId?: string; onPostClic
                 animate={{ opacity: 1, y: 0 }}
                 className="flex flex-col items-center justify-center py-20 px-8 text-center"
             >
-                <div className="w-20 h-20 rounded-[2rem] bg-white/5 border border-card-border flex items-center justify-center mb-6">
-                    <ImageIcon className="w-9 h-9 text-white/20" />
+                <div className="w-20 h-20 rounded-[2rem] bg-black/5 dark:bg-white/5 border border-card-border flex items-center justify-center mb-6">
+                    <ImageIcon className="w-9 h-9 text-black/30 dark:text-white/20" />
                 </div>
                 <h3 className="text-foreground font-black text-lg uppercase italic tracking-tighter">Henüz Gönderi Yok</h3>
                 <p className="text-secondary text-sm mt-2 leading-relaxed">
@@ -172,7 +172,7 @@ function RealPostsGallery({ userId, onPostClick }: { userId?: string; onPostClic
                             "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all border",
                             filterType === f.id
                                 ? "bg-foreground text-background border-foreground"
-                                : "bg-white/5 text-secondary border-card-border hover:bg-white/10"
+                                : "bg-black/5 dark:bg-white/5 text-secondary border-card-border hover:bg-black/10 dark:bg-white/10"
                         )}
                     >
                         {f.label}
@@ -218,7 +218,7 @@ function RealPostsGallery({ userId, onPostClick }: { userId?: string; onPostClic
                                 )
                             ) : (
                                 <div className="w-full h-full bg-gradient-to-br from-cyan-500/20 to-purple-500/20 flex items-center justify-center">
-                                    <MessageCircle className="w-8 h-8 text-white/30" />
+                                    <MessageCircle className="w-8 h-8 text-black/40 dark:text-white/30" />
                                 </div>
                             )}
 
@@ -254,11 +254,11 @@ function RealPostsGallery({ userId, onPostClick }: { userId?: string; onPostClic
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 40 }}
                             transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-                            className="fixed inset-x-4 top-20 bottom-20 z-[510] bg-[#1C1C1E] rounded-[2.5rem] overflow-hidden flex flex-col border border-card-border shadow-2xl"
+                            className="fixed inset-x-4 top-20 bottom-20 z-[510] bg-card dark:bg-[#1C1C1E] rounded-[2.5rem] overflow-hidden flex flex-col border border-card-border shadow-2xl"
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Media */}
-                            <div className="relative flex-1 bg-black">
+                            <div className="relative flex-1 bg-white dark:bg-black">
                                 {selectedPost.type === 'video' ? (
                                     <video
                                         src={selectedPost.media_url || selectedPost.image}
@@ -594,7 +594,7 @@ function PetDashboardView({ pets, activePet, switchPet, onAddPet, posts, safeAct
                             <img src={pet.image || pet.avatar} className="w-16 h-16 rounded-2xl object-cover" />
                         ) : (
                             <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-gray-150 to-gray-250 dark:from-zinc-800 dark:to-zinc-700 flex items-center justify-center border border-card-border shadow-inner">
-                                <span className="text-gray-400 dark:text-zinc-500 text-2xl font-black select-none uppercase font-sans">
+                                <span className="text-gray-500 dark:text-gray-400 dark:text-zinc-500 text-2xl font-black select-none uppercase font-sans">
                                     {pet.name ? pet.name[0] : '🐾'}
                                 </span>
                             </div>

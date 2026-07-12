@@ -86,7 +86,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             {/* PROGRESS BAR */}
             <div className="absolute top-12 left-8 right-8 flex gap-1.5 z-50">
                 {STEPS.map((_, i) => (
-                    <div key={i} className="h-1 flex-1 bg-white/10 rounded-full overflow-hidden">
+                    <div key={i} className="h-1 flex-1 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
                         <motion.div 
                             initial={{ width: 0 }}
                             animate={{ width: i <= currentStep ? '100%' : '0%' }}
@@ -116,7 +116,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                                 <h1 className="text-5xl font-black tracking-tighter italic uppercase leading-none">
                                     MOFFI'YE <br/> <span className="text-cyan-400">HOŞ GELDİN</span>
                                 </h1>
-                                <p className="text-white/40 text-sm font-medium leading-relaxed px-4">
+                                <p className="text-black/50 dark:text-white/40 text-sm font-medium leading-relaxed px-4">
                                     Patili dostun için tasarlanmış en premium ekosisteme ilk adımını attın.
                                 </p>
                             </div>
@@ -126,7 +126,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                     {/* STEP 2: IDENTITY */}
                     {currentStep === 1 && (
                         <div className="space-y-10 w-full max-w-md">
-                            <div className="w-20 h-20 bg-white/5 rounded-3xl border border-card-border flex items-center justify-center mx-auto mb-4">
+                            <div className="w-20 h-20 bg-black/5 dark:bg-white/5 rounded-3xl border border-card-border flex items-center justify-center mx-auto mb-4">
                                 <PawPrint className="w-10 h-10 text-cyan-400" />
                             </div>
                             <div className="space-y-6 text-center">
@@ -137,7 +137,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                                         autoFocus
                                         value={petData.name}
                                         onChange={(e) => setPetData({...petData, name: e.target.value})}
-                                        className="w-full bg-white/5 border-b-2 border-card-border py-6 px-4 text-4xl font-black text-center outline-none focus:border-cyan-400 transition-all placeholder:text-white/5"
+                                        className="w-full bg-black/5 dark:bg-white/5 border-b-2 border-card-border py-6 px-4 text-4xl font-black text-center outline-none focus:border-cyan-400 transition-all placeholder:text-white/5"
                                         placeholder="Dostunun adı..."
                                     />
                                 </div>
@@ -149,7 +149,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                                         onClick={() => setPetData({...petData, type})}
                                         className={cn(
                                             "px-8 py-4 rounded-2xl border font-black uppercase tracking-widest text-[10px] transition-all",
-                                            petData.type === type ? "bg-card text-black border-white" : "bg-white/5 border-card-border text-white/40"
+                                            petData.type === type ? "bg-card text-black border-white" : "bg-black/5 dark:bg-white/5 border-card-border text-black/50 dark:text-white/40"
                                         )}
                                     >
                                         {type === 'dog' ? 'KÖPEK' : 'KEDİ'}
@@ -164,13 +164,13 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                         <div className="space-y-10 w-full max-w-md">
                             <div className="space-y-4">
                                 <h2 className="text-3xl font-black uppercase italic tracking-tight leading-none">Onun En <br/> Güzel Hali</h2>
-                                <p className="text-white/40 text-sm font-medium">Profilinde görünecek o meşhur kareyi seç.</p>
+                                <p className="text-black/50 dark:text-white/40 text-sm font-medium">Profilinde görünecek o meşhur kareyi seç.</p>
                             </div>
 
                             <div 
                                 onClick={() => fileInputRef.current?.click()}
                                 className={cn(
-                                    "relative w-64 h-64 mx-auto rounded-[3.5rem] border-2 border-dashed border-card-border flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-white/5 hover:border-cyan-400/40 group overflow-hidden",
+                                    "relative w-64 h-64 mx-auto rounded-[3.5rem] border-2 border-dashed border-card-border flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-black/5 dark:bg-white/5 hover:border-cyan-400/40 group overflow-hidden",
                                     petData.image ? "border-solid border-cyan-400" : ""
                                 )}
                             >
@@ -183,10 +183,10 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                                     </>
                                 ) : (
                                     <>
-                                        <div className="w-16 h-16 rounded-3xl bg-white/5 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                                            <Zap className="w-8 h-8 text-white/20 group-hover:text-cyan-400" />
+                                        <div className="w-16 h-16 rounded-3xl bg-black/5 dark:bg-white/5 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                            <Zap className="w-8 h-8 text-black/30 dark:text-white/20 group-hover:text-cyan-400" />
                                         </div>
-                                        <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Fotoğraf Yükle</span>
+                                        <span className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-widest">Fotoğraf Yükle</span>
                                     </>
                                 )}
                                 <input 
@@ -200,7 +200,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
                             <button 
                                 onClick={handleNext}
-                                className="text-[10px] font-black text-white/20 hover:text-white uppercase tracking-widest transition-colors"
+                                className="text-[10px] font-black text-black/30 dark:text-white/20 hover:text-white uppercase tracking-widest transition-colors"
                             >
                                 Şimdilik Atla
                             </button>
@@ -212,7 +212,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                         <div className="space-y-10 w-full max-w-md">
                             <div className="space-y-4">
                                 <h2 className="text-3xl font-black uppercase italic tracking-tight">Dostunun Ruhu</h2>
-                                <p className="text-white/40 text-sm font-medium">Bu seçim onun profil rengini ve aurasını belirleyecek.</p>
+                                <p className="text-black/50 dark:text-white/40 text-sm font-medium">Bu seçim onun profil rengini ve aurasını belirleyecek.</p>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 {AURAS.map(aura => (
@@ -221,7 +221,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                                         onClick={() => setPetData({...petData, aura: aura.id})}
                                         className={cn(
                                             "p-6 rounded-[2rem] border transition-all flex flex-col items-center gap-4 relative overflow-hidden group",
-                                            petData.aura === aura.id ? `bg-white/10 border-card-border ${aura.glow} shadow-lg` : "bg-white/5 border-card-border"
+                                            petData.aura === aura.id ? `bg-black/10 dark:bg-white/10 border-card-border ${aura.glow} shadow-lg` : "bg-black/5 dark:bg-white/5 border-card-border"
                                         )}
                                     >
                                         <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center", aura.color)}>
@@ -246,14 +246,14 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                         <div className="space-y-10 max-w-md">
                             <div className="relative w-72 h-72 mx-auto">
                                 <div className="absolute inset-0 bg-red-500/20 blur-[100px] rounded-full animate-pulse" />
-                                <div className="relative w-full h-full bg-white/5 border border-card-border rounded-[3rem] flex flex-col items-center justify-center p-8">
+                                <div className="relative w-full h-full bg-black/5 dark:bg-white/5 border border-card-border rounded-[3rem] flex flex-col items-center justify-center p-8">
                                     <ShieldCheck className="w-20 h-20 text-red-500 mb-6" />
                                     <h3 className="text-xl font-black uppercase italic text-center">GÜVENLİK <br/>AKTİF</h3>
                                 </div>
                             </div>
                             <div className="space-y-4">
                                 <h2 className="text-3xl font-black uppercase italic tracking-tight leading-none">Onu Asla <br/>Yalnız Bırakma</h2>
-                                <p className="text-white/40 text-sm font-medium leading-relaxed">
+                                <p className="text-black/50 dark:text-white/40 text-sm font-medium leading-relaxed">
                                     Akıllı SOS ve Moffi Pet-ID sistemiyle dostun her zaman bir tık uzağında.
                                 </p>
                             </div>

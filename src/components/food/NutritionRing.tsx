@@ -57,7 +57,7 @@ export function NutritionRing({ calories, target, burned }: NutritionRingProps) 
 
                 {/* Inner label */}
                 <div className="absolute flex flex-col items-center text-center">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Net Kalori</span>
+                    <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Net Kalori</span>
                     <h2 className="text-3xl font-black text-gray-800 dark:text-white mt-0.5">{netCalories}</h2>
                     <span className="text-[9.5px] font-bold text-orange-600 dark:text-orange-400 mt-0.5">Hedef: {target} kcal</span>
                 </div>
@@ -69,14 +69,14 @@ export function NutritionRing({ calories, target, burned }: NutritionRingProps) 
                     <div className="w-8 h-8 rounded-full bg-orange-50 dark:bg-orange-950/20 flex items-center justify-center text-orange-600 dark:text-orange-400 mb-2">
                         <Flame className="w-4.5 h-4.5" />
                     </div>
-                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider">Alınan</span>
+                    <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">Alınan</span>
                     <span className="text-sm font-black text-gray-800 dark:text-white mt-0.5">{calories} kcal</span>
                 </div>
                 <div className="flex flex-col items-center">
                     <div className="w-8 h-8 rounded-full bg-green-50 dark:bg-green-950/20 flex items-center justify-center text-green-600 dark:text-green-400 mb-2">
                         <Activity className="w-4.5 h-4.5" />
                     </div>
-                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider">Egzersiz / Yakılan</span>
+                    <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">Egzersiz / Yakılan</span>
                     <span className="text-sm font-black text-gray-800 dark:text-white mt-0.5">{burned} kcal</span>
                 </div>
             </div>

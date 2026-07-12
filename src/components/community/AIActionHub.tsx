@@ -147,18 +147,18 @@ export function AIActionHub({ isOpen, onClose }: AIActionHubProps) {
                         onDragEnd={(_, info) => {
                             if (info.offset.y > 100) onClose();
                         }}
-                        className="fixed bottom-0 left-0 right-0 z-[7001] bg-[var(--background)] border-t border-white/10 rounded-t-[2.5rem] sm:rounded-t-[3.5rem] p-5 sm:p-8 pb-10 sm:pb-12 shadow-[0_-20px_100px_rgba(0,0,0,0.8)] max-h-[92vh] overflow-y-auto no-scrollbar"
+                        className="fixed bottom-0 left-0 right-0 z-[7001] bg-[var(--background)] border-t border-black/10 dark:border-white/10 rounded-t-[2.5rem] sm:rounded-t-[3.5rem] p-5 sm:p-8 pb-10 sm:pb-12 shadow-[0_-20px_100px_rgba(0,0,0,0.8)] max-h-[92vh] overflow-y-auto no-scrollbar"
                     >
                         {/* Apple Handle */}
                         <div className="absolute top-0 left-0 right-0 h-8 sm:h-10 flex items-center justify-center cursor-pointer pt-2">
-                            <div className="w-12 h-1.5 bg-white/20 rounded-full" />
+                            <div className="w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full" />
                         </div>
 
                         {/* TITLE BAR */}
                         <div className="flex justify-between items-center py-4 mb-2 mt-2">
                             <div className="flex items-center gap-3">
                                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-400 to-blue-600 flex items-center justify-center shadow-[0_0_15px_rgba(34,211,238,0.4)]">
-                                    <Sparkles className="text-white w-6 h-6" />
+                                    <Sparkles className="text-[#ffffff] w-6 h-6" />
                                  </div>
                                  <div>
                                     <h2 className="text-2xl font-black text-white tracking-tighter italic uppercase leading-none">Moffi AI</h2>
@@ -167,7 +167,7 @@ export function AIActionHub({ isOpen, onClose }: AIActionHubProps) {
                             </div>
                             <button 
                                 onClick={onClose}
-                                className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white active:scale-95 transition-all outline-none"
+                                className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 flex items-center justify-center text-white active:scale-95 transition-all outline-none"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -209,7 +209,7 @@ export function AIActionHub({ isOpen, onClose }: AIActionHubProps) {
                                                     <Sparkles className="w-5 h-5 text-cyan-400" />
                                                     <h4 className="text-xs font-black text-cyan-400 uppercase tracking-widest">Analiz Sonucu</h4>
                                                 </div>
-                                                <p className="text-sm text-white/90 leading-relaxed font-medium italic">
+                                                <p className="text-sm text-black/90 dark:text-white/90 leading-relaxed font-medium italic">
                                                     {result}
                                                 </p>
                                                 <button 
@@ -231,7 +231,7 @@ export function AIActionHub({ isOpen, onClose }: AIActionHubProps) {
                                 <button
                                     key={item.id}
                                     onClick={() => handleActionClick(item.id)}
-                                    className="w-full flex items-center justify-between p-5 rounded-[2.2rem] bg-[#1a1a1f] border border-white/5 hover:bg-white/[0.05] transition-all active:scale-[0.98] group"
+                                    className="w-full flex items-center justify-between p-5 rounded-[2.2rem] bg-[#1a1a1f] border border-black/5 dark:border-white/5 hover:bg-white/[0.05] transition-all active:scale-[0.98] group"
                                 >
                                     <div className="flex items-center gap-4">
                                         <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center border transition-transform group-hover:scale-110 shadow-lg", item.bg, item.border)}>
@@ -239,11 +239,11 @@ export function AIActionHub({ isOpen, onClose }: AIActionHubProps) {
                                         </div>
                                         <div className="text-left">
                                             <h4 className="text-[13px] font-black text-white uppercase tracking-tight italic">{item.label}</h4>
-                                            <p className="text-[9px] text-white/50 font-bold uppercase tracking-widest mt-0.5">{item.sub}</p>
+                                            <p className="text-[9px] text-black/50 dark:text-white/50 font-bold uppercase tracking-widest mt-0.5">{item.sub}</p>
                                         </div>
                                     </div>
-                                    <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center">
-                                        <ChevronRight className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
+                                    <div className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center">
+                                        <ChevronRight className="w-4 h-4 text-black/50 dark:text-white/40 group-hover:text-white transition-colors" />
                                     </div>
                                 </button>
                             ))}

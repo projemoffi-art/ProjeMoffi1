@@ -27,7 +27,7 @@ export default function AuthCallbackPage() {
     }, [router]);
 
     return (
-        <div className="min-h-screen bg-[#0A0A0E] flex flex-col items-center justify-center p-10 text-center">
+        <div className="min-h-screen bg-background dark:bg-[#0A0A0E] flex flex-col items-center justify-center p-10 text-center">
             <div className="relative mb-8">
                 <motion.div 
                     animate={{ rotate: 360 }}

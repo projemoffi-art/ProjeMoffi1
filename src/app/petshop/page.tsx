@@ -15,15 +15,9 @@ import type { ShopCategory, ShopProduct } from "@/types/domain";
 import AdvisorChat from "@/components/petshop/AdvisorChat";
 import { usePet } from "@/context/PetContext";
 import { useAuth } from "@/context/AuthContext";
-import { loadStripe } from '@stripe/stripe-js';
 import { useDragScroll } from "@/hooks/useDragScroll";
-import { Elements } from '@stripe/react-stripe-js';
-import { CheckoutForm } from '@/components/shop/CheckoutForm';
 import { OrderTrackingModal } from '@/components/shop/OrderTrackingModal';
 import confetti from 'canvas-confetti';
-
-const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
-const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
 
 const getImgUrl = (url: string) => {
     if (!url) return "";
@@ -61,10 +55,10 @@ function EmptyState({ icon: Icon, title, description }: { icon: any; title: stri
     return (
         <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
             <div className="w-16 h-16 bg-gray-100 dark:bg-white/5 rounded-2xl flex items-center justify-center mb-4">
-                <Icon className="w-7 h-7 text-gray-400" />
+                <Icon className="w-7 h-7 text-gray-500 dark:text-gray-400" />
             </div>
             <h3 className="text-base font-bold text-foreground dark:text-gray-300 mb-1">{title}</h3>
-            <p className="text-sm text-gray-400 max-w-xs">{description}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs">{description}</p>
         </div>
     );
 }
@@ -194,7 +188,6 @@ export default function PetShopPage() {
     
     // PAYMENT & TRACKING STATES
     const [showCheckout, setShowCheckout] = useState(false);
-    const [paymentClientSecret, setPaymentClientSecret] = useState<string | null>(null);
     const [showTracking, setShowTracking] = useState(false);
     const [lastOrderId, setLastOrderId] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false); // Local loading for payment
@@ -355,113 +348,11 @@ export default function PetShopPage() {
         setDiscountResult(result);
     };
 
-    const handleCheckoutInit = async () => {
-        setIsSubmitting(true);
+    const handleCheckoutInit = () => {
         setCheckoutStep('address');
         setCheckoutErrors([]);
-        try {
-            const response = await fetch('/api/create-payment-intent', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    amount: cartTotal,
-                    items: cart 
-                }),
-            });
-            if (response.ok) {
-                const data = await response.json();
-                if (data.clientSecret) {
-                    setPaymentClientSecret(data.clientSecret);
-                    setCheckoutMode('stripe');
-                    setShowCheckout(true);
-                    return;
-                }
-            }
-            // Fallback to custom checkout
-            setCheckoutMode('custom');
-            setShowCheckout(true);
-        } catch (err) {
-            console.warn("Stripe init failed, falling back to simulated checkout:", err);
-            setCheckoutMode('custom');
-            setShowCheckout(true);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const handleCustomPaymentConfirm = async () => {
-        const errorsList: string[] = [];
-        if (!checkoutAddress.name.trim() || !checkoutAddress.surname.trim() || !checkoutAddress.phone.trim() || !checkoutAddress.detail.trim()) {
-            errorsList.push("Lütfen teslimat adresi bilgilerini eksiksiz doldurun.");
-        }
-        if (!checkoutCard.number || checkoutCard.number.length < 16) {
-            errorsList.push("Geçerli bir 16 haneli kart numarası giriniz.");
-        }
-        if (!checkoutCard.expiry || checkoutCard.expiry.length < 5 || !checkoutCard.cvc || checkoutCard.cvc.length < 3 || !checkoutCard.holder.trim()) {
-            errorsList.push("Kart bilgileri (SKT, CVC, İsim) eksiksiz olmalıdır.");
-        }
-
-        if (errorsList.length > 0) {
-            setCheckoutErrors(errorsList);
-            return;
-        }
-
-        setCheckoutErrors([]);
-        setIsProcessingCustomPayment(true);
-        
-        setTimeout(async () => {
-            try {
-                const fullAddress = `${checkoutAddress.name} ${checkoutAddress.surname}, Tel: ${checkoutAddress.phone}, Adres: ${checkoutAddress.detail}`;
-                const order = await createOrder(fullAddress, discountCode);
-                if (order) {
-                    setLastOrderId(order.id);
-                    setShowCart(false);
-                    setShowCheckout(false);
-                    setShowTracking(true);
-                    
-                    // Reset forms
-                    setCheckoutAddress({ name: "", surname: "", phone: "", detail: "" });
-                    setCheckoutCard({ number: "", expiry: "", cvc: "", holder: "" });
-                    
-                    confetti({
-                        particleCount: 150,
-                        spread: 70,
-                        origin: { y: 0.6 },
-                        colors: ['#FF9500', '#5B4D9D', '#FFFFFF']
-                    });
-                } else {
-                    setCheckoutErrors(["Sipariş oluşturulurken veritabanı hatası oluştu. Lütfen tekrar deneyin."]);
-                }
-            } catch (err) {
-                console.error("Custom checkout error:", err);
-                setCheckoutErrors(["Beklenmedik bir hata oluştu."]);
-            } finally {
-                setIsProcessingCustomPayment(false);
-            }
-        }, 1500);
-    };
-
-    const handlePaymentSuccess = async (paymentIntentId: string) => {
-        setShowCheckout(false);
-        setIsSubmitting(true);
-        try {
-            const order = await createOrder('Müşteri Adresi', discountCode);
-            if (order) {
-                setLastOrderId(order.id);
-                setShowCart(false);
-                setShowTracking(true);
-                confetti({
-                    particleCount: 150,
-                    spread: 70,
-                    origin: { y: 0.6 },
-                    colors: ['#5B4D9D', '#FF9500', '#FFFFFF']
-                });
-            }
-        } catch (err) {
-            console.error("Order creation failed:", err);
-        } finally {
-            setIsSubmitting(false);
-        }
+        setCheckoutMode('paytr');
+        setShowCheckout(true);
     };
 
     // Dynamic Filter for Quick Buy Bar
@@ -484,7 +375,7 @@ export default function PetShopPage() {
                             if (window.history.length > 2) router.back();
                             else router.push('/community');
                         }} 
-                        className="w-10 h-10 flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-all active:scale-95"
+                        className="w-10 h-10 flex items-center justify-center hover:bg-black/5 dark:hover:bg-black/10 dark:bg-white/10 rounded-full transition-all active:scale-95"
                     >
                         <ChevronLeft className="w-6 h-6 text-foreground dark:text-white" />
                     </button>
@@ -505,7 +396,7 @@ export default function PetShopPage() {
                 {/* SEARCH */}
                 <div className="px-5 pb-3">
                     <div className="relative group">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-orange-500 transition-colors" />
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400 group-focus-within:text-orange-500 transition-colors" />
                         <input
                             value={searchQuery}
                             onChange={e => handleSearch(e.target.value)}
@@ -546,7 +437,7 @@ export default function PetShopPage() {
                                     <img 
                                         src={getFirstImgUrl(product.image)} 
                                         alt={product.name} 
-                                        className="w-10 h-10 object-cover rounded-xl mb-2 drop-shadow-md bg-white/5" 
+                                        className="w-10 h-10 object-cover rounded-xl mb-2 drop-shadow-md bg-black/5 dark:bg-white/5" 
                                         onError={(e) => {
                                             e.currentTarget.style.display = 'none';
                                             const fallback = e.currentTarget.nextSibling as HTMLElement;
@@ -563,8 +454,8 @@ export default function PetShopPage() {
                         </motion.button>
                     ))}
                     <div className="flex flex-col items-center justify-center shrink-0 w-24 bg-gray-50 dark:bg-white/5 rounded-3xl p-3 border border-dashed border-card-border dark:border-card-border">
-                        <Plus className="w-5 h-5 text-gray-400 mb-1" />
-                        <span className="text-[8px] font-bold text-gray-400 uppercase">Daha Fazla</span>
+                        <Plus className="w-5 h-5 text-gray-500 dark:text-gray-400 mb-1" />
+                        <span className="text-[8px] font-bold text-gray-500 dark:text-gray-400 uppercase">Daha Fazla</span>
                     </div>
                 </div>
             </div>
@@ -614,7 +505,7 @@ export default function PetShopPage() {
 
             {/* SORT */}
             <div className="px-5 py-2 flex items-center justify-between">
-                <span className="text-xs text-gray-400 font-medium">{sortedProducts.length} ürün</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{sortedProducts.length} ürün</span>
                 <div className="flex gap-1.5">
                     {(['popular', 'price_low', 'price_high'] as const).map(sKey => (
                         <button
@@ -690,7 +581,7 @@ export default function PetShopPage() {
                                         onClick={e => { e.stopPropagation(); toggleFav(product.id); }}
                                         className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-white/90 dark:bg-black/60 backdrop-blur-md flex items-center justify-center shadow-lg border border-card-border"
                                     >
-                                        <Heart className={cn("w-4 h-4 transition-all", favorites.has(product.id) ? "fill-red-500 text-red-500" : "text-gray-400")} />
+                                        <Heart className={cn("w-4 h-4 transition-all", favorites.has(product.id) ? "fill-red-500 text-red-500" : "text-gray-500 dark:text-gray-400")} />
                                     </motion.button>
                                     
                                     {/* Vet Approved Badge - Conditional */}
@@ -703,7 +594,7 @@ export default function PetShopPage() {
                                 </div>
  
                                 <div className="p-4 bg-card dark:bg-black/20">
-                                    <p className="text-[9px] text-gray-400 font-black uppercase tracking-wider mb-1 leading-none">{product.brand?.name || "Moffi"}</p>
+                                    <p className="text-[9px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider mb-1 leading-none">{product.brand?.name || "Moffi"}</p>
                                     <h3 
                                         onClick={() => setSelectedProduct(product)}
                                         className="text-xs font-black text-foreground dark:text-white leading-snug line-clamp-2 h-8 italic mb-2 cursor-pointer hover:text-orange-500 transition-colors"
@@ -719,7 +610,7 @@ export default function PetShopPage() {
                                             </div>
                                         )}
                                         {product.isRecentlyBought && isSmartShopEnabled && (
-                                            <span className="text-[8px] font-bold text-gray-400 italic">
+                                            <span className="text-[8px] font-bold text-gray-500 dark:text-gray-400 italic">
                                                 {activePet ? `${activePet.name} bunu seviyor` : "Dostunuz bunu seviyor"}
                                             </span>
                                         )}
@@ -761,7 +652,7 @@ export default function PetShopPage() {
                                     <div className="flex items-center justify-between mt-auto">
                                         <div className="flex flex-col">
                                             {product.oldPrice && (
-                                                <span className="text-[10px] text-gray-400 dark:text-gray-500 line-through">₺{product.oldPrice.toLocaleString('tr-TR')}</span>
+                                                <span className="text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-500 line-through">₺{product.oldPrice.toLocaleString('tr-TR')}</span>
                                             )}
                                             <span className="text-sm font-black text-foreground dark:text-white">₺{(product.price || 0).toLocaleString('tr-TR')}</span>
                                         </div>
@@ -837,7 +728,7 @@ export default function PetShopPage() {
                                 <div className="relative h-48 bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center">
                                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20" />
                                     <div className="relative">
-                                        <div className="w-24 h-24 bg-white/20 backdrop-blur-xl rounded-[2rem] flex items-center justify-center border border-white/30 shadow-2xl">
+                                        <div className="w-24 h-24 bg-black/20 dark:bg-white/20 backdrop-blur-xl rounded-[2rem] flex items-center justify-center border border-black/30 dark:border-white/30 shadow-2xl">
                                             <Sparkles className="w-12 h-12 text-white animate-pulse" />
                                         </div>
                                         <motion.div
@@ -867,13 +758,13 @@ export default function PetShopPage() {
                                         </button>
                                         <button
                                             onClick={() => handleEnableSmart(false)}
-                                            className="w-full h-12 text-[10px] font-black text-gray-400 hover:text-foreground dark:hover:text-white transition-colors uppercase tracking-widest"
+                                            className="w-full h-12 text-[10px] font-black text-gray-500 dark:text-gray-400 hover:text-foreground dark:hover:text-white transition-colors uppercase tracking-widest"
                                         >
                                             Şimdilik Bağımsız Kalsın
                                         </button>
                                     </div>
                                     
-                                    <div className="mt-6 flex items-center justify-center gap-2 text-[8px] font-bold text-gray-400 uppercase tracking-widest border-t border-card-border dark:border-card-border pt-6">
+                                    <div className="mt-6 flex items-center justify-center gap-2 text-[8px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest border-t border-card-border dark:border-card-border pt-6">
                                         <Info className="w-3 h-3" />
                                         İstediğin zaman ayarlardan değiştirebilirsin
                                     </div>
@@ -898,7 +789,7 @@ export default function PetShopPage() {
                             className="w-full h-16 bg-orange-500 rounded-[2rem] flex items-center justify-between px-8 text-white shadow-2xl active:scale-95 transition-all group overflow-hidden"
                         >
                             <div className="flex items-center gap-4 relative z-10">
-                                <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center border border-card-border">
+                                <div className="w-9 h-9 bg-black/20 dark:bg-white/20 rounded-xl flex items-center justify-center border border-card-border">
                                     <ShoppingBag className="w-4 h-4" />
                                 </div>
                                 <span className="font-black text-sm uppercase tracking-widest">{cartCount} ÜRÜN SEPETTE</span>
@@ -982,7 +873,7 @@ export default function PetShopPage() {
                                                             <div className="flex items-center gap-2">
                                                                 <span className="text-base font-black text-orange-500 leading-none">₺{itemTotal.toLocaleString('tr-TR')}</span>
                                                                 {isSubscribed && (
-                                                                    <span className="text-[10px] text-gray-400 line-through">₺{(product.price * item.quantity).toLocaleString('tr-TR')}</span>
+                                                                    <span className="text-[10px] text-gray-500 dark:text-gray-400 line-through">₺{(product.price * item.quantity).toLocaleString('tr-TR')}</span>
                                                                 )}
                                                             </div>
                                                             {isSubscribed && (
@@ -1059,19 +950,19 @@ export default function PetShopPage() {
                         >
                             <div className="max-w-md mx-auto">
                                 {/* Header */}
-                                <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
+                                <div className="flex items-center justify-between mb-6 pb-4 border-b border-black/5 dark:border-white/5">
                                     <div>
                                         <h2 className="text-xl font-black text-white italic uppercase tracking-tighter">Güvenli Ödeme</h2>
                                         <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">
-                                            {checkoutMode === 'stripe' ? 'Stripe Gateway' : 'Moffi Secure Simulation'}
+                                            'Moffi Secure Checkout'
                                         </p>
                                     </div>
                                     {!isProcessingCustomPayment && (
                                         <button 
                                             onClick={() => setShowCheckout(false)} 
-                                            className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
+                                            className="w-10 h-10 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center hover:bg-black/10 dark:bg-white/10 transition-colors"
                                         >
-                                            <X size={18} className="text-white/50" />
+                                            <X size={18} className="text-black/50 dark:text-white/50" />
                                         </button>
                                     )}
                                 </div>
@@ -1104,14 +995,14 @@ export default function PetShopPage() {
                                         <div className="flex items-center justify-center gap-2 mb-6">
                                             <span className={cn(
                                                 "text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full border transition-all",
-                                                checkoutStep === 'address' ? "bg-orange-500 border-orange-600 text-white" : "bg-white/5 border-white/5 text-gray-400"
+                                                checkoutStep === 'address' ? "bg-orange-500 border-orange-600 text-white" : "bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/5 text-gray-500 dark:text-gray-400"
                                             )}>
                                                 1. Teslimat Adresi
                                             </span>
-                                            <div className="w-8 h-px bg-white/10" />
+                                            <div className="w-8 h-px bg-black/10 dark:bg-white/10" />
                                             <span className={cn(
                                                 "text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full border transition-all",
-                                                checkoutStep === 'payment' ? "bg-orange-500 border-orange-600 text-white" : "bg-white/5 border-white/5 text-gray-400"
+                                                checkoutStep === 'payment' ? "bg-orange-500 border-orange-600 text-white" : "bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/5 text-gray-500 dark:text-gray-400"
                                             )}>
                                                 2. Ödeme Bilgileri
                                             </span>
@@ -1146,14 +1037,14 @@ export default function PetShopPage() {
                                                                 placeholder="Adınız" 
                                                                 value={checkoutAddress.name} 
                                                                 onChange={e => setCheckoutAddress({...checkoutAddress, name: e.target.value})} 
-                                                                className="bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-orange-500/50 transition-all font-semibold placeholder:text-gray-600"
+                                                                className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-orange-500/50 transition-all font-semibold placeholder:text-gray-600"
                                                             />
                                                             <input 
                                                                 type="text" 
                                                                 placeholder="Soyadınız" 
                                                                 value={checkoutAddress.surname} 
                                                                 onChange={e => setCheckoutAddress({...checkoutAddress, surname: e.target.value})} 
-                                                                className="bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-orange-500/50 transition-all font-semibold placeholder:text-gray-600"
+                                                                className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-orange-500/50 transition-all font-semibold placeholder:text-gray-600"
                                                             />
                                                         </div>
                                                         <input 
@@ -1161,14 +1052,14 @@ export default function PetShopPage() {
                                                             placeholder="Telefon Numarası" 
                                                             value={checkoutAddress.phone} 
                                                             onChange={e => setCheckoutAddress({...checkoutAddress, phone: e.target.value})} 
-                                                            className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-orange-500/50 transition-all font-semibold placeholder:text-gray-600"
+                                                            className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-orange-500/50 transition-all font-semibold placeholder:text-gray-600"
                                                         />
                                                         <textarea 
                                                             rows={3} 
                                                             placeholder="Açık Adres (Mahalle, Cadde, Sokak, No, Daire)" 
                                                             value={checkoutAddress.detail} 
                                                             onChange={e => setCheckoutAddress({...checkoutAddress, detail: e.target.value})} 
-                                                            className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-orange-500/50 transition-all font-semibold placeholder:text-gray-600 resize-none"
+                                                            className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-orange-500/50 transition-all font-semibold placeholder:text-gray-600 resize-none"
                                                         />
                                                         <button
                                                             type="button"
@@ -1212,14 +1103,11 @@ export default function PetShopPage() {
                                                                             return;
                                                                         }
                                                                     }
-                                                                    
-                                                                    // Fallback to custom offline simulator if keys are placeholder/missing
-                                                                    setCheckoutMode('custom');
-                                                                    setCheckoutStep('payment');
+                                                                    throw new Error("PayTR yanıt vermedi");
                                                                 } catch (err) {
-                                                                    console.warn("PayTR token fetch failed, falling back to simulated checkout:", err);
-                                                                    setCheckoutMode('custom');
-                                                                    setCheckoutStep('payment');
+                                                                    console.error("PayTR init failed:", err);
+                                                                    setCheckoutErrors(["Ödeme sistemi şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin."]);
+                                                                    return;
                                                                 } finally {
                                                                     setIsProcessingCustomPayment(false);
                                                                 }
@@ -1232,12 +1120,13 @@ export default function PetShopPage() {
                                                     </div>
                                                 )}
 
+                                                
                                                 {/* STEP 2: PAYMENT */}
                                                 {checkoutStep === 'payment' && (
                                                     <div className="space-y-4">
-                                                        {checkoutMode === 'paytr' && paytrToken ? (
+                                                        {checkoutMode === 'paytr' && paytrToken && (
                                                             <div className="w-full flex flex-col items-center">
-                                                                <div className="w-full bg-white/[0.02] border border-white/5 rounded-2xl p-4 text-xs space-y-2 mb-4 font-semibold text-gray-400">
+                                                                <div className="w-full bg-white/[0.02] border border-black/5 dark:border-white/5 rounded-2xl p-4 text-xs space-y-2 mb-4 font-semibold text-gray-500 dark:text-gray-400">
                                                                     <div className="flex justify-between text-xs font-black text-white">
                                                                         <span>Sipariş Tutarı</span>
                                                                         <span className="text-orange-500">₺{(cartTotal || 0).toLocaleString('tr-TR')}</span>
@@ -1248,132 +1137,9 @@ export default function PetShopPage() {
                                                                     id="paytriframe" 
                                                                     frameBorder="0" 
                                                                     scrolling="yes" 
-                                                                    className="w-full h-[480px] rounded-2xl border border-white/10 bg-white"
+                                                                    style={{ width: "100%", height: "600px" }}
                                                                 />
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setCheckoutStep('address')}
-                                                                    className="w-full h-11 bg-white/5 hover:bg-white/10 text-white font-bold text-xs rounded-xl transition-all uppercase tracking-wider mt-4"
-                                                                >
-                                                                    Geri Dön
-                                                                </button>
                                                             </div>
-                                                        ) : (
-                                                            /* OFFLINE CREDIT CARD FORM FALLBACK */
-                                                            <>
-                                                                {/* Credit Card Graphic mockup */}
-                                                                <div className="w-full aspect-[1.586/1] rounded-2xl p-5 relative overflow-hidden bg-gradient-to-tr from-orange-500 to-purple-600 text-white shadow-xl flex flex-col justify-between">
-                                                                    <div className="absolute -right-10 -top-10 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-                                                                    <div className="flex justify-between items-start">
-                                                                        <div className="flex flex-col">
-                                                                            <span className="text-[7px] font-black uppercase tracking-widest text-white/77">Moffi Pay</span>
-                                                                            <div className="w-7 h-5 bg-amber-400/80 rounded mt-1" />
-                                                                        </div>
-                                                                        <span className="text-xs font-black italic tracking-tight uppercase">MOFFI</span>
-                                                                    </div>
-                                                                    <div className="font-mono text-base tracking-widest text-center my-1 select-none">
-                                                                        {checkoutCard.number ? checkoutCard.number.replace(/(.{4})/g, '$1 ').trim() : '•••• •••• •••• ••••'}
-                                                                    </div>
-                                                                    <div className="flex justify-between items-end">
-                                                                        <div className="flex flex-col max-w-[60%]">
-                                                                            <span className="text-[6px] font-black uppercase text-white/50 leading-none mb-0.5">KART SAHİBİ</span>
-                                                                            <span className="text-[10px] font-bold tracking-wide uppercase truncate leading-none">
-                                                                                {checkoutCard.holder || 'ISIM SOYISIM'}
-                                                                            </span>
-                                                                        </div>
-                                                                        <div className="flex justify-end gap-3">
-                                                                            <div className="flex flex-col">
-                                                                                <span className="text-[6px] font-black uppercase text-white/50 leading-none mb-0.5">S.K.T</span>
-                                                                                <span className="text-[10px] font-mono font-bold tracking-wider leading-none">
-                                                                                    {checkoutCard.expiry || 'AA/YY'}
-                                                                                </span>
-                                                                            </div>
-                                                                            <div className="flex flex-col">
-                                                                                <span className="text-[6px] font-black uppercase text-white/50 leading-none mb-0.5">CVC</span>
-                                                                                <span className="text-[10px] font-mono font-bold tracking-wider leading-none">
-                                                                                    {checkoutCard.cvc || '•••'}
-                                                                                </span>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* Input fields */}
-                                                                <div className="space-y-3">
-                                                                    <input 
-                                                                        type="text" 
-                                                                        maxLength={16} 
-                                                                        placeholder="Kart Numarası (16 Hane)" 
-                                                                        value={checkoutCard.number} 
-                                                                        onChange={e => setCheckoutCard({...checkoutCard, number: e.target.value.replace(/\D/g, '')})} 
-                                                                        className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-orange-500/50 transition-all font-mono tracking-widest placeholder:font-sans placeholder:tracking-normal placeholder:text-gray-600"
-                                                                    />
-                                                                    <div className="grid grid-cols-2 gap-3">
-                                                                        <input 
-                                                                            type="text" 
-                                                                            maxLength={5} 
-                                                                            placeholder="AA/YY" 
-                                                                            value={checkoutCard.expiry} 
-                                                                            onChange={e => {
-                                                                                let val = e.target.value;
-                                                                                if (val.length === 2 && !val.includes('/')) val += '/';
-                                                                                setCheckoutCard({...checkoutCard, expiry: val});
-                                                                            }} 
-                                                                            className="bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-orange-500/50 transition-all font-mono tracking-widest placeholder:font-sans placeholder:tracking-normal placeholder:text-gray-600"
-                                                                        />
-                                                                        <input 
-                                                                            type="text" 
-                                                                            maxLength={3} 
-                                                                            placeholder="CVC" 
-                                                                            value={checkoutCard.cvc} 
-                                                                            onChange={e => setCheckoutCard({...checkoutCard, cvc: e.target.value.replace(/\D/g, '')})} 
-                                                                            className="bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-orange-500/50 transition-all font-mono tracking-widest placeholder:font-sans placeholder:tracking-normal placeholder:text-gray-600"
-                                                                        />
-                                                                    </div>
-                                                                    <input 
-                                                                        type="text" 
-                                                                        placeholder="Kart Üzerindeki İsim" 
-                                                                        value={checkoutCard.holder} 
-                                                                        onChange={e => setCheckoutCard({...checkoutCard, holder: e.target.value})} 
-                                                                        className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-orange-500/50 transition-all font-semibold uppercase placeholder:text-gray-600 placeholder:normal-case"
-                                                                    />
-                                                                </div>
-
-                                                                {/* Summary pricing */}
-                                                                <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 text-xs space-y-2 mt-4 font-semibold text-gray-400">
-                                                                    <div className="flex justify-between">
-                                                                        <span>Ürünlerin Toplamı</span>
-                                                                        <span className="text-white">₺{(cartTotal || 0).toLocaleString('tr-TR')}</span>
-                                                                    </div>
-                                                                    <div className="flex justify-between">
-                                                                        <span>Kargo Hizmeti</span>
-                                                                        <span className="text-emerald-500">Ücretsiz</span>
-                                                                    </div>
-                                                                    <div className="border-t border-white/5 pt-2 flex justify-between text-sm font-black text-white">
-                                                                        <span>Genel Toplam</span>
-                                                                        <span className="text-orange-500">₺{(cartTotal || 0).toLocaleString('tr-TR')}</span>
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* Actions buttons */}
-                                                                <div className="grid grid-cols-3 gap-3 pt-2">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => setCheckoutStep('address')}
-                                                                        className="col-span-1 h-12 bg-white/5 hover:bg-white/10 text-white font-bold text-xs rounded-xl transition-all uppercase tracking-wider"
-                                                                    >
-                                                                        Geri
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={handleCustomPaymentConfirm}
-                                                                        className="col-span-2 h-12 bg-orange-500 hover:bg-orange-600 text-white font-black text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all uppercase tracking-widest italic shadow-lg shadow-orange-500/25"
-                                                                    >
-                                                                        <ShieldCheck size={14} />
-                                                                        Ödemeyi Tamamla
-                                                                    </button>
-                                                                </div>
-                                                            </>
                                                         )}
                                                     </div>
                                                 )}
@@ -1419,7 +1185,7 @@ export default function PetShopPage() {
                                 <button 
                                     type="button"
                                     onClick={() => setSelectedProduct(null)}
-                                    className="absolute top-4 right-4 w-10 h-10 bg-black/30 md:bg-gray-100 md:dark:bg-white/5 md:text-gray-500 dark:md:text-gray-400 text-white rounded-full flex items-center justify-center border border-white/10 md:border-card-border hover:bg-black/60 md:hover:bg-orange-500 md:hover:text-white dark:md:hover:text-white transition-all z-[130] pointer-events-auto"
+                                    className="absolute top-4 right-4 w-10 h-10 bg-black/30 md:bg-gray-100 md:dark:bg-white/5 md:text-gray-500 dark:md:text-gray-500 dark:text-gray-400 text-white rounded-full flex items-center justify-center border border-black/10 dark:border-white/10 md:border-card-border hover:bg-black/60 md:hover:bg-orange-500 md:hover:text-white dark:md:hover:text-white transition-all z-[130] pointer-events-auto"
                                 >
                                     <X size={20} />
                                 </button>
@@ -1443,10 +1209,10 @@ export default function PetShopPage() {
                                             });
                                         }}
                                         className={cn(
-                                            "absolute top-4 left-4 h-10 px-3 bg-white/20 backdrop-blur-md rounded-full flex items-center gap-1.5 border text-[10px] font-black uppercase tracking-wider transition-all z-20 pointer-events-auto",
+                                            "absolute top-4 left-4 h-10 px-3 bg-black/20 dark:bg-white/20 backdrop-blur-md rounded-full flex items-center gap-1.5 border text-[10px] font-black uppercase tracking-wider transition-all z-20 pointer-events-auto",
                                             comparisonList.some(p => p.id === selectedProduct.id)
                                                 ? "bg-orange-500 border-orange-600 text-white shadow-lg shadow-orange-500/25 animate-pulse"
-                                                : "border-white/20 text-white hover:bg-white/30"
+                                                : "border-black/20 dark:border-white/20 text-white hover:bg-white/30"
                                         )}
                                     >
                                         <Sliders size={12} />
@@ -1468,7 +1234,7 @@ export default function PetShopPage() {
                                                         <img 
                                                             src={getImgUrl(activeImg)} 
                                                             alt={selectedProduct.name} 
-                                                            className="w-full h-full object-cover bg-white/5" 
+                                                            className="w-full h-full object-cover bg-black/5 dark:bg-white/5" 
                                                             onError={(e) => {
                                                                 e.currentTarget.style.display = 'none';
                                                                 const fallback = e.currentTarget.nextSibling as HTMLElement;
@@ -1490,7 +1256,7 @@ export default function PetShopPage() {
                                                                 e.stopPropagation();
                                                                 setActiveImgIndex(prev => (prev === 0 ? imgList.length - 1 : prev - 1));
                                                             }}
-                                                            className="absolute left-4 w-8 h-8 bg-black/40 text-white rounded-full flex items-center justify-center backdrop-blur-md border border-white/10 hover:bg-black/60 transition-colors z-10 pointer-events-auto"
+                                                            className="absolute left-4 w-8 h-8 bg-black/40 text-white rounded-full flex items-center justify-center backdrop-blur-md border border-black/10 dark:border-white/10 hover:bg-black/60 transition-colors z-10 pointer-events-auto"
                                                         >
                                                             <ChevronLeft size={16} />
                                                         </button>
@@ -1500,7 +1266,7 @@ export default function PetShopPage() {
                                                                 e.stopPropagation();
                                                                 setActiveImgIndex(prev => (prev === imgList.length - 1 ? 0 : prev + 1));
                                                             }}
-                                                            className="absolute right-4 w-8 h-8 bg-black/40 text-white rounded-full flex items-center justify-center backdrop-blur-md border border-white/10 hover:bg-black/60 transition-colors z-10 pointer-events-auto"
+                                                            className="absolute right-4 w-8 h-8 bg-black/40 text-white rounded-full flex items-center justify-center backdrop-blur-md border border-black/10 dark:border-white/10 hover:bg-black/60 transition-colors z-10 pointer-events-auto"
                                                         >
                                                             <ChevronRight size={16} />
                                                         </button>
@@ -1526,7 +1292,7 @@ export default function PetShopPage() {
                                     })()}
                                     
                                     {selectedProduct.tag && (
-                                        <span className="absolute bottom-4 left-4 px-3 py-1 rounded-xl text-[9px] font-black text-white bg-black/45 backdrop-blur-md uppercase tracking-widest border border-white/10 z-10">
+                                        <span className="absolute bottom-4 left-4 px-3 py-1 rounded-xl text-[9px] font-black text-white bg-black/45 backdrop-blur-md uppercase tracking-widest border border-black/10 dark:border-white/10 z-10">
                                             {selectedProduct.tag}
                                         </span>
                                     )}
@@ -1550,7 +1316,7 @@ export default function PetShopPage() {
                                     <h3 className="text-base font-black text-foreground dark:text-white leading-tight italic uppercase tracking-tight mb-1 shrink-0">
                                         {selectedProduct.name}
                                     </h3>
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-4 shrink-0">
+                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-4 shrink-0">
                                         {selectedProduct.brand?.name || "Moffi Premium"}
                                     </p>
                                     
@@ -1567,7 +1333,7 @@ export default function PetShopPage() {
                                                         "flex-1 pb-2 text-[10px] font-black uppercase tracking-wider relative transition-colors",
                                                         detailTab === tab 
                                                             ? "text-orange-500" 
-                                                            : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                                                            : "text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
                                                     )}
                                                 >
                                                     {tab === 'overview' ? 'Genel' : tab === 'smart' ? '🐾 Öneri' : 'Yorumlar'}
@@ -1612,7 +1378,7 @@ export default function PetShopPage() {
 
                                                 {/* Subscription Selector */}
                                                 <div className="space-y-2.5">
-                                                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Satın Alma Tipi</span>
+                                                    <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">Satın Alma Tipi</span>
                                                     <div className="grid grid-cols-2 gap-2.5">
                                                         <button
                                                             type="button"
@@ -1659,10 +1425,10 @@ export default function PetShopPage() {
                                                     if (!compProd) return null;
                                                     return (
                                                         <div className="space-y-2.5">
-                                                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Birlikte Sıkça Alınanlar</span>
+                                                            <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">Birlikte Sıkça Alınanlar</span>
                                                             <div className="bg-gray-50 dark:bg-white/5 border border-card-border p-3 rounded-2xl flex items-center justify-between gap-4">
                                                                 <div className="flex items-center gap-3 min-w-0">
-                                                                    <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center text-2xl overflow-hidden shrink-0 border border-card-border">
+                                                                    <div className="w-12 h-12 bg-black/5 dark:bg-white/5 rounded-xl flex items-center justify-center text-2xl overflow-hidden shrink-0 border border-card-border">
                                                                         {compProd.image && (compProd.image.startsWith("http") || compProd.image.startsWith("/") || compProd.image.includes(".") || compProd.image.length > 4) ? (
                                                                             <img src={getImgUrl(compProd.image)} alt={compProd.name} className="w-full h-full object-cover" />
                                                                         ) : (
@@ -1716,12 +1482,12 @@ export default function PetShopPage() {
                                                 </div>
                                                 {activePet && (
                                                     <div className="bg-gray-50 dark:bg-white/5 p-3 rounded-2xl border border-card-border flex items-center gap-3">
-                                                        <div className="w-9 h-9 rounded-xl overflow-hidden bg-white/10 shrink-0 border border-card-border">
+                                                        <div className="w-9 h-9 rounded-xl overflow-hidden bg-black/10 dark:bg-white/10 shrink-0 border border-card-border">
                                                             <img src={activePet.image || activePet.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=100"} alt={activePet.name} className="w-full h-full object-cover" />
                                                         </div>
                                                         <div>
                                                             <h5 className="text-[10px] font-black text-foreground dark:text-white uppercase tracking-wider">{activePet.name}</h5>
-                                                            <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest">{activePet.breed} • {activePet.weight} kg</p>
+                                                            <p className="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">{activePet.breed} • {activePet.weight} kg</p>
                                                         </div>
                                                     </div>
                                                 )}
@@ -1737,12 +1503,12 @@ export default function PetShopPage() {
                                                         <div key={rev.id} className="bg-gray-50 dark:bg-white/5 border border-card-border p-3 rounded-2xl space-y-2">
                                                             <div className="flex items-center justify-between">
                                                                 <div className="flex items-center gap-2">
-                                                                    <div className="w-7 h-7 rounded-full overflow-hidden bg-white/10 border border-card-border shrink-0">
+                                                                    <div className="w-7 h-7 rounded-full overflow-hidden bg-black/10 dark:bg-white/10 border border-card-border shrink-0">
                                                                         <img src={rev.avatar} alt={rev.username} className="w-full h-full object-cover" />
                                                                     </div>
                                                                     <div>
                                                                         <h5 className="text-[10px] font-black text-foreground dark:text-white leading-none">{rev.username}</h5>
-                                                                        <span className="text-[8px] text-gray-400 font-semibold">{rev.date}</span>
+                                                                        <span className="text-[8px] text-gray-500 dark:text-gray-400 font-semibold">{rev.date}</span>
                                                                     </div>
                                                                 </div>
                                                                 <div className="flex gap-0.5 text-orange-500">
@@ -1758,13 +1524,13 @@ export default function PetShopPage() {
                                                         </div>
                                                     ))}
                                                     {(!reviews[selectedProduct.id] || reviews[selectedProduct.id].length === 0) && (
-                                                        <p className="text-[10px] text-gray-400 text-center font-bold uppercase tracking-wider py-4">Henüz yorum yapılmamış.</p>
+                                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 text-center font-bold uppercase tracking-wider py-4">Henüz yorum yapılmamış.</p>
                                                     )}
                                                 </div>
 
                                                 {/* Add Review Form */}
                                                 <div className="border-t border-card-border dark:border-card-border/60 pt-4 space-y-3 shrink-0">
-                                                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Yorum Yap</span>
+                                                    <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">Yorum Yap</span>
                                                     
                                                     {/* Star Input */}
                                                     <div className="flex items-center gap-1">
@@ -1830,7 +1596,7 @@ export default function PetShopPage() {
                                     <div className="mt-6 pt-4 border-t border-card-border dark:border-card-border/60 shrink-0">
                                         <div className="flex items-center justify-between mb-4">
                                             <div className="flex flex-col">
-                                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider mb-1">Adet</span>
+                                                <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Adet</span>
                                                 <div className="flex items-center gap-2.5 bg-gray-100 dark:bg-white/10 rounded-xl px-2.5 py-1 w-fit border border-card-border">
                                                     <button 
                                                         type="button"
@@ -1851,7 +1617,7 @@ export default function PetShopPage() {
                                             </div>
                                             
                                             <div className="flex flex-col items-end">
-                                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider mb-1">Toplam Tutar</span>
+                                                <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Toplam Tutar</span>
                                                 <div className="flex items-center gap-2 mt-1 shrink-0">
                                                     <span className="text-base font-black text-foreground dark:text-white">
                                                         ₺{((subscriptions.some(s => s.id === selectedProduct.id) ? selectedProduct.price * 0.9 : selectedProduct.price) * modalQty).toLocaleString('tr-TR')}
@@ -1943,7 +1709,7 @@ export default function PetShopPage() {
                                 <button
                                     type="button"
                                     onClick={() => setComparisonList([])}
-                                    className="px-3 py-2 text-[10px] font-black text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 uppercase tracking-wider transition-colors"
+                                    className="px-3 py-2 text-[10px] font-black text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 uppercase tracking-wider transition-colors"
                                 >
                                     Temizle
                                 </button>
@@ -1988,7 +1754,7 @@ export default function PetShopPage() {
                                     <h3 className="text-base font-black text-foreground dark:text-white leading-none italic uppercase tracking-tight">
                                         Seçilen Ürünleri Karşılaştır
                                     </h3>
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1.5">
+                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mt-1.5">
                                         Karar vermenizi kolaylaştıracak detaylı analiz
                                     </p>
                                 </div>
@@ -2056,7 +1822,7 @@ export default function PetShopPage() {
                                                     <h4 className="text-xs font-black text-foreground dark:text-white leading-tight uppercase tracking-tight line-clamp-1 italic">
                                                         {product.name}
                                                     </h4>
-                                                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mt-0.5">
+                                                    <p className="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mt-0.5">
                                                         {product.brand?.name || "Moffi Premium"}
                                                     </p>
                                                 </div>
@@ -2064,7 +1830,7 @@ export default function PetShopPage() {
                                                 {/* Price & Rating */}
                                                 <div className="py-4 border-b border-card-border/60 space-y-3">
                                                     <div className="flex justify-between items-center">
-                                                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Fiyat</span>
+                                                        <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Fiyat</span>
                                                         <div className="flex flex-col items-end">
                                                             <span className="text-xs font-black text-foreground dark:text-white">
                                                                 ₺{finalPrice.toLocaleString('tr-TR')}
@@ -2077,13 +1843,13 @@ export default function PetShopPage() {
                                                         </div>
                                                     </div>
                                                     <div className="flex justify-between items-center">
-                                                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Moffi Puan</span>
+                                                        <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Moffi Puan</span>
                                                         <span className="bg-amber-500/10 text-amber-500 text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-0.5">
                                                             ✨ +{Math.round(finalPrice / 10)} Puan
                                                         </span>
                                                     </div>
                                                     <div className="flex justify-between items-center">
-                                                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Değerlendirme</span>
+                                                        <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Değerlendirme</span>
                                                         <div className="flex items-center gap-1">
                                                             <div className="flex text-orange-500">
                                                                 {Array.from({ length: 5 }).map((_, idx) => (
@@ -2138,7 +1904,7 @@ export default function PetShopPage() {
                                     style={{ gridTemplateColumns: `180px repeat(${comparisonList.length}, minmax(0, 1fr))` }}
                                 >
                                     {/* Row 1: Header / Product Brand & Name */}
-                                    <div className="flex items-center text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest border-b border-card-border/40 pb-4">Ürün Detayı</div>
+                                    <div className="flex items-center text-[10px] font-black text-gray-500 dark:text-gray-400 dark:text-zinc-500 uppercase tracking-widest border-b border-card-border/40 pb-4">Ürün Detayı</div>
                                     {comparisonList.map((product) => {
                                         const imgList = product.image ? product.image.split(',') : [];
                                         const img = imgList[0] || product.image || "";
@@ -2166,7 +1932,7 @@ export default function PetShopPage() {
                                                 <h4 className="text-xs font-black text-foreground dark:text-white leading-tight uppercase tracking-tight line-clamp-1 italic">
                                                     {product.name}
                                                 </h4>
-                                                <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mt-0.5">
+                                                <p className="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mt-0.5">
                                                     {product.brand?.name || "Moffi Premium"}
                                                 </p>
                                             </div>
@@ -2174,7 +1940,7 @@ export default function PetShopPage() {
                                     })}
 
                                     {/* Row 2: Price */}
-                                    <div className="flex items-center text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest border-b border-card-border/40 py-4">Fiyat & Puan</div>
+                                    <div className="flex items-center text-[10px] font-black text-gray-500 dark:text-gray-400 dark:text-zinc-500 uppercase tracking-widest border-b border-card-border/40 py-4">Fiyat & Puan</div>
                                     {comparisonList.map((product) => {
                                         const hasDiscount = subscriptions.some(s => s.id === product.id);
                                         const finalPrice = hasDiscount ? product.price * 0.9 : product.price;
@@ -2190,7 +1956,7 @@ export default function PetShopPage() {
                                     })}
 
                                     {/* Row 3: Rating */}
-                                    <div className="flex items-center text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest border-b border-card-border/40 py-4">Değerlendirme</div>
+                                    <div className="flex items-center text-[10px] font-black text-gray-500 dark:text-gray-400 dark:text-zinc-500 uppercase tracking-widest border-b border-card-border/40 py-4">Değerlendirme</div>
                                     {comparisonList.map((product) => {
                                         const productReviews = reviews[product.id] || [];
                                         const avgRating = productReviews.length > 0 
@@ -2203,7 +1969,7 @@ export default function PetShopPage() {
                                                         <Star key={idx} size={10} className={idx < avgRating ? "fill-orange-500 text-orange-500" : "text-gray-300 dark:text-zinc-600"} />
                                                     ))}
                                                 </div>
-                                                <span className="text-[8px] font-black text-gray-400 uppercase tracking-wider mt-1">({productReviews.length} yorum)</span>
+                                                <span className="text-[8px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider mt-1">({productReviews.length} yorum)</span>
                                             </div>
                                         );
                                     })}
@@ -2211,7 +1977,7 @@ export default function PetShopPage() {
 
 
                                     {/* Row 5: AI recommendation */}
-                                    <div className="flex items-center text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest border-b border-card-border/40 py-4">🐾 Moffi Önerisi</div>
+                                    <div className="flex items-center text-[10px] font-black text-gray-500 dark:text-gray-400 dark:text-zinc-500 uppercase tracking-widest border-b border-card-border/40 py-4">🐾 Moffi Önerisi</div>
                                     {comparisonList.map((product) => {
                                         return (
                                             <div key={`recommend-${product.id}`} className="flex items-center border-b border-card-border/40 py-4 px-6">
@@ -2220,7 +1986,7 @@ export default function PetShopPage() {
                                                         {getSmartRecommendation(product.name, product.category, activePet)}
                                                     </p>
                                                 ) : (
-                                                    <span className="text-[9px] text-gray-400 italic">Akıllı alışveriş entegrasyonu kapalı.</span>
+                                                    <span className="text-[9px] text-gray-500 dark:text-gray-400 italic">Akıllı alışveriş entegrasyonu kapalı.</span>
                                                 )}
                                             </div>
                                         );

@@ -45,13 +45,13 @@ export function InboxModal() {
                     initial={{ opacity: 0, y: 50 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 50 }}
-                    className="fixed inset-0 z-[5000] flex flex-col pt-safe-top bg-black text-white"
+                    className="fixed inset-0 z-[5000] flex flex-col pt-safe-top bg-white dark:bg-black text-white"
                 >
                     {/* HEADER */}
                     <div className="px-6 py-4 flex items-center justify-between border-b border-card-border backdrop-blur-3xl sticky top-0 z-10 bg-black/80">
                         {activeChatUserId ? (
                             <div className="flex items-center gap-3">
-                                <button onClick={() => setActiveChatUserId(null)} className="p-2 rounded-full bg-white/5 active:scale-95 transition-all">
+                                <button onClick={() => setActiveChatUserId(null)} className="p-2 rounded-full bg-black/5 dark:bg-white/5 active:scale-95 transition-all">
                                     <ChevronRight className="w-6 h-6 rotate-180 text-white" />
                                 </button>
                                 <div className="flex items-center gap-2">
@@ -62,7 +62,7 @@ export function InboxModal() {
                                         <h3 className="text-white font-bold text-sm">{activeChatPartner}</h3>
                                         <div className="flex items-center gap-1.5">
                                             <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                                            <span className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Çevrimiçi</span>
+                                            <span className="text-[10px] text-black/50 dark:text-white/40 font-bold uppercase tracking-widest">Çevrimiçi</span>
                                         </div>
                                     </div>
                                 </div>
@@ -74,17 +74,17 @@ export function InboxModal() {
                             </div>
                         )}
                         <div className="flex items-center gap-3">
-                            {!activeChatUserId && <button className="p-2.5 rounded-full bg-white/5 text-white/40 active:scale-95 transition-all"><Search className="w-5 h-5" /></button>}
-                            <button onClick={() => setIsInboxOpen(false)} className="p-2.5 rounded-full bg-white/5 text-white/40 active:scale-95 transition-all"><X className="w-5 h-5" /></button>
+                            {!activeChatUserId && <button className="p-2.5 rounded-full bg-black/5 dark:bg-white/5 text-black/50 dark:text-white/40 active:scale-95 transition-all"><Search className="w-5 h-5" /></button>}
+                            <button onClick={() => setIsInboxOpen(false)} className="p-2.5 rounded-full bg-black/5 dark:bg-white/5 text-black/50 dark:text-white/40 active:scale-95 transition-all"><X className="w-5 h-5" /></button>
                         </div>
                     </div>
 
                     {!activeChatUserId && (
                         <div className="px-6 py-4 flex gap-2">
-                            <button onClick={() => setInboxTab('chats')} className={cn("flex-1 py-3 rounded-2xl flex items-center justify-center gap-2 font-bold text-sm transition-all shadow-lg active:scale-95", inboxTab === 'chats' ? "bg-card text-black shadow-white/10" : "bg-white/5 text-white/40 border border-card-border")}>
+                            <button onClick={() => setInboxTab('chats')} className={cn("flex-1 py-3 rounded-2xl flex items-center justify-center gap-2 font-bold text-sm transition-all shadow-lg active:scale-95", inboxTab === 'chats' ? "bg-card text-black shadow-white/10" : "bg-black/5 dark:bg-white/5 text-black/50 dark:text-white/40 border border-card-border")}>
                                 <MessageCircle className="w-4 h-4" /> Sohbetler
                             </button>
-                            <button onClick={() => setInboxTab('sos')} className={cn("flex-1 py-3 rounded-2xl flex items-center justify-center gap-2 font-bold text-sm transition-all shadow-lg active:scale-95", inboxTab === 'sos' ? "bg-red-500 text-white shadow-red-500/20" : "bg-white/5 text-white/40 border border-card-border")}>
+                            <button onClick={() => setInboxTab('sos')} className={cn("flex-1 py-3 rounded-2xl flex items-center justify-center gap-2 font-bold text-sm transition-all shadow-lg active:scale-95", inboxTab === 'sos' ? "bg-red-500 text-white shadow-red-500/20" : "bg-black/5 dark:bg-white/5 text-black/50 dark:text-white/40 border border-card-border")}>
                                 <ShieldAlert className="w-4 h-4" /> SOS Alarmları
                             </button>
                         </div>
@@ -103,16 +103,16 @@ export function InboxModal() {
                                                             deleteMessage(m.id);
                                                         }
                                                     }}
-                                                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-full hover:bg-white/5 active:scale-90 transition-all text-red-500/70 hover:text-red-500 cursor-pointer shrink-0"
+                                                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-full hover:bg-black/5 dark:bg-white/5 active:scale-90 transition-all text-red-500/70 hover:text-red-500 cursor-pointer shrink-0"
                                                     title="Mesajı Sil"
                                                 >
                                                     <Trash2 className="w-3.5 h-3.5" />
                                                 </button>
                                             )}
-                                            <div className={cn("px-4 py-3 rounded-[1.5rem] relative active:scale-[0.98] transition-all shadow-sm", m.sentByMe ? "bg-cyan-500 text-black font-medium rounded-tr-none" : "bg-white/10 text-white border border-card-border rounded-tl-none")}>
+                                            <div className={cn("px-4 py-3 rounded-[1.5rem] relative active:scale-[0.98] transition-all shadow-sm", m.sentByMe ? "bg-cyan-500 text-black font-medium rounded-tr-none" : "bg-black/10 dark:bg-white/10 text-white border border-card-border rounded-tl-none")}>
                                                 <p className="text-sm leading-relaxed">{m.text}</p>
                                                 <div className={cn("flex items-center gap-1 mt-1.5", m.sentByMe ? "justify-end" : "justify-start")}>
-                                                    <span className={cn("text-[9px] font-bold uppercase tracking-tighter opacity-60", m.sentByMe ? "text-black" : "text-white/40")}>{m.time}</span>
+                                                    <span className={cn("text-[9px] font-bold uppercase tracking-tighter opacity-60", m.sentByMe ? "text-black" : "text-black/50 dark:text-white/40")}>{m.time}</span>
                                                     {m.sentByMe && <CheckCheck className="w-3 h-3 text-black/60" />}
                                                 </div>
                                             </div>
@@ -125,15 +125,15 @@ export function InboxModal() {
                             <div className="flex flex-col">
                                 {inboxMessages.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center py-20 px-10 text-center">
-                                        <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-6">
-                                            <MessageCircle className="w-10 h-10 text-white/20" />
+                                        <div className="w-20 h-20 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center mb-6">
+                                            <MessageCircle className="w-10 h-10 text-black/30 dark:text-white/20" />
                                         </div>
                                         <h3 className="text-xl font-bold text-white mb-2">Henüz Sohbet Yok</h3>
-                                        <p className="text-sm text-white/40">Arkadaşlarınıza mesaj atarak ilk sohbeti siz başlatın.</p>
+                                        <p className="text-sm text-black/50 dark:text-white/40">Arkadaşlarınıza mesaj atarak ilk sohbeti siz başlatın.</p>
                                     </div>
                                 ) : (
                                     inboxMessages.map((m: any) => (
-                                        <div key={m.userId} onClick={() => setActiveChatUserId(m.userId)} className="px-6 py-5 flex items-center gap-4 hover:bg-white/5 active:bg-white/5 transition-colors cursor-pointer border-b border-card-border relative group">
+                                        <div key={m.userId} onClick={() => setActiveChatUserId(m.userId)} className="px-6 py-5 flex items-center gap-4 hover:bg-black/5 dark:bg-white/5 active:bg-black/5 dark:bg-white/5 transition-colors cursor-pointer border-b border-card-border relative group">
                                             <div className="relative">
                                                 <div className="w-14 h-14 rounded-full border border-card-border overflow-hidden bg-gray-900">
                                                     <img src={m.avatar} className="w-full h-full object-cover" />
@@ -143,10 +143,10 @@ export function InboxModal() {
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex justify-between items-center mb-1">
                                                     <h4 className="font-bold text-white text-base truncate pr-2">{m.partnerName}</h4>
-                                                    <span className="text-[10px] text-white/40 font-bold uppercase tracking-tight">{m.latestTime}</span>
+                                                    <span className="text-[10px] text-black/50 dark:text-white/40 font-bold uppercase tracking-tight">{m.latestTime}</span>
                                                 </div>
                                                 <div className="flex items-center justify-between">
-                                                    <p className={cn("text-sm truncate", m.unread ? "text-cyan-400 font-black" : "text-white/40 font-medium")}>
+                                                    <p className={cn("text-sm truncate", m.unread ? "text-cyan-400 font-black" : "text-black/50 dark:text-white/40 font-medium")}>
                                                         {m.sentByMe ? 'Siz: ' : ''}{m.latestMessage}
                                                     </p>
                                                     {m.unread && <div className="ml-2 w-2.5 h-2.5 bg-cyan-400 rounded-full shadow-[0_0_10px_rgba(34,211,238,0.5)]" />}
@@ -164,7 +164,7 @@ export function InboxModal() {
                                             <ShieldAlert className="w-10 h-10 text-red-500" />
                                         </div>
                                         <h3 className="text-xl font-bold text-white mb-2">Güvendesiniz!</h3>
-                                        <p className="text-sm text-white/40">Yakın çevrenizde aktif herhangi bir kayıp pet ihbarı bulunmuyor.</p>
+                                        <p className="text-sm text-black/50 dark:text-white/40">Yakın çevrenizde aktif herhangi bir kayıp pet ihbarı bulunmuyor.</p>
                                     </div>
                                 ) : (
                                     sosAlerts.map((sos: any) => (
@@ -175,13 +175,13 @@ export function InboxModal() {
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex justify-between items-center mb-1">
                                                     <h4 className="font-bold text-red-400 text-base">{(sos.pet_name || sos.name)} KAYIP!</h4>
-                                                    <span className="text-[10px] text-white/20 font-bold uppercase tracking-tighter">{sos.time}</span>
+                                                    <span className="text-[10px] text-black/30 dark:text-white/20 font-bold uppercase tracking-tighter">{sos.time}</span>
                                                 </div>
-                                                <p className="text-sm text-white/60 font-medium line-clamp-2 leading-relaxed">
+                                                <p className="text-sm text-black/60 dark:text-white/60 font-medium line-clamp-2 leading-relaxed">
                                                     <span className="font-black text-white">{(sos.last_location || sos.location)}</span> konumunda ihtar geçildi. Lütfen çevreye duyarlı olun.
                                                 </p>
                                             </div>
-                                            <ChevronRight className="w-6 h-6 text-white/20 self-center" />
+                                            <ChevronRight className="w-6 h-6 text-black/30 dark:text-white/20 self-center" />
                                         </div>
                                     ))
                                 )}
@@ -191,19 +191,19 @@ export function InboxModal() {
 
                     {activeChatUserId && (
                         <div className="absolute bottom-0 inset-x-0 bg-black/80 backdrop-blur-3xl px-6 py-4 border-t border-card-border flex items-center gap-3">
-                            <button className="p-3 rounded-full bg-white/5 text-white/40 hover:text-white transition-all">
+                            <button className="p-3 rounded-full bg-black/5 dark:bg-white/5 text-black/50 dark:text-white/40 hover:text-white transition-all">
                                 <Plus className="w-6 h-6" />
                             </button>
-                            <div className="flex-1 bg-white/5 border border-card-border rounded-2xl px-5 py-3 flex items-center gap-2 focus-within:border-cyan-400/50 transition-all">
+                            <div className="flex-1 bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl px-5 py-3 flex items-center gap-2 focus-within:border-cyan-400/50 transition-all">
                                 <input
                                     type="text"
                                     value={replyMessage}
                                     onChange={(e) => setReplyMessage(e.target.value)}
                                     placeholder="Mesajınızı yazın..."
-                                    className="bg-transparent border-none outline-none flex-1 text-sm text-white placeholder:text-white/20"
+                                    className="bg-transparent border-none outline-none flex-1 text-sm text-white placeholder:text-black/30 dark:text-white/20"
                                     onKeyPress={(e) => e.key === 'Enter' && onSendReply()}
                                 />
-                                <button className="text-white/20 hover:text-cyan-400 transition-colors">
+                                <button className="text-black/30 dark:text-white/20 hover:text-cyan-400 transition-colors">
                                     <Smile className="w-5 h-5" />
                                 </button>
                             </div>
@@ -211,7 +211,7 @@ export function InboxModal() {
                                 disabled={!replyMessage.trim() || isReplying}
                                 onClick={onSendReply}
                                 className={cn("p-4 rounded-2xl flex items-center justify-center transition-all active:scale-95 shadow-lg",
-                                    replyMessage.trim() ? "bg-card text-black shadow-lg" : "bg-white/5 text-white/20"
+                                    replyMessage.trim() ? "bg-card text-black shadow-lg" : "bg-black/5 dark:bg-white/5 text-black/30 dark:text-white/20"
                                 )}
                             >
                                 {isReplying ? <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" /> : <Send className="w-5 h-5" />}

@@ -95,7 +95,7 @@ function QuestChip({ quest }: { quest: any }) {
                 <div>
                     <div className="text-lg mb-1">{isCompleted ? '✅' : quest.icon}</div>
                     <p className={`text-[8.5px] font-black leading-tight line-clamp-2 ${
-                        isCompleted ? 'text-emerald-400 line-through opacity-60' : 'text-white/80'
+                        isCompleted ? 'text-emerald-400 line-through opacity-60' : 'text-black/80 dark:text-white/80'
                     }`}>
                         {quest.title}
                     </p>
@@ -103,11 +103,11 @@ function QuestChip({ quest }: { quest: any }) {
                 
                 {/* Linear progress bar instead of rings */}
                 <div className="mt-2">
-                    <div className="flex items-center justify-between text-[6.5px] font-black text-white/30 mb-0.5">
+                    <div className="flex items-center justify-between text-[6.5px] font-black text-black/40 dark:text-white/30 mb-0.5">
                         <span>{isCompleted ? 'Tamamlandı' : `${Math.round(pct)}%`}</span>
                         <span className="text-orange-400">+{quest.reward.pp} PP</span>
                     </div>
-                    <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div className="w-full h-1 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
                         <motion.div
                             className={`h-full rounded-full ${isCompleted ? 'bg-emerald-500' : `bg-gradient-to-r ${grad}`}`}
                             initial={{ width: 0 }}
@@ -179,7 +179,7 @@ export function QuestBentoCard() {
 
                         {/* Merkezdeki Pet Avatarı */}
                         <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-[78px] h-[78px] rounded-full overflow-hidden border border-card-border bg-white/5 shadow-inner flex items-center justify-center">
+                            <div className="w-[78px] h-[78px] rounded-full overflow-hidden border border-card-border bg-black/5 dark:bg-white/5 shadow-inner flex items-center justify-center">
                                 {activePet?.avatar || activePet?.image ? (
                                     <img
                                         src={activePet.avatar || activePet.image}
@@ -201,7 +201,7 @@ export function QuestBentoCard() {
                     {/* Sağ bilgi */}
                     <div className="flex-1 min-w-0">
                         {/* Seviye başlığı */}
-                        <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em] mb-0.5">Görev Merkezi</p>
+                        <p className="text-[8px] font-black text-black/40 dark:text-white/30 uppercase tracking-[0.2em] mb-0.5">Görev Merkezi</p>
                         <h3 className="text-xs font-black text-white leading-tight mb-2.5 truncate">{levelTitle}</h3>
 
                         {/* Stat grid 2x2 */}
@@ -215,7 +215,7 @@ export function QuestBentoCard() {
                                 <p className="text-[6px] font-black text-white/25 uppercase tracking-widest mt-1">Gün Seri</p>
                             </div>
                             <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-1.5 text-center">
-                                <div className="text-xs font-black text-emerald-400 leading-none">{completedCount}<span className="text-white/20">/{totalCount}</span></div>
+                                <div className="text-xs font-black text-emerald-400 leading-none">{completedCount}<span className="text-black/30 dark:text-white/20">/{totalCount}</span></div>
                                 <p className="text-[6px] font-black text-white/25 uppercase tracking-widest mt-1">Görev</p>
                             </div>
                             <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-1.5 text-center">
@@ -235,7 +235,7 @@ export function QuestBentoCard() {
                     ].map(item => (
                         <div key={item.label} className="flex items-center gap-1.5">
                             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: item.color, boxShadow: `0 0 4px ${item.color}` }} />
-                            <span className="text-[7.5px] font-black text-white/40 uppercase tracking-wider">{item.label}</span>
+                            <span className="text-[7.5px] font-black text-black/50 dark:text-white/40 uppercase tracking-wider">{item.label}</span>
                             <span className="text-[7.5px] font-black" style={{ color: item.color }}>{item.val}</span>
                         </div>
                     ))}
@@ -260,13 +260,13 @@ export function QuestBentoCard() {
                         <QuestChip key={q.id} quest={q} />
                     ))}
                     {dailyQuests.length === 0 && (
-                        <div className="text-[9px] text-white/20 font-bold py-2">Görevler yükleniyor...</div>
+                        <div className="text-[9px] text-black/30 dark:text-white/20 font-bold py-2">Görevler yükleniyor...</div>
                     )}
                 </div>
 
                 {/* ── HAFTALIK PUL BARI ── */}
                 <div className="mt-3 flex items-center gap-2 px-0.5">
-                    <span className="text-[6.5px] font-black text-white/20 uppercase tracking-widest shrink-0">Haftalık</span>
+                    <span className="text-[6.5px] font-black text-black/30 dark:text-white/20 uppercase tracking-widest shrink-0">Haftalık</span>
                     <div className="flex gap-1 flex-1">
                         {Array.from({ length: maxWeeklyStamps }, (_, i) => (
                             <motion.div
@@ -293,7 +293,7 @@ export function QuestBentoCard() {
                     transition={{ duration: 2.5, repeat: Infinity }}
                 >
                     <div className="w-1 h-1 bg-white/30 rounded-full" />
-                    <p className="text-[7.5px] font-black text-white/30 uppercase tracking-[0.25em]">Detayları görmek için dokunun</p>
+                    <p className="text-[7.5px] font-black text-black/40 dark:text-white/30 uppercase tracking-[0.25em]">Detayları görmek için dokunun</p>
                     <div className="w-1 h-1 bg-white/30 rounded-full" />
                 </motion.div>
             </div>

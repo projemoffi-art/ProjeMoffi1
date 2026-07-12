@@ -52,7 +52,7 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
                             </div>
                             <div>
                                 <div className="text-sm font-bold text-foreground dark:text-white">Görünüm Modu</div>
-                                <div className="text-xs text-gray-400 dark:text-gray-500">{theme === 'dark' ? 'Karanlık Mod' : 'Aydınlık Mod'}</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500">{theme === 'dark' ? 'Karanlık Mod' : 'Aydınlık Mod'}</div>
                             </div>
                         </div>
                         <button

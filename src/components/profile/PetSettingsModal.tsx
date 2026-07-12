@@ -23,13 +23,13 @@ interface PetSettingsModalProps {
 
 // Tek satır input / select / boolean / number row
 const SettingRow = ({ icon: Icon, label, value, onChange, type = "text", options, tags, color = "text-white", placeholder }: any) => (
-    <div className="w-full flex flex-col p-4 bg-white/5 border-b border-card-border last:border-0 group transition-colors hover:bg-white/[0.07]">
+    <div className="w-full flex flex-col p-4 bg-black/5 dark:bg-white/5 border-b border-card-border last:border-0 group transition-colors hover:bg-white/[0.07]">
         <div className="flex items-center gap-4">
-            <div className={cn("w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center shrink-0 shadow-inner group-hover:scale-110 transition-transform", color)}>
+            <div className={cn("w-9 h-9 rounded-xl bg-black/5 dark:bg-white/5 flex items-center justify-center shrink-0 shadow-inner group-hover:scale-110 transition-transform", color)}>
                 <Icon className="w-4.5 h-4.5" />
             </div>
             <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-0.5">{label}</p>
+                <p className="text-[10px] font-black text-black/40 dark:text-white/30 uppercase tracking-[0.2em] mb-0.5">{label}</p>
                 
                 {tags && (
                     <div className="flex flex-wrap gap-1.5 mt-1 mb-2">
@@ -40,7 +40,7 @@ const SettingRow = ({ icon: Icon, label, value, onChange, type = "text", options
                                     const newValue = value ? `${value}, ${tag}` : tag;
                                     onChange(newValue);
                                 }}
-                                className="px-2.5 py-1 rounded-lg bg-white/5 border border-card-border text-[10px] font-bold text-white/60 hover:bg-white/10 hover:text-white transition-all active:scale-95"
+                                className="px-2.5 py-1 rounded-lg bg-black/5 dark:bg-white/5 border border-card-border text-[10px] font-bold text-black/60 dark:text-white/60 hover:bg-black/10 dark:bg-white/10 hover:text-white transition-all active:scale-95"
                             >
                                 + {tag}
                             </button>
@@ -58,7 +58,7 @@ const SettingRow = ({ icon: Icon, label, value, onChange, type = "text", options
                                     "px-3 py-1 rounded-full text-xs font-bold transition-all border",
                                     value === opt 
                                         ? "bg-white text-black border-white" 
-                                        : "bg-transparent text-white/40 border-card-border hover:border-white/30"
+                                        : "bg-transparent text-black/50 dark:text-white/40 border-card-border hover:border-black/30 dark:border-white/30"
                                 )}
                             >
                                 {opt}
@@ -75,7 +75,7 @@ const SettingRow = ({ icon: Icon, label, value, onChange, type = "text", options
                                     "px-4 py-1 rounded-full text-xs font-bold transition-all border",
                                     value === val 
                                         ? "bg-white text-black border-white" 
-                                        : "bg-transparent text-white/40 border-card-border hover:border-white/30"
+                                        : "bg-transparent text-black/50 dark:text-white/40 border-card-border hover:border-black/30 dark:border-white/30"
                                 )}
                             >
                                 {val ? "Evet" : "Hayır"}
@@ -294,13 +294,13 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
                         animate={{ y: 0.1 }}
                         exit={{ y: "100%" }}
                         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                        className="w-full h-[94vh] bg-[#0A0A0E] rounded-t-[3rem] border-t border-card-border flex flex-col overflow-hidden shadow-[0_-25px_50px_rgba(0,0,0,0.8)]"
+                        className="w-full h-[94vh] bg-background dark:bg-[#0A0A0E] rounded-t-[3rem] border-t border-card-border flex flex-col overflow-hidden shadow-[0_-25px_50px_rgba(0,0,0,0.8)]"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header */}
-                        <div className="px-6 py-5 flex items-center justify-between border-b border-card-border bg-[#0A0A0E]/80 backdrop-blur-md sticky top-0 z-50">
-                            <button onClick={onClose} className="text-[17px] font-medium text-white/40 hover:text-white transition-colors">Vazgeç</button>
-                            <h2 className="text-sm font-black text-white uppercase tracking-[0.3em] opacity-80">Passport Editor</h2>
+                        <div className="px-6 py-5 flex items-center justify-between border-b border-card-border bg-background dark:bg-[#0A0A0E] sticky top-0 z-50">
+                            <button onClick={onClose} className="text-[17px] font-bold text-white hover:text-gray-200 transition-colors">Vazgeç</button>
+                            <h2 className="text-sm font-black text-white uppercase tracking-[0.3em]">Passport Editor</h2>
                             <button 
                                 onClick={handleSave} 
                                 disabled={isSaving}
@@ -334,17 +334,17 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
                                         {photoPreview ? (
                                             <img src={photoPreview} className="w-full h-full object-cover" alt="Pet" />
                                         ) : (
-                                            <div className="w-full h-full bg-white/5 flex items-center justify-center">
-                                                <PawPrint className="w-10 h-10 text-white/20" />
+                                            <div className="w-full h-full bg-black/5 dark:bg-white/5 flex items-center justify-center">
+                                                <PawPrint className="w-10 h-10 text-black/30 dark:text-white/20" />
                                             </div>
                                         )}
                                         <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-[2.4rem]">
                                             {isUploadingPhoto ? (
-                                                <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                                <div className="w-6 h-6 border-2 border-black/20 dark:border-white/20 border-t-white rounded-full animate-spin" />
                                             ) : (
                                                 <>
                                                     <Camera className="w-6 h-6 text-white" />
-                                                    <span className="text-[9px] font-black text-white/80 mt-1 uppercase tracking-wider">Değiştir</span>
+                                                    <span className="text-[9px] font-black text-black/80 dark:text-white/80 mt-1 uppercase tracking-wider">Değiştir</span>
                                                 </>
                                             )}
                                         </div>
@@ -361,7 +361,7 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
                                     <div className="flex items-center justify-center gap-2 mt-1.5">
                                         <span className="text-lg">{formData.type}</span>
                                         {calculatedAge && (
-                                            <span className="inline-block px-3 py-0.5 bg-white/5 rounded-full text-[10px] font-black text-white/40 uppercase tracking-widest border border-card-border">
+                                            <span className="inline-block px-3 py-0.5 bg-black/5 dark:bg-white/5 rounded-full text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest border border-card-border">
                                                 {calculatedAge}
                                             </span>
                                         )}
@@ -374,8 +374,8 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
 
                             {/* ─── Temel Kimlik ─── */}
                             <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em] ml-6">Temel Kimlik</h4>
-                                <div className="rounded-[2.5rem] overflow-hidden border border-card-border bg-[#1C1C1E]/40 backdrop-blur-xl">
+                                <h4 className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-[0.4em] ml-6">Temel Kimlik</h4>
+                                <div className="rounded-[2.5rem] overflow-hidden border border-card-border bg-card dark:bg-[#1C1C1E]/40 backdrop-blur-xl">
                                     <SettingRow icon={Fingerprint} label="İsim" value={formData.name} onChange={(v:any) => setFormData(f => ({...f, name: v}))} color="text-cyan-400" placeholder="Petin adı" />
                                     <SettingRow icon={Award} label="Cins / Irk" value={formData.breed} onChange={(v:any) => setFormData(f => ({...f, breed: v}))} color="text-purple-400" placeholder="örn: Golden Retriever" />
                                     <SettingRow icon={Hash} label="Microchip No" value={formData.microchip} onChange={(v:any) => setFormData(f => ({...f, microchip: v}))} color="text-emerald-400" placeholder="Chip numarası" />
@@ -386,16 +386,16 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
 
                             {/* ─── Tür & Boyut ─── */}
                             <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em] ml-6">Tür & Boyut</h4>
-                                <div className="rounded-[2.5rem] overflow-hidden border border-card-border bg-[#1C1C1E]/40 backdrop-blur-xl">
+                                <h4 className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-[0.4em] ml-6">Tür & Boyut</h4>
+                                <div className="rounded-[2.5rem] overflow-hidden border border-card-border bg-card dark:bg-[#1C1C1E]/40 backdrop-blur-xl">
                                     {/* Tür seçimi — emoji butonlar */}
                                     <div className="p-4 border-b border-card-border">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center shrink-0 text-yellow-400">
+                                            <div className="w-9 h-9 rounded-xl bg-black/5 dark:bg-white/5 flex items-center justify-center shrink-0 text-yellow-400">
                                                 <PawPrint className="w-4.5 h-4.5" />
                                             </div>
                                             <div className="flex-1">
-                                                <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-2">Hayvan Türü</p>
+                                                <p className="text-[10px] font-black text-black/40 dark:text-white/30 uppercase tracking-[0.2em] mb-2">Hayvan Türü</p>
                                                 <div className="flex gap-2 flex-wrap">
                                                     {PET_TYPES.map(emoji => (
                                                         <button
@@ -405,7 +405,7 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
                                                                 "w-10 h-10 rounded-2xl text-xl flex items-center justify-center transition-all border",
                                                                 formData.type === emoji
                                                                     ? "bg-white border-white scale-110 shadow-lg"
-                                                                    : "bg-white/5 border-card-border hover:bg-white/10"
+                                                                    : "bg-black/5 dark:bg-white/5 border-card-border hover:bg-black/10 dark:bg-white/10"
                                                             )}
                                                         >
                                                             {emoji}
@@ -421,8 +421,8 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
 
                             {/* ─── Biyometrik ─── */}
                             <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em] ml-6">Biyometrik Veriler</h4>
-                                <div className="rounded-[2.5rem] overflow-hidden border border-card-border bg-[#1C1C1E]/40 backdrop-blur-xl">
+                                <h4 className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-[0.4em] ml-6">Biyometrik Veriler</h4>
+                                <div className="rounded-[2.5rem] overflow-hidden border border-card-border bg-card dark:bg-[#1C1C1E]/40 backdrop-blur-xl">
                                     <SettingRow icon={User} label="Cinsiyet" value={formData.gender} onChange={(v:any) => setFormData(f => ({...f, gender: v}))} type="select" options={["Erkek", "Dişi"]} color="text-pink-400" />
                                     <SettingRow 
                                         icon={Zap} 
@@ -439,8 +439,8 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
 
                             {/* ─── Sağlık & Karakter ─── */}
                             <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em] ml-6">Sağlık & Karakter</h4>
-                                <div className="rounded-[2.5rem] overflow-hidden border border-card-border bg-[#1C1C1E]/40 backdrop-blur-xl">
+                                <h4 className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-[0.4em] ml-6">Sağlık & Karakter</h4>
+                                <div className="rounded-[2.5rem] overflow-hidden border border-card-border bg-card dark:bg-[#1C1C1E]/40 backdrop-blur-xl">
                                     <SettingRow icon={Heart} label="Sağlık Durumu" value={formData.healthStatus} onChange={(v:any) => setFormData(f => ({...f, healthStatus: v}))} type="select" options={HEALTH_OPTIONS} color="text-rose-400" />
                                     <SettingRow 
                                         icon={FileText} 
@@ -475,8 +475,8 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
 
                             {/* ─── Veli Bilgileri ─── */}
                             <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em] ml-6">Veli (Sahip) Bilgileri</h4>
-                                <div className="rounded-[2.5rem] overflow-hidden border border-card-border bg-[#1C1C1E]/40 backdrop-blur-xl">
+                                <h4 className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-[0.4em] ml-6">Veli (Sahip) Bilgileri</h4>
+                                <div className="rounded-[2.5rem] overflow-hidden border border-card-border bg-card dark:bg-[#1C1C1E]/40 backdrop-blur-xl">
                                     <SettingRow icon={User} label="Veli Adı" value={formData.ownerName} onChange={(v:any) => setFormData(f => ({...f, ownerName: v}))} color="text-white" placeholder="Ad Soyad" />
                                     <SettingRow icon={Phone} label="Telefon" value={formData.ownerPhone} onChange={(v:any) => setFormData(f => ({...f, ownerPhone: v}))} type="tel" color="text-white" placeholder="+90 5xx xxx xx xx" />
                                     <SettingRow icon={MapPin} label="Adres / Bölge" value={formData.ownerAddress} onChange={(v:any) => setFormData(f => ({...f, ownerAddress: v}))} color="text-white" placeholder="Mahalle, İlçe, İl" />
@@ -485,8 +485,8 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
 
                             {/* ─── Parazit Takibi ─── */}
                             <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em] ml-6">Parazit Kontrol Tarihleri</h4>
-                                <div className="rounded-[2.5rem] overflow-hidden border border-card-border bg-[#1C1C1E]/40 backdrop-blur-xl">
+                                <h4 className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-[0.4em] ml-6">Parazit Kontrol Tarihleri</h4>
+                                <div className="rounded-[2.5rem] overflow-hidden border border-card-border bg-card dark:bg-[#1C1C1E]/40 backdrop-blur-xl">
                                     <SettingRow icon={ShieldCheck} label="İç Parazit Uygulaması" value={formData.parasiteInternal} onChange={(v:any) => setFormData(f => ({...f, parasiteInternal: v}))} type="date" color="text-emerald-400" />
                                     <SettingRow icon={ShieldCheck} label="Dış Parazit Uygulaması" value={formData.parasiteExternal} onChange={(v:any) => setFormData(f => ({...f, parasiteExternal: v}))} type="date" color="text-emerald-400" />
                                 </div>
@@ -494,8 +494,8 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
 
                             {/* ─── Günlük Hedefler ─── */}
                             <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em] ml-6">Günlük Hedefler</h4>
-                                <div className="rounded-[2.5rem] overflow-hidden border border-card-border bg-[#1C1C1E]/40 backdrop-blur-xl">
+                                <h4 className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-[0.4em] ml-6">Günlük Hedefler</h4>
+                                <div className="rounded-[2.5rem] overflow-hidden border border-card-border bg-card dark:bg-[#1C1C1E]/40 backdrop-blur-xl">
                                     <SettingRow icon={Zap} label="Aktivite Hedefi (%)" value={formData.activityTarget} onChange={(v:any) => setFormData(f => ({...f, activityTarget: Number(v) || 0}))} type="number" color="text-emerald-400" />
                                     <SettingRow icon={Droplets} label="Su Hedefi (ML)" value={formData.waterTarget} onChange={(v:any) => setFormData(f => ({...f, waterTarget: Number(v) || 0}))} type="number" color="text-blue-400" />
                                     <SettingRow icon={Flame} label="Beslenme Hedefi (KCAL)" value={formData.foodTarget} onChange={(v:any) => setFormData(f => ({...f, foodTarget: Number(v) || 0}))} type="number" color="text-orange-400" />
@@ -511,7 +511,7 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
                                     <div className="absolute inset-0 bg-red-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                                     <Trash2 className="w-4 h-4 transform group-hover:rotate-12 transition-transform" /> Pasaport Kaydını Sıfırla
                                 </button>
-                                <p className="text-[10px] text-white/20 text-center font-bold px-12 leading-relaxed uppercase tracking-[0.2em]">
+                                <p className="text-[10px] text-black/30 dark:text-white/20 text-center font-bold px-12 leading-relaxed uppercase tracking-[0.2em]">
                                     All data secured via Moffi Cloud Encryption. Changes sync across your devices instantly.
                                 </p>
                             </div>

@@ -45,7 +45,7 @@ export default function BusinessLayout({ children }: { children: React.ReactNode
                                     <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">{rejectionReason}</p>
                                 </div>
                             )}
-                            <p className="text-xs text-gray-400 dark:text-gray-500">Lütfen bilgilerinizi kontrol edip yönetici ile iletişime geçin.</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500">Lütfen bilgilerinizi kontrol edip yönetici ile iletişime geçin.</p>
                         </>
                     ) : (
                         <>
@@ -65,7 +65,7 @@ export default function BusinessLayout({ children }: { children: React.ReactNode
                                     <div><strong>Vergi No:</strong> {user.taxId}</div>
                                 </div>
                             </div>
-                            <p className="text-xs text-gray-400 dark:text-gray-500">Ortalama onaylanma süresi 1-2 iş günüdür.</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500">Ortalama onaylanma süresi 1-2 iş günüdür.</p>
                         </>
                     )}
 

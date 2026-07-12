@@ -168,12 +168,12 @@ export default function PetMemoryGame({ onGameOver, onClose }: GameProps) {
             {/* HEADER */}
             <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-center z-20">
                 <button onClick={onClose} className="bg-card p-2 rounded-xl shadow-moffi-card hover:bg-gray-50 transition">
-                    <X className="w-6 h-6 text-gray-400" />
+                    <X className="w-6 h-6 text-gray-500 dark:text-gray-400" />
                 </button>
 
                 <div className="flex gap-3">
                     <div className="bg-white/80 backdrop-blur px-4 py-2 rounded-xl border border-white/50 shadow-sm flex items-center gap-2">
-                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Level</span>
+                        <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Level</span>
                         <span className="text-xl font-black text-[#5B4D9D]">{currentLevel}</span>
                     </div>
                     <div className="bg-white/80 backdrop-blur px-4 py-2 rounded-xl border border-white/50 shadow-sm flex items-center gap-2">
@@ -272,7 +272,7 @@ export default function PetMemoryGame({ onGameOver, onClose }: GameProps) {
                         </p>
 
                         <div className="bg-gray-50 rounded-2xl p-5 mb-8">
-                            <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Toplam Skor</div>
+                            <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Toplam Skor</div>
                             <div className="text-4xl font-black text-[#5B4D9D]">{totalScore}</div>
                         </div>
 

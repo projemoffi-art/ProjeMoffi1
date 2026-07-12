@@ -63,7 +63,7 @@ export default function PetIDPage() {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center gap-4">
                 <Loader2 className="w-10 h-10 text-cyan-500 animate-spin" />
-                <p className="text-white/40 text-xs font-bold uppercase tracking-widest">Moffi Kimlik Bilgileri Alınıyor...</p>
+                <p className="text-black/50 dark:text-white/40 text-xs font-bold uppercase tracking-widest">Moffi Kimlik Bilgileri Alınıyor...</p>
             </div>
         );
     }
@@ -73,8 +73,8 @@ export default function PetIDPage() {
             <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
                 <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
                 <h1 className="text-xl font-bold text-white mb-2">Pet ID Bulunamadı</h1>
-                <p className="text-white/50 text-sm mb-6">Girdiğiniz kimlik numarası sistemimizde kayıtlı görünmüyor.</p>
-                <button onClick={() => router.push('/')} className="bg-white/10 text-white px-6 py-3 rounded-2xl font-bold">Anasayfaya Dön</button>
+                <p className="text-black/50 dark:text-white/50 text-sm mb-6">Girdiğiniz kimlik numarası sistemimizde kayıtlı görünmüyor.</p>
+                <button onClick={() => router.push('/')} className="bg-black/10 dark:bg-white/10 text-white px-6 py-3 rounded-2xl font-bold">Anasayfaya Dön</button>
             </div>
         );
     }
@@ -126,7 +126,7 @@ export default function PetIDPage() {
     };
 
     return (
-        <div className="min-h-[100dvh] bg-black text-white selection:bg-cyan-500/30 overflow-hidden relative">
+        <div className="min-h-[100dvh] bg-white dark:bg-black text-white selection:bg-cyan-500/30 overflow-hidden relative">
 
             {/* SCAN NOTIFICATION TOAST (SIMULATION FOR FINDER TO SEE OWNER IS AWARE) */}
             <AnimatePresence>
@@ -196,15 +196,15 @@ export default function PetIDPage() {
                             delay: 0.3,
                             scale: { repeat: Infinity, duration: 2, ease: "easeInOut" }
                         }}
-                        className="w-full max-w-sm mb-6 bg-red-600 rounded-3xl p-4 shadow-[0_0_40px_rgba(220,38,38,0.5)] border-2 border-white/30 relative overflow-hidden"
+                        className="w-full max-w-sm mb-6 bg-red-600 rounded-3xl p-4 shadow-[0_0_40px_rgba(220,38,38,0.5)] border-2 border-black/30 dark:border-white/30 relative overflow-hidden"
                     >
-                        <div className="absolute inset-0 bg-white/10 animate-shimmer" />
+                        <div className="absolute inset-0 bg-black/10 dark:bg-white/10 animate-shimmer" />
                         <div className="flex items-center gap-4 relative z-10">
                             <div className="w-12 h-12 bg-card rounded-2xl flex items-center justify-center shadow-lg shrink-0">
                                 <ShieldAlert className="w-7 h-7 text-red-600" />
                             </div>
                             <div className="flex flex-col">
-                                <span className="text-[10px] font-black text-white/70 uppercase tracking-widest leading-none mb-1">Kritik Tıbbi Uyarı</span>
+                                <span className="text-[10px] font-black text-black/70 dark:text-white/70 uppercase tracking-widest leading-none mb-1">Kritik Tıbbi Uyarı</span>
                                 <span className="text-sm font-black text-white leading-tight uppercase tracking-tight italic">
                                     {sosConfig.criticalHealthAlert}
                                 </span>
@@ -237,7 +237,7 @@ export default function PetIDPage() {
                     <h1 className="text-4xl font-black mb-1 tracking-tight flex items-center justify-center gap-2">
                         {pet.name}
                     </h1>
-                    <p className="text-white/60 text-sm font-medium mb-6 flex items-center justify-center gap-1.5 uppercase tracking-widest">
+                    <p className="text-black/60 dark:text-white/60 text-sm font-medium mb-6 flex items-center justify-center gap-1.5 uppercase tracking-widest">
                         {pet.breed} • {pet.age}
                     </p>
 
@@ -248,7 +248,7 @@ export default function PetIDPage() {
                         transition={{ delay: 0.1 }}
                         className={cn(
                             "w-full rounded-[2.5rem] p-6 shadow-xl backdrop-blur-xl border border-card-border relative overflow-hidden",
-                            isLost ? "bg-red-500/10" : "bg-white/5"
+                            isLost ? "bg-red-500/10" : "bg-black/5 dark:bg-white/5"
                         )}
                     >
                         {isLost ? (
@@ -265,7 +265,7 @@ export default function PetIDPage() {
                                     {sosConfig.criticalHealthAlert && (
                                         <div className="w-full bg-red-950/50 rounded-2xl p-3 border border-red-500/10 mt-2 flex flex-col items-start text-left">
                                             <span className="text-xs uppercase font-bold text-red-400 mb-1">⚕️ Sağlık Uyarısı</span>
-                                            <p className="text-[13px] text-white/90 leading-snug">{sosConfig.criticalHealthAlert}</p>
+                                            <p className="text-[13px] text-black/90 dark:text-white/90 leading-snug">{sosConfig.criticalHealthAlert}</p>
                                         </div>
                                     )}
                                 </div>
@@ -276,11 +276,11 @@ export default function PetIDPage() {
                                     <Heart className="w-5 h-5" fill="currentColor" />
                                 </div>
                                 <h2 className="text-lg font-bold text-white tracking-wide">Ben Güvendeyim!</h2>
-                                <p className="text-sm text-white/70 leading-relaxed">
+                                <p className="text-sm text-black/70 dark:text-white/70 leading-relaxed">
                                     Sahibim yanımda veya evimdeyim. Benimle karşılaştıysan sadece başımı okşa ve iyi olduğumu bil! 🐾
                                 </p>
-                                <div className="w-full h-[1px] bg-white/10 my-2" />
-                                <p className="text-[13px] italic text-white/50">"{pet.bio}"</p>
+                                <div className="w-full h-[1px] bg-black/10 dark:bg-white/10 my-2" />
+                                <p className="text-[13px] italic text-black/50 dark:text-white/50">"{pet.bio}"</p>
                             </div>
                         )}
                     </motion.div>
@@ -308,7 +308,7 @@ export default function PetIDPage() {
                             </button>
 
                             {sosConfig.allowAnonymousMessaging && (
-                                <button onClick={() => setShowMessageBox(!showMessageBox)} className="flex-1 bg-white/10 hover:bg-white/15 border border-card-border text-white rounded-[20px] p-4 flex flex-col items-center justify-center gap-2 transition-colors active:scale-95">
+                                <button onClick={() => setShowMessageBox(!showMessageBox)} className="flex-1 bg-black/10 dark:bg-white/10 hover:bg-white/15 border border-card-border text-white rounded-[20px] p-4 flex flex-col items-center justify-center gap-2 transition-colors active:scale-95">
                                     <MessageCircle className="w-6 h-6" />
                                     <span className="font-semibold text-xs text-center leading-tight">Anonim Mesaj Bırak</span>
                                 </button>
@@ -324,13 +324,13 @@ export default function PetIDPage() {
                                     exit={{ height: 0, opacity: 0 }}
                                     className="overflow-hidden"
                                 >
-                                    <div className="bg-[#1C1C1E] rounded-3xl p-4 border border-card-border shadow-xl mt-2 flex flex-col gap-3">
-                                        <p className="text-xs text-white/50 text-center uppercase tracking-wide font-bold">Uygulamasız - Güvenli Mesaj</p>
+                                    <div className="bg-card dark:bg-[#1C1C1E] rounded-3xl p-4 border border-card-border shadow-xl mt-2 flex flex-col gap-3">
+                                        <p className="text-xs text-black/50 dark:text-white/50 text-center uppercase tracking-wide font-bold">Uygulamasız - Güvenli Mesaj</p>
                                         <textarea
                                             value={anonMessage}
                                             onChange={(e) => setAnonMessage(e.target.value)}
                                             placeholder="Örn: Migros'un arkasında gördüm, mama veriyorum..."
-                                            className="w-full bg-black/50 border border-card-border rounded-2xl p-3 text-sm text-white outline-none focus:border-cyan-500/50 placeholder:text-white/30 resize-none h-20"
+                                            className="w-full bg-black/50 border border-card-border rounded-2xl p-3 text-sm text-white outline-none focus:border-cyan-500/50 placeholder:text-black/40 dark:text-white/30 resize-none h-20"
                                         />
                                         <button
                                             onClick={handleSendMessage}

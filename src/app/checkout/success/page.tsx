@@ -68,7 +68,7 @@ export default function OrderSuccessPage() {
                         <Package className="w-6 h-6" />
                     </div>
                     <div>
-                        <div className="text-[10px] uppercase font-bold text-gray-400">Tahmini Teslimat</div>
+                        <div className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400">Tahmini Teslimat</div>
                         <div className="font-bold text-foreground dark:text-white">12 - 14 Aralık</div>
                     </div>
                 </div>
@@ -80,7 +80,7 @@ export default function OrderSuccessPage() {
                         </button>
                     </Link>
                     <Link href="/studio">
-                        <button className="w-full py-4 bg-card dark:bg-black text-foreground dark:text-white border-2 border-transparent hover:border-card-border dark:hover:border-card-border rounded-2xl font-bold text-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-all">
+                        <button className="w-full py-4 bg-card dark:bg-black text-foreground dark:text-white border-2 border-transparent hover:border-card-border dark:hover:border-card-border rounded-2xl font-bold text-lg hover:bg-gray-50 dark:hover:bg-black/5 dark:bg-white/5 transition-all">
                             Ana Sayfaya Dön
                         </button>
                     </Link>

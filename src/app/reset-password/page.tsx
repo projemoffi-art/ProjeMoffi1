@@ -57,7 +57,7 @@ export default function ResetPasswordPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#0A0A0E] flex flex-col items-center justify-center p-6 relative overflow-hidden">
+        <div className="min-h-screen bg-background dark:bg-[#0A0A0E] flex flex-col items-center justify-center p-6 relative overflow-hidden">
             {/* Ambient Background Effects */}
             <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-cyan-500/10 blur-[120px] rounded-full" />
             <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/10 blur-[120px] rounded-full" />
@@ -69,13 +69,13 @@ export default function ResetPasswordPage() {
             >
                 {/* Logo Section */}
                 <div className="flex items-center justify-center gap-3 mb-12">
-                    <div className="w-12 h-12 bg-white/10 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-card-border">
+                    <div className="w-12 h-12 bg-black/10 dark:bg-white/10 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-card-border">
                         <PawPrint className="w-7 h-7 text-cyan-400" />
                     </div>
                     <h1 className="text-3xl font-black text-white tracking-widest uppercase italic italic leading-none">Moffi <span className="text-cyan-400">Core</span></h1>
                 </div>
 
-                <div className="bg-white/5 backdrop-blur-3xl border border-card-border rounded-[3rem] p-10 shadow-2xl relative overflow-hidden">
+                <div className="bg-black/5 dark:bg-white/5 backdrop-blur-3xl border border-card-border rounded-[3rem] p-10 shadow-2xl relative overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/5 to-purple-500/5" />
                     
                     <div className="relative z-10">
@@ -93,7 +93,7 @@ export default function ResetPasswordPage() {
                                         <input
                                             type={showPassword ? "text" : "password"}
                                             placeholder="••••••••"
-                                            className="w-full pl-16 pr-16 py-5 bg-white/5 border border-card-border rounded-[2rem] text-sm text-white focus:border-cyan-500/50 outline-none transition-all placeholder-gray-800"
+                                            className="w-full pl-16 pr-16 py-5 bg-black/5 dark:bg-white/5 border border-card-border rounded-[2rem] text-sm text-white focus:border-cyan-500/50 outline-none transition-all placeholder-gray-800"
                                             required
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
@@ -111,7 +111,7 @@ export default function ResetPasswordPage() {
                                         <input
                                             type="password"
                                             placeholder="••••••••"
-                                            className="w-full pl-16 pr-6 py-5 bg-white/5 border border-card-border rounded-[2rem] text-sm text-white focus:border-cyan-500/50 outline-none transition-all placeholder-gray-800"
+                                            className="w-full pl-16 pr-6 py-5 bg-black/5 dark:bg-white/5 border border-card-border rounded-[2rem] text-sm text-white focus:border-cyan-500/50 outline-none transition-all placeholder-gray-800"
                                             required
                                             value={confirmPassword}
                                             onChange={(e) => setConfirmPassword(e.target.value)}
@@ -157,7 +157,7 @@ export default function ResetPasswordPage() {
                 </div>
 
                 <div className="mt-12 flex justify-center">
-                    <div className="flex items-center gap-2 px-6 py-3 bg-white/5 border border-card-border rounded-full backdrop-blur-xl">
+                    <div className="flex items-center gap-2 px-6 py-3 bg-black/5 dark:bg-white/5 border border-card-border rounded-full backdrop-blur-xl">
                         <ShieldCheck className="w-4 h-4 text-cyan-400" />
                         <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest leading-none">Moffi End-to-End Encryption Active</span>
                     </div>

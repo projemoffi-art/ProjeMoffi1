@@ -48,7 +48,7 @@ export function MoffiWallet({ isOpen, onClose }: MoffiWalletProps) {
                     onClick={onClose}
                     className="absolute top-4 right-4 w-8 h-8 bg-gray-50 dark:bg-slate-800 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-slate-700 transition"
                 >
-                    <X className="w-5 h-5 text-gray-400 dark:text-gray-300" />
+                    <X className="w-5 h-5 text-gray-500 dark:text-gray-400 dark:text-gray-300" />
                 </button>
 
                 {/* Header */}
@@ -58,34 +58,34 @@ export function MoffiWallet({ isOpen, onClose }: MoffiWalletProps) {
                     </div>
                     <div>
                         <h2 className="text-lg font-black text-foreground dark:text-white font-poppins">Moffi Cüzdan</h2>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 font-bold">Resmi Bakiye</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 font-bold">Resmi Bakiye</p>
                     </div>
                 </div>
 
                 {/* Main Curve Card */}
                 <div className="bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] dark:from-indigo-600 dark:to-purple-800 rounded-[2rem] p-6 text-white shadow-xl shadow-indigo-200 dark:shadow-none mb-6 relative overflow-hidden transition-all">
                     {/* Decor */}
-                    <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl opacity-50" />
+                    <div className="absolute -top-10 -right-10 w-40 h-40 bg-black/10 dark:bg-white/10 rounded-full blur-3xl opacity-50" />
 
                     <div className="relative z-10 flex flex-col items-center text-center">
                         <div className="text-5xl font-black mb-2 flex items-center gap-2">
                             <span className="text-yellow-400 text-3xl">💎</span>
                             {userProfile?.moffi_coins?.toLocaleString() || '0'}
                         </div>
-                        <div className="text-[10px] font-bold text-white/50 mb-4">
+                        <div className="text-[10px] font-bold text-black/50 dark:text-white/50 mb-4">
                             Moffi Coin Bakiyesi
                         </div>
 
                         <div className="flex gap-2 w-full mb-4">
                             <button 
                                 onClick={() => handleAddCoins(100)}
-                                className="flex-1 bg-white/10 hover:bg-white/20 border border-card-border py-2 rounded-xl text-[10px] font-bold transition-all"
+                                className="flex-1 bg-black/10 dark:bg-white/10 hover:bg-black/20 dark:bg-white/20 border border-card-border py-2 rounded-xl text-[10px] font-bold transition-all"
                             >
                                 +100💎
                             </button>
                             <button 
                                 onClick={() => handleAddCoins(500)}
-                                className="flex-1 bg-white/10 hover:bg-white/20 border border-card-border py-2 rounded-xl text-[10px] font-bold transition-all"
+                                className="flex-1 bg-black/10 dark:bg-white/10 hover:bg-black/20 dark:bg-white/20 border border-card-border py-2 rounded-xl text-[10px] font-bold transition-all"
                             >
                                 +500💎
                             </button>
@@ -108,7 +108,7 @@ export function MoffiWallet({ isOpen, onClose }: MoffiWalletProps) {
                 {/* History List */}
                 <div>
                     <h3 className="text-sm font-bold text-foreground dark:text-white mb-4 flex items-center gap-2">
-                        <History className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                        <History className="w-4 h-4 text-gray-500 dark:text-gray-400 dark:text-gray-500" />
                         Son İşlemler
                     </h3>
 
@@ -119,7 +119,7 @@ export function MoffiWallet({ isOpen, onClose }: MoffiWalletProps) {
                                     <div className="text-xl">{tx.icon}</div>
                                     <div>
                                         <div className="text-xs font-bold text-foreground dark:text-white">{tx.description}</div>
-                                        <div className="text-[10px] text-gray-400 dark:text-gray-500">
+                                        <div className="text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-500">
                                             {new Date(tx.date).toLocaleDateString()} • {new Date(tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </div>
                                     </div>

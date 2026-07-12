@@ -59,7 +59,7 @@ export function ClinicListModal({ isOpen, onClose, clinics, onSelectClinic, isLo
                                 <p className="text-[10px] text-zinc-400 dark:text-white/20 font-black uppercase tracking-widest mt-2">{clinics.length} KAYITLI NOKTA</p>
                             </div>
                         </div>
-                        <button onClick={onClose} className="w-11 h-11 rounded-full bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-card-border flex items-center justify-center text-zinc-500 dark:text-white/40 hover:text-zinc-800 dark:hover:text-white hover:bg-zinc-200/50 dark:hover:bg-white/10 transition-all cursor-pointer">
+                        <button onClick={onClose} className="w-11 h-11 rounded-full bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-card-border flex items-center justify-center text-zinc-500 dark:text-white/40 hover:text-zinc-800 dark:hover:text-white hover:bg-zinc-200/50 dark:hover:bg-black/10 dark:bg-white/10 transition-all cursor-pointer">
                             <X className="w-5 h-5" />
                         </button>
                     </div>
@@ -71,7 +71,7 @@ export function ClinicListModal({ isOpen, onClose, clinics, onSelectClinic, isLo
                         <input
                             type="text"
                             placeholder="Klinik ismi veya uzmanlık yazın..."
-                            className="w-full h-16 pl-14 pr-6 bg-zinc-100/80 dark:bg-white/5 rounded-3xl border border-zinc-200 dark:border-card-border outline-none font-bold text-sm text-zinc-800 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-white/20 focus:border-[#5B4D9D]/50 focus:bg-zinc-200/40 dark:focus:bg-white/[0.08] transition-all relative z-10"
+                            className="w-full h-16 pl-14 pr-6 bg-zinc-100/80 dark:bg-white/5 rounded-3xl border border-zinc-200 dark:border-card-border outline-none font-bold text-sm text-zinc-800 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-black/30 dark:text-white/20 focus:border-[#5B4D9D]/50 focus:bg-zinc-200/40 dark:focus:bg-white/[0.08] transition-all relative z-10"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -140,7 +140,7 @@ export function ClinicListModal({ isOpen, onClose, clinics, onSelectClinic, isLo
                 <div className="p-8 bg-white/95 dark:bg-[#111111]/80 backdrop-blur-3xl border-t border-zinc-200 dark:border-card-border">
                     <button 
                         onClick={onClose}
-                        className="w-full h-16 bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-3xl text-zinc-500 dark:text-white/40 font-black text-[10px] uppercase tracking-[0.3em] hover:bg-zinc-200/50 dark:hover:bg-white/10 transition-all uppercase cursor-pointer"
+                        className="w-full h-16 bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-3xl text-zinc-500 dark:text-white/40 font-black text-[10px] uppercase tracking-[0.3em] hover:bg-zinc-200/50 dark:hover:bg-black/10 dark:bg-white/10 transition-all uppercase cursor-pointer"
                     >
                         Pencereyi Kapat
                     </button>

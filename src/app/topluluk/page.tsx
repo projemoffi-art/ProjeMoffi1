@@ -10,17 +10,18 @@ import {
     LogOut, ChevronRight, ChevronLeft, User, Bell, Lock, HelpCircle, Check, HeartHandshake, CheckCheck, ShieldAlert, ChevronDown,
     AlertTriangle, PhoneCall, BadgeCheck, Radar, Palette, ShoppingBag, Gamepad2, Globe, Filter,
     Coins, Package, Calendar, Plane, ShieldCheck, Route, TrendingUp, Timer, Footprints, Play, Download, Clock, Syringe, Moon, Flame,
-    Sun, Contrast, Droplet
+    Sun, Contrast, Droplet, Info
 } from 'lucide-react';
 import { compressImageToFile } from '@/lib/imageUtils';
 import { cn } from '@/lib/utils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
+const MapLocationPicker = dynamic(() => import('@/components/common/MapLocationPicker').then(mod => mod.MapLocationPicker), { ssr: false });
 
 const RadarMap = dynamic(() => import('@/components/community/RadarMap'), {
     ssr: false,
     loading: () => (
-        <div className="w-full h-[380px] rounded-[2.5rem] bg-[var(--card-bg)] border border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)]">
+        <div className="w-full h-[380px] rounded-[2.5rem] bg-[var(--card-bg)] border border-black/10 dark:border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)]">
             <Activity className="w-8 h-8 mb-2 animate-spin text-cyan-400" />
             <p className="text-xs font-bold uppercase tracking-wider">Harita Yükleniyor...</p>
         </div>
@@ -30,7 +31,7 @@ const RadarMap = dynamic(() => import('@/components/community/RadarMap'), {
 const SightingMapSelector = dynamic(() => import('@/components/community/SightingMapSelector'), {
     ssr: false,
     loading: () => (
-        <div className="w-full h-full bg-[#1A1A1A] animate-pulse rounded-2xl flex items-center justify-center text-white/20 font-bold">Harita Yükleniyor...</div>
+        <div className="w-full h-full bg-card dark:bg-[#1A1A1A] animate-pulse rounded-2xl flex items-center justify-center text-black/30 dark:text-white/20 font-bold">Harita Yükleniyor...</div>
     )
 });
 
@@ -213,18 +214,19 @@ export default function MoffiSocialMasterpiece() {
     const [petSightings, setPetSightings] = useState<any[]>([]);
     const [isLoadingSightings, setIsLoadingSightings] = useState(false);
     const [radarViewMode, setRadarViewMode] = useState<'list' | 'map'>('list');
-    const [filterPetType, setFilterPetType] = useState<'all' | 'dog' | 'cat'>('all');
+    const [selectedCategory, setSelectedCategory] = useState("Tümü");
     const [filterDistance, setFilterDistance] = useState<'all' | number>('all');
 
     const [lostPets, setLostPets] = useState<any[]>([]);
 
     const filteredLostPets = useMemo(() => {
         return lostPets.filter(pet => {
-            if (filterPetType !== 'all') {
-                const isDog = pet.type?.toLowerCase().includes('dog') || pet.type?.toLowerCase().includes('köpek') || pet.type === '🐶';
-                const isCat = pet.type?.toLowerCase().includes('cat') || pet.type?.toLowerCase().includes('kedi') || pet.type === '🐱';
-                if (filterPetType === 'dog' && !isDog) return false;
-                if (filterPetType === 'cat' && !isCat) return false;
+            if (selectedCategory !== "Tümü" && selectedCategory !== "Hepsi") {
+                const type = pet.pet_type?.toLowerCase() || pet.type?.toLowerCase() || "";
+                if (selectedCategory === "Kediler" && type !== "cat" && !type.includes("kedi")) return false;
+                if (selectedCategory === "Köpekler" && type !== "dog" && !type.includes("köpek")) return false;
+                if (selectedCategory === "Kuşlar" && type !== "bird" && !type.includes("kuş")) return false;
+                if (selectedCategory === "Diğer" && type !== "other") return false;
             }
             if (filterDistance !== 'all' && userCoords && pet.latitude && pet.longitude) {
                 const R = 6371; // Earth radius in km
@@ -239,8 +241,9 @@ export default function MoffiSocialMasterpiece() {
             }
             return true;
         });
-    }, [lostPets, filterPetType, filterDistance, userCoords]);
+    }, [lostPets, selectedCategory, filterDistance, userCoords]);
 
+    const [lostPetType, setLostPetType] = useState("cat");
     const [lostPetName, setLostPetName] = useState("");
     const [lostPetBreed, setLostPetBreed] = useState("");
     const [lostPetLocation, setLostPetLocation] = useState("");
@@ -551,35 +554,6 @@ export default function MoffiSocialMasterpiece() {
             video.removeEventListener('pause', handlePause);
         };
     }, [audioURL, videoTrimRange[0]]);
-
-    // Synchronize preview video and audio play/pause states
-    useEffect(() => {
-        const video = uploadVideoRef.current;
-        const audio = uploadAudioRef.current;
-        if (!video || !audio) return;
-
-        const handlePlay = () => {
-            audio.currentTime = Math.max(0, video.currentTime - videoTrimRange[0]);
-            audio.play().catch(() => {});
-        };
-        const handlePause = () => {
-            audio.pause();
-        };
-
-        video.addEventListener('play', handlePlay);
-        video.addEventListener('pause', handlePause);
-        
-        if (!video.paused) {
-            audio.play().catch(() => {});
-        } else {
-            audio.pause();
-        }
-
-        return () => {
-            video.removeEventListener('play', handlePlay);
-            video.removeEventListener('pause', handlePause);
-        };
-    }, [audioURL, videoTrimRange[0]]);
     
     // DERIVED STATES
     const isAnyPetLost = useMemo(() => userPets.some(p => p.is_lost), [userPets]);
@@ -782,7 +756,7 @@ export default function MoffiSocialMasterpiece() {
         setIsUploadingStory(true);
         try {
             // --- PROFESSIONAL COMPRESSION ---
-            const compressed = await compressImageToFile(pendingStoryFile);
+            const compressed = await compressImage(pendingStoryFile);
             const res = await uploadStory(compressed);
             if (res.success) {
                 showToast("Harika!", "Hikayen başarıyla paylaşıldı.", "success");
@@ -1628,7 +1602,7 @@ export default function MoffiSocialMasterpiece() {
             let fileToUpload: any = selectedFile;
             
             if (selectedFile.type.startsWith('image/')) {
-                fileToUpload = await compressImageToFile(selectedFile, 1200, 0.8, imageFilter);
+                fileToUpload = await compressImage(selectedFile);
             } else if (selectedFile.type.startsWith('video/')) {
                 // Show "Processing" state
                 showToast("Video Hazırlanıyor...", "Seçtiğiniz 10 saniyelik kısım işleniyor ve optimize ediliyor. ✨", "info");
@@ -1752,8 +1726,9 @@ export default function MoffiSocialMasterpiece() {
             // 2. Insert Record via API
             const newAlert = await apiService.addLostPet({
                 name: lostPetName,
-                type: 'dog',
+                type: lostPetType,
                 img: photoUrls[0] || undefined,
+                images: photoUrls,
                 location: lostPetLocation,
                 description: lostPetDesc,
                 latitude: newLostPetCoords[0],
@@ -1822,7 +1797,10 @@ export default function MoffiSocialMasterpiece() {
                 type: adoptionPetType,
                 description: adoptionPetDesc,
                 img: photoUrls[0] || undefined,
-                owner: user.username
+                images: photoUrls,
+                breed: adoptionPetBreed,
+                age: adoptionPetAge,
+                owner: user.user_metadata?.username || user.email?.split('@')[0] || 'Moffi Üyesi'
             });
 
             setAdoptionAds(prev => [newAd, ...prev]);
@@ -2068,7 +2046,7 @@ export default function MoffiSocialMasterpiece() {
 
 
     return (
-        <div className="fixed inset-0 bg-[var(--background)] text-[var(--foreground)] overflow-hidden flex flex-col font-sans">
+        <div className="fixed inset-0 bg-[var(--background)] text-[var(--foreground)] overflow-hidden flex flex-col font-sans pb-[72px] md:pb-0">
 
             {/* iOS STYLE TOAST NOTIFICATION */}
             <AnimatePresence>
@@ -2084,7 +2062,7 @@ export default function MoffiSocialMasterpiece() {
                             "backdrop-blur-xl border rounded-[1.5rem] p-4 shadow-2xl flex items-start gap-4 pointer-events-auto",
                             toastMessage.type === 'success' ? "bg-cyan-500/20 border-cyan-500/30 text-cyan-100" :
                                 toastMessage.type === 'error' ? "bg-red-500/20 border-red-500/30 text-red-100" :
-                                    "bg-white/10 border-white/20 text-[var(--foreground)]"
+                                    "bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 text-[var(--foreground)]"
                         )}>
                             <div className={cn(
                                 "flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center shadow-lg",
@@ -2116,7 +2094,7 @@ export default function MoffiSocialMasterpiece() {
                 id="community-scroll-container"
                 ref={globalScrollRef}
                 onScroll={handleMainScroll}
-                className="flex-1 relative z-10 w-full overflow-y-auto no-scrollbar overscroll-contain"
+                className={`flex-1 relative z-10 w-full no-scrollbar ${activeTab === 'feed' ? 'overflow-hidden flex flex-col' : 'overflow-y-auto overscroll-contain'}`}
             >
                 {activeTab === 'radar' && (
                     <motion.header 
@@ -2128,14 +2106,14 @@ export default function MoffiSocialMasterpiece() {
                         {/* Back button */}
                         <button 
                             onClick={() => setActiveTab('feed')}
-                            className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[var(--secondary-text)] hover:text-white transition-all active:scale-90 shadow-sm"
+                            className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 flex items-center justify-center text-[var(--secondary-text)] hover:text-white transition-all active:scale-90 shadow-sm"
                             title="Geri Dön"
                         >
                             <ChevronLeft className="w-5 h-5 text-white" />
                         </button>
 
                         {/* Segment Switcher: Kayıp / Sahiplen */}
-                        <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 w-full max-w-[200px] shadow-inner backdrop-blur-md">
+                        <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded-2xl border border-black/10 dark:border-white/10 w-full max-w-[200px] shadow-inner backdrop-blur-md">
                             <button 
                                 onClick={() => setRadarTabMode('lost')}
                                 className={cn(
@@ -2174,9 +2152,9 @@ export default function MoffiSocialMasterpiece() {
                                             <div className="relative w-9 h-9">
                                                 <motion.button
                                                     style={{ scale: iconScale }}
-                                                    className="w-full h-full flex items-center justify-center hover:bg-white/10 rounded-full transition-all active:scale-90 bg-black/20 backdrop-blur-md border border-white/10 shadow-lg"
+                                                    className="w-full h-full flex items-center justify-center hover:bg-black/10 dark:bg-white/10 rounded-full transition-all active:scale-90 bg-black/20 backdrop-blur-md border border-black/10 dark:border-white/10 shadow-lg"
                                                 >
-                                                    <Camera className="w-4 h-4 text-white/90" />
+                                                    <Camera className="w-4 h-4 text-black/90 dark:text-white/90" />
                                                 </motion.button>
                                                 <input 
                                                     type="file" 
@@ -2191,9 +2169,9 @@ export default function MoffiSocialMasterpiece() {
                                             <motion.button 
                                                 style={{ scale: iconScale }}
                                                 onClick={() => setIsSpotlightOpen(true)}
-                                                className="p-2 hover:bg-white/10 rounded-full transition-colors bg-black/20 backdrop-blur-md border border-white/10 shadow-lg"
+                                                className="p-2 hover:bg-black/10 dark:bg-white/10 rounded-full transition-colors bg-black/20 backdrop-blur-md border border-black/10 dark:border-white/10 shadow-lg"
                                             >
-                                                <Search className="w-4 h-4 text-white/90" />
+                                                <Search className="w-4 h-4 text-black/90 dark:text-white/90" />
                                             </motion.button>
 
                                             <motion.button
@@ -2204,7 +2182,7 @@ export default function MoffiSocialMasterpiece() {
                                                         router.push(`/profile/${user.id}`);
                                                     }
                                                 }}
-                                                className="w-8 h-8 rounded-full overflow-hidden border border-white/20 shadow-lg cursor-pointer hover:border-white/50 transition-colors ml-1"
+                                                className="w-8 h-8 rounded-full overflow-hidden border border-black/20 dark:border-white/20 shadow-lg cursor-pointer hover:border-white/50 transition-colors ml-1"
                                             >
                                                 <img src={user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100"} className="w-full h-full object-cover" alt="User Profile" />
                                             </motion.button>
@@ -2249,8 +2227,8 @@ export default function MoffiSocialMasterpiece() {
                             lostPets={filteredLostPets}
                             isLoading={isLoadingLost}
                             userCoords={userCoords}
-                            filterPetType={filterPetType}
-                            setFilterPetType={setFilterPetType}
+                            selectedCategory={selectedCategory}
+                            setSelectedCategory={setSelectedCategory}
                             filterDistance={filterDistance}
                             setFilterDistance={setFilterDistance}
                             radarViewMode={radarViewMode}
@@ -2298,12 +2276,12 @@ export default function MoffiSocialMasterpiece() {
                             initial={{ scale: 0.95, y: 20, opacity: 0 }}
                             animate={{ scale: 1, y: 0, opacity: 1 }}
                             exit={{ scale: 0.95, y: 20, opacity: 0 }}
-                            className="w-full max-w-sm bg-[#1C1C1E]/80 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col"
+                            className="w-full max-w-sm bg-card dark:bg-[#1C1C1E]/80 border border-black/10 dark:border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {/* Navigation Header */}
-                            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-white/5 backdrop-blur-md">
-                                <button onClick={() => setIsEditProfileOpen(false)} className="flex items-center gap-1 text-sm font-medium text-white/60 hover:text-white transition-all active:scale-95 group">
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-black/5 dark:border-white/5 bg-black/5 dark:bg-white/5 backdrop-blur-md">
+                                <button onClick={() => setIsEditProfileOpen(false)} className="flex items-center gap-1 text-sm font-medium text-black/60 dark:text-white/60 hover:text-white transition-all active:scale-95 group">
                                     <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
                                     Vazgeç
                                 </button>
@@ -2352,14 +2330,14 @@ export default function MoffiSocialMasterpiece() {
                                 {/* Photo Management Area */}
                                 <div className="relative h-44 mb-16">
                                     {/* Cover Photo */}
-                                    <div className="w-full h-full bg-white/5 relative overflow-hidden group cursor-pointer" onClick={() => coverInputRef.current?.click()}>
+                                    <div className="w-full h-full bg-black/5 dark:bg-white/5 relative overflow-hidden group cursor-pointer" onClick={() => coverInputRef.current?.click()}>
                                         {editCoverPreview ? (
                                             <img src={editCoverPreview} className="w-full h-full object-cover" />
                                         ) : (
                                             <div className="w-full h-full bg-gradient-to-tr from-cyan-900/40 to-purple-900/40" />
                                         )}
                                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center">
+                                            <div className="w-10 h-10 rounded-full bg-black/10 dark:bg-white/10 backdrop-blur-md border border-black/20 dark:border-white/20 flex items-center justify-center">
                                                 <Camera className="w-5 h-5 text-white" />
                                             </div>
                                         </div>
@@ -2374,12 +2352,12 @@ export default function MoffiSocialMasterpiece() {
 
                                     {/* Avatar Overlap */}
                                     <div className="absolute -bottom-12 left-6">
-                                        <label htmlFor="edit-avatar-upload" className="block relative w-24 h-24 rounded-full border-4 border-[#1C1C1E] shadow-2xl cursor-pointer group bg-[#1C1C1E] overflow-hidden">
+                                        <label htmlFor="edit-avatar-upload" className="block relative w-24 h-24 rounded-full border-4 border-[#1C1C1E] shadow-2xl cursor-pointer group bg-card dark:bg-[#1C1C1E] overflow-hidden">
                                             {editAvatarPreview ? (
                                                 <img src={editAvatarPreview} className="w-full h-full object-cover" />
                                             ) : (
-                                                <div className="w-full h-full bg-white/5 flex items-center justify-center">
-                                                    <Camera className="w-6 h-6 text-white/40" />
+                                                <div className="w-full h-full bg-black/5 dark:bg-white/5 flex items-center justify-center">
+                                                    <Camera className="w-6 h-6 text-black/50 dark:text-white/40" />
                                                 </div>
                                             )}
                                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -2398,38 +2376,38 @@ export default function MoffiSocialMasterpiece() {
 
                                 {/* Form Section: iOS Style Rows */}
                                 <div className="px-4 space-y-6">
-                                    <div className="bg-white/5 rounded-2xl border border-white/5 overflow-hidden">
-                                        <div className="px-4 py-4 border-b border-white/5">
-                                            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest block mb-1">Görünen Ad</label>
+                                    <div className="bg-black/5 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/5 overflow-hidden">
+                                        <div className="px-4 py-4 border-b border-black/5 dark:border-white/5">
+                                            <label className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest block mb-1">Görünen Ad</label>
                                             <input 
                                                 type="text" 
                                                 value={editName} 
                                                 onChange={e => setEditName(e.target.value)} 
-                                                className="w-full bg-transparent text-sm font-bold text-white outline-none placeholder:text-white/20"
+                                                className="w-full bg-transparent text-sm font-bold text-white outline-none placeholder:text-black/30 dark:text-white/20"
                                                 placeholder="İsminiz"
                                             />
                                         </div>
                                         <div className="px-4 py-4">
-                                            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest block mb-1">Kullanıcı Adı</label>
+                                            <label className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest block mb-1">Kullanıcı Adı</label>
                                             <div className="flex items-center gap-1">
-                                                <span className="text-sm font-bold text-white/40">@</span>
+                                                <span className="text-sm font-bold text-black/50 dark:text-white/40">@</span>
                                                 <input 
                                                     type="text" 
                                                     value={editUsername} 
                                                     onChange={e => setEditUsername(e.target.value)} 
-                                                    className="w-full bg-transparent text-sm font-bold text-white outline-none placeholder:text-white/20"
+                                                    className="w-full bg-transparent text-sm font-bold text-white outline-none placeholder:text-black/30 dark:text-white/20"
                                                     placeholder="kullanici_adi"
                                                 />
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="bg-white/5 rounded-2xl border border-white/5 px-4 py-4">
-                                        <label className="text-[10px] font-black text-white/40 uppercase tracking-widest block mb-1">Biyografi</label>
+                                    <div className="bg-black/5 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/5 px-4 py-4">
+                                        <label className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest block mb-1">Biyografi</label>
                                         <textarea 
                                             value={editBio} 
                                             onChange={e => setEditBio(e.target.value)} 
-                                            className="w-full bg-transparent text-sm font-medium text-white/80 outline-none placeholder:text-white/20 resize-none h-24"
+                                            className="w-full bg-transparent text-sm font-medium text-black/80 dark:text-white/80 outline-none placeholder:text-black/30 dark:text-white/20 resize-none h-24"
                                             placeholder="Kendinizden bahsedin..."
                                         />
                                     </div>
@@ -2464,7 +2442,7 @@ export default function MoffiSocialMasterpiece() {
                                     setTimeout(() => setAddPetStep(1), 300);
                                 }
                             }}
-                            className="w-full bg-[var(--card-bg)] border border-white/10 rounded-[2.5rem] p-6 pb-12 shadow-[0_-20px_50px_rgba(0,0,0,0.8)] relative flex flex-col items-center"
+                            className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-[2.5rem] p-4 sm:p-6 pb-12 shadow-[0_-20px_50px_rgba(0,0,0,0.8)] relative flex flex-col items-center"
                             onClick={(e) => e.stopPropagation()} // Prevent close on clicking inside modal
                         >
                             {/* Drag Indicator */}
@@ -2507,7 +2485,7 @@ export default function MoffiSocialMasterpiece() {
                                         <div className="w-full mb-2">
                                             <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 pt-1 items-center px-1">
                                                 {newPetPhotos.map((photo, index) => (
-                                                    <div key={index} className="relative shrink-0 w-24 h-24 rounded-2xl overflow-hidden border border-white/10 shadow-lg group">
+                                                    <div key={index} className="relative shrink-0 w-24 h-24 rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 shadow-lg group">
                                                         <img src={photo.preview} className="w-full h-full object-cover" />
                                                         <button
                                                             onClick={() => setNewPetPhotos(prev => prev.filter((_, i) => i !== index))}
@@ -2556,11 +2534,11 @@ export default function MoffiSocialMasterpiece() {
                                         <div className="flex gap-3 w-full">
                                             <div className="flex-1">
                                                 <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">İsim</label>
-                                                <input type="text" value={newPetName} onChange={e => setNewPetName(e.target.value)} placeholder="Örn: Pamuk" className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-5 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors font-bold" />
+                                                <input type="text" value={newPetName} onChange={e => setNewPetName(e.target.value)} placeholder="Örn: Pamuk" className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors font-bold" />
                                             </div>
                                             <div className="w-24">
                                                 <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Tür</label>
-                                                <select value={newPetType} onChange={e => setNewPetType(e.target.value)} className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-2 py-3.5 text-center text-xl mt-1 outline-none focus:border-cyan-400 transition-colors appearance-none" style={{ textAlignLast: "center" }}>
+                                                <select value={newPetType} onChange={e => setNewPetType(e.target.value)} className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl px-2 py-3.5 text-center text-xl mt-1 outline-none focus:border-cyan-400 transition-colors appearance-none" style={{ textAlignLast: "center" }}>
                                                     <option value="🐶">🐶</option>
                                                     <option value="🐱">🐱</option>
                                                     <option value="🦜">🦜</option>
@@ -2573,32 +2551,32 @@ export default function MoffiSocialMasterpiece() {
                                         <div className="flex gap-3 w-full">
                                             <div className="flex-[2]">
                                                 <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Irkı</label>
-                                                <input type="text" value={newPetBreed} onChange={e => setNewPetBreed(e.target.value)} placeholder="Örn: Golden Retriever" className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-5 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors font-medium text-sm" />
+                                                <input type="text" value={newPetBreed} onChange={e => setNewPetBreed(e.target.value)} placeholder="Örn: Golden Retriever" className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors font-medium text-sm" />
                                             </div>
                                             <div className="flex-1">
                                                 <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Yaş</label>
-                                                <input type="text" value={newPetAge} onChange={e => setNewPetAge(e.target.value)} placeholder="Örn: 2 Yaş" className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-4 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors font-medium text-sm text-center" />
+                                                <input type="text" value={newPetAge} onChange={e => setNewPetAge(e.target.value)} placeholder="Örn: 2 Yaş" className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors font-medium text-sm text-center" />
                                             </div>
                                         </div>
 
                                         <div className="flex gap-3 w-full">
                                             <div className="flex-1">
                                                 <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Cinsiyet</label>
-                                                <select value={newPetGender} onChange={e => setNewPetGender(e.target.value)} className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-4 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors text-sm">
+                                                <select value={newPetGender} onChange={e => setNewPetGender(e.target.value)} className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors text-sm">
                                                     <option value="Erkek">Erkek</option>
                                                     <option value="Dişi">Dişi</option>
                                                 </select>
                                             </div>
                                             <div className="flex-1">
                                                 <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Kısır Mı?</label>
-                                                <select value={newPetNeutered} onChange={e => setNewPetNeutered(e.target.value)} className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-4 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors text-sm">
+                                                <select value={newPetNeutered} onChange={e => setNewPetNeutered(e.target.value)} className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors text-sm">
                                                     <option value="Evet">Evet</option>
                                                     <option value="Hayır">Hayır</option>
                                                 </select>
                                             </div>
                                             <div className="flex-1">
                                                 <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Boyut</label>
-                                                <select value={newPetSize} onChange={e => setNewPetSize(e.target.value)} className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-4 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors text-sm">
+                                                <select value={newPetSize} onChange={e => setNewPetSize(e.target.value)} className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors text-sm">
                                                     <option value="Küçük">Küçük</option>
                                                     <option value="Orta">Orta</option>
                                                     <option value="Büyük">Büyük</option>
@@ -2629,12 +2607,12 @@ export default function MoffiSocialMasterpiece() {
 
                                         <div>
                                             <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Ayırt Edici Özellikleri</label>
-                                            <textarea value={newPetFeatures} onChange={e => setNewPetFeatures(e.target.value)} placeholder="Örn: Sol kulağındaki hafif kesik, kuyruk ucu beyaz..." className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-5 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors font-medium text-sm h-16 resize-none" />
+                                            <textarea value={newPetFeatures} onChange={e => setNewPetFeatures(e.target.value)} placeholder="Örn: Sol kulağındaki hafif kesik, kuyruk ucu beyaz..." className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors font-medium text-sm h-16 resize-none" />
                                         </div>
 
                                         <div>
                                             <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Karakteri (Bulan Kişiye Tavsiye)</label>
-                                            <textarea value={newPetCharacter} onChange={e => setNewPetCharacter(e.target.value)} placeholder="Örn: Çok uysaldır ancak ani seslerden korkup kaçabilir." className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-5 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors font-medium text-sm h-16 resize-none" />
+                                            <textarea value={newPetCharacter} onChange={e => setNewPetCharacter(e.target.value)} placeholder="Örn: Çok uysaldır ancak ani seslerden korkup kaçabilir." className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors font-medium text-sm h-16 resize-none" />
                                         </div>
 
                                         <button onClick={() => setAddPetStep(3)} className="w-full py-4 mt-4 bg-white rounded-2xl font-black text-black hover:bg-gray-200 transition-colors disabled:opacity-50">
@@ -2649,13 +2627,13 @@ export default function MoffiSocialMasterpiece() {
                                         <div>
                                             <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Mikroçip Numarası</label>
                                             <div className="relative mt-1">
-                                                <input type="text" value={newPetMicrochip} onChange={e => setNewPetMicrochip(e.target.value)} placeholder="TR-000000000" className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl pl-12 pr-5 py-4 text-[var(--foreground)] outline-none focus:border-cyan-400 transition-colors font-mono tracking-widest text-sm" />
+                                                <input type="text" value={newPetMicrochip} onChange={e => setNewPetMicrochip(e.target.value)} placeholder="TR-000000000" className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl pl-12 pr-5 py-4 text-[var(--foreground)] outline-none focus:border-cyan-400 transition-colors font-mono tracking-widest text-sm" />
                                                 <ShieldAlert className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--secondary-text)]" />
                                             </div>
                                             <p className="text-[10px] text-[var(--secondary-text)] ml-3 mt-1.5 font-medium">Veteriner sorgulamaları için resmi numarasını girebilirsiniz. Uygulamada güvenle saklanır.</p>
                                         </div>
 
-                                        <div className="bg-[var(--card-bg)] border border-white/10 rounded-3xl p-5 mt-4">
+                                        <div className="bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-3xl p-5 mt-4">
                                             <div className="flex justify-between items-center mb-1">
                                                 <div className="flex items-center gap-2">
                                                     <PhoneCall className={cn("w-5 h-5 transition-colors", newPetShowPhone ? "text-cyan-400" : "text-[var(--secondary-text)]")} />
@@ -2732,7 +2710,7 @@ export default function MoffiSocialMasterpiece() {
                                             className="w-full py-4 mt-6 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl font-black text-[var(--foreground)] shadow-[0_10px_30px_rgba(34,211,238,0.3)] hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2"
                                         >
                                             {isSavingPet ? (
-                                                <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                                <div className="w-5 h-5 border-2 border-black/20 dark:border-white/20 border-t-white rounded-full animate-spin" />
                                             ) : (
                                                 <>Aileye Ekle & QR Kimlik Oluştur <BadgeCheck className="w-5 h-5" /></>
                                             )}
@@ -2762,7 +2740,7 @@ export default function MoffiSocialMasterpiece() {
                         <div className="flex justify-between items-center px-6 pt-12 pb-4 shrink-0 border-b border-[var(--card-border)]">
                             <button
                                 onClick={() => { setIsUploadModalOpen(false); setUploadImageURL(null); setUploadCaption(''); setUploadMood(null); }}
-                                className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center -ml-2"
+                                className="w-10 h-10 rounded-full bg-black/10 dark:bg-white/10 flex items-center justify-center -ml-2"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -2779,7 +2757,7 @@ export default function MoffiSocialMasterpiece() {
                                         initial={{ scale: 0.9, opacity: 0 }}
                                         animate={{ scale: 1, opacity: 1 }}
                                         className={cn(
-                                            "w-full rounded-[2.5rem] overflow-hidden bg-black border border-white/10 relative shadow-2xl group transition-all duration-500 ease-in-out shrink-0",
+                                            "w-full rounded-[2.5rem] overflow-hidden bg-white dark:bg-black border border-black/10 dark:border-white/10 relative shadow-2xl group transition-all duration-500 ease-in-out shrink-0",
                                             activeTool 
                                                 ? "h-[30vh] min-h-[220px]" 
                                                 : "h-[50vh] min-h-[380px] max-h-[500px]"
@@ -2801,7 +2779,7 @@ export default function MoffiSocialMasterpiece() {
                                                     onTimeUpdate={handleVideoTimeUpdate}
                                                 />
                                             {/* Video Indicator Badge */}
-                                            <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-2 border border-white/10">
+                                            <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-2 border border-black/10 dark:border-white/10">
                                                 <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
                                                 <span className="text-[10px] font-black text-white uppercase tracking-widest">Video Yayında</span>
                                             </div>
@@ -2877,7 +2855,7 @@ export default function MoffiSocialMasterpiece() {
                                         <div className="relative w-5 h-5">
                                             <button 
                                                 type="button"
-                                                className="text-white/60 hover:text-white transition-all active:scale-90"
+                                                className="text-black/60 dark:text-white/60 hover:text-white transition-all active:scale-90"
                                                 title="Medyayı Değiştir"
                                             >
                                                 <Camera className="w-5 h-5" />
@@ -2895,7 +2873,7 @@ export default function MoffiSocialMasterpiece() {
                                             onClick={() => audioInputRef.current?.click()}
                                             className={cn(
                                                 "transition-all active:scale-90",
-                                                audioURL ? "text-cyan-400" : "text-white/60 hover:text-white"
+                                                audioURL ? "text-cyan-400" : "text-black/60 dark:text-white/60 hover:text-white"
                                             )}
                                             title="Müzik/Ses Ekle"
                                         >
@@ -2948,7 +2926,7 @@ export default function MoffiSocialMasterpiece() {
                                                     {uploadMood}
                                                 </div>
                                             ) : (
-                                                <div className="bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black text-white/60 uppercase tracking-widest border border-white/10">
+                                                <div className="bg-black/10 dark:bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black text-black/60 dark:text-white/60 uppercase tracking-widest border border-black/10 dark:border-white/10">
                                                     Duygu Durumu Yok
                                                 </div>
                                             )}
@@ -2962,13 +2940,13 @@ export default function MoffiSocialMasterpiece() {
                                 <motion.div 
                                     initial={{ y: 20, opacity: 0 }}
                                     animate={{ y: 0, opacity: 1 }}
-                                    className="w-full h-[45vh] min-h-[320px] max-h-[420px] rounded-[2rem] border-2 border-dashed border-white/10 bg-white/[0.02] flex flex-col items-center justify-center gap-6 cursor-pointer hover:bg-white/[0.05] hover:border-cyan-500/40 transition-all duration-700 group relative overflow-hidden shrink-0"
+                                    className="w-full h-[45vh] min-h-[320px] max-h-[420px] rounded-[2rem] border-2 border-dashed border-black/10 dark:border-white/10 bg-white/[0.02] flex flex-col items-center justify-center gap-6 cursor-pointer hover:bg-white/[0.05] hover:border-cyan-500/40 transition-all duration-700 group relative overflow-hidden shrink-0"
                                 >
                                     {/* Background Glow */}
                                     <div className="absolute inset-0 bg-cyan-500/5 blur-[100px] group-hover:bg-cyan-500/10 transition-colors" />
                                     
                                     <div className="relative">
-                                        <div className="w-20 h-20 rounded-[1.5rem] bg-gradient-to-tr from-cyan-500/20 to-purple-500/20 flex items-center justify-center border border-white/10 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-xl">
+                                        <div className="w-20 h-20 rounded-[1.5rem] bg-gradient-to-tr from-cyan-500/20 to-purple-500/20 flex items-center justify-center border border-black/10 dark:border-white/10 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-xl">
                                             <ImagePlus className="w-8 h-8 text-cyan-400 drop-shadow-[0_0_15px_rgba(34,211,238,0.5)]" />
                                         </div>
                                         <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-cyan-500 flex items-center justify-center text-black border-4 border-[#0a0a0b] shadow-xl group-hover:scale-110 transition-transform">
@@ -2995,12 +2973,12 @@ export default function MoffiSocialMasterpiece() {
 
                             {selectedFile?.type.startsWith('video/') && videoDuration > 0 && (
                                 <div className="flex flex-col gap-3 py-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                                    <div className="flex justify-between items-center text-[10px] font-black tracking-wide text-white/50 px-1">
+                                    <div className="flex justify-between items-center text-[10px] font-black tracking-wide text-black/50 dark:text-white/50 px-1">
                                         <div className="flex items-center gap-1.5 text-cyan-400">
                                             <Timer className="w-3.5 h-3.5" />
                                             <span className="font-extrabold uppercase text-[9px] tracking-wider">{(videoTrimRange[1] - videoTrimRange[0]).toFixed(1)} sn seçildi</span>
                                         </div>
-                                        <div className="font-mono text-[9px] text-white/30 flex gap-2">
+                                        <div className="font-mono text-[9px] text-black/40 dark:text-white/30 flex gap-2">
                                             <span>{videoTrimRange[0].toFixed(1)}s – {videoTrimRange[1].toFixed(1)}s</span>
                                             <span className="text-white/10">|</span>
                                             <span>Toplam: {videoDuration.toFixed(1)}s</span>
@@ -3010,7 +2988,7 @@ export default function MoffiSocialMasterpiece() {
                                     {/* Visual Trimmer Timeline Track */}
                                     <div 
                                         ref={trimmerRef}
-                                        className="relative h-8 bg-white/[0.01] rounded-xl border border-white/5 overflow-visible select-none mt-2"
+                                        className="relative h-8 bg-white/[0.01] rounded-xl border border-black/5 dark:border-white/5 overflow-visible select-none mt-2"
                                     >
                                         {/* Background waveform mock bars to look like a timeline */}
                                         <div className="absolute inset-0 flex items-center justify-between px-3 gap-[2px] opacity-25 pointer-events-none z-0">
@@ -3119,7 +3097,7 @@ export default function MoffiSocialMasterpiece() {
                             )}
                             {/* Filter guide hint */}
                             {selectedFile?.type.startsWith('image/') && (
-                                <p className="text-center text-[10px] text-white/30 font-medium tracking-widest uppercase mt-2 mb-1 animate-pulse">
+                                <p className="text-center text-[10px] text-black/40 dark:text-white/30 font-medium tracking-widest uppercase mt-2 mb-1 animate-pulse">
                                     Filtreleri değiştirmek için fotoğrafı sağa sola kaydır
                                 </p>
                             )}
@@ -3134,7 +3112,7 @@ export default function MoffiSocialMasterpiece() {
                                         e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
                                     }}
                                     placeholder="Neler oluyor?.."
-                                    className="w-full bg-transparent outline-none text-[var(--foreground)] resize-none min-h-[40px] max-h-[100px] text-lg font-medium py-1 overflow-hidden placeholder:text-white/20"
+                                    className="w-full bg-transparent outline-none text-[var(--foreground)] resize-none min-h-[40px] max-h-[100px] text-lg font-medium py-1 overflow-hidden placeholder:text-black/30 dark:text-white/20"
                                     rows={1}
                                 />
                             </div>
@@ -3148,12 +3126,12 @@ export default function MoffiSocialMasterpiece() {
 
 
                                                                                      {/* SMART TOOLBAR */}
-                            <div className="flex items-center justify-between px-2 py-4 border-y border-white/5 mt-2 shrink-0">
+                            <div className="flex items-center justify-between px-2 py-4 border-y border-black/5 dark:border-white/5 mt-2 shrink-0">
                                  <div className="flex items-center gap-6">
                                      <button 
                                          type="button"
                                          onClick={() => { console.log("Adjust clicked. Current activeTool:", activeTool); setActiveTool(activeTool === 'adjust' ? null : 'adjust'); }}
-                                         className={cn("transition-all active:scale-90", activeTool === 'adjust' ? "text-cyan-400" : "text-white/40 hover:text-white")}
+                                         className={cn("transition-all active:scale-90", activeTool === 'adjust' ? "text-cyan-400" : "text-black/50 dark:text-white/40 hover:text-white")}
                                          title="İnce Ayar"
                                      >
                                          <Palette className="w-5 h-5" />
@@ -3161,7 +3139,7 @@ export default function MoffiSocialMasterpiece() {
                                      <button 
                                          type="button"
                                          onClick={() => { console.log("Tag clicked. Current activeTool:", activeTool); setActiveTool(activeTool === 'tag' ? null : 'tag'); }}
-                                         className={cn("transition-all active:scale-90", activeTool === 'tag' ? "text-cyan-400" : "text-white/40 hover:text-white")}
+                                         className={cn("transition-all active:scale-90", activeTool === 'tag' ? "text-cyan-400" : "text-black/50 dark:text-white/40 hover:text-white")}
                                          title="Etiketle"
                                      >
                                          <PawPrint className="w-5 h-5" />
@@ -3169,7 +3147,7 @@ export default function MoffiSocialMasterpiece() {
                                      <button 
                                          type="button"
                                          onClick={() => { console.log("Schedule clicked. Current activeTool:", activeTool); setActiveTool(activeTool === 'schedule' ? null : 'schedule'); }}
-                                         className={cn("transition-all active:scale-90", activeTool === 'schedule' ? "text-cyan-400" : "text-white/40 hover:text-white")}
+                                         className={cn("transition-all active:scale-90", activeTool === 'schedule' ? "text-cyan-400" : "text-black/50 dark:text-white/40 hover:text-white")}
                                          title="Zamanla"
                                      >
                                          <Clock className="w-5 h-5" />
@@ -3177,7 +3155,7 @@ export default function MoffiSocialMasterpiece() {
                                      <button 
                                          type="button"
                                          onClick={() => { console.log("Mood clicked. Current activeTool:", activeTool); setActiveTool(activeTool === 'mood' ? null : 'mood'); }}
-                                         className={cn("transition-all active:scale-90", activeTool === 'mood' ? "text-cyan-400" : "text-white/40 hover:text-white")}
+                                         className={cn("transition-all active:scale-90", activeTool === 'mood' ? "text-cyan-400" : "text-black/50 dark:text-white/40 hover:text-white")}
                                          title="Ruh Hali"
                                      >
                                          <Heart className="w-5 h-5" />
@@ -3190,7 +3168,7 @@ export default function MoffiSocialMasterpiece() {
                                     disabled={isGeneratingAI}
                                     className={cn(
                                         "flex items-center gap-2 px-4 py-2 rounded-full transition-all active:scale-95",
-                                        isGeneratingAI ? "bg-white/5 opacity-50" : "bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20"
+                                        isGeneratingAI ? "bg-black/5 dark:bg-white/5 opacity-50" : "bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20"
                                     )}
                                 >
                                     {isGeneratingAI ? <div className="w-3 h-3 border-2 border-cyan-400/20 border-t-cyan-400 rounded-full animate-spin" /> : <Sparkles className="w-3 h-3" />}
@@ -3205,13 +3183,13 @@ export default function MoffiSocialMasterpiece() {
                                              id="upload-tool-drawer"
                                              initial={{ opacity: 0, y: -10 }}
                                              animate={{ opacity: 1, y: 0 }}
-                                             className="bg-[#0c0c0d]/30 backdrop-blur-xl border border-white/5 rounded-2xl overflow-hidden shrink-0"
+                                             className="bg-[#0c0c0d]/30 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-2xl overflow-hidden shrink-0"
                                          >
                                              <div className="p-4">
                                                  {activeTool === 'adjust' && (
                                                      <div className="flex flex-col gap-4">
                                                          {/* Sub-tool selector & Reset */}
-                                                         <div className="flex justify-between items-center border-b border-white/5 pb-2.5">
+                                                         <div className="flex justify-between items-center border-b border-black/5 dark:border-white/5 pb-2.5">
                                                              <div className="flex gap-4 sm:gap-6 overflow-x-auto no-scrollbar py-1">
                                                                  <button 
                                                                      type="button" 
@@ -3220,7 +3198,7 @@ export default function MoffiSocialMasterpiece() {
                                                                          "flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest transition-all shrink-0 relative py-1",
                                                                          activeAdjustSubTool === 'brightness' 
                                                                              ? "text-cyan-400" 
-                                                                             : "text-white/35 hover:text-white/60"
+                                                                             : "text-white/35 hover:text-black/60 dark:text-white/60"
                                                                      )}
                                                                  >
                                                                      <Sun className="w-3.5 h-3.5" /> Parlaklık
@@ -3235,7 +3213,7 @@ export default function MoffiSocialMasterpiece() {
                                                                          "flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest transition-all shrink-0 relative py-1",
                                                                          activeAdjustSubTool === 'contrast' 
                                                                              ? "text-cyan-400" 
-                                                                             : "text-white/35 hover:text-white/60"
+                                                                             : "text-white/35 hover:text-black/60 dark:text-white/60"
                                                                      )}
                                                                  >
                                                                      <Contrast className="w-3.5 h-3.5" /> Kontrast
@@ -3250,7 +3228,7 @@ export default function MoffiSocialMasterpiece() {
                                                                          "flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest transition-all shrink-0 relative py-1",
                                                                          activeAdjustSubTool === 'saturation' 
                                                                              ? "text-cyan-400" 
-                                                                             : "text-white/35 hover:text-white/60"
+                                                                             : "text-white/35 hover:text-black/60 dark:text-white/60"
                                                                      )}
                                                                  >
                                                                      <Droplet className="w-3.5 h-3.5" /> Doygunluk
@@ -3262,7 +3240,7 @@ export default function MoffiSocialMasterpiece() {
                                                              <button 
                                                                  type="button" 
                                                                  onClick={() => { setBrightness(100); setContrast(100); setSaturation(100); }} 
-                                                                 className="text-[9px] font-black text-white/30 hover:text-red-400 uppercase tracking-widest active:scale-95 transition-all shrink-0 ml-2"
+                                                                 className="text-[9px] font-black text-black/40 dark:text-white/30 hover:text-red-400 uppercase tracking-widest active:scale-95 transition-all shrink-0 ml-2"
                                                              >
                                                                  Sıfırla
                                                              </button>
@@ -3327,7 +3305,7 @@ export default function MoffiSocialMasterpiece() {
 
                                             {activeTool === 'tag' && (
                                                 <div className="flex flex-col gap-4">
-                                                    <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Dostunu Etiketle</span>
+                                                    <span className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest">Dostunu Etiketle</span>
                                                     <div className="flex gap-4 overflow-x-auto no-scrollbar py-2">
                                                         {userPets?.map(pet => (
                                                             <button 
@@ -3336,11 +3314,11 @@ export default function MoffiSocialMasterpiece() {
                                                                 onClick={() => setTaggedPetIds(prev => prev.includes(pet.id) ? prev.filter(id => id !== pet.id) : [...prev, pet.id])}
                                                                 className="flex flex-col items-center gap-2 shrink-0"
                                                             >
-                                                                <div className={cn("w-12 h-12 rounded-full border-2 transition-all relative", taggedPetIds.includes(pet.id) ? "border-cyan-500 scale-110 shadow-[0_0_15px_rgba(6,182,212,0.3)]" : "border-white/10")}>
+                                                                <div className={cn("w-12 h-12 rounded-full border-2 transition-all relative", taggedPetIds.includes(pet.id) ? "border-cyan-500 scale-110 shadow-[0_0_15px_rgba(6,182,212,0.3)]" : "border-black/10 dark:border-white/10")}>
                                                                     <img src={pet.avatar} className="w-full h-full rounded-full object-cover p-0.5" />
                                                                     {taggedPetIds.includes(pet.id) && <div className="absolute -top-1 -right-1 w-4 h-4 bg-cyan-500 rounded-full flex items-center justify-center border-2 border-black"><Check size={8} /></div>}
                                                                 </div>
-                                                                <span className={cn("text-[9px] font-bold uppercase", taggedPetIds.includes(pet.id) ? "text-cyan-400" : "text-white/40")}>{pet.name}</span>
+                                                                <span className={cn("text-[9px] font-bold uppercase", taggedPetIds.includes(pet.id) ? "text-cyan-400" : "text-black/50 dark:text-white/40")}>{pet.name}</span>
                                                             </button>
                                                         ))}
                                                     </div>
@@ -3350,23 +3328,23 @@ export default function MoffiSocialMasterpiece() {
                                             {activeTool === 'schedule' && (
                                                 <div className="flex flex-col gap-4">
                                                     <div className="flex justify-between items-center">
-                                                        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Paylaşım Zamanı</span>
-                                                        <button type="button" onClick={() => setIsSchedulingMode(!isSchedulingMode)} className={cn("px-3 py-1 rounded-full text-[9px] font-black uppercase transition-all", isSchedulingMode ? "bg-cyan-500 text-black" : "bg-white/10 text-white/40")}>
+                                                        <span className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest">Paylaşım Zamanı</span>
+                                                        <button type="button" onClick={() => setIsSchedulingMode(!isSchedulingMode)} className={cn("px-3 py-1 rounded-full text-[9px] font-black uppercase transition-all", isSchedulingMode ? "bg-cyan-500 text-black" : "bg-black/10 dark:bg-white/10 text-black/50 dark:text-white/40")}>
                                                             {isSchedulingMode ? 'Zamanlandı' : 'Şimdi'}
                                                         </button>
                                                     </div>
                                                     {isSchedulingMode && (
-                                                        <input type="datetime-local" value={scheduledDate || ''} onChange={(e) => setScheduledDate(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white [color-scheme:dark]" />
+                                                        <input type="datetime-local" value={scheduledDate || ''} onChange={(e) => setScheduledDate(e.target.value)} className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-xs text-white [color-scheme:dark]" />
                                                     )}
                                                 </div>
                                             )}
 
                                             {activeTool === 'mood' && (
                                                 <div className="flex flex-col gap-4">
-                                                    <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Ruh Hali</span>
+                                                    <span className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest">Ruh Hali</span>
                                                     <div className="flex flex-wrap gap-2">
                                                         {MOOD_OPTIONS.map(mood => (
-                                                            <button type="button" key={mood} onClick={() => setUploadMood(uploadMood === mood ? null : mood)} className={cn("px-4 py-2 rounded-full text-xs font-bold transition-all", uploadMood === mood ? "bg-white text-black scale-105" : "bg-white/5 text-white/40 hover:bg-white/10")}>
+                                                            <button type="button" key={mood} onClick={() => setUploadMood(uploadMood === mood ? null : mood)} className={cn("px-4 py-2 rounded-full text-xs font-bold transition-all", uploadMood === mood ? "bg-white text-black scale-105" : "bg-black/5 dark:bg-white/5 text-black/50 dark:text-white/40 hover:bg-black/10 dark:bg-white/10")}>
                                                                 {mood}
                                                             </button>
                                                         ))}
@@ -3388,7 +3366,7 @@ export default function MoffiSocialMasterpiece() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[9999] bg-black overflow-y-auto"
+                        className="fixed inset-0 z-[9999] bg-white dark:bg-black overflow-y-auto"
                     >
                         {/* Immersive Background Blur - FIXED & TOP PRIORITY */}
                         <div className="fixed inset-0 z-0 pointer-events-none">
@@ -3397,10 +3375,10 @@ export default function MoffiSocialMasterpiece() {
 
                         <div className="relative z-10 flex flex-col min-h-screen">
                             {/* Header */}
-                            <div className="flex justify-between items-center p-6 pt-8">
+                            <div className="flex justify-between items-center p-4 sm:p-6 pt-8">
                                 <button
                                     onClick={() => setStoryPreview(null)}
-                                    className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white border border-white/10 active:scale-90 transition-transform"
+                                    className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white border border-black/10 dark:border-white/10 active:scale-90 transition-transform"
                                 >
                                     <X className="w-6 h-6" />
                                 </button>
@@ -3409,18 +3387,18 @@ export default function MoffiSocialMasterpiece() {
                             </div>
 
                             {/* Preview Content - Responsive & Safe */}
-                            <div className="flex-1 flex items-center justify-center p-6 py-10">
-                                <div className="w-full max-w-[300px] sm:max-w-[340px] max-h-[65vh] aspect-[9/16] rounded-[48px] overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border-[6px] border-white/10 relative">
+                            <div className="flex-1 flex items-center justify-center p-4 sm:p-6 py-10">
+                                <div className="w-full max-w-[300px] sm:max-w-[340px] max-h-[65vh] aspect-[9/16] rounded-[48px] overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border-[6px] border-black/10 dark:border-white/10 relative">
                                     <img src={storyPreview} className="w-full h-full object-cover" />
                                     <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60 pointer-events-none" />
                                     
                                     {/* Glass Overlay for extra premium feel */}
-                                    <div className="absolute inset-0 border border-white/10 rounded-[42px] pointer-events-none" />
+                                    <div className="absolute inset-0 border border-black/10 dark:border-white/10 rounded-[42px] pointer-events-none" />
                                 </div>
                             </div>
 
                             {/* Footer Controls - Clears Nav Bar */}
-                            <div className="p-8 pb-32 flex flex-col gap-5">
+                            <div className="p-4 sm:p-8 pb-32 flex flex-col gap-5">
                             <button
                                 onClick={confirmUploadStory}
                                 disabled={isUploadingStory}
@@ -3430,14 +3408,14 @@ export default function MoffiSocialMasterpiece() {
                                 )}
                             >
                                 {isUploadingStory ? (
-                                    <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Yükleniyor...</>
+                                    <><div className="w-5 h-5 border-2 border-black/30 dark:border-white/30 border-t-white rounded-full animate-spin" /> Yükleniyor...</>
                                 ) : (
                                     <><Sparkles className="w-5 h-5" /> Hikayeyi Paylaş</>
                                 )}
                             </button>
                             <button
                                 onClick={() => setStoryPreview(null)}
-                                className="w-full py-3 text-white/60 font-bold hover:text-white transition-colors"
+                                className="w-full py-3 text-black/60 dark:text-white/60 font-bold hover:text-white transition-colors"
                             >
                                 Vazgeç
                             </button>
@@ -3457,10 +3435,10 @@ export default function MoffiSocialMasterpiece() {
                         className="fixed inset-0 z-[505] bg-black/95 backdrop-blur-xl flex flex-col"
                     >
                         {/* Header */}
-                        <div className="flex justify-between items-center p-6 shrink-0 border-b border-[var(--card-border)]">
+                        <div className="flex justify-between items-center p-4 sm:p-6 shrink-0 border-b border-[var(--card-border)]">
                             <button
                                 onClick={() => setEditingPost(null)}
-                                className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center -ml-2 text-[var(--foreground)] hover:bg-white/20"
+                                className="w-10 h-10 rounded-full bg-black/10 dark:bg-white/10 flex items-center justify-center -ml-2 text-[var(--foreground)] hover:bg-black/20 dark:bg-white/20"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -3472,12 +3450,12 @@ export default function MoffiSocialMasterpiece() {
                         <div className="flex-1 overflow-y-auto w-full max-w-lg mx-auto p-4 pb-32 flex flex-col gap-6">
 
                             {/* PREVIEW */}
-                            <div className="w-full aspect-[4/5] rounded-3xl overflow-hidden bg-gray-900 border border-white/10 relative shadow-2xl">
+                            <div className="w-full aspect-[4/5] rounded-3xl overflow-hidden bg-gray-900 border border-black/10 dark:border-white/10 relative shadow-2xl">
                                 <img src={editingPost.media} className="w-full h-full object-cover" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
                                 <div className="absolute bottom-4 left-4 flex gap-2">
                                     {editingPost.mood && (
-                                        <div className="bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-[var(--foreground)] border border-white/20">
+                                        <div className="bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-[var(--foreground)] border border-black/20 dark:border-white/20">
                                             {editingPost.mood}
                                         </div>
                                     )}
@@ -3485,7 +3463,7 @@ export default function MoffiSocialMasterpiece() {
                             </div>
 
                             {/* CAPTION */}
-                            <div className="bg-[var(--card-bg)] border border-white/10 rounded-3xl p-4 flex gap-4">
+                            <div className="bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-3xl p-4 flex gap-4">
                                 <img src={user?.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} className="w-10 h-10 rounded-full shrink-0" />
                                 <textarea
                                     value={editingPost.desc}
@@ -3507,7 +3485,7 @@ export default function MoffiSocialMasterpiece() {
                                             onClick={() => setEditingPost({ ...editingPost, mood: editingPost.mood === mood ? null : mood })}
                                             className={cn(
                                                 "shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors border",
-                                                editingPost.mood === mood ? "bg-cyan-500 text-black border-cyan-400 font-bold" : "bg-[var(--card-bg)] border-white/10 text-[var(--foreground)] hover:bg-white/10"
+                                                editingPost.mood === mood ? "bg-cyan-500 text-black border-cyan-400 font-bold" : "bg-[var(--card-bg)] border-black/10 dark:border-white/10 text-[var(--foreground)] hover:bg-black/10 dark:bg-white/10"
                                             )}
                                         >
                                             {mood}
@@ -3553,21 +3531,21 @@ export default function MoffiSocialMasterpiece() {
                             transition={{ duration: 0.2, ease: "easeOut" }}
                             className="fixed inset-0 z-[300] flex items-center justify-center p-4 pointer-events-none"
                         >
-                            <div className="w-full max-w-[280px] bg-[#252528]/95 backdrop-blur-xl rounded-3xl overflow-hidden pointer-events-auto shadow-2xl border border-white/10 flex flex-col">
-                                <div className="p-6 flex flex-col items-center text-center gap-2 border-b border-white/10">
+                            <div className="w-full max-w-[280px] bg-[#252528]/95 backdrop-blur-xl rounded-3xl overflow-hidden pointer-events-auto shadow-2xl border border-black/10 dark:border-white/10 flex flex-col">
+                                <div className="p-4 sm:p-6 flex flex-col items-center text-center gap-2 border-b border-black/10 dark:border-white/10">
                                     <h3 className="text-[var(--foreground)] text-base font-bold">Gönderiyi Sil</h3>
                                     <p className="text-[var(--foreground)]/70 text-sm leading-snug">Bu gönderiyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.</p>
                                 </div>
                                 <div className="flex flex-col">
                                     <button
                                         onClick={deletePost}
-                                        className="w-full py-3.5 text-red-500 font-bold text-[15px] border-b border-white/10 hover:bg-[var(--card-bg)] transition-colors active:bg-white/10"
+                                        className="w-full py-3.5 text-red-500 font-bold text-[15px] border-b border-black/10 dark:border-white/10 hover:bg-[var(--card-bg)] transition-colors active:bg-black/10 dark:bg-white/10"
                                     >
                                         Sil
                                     </button>
                                     <button
                                         onClick={() => setPostToDelete(null)}
-                                        className="w-full py-3.5 text-cyan-500 font-normal text-[15px] hover:bg-[var(--card-bg)] transition-colors active:bg-white/10"
+                                        className="w-full py-3.5 text-cyan-500 font-normal text-[15px] hover:bg-[var(--card-bg)] transition-colors active:bg-black/10 dark:bg-white/10"
                                     >
                                         Vazgeç
                                     </button>
@@ -3592,7 +3570,7 @@ export default function MoffiSocialMasterpiece() {
                         <div className="flex justify-between items-center px-6 pb-4 border-b border-red-500/20">
                             <button
                                 onClick={() => setIsLostAdModalOpen(false)}
-                                className="w-10 h-10 rounded-full bg-[var(--card-bg)] flex items-center justify-center -ml-2 hover:bg-white/10 transition-colors"
+                                className="w-10 h-10 rounded-full bg-[var(--card-bg)] flex items-center justify-center -ml-2 hover:bg-black/10 dark:bg-white/10 transition-colors"
                             >
                                 <ChevronLeft className="w-6 h-6 text-[var(--foreground)]" />
                             </button>
@@ -3601,9 +3579,9 @@ export default function MoffiSocialMasterpiece() {
                         </div>
 
                         {/* Content */}
-                        <div className="flex-1 overflow-y-auto w-full max-w-lg mx-auto p-6 space-y-6">
+                        <div className="flex-1 overflow-y-auto w-full max-w-lg mx-auto p-4 sm:p-6 space-y-6">
 
-                            <div className="bg-red-500/10 border border-red-500/30 rounded-3xl p-6 text-center shadow-inner relative overflow-hidden">
+                            <div className="bg-red-500/10 border border-red-500/30 rounded-3xl p-4 sm:p-6 text-center shadow-inner relative overflow-hidden">
                                 <div className="absolute inset-0 bg-red-500/10 animate-pulse pointer-events-none" />
                                 <div className="w-16 h-16 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center mx-auto mb-4 border border-red-500/30">
                                     <MapPin className="w-8 h-8" />
@@ -3614,35 +3592,57 @@ export default function MoffiSocialMasterpiece() {
                                 </p>
                             </div>
 
+                            <div className="flex gap-2">
+                                {[
+                                    { id: 'cat', label: 'Kedi', icon: '🐈' },
+                                    { id: 'dog', label: 'Köpek', icon: '🐕' },
+                                    { id: 'bird', label: 'Kuş', icon: '🦜' },
+                                    { id: 'other', label: 'Diğer', icon: '🐾' },
+                                ].map(type => (
+                                    <button
+                                        key={type.id}
+                                        onClick={() => setLostPetType(type.id)}
+                                        className={cn(
+                                            "flex-1 py-3 rounded-2xl text-xs font-bold transition-all flex flex-col items-center gap-1 border",
+                                            lostPetType === type.id
+                                                ? "bg-red-500/20 border-red-500 text-red-400"
+                                                : "bg-[var(--card-bg)] border-black/10 dark:border-white/10 text-[var(--secondary-text)]"
+                                        )}
+                                    >
+                                        <span className="text-xl">{type.icon}</span>
+                                        {type.label}
+                                    </button>
+                                ))}
+                            </div>
+
                             <div className="space-y-4">
                                 <div>
                                     <label className="text-xs font-bold text-[var(--secondary-text)] ml-1 uppercase tracking-wider">İsmi</label>
-                                    <input value={lostPetName} onChange={e => setLostPetName(e.target.value)} type="text" placeholder="Örn: Buster" className="w-full mt-1 bg-[var(--card-bg)] border border-white/10 rounded-2xl py-4 px-5 text-[var(--foreground)] outline-none focus:border-red-500 transition-colors" />
+                                    <input value={lostPetName} onChange={e => setLostPetName(e.target.value)} type="text" placeholder="Örn: Buster" className="w-full mt-1 bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl py-4 px-5 text-[var(--foreground)] outline-none focus:border-red-500 transition-colors" />
                                 </div>
 
                                 <div>
                                     <label className="text-xs font-bold text-[var(--secondary-text)] ml-1 uppercase tracking-wider">Cinsi / Türü</label>
-                                    <input value={lostPetBreed} onChange={e => setLostPetBreed(e.target.value)} type="text" placeholder="Örn: Golden Retriever" className="w-full mt-1 bg-[var(--card-bg)] border border-white/10 rounded-2xl py-4 px-5 text-[var(--foreground)] outline-none focus:border-red-500 transition-colors" />
+                                    <input value={lostPetBreed} onChange={e => setLostPetBreed(e.target.value)} type="text" placeholder="Örn: Golden Retriever" className="w-full mt-1 bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl py-4 px-5 text-[var(--foreground)] outline-none focus:border-red-500 transition-colors" />
                                 </div>
 
                                 <div>
-                                    <label className="text-xs font-bold text-[var(--secondary-text)] ml-1 uppercase tracking-wider">En Son Görüldüğü Yer</label>
-                                    <input value={lostPetLocation} onChange={e => setLostPetLocation(e.target.value)} type="text" placeholder="Örn: Kadıköy Moda Sahili" className="w-full mt-1 bg-[var(--card-bg)] border border-white/10 rounded-2xl py-4 px-5 text-[var(--foreground)] outline-none focus:border-red-500 transition-colors" />
+                                    <label className="text-xs font-bold text-[var(--secondary-text)] ml-1 mb-2 block uppercase tracking-wider">En Son Göründüğü Yer (Harita)</label>
+                                    <MapLocationPicker 
+                                        coords={newLostPetCoords} 
+                                        onChange={(coords, address) => {
+                                            setNewLostPetCoords(coords);
+                                            if (address) setLostPetLocation(address);
+                                        }} 
+                                        height="220px" 
+                                    />
                                 </div>
 
-                                <div>
-                                    <label className="text-xs font-bold text-[var(--secondary-text)] ml-1 uppercase tracking-wider">Haritada Konumu İşaretleyin 📍</label>
-                                    <div className="h-44 rounded-2xl overflow-hidden border border-white/10 mt-1 relative z-20">
-                                        <SightingMapSelector 
-                                            userPos={newLostPetCoords} 
-                                            onChange={(coords) => setNewLostPetCoords(coords)} 
-                                        />
-                                    </div>
-                                </div>
+
 
                                 <div>
                                     <label className="text-xs font-bold text-[var(--secondary-text)] ml-1 uppercase tracking-wider">Detaylar / İletişim Notu</label>
-                                    <textarea value={lostPetDesc} onChange={e => setLostPetDesc(e.target.value)} placeholder="Tasma rengi, belirgin özelliği veya ek iletişim bilgileriniz..." className="w-full mt-1 bg-[var(--card-bg)] border border-white/10 rounded-2xl py-4 px-5 text-[var(--foreground)] outline-none focus:border-red-500 transition-colors resize-none h-24" />
+                                    <textarea value={lostPetDesc} onChange={e => setLostPetDesc(e.target.value)} placeholder="Tasma rengi, belirgin özelliği veya ek iletişim bilgileriniz..." className="w-full mt-1 bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl py-4 px-5 text-[var(--foreground)] outline-none focus:border-red-500 transition-colors resize-none h-24" />
                                 </div>
 
                                 <div>
@@ -3657,7 +3657,7 @@ export default function MoffiSocialMasterpiece() {
                                     {lostPetPhotos.length > 0 ? (
                                         <div className="grid grid-cols-4 gap-3">
                                             {lostPetPhotos.map((photo, idx) => (
-                                                <div key={idx} className="aspect-square rounded-xl bg-[var(--card-bg)] border border-white/10 relative overflow-hidden group">
+                                                <div key={idx} className="aspect-square rounded-xl bg-[var(--card-bg)] border border-black/10 dark:border-white/10 relative overflow-hidden group">
                                                     <img src={photo.preview} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
                                                     <button
                                                         onClick={() => setLostPetPhotos(prev => prev.filter((_, i) => i !== idx))}
@@ -3670,7 +3670,7 @@ export default function MoffiSocialMasterpiece() {
                                             {lostPetPhotos.length < 4 && (
                                                 <button
                                                     onClick={() => sosInputRef.current?.click()}
-                                                    className="aspect-square rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-red-500/50 hover:text-red-500 transition-all"
+                                                    className="aspect-square rounded-xl border-2 border-dashed border-black/10 dark:border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-red-500/50 hover:text-red-500 transition-all"
                                                 >
                                                     <Plus className="w-5 h-5" />
                                                 </button>
@@ -3679,7 +3679,7 @@ export default function MoffiSocialMasterpiece() {
                                     ) : (
                                         <div
                                             onClick={() => sosInputRef.current?.click()}
-                                            className="w-full py-8 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-red-500/30 hover:bg-red-500/5 transition-all cursor-pointer"
+                                            className="w-full py-8 border-2 border-dashed border-black/10 dark:border-white/10 rounded-2xl flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-red-500/30 hover:bg-red-500/5 transition-all cursor-pointer"
                                         >
                                             <Camera className="w-8 h-8 mb-2 opacity-30" />
                                             <p className="text-xs font-bold">Fotoğraf Ekle</p>
@@ -3690,7 +3690,7 @@ export default function MoffiSocialMasterpiece() {
                         </div>
 
                         {/* Sticky Action Button */}
-                        <div className="p-6 border-t border-red-500/20 bg-[var(--background)] shrink-0">
+                        <div className="p-4 sm:p-6 border-t border-red-500/20 bg-[var(--background)] shrink-0">
                             <button
                                 onClick={submitSos}
                                 disabled={isSubmittingSOS}
@@ -3709,139 +3709,233 @@ export default function MoffiSocialMasterpiece() {
 
             {/* IMMERSIVE LOST PET DETAIL BOTTOM SHEET / DRAWER */}
             <AnimatePresence>
-                {selectedLostPet && (
-                    <div className="fixed inset-0 z-[290] flex items-end justify-center pointer-events-none">
-                        {/* Semi-transparent backdrop overlay that fades in */}
-                        <motion.div 
+                        {selectedLostPet && (
+                    <div className="fixed inset-0 z-[120] flex items-end justify-center sm:p-4 pb-0">
+                        <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-black/40 backdrop-blur-[3px] pointer-events-auto"
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                             onClick={() => setSelectedLostPet(null)}
                         />
-                        
-                        {/* Sliding sheet container */}
                         <motion.div
-                            initial={{ opacity: 0, y: "100%" }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: "100%" }}
-                            transition={{ type: "spring", damping: 25, stiffness: 220 }}
-                            className="w-full max-w-lg bg-[var(--background)]/90 backdrop-blur-2xl border-t border-white/10 rounded-t-[3rem] shadow-[0_-15px_40px_rgba(0,0,0,0.3)] flex flex-col relative z-10 pointer-events-auto max-h-[85vh] overflow-hidden text-[var(--foreground)]"
+                            drag="y"
+                            dragConstraints={{ top: 0, bottom: 0 }}
+                            dragElastic={0.2}
+                            onDragEnd={(e, info) => {
+                                if (info.offset.y > 100) setSelectedLostPet(null);
+                            }}
+                            initial={{ y: "100%", opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: "100%", opacity: 0 }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="w-full sm:max-w-md bg-[var(--background)] sm:rounded-[3rem] rounded-t-[2.5rem] shadow-2xl relative z-10 flex flex-col overflow-hidden max-h-[90vh] sm:max-h-[85vh] border-t border-black/10 dark:border-white/10 sm:border"
                         >
-                            {/* Drag handle */}
-                            <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto my-4 shrink-0 cursor-pointer" onClick={() => setSelectedLostPet(null)} />
+                            {/* Drag Handle */}
+                            <button 
+                                onClick={() => setSelectedLostPet(null)}
+                                className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full z-50 hover:bg-white/40 transition-colors cursor-pointer"
+                            />
 
-                            {/* Image Header with rounded design */}
-                            <div className="relative w-full h-[220px] shrink-0 overflow-hidden px-6 pt-1">
-                                <div className="w-full h-full rounded-[2.5rem] overflow-hidden relative border border-white/5 shadow-inner">
-                                    {selectedLostPet.media_url ? (
-                                        <img src={selectedLostPet.media_url} className="w-full h-full object-cover transition-all duration-500" />
-                                    ) : (
-                                        <div className="absolute inset-x-0 inset-y-0 flex items-center justify-center bg-red-950/20">
-                                            <MapPin className="w-12 h-12 text-red-500/20" />
+                            <div className="flex-1 overflow-y-auto no-scrollbar w-full flex flex-col relative">
+                                {/* Hero Image Section */}
+                            {selectedLostPet.active_image_url || selectedLostPet.media_url ? (
+                                <div 
+                                    className="relative w-full h-[260px] sm:h-[300px] bg-white dark:bg-black shrink-0 overflow-hidden"
+                                    onTouchStart={(e) => {
+                                        const touch = e.touches[0];
+                                        (window as any).heroTouchStartX = touch.clientX;
+                                    }}
+                                    onTouchEnd={(e) => {
+                                        const touchX = e.changedTouches[0].clientX;
+                                        const startX = (window as any).heroTouchStartX;
+                                        if (startX && selectedLostPet.images && selectedLostPet.images.length > 1) {
+                                            const diff = startX - touchX;
+                                            const currentIndex = selectedLostPet.images.indexOf(selectedLostPet.active_image_url || selectedLostPet.images[0] || selectedLostPet.media_url);
+                                            if (diff > 40 && currentIndex < selectedLostPet.images.length - 1) {
+                                                setSelectedLostPet({ ...selectedLostPet, active_image_url: selectedLostPet.images[currentIndex + 1] });
+                                            } else if (diff < -40 && currentIndex > 0) {
+                                                setSelectedLostPet({ ...selectedLostPet, active_image_url: selectedLostPet.images[currentIndex - 1] });
+                                            }
+                                        }
+                                    }}
+                                >
+                                    <img 
+                                        key={selectedLostPet.active_image_url || selectedLostPet.media_url}
+                                        src={selectedLostPet.active_image_url || selectedLostPet.media_url} 
+                                        alt={selectedLostPet.pet_name || 'Kayıp Pet'} 
+                                        className="w-full h-full object-cover animate-in fade-in zoom-in-95 duration-300" 
+                                    />
+                                    
+                                    {/* Pagination Dots */}
+                                    {selectedLostPet.images && selectedLostPet.images.length > 1 && (
+                                        <div className="absolute top-4 inset-x-0 flex justify-center gap-1.5 z-20 pointer-events-none">
+                                            {selectedLostPet.images.map((url: string, i: number) => (
+                                                <div key={i} className={cn("h-1.5 rounded-full transition-all duration-300", (selectedLostPet.active_image_url || selectedLostPet.images[0]) === url ? "w-4 bg-white shadow-sm" : "w-1.5 bg-white/50 backdrop-blur-sm")} />
+                                            ))}
                                         </div>
                                     )}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent pointer-events-none" />
-                                    
-                                    {/* Close Button floating top-right inside image */}
-                                    <button
-                                        onClick={() => setSelectedLostPet(null)}
-                                        className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/50 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors z-20 active:scale-90"
-                                    >
-                                        <ChevronLeft className="w-5 h-5 text-white" />
-                                    </button>
 
-                                    {/* Share Button floating top-left inside image */}
-                                    <button 
-                                        onClick={() => showToast("SOS Modu Aktif", "İlanınız hazırlanıyor...", "info")}
-                                        className="absolute top-4 left-4 w-9 h-9 rounded-full bg-black/50 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors z-20 active:scale-90"
-                                    >
-                                        <Share2 className="w-4 h-4 text-white" />
-                                    </button>
-
-                                    {/* Floating Hero Info */}
-                                    <div className="absolute bottom-4 left-5 right-5 z-10 flex justify-between items-end">
-                                        <div className="flex flex-col gap-0.5">
-                                            <div className="flex items-center gap-1.5 mb-1">
-                                                <span className="bg-red-600 px-2 py-0.5 rounded-full text-[8.5px] font-black text-white tracking-widest uppercase shadow-[0_0_10px_rgba(220,38,38,0.5)]">
-                                                    KAYIP İLANI
+                                    {/* Header Info Layered on Image */}
+                                    <div className="absolute bottom-0 inset-x-0 p-6 flex items-end justify-between z-10 pointer-events-none">
+                                        <div className="flex flex-col gap-1 min-w-0 pr-4">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <div className="px-2.5 py-1 rounded-lg bg-red-500 text-white text-[10px] font-black tracking-widest uppercase shadow-lg shadow-red-500/30 flex items-center gap-1.5">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" /> S.O.S
+                                                </div>
+                                                <span className="text-[10px] font-bold text-black/80 dark:text-white/80 bg-black/40 backdrop-blur-md px-2 py-1 rounded-lg">
+                                                    {new Date(selectedLostPet.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}
                                                 </span>
-                                                {selectedLostPet.reward_enabled && (
-                                                    <span className="bg-amber-500 px-2 py-0.5 rounded-full text-[8.5px] font-black text-black tracking-widest uppercase shadow-[0_0_10px_rgba(245,158,11,0.5)]">
-                                                        🏆 ÖDÜLLÜ
-                                                    </span>
-                                                )}
                                             </div>
-                                            <h1 className="text-2xl font-black text-white tracking-tight leading-none drop-shadow-md">
-                                                {selectedLostPet.pet_name}
-                                            </h1>
                                         </div>
-                                        <span className="text-[10px] font-bold text-white/80 bg-black/35 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/5">
-                                            {new Date(selectedLostPet.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}
-                                        </span>
+                                    </div>
+
+                                    {/* Floating Actions (Close & Share) on top of image */}
+                                    <div className="absolute top-6 right-6 flex items-center gap-2 z-20">
+                                        <button 
+                                            onClick={async () => {
+                                                try {
+                                                    if (navigator.share) {
+                                                        await navigator.share({
+                                                            title: 'Kayıp İlanı: ' + selectedLostPet.pet_name,
+                                                            text: 'Lütfen bu kayıp dostumuzu bulmamıza yardım edin!',
+                                                            url: window.location.href,
+                                                        });
+                                                    } else {
+                                                        showToast("Bağlantı Kopyalandı", "İlan linki panoya kopyalandı", "success");
+                                                    }
+                                                } catch (err) {
+                                                    console.error("Share failed:", err);
+                                                }
+                                            }}
+                                            className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-black/10 dark:border-white/10 flex items-center justify-center text-black/80 dark:text-white/80 hover:bg-black/60 hover:text-white transition-all active:scale-95"
+                                        >
+                                            <Share2 className="w-4 h-4" />
+                                        </button>
+                                        <button 
+                                            onClick={() => setSelectedLostPet(null)}
+                                            className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-black/10 dark:border-white/10 flex items-center justify-center text-black/80 dark:text-white/80 hover:bg-black/60 hover:text-white transition-all active:scale-95"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
                                     </div>
                                 </div>
-                            </div>
-
-                            {/* Multi-photo switcher if available */}
-                            {selectedLostPet.images && selectedLostPet.images.length > 1 && (
-                                <div className="px-6 pt-3 flex gap-2 overflow-x-auto no-scrollbar shrink-0">
-                                    {selectedLostPet.images.map((url: string, i: number) => (
-                                        <button
-                                            key={i}
-                                            onClick={() => setSelectedLostPet({ ...selectedLostPet, media_url: url })}
-                                            className={cn(
-                                                "w-11 h-11 rounded-xl border overflow-hidden shrink-0 transition-all",
-                                                selectedLostPet.media_url === url ? "border-red-500 scale-105 shadow-md" : "border-white/10 opacity-60"
-                                            )}
+                            ) : (
+                                <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-red-900/40 to-[var(--background)] border-b border-red-500/10 pb-6 pt-12 px-6">
+                                    {/* Floating Actions (Close & Share) for No Image version */}
+                                    <div className="absolute top-6 right-6 flex items-center gap-2 z-20">
+                                        <button 
+                                            onClick={async () => {
+                                                try {
+                                                    if (navigator.share) {
+                                                        await navigator.share({
+                                                            title: 'Kayıp İlanı: ' + selectedLostPet.pet_name,
+                                                            text: 'Lütfen bu kayıp dostumuzu bulmamıza yardım edin!',
+                                                            url: window.location.href,
+                                                        });
+                                                    } else {
+                                                        showToast("Bağlantı Kopyalandı", "İlan linki panoya kopyalandı", "success");
+                                                    }
+                                                } catch (err) {
+                                                    console.error("Share failed:", err);
+                                                }
+                                            }}
+                                            className="w-10 h-10 rounded-full bg-[var(--card-bg)] border border-[var(--card-border)] flex items-center justify-center text-[var(--foreground)] hover:bg-black/5 dark:bg-white/5 transition-all active:scale-95 shadow-sm"
                                         >
-                                            <img src={url} className="w-full h-full object-cover" />
+                                            <Share2 className="w-4 h-4" />
                                         </button>
-                                    ))}
+                                        <button 
+                                            onClick={() => setSelectedLostPet(null)}
+                                            className="w-10 h-10 rounded-full bg-[var(--card-bg)] border border-[var(--card-border)] flex items-center justify-center text-[var(--foreground)] hover:bg-black/5 dark:bg-white/5 transition-all active:scale-95 shadow-sm"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+
+                                    <div className="flex flex-col gap-1 min-w-0 pr-4 relative z-10 mt-6">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <div className="px-2.5 py-1 rounded-lg bg-red-500 text-white text-[10px] font-black tracking-widest uppercase shadow-lg shadow-red-500/30 flex items-center gap-1.5">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" /> S.O.S
+                                            </div>
+                                            <span className="text-[10px] font-bold text-[var(--secondary-text)] bg-[var(--card-bg)] px-2 py-1 rounded-lg border border-[var(--card-border)]">
+                                                {new Date(selectedLostPet.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}
+                                            </span>
+                                        </div>
+                                        <h1 className="text-3xl font-black text-[var(--foreground)] tracking-tight truncate">
+                                            {selectedLostPet.pet_name}
+                                        </h1>
+                                    </div>
+                                    
+                                    {/* Big decorative background icon */}
+                                    <div className="absolute -right-8 -bottom-8 opacity-5 pointer-events-none">
+                                        <PawPrint className="w-48 h-48 text-red-500" />
+                                    </div>
                                 </div>
                             )}
 
                             {/* Scrollable details */}
-                            <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-4 space-y-6 pb-28">
+                            <div className="flex-1 px-6 pt-2 pb-4 space-y-6 pb-[calc(100px+env(safe-area-inset-bottom))] bg-[var(--background)] relative z-10 -mt-4 rounded-t-3xl">
+                                <h1 className="text-3xl font-black text-[var(--foreground)] tracking-tight truncate mt-1">
+                                    {selectedLostPet.pet_name}
+                                </h1>
+
+                                {/* Thumbnail Gallery */}
+                                {selectedLostPet.images && selectedLostPet.images.length > 1 && (
+                                    <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                                        {selectedLostPet.images.map((url: string, i: number) => (
+                                            <button 
+                                                key={i} 
+                                                onClick={() => setSelectedLostPet({ ...selectedLostPet, active_image_url: url })}
+                                                className={cn(
+                                                    "w-16 h-16 rounded-2xl overflow-hidden shrink-0 transition-all border-2",
+                                                    (selectedLostPet.active_image_url || selectedLostPet.media_url) === url ? "border-red-500 scale-105 shadow-md" : "border-black/10 dark:border-white/10 opacity-60 hover:opacity-100"
+                                                )}
+                                            >
+                                                <img src={url} alt={`Görsel ${i+1}`} className="w-full h-full object-cover" />
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+
                                 {/* Metadata Grid */}
-                                <div className="grid grid-cols-2 gap-3.5">
-                                    <div className="bg-[var(--card-bg)] border border-white/5 rounded-2xl p-3 flex items-center gap-3 shadow-sm">
-                                        <div className="w-9 h-9 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 shrink-0">
-                                            <MapPin className="w-4 h-4" />
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="bg-[var(--card-bg)] border border-black/5 dark:border-white/5 rounded-2xl p-2.5 flex items-center gap-2.5 shadow-sm">
+                                        <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 shrink-0">
+                                            <MapPin className="w-3.5 h-3.5" />
                                         </div>
                                         <div className="flex flex-col min-w-0">
-                                            <span className="text-[9px] text-[var(--secondary-text)] font-bold uppercase tracking-wider">Son Görülen Yer</span>
-                                            <span className="text-xs text-[var(--foreground)] font-black truncate">{selectedLostPet.last_location || selectedLostPet.location}</span>
+                                            <span className="text-[8px] text-[var(--secondary-text)] font-bold uppercase tracking-wider">Son Görülen Yer</span>
+                                            <span className="text-[11px] text-[var(--foreground)] font-black truncate">{selectedLostPet.last_location || selectedLostPet.location}</span>
                                         </div>
                                     </div>
 
-                                    <div className="bg-[var(--card-bg)] border border-white/5 rounded-2xl p-3 flex items-center gap-3 shadow-sm">
-                                        <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 shrink-0">
-                                            <User className="w-4 h-4" />
+                                    <div className="bg-[var(--card-bg)] border border-black/5 dark:border-white/5 rounded-2xl p-2.5 flex items-center gap-2.5 shadow-sm">
+                                        <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 shrink-0">
+                                            <User className="w-3.5 h-3.5" />
                                         </div>
                                         <div className="flex flex-col min-w-0">
-                                            <span className="text-[9px] text-[var(--secondary-text)] font-bold uppercase tracking-wider">İlan Sahibi</span>
-                                            <span className="text-xs text-[var(--foreground)] font-black truncate">{selectedLostPet.author_name || 'Moffi Üyesi'}</span>
+                                            <span className="text-[8px] text-[var(--secondary-text)] font-bold uppercase tracking-wider">İlan Sahibi</span>
+                                            <span className="text-[11px] text-[var(--foreground)] font-black truncate">{selectedLostPet.author_name || 'Moffi Üyesi'}</span>
                                         </div>
                                     </div>
 
-                                    <div className="bg-[var(--card-bg)] border border-white/5 rounded-2xl p-3 flex items-center gap-3 shadow-sm">
-                                        <div className="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0">
-                                            <Flame className="w-4 h-4" />
+                                    <div className="bg-[var(--card-bg)] border border-black/5 dark:border-white/5 rounded-2xl p-2.5 flex items-center gap-2.5 shadow-sm">
+                                        <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 shrink-0">
+                                            <PawPrint className="w-3.5 h-3.5" />
                                         </div>
                                         <div className="flex flex-col min-w-0">
-                                            <span className="text-[9px] text-[var(--secondary-text)] font-bold uppercase tracking-wider">Cinsi / Türü</span>
-                                            <span className="text-xs text-[var(--foreground)] font-black truncate">{selectedLostPet.pet_breed || selectedLostPet.type || 'Belirtilmedi'}</span>
+                                            <span className="text-[8px] text-[var(--secondary-text)] font-bold uppercase tracking-wider">Cinsi / Türü</span>
+                                            <span className="text-[11px] text-[var(--foreground)] font-black truncate">{selectedLostPet.pet_breed || selectedLostPet.type || 'Belirtilmedi'}</span>
                                         </div>
                                     </div>
 
-                                    <div className="bg-[var(--card-bg)] border border-white/5 rounded-2xl p-3 flex items-center gap-3 shadow-sm">
-                                        <div className="w-9 h-9 rounded-xl bg-green-500/10 flex items-center justify-center text-green-500 shrink-0">
-                                            <Activity className="w-4 h-4" />
+                                    <div className="bg-[var(--card-bg)] border border-black/5 dark:border-white/5 rounded-2xl p-2.5 flex items-center gap-2.5 shadow-sm">
+                                        <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 shrink-0">
+                                            <Coins className="w-3.5 h-3.5" />
                                         </div>
                                         <div className="flex flex-col min-w-0">
-                                            <span className="text-[9px] text-[var(--secondary-text)] font-bold uppercase tracking-wider">Ödül Miktarı</span>
-                                            <span className="text-xs text-[var(--foreground)] font-black truncate">
+                                            <span className="text-[8px] text-[var(--secondary-text)] font-bold uppercase tracking-wider">Ödül Miktarı</span>
+                                            <span className="text-[11px] text-[var(--foreground)] font-black truncate">
                                                 {selectedLostPet.reward_enabled && selectedLostPet.reward_amount 
                                                     ? `${Number(selectedLostPet.reward_amount).toLocaleString('tr-TR')} TL` 
                                                     : 'Ödül Yok'}
@@ -3850,42 +3944,55 @@ export default function MoffiSocialMasterpiece() {
                                     </div>
                                 </div>
 
+                                {/* Map Location Readonly */}
+                                {selectedLostPet.latitude && selectedLostPet.longitude && (
+                                    <div className="space-y-2">
+                                        <h3 className="text-sm font-black text-[var(--foreground)] uppercase tracking-wider">Son Konumu (Harita)</h3>
+                                        <MapLocationPicker 
+                                            coords={[selectedLostPet.latitude, selectedLostPet.longitude]} 
+                                            readonly={true}
+                                            height="160px"
+                                        />
+                                    </div>
+                                )}
+
                                 {/* Description */}
-                                <div className="space-y-2">
-                                    <h3 className="text-sm font-black text-[var(--foreground)] uppercase tracking-wider">İlan Detayı</h3>
-                                    <p className="text-xs text-[var(--secondary-text)] leading-relaxed font-medium bg-[var(--card-bg)]/50 border border-white/5 rounded-2xl p-4">
+                                <div className="space-y-1.5">
+                                    <h3 className="text-[13px] font-black text-[var(--foreground)] uppercase tracking-wider">İlan Detayı</h3>
+                                    <p className="text-[11px] text-[var(--secondary-text)] leading-relaxed font-medium bg-[var(--card-bg)]/50 border border-black/5 dark:border-white/5 rounded-xl p-3.5">
                                         {selectedLostPet.description || "Ek detay girilmemiş."}
                                     </p>
                                 </div>
 
                                 {/* Warning Box */}
-                                <div className="bg-red-500/5 border border-red-500/15 p-4 rounded-2xl flex gap-3 items-start">
-                                    <AlertTriangle className="w-4.5 h-4.5 text-red-500 shrink-0 mt-0.5 animate-pulse" />
-                                    <p className="text-[11px] text-red-400 font-medium leading-relaxed">
+                                <div className="bg-red-500/5 border border-red-500/15 p-3.5 rounded-xl flex gap-2.5 items-start">
+                                    <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5 animate-pulse" />
+                                    <p className="text-[10px] text-red-400 font-medium leading-relaxed">
                                         Eğer bu dostumuzu görüyorsanız lütfen ani hareketler yapmadan, nazikçe yaklaşın ve hemen aşağıdaki butonlar yardımıyla sahibiyle iletişime geçin.
                                     </p>
                                 </div>
                             </div>
+                            </div>
 
                             {/* Floating Actions Bottom Bar */}
-                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[var(--background)] via-[var(--background)]/95 to-transparent p-6 pt-10 shrink-0 flex gap-3 z-30">
+                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[var(--background)] via-[var(--background)]/95 to-transparent p-3 sm:px-5 pt-6 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shrink-0 flex gap-2 z-30">
                                 <button 
-                                    className="flex-1 py-3.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-black font-black text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg shadow-cyan-500/20" 
+                                    className="flex-1 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-black text-[13px] flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-lg shadow-cyan-500/20" 
                                     onClick={handleMessageOwner}
                                 >
-                                    <MessageCircle className="w-4.5 h-4.5" /> Sahibine Mesaj At
+                                    <MessageCircle className="w-4 h-4" /> Sahibine Mesaj At
                                 </button>
                                 <button 
                                     disabled={isReportingLocation} 
                                     className={cn(
-                                        "flex-1 py-3.5 rounded-2xl border border-white/10 font-black text-sm flex items-center justify-center gap-2 transition-transform shadow-lg", 
+                                        "flex-[0.8] py-3 rounded-2xl border border-black/10 dark:border-white/10 font-black text-sm flex items-center justify-center gap-2 transition-transform shadow-lg", 
                                         isReportingLocation 
-                                            ? "bg-white/5 text-[var(--secondary-text)] cursor-not-allowed" 
-                                            : "bg-white/5 text-[var(--foreground)] hover:bg-white/10 active:scale-95"
+                                            ? "bg-black/5 dark:bg-white/5 text-[var(--secondary-text)] cursor-not-allowed" 
+                                            : "bg-black/5 dark:bg-white/5 text-[var(--foreground)] hover:bg-black/10 dark:bg-white/10 active:scale-95"
                                     )} 
                                     onClick={handleReportLocation}
                                 >
-                                    {isReportingLocation ? <Activity className="w-4.5 h-4.5 animate-spin" /> : <Flame className="w-4.5 h-4.5 text-red-500" />} 
+                                    {isReportingLocation ? <Activity className="w-4 h-4 animate-spin" /> : <Flame className="w-4 h-4 text-red-500" />} 
                                     {isReportingLocation ? "Bulunuyor..." : "Onu Gördüm!"}
                                 </button>
                             </div>
@@ -3909,9 +4016,9 @@ export default function MoffiSocialMasterpiece() {
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="w-full max-w-md bg-[var(--card-bg)] rounded-[2rem] border border-white/10 shadow-2xl relative z-10 overflow-hidden flex flex-col"
+                            className="w-full max-w-md bg-[var(--card-bg)] rounded-[2rem] border border-black/10 dark:border-white/10 shadow-2xl relative z-10 overflow-hidden flex flex-col"
                         >
-                            <div className="p-6 pb-4 border-b border-[var(--card-border)] flex flex-col items-center">
+                            <div className="p-4 sm:p-6 pb-4 border-b border-[var(--card-border)] flex flex-col items-center">
                                 <div className="w-16 h-16 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center mb-4 ring-4 ring-blue-500/10">
                                     <Lock className="w-8 h-8" />
                                 </div>
@@ -3920,7 +4027,7 @@ export default function MoffiSocialMasterpiece() {
                                 </h3>
                             </div>
 
-                            <div className="p-6 space-y-4">
+                            <div className="p-4 sm:p-6 space-y-4">
                                 <p className="text-[var(--secondary-text)] text-sm font-medium leading-relaxed text-center">
                                     Moffi KVKK yükümlülükleri gereğince, iletişim bilgileriniz, gerçek adınız veya net GPS konumunuz {selectedLostPet?.author_name} kullanıcısı ile <strong className="text-[var(--foreground)]">asla paylaşılmayacaktır.</strong>
                                 </p>
@@ -3945,7 +4052,7 @@ export default function MoffiSocialMasterpiece() {
                                             if (anonError) setAnonError(null);
                                         }}
                                         placeholder={anonModalType === 'report' ? "Hangi bölgede gördünüz? (Sadece sokak, park veya mekan adı)" : "Mesajınız (Numaranız veya isminiz gizli kalacaktır)..."}
-                                        className={cn("w-full bg-[var(--background)] border rounded-xl p-4 text-[var(--foreground)] text-sm outline-none transition-colors h-28 resize-none", anonError ? "border-red-500 focus:border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]" : "border-white/10 focus:border-cyan-500")}
+                                        className={cn("w-full bg-[var(--background)] border rounded-xl p-4 text-[var(--foreground)] text-sm outline-none transition-colors h-28 resize-none", anonError ? "border-red-500 focus:border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]" : "border-black/10 dark:border-white/10 focus:border-cyan-500")}
                                     />
                                     {anonError && (
                                         <div className="absolute top-2 right-2 p-1.5 bg-red-500 rounded-full animate-bounce">
@@ -3957,7 +4064,7 @@ export default function MoffiSocialMasterpiece() {
                                 <div className="flex gap-3 pt-2">
                                     <button
                                         onClick={() => { setAnonModalType(null); setAnonError(null); }}
-                                        className="flex-1 py-3 rounded-xl bg-[var(--card-bg)] text-[var(--secondary-text)] font-bold hover:bg-white/10 transition-colors"
+                                        className="flex-1 py-3 rounded-xl bg-[var(--card-bg)] text-[var(--secondary-text)] font-bold hover:bg-black/10 dark:bg-white/10 transition-colors"
                                     >
                                         İptal
                                     </button>
@@ -3997,19 +4104,19 @@ export default function MoffiSocialMasterpiece() {
                             animate={{ y: 0 }}
                             exit={{ y: "100%" }}
                             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            className="relative w-full h-[90vh] bg-[var(--card-bg)] rounded-t-[2.5rem] flex flex-col overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.5)] border-t border-white/10"
+                            className="relative w-full h-[90vh] bg-[var(--card-bg)] rounded-t-[2.5rem] flex flex-col overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.5)] border-t border-black/10 dark:border-white/10"
                         >
                             {/* Grab Handle */}
                             {/* Grab Handle (Click to close) */}
                             <button 
                                 onClick={() => setIsAddAdoptionModalOpen(false)}
-                                className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/20 rounded-full z-50 hover:bg-white/40 transition-colors cursor-pointer"
+                                className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full z-50 hover:bg-white/40 transition-colors cursor-pointer"
                             />
 
 
 
-                            <div className="p-6 pt-12 pb-4 border-b border-[var(--card-border)] shrink-0 flex items-center gap-4">
-                                <button onClick={() => setIsAddAdoptionModalOpen(false)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center -ml-2 hover:bg-white/10 transition-colors">
+                            <div className="p-4 sm:p-6 pt-12 pb-4 border-b border-[var(--card-border)] shrink-0 flex items-center gap-4">
+                                <button onClick={() => setIsAddAdoptionModalOpen(false)} className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center -ml-2 hover:bg-black/10 dark:bg-white/10 transition-colors">
                                     <ChevronLeft className="w-6 h-6" />
                                 </button>
                                 <div>
@@ -4020,7 +4127,7 @@ export default function MoffiSocialMasterpiece() {
                                 </div>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6">
+                            <div className="flex-1 overflow-y-auto no-scrollbar p-4 sm:p-6 space-y-6">
                                 {/* Photo Upload Apple Style */}
                                 <input
                                     type="file"
@@ -4042,7 +4149,7 @@ export default function MoffiSocialMasterpiece() {
                                 {adoptionPetPhotos.length > 0 ? (
                                     <div className="grid grid-cols-4 gap-3 mb-2">
                                         {adoptionPetPhotos.map((photo, idx) => (
-                                            <div key={idx} className="aspect-square rounded-2xl bg-[#1C1C1E] border border-white/10 relative overflow-hidden group">
+                                            <div key={idx} className="aspect-square rounded-2xl bg-card dark:bg-[#1C1C1E] border border-black/10 dark:border-white/10 relative overflow-hidden group">
                                                 <img src={photo.preview} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
                                                 <button
                                                     onClick={() => setAdoptionPetPhotos(prev => prev.filter((_, i) => i !== idx))}
@@ -4055,7 +4162,7 @@ export default function MoffiSocialMasterpiece() {
                                         {adoptionPetPhotos.length < 4 && (
                                             <button
                                                 onClick={() => adoptionPhotoRef.current?.click()}
-                                                className="aspect-square rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-cyan-400/50 hover:text-cyan-400 transition-all font-bold"
+                                                className="aspect-square rounded-2xl border-2 border-dashed border-black/10 dark:border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-cyan-400/50 hover:text-cyan-400 transition-all font-bold"
                                             >
                                                 <Plus className="w-6 h-6" />
                                                 <span className="text-[10px] mt-1">Ekle</span>
@@ -4065,7 +4172,7 @@ export default function MoffiSocialMasterpiece() {
                                 ) : (
                                     <div
                                         onClick={() => adoptionPhotoRef.current?.click()}
-                                        className="w-full h-52 rounded-3xl bg-[#1C1C1E] border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-cyan-400/50 hover:bg-cyan-400/5 transition-colors cursor-pointer group mb-2 shadow-inner overflow-hidden"
+                                        className="w-full h-52 rounded-3xl bg-card dark:bg-[#1C1C1E] border-2 border-dashed border-black/10 dark:border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-cyan-400/50 hover:bg-cyan-400/5 transition-colors cursor-pointer group mb-2 shadow-inner overflow-hidden"
                                     >
                                         <Camera className="w-8 h-8 mb-2 group-hover:text-cyan-400 group-hover:scale-110 transition-all drop-shadow-md" />
                                         <span className="text-sm font-bold tracking-wide">Net Fotoğraflar Yükle</span>
@@ -4148,7 +4255,7 @@ export default function MoffiSocialMasterpiece() {
                                 </div>
                             </div>
 
-                            <div className="p-6 pt-3 pb-8 bg-[var(--card-bg)] shrink-0 border-t border-[var(--card-border)] relative z-20">
+                            <div className="p-4 sm:p-6 pt-3 pb-8 bg-[var(--card-bg)] shrink-0 border-t border-[var(--card-border)] relative z-20">
                                 <button
                                     onClick={handleAdoptionPost}
                                     disabled={isSubmittingAdoption}
@@ -4196,82 +4303,181 @@ export default function MoffiSocialMasterpiece() {
                                     setSelectedAdoptionPet(null);
                                 }
                             }}
-                            className="relative w-full h-[85vh] bg-[var(--background)] rounded-t-[2.5rem] flex flex-col overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.5)] border-t border-white/10"
+                            className="relative w-full h-[85vh] bg-[var(--background)] rounded-t-[2.5rem] flex flex-col overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.5)] border-t border-black/10 dark:border-white/10"
                         >
-                            {/* Grab Handle */}
                             {/* Grab Handle (Click to close) */}
                             <button 
                                 onClick={() => setSelectedAdoptionPet(null)}
-                                className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/20 rounded-full z-50 hover:bg-white/40 transition-colors cursor-pointer"
+                                className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full z-50 hover:bg-white/40 transition-colors cursor-pointer"
                             />
 
-
-
-                            {/* Hero Image */}
-                            <div className="w-full h-[45%] relative shrink-0">
-                                <img src={selectedAdoptionPet.img} className="w-full h-full object-cover transition-all duration-500" />
-                                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[var(--background)] to-transparent" />
-
-                                <button 
-                                    onClick={() => setSelectedAdoptionPet(null)}
-                                    className="absolute top-12 left-6 w-10 h-10 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white z-30 active:scale-90 transition-transform"
+                            <div className="flex-1 overflow-y-auto no-scrollbar w-full flex flex-col relative">
+                                {/* Hero Image */}
+                                <div 
+                                    className="w-full h-[350px] relative shrink-0 overflow-hidden bg-white dark:bg-black"
+                                    onTouchStart={(e) => {
+                                        const touch = e.touches[0];
+                                        (window as any).adoptionHeroTouchStartX = touch.clientX;
+                                    }}
+                                    onTouchEnd={(e) => {
+                                        const touchX = e.changedTouches[0].clientX;
+                                        const startX = (window as any).adoptionHeroTouchStartX;
+                                        if (startX && selectedAdoptionPet.images && selectedAdoptionPet.images.length > 1) {
+                                            const diff = startX - touchX;
+                                            const currentIndex = selectedAdoptionPet.images.indexOf(selectedAdoptionPet.img || selectedAdoptionPet.images[0]);
+                                            if (diff > 40 && currentIndex < selectedAdoptionPet.images.length - 1) {
+                                                setSelectedAdoptionPet({ ...selectedAdoptionPet, img: selectedAdoptionPet.images[currentIndex + 1] });
+                                            } else if (diff < -40 && currentIndex > 0) {
+                                                setSelectedAdoptionPet({ ...selectedAdoptionPet, img: selectedAdoptionPet.images[currentIndex - 1] });
+                                            }
+                                        }
+                                    }}
                                 >
-                                    <ChevronLeft className="w-6 h-6" />
-                                </button>
+                                    <img 
+                                        key={selectedAdoptionPet.img}
+                                        src={selectedAdoptionPet.img} 
+                                        className="w-full h-full object-cover animate-in fade-in zoom-in-95 duration-300" 
+                                    />
 
-                                {selectedAdoptionPet.images && selectedAdoptionPet.images.length > 1 && (
-                                    <div className="absolute bottom-10 left-6 flex gap-2 z-20 overflow-x-auto no-scrollbar max-w-[calc(100%-48px)] pb-1">
-                                        {selectedAdoptionPet.images.map((url: string, i: number) => (
-                                            <button
-                                                key={i}
-                                                onClick={() => setSelectedAdoptionPet({ ...selectedAdoptionPet, img: url })}
-                                                className={cn(
-                                                    "w-12 h-12 rounded-xl border-2 overflow-hidden shrink-0 transition-all",
-                                                    selectedAdoptionPet.img === url ? "border-cyan-400 scale-105" : "border-white/10 opacity-60"
+                                    {/* Badge Layering */}
+                                    <div className="absolute bottom-0 inset-x-0 p-6 flex items-end justify-between z-10 pointer-events-none">
+                                        <div className="flex flex-col gap-1 min-w-0 pr-4">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <div className="px-2 py-1 rounded-md bg-cyan-500 text-black text-[9px] font-black tracking-widest uppercase shadow-lg shadow-cyan-500/30 flex items-center gap-1">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-white dark:bg-black animate-pulse" /> YUVASINI ARIYOR
+                                                </div>
+                                                {selectedAdoptionPet.created_at && (
+                                                    <span className="text-[9px] font-bold text-black/80 dark:text-white/80 bg-black/40 backdrop-blur-md px-2 py-1 rounded-md">
+                                                        {new Date(selectedAdoptionPet.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}
+                                                    </span>
                                                 )}
-                                            >
-                                                <img src={url} className="w-full h-full object-cover" />
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Content */}
-                            <div className="flex-1 overflow-y-auto no-scrollbar px-6 -mt-8 relative z-10">
-                                <span className="text-cyan-400 text-[10px] font-black uppercase tracking-widest">{selectedAdoptionPet.breed}</span>
-                                <h1 className="text-4xl font-black text-[var(--foreground)] leading-tight mt-1">{selectedAdoptionPet.name}</h1>
-
-                                <div className="flex gap-2 mt-4">
-                                    {selectedAdoptionPet.tags?.map((tag: string) => (
-                                        <div key={tag} className="bg-[var(--card-bg)] border border-white/10 px-3 py-1.5 rounded-full text-xs font-bold text-[var(--foreground)] flex items-center gap-1.5">
-                                            <Check className="w-3 h-3 text-cyan-400" /> {tag}
+                                            </div>
                                         </div>
-                                    ))}
+                                    </div>
+
+                                    {/* Pagination Dots */}
+                                    {selectedAdoptionPet.images && selectedAdoptionPet.images.length > 1 && (
+                                        <div className="absolute top-6 inset-x-0 flex justify-center gap-1.5 z-20 pointer-events-none">
+                                            {selectedAdoptionPet.images.map((url: string, i: number) => (
+                                                <div key={i} className={cn("h-1.5 rounded-full transition-all duration-300", (selectedAdoptionPet.img || selectedAdoptionPet.images[0]) === url ? "w-4 bg-white shadow-sm" : "w-1.5 bg-white/50 backdrop-blur-sm")} />
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Floating Actions (Close & Share) on top of image */}
+                                    <div className="absolute top-12 sm:top-6 right-6 flex items-center gap-2 z-20">
+                                        <button 
+                                            onClick={async () => {
+                                                try {
+                                                    if (navigator.share) {
+                                                        await navigator.share({
+                                                            title: 'Sahiplenme İlanı: ' + selectedAdoptionPet.name,
+                                                            text: 'Bu tatlı dosta yuva olmak ister misin?',
+                                                            url: window.location.href,
+                                                        });
+                                                    } else {
+                                                        showToast("Bağlantı Kopyalandı", "İlan linki panoya kopyalandı", "success");
+                                                    }
+                                                } catch (err) {
+                                                    console.error("Share failed:", err);
+                                                }
+                                            }}
+                                            className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-md border border-black/10 dark:border-white/10 flex items-center justify-center text-black/80 dark:text-white/80 hover:bg-black/60 hover:text-white transition-all active:scale-95"
+                                        >
+                                            <Share2 className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button 
+                                            onClick={() => setSelectedAdoptionPet(null)}
+                                            className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-md border border-black/10 dark:border-white/10 flex items-center justify-center text-black/80 dark:text-white/80 hover:bg-black/60 hover:text-white transition-all active:scale-95"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
                                 </div>
 
-                                <div className="mt-8 bg-[var(--card-bg)] rounded-3xl p-5 border border-[var(--card-border)]">
-                                    <h3 className="text-[var(--foreground)]/50 text-xs font-bold uppercase tracking-wider mb-2">Hikaye & Durum</h3>
-                                    <p className="text-gray-300 text-sm leading-relaxed font-medium">
-                                        {selectedAdoptionPet.desc}
-                                    </p>
+                                {/* Content */}
+                                <div className="flex-1 px-6 pt-2 pb-6 bg-[var(--background)] relative z-10 -mt-4 rounded-t-3xl">
+                                    <h1 className="text-2xl font-black text-[var(--foreground)] leading-tight mt-1">{selectedAdoptionPet.name}</h1>
+
+                                    {/* Thumbnail Gallery */}
+                                    {selectedAdoptionPet.images && selectedAdoptionPet.images.length > 1 && (
+                                        <div className="flex gap-2 overflow-x-auto no-scrollbar py-2 mb-2">
+                                            {selectedAdoptionPet.images.map((url: string, i: number) => (
+                                                <button 
+                                                    key={i} 
+                                                    onClick={() => setSelectedAdoptionPet({ ...selectedAdoptionPet, img: url })}
+                                                    className={cn(
+                                                        "w-14 h-14 rounded-xl overflow-hidden shrink-0 transition-all border",
+                                                        (selectedAdoptionPet.img || selectedAdoptionPet.images[0]) === url ? "border-cyan-500 scale-105 shadow-md" : "border-black/10 dark:border-white/10 opacity-60 hover:opacity-100"
+                                                    )}
+                                                >
+                                                    <img src={url} alt={`Görsel ${i+1}`} className="w-full h-full object-cover" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Author Profile Snippet */}
+                                    <div className="flex items-center gap-3 mt-3 mb-4">
+                                        <div className="w-7 h-7 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden border border-black/20 dark:border-white/20">
+                                            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedAdoptionPet.user_id}`} className="w-full h-full object-cover" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-widest leading-tight">İlan Sahibi</span>
+                                            <span className="text-sm font-black text-[var(--foreground)] leading-tight">{selectedAdoptionPet.author_name || selectedAdoptionPet.owner}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Capsules */}
+                                    <div className="flex gap-2 flex-wrap mb-5">
+                                        {selectedAdoptionPet.breed && (
+                                            <div className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 px-3 py-1.5 rounded-lg text-[11px] font-bold text-[var(--foreground)] flex items-center gap-1.5">
+                                                <span className="text-[15px]">🐾</span> {selectedAdoptionPet.breed}
+                                            </div>
+                                        )}
+                                        {selectedAdoptionPet.age && (
+                                            <div className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 px-3 py-1.5 rounded-lg text-[11px] font-bold text-[var(--foreground)] flex items-center gap-1.5">
+                                                <span className="text-[15px]">🎂</span> {selectedAdoptionPet.age}
+                                            </div>
+                                        )}
+                                        {selectedAdoptionPet.gender && (
+                                            <div className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 px-3 py-1.5 rounded-lg text-[11px] font-bold text-[var(--foreground)] flex items-center gap-1.5">
+                                                <span className="text-[15px]">{selectedAdoptionPet.gender === 'Erkek' ? '♂️' : '♀️'}</span> {selectedAdoptionPet.gender}
+                                            </div>
+                                        )}
+                                        {selectedAdoptionPet.tags?.map((tag: string) => (
+                                            <div key={tag} className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 px-3 py-1.5 rounded-lg text-[11px] font-bold text-[var(--foreground)] flex items-center gap-1.5">
+                                                <Check className="w-3.5 h-3.5 text-cyan-400" /> {tag}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="bg-card dark:bg-[#1C1C1E] rounded-xl p-3.5 border border-black/5 dark:border-white/5 relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 blur-3xl rounded-full" />
+                                        <h3 className="text-cyan-400/80 text-[10px] font-black uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                                            <Info className="w-3 h-3" /> Hikaye & Durum
+                                        </h3>
+                                        <p className="text-gray-300 text-xs leading-relaxed font-medium whitespace-pre-wrap relative z-10">
+                                            {selectedAdoptionPet.description || selectedAdoptionPet.desc}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
 
                             {/* Apple iOS Style Floating Action Bar */}
-                            <div className="w-full p-6 pt-2 pb-10 bg-gradient-to-t from-[var(--background)] via-[var(--background)] to-transparent relative z-20">
-                                <div className="flex gap-3">
+                            <div className="w-full p-4 sm:px-5 pt-2 pb-5 bg-gradient-to-t from-[var(--background)] via-[var(--background)] to-transparent relative z-20 shrink-0">
+                                <div className="flex gap-2.5">
                                     <button
                                         onClick={() => handleStartAdoptionChat(selectedAdoptionPet)}
-                                        className="flex-1 py-4 rounded-full bg-white/10 border border-white/10 text-[var(--foreground)] font-bold text-[15px] active:scale-95 transition-transform flex items-center justify-center gap-2"
+                                        className="flex-1 py-3 rounded-xl bg-black/10 dark:bg-white/10 border border-black/10 dark:border-white/10 text-[var(--foreground)] font-bold text-xs active:scale-95 transition-transform flex items-center justify-center gap-1.5"
                                     >
-                                        <MessageCircle className="w-5 h-5" /> Mesaj
+                                        <MessageCircle className="w-4 h-4" /> Mesaj
                                     </button>
                                     <button
                                         onClick={() => setIsApplicationFormOpen(true)}
-                                        className="flex-[2] py-4 rounded-full bg-cyan-500 text-black font-black text-[15px] shadow-[0_10px_30px_rgba(34,211,238,0.3)] active:scale-95 transition-transform flex items-center justify-center gap-2"
+                                        className="flex-[2] py-3 rounded-xl bg-cyan-500 text-black font-black text-xs shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-1.5"
                                     >
-                                        <HeartHandshake className="w-5 h-5" /> Sahiplenme Başvurusu
+                                        <HeartHandshake className="w-4 h-4" /> Sahiplenme Başvurusu
                                     </button>
                                 </div>
                                 <button
@@ -4279,11 +4485,11 @@ export default function MoffiSocialMasterpiece() {
                                         setReportingAdId(selectedAdoptionPet?.id || null);
                                         setIsReportAdModalOpen(true);
                                     }}
-                                    className="w-full mt-3 py-3 rounded-full bg-red-500/10 text-red-400 font-bold text-[13px] border border-red-500/20 active:scale-95 transition-transform flex items-center justify-center gap-2"
+                                    className="w-full mt-2 py-2.5 rounded-xl bg-red-500/10 text-red-400 font-bold text-[11px] border border-red-500/20 active:scale-95 transition-transform flex items-center justify-center gap-1.5"
                                 >
-                                    <ShieldAlert className="w-4 h-4" /> Ücret Talep Ediyor / İhbar Et
+                                    <ShieldAlert className="w-3.5 h-3.5" /> Ücret Talep Ediyor / İhbar Et
                                 </button>
-                                <p className="text-[10px] text-[var(--secondary-text)] text-center font-medium mt-2">Moffi Güvenli Mesajlaşma ile verileriniz uçtan uca korunur.</p>
+                                <p className="text-[9px] text-[var(--secondary-text)] text-center font-medium mt-1.5">Moffi Güvenli Mesajlaşma ile verileriniz uçtan uca korunur.</p>
                             </div>
                         </motion.div>
                     </motion.div>
@@ -4317,15 +4523,15 @@ export default function MoffiSocialMasterpiece() {
                                     setIsReportAdModalOpen(false);
                                 }
                             }}
-                            className="relative bg-[var(--card-bg)] rounded-t-[2.5rem] p-6 pb-12 border-t border-white/10 z-10"
+                            className="relative bg-[var(--card-bg)] rounded-t-[2.5rem] p-4 sm:p-6 pb-12 border-t border-black/10 dark:border-white/10 z-10"
                         >
                             <button 
                                 onClick={() => setIsReportAdModalOpen(false)}
-                                className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-6 hover:bg-white/40 transition-colors cursor-pointer block" 
+                                className="w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full mx-auto mb-6 hover:bg-white/40 transition-colors cursor-pointer block" 
                             />
 
                             <div className="flex items-center gap-3 mb-6">
-                                <button onClick={() => setIsReportAdModalOpen(false)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center -ml-2 hover:bg-white/10 transition-colors">
+                                <button onClick={() => setIsReportAdModalOpen(false)} className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center -ml-2 hover:bg-black/10 dark:bg-white/10 transition-colors">
                                     <ChevronLeft className="w-6 h-6" />
                                 </button>
                                 <div className="w-12 h-12 rounded-2xl bg-red-500/20 flex items-center justify-center ml-1">
@@ -4367,7 +4573,7 @@ export default function MoffiSocialMasterpiece() {
                                 className="w-full py-4 rounded-full bg-red-500 text-[var(--foreground)] font-black text-[15px] active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-40"
                             >
                                 {isSubmittingReport ? (
-                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    <div className="w-5 h-5 border-2 border-black/30 dark:border-white/30 border-t-white rounded-full animate-spin" />
                                 ) : (
                                     <><ShieldAlert className="w-5 h-5" /> Bildirimi Gönder</>
                                 )}
@@ -4403,18 +4609,18 @@ export default function MoffiSocialMasterpiece() {
                                     setIsApplicationFormOpen(false);
                                 }
                             }}
-                            className="relative bg-[var(--background)] rounded-t-[3rem] p-6 pb-12 border-t border-white/10 z-10 flex flex-col max-h-[90vh]"
+                            className="relative bg-[var(--background)] rounded-t-[3rem] p-4 sm:p-6 pb-12 border-t border-black/10 dark:border-white/10 z-10 flex flex-col max-h-[90vh]"
                         >
                             <button 
                                 onClick={() => setIsApplicationFormOpen(false)}
-                                className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-6 hover:bg-white/40 transition-colors cursor-pointer block" 
+                                className="w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full mx-auto mb-6 hover:bg-white/40 transition-colors cursor-pointer block" 
                             />
 
                             <div className="flex items-center gap-4 mb-8">
-                                <button onClick={() => setIsApplicationFormOpen(false)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center -ml-2 hover:bg-white/10 transition-colors">
+                                <button onClick={() => setIsApplicationFormOpen(false)} className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center -ml-2 hover:bg-black/10 dark:bg-white/10 transition-colors">
                                     <ChevronLeft className="w-6 h-6" />
                                 </button>
-                                <div className="w-16 h-16 rounded-[1.5rem] overflow-hidden border border-white/10">
+                                <div className="w-16 h-16 rounded-[1.5rem] overflow-hidden border border-black/10 dark:border-white/10">
                                     <img src={selectedAdoptionPet.img} className="w-full h-full object-cover" />
                                 </div>
                                 <div>
@@ -4467,7 +4673,7 @@ export default function MoffiSocialMasterpiece() {
                                         placeholder="Neden onu sahiplenmek istiyorsunuz? Ona nasıl bir hayat sunacaksınız?"
                                         value={appNote}
                                         onChange={(e) => setAppNote(e.target.value)}
-                                        className="w-full bg-[var(--card-bg)] border border-white/10 rounded-2xl px-5 py-4 text-[var(--foreground)] text-[15px] focus:outline-none focus:border-cyan-400 transition-colors resize-none placeholder:text-gray-600"
+                                        className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl px-5 py-4 text-[var(--foreground)] text-[15px] focus:outline-none focus:border-cyan-400 transition-colors resize-none placeholder:text-gray-600"
                                     />
                                 </div>
 
@@ -4503,7 +4709,7 @@ export default function MoffiSocialMasterpiece() {
                         animate={{ x: 0 }}
                         exit={{ x: "100%" }}
                         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                        className="fixed inset-0 z-[500] bg-black flex flex-col"
+                        className="fixed inset-0 z-[500] bg-white dark:bg-black flex flex-col"
                     >
                         {/* Header */}
                         <div className="pt-12 pb-4 px-4 bg-black/80 backdrop-blur-xl border-b border-[var(--card-border)] flex items-center gap-3">
@@ -4511,7 +4717,7 @@ export default function MoffiSocialMasterpiece() {
                                 <ChevronLeft className="w-6 h-6" />
                             </button>
                             <div className="flex items-center gap-3">
-                                <img src={adoptionChatPet.img} className="w-10 h-10 rounded-full object-cover border border-white/10" />
+                                <img src={adoptionChatPet.img} className="w-10 h-10 rounded-full object-cover border border-black/10 dark:border-white/10" />
                                 <div>
                                     <h3 className="text-[var(--foreground)] font-bold text-sm leading-tight">{adoptionChatPet.name} İlanı</h3>
                                     <p className="text-green-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
@@ -4522,7 +4728,7 @@ export default function MoffiSocialMasterpiece() {
                         </div>
 
                         {/* Messages Area */}
-                        <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-4">
+                        <div className="flex-1 overflow-y-auto no-scrollbar p-4 sm:p-6 space-y-4">
                             {adoptionMessages.map((msg) => (
                                 <motion.div
                                     key={msg.id}
@@ -4534,14 +4740,14 @@ export default function MoffiSocialMasterpiece() {
                                     )}
                                 >
                                     {msg.sender === 'system' ? (
-                                        <div className="bg-[var(--card-bg)] border border-white/10 rounded-2xl px-4 py-2 text-[11px] text-[var(--secondary-text)] text-center leading-relaxed">
+                                        <div className="bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl px-4 py-2 text-[11px] text-[var(--secondary-text)] text-center leading-relaxed">
                                             {msg.text}
                                         </div>
                                     ) : (
                                         <>
                                             <div className={cn(
                                                 "px-4 py-2.5 rounded-2xl text-[14px] font-medium leading-[1.4]",
-                                                msg.sender === 'me' ? "bg-cyan-500 text-[var(--foreground)] rounded-tr-sm" : "bg-[#1C1C1E] text-[var(--foreground)] rounded-tl-sm border border-[var(--card-border)]"
+                                                msg.sender === 'me' ? "bg-cyan-500 text-[var(--foreground)] rounded-tr-sm" : "bg-card dark:bg-[#1C1C1E] text-[var(--foreground)] rounded-tl-sm border border-[var(--card-border)]"
                                             )}>
                                                 {msg.text}
                                             </div>
@@ -4554,7 +4760,7 @@ export default function MoffiSocialMasterpiece() {
 
                         {/* Input Area */}
                         <div className="p-4 pb-10 bg-black/80 backdrop-blur-xl border-t border-[var(--card-border)]">
-                            <div className="flex items-center gap-2 bg-[#1C1C1E] rounded-full p-2 pl-4 border border-[var(--card-border)]">
+                            <div className="flex items-center gap-2 bg-card dark:bg-[#1C1C1E] rounded-full p-2 pl-4 border border-[var(--card-border)]">
                                 <input
                                     type="text"
                                     placeholder="Bir mesaj yazın..."
@@ -4584,12 +4790,12 @@ export default function MoffiSocialMasterpiece() {
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
                             transition={{ duration: 0.2 }}
-                            className="fixed inset-0 z-[200] bg-black flex flex-col justify-center items-center"
+                            className="fixed inset-0 z-[200] bg-white dark:bg-black flex flex-col justify-center items-center"
                         >
                             {/* Progress Bars Placeholder */}
                             <div className="absolute top-4 left-4 right-4 z-10 flex gap-1 h-0.5">
                                 {storyGroups[viewerStoryGroupIndex].stories.map((_, idx) => (
-                                    <div key={idx} className="flex-1 bg-white/20 overflow-hidden rounded-full relative">
+                                    <div key={idx} className="flex-1 bg-black/20 dark:bg-white/20 overflow-hidden rounded-full relative">
                                                                                 <StoryProgressBar 
                                             isActive={idx === viewerStoryIndex} 
                                             isCompleted={idx < viewerStoryIndex}
@@ -4608,11 +4814,11 @@ export default function MoffiSocialMasterpiece() {
                                     <span className="font-bold text-sm tracking-wide">{storyGroups[viewerStoryGroupIndex].author_name}</span>
                                     <span className="text-[var(--foreground)]/60 text-xs mt-0.5">· {formatTimeAgo(storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].created_at)}</span>
                                 </div>
-                                <button onClick={closeStoryViewer} className="w-8 h-8 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center border border-white/20 active:scale-90 transition-transform"><X className="w-5 h-5" /></button>
+                                <button onClick={closeStoryViewer} className="w-8 h-8 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center border border-black/20 dark:border-white/20 active:scale-90 transition-transform"><X className="w-5 h-5" /></button>
                             </div>
 
                             {/* Media Display */}
-                            <div className="relative w-full h-full md:max-w-md md:aspect-[9/16] md:h-auto md:max-h-[90vh] md:rounded-3xl overflow-hidden bg-[#1c1c1e] md:border md:border-white/10 shadow-2xl">
+                            <div className="relative w-full h-full md:max-w-md md:aspect-[9/16] md:h-auto md:max-h-[90vh] md:rounded-3xl overflow-hidden bg-[#1c1c1e] md:border md:border-black/10 dark:border-white/10 shadow-2xl">
                                 <img
                                     key={storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].id}
                                     src={storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].media_url}
@@ -4688,23 +4894,23 @@ export default function MoffiSocialMasterpiece() {
                                     {storyGroups[viewerStoryGroupIndex].user_id === user?.id ? (
                                         <div className="flex items-center justify-between w-full text-[var(--foreground)]">
                                             <button className="flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); showToast("İstatistikler", "Luna, Felix ve 12 diğer kişi gördü.", "info"); }}>
-                                                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                                                <div className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center border border-black/10 dark:border-white/10">
                                                     <Activity className="w-4 h-4 text-white" />
                                                 </div>
-                                                <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Görüntüleme</span>
+                                                <span className="text-[8px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest">Görüntüleme</span>
                                             </button>
                                             <div className="flex gap-4">
                                                 <button className="flex flex-col items-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); showToast("Öne Çıkarılıyor", "Hikayeniz vitrine taşınıyor...", "success"); }}>
-                                                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                                                    <div className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center border border-black/10 dark:border-white/10">
                                                         <Heart className="w-4 h-4 text-white" />
                                                     </div>
-                                                    <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Öne Çıkar</span>
+                                                    <span className="text-[8px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest">Öne Çıkar</span>
                                                 </button>
                                                 <button className="flex flex-col items-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); showToast("Seçenekler", "İşlem menüsü açılıyor...", "info"); }}>
-                                                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                                                    <div className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center border border-black/10 dark:border-white/10">
                                                         <MoreHorizontal className="w-4 h-4 text-white" />
                                                     </div>
-                                                    <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Daha Fazla</span>
+                                                    <span className="text-[8px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest">Daha Fazla</span>
                                                 </button>
                                             </div>
                                         </div>
@@ -4809,7 +5015,7 @@ function SettingsRow({ icon: Icon, label, danger, onClick }: { icon: any, label:
     return (
         <button onClick={onClick} className={cn("w-full flex items-center justify-between p-4 rounded-2xl hover:bg-[var(--card-bg)] transition-colors group", danger && "hover:bg-red-500/10")}>
             <div className="flex items-center gap-4">
-                <div className={cn("p-2 rounded-full", danger ? "bg-red-500/20 text-red-500" : "bg-white/10 text-[var(--foreground)]")}>
+                <div className={cn("p-2 rounded-full", danger ? "bg-red-500/20 text-red-500" : "bg-black/10 dark:bg-white/10 text-[var(--foreground)]")}>
                     <Icon className="w-5 h-5" />
                 </div>
                 <span className={cn("font-bold", danger ? "text-red-500" : "text-[var(--foreground)]/90")}>{label}</span>
@@ -4838,14 +5044,14 @@ const TimeWheel = ({ value, onChange, max, label }: { value: number, onChange: (
     return (
         <div className="flex flex-col items-center gap-2">
             <span className="text-[10px] font-black text-secondary uppercase tracking-widest">{label}</span>
-            <div className="h-40 overflow-y-auto no-scrollbar snap-y snap-mandatory bg-black/20 rounded-2xl border border-white/5 w-16">
+            <div className="h-40 overflow-y-auto no-scrollbar snap-y snap-mandatory bg-black/20 rounded-2xl border border-black/5 dark:border-white/5 w-16">
                 {numbers.map(n => (
                     <button 
                         key={n} 
                         onClick={() => onChange(n)} 
                         className={cn(
                             "h-10 w-full flex items-center justify-center snap-start transition-all", 
-                            value === n ? "text-cyan-400 font-black text-lg bg-cyan-400/10" : "text-white/20 text-sm"
+                            value === n ? "text-cyan-400 font-black text-lg bg-cyan-400/10" : "text-black/30 dark:text-white/20 text-sm"
                         )}
                     >
                         {n.toString().padStart(2, '0')}
@@ -4855,3 +5061,4 @@ const TimeWheel = ({ value, onChange, max, label }: { value: number, onChange: (
         </div>
     );
 };
+

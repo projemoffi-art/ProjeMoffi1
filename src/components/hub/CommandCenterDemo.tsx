@@ -58,16 +58,16 @@ export function CommandCenterDemo({ isOpen, onClose }: CommandCenterDemoProps) {
                     animate={{ y: 0 }}
                     exit={{ y: '100%' }}
                     transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                    className="absolute bottom-0 left-0 right-0 bg-white/5 border-t border-card-border rounded-t-[3.5rem] p-8 shadow-[0_-20px_80px_rgba(0,0,0,0.8)] flex flex-col min-h-[85vh] overflow-hidden"
+                    className="absolute bottom-0 left-0 right-0 bg-black/5 dark:bg-white/5 border-t border-card-border rounded-t-[3.5rem] p-8 shadow-[0_-20px_80px_rgba(0,0,0,0.8)] flex flex-col min-h-[85vh] overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Apple Handle */}
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/20 rounded-full" />
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full" />
 
                     {/* Header: Title & Clock */}
                     <div className="flex justify-between items-start mt-4 mb-8">
                         <div>
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-1">Moffi Intelligence</p>
+                            <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-[0.3em] mb-1">Moffi Intelligence</p>
                             <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase">Command Center</h2>
                         </div>
                         <div className="text-right">
@@ -114,7 +114,7 @@ export function CommandCenterDemo({ isOpen, onClose }: CommandCenterDemoProps) {
                                 <span className="text-4xl font-black text-white italic">{stats.steps.toLocaleString()}</span>
                                 <span className="text-xs text-yellow-400 font-bold uppercase italic">Pati</span>
                             </div>
-                            <div className="w-full bg-white/5 h-1 rounded-full mt-3 overflow-hidden">
+                            <div className="w-full bg-black/5 dark:bg-white/5 h-1 rounded-full mt-3 overflow-hidden">
                                 <div className="bg-yellow-500 h-full w-[65%]" />
                             </div>
                         </div>
@@ -141,7 +141,7 @@ export function CommandCenterDemo({ isOpen, onClose }: CommandCenterDemoProps) {
                             </div>
                             
                             <div className="relative pt-2">
-                                <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                <div className="w-full h-1.5 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
                                     <motion.div 
                                         animate={{ width: `${(1.4 - courierDist + 0.1) / 1.5 * 100}%` }}
                                         className="h-full bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.5)]" 
@@ -168,7 +168,7 @@ export function CommandCenterDemo({ isOpen, onClose }: CommandCenterDemoProps) {
                             ].map((item, i) => (
                                 <button key={i} className="flex flex-col items-center gap-3 active:scale-95 transition-all relative group">
                                     <div className={cn(
-                                        "w-16 h-16 rounded-[1.8rem] bg-white/5 border border-card-border flex items-center justify-center text-white shadow-xl hover:bg-white/10 transition-colors",
+                                        "w-16 h-16 rounded-[1.8rem] bg-black/5 dark:bg-white/5 border border-card-border flex items-center justify-center text-white shadow-xl hover:bg-black/10 dark:bg-white/10 transition-colors",
                                         `hover:border-${item.color}-500/30`
                                     )}>
                                         <item.icon size={24} />

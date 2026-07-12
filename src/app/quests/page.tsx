@@ -69,7 +69,7 @@ export default function FullQuestCenter() {
                         className={cn(
                             "w-10 h-10 rounded-full flex items-center justify-center border transition-all duration-200 active:scale-90",
                             isDark 
-                                ? "bg-white/5 border-card-border text-white/70 hover:bg-white/10 hover:text-white" 
+                                ? "bg-black/5 dark:bg-white/5 border-card-border text-black/70 dark:text-white/70 hover:bg-black/10 dark:bg-white/10 hover:text-white" 
                                 : "bg-[#faf6eb] border-[#c0a684] text-[#624730] hover:bg-[#e7dec4]"
                         )}
                     >
@@ -123,7 +123,7 @@ export default function FullQuestCenter() {
                             <div className="flex justify-between mb-1">
                                 <span className={cn(
                                     "text-[9px] font-black uppercase tracking-widest transition-colors duration-300",
-                                    isDark ? "text-white/30" : "text-[#624730]/60"
+                                    isDark ? "text-black/40 dark:text-white/30" : "text-[#624730]/60"
                                 )}>
                                     Mana Seviyesi (XP)
                                 </span>
@@ -138,7 +138,7 @@ export default function FullQuestCenter() {
                             {/* Glowing Mana Bar */}
                             <div className={cn(
                                 "h-2.5 rounded-full overflow-hidden border transition-all duration-300",
-                                isDark ? "bg-white/5 border-white/[0.04]" : "bg-[#e7dec4] border-[#c0a684]/50 shadow-inner"
+                                isDark ? "bg-black/5 dark:bg-white/5 border-white/[0.04]" : "bg-[#e7dec4] border-[#c0a684]/50 shadow-inner"
                             )}>
                                 <motion.div
                                     className={cn(
@@ -177,7 +177,7 @@ export default function FullQuestCenter() {
                                     <span className={cn("text-xs font-black", s.color)}>{s.val}</span>
                                     <span className={cn(
                                         "text-[8px] font-bold uppercase mt-0.5 tracking-wider transition-colors duration-300",
-                                        isDark ? "text-white/30" : "text-[#624730]/50"
+                                        isDark ? "text-black/40 dark:text-white/30" : "text-[#624730]/50"
                                     )}>
                                         {s.label}
                                     </span>
@@ -211,7 +211,7 @@ export default function FullQuestCenter() {
                                     ? 'bg-purple-500/20 text-purple-300 border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.25)]'
                                     : 'bg-[#faf6eb] text-[#624730] border-[#c0a684] shadow-md shadow-[#9c8b74]/8'
                                 : isDark
-                                    ? 'border-transparent text-white/35 hover:text-white/60 hover:bg-white/5'
+                                    ? 'border-transparent text-white/35 hover:text-black/60 dark:text-white/60 hover:bg-black/5 dark:bg-white/5'
                                     : 'border-transparent text-[#9c8b74] hover:text-[#624730] hover:bg-[#faf6eb]/50'
                         )}
                     >
@@ -271,7 +271,7 @@ export default function FullQuestCenter() {
                                 <div className="flex flex-col items-end gap-1.5">
                                     <div className={cn(
                                         "px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-inner transition-colors duration-300",
-                                        isDark ? "bg-white/10 text-white/70" : "bg-[#e7dec4] text-[#624730]"
+                                        isDark ? "bg-black/10 dark:bg-white/10 text-black/70 dark:text-white/70" : "bg-[#e7dec4] text-[#624730]"
                                     )}>
                                         ⏳ Kapanış: 3g 12s
                                     </div>
@@ -303,7 +303,7 @@ export default function FullQuestCenter() {
                                     <div>
                                         <h4 className={cn(
                                             "text-[11px] font-black uppercase tracking-widest transition-colors duration-300",
-                                            isDark ? "text-white/70" : "text-[#624730]/70"
+                                            isDark ? "text-black/70 dark:text-white/70" : "text-[#624730]/70"
                                         )}>
                                             Canlı Etkinlik
                                         </h4>
@@ -336,7 +336,7 @@ export default function FullQuestCenter() {
                         >
                             {monthlyResearch
                                 ? <ResearchPanel research={monthlyResearch} />
-                                : <div className={cn("text-center py-10 text-xs transition-colors", isDark ? "text-white/20" : "text-[#624730]/40")}>Araştırma yükleniyor...</div>
+                                : <div className={cn("text-center py-10 text-xs transition-colors", isDark ? "text-black/30 dark:text-white/20" : "text-[#624730]/40")}>Araştırma yükleniyor...</div>
                             }
                         </motion.div>
                     )}
@@ -352,7 +352,7 @@ export default function FullQuestCenter() {
                             <div className="flex items-center justify-between">
                                 <span className={cn(
                                     "text-[10px] font-black uppercase tracking-widest transition-colors",
-                                    isDark ? "text-white/30" : "text-[#624730]/65"
+                                    isDark ? "text-black/40 dark:text-white/30" : "text-[#624730]/65"
                                 )}>
                                     Rozet Koleksiyonu
                                 </span>

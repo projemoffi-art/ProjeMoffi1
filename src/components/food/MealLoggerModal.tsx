@@ -72,12 +72,12 @@ export function MealLoggerModal({ isOpen, onClose, onAddMeal }: MealLoggerModalP
                                 <Utensils className="w-6 h-6" />
                             </div>
                             <h3 className="text-lg font-black tracking-tight">Öğün / Yemek Ekle</h3>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Önerilen Öğünler veya Manuel Giriş</p>
+                            <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-1">Önerilen Öğünler veya Manuel Giriş</p>
                         </div>
 
                         {/* Quick Add List */}
                         <div className="space-y-3 mb-6">
-                            <span className="text-[9.5px] font-black text-gray-400 uppercase tracking-wider block mb-1">Hızlı Seçenekler</span>
+                            <span className="text-[9.5px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider block mb-1">Hızlı Seçenekler</span>
                             {quickMeals.map((meal) => (
                                 <button
                                     key={meal.id}
@@ -86,7 +86,7 @@ export function MealLoggerModal({ isOpen, onClose, onAddMeal }: MealLoggerModalP
                                 >
                                     <div>
                                         <h4 className="text-xs font-black text-gray-800 dark:text-white/95 group-hover:text-orange-600 transition-colors">{meal.label}</h4>
-                                        <p className="text-[10px] text-gray-400 font-bold mt-0.5">{meal.type} • {meal.amount}</p>
+                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mt-0.5">{meal.type} • {meal.amount}</p>
                                     </div>
                                     <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-100 dark:border-orange-900/30 text-orange-600 dark:text-orange-400 text-xs font-black px-3 py-1.5 rounded-xl">
                                         +{meal.calories} kcal
@@ -97,7 +97,7 @@ export function MealLoggerModal({ isOpen, onClose, onAddMeal }: MealLoggerModalP
 
                         {/* Custom Input Form */}
                         <form onSubmit={handleCustomSubmit} className="pt-4 border-t border-gray-100 dark:border-white/5">
-                            <span className="text-[9.5px] font-black text-gray-400 uppercase tracking-wider block mb-3.5">Özel Kalori Ekle</span>
+                            <span className="text-[9.5px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider block mb-3.5">Özel Kalori Ekle</span>
                             <div className="space-y-3.5">
                                 <div>
                                     <input 
@@ -105,7 +105,7 @@ export function MealLoggerModal({ isOpen, onClose, onAddMeal }: MealLoggerModalP
                                         placeholder="Yemek / Atıştırmalık Adı (örn. Yaş Mama)" 
                                         value={customType}
                                         onChange={(e) => setCustomType(e.target.value)}
-                                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 p-3.5 rounded-2xl text-xs font-bold outline-none placeholder:text-gray-400 text-gray-800 dark:text-white focus:border-orange-500 transition-colors"
+                                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 p-3.5 rounded-2xl text-xs font-bold outline-none placeholder:text-gray-500 dark:text-gray-400 text-gray-800 dark:text-white focus:border-orange-500 transition-colors"
                                     />
                                 </div>
                                 <div className="flex gap-3">
@@ -115,7 +115,7 @@ export function MealLoggerModal({ isOpen, onClose, onAddMeal }: MealLoggerModalP
                                         value={customKcal}
                                         onChange={(e) => setCustomKcal(e.target.value)}
                                         required
-                                        className="flex-1 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 p-3.5 rounded-2xl text-xs font-bold outline-none placeholder:text-gray-400 text-gray-800 dark:text-white focus:border-orange-500 transition-colors"
+                                        className="flex-1 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 p-3.5 rounded-2xl text-xs font-bold outline-none placeholder:text-gray-500 dark:text-gray-400 text-gray-800 dark:text-white focus:border-orange-500 transition-colors"
                                     />
                                     <button 
                                         type="submit"

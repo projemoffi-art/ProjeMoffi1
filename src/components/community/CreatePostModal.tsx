@@ -54,11 +54,11 @@ export default function CreatePostModal({ isOpen, onClose, onSubmit }: CreatePos
                         initial={{ opacity: 0, y: 100, scale: 0.9 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 100, scale: 0.9 }}
-                        className="fixed inset-x-4 top-20 bottom-24 z-50 bg-[#1A1A1A] border border-card-border rounded-[2rem] p-6 flex flex-col shadow-2xl overflow-y-auto"
+                        className="fixed inset-x-4 top-20 bottom-24 z-50 bg-card dark:bg-[#1A1A1A] border border-card-border rounded-[2rem] p-6 flex flex-col shadow-2xl overflow-y-auto"
                     >
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-xl font-bold text-white">Yeni Gönderi</h2>
-                            <button onClick={onClose} className="p-2 bg-white/5 rounded-full hover:bg-white/10"><X className="w-5 h-5 text-gray-400" /></button>
+                            <button onClick={onClose} className="p-2 bg-black/5 dark:bg-white/5 rounded-full hover:bg-black/10 dark:bg-white/10"><X className="w-5 h-5 text-gray-500 dark:text-gray-400" /></button>
                         </div>
 
                         {/* Image Preview / Selector */}
@@ -70,8 +70,8 @@ export default function CreatePostModal({ isOpen, onClose, onSubmit }: CreatePos
                                 <img src={preview} className="w-full h-full object-cover" />
                             ) : (
                                 <>
-                                    <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-2">
-                                        <ImageIcon className="w-6 h-6 text-gray-400" />
+                                    <div className="w-12 h-12 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center mb-2">
+                                        <ImageIcon className="w-6 h-6 text-gray-500 dark:text-gray-400" />
                                     </div>
                                     <p className="text-xs text-gray-500">Fotoğraf Seç veya Çek</p>
                                 </>
@@ -89,8 +89,8 @@ export default function CreatePostModal({ isOpen, onClose, onSubmit }: CreatePos
                             />
 
                             {/* Location Input */}
-                            <div className="flex items-center gap-2 bg-white/5 px-4 py-3 rounded-xl">
-                                <MapPin className="w-4 h-4 text-gray-400" />
+                            <div className="flex items-center gap-2 bg-black/5 dark:bg-white/5 px-4 py-3 rounded-xl">
+                                <MapPin className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                                 <input
                                     type="text"
                                     placeholder="Konum Ekle"

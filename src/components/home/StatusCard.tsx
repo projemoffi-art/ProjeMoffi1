@@ -6,7 +6,7 @@ export function StatusCard() {
             {/* Decorative background circles */}
             <div className="absolute top-4 right-4 w-4 h-4 bg-white/60 rounded-full blur-[1px]" />
             <div className="absolute top-12 right-12 w-2 h-2 bg-white/40 rounded-full blur-[1px]" />
-            <div className="absolute bottom-8 right-8 w-16 h-16 bg-white/20 rounded-full blur-xl" />
+            <div className="absolute bottom-8 right-8 w-16 h-16 bg-black/20 dark:bg-white/20 rounded-full blur-xl" />
 
             {/* Header Text */}
             <div className="relative z-10 mb-6">

@@ -1,0 +1,1 @@
+ALTER TABLE adoption_pets ADD COLUMN IF NOT EXISTS images text[], ADD COLUMN IF NOT EXISTS pet_age text, ADD COLUMN IF NOT EXISTS gender text;

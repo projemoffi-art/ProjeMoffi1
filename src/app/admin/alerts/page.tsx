@@ -15,7 +15,7 @@ import { useRouter } from "next/navigation";
 // Premium Ambient GlassCard
 const GlassCard = ({ children, className, glowColor = "rgba(99, 102, 241, 0.05)" }: any) => (
     <div className={cn(
-        "relative overflow-hidden bg-[#0A0A0E]/60 backdrop-blur-3xl border border-white/5 rounded-[2rem] shadow-2xl",
+        "relative overflow-hidden bg-background dark:bg-[#0A0A0E]/60 backdrop-blur-3xl border border-black/5 dark:border-white/5 rounded-[2rem] shadow-2xl",
         className
     )}>
         <div 
@@ -183,7 +183,7 @@ export default function AdminAnnouncementsPage() {
                         initial={{ opacity: 0, y: -50, scale: 0.9 }}
                         animate={{ opacity: 1, y: 20, scale: 1 }}
                         exit={{ opacity: 0, y: -50, scale: 0.9 }}
-                        className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-4 rounded-2xl bg-black/80 backdrop-blur-xl border border-white/10 shadow-2xl"
+                        className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-4 rounded-2xl bg-black/80 backdrop-blur-xl border border-black/10 dark:border-white/10 shadow-2xl"
                     >
                         {toast.type === 'success' && <CheckCircle className="w-5 h-5 text-emerald-400" />}
                         {toast.type === 'error' && <AlertCircle className="w-5 h-5 text-red-500" />}
@@ -202,7 +202,7 @@ export default function AdminAnnouncementsPage() {
                         <div className="flex items-center gap-3">
                             <button 
                                 onClick={() => router.push('/admin')}
-                                className="w-8 h-8 rounded-full bg-white/5 border border-white/5 flex items-center justify-center hover:bg-white/10 transition-colors"
+                                className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 flex items-center justify-center hover:bg-black/10 dark:bg-white/10 transition-colors"
                             >
                                 <ArrowLeft className="w-4 h-4 text-white" />
                             </button>
@@ -216,7 +216,7 @@ export default function AdminAnnouncementsPage() {
                             <h1 className="text-4xl lg:text-5xl font-black text-white tracking-tighter uppercase leading-none">
                                 Sistem Duyuruları
                             </h1>
-                            <p className="text-white/40 font-medium text-sm mt-2 max-w-xl">
+                            <p className="text-black/50 dark:text-white/40 font-medium text-sm mt-2 max-w-xl">
                                 Moffi mobil akışındaki genel duyuru, kampanya ve güncellemeleri gerçek zamanlı olarak yayınlayın ve yönetin.
                             </p>
                         </div>
@@ -234,29 +234,29 @@ export default function AdminAnnouncementsPage() {
             {/* --- STATS GRID --- */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <GlassCard className="p-8" glowColor="rgba(34, 211, 238, 0.05)">
-                    <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em] mb-2">Aktif Duyurular</p>
+                    <p className="text-[9px] font-black text-black/30 dark:text-white/20 uppercase tracking-[0.2em] mb-2">Aktif Duyurular</p>
                     <div className="flex items-baseline gap-2">
                         <h3 className="text-5xl font-black text-white tracking-tighter">{totalActive}</h3>
                         <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)] animate-pulse" />
                     </div>
-                    <p className="text-[10px] text-white/40 mt-1 font-bold">Kullanıcı akışında anlık görünen hikayeler</p>
+                    <p className="text-[10px] text-black/50 dark:text-white/40 mt-1 font-bold">Kullanıcı akışında anlık görünen hikayeler</p>
                 </GlassCard>
 
                 <GlassCard className="p-8" glowColor="rgba(168, 85, 247, 0.05)">
-                    <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em] mb-2">Süresi Dolanlar</p>
+                    <p className="text-[9px] font-black text-black/30 dark:text-white/20 uppercase tracking-[0.2em] mb-2">Süresi Dolanlar</p>
                     <h3 className="text-5xl font-black text-white tracking-tighter">{totalExpired}</h3>
-                    <p className="text-[10px] text-white/40 mt-1 font-bold">Zaman aşımına uğramış arşiv duyurular</p>
+                    <p className="text-[10px] text-black/50 dark:text-white/40 mt-1 font-bold">Zaman aşımına uğramış arşiv duyurular</p>
                 </GlassCard>
 
                 <GlassCard className="p-8" glowColor="rgba(6, 182, 212, 0.05)">
-                    <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em] mb-2">Veri Tabanı Entegrasyonu</p>
+                    <p className="text-[9px] font-black text-black/30 dark:text-white/20 uppercase tracking-[0.2em] mb-2">Veri Tabanı Entegrasyonu</p>
                     <div className="flex items-center gap-2 mt-2">
                         <Database className="w-5 h-5 text-cyan-400" />
                         <span className="text-xs font-black text-white uppercase tracking-wider">
                             {isSupabaseEnabled ? "Supabase Cloud DB" : "Yerel Depolama (Mock)"}
                         </span>
                     </div>
-                    <p className="text-[10px] text-white/40 mt-3 font-bold">
+                    <p className="text-[10px] text-black/50 dark:text-white/40 mt-3 font-bold">
                         {isSupabaseEnabled 
                             ? "Kayıtlar Supabase bulut veritabanında güvenle saklanır." 
                             : "Geliştirici modu: Değişiklikler tarayıcı belleğine (localStorage) yazılır."}
@@ -282,7 +282,7 @@ export default function AdminAnnouncementsPage() {
                                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                                className="relative w-full max-w-2xl bg-[#0F0F16] border border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-2xl max-h-[90vh] overflow-y-auto no-scrollbar"
+                                className="relative w-full max-w-2xl bg-[#0F0F16] border border-black/10 dark:border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-2xl max-h-[90vh] overflow-y-auto no-scrollbar"
                             >
                                 <div className="flex items-center justify-between mb-8">
                                     <div className="flex items-center gap-3">
@@ -291,12 +291,12 @@ export default function AdminAnnouncementsPage() {
                                         </div>
                                         <div>
                                             <h3 className="text-2xl font-black text-white tracking-tighter uppercase">Yeni Duyuru Yayınla</h3>
-                                            <p className="text-white/40 text-[10px] font-bold uppercase tracking-wider">Moffi Platformu</p>
+                                            <p className="text-black/50 dark:text-white/40 text-[10px] font-bold uppercase tracking-wider">Moffi Platformu</p>
                                         </div>
                                     </div>
                                     <button 
                                         onClick={() => setIsFormOpen(false)}
-                                        className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+                                        className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-black/50 dark:text-white/40 hover:text-white hover:bg-black/10 dark:bg-white/10 transition-colors"
                                     >
                                         ×
                                     </button>
@@ -313,24 +313,24 @@ export default function AdminAnnouncementsPage() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         {/* Title */}
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest block">Başlık</label>
+                                            <label className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest block">Başlık</label>
                                             <input 
                                                 type="text" 
                                                 value={title} 
                                                 onChange={(e) => setTitle(e.target.value)}
                                                 placeholder="Duyuru başlığını girin..." 
-                                                className="w-full bg-black/40 border border-white/5 rounded-2xl px-5 py-4 text-sm text-white focus:border-indigo-500 focus:outline-none transition-colors"
+                                                className="w-full bg-black/40 border border-black/5 dark:border-white/5 rounded-2xl px-5 py-4 text-sm text-white focus:border-indigo-500 focus:outline-none transition-colors"
                                                 required
                                             />
                                         </div>
 
                                         {/* Badge Tag */}
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest block">Etiket (Rozet)</label>
+                                            <label className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest block">Etiket (Rozet)</label>
                                             <select 
                                                 value={badge} 
                                                 onChange={(e) => setBadge(e.target.value)}
-                                                className="w-full bg-black/40 border border-white/5 rounded-2xl px-5 py-4 text-sm text-white focus:border-indigo-500 focus:outline-none transition-colors appearance-none"
+                                                className="w-full bg-black/40 border border-black/5 dark:border-white/5 rounded-2xl px-5 py-4 text-sm text-white focus:border-indigo-500 focus:outline-none transition-colors appearance-none"
                                             >
                                                 <option value="Duyuru">📢 Duyuru</option>
                                                 <option value="Etkinlik">🎟️ Etkinlik</option>
@@ -343,44 +343,44 @@ export default function AdminAnnouncementsPage() {
 
                                     {/* Description */}
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-white/40 uppercase tracking-widest block">Detay Açıklama</label>
+                                        <label className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest block">Detay Açıklama</label>
                                         <textarea 
                                             value={description} 
                                             onChange={(e) => setDescription(e.target.value)}
                                             placeholder="Kullanıcı hikayeyi açtığında altta görünecek detay yazısı..." 
-                                            className="w-full bg-black/40 border border-white/5 rounded-2xl px-5 py-4 text-sm text-white focus:border-indigo-500 focus:outline-none transition-colors h-28 resize-none"
+                                            className="w-full bg-black/40 border border-black/5 dark:border-white/5 rounded-2xl px-5 py-4 text-sm text-white focus:border-indigo-500 focus:outline-none transition-colors h-28 resize-none"
                                             required
                                         />
                                     </div>
 
                                     {/* Media URL */}
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-white/40 uppercase tracking-widest block">Görsel (Medya) URL</label>
+                                        <label className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest block">Görsel (Medya) URL</label>
                                         <input 
                                             type="text" 
                                             value={mediaUrl} 
                                             onChange={(e) => setMediaUrl(e.target.value)}
                                             placeholder="Görsel linkini ekleyin..." 
-                                            className="w-full bg-black/40 border border-white/5 rounded-2xl px-5 py-4 text-sm text-white focus:border-indigo-500 focus:outline-none transition-colors"
+                                            className="w-full bg-black/40 border border-black/5 dark:border-white/5 rounded-2xl px-5 py-4 text-sm text-white focus:border-indigo-500 focus:outline-none transition-colors"
                                         />
-                                        <div className="mt-2 text-[10px] text-white/30 flex items-center gap-1.5">
+                                        <div className="mt-2 text-[10px] text-black/40 dark:text-white/30 flex items-center gap-1.5">
                                             <Eye className="w-3.5 h-3.5" /> Canlı Önizleme: 
                                             <a href={mediaUrl} target="_blank" rel="noreferrer" className="text-indigo-400 underline hover:text-indigo-300">Medya Sekmesi ↗</a>
                                         </div>
                                     </div>
 
                                     {/* CTA CONFIGURATOR */}
-                                    <div className="border border-white/5 rounded-3xl p-6 bg-black/25 space-y-4">
+                                    <div className="border border-black/5 dark:border-white/5 rounded-3xl p-6 bg-black/25 space-y-4">
                                         <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
                                             <LinkIcon className="w-4 h-4 text-indigo-400" /> Buton (CTA) Yapılandırma
                                         </h4>
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div className="space-y-1">
-                                                <label className="text-[9px] font-black text-white/30 uppercase tracking-widest">Eylem Tipi</label>
+                                                <label className="text-[9px] font-black text-black/40 dark:text-white/30 uppercase tracking-widest">Eylem Tipi</label>
                                                 <select 
                                                     value={ctaType} 
                                                     onChange={(e) => setCtaType(e.target.value)}
-                                                    className="w-full bg-black/40 border border-white/5 rounded-xl p-3 text-xs text-white focus:border-indigo-500 focus:outline-none"
+                                                    className="w-full bg-black/40 border border-black/5 dark:border-white/5 rounded-xl p-3 text-xs text-white focus:border-indigo-500 focus:outline-none"
                                                 >
                                                     <option value="toast">Bilgi Mesajı (Toast) / Detay Modalı</option>
                                                     <option value="link">Uygulama İçi Sayfa (Örn: /shop, /wallet)</option>
@@ -389,23 +389,23 @@ export default function AdminAnnouncementsPage() {
                                                 </select>
                                             </div>
                                             <div className="space-y-1">
-                                                <label className="text-[9px] font-black text-white/30 uppercase tracking-widest">Buton Metni</label>
+                                                <label className="text-[9px] font-black text-black/40 dark:text-white/30 uppercase tracking-widest">Buton Metni</label>
                                                 <input 
                                                     type="text" 
                                                     value={ctaText} 
                                                     onChange={(e) => setCtaText(e.target.value)}
                                                     placeholder="Katıl, İncele vb..."
-                                                    className="w-full bg-black/40 border border-white/5 rounded-xl p-3 text-xs text-white focus:border-indigo-500 focus:outline-none"
+                                                    className="w-full bg-black/40 border border-black/5 dark:border-white/5 rounded-xl p-3 text-xs text-white focus:border-indigo-500 focus:outline-none"
                                                 />
                                             </div>
                                             <div className="space-y-1">
-                                                <label className="text-[9px] font-black text-white/30 uppercase tracking-widest">Eylem Hedefi (Değer)</label>
+                                                <label className="text-[9px] font-black text-black/40 dark:text-white/30 uppercase tracking-widest">Eylem Hedefi (Değer)</label>
                                                 <input 
                                                     type="text" 
                                                     value={ctaValue} 
                                                     onChange={(e) => setCtaValue(e.target.value)}
                                                     placeholder="Web linki, kupon kodu veya mesaj..."
-                                                    className="w-full bg-black/40 border border-white/5 rounded-xl p-3 text-xs text-white focus:border-indigo-500 focus:outline-none"
+                                                    className="w-full bg-black/40 border border-black/5 dark:border-white/5 rounded-xl p-3 text-xs text-white focus:border-indigo-500 focus:outline-none"
                                                 />
                                             </div>
                                         </div>
@@ -414,7 +414,7 @@ export default function AdminAnnouncementsPage() {
                                     {/* DURATION / LIFESPAN */}
                                     <div className="space-y-2">
                                         <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
-                                            <span className="text-white/40">Duyuru Yayında Kalma Süresi</span>
+                                            <span className="text-black/50 dark:text-white/40">Duyuru Yayında Kalma Süresi</span>
                                             <span className="text-indigo-400">{durationDays} Gün</span>
                                         </div>
                                         <input 
@@ -425,15 +425,15 @@ export default function AdminAnnouncementsPage() {
                                             onChange={(e) => setDurationDays(Number(e.target.value))}
                                             className="w-full accent-indigo-500"
                                         />
-                                        <span className="text-[9px] text-white/20 block font-medium">Bu sürenin sonunda duyuru hikayesi kullanıcı akışından otomatik olarak kaldırılacaktır.</span>
+                                        <span className="text-[9px] text-black/30 dark:text-white/20 block font-medium">Bu sürenin sonunda duyuru hikayesi kullanıcı akışından otomatik olarak kaldırılacaktır.</span>
                                     </div>
 
                                     {/* Action Buttons */}
-                                    <div className="flex justify-end gap-4 pt-4 border-t border-white/5">
+                                    <div className="flex justify-end gap-4 pt-4 border-t border-black/5 dark:border-white/5">
                                         <button 
                                             type="button" 
                                             onClick={() => setIsFormOpen(false)}
-                                            className="px-6 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-colors cursor-pointer"
+                                            className="px-6 py-4 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:bg-white/10 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-colors cursor-pointer"
                                         >
                                             Vazgeç
                                         </button>
@@ -456,13 +456,13 @@ export default function AdminAnnouncementsPage() {
                 {loading ? (
                     <div className="flex flex-col items-center justify-center py-32 gap-3">
                         <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
-                        <span className="text-[10px] font-black uppercase text-white/30 tracking-widest">Duyuru Bilgileri Yükleniyor...</span>
+                        <span className="text-[10px] font-black uppercase text-black/40 dark:text-white/30 tracking-widest">Duyuru Bilgileri Yükleniyor...</span>
                     </div>
                 ) : announcements.length === 0 ? (
-                    <GlassCard className="py-24 text-center border-dashed border-2 border-white/10" glowColor="rgba(239, 68, 68, 0.02)">
-                        <AlertCircle className="w-12 h-12 text-white/20 mx-auto mb-4" />
+                    <GlassCard className="py-24 text-center border-dashed border-2 border-black/10 dark:border-white/10" glowColor="rgba(239, 68, 68, 0.02)">
+                        <AlertCircle className="w-12 h-12 text-black/30 dark:text-white/20 mx-auto mb-4" />
                         <h3 className="text-xl font-black text-white uppercase tracking-tight">Aktif Duyuru Bulunmuyor</h3>
-                        <p className="text-white/40 text-xs mt-2 max-w-sm mx-auto leading-relaxed">
+                        <p className="text-black/50 dark:text-white/40 text-xs mt-2 max-w-sm mx-auto leading-relaxed">
                             Şu anda sistemde yayınlanmış duyuru yok. Sağ üstteki butona tıklayarak hemen ilk duyurunuzu oluşturabilirsiniz!
                         </p>
                     </GlassCard>
@@ -481,17 +481,17 @@ export default function AdminAnnouncementsPage() {
                                 >
                                     <GlassCard 
                                         className={cn(
-                                            "h-full flex flex-col justify-between border-white/5 transition-all group-hover:border-white/10",
+                                            "h-full flex flex-col justify-between border-black/5 dark:border-white/5 transition-all group-hover:border-black/10 dark:border-white/10",
                                             isExpired && "opacity-60 border-red-500/10"
                                         )}
                                         glowColor={isExpired ? "rgba(220, 38, 38, 0.02)" : "rgba(99, 102, 241, 0.04)"}
                                     >
-                                        <div className="relative aspect-video w-full overflow-hidden bg-black/40 border-b border-white/5">
+                                        <div className="relative aspect-video w-full overflow-hidden bg-black/40 border-b border-black/5 dark:border-white/5">
                                             <img src={ann.media_url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="" />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-transparent" />
                                             
                                             {/* Badge Tag */}
-                                            <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 text-[9px] font-black uppercase text-white tracking-widest shadow-lg">
+                                            <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-black/10 dark:border-white/10 text-[9px] font-black uppercase text-white tracking-widest shadow-lg">
                                                 {ann.badge || '📢 Duyuru'}
                                             </div>
 
@@ -512,27 +512,27 @@ export default function AdminAnnouncementsPage() {
                                                 <h4 className="text-lg font-black text-white leading-tight uppercase tracking-tight group-hover:text-indigo-400 transition-colors">
                                                     {ann.title}
                                                 </h4>
-                                                <p className="text-xs text-white/40 leading-relaxed font-medium line-clamp-3">
+                                                <p className="text-xs text-black/50 dark:text-white/40 leading-relaxed font-medium line-clamp-3">
                                                     {ann.description}
                                                 </p>
                                             </div>
 
-                                            <div className="space-y-4 pt-4 border-t border-white/5">
+                                            <div className="space-y-4 pt-4 border-t border-black/5 dark:border-white/5">
                                                 {/* CTA Summary Info */}
-                                                <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 space-y-2">
-                                                    <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] block">CTA Eylemi</span>
+                                                <div className="bg-white/[0.02] border border-black/5 dark:border-white/5 rounded-2xl p-4 space-y-2">
+                                                    <span className="text-[8px] font-black text-black/30 dark:text-white/20 uppercase tracking-[0.2em] block">CTA Eylemi</span>
                                                     <div className="flex justify-between items-center text-xs font-bold">
-                                                        <span className="text-white/80">{ann.cta_text}</span>
+                                                        <span className="text-black/80 dark:text-white/80">{ann.cta_text}</span>
                                                         <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded-lg">
                                                             {getCtaLabel(ann.cta_type)}
                                                         </span>
                                                     </div>
-                                                    <span className="text-[10px] text-white/30 truncate block max-w-full font-mono">{ann.cta_value}</span>
+                                                    <span className="text-[10px] text-black/40 dark:text-white/30 truncate block max-w-full font-mono">{ann.cta_value}</span>
                                                 </div>
 
                                                 {/* Action panel */}
                                                 <div className="flex justify-between items-center">
-                                                    <span className="text-[9px] font-mono text-white/20">
+                                                    <span className="text-[9px] font-mono text-black/30 dark:text-white/20">
                                                         ID: {ann.id.substring(0, 12)}...
                                                     </span>
                                                     <button 

@@ -61,7 +61,7 @@ function getDaysUntilWeekend(): number {
 }
 
 const MEDAL = ['🥇', '🥈', '🥉'];
-const TREND_COLOR = { up: 'text-emerald-400', down: 'text-red-400', same: 'text-white/30' };
+const TREND_COLOR = { up: 'text-emerald-400', down: 'text-red-400', same: 'text-black/40 dark:text-white/30' };
 const TREND_ICON = { up: '↑', down: '↓', same: '—' };
 
 // ─── COMPONENT ────────────────────────────────────────────────────────────────
@@ -137,7 +137,7 @@ export function NeighborhoodLeague() {
                         <h3 className="text-base font-black text-white">Bu Haftanın Sıralaması</h3>
                     </div>
                     <div className="text-right">
-                        <p className="text-[8px] text-white/30 font-bold uppercase tracking-wider">{daysLeft} gün kaldı</p>
+                        <p className="text-[8px] text-black/40 dark:text-white/30 font-bold uppercase tracking-wider">{daysLeft} gün kaldı</p>
                         <p className="text-xs font-black text-purple-300">#{myRank} Konumsun</p>
                     </div>
                 </div>
@@ -149,10 +149,10 @@ export function NeighborhoodLeague() {
                         { icon: <Flame className="w-3 h-3" />, label: 'Seri', value: `${walkStats?.currentStreak || 0} gün`, color: 'text-orange-400' },
                         { icon: <TrendingUp className="w-3 h-3" />, label: 'Puanın', value: myScore.toLocaleString(), color: 'text-blue-400' },
                     ].map((s, i) => (
-                        <div key={i} className="bg-white/5 rounded-xl p-2.5 text-center border border-card-border">
+                        <div key={i} className="bg-black/5 dark:bg-white/5 rounded-xl p-2.5 text-center border border-card-border">
                             <div className={`flex justify-center mb-1 ${s.color}`}>{s.icon}</div>
                             <p className={`text-[11px] font-black ${s.color}`}>{s.value}</p>
-                            <p className="text-[7px] text-white/30 font-bold uppercase tracking-wider">{s.label}</p>
+                            <p className="text-[7px] text-black/40 dark:text-white/30 font-bold uppercase tracking-wider">{s.label}</p>
                         </div>
                     ))}
                 </div>
@@ -172,9 +172,9 @@ export function NeighborhoodLeague() {
                             <img src={topThree[1].avatar} className="w-10 h-10 rounded-full border-2 border-silver object-cover" alt={topThree[1].name} />
                             <span className="absolute -bottom-1 -right-1 text-sm">🥈</span>
                         </div>
-                        <p className="text-[8px] font-black text-white/80 text-center leading-tight">{topThree[1].isMe ? 'Sen' : topThree[1].name.split(' ')[0]}</p>
-                        <div className="bg-white/10 rounded-t-xl w-full h-14 flex items-end justify-center pb-1.5 mt-1">
-                            <span className="text-[9px] font-black text-white/60">{topThree[1].score.toLocaleString()}</span>
+                        <p className="text-[8px] font-black text-black/80 dark:text-white/80 text-center leading-tight">{topThree[1].isMe ? 'Sen' : topThree[1].name.split(' ')[0]}</p>
+                        <div className="bg-black/10 dark:bg-white/10 rounded-t-xl w-full h-14 flex items-end justify-center pb-1.5 mt-1">
+                            <span className="text-[9px] font-black text-black/60 dark:text-white/60">{topThree[1].score.toLocaleString()}</span>
                         </div>
                     </motion.div>
                 )}
@@ -214,9 +214,9 @@ export function NeighborhoodLeague() {
                             <img src={topThree[2].avatar} className="w-10 h-10 rounded-full border-2 border-orange-400 object-cover" alt={topThree[2].name} />
                             <span className="absolute -bottom-1 -right-1 text-sm">🥉</span>
                         </div>
-                        <p className="text-[8px] font-black text-white/80 text-center leading-tight">{topThree[2].isMe ? 'Sen' : topThree[2].name.split(' ')[0]}</p>
-                        <div className="bg-white/5 rounded-t-xl w-full h-10 flex items-end justify-center pb-1.5 mt-1">
-                            <span className="text-[9px] font-black text-white/60">{topThree[2].score.toLocaleString()}</span>
+                        <p className="text-[8px] font-black text-black/80 dark:text-white/80 text-center leading-tight">{topThree[2].isMe ? 'Sen' : topThree[2].name.split(' ')[0]}</p>
+                        <div className="bg-black/5 dark:bg-white/5 rounded-t-xl w-full h-10 flex items-end justify-center pb-1.5 mt-1">
+                            <span className="text-[9px] font-black text-black/60 dark:text-white/60">{topThree[2].score.toLocaleString()}</span>
                         </div>
                     </motion.div>
                 )}
@@ -233,27 +233,27 @@ export function NeighborhoodLeague() {
                         className={`flex items-center gap-3 p-3 rounded-2xl border transition-all ${
                             player.isMe
                                 ? 'bg-purple-500/15 border-purple-500/30 shadow-[0_0_16px_rgba(168,85,247,0.1)]'
-                                : 'bg-white/[0.02] border-card-border hover:bg-white/5'
+                                : 'bg-white/[0.02] border-card-border hover:bg-black/5 dark:bg-white/5'
                         }`}
                     >
-                        <span className="text-[11px] font-black text-white/30 w-5 text-center shrink-0">
+                        <span className="text-[11px] font-black text-black/40 dark:text-white/30 w-5 text-center shrink-0">
                             {player.rank}
                         </span>
                         <img src={player.avatar} className="w-8 h-8 rounded-full object-cover shrink-0" alt={player.name} />
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5">
-                                <p className={`text-[10px] font-black leading-none ${player.isMe ? 'text-purple-300' : 'text-white/80'}`}>
+                                <p className={`text-[10px] font-black leading-none ${player.isMe ? 'text-purple-300' : 'text-black/80 dark:text-white/80'}`}>
                                     {player.isMe ? 'Sen 👈' : player.name}
                                 </p>
                                 {player.badge && <span className="text-[9px]">{player.badge}</span>}
                             </div>
-                            <p className="text-[8px] text-white/30 font-semibold">{player.petName} · {player.distanceKm} km · {player.streak}🔥</p>
+                            <p className="text-[8px] text-black/40 dark:text-white/30 font-semibold">{player.petName} · {player.distanceKm} km · {player.streak}🔥</p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                             <span className={`text-[8px] font-black ${TREND_COLOR[player.trend]}`}>
                                 {TREND_ICON[player.trend]}
                             </span>
-                            <span className="text-[10px] font-black text-white/60 font-mono">{player.score.toLocaleString()}</span>
+                            <span className="text-[10px] font-black text-black/60 dark:text-white/60 font-mono">{player.score.toLocaleString()}</span>
                         </div>
                     </motion.div>
                 ))}
@@ -270,7 +270,7 @@ export function NeighborhoodLeague() {
                         <span className="text-2xl">🎁</span>
                         <div>
                             <p className="text-[9px] font-black text-amber-400 uppercase tracking-widest">Hafta Sonu Bonusu!</p>
-                            <p className="text-[10px] text-white/70 font-semibold">
+                            <p className="text-[10px] text-black/70 dark:text-white/70 font-semibold">
                                 {daysLeft === 0 ? 'Bugün son gün!' : `${daysLeft} gün kaldı`} — İlk 3'e gir, x2 PP ödülü kazan!
                             </p>
                         </div>

@@ -123,7 +123,7 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
                                 <p className="text-[10px] text-zinc-400 dark:text-white/30 font-black uppercase tracking-[0.3em] mt-2">DENTAL CARE 2.0</p>
                             </div>
                         </div>
-                        <button onClick={onClose} className="w-11 h-11 rounded-full bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-500 dark:bg-white/5 dark:border-card-border dark:text-white/40 dark:hover:text-white dark:hover:bg-white/10 transition-all cursor-pointer">
+                        <button onClick={onClose} className="w-11 h-11 rounded-full bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-500 dark:bg-white/5 dark:border-card-border dark:text-white/40 dark:hover:text-white dark:hover:bg-black/10 dark:bg-white/10 transition-all cursor-pointer">
                             <X className="w-5 h-5" />
                         </button>
                     </div>
@@ -134,7 +134,7 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
                             onClick={() => setActiveTab('checkup')}
                             className={cn(
                                 "flex-1 py-3.5 rounded-[1.4rem] text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer",
-                                activeTab === 'checkup' ? "bg-white dark:bg-[#1C1C1E] text-zinc-850 dark:text-white shadow-md dark:shadow-2xl" : "text-zinc-500 dark:text-white/30 hover:text-zinc-700 dark:hover:text-white/60"
+                                activeTab === 'checkup' ? "bg-white dark:bg-[#1C1C1E] text-zinc-850 dark:text-white shadow-md dark:shadow-2xl" : "text-zinc-500 dark:text-white/30 hover:text-zinc-700 dark:hover:text-black/60 dark:text-white/60"
                             )}
                         >
                             <Search className="w-3.5 h-3.5" /> KONTROL
@@ -143,7 +143,7 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
                             onClick={() => setActiveTab('timer')}
                             className={cn(
                                 "flex-1 py-3.5 rounded-[1.4rem] text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer",
-                                activeTab === 'timer' ? "bg-emerald-500 text-white shadow-md dark:shadow-2xl" : "text-zinc-500 dark:text-white/30 hover:text-zinc-700 dark:hover:text-white/60"
+                                activeTab === 'timer' ? "bg-emerald-500 text-white shadow-md dark:shadow-2xl" : "text-zinc-500 dark:text-white/30 hover:text-zinc-700 dark:hover:text-black/60 dark:text-white/60"
                             )}
                         >
                             <HeartPulse className="w-3.5 h-3.5" /> FIRÇALA
@@ -152,7 +152,7 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
                             onClick={() => setActiveTab('guide')}
                             className={cn(
                                 "flex-1 py-3.5 rounded-[1.4rem] text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer",
-                                activeTab === 'guide' ? "bg-blue-500 text-white shadow-md dark:shadow-2xl" : "text-zinc-500 dark:text-white/30 hover:text-zinc-700 dark:hover:text-white/60"
+                                activeTab === 'guide' ? "bg-blue-500 text-white shadow-md dark:shadow-2xl" : "text-zinc-500 dark:text-white/30 hover:text-zinc-700 dark:hover:text-black/60 dark:text-white/60"
                             )}
                         >
                             <BookOpen className="w-3.5 h-3.5" /> REHBER
@@ -260,7 +260,7 @@ export function DentalCareModal({ isOpen, onClose }: DentalCareModalProps) {
                                 </button>
                                 <button
                                     onClick={() => { setIsTimerRunning(false); setTimeLeft(120); }}
-                                    className="w-16 h-16 rounded-full bg-zinc-100 text-zinc-400 flex items-center justify-center hover:bg-zinc-200/50 hover:text-zinc-800 dark:bg-white/5 dark:text-white/30 dark:hover:bg-white/10 dark:hover:text-white transition-all active:scale-90 border border-zinc-200 dark:border-card-border cursor-pointer"
+                                    className="w-16 h-16 rounded-full bg-zinc-100 text-zinc-400 flex items-center justify-center hover:bg-zinc-200/50 hover:text-zinc-800 dark:bg-white/5 dark:text-white/30 dark:hover:bg-black/10 dark:bg-white/10 dark:hover:text-white transition-all active:scale-90 border border-zinc-200 dark:border-card-border cursor-pointer"
                                 >
                                     <RotateCcw className="w-7 h-7" />
                                 </button>

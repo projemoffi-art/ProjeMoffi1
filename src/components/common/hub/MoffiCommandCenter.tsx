@@ -63,17 +63,17 @@ export function MoffiCommandCenter({ isOpen, onClose, onNavigate }: MoffiCommand
                     animate={{ y: 0, opacity: 1 }}
                     exit={{ y: '100%', opacity: 0.5 }}
                     transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                    className="absolute bottom-0 left-0 right-0 bg-[#0A0A0E] border-t border-card-border rounded-t-[4rem] p-8 pb-12 shadow-[0_-30px_100px_rgba(0,0,0,0.9)] min-h-[90vh] flex flex-col"
+                    className="absolute bottom-0 left-0 right-0 bg-background dark:bg-[#0A0A0E] border-t border-card-border rounded-t-[4rem] p-8 pb-12 shadow-[0_-30px_100px_rgba(0,0,0,0.9)] min-h-[90vh] flex flex-col"
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Apple Style Grabber */}
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/10 rounded-full" />
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-black/10 dark:bg-white/10 rounded-full" />
 
                     {/* TOP HEADER: Identity & Clock */}
                     <div className="flex justify-between items-start mt-4 mb-10">
                         <div className="flex items-center gap-4">
                             <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#5B4D9D] to-[#8B5CF6] p-[2px] shadow-lg shadow-purple-500/20">
-                                <div className="w-full h-full rounded-2xl bg-[#0A0A0E] overflow-hidden">
+                                <div className="w-full h-full rounded-2xl bg-background dark:bg-[#0A0A0E] overflow-hidden">
                                      {activePet?.image && <img src={activePet.image} alt="Pet" className="w-full h-full object-cover opacity-80" />}
                                 </div>
                             </div>
@@ -101,7 +101,7 @@ export function MoffiCommandCenter({ isOpen, onClose, onNavigate }: MoffiCommand
                                         <Crown className="text-yellow-500" size={18} />
                                     </div>
                                     <p className="text-[10px] text-white font-black uppercase tracking-widest">Moffi Pro</p>
-                                    <button onClick={() => onNavigate('studio')} className="mt-2 px-3 py-1 bg-white/10 rounded-full text-[8px] font-bold uppercase hover:bg-white/20 transition-colors">Yükselt</button>
+                                    <button onClick={() => onNavigate('studio')} className="mt-2 px-3 py-1 bg-black/10 dark:bg-white/10 rounded-full text-[8px] font-bold uppercase hover:bg-black/20 dark:bg-white/20 transition-colors">Yükselt</button>
                                 </div>
                             )}
                             
@@ -140,7 +140,7 @@ export function MoffiCommandCenter({ isOpen, onClose, onNavigate }: MoffiCommand
                                 <span className="text-xs text-yellow-500 font-bold uppercase italic tracking-tighter">Pati</span>
                             </div>
                             <div className="mt-2 flex items-center gap-2">
-                                <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                <div className="flex-1 h-1.5 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
                                      <div className="h-full bg-yellow-500" style={{ width: `${Math.min(100, (todayStats.steps / 5000) * 100)}%` }} />
                                 </div>
                                 <span className="text-[9px] font-bold text-gray-500">{todayStats.distanceKm}km</span>
@@ -168,7 +168,7 @@ export function MoffiCommandCenter({ isOpen, onClose, onNavigate }: MoffiCommand
                                         </p>
                                     </div>
                                 </div>
-                                <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-white/20 group-hover:text-white transition-colors">
+                                <div className="w-12 h-12 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-black/30 dark:text-white/20 group-hover:text-white transition-colors">
                                     <ArrowUpRight size={24} />
                                 </div>
                             </button>

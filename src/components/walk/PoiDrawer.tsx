@@ -24,7 +24,7 @@ export function showPoiDrawer(
                         {selectedPOI.image ? (
                             <img src={selectedPOI.image} alt={selectedPOI.name} className="w-full h-full object-cover" />
                         ) : (
-                            <Star className="w-8 h-8 text-gray-400" />
+                            <Star className="w-8 h-8 text-gray-500 dark:text-gray-400" />
                         )}
                     </div>
                     <div>
@@ -50,13 +50,13 @@ export function showPoiDrawer(
             <div className="flex gap-6 border-b border-card-border dark:border-slate-800 mb-6">
                 <button
                     onClick={() => setActiveTab('details')}
-                    className={cn("pb-3 text-sm font-bold border-b-2 transition-all", activeTab === 'details' ? "border-black dark:border-white text-black dark:text-white" : "border-transparent text-gray-400")}
+                    className={cn("pb-3 text-sm font-bold border-b-2 transition-all", activeTab === 'details' ? "border-black dark:border-white text-black dark:text-white" : "border-transparent text-gray-500 dark:text-gray-400")}
                 >
                     Hakkında
                 </button>
                 <button
                     onClick={() => setActiveTab('reviews')}
-                    className={cn("pb-3 text-sm font-bold border-b-2 transition-all", activeTab === 'reviews' ? "border-black dark:border-white text-black dark:text-white" : "border-transparent text-gray-400")}
+                    className={cn("pb-3 text-sm font-bold border-b-2 transition-all", activeTab === 'reviews' ? "border-black dark:border-white text-black dark:text-white" : "border-transparent text-gray-500 dark:text-gray-400")}
                 >
                     Yorumlar ({selectedPOI.reviews ? selectedPOI.reviews.length : 0})
                 </button>
@@ -98,7 +98,7 @@ export function showPoiDrawer(
                                 <p className="text-xs text-gray-600 dark:text-gray-300">{review.comment}</p>
                             </div>
                         )) : (
-                            <div className="text-center text-gray-400 text-sm py-4">Henüz yorum yapılmamış.</div>
+                            <div className="text-center text-gray-500 dark:text-gray-400 text-sm py-4">Henüz yorum yapılmamış.</div>
                         )}
                     </div>
                 )}

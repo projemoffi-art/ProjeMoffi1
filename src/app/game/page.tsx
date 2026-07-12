@@ -135,7 +135,7 @@ export default function GamePage() {
                     </div>
                     <div>
                         <h2 className="font-bold text-lg">Moffi</h2>
-                        <div className="flex items-center gap-1 text-xs font-medium text-gray-400">
+                        <div className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400">
                             <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
                             <span>Seviye {stats.level}</span>
                         </div>
@@ -144,13 +144,13 @@ export default function GamePage() {
 
                 {/* Daily Limit - The Core Focus */}
                 <div className="text-right">
-                    <div className="text-[10px] uppercase font-bold text-gray-400 mb-1">Bugün Oynayabilirsin</div>
+                    <div className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 mb-1">Bugün Oynayabilirsin</div>
                     <div className="text-3xl font-black text-white flex items-center justify-end gap-2">
                         {DAILY_POINT_CAP - gameState.dailyPoints}
                         <span className="text-sm font-bold text-[#5B4D9D]">Puan</span>
                     </div>
                     {/* Visual Bar */}
-                    <div className="h-1.5 w-24 bg-white/10 rounded-full ml-auto mt-2 overflow-hidden">
+                    <div className="h-1.5 w-24 bg-black/10 dark:bg-white/10 rounded-full ml-auto mt-2 overflow-hidden">
                         <div
                             className="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-full"
                             style={{ width: `${((DAILY_POINT_CAP - gameState.dailyPoints) / DAILY_POINT_CAP) * 100}% ` }}
@@ -206,7 +206,7 @@ export default function GamePage() {
                         router.push('/community');
                     }
                 }} 
-                className="fixed top-6 left-6 z-[60] w-12 h-12 bg-white/20 dark:bg-black/40 backdrop-blur-xl border border-card-border dark:border-card-border rounded-2xl flex items-center justify-center hover:bg-white/10 hover:scale-105 active:scale-95 transition-all shadow-xl"
+                className="fixed top-6 left-6 z-[60] w-12 h-12 bg-black/20 dark:bg-white/20 dark:bg-black/40 backdrop-blur-xl border border-card-border dark:border-card-border rounded-2xl flex items-center justify-center hover:bg-black/10 dark:bg-white/10 hover:scale-105 active:scale-95 transition-all shadow-xl"
             >
                 <ChevronLeft className="w-6 h-6 text-foreground dark:text-white" />
             </button>
@@ -263,7 +263,7 @@ export default function GamePage() {
                 {feedback && (
                     <motion.div
                         initial={{ y: -50, opacity: 0 }} animate={{ y: 20, opacity: 1 }} exit={{ y: -50, opacity: 0 }}
-                        className="fixed top-0 left-1/2 -translate-x-1/2 z-[110] bg-black text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3"
+                        className="fixed top-0 left-1/2 -translate-x-1/2 z-[110] bg-white dark:bg-black text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3"
                     >
                         <span className="text-2xl">{feedback.value}</span>
                         <span className="font-bold">{feedback.type}</span>
@@ -274,10 +274,10 @@ export default function GamePage() {
             {/* TOP NAVIGATION TOGGLE */}
             <div className="sticky top-0 z-30 bg-[#F8F9FC]/80 dark:bg-black/80 backdrop-blur-xl p-4 flex justify-center border-b border-card-border/50 dark:border-card-border">
                 <div className="bg-card dark:bg-[#1A1A1A] p-1 rounded-2xl shadow-moffi-card border border-card-border dark:border-card-border flex p-1">
-                    <button onClick={() => setActiveTab('home')} className={cn("px-6 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2", activeTab === 'home' ? "bg-black dark:bg-card text-white dark:text-black shadow-lg" : "text-gray-500")}>
+                    <button onClick={() => setActiveTab('home')} className={cn("px-6 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2", activeTab === 'home' ? "bg-white dark:bg-black dark:bg-card text-white dark:text-black shadow-lg" : "text-gray-500")}>
                         <Heart className="w-3.5 h-3.5" /> Evim
                     </button>
-                    <button onClick={() => setActiveTab('arena')} className={cn("px-6 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2", activeTab === 'arena' ? "bg-black dark:bg-card text-white dark:text-black shadow-lg" : "text-gray-500")}>
+                    <button onClick={() => setActiveTab('arena')} className={cn("px-6 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2", activeTab === 'arena' ? "bg-white dark:bg-black dark:bg-card text-white dark:text-black shadow-lg" : "text-gray-500")}>
                         <Gamepad2 className="w-3.5 h-3.5" /> Arena
                     </button>
                 </div>

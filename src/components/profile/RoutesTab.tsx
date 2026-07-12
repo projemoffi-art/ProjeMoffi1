@@ -60,8 +60,8 @@ export function RoutesTab({ routes = [], activePet }: { routes?: any[], activePe
             {/* HISTORY LIST */}
             <div className="space-y-4 pt-6">
                 <div className="flex items-center gap-2 px-2 mb-2">
-                    <Calendar className="w-3 h-3 text-white/40" />
-                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Son Hareketler</span>
+                    <Calendar className="w-3 h-3 text-black/50 dark:text-white/40" />
+                    <span className="text-[9px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest">Son Hareketler</span>
                 </div>
                 {displayRoutes.map(route => (
                     <div key={route.id} className="bg-[#12121A]/50 border border-card-border rounded-[2.5rem] p-6 flex items-center justify-between group hover:border-rose-500/20 transition-all cursor-pointer">
@@ -80,7 +80,7 @@ export function RoutesTab({ routes = [], activePet }: { routes?: any[], activePe
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-rose-500/10 transition-colors">
+                            <div className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center group-hover:bg-rose-500/10 transition-colors">
                                 <Navigation className="w-3.5 h-3.5 text-gray-600 group-hover:text-rose-500 rotate-45 transition-colors" />
                             </div>
                             <ChevronRight className="w-5 h-5 text-foreground group-hover:text-white transition-all transform group-hover:translate-x-1" />

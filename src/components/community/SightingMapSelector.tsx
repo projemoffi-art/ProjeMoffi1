@@ -49,7 +49,7 @@ export default function SightingMapSelector({ userPos, onChange }: SightingMapSe
     });
 
     return (
-        <div className="w-full h-full rounded-2xl overflow-hidden border border-white/10 relative bg-[#1A1A1A]">
+        <div className="w-full h-full rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 relative bg-card dark:bg-[#1A1A1A]">
             <MapContainer
                 center={defaultCenter}
                 zoom={14}
@@ -66,7 +66,7 @@ export default function SightingMapSelector({ userPos, onChange }: SightingMapSe
                 <Marker position={markerPos} icon={redIcon} />
                 <MapClickHandler onMapClick={handleMapClick} />
             </MapContainer>
-            <div className="absolute bottom-2 left-2 z-[1000] bg-black/80 px-2 py-1 rounded text-[9px] text-white/70 pointer-events-none">
+            <div className="absolute bottom-2 left-2 z-[1000] bg-black/80 px-2 py-1 rounded text-[9px] text-black/70 dark:text-white/70 pointer-events-none">
                 İhbar konumunu haritada tıklayarak taşıyabilirsiniz.
             </div>
         </div>

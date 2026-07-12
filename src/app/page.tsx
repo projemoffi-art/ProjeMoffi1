@@ -31,7 +31,7 @@ export default function Home() {
 
   if (step === 'loading') {
     return (
-      <main className="min-h-screen bg-black flex items-center justify-center">
+      <main className="min-h-screen bg-white dark:bg-black flex items-center justify-center">
         <motion.div 
             animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}
             transition={{ duration: 2, repeat: Infinity }}

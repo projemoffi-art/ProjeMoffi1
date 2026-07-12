@@ -381,10 +381,10 @@ export function CareHubModal({
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
                         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                        className="fixed inset-0 m-auto w-[92%] max-w-[500px] h-[85vh] bg-[#0d0d0f] border border-white/10 rounded-[2.5rem] shadow-[0_25px_60px_rgba(0,0,0,0.5)] z-[9999] text-white flex flex-col overflow-hidden"
+                        className="fixed inset-0 m-auto w-[92%] max-w-[500px] h-[85vh] bg-[#0d0d0f] border border-black/10 dark:border-white/10 rounded-[2.5rem] shadow-[0_25px_60px_rgba(0,0,0,0.5)] z-[9999] text-white flex flex-col overflow-hidden"
                     >
                         {/* HEADER */}
-                        <div className="p-6 pb-4 border-b border-white/5 relative bg-[#121215]/80 backdrop-blur-xl">
+                        <div className="p-6 pb-4 border-b border-black/5 dark:border-white/5 relative bg-[#121215]/80 backdrop-blur-xl">
                             {/* Pet Switcher in Header */}
                             <div className="absolute top-3.5 right-16 z-20 scale-[0.8] origin-right">
                                 <PetSwitcher />
@@ -393,7 +393,7 @@ export function CareHubModal({
                             <button 
                                 onClick={onClose}
                                 data-testid="close-care-hub"
-                                className="absolute top-5 right-5 w-9 h-9 bg-white/5 border border-white/10 rounded-full flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 transition-colors z-20"
+                                className="absolute top-5 right-5 w-9 h-9 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-full flex items-center justify-center text-black/50 dark:text-white/50 hover:text-white hover:bg-black/10 dark:bg-white/10 transition-colors z-20"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -415,7 +415,7 @@ export function CareHubModal({
                             </div>
 
                             {/* TABS */}
-                            <div className="flex bg-white/5 border border-white/5 p-1 rounded-2xl mt-4">
+                            <div className="flex bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 p-1 rounded-2xl mt-4">
                                 {[
                                     { id: 'nutrition', label: 'Beslenme & Su', icon: Droplets },
                                     { id: 'health', label: 'Sağlık & Aşılar', icon: Activity },
@@ -429,7 +429,7 @@ export function CareHubModal({
                                             "flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5",
                                             activeTab === tab.id 
                                                 ? "bg-white text-black shadow-md" 
-                                                : "text-white/40 hover:text-white/60"
+                                                : "text-black/50 dark:text-white/40 hover:text-black/60 dark:text-white/60"
                                         )}
                                     >
                                         <tab.icon className="w-3.5 h-3.5" />
@@ -448,7 +448,7 @@ export function CareHubModal({
                                     {/* Summary Stats Row */}
                                     <div className="grid grid-cols-2 gap-4">
                                         {/* Water Ring Card */}
-                                        <div className="bg-[#121215] border border-white/5 p-4 rounded-3xl flex flex-col items-center relative overflow-hidden">
+                                        <div className="bg-[#121215] border border-black/5 dark:border-white/5 p-4 rounded-3xl flex flex-col items-center relative overflow-hidden">
                                             {/* Fill wave representation in card */}
                                             <div 
                                                 className="absolute inset-x-0 bottom-0 bg-blue-500/20 transition-all duration-500 overflow-hidden" 
@@ -474,12 +474,12 @@ export function CareHubModal({
                                                 </div>
                                             </div>
                                             <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Günlük Su</span>
-                                            <h4 className="text-xl font-black mt-0.5">{water} <span className="text-[10px] font-bold text-gray-400">ML</span></h4>
+                                            <h4 className="text-xl font-black mt-0.5">{water} <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">ML</span></h4>
                                             <span className="text-[9px] font-bold text-blue-400 mt-1">Hedef: {targetWater} ml</span>
                                         </div>
 
                                         {/* Food Ring Card */}
-                                        <div className="bg-[#121215] border border-white/5 p-4 rounded-3xl flex flex-col items-center relative overflow-hidden">
+                                        <div className="bg-[#121215] border border-black/5 dark:border-white/5 p-4 rounded-3xl flex flex-col items-center relative overflow-hidden">
                                             <div 
                                                 className="absolute inset-x-0 bottom-0 bg-orange-500/5 transition-all duration-500" 
                                                 style={{ height: `${foodPercent}%` }} 
@@ -494,13 +494,13 @@ export function CareHubModal({
                                                 </div>
                                             </div>
                                             <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Günlük Kalori</span>
-                                            <h4 className="text-xl font-black mt-0.5">{calories} <span className="text-[10px] font-bold text-gray-400">KCAL</span></h4>
+                                            <h4 className="text-xl font-black mt-0.5">{calories} <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">KCAL</span></h4>
                                             <span className="text-[9px] font-bold text-orange-400 mt-1">Hedef: {targetFood} kcal</span>
                                         </div>
                                     </div>
 
                                     {/* Interactive Water Logger */}
-                                    <div className="bg-[#121215] border border-white/5 p-5 rounded-3xl space-y-4">
+                                    <div className="bg-[#121215] border border-black/5 dark:border-white/5 p-5 rounded-3xl space-y-4">
                                         <div className="flex justify-between items-center">
                                             <div className="flex items-center gap-2">
                                                 <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
@@ -534,7 +534,7 @@ export function CareHubModal({
                                     </div>
 
                                     {/* Interactive Meal Logger */}
-                                    <div className="bg-[#121215] border border-white/5 p-5 rounded-3xl space-y-4">
+                                    <div className="bg-[#121215] border border-black/5 dark:border-white/5 p-5 rounded-3xl space-y-4">
                                         <div className="flex justify-between items-center">
                                             <div className="flex items-center gap-2">
                                                 <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-400">
@@ -578,9 +578,9 @@ export function CareHubModal({
                                             <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest block">Bugünün Kayıtları</span>
                                             <div className="space-y-2 max-h-[150px] overflow-y-auto pr-1">
                                                 {foodLog.map((log) => (
-                                                    <div key={log.id} className="flex justify-between items-center bg-white/[0.02] border border-white/5 p-3 rounded-xl">
+                                                    <div key={log.id} className="flex justify-between items-center bg-white/[0.02] border border-black/5 dark:border-white/5 p-3 rounded-xl">
                                                         <div className="text-left">
-                                                            <p className="text-xs font-bold text-white/90">{log.name}</p>
+                                                            <p className="text-xs font-bold text-black/90 dark:text-white/90">{log.name}</p>
                                                             <span className="text-[9px] text-gray-500 font-bold">{log.time}</span>
                                                         </div>
                                                         <div className="flex items-center gap-3">
@@ -588,7 +588,7 @@ export function CareHubModal({
                                                             <button 
                                                                 onClick={() => handleDeleteMeal(log.id, log.kcal)}
                                                                 data-testid={`delete-meal-${log.id}`}
-                                                                className="text-white/30 hover:text-red-400 p-1.5 rounded-lg hover:bg-white/5 active:scale-90 transition-all cursor-pointer"
+                                                                className="text-black/40 dark:text-white/30 hover:text-red-400 p-1.5 rounded-lg hover:bg-black/5 dark:bg-white/5 active:scale-90 transition-all cursor-pointer"
                                                                 title="Kaydı Sil"
                                                             >
                                                                 <Trash2 className="w-3.5 h-3.5" />
@@ -603,7 +603,7 @@ export function CareHubModal({
                                     {/* Link to advanced food and diet plans */}
                                     <button 
                                         onClick={() => { onClose(); router.push('/food'); }}
-                                        className="w-full bg-[#121215] hover:bg-white/5 border border-white/5 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-1.5 transition-all active:scale-98 mt-2"
+                                        className="w-full bg-[#121215] hover:bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-1.5 transition-all active:scale-98 mt-2"
                                     >
                                         <span>Gelişmiş Diyet Planı & Makroları Aç</span> <ChevronRight size={14} />
                                     </button>
@@ -614,7 +614,7 @@ export function CareHubModal({
                             {activeTab === 'health' && (
                                 <div className="space-y-6">
                                     {/* Pet Vital Statistics */}
-                                    <div className="bg-[#121215] border border-white/5 p-5 rounded-3xl">
+                                    <div className="bg-[#121215] border border-black/5 dark:border-white/5 p-5 rounded-3xl">
                                         <div className="flex items-center gap-2 mb-4">
                                             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
                                                 <Heart className="w-4 h-4" />
@@ -624,7 +624,7 @@ export function CareHubModal({
 
                                         <div className="grid grid-cols-3 gap-3">
                                             {/* Weight Widget */}
-                                            <div className="bg-white/[0.02] border border-white/5 p-3.5 rounded-2xl flex flex-col items-center justify-center text-center relative">
+                                            <div className="bg-white/[0.02] border border-black/5 dark:border-white/5 p-3.5 rounded-2xl flex flex-col items-center justify-center text-center relative">
                                                 <Scale className="text-cyan-400 mb-1" size={16} />
                                                 
                                                 {isEditingWeight ? (
@@ -634,11 +634,11 @@ export function CareHubModal({
                                                             placeholder={currentWeight}
                                                             value={weightInput}
                                                             onChange={(e) => setWeightInput(e.target.value)}
-                                                            className="w-16 bg-[#1a1a1f] border border-white/10 text-center text-xs font-bold py-0.5 rounded-md outline-none text-white focus:border-cyan-500"
+                                                            className="w-16 bg-[#1a1a1f] border border-black/10 dark:border-white/10 text-center text-xs font-bold py-0.5 rounded-md outline-none text-white focus:border-cyan-500"
                                                         />
                                                         <div className="flex gap-1">
                                                             <button onClick={handleUpdateWeight} className="bg-cyan-500 text-black text-[8px] font-black px-1.5 py-0.5 rounded">Kaydet</button>
-                                                            <button onClick={() => setIsEditingWeight(false)} className="bg-white/5 text-[8px] font-bold px-1.5 py-0.5 rounded">İptal</button>
+                                                            <button onClick={() => setIsEditingWeight(false)} className="bg-black/5 dark:bg-white/5 text-[8px] font-bold px-1.5 py-0.5 rounded">İptal</button>
                                                         </div>
                                                     </div>
                                                 ) : (
@@ -655,14 +655,14 @@ export function CareHubModal({
                                             </div>
 
                                             {/* Pulse Widget */}
-                                            <div className="bg-white/[0.02] border border-white/5 p-3.5 rounded-2xl flex flex-col items-center justify-center text-center">
+                                            <div className="bg-white/[0.02] border border-black/5 dark:border-white/5 p-3.5 rounded-2xl flex flex-col items-center justify-center text-center">
                                                 <Activity className="text-red-400 mb-1" size={16} />
                                                 <span className="text-sm font-black text-white italic">82 <small className="text-[9px] not-italic opacity-55">bpm</small></span>
                                                 <span className="text-[8px] text-gray-500 font-bold uppercase mt-1">Nabız</span>
                                             </div>
 
                                             {/* Age Widget */}
-                                            <div className="bg-white/[0.02] border border-white/5 p-3.5 rounded-2xl flex flex-col items-center justify-center text-center">
+                                            <div className="bg-white/[0.02] border border-black/5 dark:border-white/5 p-3.5 rounded-2xl flex flex-col items-center justify-center text-center">
                                                 <Sparkles className="text-yellow-400 mb-1" size={16} />
                                                 <span className="text-sm font-black text-white italic">2.1 <small className="text-[9px] not-italic opacity-55">yıl</small></span>
                                                 <span className="text-[8px] text-gray-500 font-bold uppercase mt-1">Yaş</span>
@@ -686,7 +686,7 @@ export function CareHubModal({
                                         ) : (
                                             <div className="relative pl-6 space-y-6">
                                                 {/* Line */}
-                                                <div className="absolute left-[3px] top-2 bottom-2 w-[1px] bg-white/10" />
+                                                <div className="absolute left-[3px] top-2 bottom-2 w-[1px] bg-black/10 dark:bg-white/10" />
 
                                                 {schedule.slice(0, 4).map((item) => {
                                                     const isCompleted = item.status === 'completed';
@@ -702,7 +702,7 @@ export function CareHubModal({
                                                                 isOverdue ? "bg-red-500 border-red-950" : "bg-cyan-500 border-cyan-950 animate-pulse"
                                                             )} />
 
-                                                            <div className="bg-white/[0.02] border border-white/5 p-4 rounded-2xl flex justify-between items-start gap-4">
+                                                            <div className="bg-white/[0.02] border border-black/5 dark:border-white/5 p-4 rounded-2xl flex justify-between items-start gap-4">
                                                                 <div>
                                                                     <h5 className="text-xs font-black text-white uppercase tracking-tight italic">{item.definition.name}</h5>
                                                                     <p className="text-[9px] text-gray-500 font-bold mt-1 uppercase">
@@ -737,7 +737,7 @@ export function CareHubModal({
 
                                         <button 
                                             onClick={() => { onClose(); router.push('/vet?open=vaccine'); }}
-                                            className="w-full bg-[#121215] hover:bg-white/5 border border-white/5 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-1.5 transition-all active:scale-98"
+                                            className="w-full bg-[#121215] hover:bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-1.5 transition-all active:scale-98"
                                         >
                                             <span>Tüm Aşı Takvimini Aç</span> <ChevronRight size={14} />
                                         </button>
@@ -749,7 +749,7 @@ export function CareHubModal({
                             {activeTab === 'vet' && (
                                 <div className="space-y-6 text-left">
                                     {/* Appointment list */}
-                                    <div className="bg-[#121215] border border-white/5 p-5 rounded-3xl space-y-4">
+                                    <div className="bg-[#121215] border border-black/5 dark:border-white/5 p-5 rounded-3xl space-y-4">
                                         <div className="flex items-center gap-2">
                                             <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400">
                                                 <Calendar className="w-4 h-4" />
@@ -759,7 +759,7 @@ export function CareHubModal({
 
                                         <div className="space-y-3">
                                             {localAppointments.length === 0 ? (
-                                                <div className="bg-white/[0.01] border border-white/5 p-4 rounded-2xl text-center text-xs text-gray-500 font-bold uppercase tracking-wider">
+                                                <div className="bg-white/[0.01] border border-black/5 dark:border-white/5 p-4 rounded-2xl text-center text-xs text-gray-500 font-bold uppercase tracking-wider">
                                                     Kayıtlı randevu bulunamadı.
                                                 </div>
                                             ) : (
@@ -778,7 +778,7 @@ export function CareHubModal({
                                                         'text-red-400 bg-red-500/10';
 
                                                     return (
-                                                        <div key={apt.id || Math.random()} className="bg-white/[0.01] border border-white/5 p-4 rounded-2xl flex justify-between items-center text-left">
+                                                        <div key={apt.id || Math.random()} className="bg-white/[0.01] border border-black/5 dark:border-white/5 p-4 rounded-2xl flex justify-between items-center text-left">
                                                             <div>
                                                                 <h5 className="text-xs font-black text-white uppercase italic">{apt.type === 'general' ? 'Genel Muayene' : (apt.type || 'Genel Muayene')}</h5>
                                                                 <p className="text-[9px] text-gray-500 font-bold mt-1 uppercase">{apt.clinicName || 'Moda Veteriner Polikliniği'}</p>
@@ -797,7 +797,7 @@ export function CareHubModal({
                                     </div>
 
                                     {/* Near Vet Clinics */}
-                                    <div className="bg-[#121215] border border-white/5 p-5 rounded-3xl space-y-4">
+                                    <div className="bg-[#121215] border border-black/5 dark:border-white/5 p-5 rounded-3xl space-y-4">
                                         <div className="flex items-center gap-2">
                                             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
                                                 <MapPin className="w-4 h-4" />
@@ -810,9 +810,9 @@ export function CareHubModal({
                                                 { name: "Pati Hayat 7/24 Klinik", dist: "450m", status: "Açık • Acil Servis" },
                                                 { name: "Moda Vet Polikliniği", dist: "1.2km", status: "Açık • Uzman Ekip" }
                                             ].map((clinic, i) => (
-                                                <div key={i} className="bg-white/[0.01] border border-white/5 p-3.5 rounded-2xl flex justify-between items-center">
+                                                <div key={i} className="bg-white/[0.01] border border-black/5 dark:border-white/5 p-3.5 rounded-2xl flex justify-between items-center">
                                                     <div>
-                                                        <h5 className="text-xs font-black text-white/90 uppercase">{clinic.name}</h5>
+                                                        <h5 className="text-xs font-black text-black/90 dark:text-white/90 uppercase">{clinic.name}</h5>
                                                         <span className="text-[8.5px] text-emerald-400 font-black block mt-0.5 uppercase">{clinic.status}</span>
                                                     </div>
                                                     <span className="text-xs font-black text-white italic">{clinic.dist}</span>
@@ -843,7 +843,7 @@ export function CareHubModal({
                                     {/* Link to clinic appointment page */}
                                     <button 
                                         onClick={() => { onClose(); router.push('/vet?open=appointment'); }}
-                                        className="w-full bg-[#121215] hover:bg-white/5 border border-white/5 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-1.5 transition-all active:scale-98 mt-2"
+                                        className="w-full bg-[#121215] hover:bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-1.5 transition-all active:scale-98 mt-2"
                                     >
                                         <span>Yeni Randevu Al & Yönet</span> <ChevronRight size={14} />
                                     </button>
@@ -853,7 +853,7 @@ export function CareHubModal({
                         </div>
 
                         {/* BOTTOM BANNER (AVERAGE PROGRESS INDICATOR) */}
-                        <div className="p-4 bg-[#121215] border-t border-white/5 flex items-center justify-between text-left">
+                        <div className="p-4 bg-[#121215] border-t border-black/5 dark:border-white/5 flex items-center justify-between text-left">
                             <div>
                                 <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest block">Ortalama Günlük Durum</span>
                                 <span className="text-sm font-black text-white italic uppercase mt-0.5 block">%{averageProgress} Tamamlandı</span>

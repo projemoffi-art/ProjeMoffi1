@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 const GlassCard = ({ children, className }: any) => (
     <div className={cn(
-        "relative overflow-hidden bg-[#0A0A0E]/80 backdrop-blur-3xl border border-card-border rounded-[2.5rem] shadow-2xl",
+        "relative overflow-hidden bg-background dark:bg-[#0A0A0E]/80 backdrop-blur-3xl border border-card-border rounded-[2.5rem] shadow-2xl",
         className
     )}>
         {children}
@@ -69,9 +69,9 @@ export default function ActivityPage() {
                         Yürüyüş & Oyun
                     </motion.h1>
                 </div>
-                <div className="flex bg-white/5 border border-white/10 rounded-2xl p-1">
+                <div className="flex bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-2xl p-1">
                     <button className="px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all bg-emerald-500 text-white">Harita Görünümü</button>
-                    <button className="px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all text-white/40 hover:text-white">Isı Haritası</button>
+                    <button className="px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all text-black/50 dark:text-white/40 hover:text-white">Isı Haritası</button>
                 </div>
             </div>
 
@@ -81,7 +81,7 @@ export default function ActivityPage() {
                     <div className="relative z-10 flex flex-col items-center justify-center flex-1 text-center">
                         <MapIcon className="w-24 h-24 text-emerald-500/20 mb-6" />
                         <h3 className="text-3xl font-black text-white uppercase tracking-widest mb-4">Canlı Harita Yükleniyor</h3>
-                        <p className="text-white/40 max-w-md">API entegrasyonu tamamlandıktan sonra anlık lokasyon bazlı harita verileri burada görüntülenecektir.</p>
+                        <p className="text-black/50 dark:text-white/40 max-w-md">API entegrasyonu tamamlandıktan sonra anlık lokasyon bazlı harita verileri burada görüntülenecektir.</p>
                     </div>
                 </GlassCard>
 
@@ -90,12 +90,12 @@ export default function ActivityPage() {
                         <h4 className="text-white font-black uppercase tracking-widest mb-6">Aktif Bölgeler</h4>
                         <div className="space-y-4">
                             {parks.map((park) => (
-                                <div key={park.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
+                                <div key={park.id} className="flex items-center justify-between p-3 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:bg-white/10 transition-colors cursor-pointer">
                                     <div className="flex items-center gap-3">
                                         <div className={cn("w-2 h-2 rounded-full", park.status === 'high' ? "bg-rose-500" : park.status === 'medium' ? "bg-amber-500" : "bg-emerald-500")} />
                                         <span className="text-sm font-bold text-white">{park.name}</span>
                                     </div>
-                                    <div className="flex items-center gap-2 text-white/40">
+                                    <div className="flex items-center gap-2 text-black/50 dark:text-white/40">
                                         <Users className="w-4 h-4" />
                                         <span className="text-xs font-mono">{park.active}</span>
                                     </div>
@@ -109,8 +109,8 @@ export default function ActivityPage() {
                             <MapPin className="w-6 h-6 text-emerald-400" />
                         </div>
                         <h4 className="text-lg font-black text-white uppercase mb-2">Popüler Rotalar</h4>
-                        <p className="text-white/60 text-xs mb-4">Moffi topluluğunun en çok tercih ettiği yürüyüş rotaları analiz ediliyor.</p>
-                        <button className="w-full py-3 bg-white/10 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/20 transition-all">
+                        <p className="text-black/60 dark:text-white/60 text-xs mb-4">Moffi topluluğunun en çok tercih ettiği yürüyüş rotaları analiz ediliyor.</p>
+                        <button className="w-full py-3 bg-black/10 dark:bg-white/10 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-black/20 dark:bg-white/20 transition-all">
                             Rapor Oluştur
                         </button>
                     </GlassCard>

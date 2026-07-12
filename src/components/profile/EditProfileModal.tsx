@@ -66,7 +66,7 @@ export default function EditProfileModal({ isOpen, onClose, currentUser, onSave 
                     >
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-xl font-bold text-foreground dark:text-white">Profili Düzenle</h2>
-                            <button onClick={onClose} className="p-2 bg-gray-100 dark:bg-white/5 rounded-full hover:bg-gray-200 dark:hover:bg-white/10">
+                            <button onClick={onClose} className="p-2 bg-gray-100 dark:bg-white/5 rounded-full hover:bg-gray-200 dark:hover:bg-black/10 dark:bg-white/10">
                                 <X className="w-5 h-5 text-gray-500" />
                             </button>
                         </div>
@@ -92,9 +92,9 @@ export default function EditProfileModal({ isOpen, onClose, currentUser, onSave 
                         {/* Inputs */}
                         <div className="space-y-4 flex-1">
                             <div className="space-y-1">
-                                <label className="text-xs font-bold text-gray-400 ml-1">Kullanıcı Adı</label>
+                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 ml-1">Kullanıcı Adı</label>
                                 <div className="flex items-center gap-2 bg-gray-50 dark:bg-white/5 px-4 py-3 rounded-xl border border-card-border dark:border-card-border">
-                                    <UserIcon className="w-4 h-4 text-gray-400" />
+                                    <UserIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                                     <input
                                         type="text"
                                         value={name}
@@ -105,9 +105,9 @@ export default function EditProfileModal({ isOpen, onClose, currentUser, onSave 
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-xs font-bold text-gray-400 ml-1">Biyografi</label>
+                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 ml-1">Biyografi</label>
                                 <div className="flex items-start gap-2 bg-gray-50 dark:bg-white/5 px-4 py-3 rounded-xl border border-card-border dark:border-card-border h-24">
-                                    <Type className="w-4 h-4 text-gray-400 mt-1" />
+                                    <Type className="w-4 h-4 text-gray-500 dark:text-gray-400 mt-1" />
                                     <textarea
                                         value={bio}
                                         onChange={(e) => setBio(e.target.value)}

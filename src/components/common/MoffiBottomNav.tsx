@@ -57,7 +57,7 @@ export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisibl
                 initial={false}
                 animate={{ y: isVisible ? 0 : 150, opacity: isVisible ? 1 : 0 }}
                 transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
-                className="pointer-events-auto w-full max-w-md bg-white/10 dark:bg-black/20 backdrop-blur-md backdrop-saturate-[1.5] border-t border-x border-white/30 dark:border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),_0_-5px_20px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),_0_-5px_20px_rgba(0,0,0,0.3)] rounded-t-2xl overflow-visible pb-0.5"
+                className="pointer-events-auto w-full max-w-md bg-black/10 dark:bg-white/10 dark:bg-black/20 backdrop-blur-md backdrop-saturate-[1.5] border-t border-x border-black/30 dark:border-white/30 dark:border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),_0_-5px_20px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),_0_-5px_20px_rgba(0,0,0,0.3)] rounded-t-2xl overflow-visible pb-0.5"
             >
                 <div className="px-6 relative h-11 flex items-center justify-between">
                     
@@ -89,7 +89,7 @@ export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisibl
                             onClick={() => window.dispatchEvent(new CustomEvent('open-moffi-ai-hub'))}
                             className={cn(
                                 "w-11 h-11 rounded-full flex items-center justify-center border-[2.5px] border-[var(--background)] dark:border-[#1c1c21] active:scale-95 transition-all group absolute -top-4",
-                                "bg-gradient-to-tr from-cyan-400 via-blue-500 to-purple-600 text-white shadow-[0_8px_20px_rgba(34,211,238,0.4)]"
+                                "bg-gradient-to-tr from-cyan-400 via-blue-500 to-purple-600 text-[#ffffff] shadow-[0_8px_20px_rgba(34,211,238,0.4)]"
                             )}
                         >
                             <Sparkles className="w-5 h-5 transition-transform duration-500 group-hover:scale-110" />

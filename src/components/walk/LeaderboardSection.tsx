@@ -219,7 +219,7 @@ export function LeaderboardSection() {
                                         isMe ? "border-[#5B4D9D]/50 bg-[#5B4D9D]/5" : "border-card-border/50 dark:border-white/5"
                                     )}
                                 >
-                                    <div className="font-bold text-gray-400 w-5 text-center text-xs">{i + 4}</div>
+                                    <div className="font-bold text-gray-500 dark:text-gray-400 w-5 text-center text-xs">{i + 4}</div>
                                     <div className="w-10 h-10 rounded-full mx-3 relative">
                                         <img src={item.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${item.id}`} className="w-full h-full rounded-full object-cover bg-gray-100" />
                                         {/* Country Flag */}
@@ -232,11 +232,11 @@ export function LeaderboardSection() {
                                             {isMe ? 'Sen' : item.name}
                                             {isMe && <span className="bg-[#5B4D9D] text-white text-[7px] px-1.5 py-0.5 rounded">SEN</span>}
                                         </div>
-                                        <div className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{item.pet}</div>
+                                        <div className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-0.5">{item.pet}</div>
                                     </div>
                                     <div className="text-right">
                                         <div className="font-black text-xs text-[#5B4D9D]">{item.score.toLocaleString()}</div>
-                                        <div className={cn("text-[9px] font-bold flex items-center justify-end gap-0.5 mt-0.5", item.change > 0 ? "text-emerald-500" : item.change < 0 ? "text-red-500" : "text-gray-400")}>
+                                        <div className={cn("text-[9px] font-bold flex items-center justify-end gap-0.5 mt-0.5", item.change > 0 ? "text-emerald-500" : item.change < 0 ? "text-red-500" : "text-gray-500 dark:text-gray-400")}>
                                             {item.change !== 0 && <TrendingUp className={cn("w-2.5 h-2.5", item.change < 0 && "rotate-180")} />}
                                             {item.change === 0 ? '-' : Math.abs(item.change)}
                                         </div>
@@ -252,9 +252,9 @@ export function LeaderboardSection() {
             {currentUser && activeTab === 'users' && !isCurrentUserInTop3 && !loading && (
                 <div className="mt-6">
                     <div className="bg-[#5B4D9D] rounded-2xl p-3.5 flex items-center text-white shadow-xl shadow-purple-500/20 relative overflow-hidden">
-                        <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded-full blur-xl pointer-events-none" />
-                        <div className="font-black w-8 text-center text-white/50 text-xs">#{userRank}</div>
-                        <div className="w-10 h-10 rounded-full bg-white/20 mx-2 overflow-hidden shrink-0 border border-white/20">
+                        <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-black/10 dark:bg-white/10 rounded-full blur-xl pointer-events-none" />
+                        <div className="font-black w-8 text-center text-black/50 dark:text-white/50 text-xs">#{userRank}</div>
+                        <div className="w-10 h-10 rounded-full bg-black/20 dark:bg-white/20 mx-2 overflow-hidden shrink-0 border border-black/20 dark:border-white/20">
                             <img src={currentUser.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${currentUser.id}`} className="w-full h-full object-cover" />
                         </div>
                         <div className="flex-1 min-w-0 pr-2">

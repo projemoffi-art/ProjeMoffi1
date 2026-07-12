@@ -60,7 +60,7 @@ export function VetQuickSheet({ isOpen, onClose, petId = "pet-1" }: VetQuickShee
                             </div>
                             <button 
                                 onClick={onClose}
-                                className="w-10 h-10 bg-zinc-100 dark:bg-white/5 rounded-full flex items-center justify-center border border-zinc-200 dark:border-card-border hover:bg-zinc-200 dark:hover:bg-white/10 transition-all"
+                                className="w-10 h-10 bg-zinc-100 dark:bg-white/5 rounded-full flex items-center justify-center border border-zinc-200 dark:border-card-border hover:bg-zinc-200 dark:hover:bg-black/10 dark:bg-white/10 transition-all"
                             >
                                 <X className="w-5 h-5 text-zinc-400 dark:text-white/50" />
                             </button>
@@ -112,7 +112,7 @@ export function VetQuickSheet({ isOpen, onClose, petId = "pet-1" }: VetQuickShee
                                             </button>
                                             <button 
                                                 onClick={(e) => { e.stopPropagation(); window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(nearestClinic.name)}`, '_blank'); }}
-                                                className="flex-1 bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-card-border text-zinc-700 dark:text-white h-12 rounded-xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-zinc-200 dark:hover:bg-white/10 active:scale-95 transition-all"
+                                                className="flex-1 bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-card-border text-zinc-700 dark:text-white h-12 rounded-xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-zinc-200 dark:hover:bg-black/10 dark:bg-white/10 active:scale-95 transition-all"
                                             >
                                                 <Navigation className="w-4 h-4" /> Yol Tarifi
                                             </button>
@@ -151,7 +151,7 @@ export function VetQuickSheet({ isOpen, onClose, petId = "pet-1" }: VetQuickShee
                             <section className="grid grid-cols-2 gap-4">
                                 <button
                                     onClick={() => { router.push('/vet?modal=vaccine'); onClose(); }}
-                                    className="bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-[1.8rem] p-5 text-left flex flex-col justify-between h-32 hover:bg-zinc-100 dark:hover:bg-white/10 transition-all group"
+                                    className="bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-[1.8rem] p-5 text-left flex flex-col justify-between h-32 hover:bg-zinc-100 dark:hover:bg-black/10 dark:bg-white/10 transition-all group"
                                 >
                                     <div className="w-10 h-10 bg-emerald-500/20 text-emerald-400 rounded-xl flex items-center justify-center border border-emerald-500/20 group-hover:scale-110 transition-transform">
                                         <ShieldCheck className="w-5 h-5" />
@@ -160,7 +160,7 @@ export function VetQuickSheet({ isOpen, onClose, petId = "pet-1" }: VetQuickShee
                                 </button>
                                 <button
                                     onClick={() => { router.push('/vet?modal=clinicList'); onClose(); }}
-                                    className="bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-[1.8rem] p-5 text-left flex flex-col justify-between h-32 hover:bg-zinc-100 dark:hover:bg-white/10 transition-all group"
+                                    className="bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-[1.8rem] p-5 text-left flex flex-col justify-between h-32 hover:bg-zinc-100 dark:hover:bg-black/10 dark:bg-white/10 transition-all group"
                                 >
                                     <div className="w-10 h-10 bg-blue-500/20 text-blue-400 rounded-xl flex items-center justify-center border border-blue-500/20 group-hover:scale-110 transition-transform">
                                         <Stethoscope className="w-5 h-5" />

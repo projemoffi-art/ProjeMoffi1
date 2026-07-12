@@ -158,7 +158,7 @@ export function CoinStore({ coinBalance, userId, onPurchase, onClose }: CoinStor
     return (
         <div className="flex flex-col h-full">
             {/* Header */}
-            <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/5">
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-black/5 dark:border-white/5">
                 <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/30">
                         <Coins className="w-5 h-5 text-black" />
@@ -169,8 +169,8 @@ export function CoinStore({ coinBalance, userId, onPurchase, onClose }: CoinStor
                     </div>
                 </div>
                 {onClose && (
-                    <button onClick={onClose} className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
-                        <X className="w-4 h-4 text-white/50" />
+                    <button onClick={onClose} className="p-2 rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:bg-white/10 transition-colors">
+                        <X className="w-4 h-4 text-black/50 dark:text-white/50" />
                     </button>
                 )}
             </div>
@@ -181,7 +181,7 @@ export function CoinStore({ coinBalance, userId, onPurchase, onClose }: CoinStor
                     onClick={() => setActiveCategory('all')}
                     className={cn(
                         "shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all",
-                        activeCategory === 'all' ? "bg-amber-400/20 border-amber-400/50 text-amber-300" : "bg-white/5 border-white/10 text-white/40"
+                        activeCategory === 'all' ? "bg-amber-400/20 border-amber-400/50 text-amber-300" : "bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 text-black/50 dark:text-white/40"
                     )}
                 >Tümü</button>
                 {(Object.keys(CATEGORY_LABELS) as StoreItem['category'][]).map(cat => (
@@ -190,7 +190,7 @@ export function CoinStore({ coinBalance, userId, onPurchase, onClose }: CoinStor
                         onClick={() => setActiveCategory(cat)}
                         className={cn(
                             "shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all whitespace-nowrap",
-                            activeCategory === cat ? "bg-amber-400/20 border-amber-400/50 text-amber-300" : "bg-white/5 border-white/10 text-white/40"
+                            activeCategory === cat ? "bg-amber-400/20 border-amber-400/50 text-amber-300" : "bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 text-black/50 dark:text-white/40"
                         )}
                     >{CATEGORY_LABELS[cat]}</button>
                 ))}
@@ -211,9 +211,9 @@ export function CoinStore({ coinBalance, userId, onPurchase, onClose }: CoinStor
                                 whileTap={{ scale: 0.96 }}
                                 className={cn(
                                     "relative rounded-2xl border p-4 flex flex-col gap-3 transition-all",
-                                    isPurchased ? "bg-white/5 border-white/10 opacity-70" :
-                                    canAfford ? "bg-white/5 border-white/10 hover:border-white/20 cursor-pointer" :
-                                    "bg-white/3 border-white/5 opacity-50 cursor-not-allowed"
+                                    isPurchased ? "bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 opacity-70" :
+                                    canAfford ? "bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 hover:border-black/20 dark:border-white/20 cursor-pointer" :
+                                    "bg-white/3 border-black/5 dark:border-white/5 opacity-50 cursor-not-allowed"
                                 )}
                                 onClick={() => !isPurchased && canAfford && handleBuy(item)}
                             >
@@ -231,19 +231,19 @@ export function CoinStore({ coinBalance, userId, onPurchase, onClose }: CoinStor
                                         <span className="text-[7px] font-black text-amber-300 bg-amber-400/20 border border-amber-400/30 rounded px-1.5 py-0.5 uppercase tracking-wider">Sınırlı</span>
                                     )}
                                     {item.isMock && (
-                                        <span className="text-[7px] font-black text-white/20 bg-white/5 rounded px-1.5 py-0.5 uppercase">Yakında</span>
+                                        <span className="text-[7px] font-black text-black/30 dark:text-white/20 bg-black/5 dark:bg-white/5 rounded px-1.5 py-0.5 uppercase">Yakında</span>
                                     )}
                                 </div>
 
                                 {/* Info */}
                                 <div>
                                     <p className="text-[11px] font-black text-white leading-tight mb-1">{item.name}</p>
-                                    <p className="text-[9px] text-white/40 leading-relaxed">{item.description}</p>
+                                    <p className="text-[9px] text-black/50 dark:text-white/40 leading-relaxed">{item.description}</p>
                                 </div>
 
                                 {/* Buy button */}
                                 <div className={cn(
-                                    "flex items-center justify-between mt-auto pt-2 border-t border-white/5",
+                                    "flex items-center justify-between mt-auto pt-2 border-t border-black/5 dark:border-white/5",
                                 )}>
                                     <div className="flex items-center gap-1">
                                         <Coins className="w-3 h-3 text-amber-400" />
@@ -255,14 +255,14 @@ export function CoinStore({ coinBalance, userId, onPurchase, onClose }: CoinStor
                                             <span className="text-[9px] font-bold">Alındı</span>
                                         </div>
                                     ) : !canAfford ? (
-                                        <div className="flex items-center gap-1 text-white/20">
+                                        <div className="flex items-center gap-1 text-black/30 dark:text-white/20">
                                             <Lock className="w-3.5 h-3.5" />
                                             <span className="text-[9px] font-bold">Yetersiz</span>
                                         </div>
                                     ) : isBuying ? (
-                                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                        <div className="w-4 h-4 border-2 border-black/20 dark:border-white/20 border-t-white rounded-full animate-spin" />
                                     ) : (
-                                        <span className="text-[9px] font-black text-white/60 uppercase tracking-wider">Al →</span>
+                                        <span className="text-[9px] font-black text-black/60 dark:text-white/60 uppercase tracking-wider">Al →</span>
                                     )}
                                 </div>
                             </motion.div>
@@ -286,7 +286,7 @@ export function CoinStore({ coinBalance, userId, onPurchase, onClose }: CoinStor
             </AnimatePresence>
 
             {/* Nasıl coin kazanılır */}
-            <div className="px-4 pb-4 pt-2 border-t border-white/5">
+            <div className="px-4 pb-4 pt-2 border-t border-black/5 dark:border-white/5">
                 <p className="text-[9px] text-white/25 text-center">
                     Coin kazan: Görev tamamla (+5–20🪙) · Düello kazan (+50🪙) · Podyum birincisi (+200🪙) · 7 günlük seri (+50🪙)
                 </p>

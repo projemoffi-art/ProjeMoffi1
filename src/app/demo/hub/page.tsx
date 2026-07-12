@@ -41,8 +41,8 @@ export default function HubDemoPage() {
                 <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-card-border p-4 flex items-center justify-between">
                     <h1 className="text-2xl font-black italic tracking-tighter text-[#5B4D9D]">MOFFI</h1>
                     <div className="flex gap-4">
-                        <Search className="text-gray-400" size={24} />
-                        <Heart className="text-gray-400" size={24} />
+                        <Search className="text-gray-500 dark:text-gray-400" size={24} />
+                        <Heart className="text-gray-500 dark:text-gray-400" size={24} />
                     </div>
                 </div>
 

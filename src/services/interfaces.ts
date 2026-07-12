@@ -58,7 +58,7 @@ export interface IPetShopService {
     clearCart(userId: string): Promise<void>;
 
     // Orders
-    createOrder(order: Omit<ShopOrder, 'id' | 'status' | 'createdAt' | 'updatedAt'>): Promise<ShopOrder>;
+
     getOrders(userId: string): Promise<ShopOrder[]>;
     getOrderById(id: string): Promise<ShopOrder | null>;
 

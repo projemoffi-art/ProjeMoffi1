@@ -90,27 +90,27 @@ export function GuardianModal({ isOpen, onClose, onActivate }: GuardianModalProp
                     </div>
 
                     <h2 className="text-3xl font-black text-white tracking-tight mb-2">GUARDIAN PROTOKOLÜ</h2>
-                    <p className="text-gray-400 text-sm font-medium">Acil Durum Müdahale Sistemi</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Acil Durum Müdahale Sistemi</p>
                 </div>
 
                 {/* --- STATE: IDLE --- */}
                 {step === 'idle' && (
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-                        <div className="bg-white/5 border border-card-border rounded-2xl p-6 text-left mb-8">
+                        <div className="bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl p-6 text-left mb-8">
                             <h3 className="text-white font-bold mb-4 flex items-center gap-2">
                                 <Activity className="w-4 h-4 text-red-500" /> Sistem Durumu
                             </h3>
                             <div className="space-y-4">
                                 <div className="flex justify-between items-center text-sm">
-                                    <span className="text-gray-400">Tasma Bataryası</span>
+                                    <span className="text-gray-500 dark:text-gray-400">Tasma Bataryası</span>
                                     <span className="text-white font-mono font-bold">88%</span>
                                 </div>
                                 <div className="flex justify-between items-center text-sm">
-                                    <span className="text-gray-400">GPS Sinyali</span>
+                                    <span className="text-gray-500 dark:text-gray-400">GPS Sinyali</span>
                                     <span className="text-green-500 font-bold">Güçlü</span>
                                 </div>
                                 <div className="flex justify-between items-center text-sm">
-                                    <span className="text-gray-400">Aktif Kullanıcılar (15km)</span>
+                                    <span className="text-gray-500 dark:text-gray-400">Aktif Kullanıcılar (15km)</span>
                                     <span className="text-white font-mono font-bold">124</span>
                                 </div>
                             </div>
@@ -191,17 +191,17 @@ export function GuardianModal({ isOpen, onClose, onActivate }: GuardianModalProp
                             <div className="grid grid-cols-3 gap-2 mb-6">
                                 <div className="bg-black/40 p-3 rounded-xl flex flex-col items-center gap-1">
                                     <Radio className="w-4 h-4 text-red-400" />
-                                    <span className="text-[10px] font-bold text-gray-400">SİNYAL</span>
+                                    <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">SİNYAL</span>
                                     <span className="text-xs font-bold text-white">YÜKSEK</span>
                                 </div>
                                 <div className="bg-black/40 p-3 rounded-xl flex flex-col items-center gap-1">
                                     <Globe className="w-4 h-4 text-red-400" />
-                                    <span className="text-[10px] font-bold text-gray-400">AĞ</span>
+                                    <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">AĞ</span>
                                     <span className="text-xs font-bold text-white">GENİŞ</span>
                                 </div>
                                 <div className="bg-black/40 p-3 rounded-xl flex flex-col items-center gap-1">
                                     <Siren className="w-4 h-4 text-red-400" />
-                                    <span className="text-[10px] font-bold text-gray-400">DURUM</span>
+                                    <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">DURUM</span>
                                     <span className="text-xs font-bold text-white animate-pulse">ACİL</span>
                                 </div>
                             </div>

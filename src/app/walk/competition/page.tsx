@@ -59,29 +59,29 @@ export default function CompetitionPage() {
 
             {/* Header */}
             <header className="relative z-10 px-6 py-6 flex items-center justify-between">
-                <button onClick={() => router.back()} className="w-10 h-10 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-white/20 transition border border-card-border">
+                <button onClick={() => router.back()} className="w-10 h-10 bg-black/10 dark:bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-black/20 dark:bg-white/20 transition border border-card-border">
                     <ArrowLeft className="w-5 h-5 text-white" />
                 </button>
                 <div className="flex items-center gap-2 bg-black/30 px-4 py-2 rounded-full border border-card-border backdrop-blur-md">
                     <Trophy className="w-4 h-4 text-yellow-400" />
-                    <span className="text-xs font-bold uppercase tracking-wider text-white/90">Competition Hub</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-black/90 dark:text-white/90">Competition Hub</span>
                 </div>
                 <div className="w-10"></div> {/* Spacer */}
             </header>
 
             {/* Hub Switcher */}
             <div className="px-6 mb-8 relative z-10">
-                <div className="flex p-1 bg-white/5 border border-card-border rounded-2xl backdrop-blur-sm">
+                <div className="flex p-1 bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl backdrop-blur-sm">
                     <button
                         onClick={() => setActiveTab('league')}
-                        className={cn("flex-1 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2", activeTab === 'league' ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-white/50 hover:text-white")}
+                        className={cn("flex-1 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2", activeTab === 'league' ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-black/50 dark:text-white/50 hover:text-white")}
                     >
                         <Crown className="w-4 h-4" />
                         MoffiLeague
                     </button>
                     <button
                         onClick={() => setActiveTab('spotlight')}
-                        className={cn("flex-1 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2", activeTab === 'spotlight' ? "bg-card text-indigo-900 shadow-lg" : "text-white/50 hover:text-white")}
+                        className={cn("flex-1 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2", activeTab === 'spotlight' ? "bg-card text-indigo-900 shadow-lg" : "text-black/50 dark:text-white/50 hover:text-white")}
                     >
                         <Store className="w-4 h-4" />
                         Spotlight
@@ -104,13 +104,13 @@ export default function CompetitionPage() {
                                     onClick={() => setActiveLeague(league.id)}
                                     className={cn(
                                         "flex-1 flex flex-col items-center gap-1 py-3 px-2 rounded-2xl border transition-all duration-300 relative overflow-hidden group",
-                                        isActive ? `${league.bg} ${league.border}` : "bg-white/5 border-card-border hover:bg-white/10"
+                                        isActive ? `${league.bg} ${league.border}` : "bg-black/5 dark:bg-white/5 border-card-border hover:bg-black/10 dark:bg-white/10"
                                     )}
                                 >
-                                    <div className={cn("p-2 rounded-full bg-white/10 mb-1", isActive ? "scale-110" : "scale-100")}>
+                                    <div className={cn("p-2 rounded-full bg-black/10 dark:bg-white/10 mb-1", isActive ? "scale-110" : "scale-100")}>
                                         <league.icon className={cn("w-5 h-5", league.color)} />
                                     </div>
-                                    <span className={cn("text-[10px] font-bold uppercase tracking-wider", isActive ? "text-white" : "text-white/40")}>
+                                    <span className={cn("text-[10px] font-bold uppercase tracking-wider", isActive ? "text-white" : "text-black/50 dark:text-white/40")}>
                                         {league.name.split(' ')[0]}
                                     </span>
                                     {isActive && <div className="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent pointer-events-none" />}
@@ -129,7 +129,7 @@ export default function CompetitionPage() {
                             </div>
                             <div className="text-center">
                                 <div className="text-xs font-bold text-gray-300 truncate w-20">{top3[1]?.name.split(' ')[0]}</div>
-                                <div className="text-[10px] font-bold text-white/50">{top3[1]?.points}p</div>
+                                <div className="text-[10px] font-bold text-black/50 dark:text-white/50">{top3[1]?.points}p</div>
                             </div>
                             <div className="w-full h-24 bg-gradient-to-t from-gray-500/20 to-gray-500/5 rounded-t-xl border-t border-gray-500/30 backdrop-blur-sm" />
                         </div>
@@ -158,7 +158,7 @@ export default function CompetitionPage() {
                             </div>
                             <div className="text-center">
                                 <div className="text-xs font-bold text-orange-200 truncate w-20">{top3[2]?.name.split(' ')[0]}</div>
-                                <div className="text-[10px] font-bold text-white/50">{top3[2]?.points}p</div>
+                                <div className="text-[10px] font-bold text-black/50 dark:text-white/50">{top3[2]?.points}p</div>
                             </div>
                             <div className="w-full h-16 bg-gradient-to-t from-orange-500/20 to-orange-500/5 rounded-t-xl border-t border-orange-500/30 backdrop-blur-sm" />
                         </div>
@@ -167,16 +167,16 @@ export default function CompetitionPage() {
                     {/* Rank 4-10 List */}
                     <div className="flex-1 space-y-3 pb-8">
                         {rest.map((user, idx) => (
-                            <div key={user.id} className="flex items-center gap-4 p-3 rounded-2xl bg-white/5 border border-card-border backdrop-blur-sm hover:bg-white/10 transition group">
-                                <div className="w-8 flex justify-center text-sm font-bold text-white/40">#{idx + 4}</div>
+                            <div key={user.id} className="flex items-center gap-4 p-3 rounded-2xl bg-black/5 dark:bg-white/5 border border-card-border backdrop-blur-sm hover:bg-black/10 dark:bg-white/10 transition group">
+                                <div className="w-8 flex justify-center text-sm font-bold text-black/50 dark:text-white/40">#{idx + 4}</div>
                                 <img src={user.avatar} className="w-10 h-10 rounded-full border border-card-border" />
                                 <div className="flex-1">
                                     <div className="text-sm font-bold text-white group-hover:text-indigo-300 transition">{user.name}</div>
-                                    <div className="text-xs text-white/40">Poodle • 2y</div>
+                                    <div className="text-xs text-black/50 dark:text-white/40">Poodle • 2y</div>
                                 </div>
                                 <div className="text-right">
                                     <div className="text-sm font-black text-indigo-400">{user.points}</div>
-                                    <div className="text-[9px] uppercase font-bold text-white/30">Puan</div>
+                                    <div className="text-[9px] uppercase font-bold text-black/40 dark:text-white/30">Puan</div>
                                 </div>
                             </div>
                         ))}
@@ -188,7 +188,7 @@ export default function CompetitionPage() {
                 <div className="flex-1 px-6 relative z-10 pb-8 space-y-6 animate-in fade-in slide-in-from-right duration-300">
                     <div className="text-center mb-2">
                         <h2 className="text-xl font-bold bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent">Haftanın Yıldız İşletmeleri</h2>
-                        <p className="text-xs text-white/50">En çok ziyaret edilen premium noktalar</p>
+                        <p className="text-xs text-black/50 dark:text-white/50">En çok ziyaret edilen premium noktalar</p>
                     </div>
 
                     {SPOTLIGHT_BUSINESSES.map((business, index) => (
@@ -212,12 +212,12 @@ export default function CompetitionPage() {
                             {/* Info */}
                             <div className="p-4 flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center">
+                                    <div className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center">
                                         <Flame className="w-4 h-4 text-orange-500" />
                                     </div>
                                     <div>
                                         <div className="text-sm font-bold text-white">{business.visits}</div>
-                                        <div className="text-[9px] text-white/40">Haftalık Ziyaret</div>
+                                        <div className="text-[9px] text-black/50 dark:text-white/40">Haftalık Ziyaret</div>
                                     </div>
                                 </div>
                                 <button className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-lg shadow-indigo-500/20 transition flex items-center gap-1">

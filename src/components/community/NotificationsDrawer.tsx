@@ -38,7 +38,7 @@ export function NotificationsDrawer({
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: "100%", opacity: 0 }}
                         transition={{ type: "spring", damping: 30, stiffness: 300, mass: 0.8 }}
-                        className="fixed inset-y-0 right-0 w-[85%] max-w-sm bg-[#0A0A0E] z-[120] border-l border-card-border shadow-2xl flex flex-col pt-safe"
+                        className="fixed inset-y-0 right-0 w-[85%] max-w-sm bg-background dark:bg-[#0A0A0E] z-[120] border-l border-card-border shadow-2xl flex flex-col pt-safe"
                     >
                         <div className="p-6 border-b border-card-border flex items-center justify-between">
                             <div className="flex items-center gap-3">
@@ -55,7 +55,7 @@ export function NotificationsDrawer({
                                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{unreadCount} yeni mesaj</p>
                                 </div>
                             </div>
-                            <button onClick={onClose} className="p-2 rounded-full bg-white/5 text-gray-400 hover:text-white transition-colors">
+                            <button onClick={onClose} className="p-2 rounded-full bg-black/5 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-white transition-colors">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
@@ -84,11 +84,11 @@ export function NotificationsDrawer({
                                                 "px-5 py-4 flex items-center gap-3 transition-all duration-500 cursor-pointer relative overflow-hidden border-l-4",
                                                 isUnread 
                                                     ? "bg-accent/5 border-accent shadow-[inset_0_0_20px_rgba(255,55,95,0.05)]" 
-                                                    : "bg-transparent hover:bg-white/5 border-transparent"
+                                                    : "bg-transparent hover:bg-black/5 dark:bg-white/5 border-transparent"
                                             )}
                                         >
                                             <div className="relative shrink-0">
-                                                <div className="w-11 h-11 rounded-full overflow-hidden bg-white/5 border border-card-border">
+                                                <div className="w-11 h-11 rounded-full overflow-hidden bg-black/5 dark:bg-white/5 border border-card-border">
                                                     {notif.avatar && !notif.avatar.includes('cdn-icons') ? (
                                                         <img src={notif.avatar} className="w-full h-full object-cover" />
                                                     ) : (
@@ -109,14 +109,14 @@ export function NotificationsDrawer({
                                             <div className="flex-1 min-w-0 flex flex-col justify-center">
                                                 <p className={cn(
                                                     "text-[13px] leading-tight break-words transition-colors",
-                                                    isUnread ? "text-white font-bold" : "text-white/70"
+                                                    isUnread ? "text-white font-bold" : "text-black/70 dark:text-white/70"
                                                 )}>
                                                     <span className="font-black text-white mr-1">{notif.user}</span> 
                                                     {notif.text?.startsWith(notif.user) 
                                                         ? notif.text.substring(notif.user.length).trim() 
                                                         : (notif.content || notif.text)}
                                                 </p>
-                                                <p className="text-[10px] text-white/30 font-black uppercase tracking-widest mt-1.5 flex items-center gap-2">
+                                                <p className="text-[10px] text-black/40 dark:text-white/30 font-black uppercase tracking-widest mt-1.5 flex items-center gap-2">
                                                     {notif.time}
                                                     {isUnread && <span className="w-1 h-1 rounded-full bg-accent animate-pulse" />}
                                                 </p>

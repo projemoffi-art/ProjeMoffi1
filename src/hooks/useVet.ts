@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { apiService } from "@/services/apiService";
 import { VetClinic, VetAppointment } from "@/types/domain";
+import { supabase } from "@/lib/supabase";
 
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
     const R = 6371;
@@ -106,15 +107,19 @@ export function useVet() {
         time: string, 
         type: string, 
         sharedPassport?: any, 
-        petInfo?: { name: string; image: string },
+        petInfo?: { id: string; name: string; image: string },
         paymentDetails?: { paymentId: string; paymentAmount: number; paymentStatus: string }
     ) => {
+        if (!petInfo?.id) throw new Error("Randevu için bir evcil hayvan seçilmeli");
         setIsLoading(true);
         try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("Randevu almak için giriş yapmalısınız");
             const appointmentPayload = {
                 clinicId: clinic.id,
                 clinicName: clinic.name,
-                petId: '349b89f8-c5e5-46e8-abf7-b2e41b29d39a', // Milo
+                petId: petInfo.id,
+                userId: user?.id,
                 appointmentDate: `${date}T${time}:00Z`,
                 notes: `Randevu tipi: ${type === 'general' ? 'Genel Muayene' : type}`,
                 status: 'pending',
@@ -134,8 +139,9 @@ export function useVet() {
 
                     const newRequest = {
                         id: Date.now(),
-                        petName: petInfo?.name || "Milo",
-                        ownerName: "Uveys",
+                        petId: petInfo.id,
+                        petName: petInfo.name,
+                        ownerName: user?.user_metadata?.full_name || "Moffi Üyesi",
                         time: time,
                         date: date,
                         type: type === 'general' ? 'Genel Muayene' : type,
@@ -162,6 +168,7 @@ export function useVet() {
             }
         } catch (error) {
             console.error("Appointment booking failed:", error);
+            throw error;
         } finally {
             setIsLoading(false);
         }

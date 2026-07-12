@@ -35,7 +35,7 @@ export function PatiKartPolicyModal({ isOpen, onClose }: PatiKartPolicyModalProp
                             
                             <button 
                                 onClick={onClose}
-                                className="absolute top-4 right-4 w-8 h-8 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center text-white/70 hover:text-white transition-colors z-20"
+                                className="absolute top-4 right-4 w-8 h-8 bg-black/10 dark:bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center text-black/70 dark:text-white/70 hover:text-white transition-colors z-20"
                             >
                                 <X className="w-4 h-4" />
                             </button>
@@ -155,11 +155,11 @@ export function PatiKartPolicyModal({ isOpen, onClose }: PatiKartPolicyModalProp
                             <div className="mt-10 flex flex-col gap-3">
                                 <button 
                                     onClick={onClose}
-                                    className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-gray-900/20 hover:bg-black transition-colors"
+                                    className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-gray-900/20 hover:bg-white dark:bg-black transition-colors"
                                 >
                                     Okudum, Anladım ve Kabul Ediyorum
                                 </button>
-                                <p className="text-[10px] text-center text-gray-400 font-medium flex items-center justify-center gap-1">
+                                <p className="text-[10px] text-center text-gray-500 dark:text-gray-400 font-medium flex items-center justify-center gap-1">
                                     <Lock className="w-3 h-3" /> Tüm politika ve kurallar 256-bit yasal imza şifrelemesi ile kayıt altındadır.
                                 </p>
                             </div>

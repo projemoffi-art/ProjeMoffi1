@@ -358,7 +358,7 @@ export function MoffiSidebar() {
                            <motion.div 
                               style={{ opacity: Math.max(0.3, handleOpacity) }}
                               className={cn(
-                                  "w-2 h-24 transition-all duration-300 group-hover:scale-y-105 group-hover:w-3 shadow-[0_2px_10px_rgba(0,0,0,0.2)] bg-zinc-200 border border-white/5",
+                                  "w-2 h-24 transition-all duration-300 group-hover:scale-y-105 group-hover:w-3 shadow-[0_2px_10px_rgba(0,0,0,0.2)] bg-zinc-200 border border-black/5 dark:border-white/5",
                                   edgePosition === 'left' ? "rounded-r-full" : "rounded-l-full"
                               )}
                           />
@@ -403,10 +403,10 @@ export function MoffiSidebar() {
                                 /* CONFIGURATION CENTER PANEL */
                                 <div className="flex-1 flex flex-col h-full relative z-10 overflow-hidden text-white font-bold drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.95)]">
                                     {/* Header */}
-                                    <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4 shrink-0">
+                                    <div className="flex items-center justify-between border-b border-black/10 dark:border-white/10 pb-3 mb-4 shrink-0">
                                         <button 
                                             onClick={() => { triggerHaptic(15); setIsConfiguring(false); }}
-                                            className="p-1.5 rounded-full hover:bg-white/5 text-white/50 hover:text-white transition-colors"
+                                            className="p-1.5 rounded-full hover:bg-black/5 dark:bg-white/5 text-black/50 dark:text-white/50 hover:text-white transition-colors"
                                         >
                                             <ArrowLeft className="w-4 h-4 text-white" />
                                         </button>
@@ -423,10 +423,10 @@ export function MoffiSidebar() {
                                             {/* BLUR CONTROL TRACK */}
                                             <div className="flex flex-col gap-2.5">
                                                 <div className="flex justify-between items-center px-1">
-                                                    <span className="text-[7.5px] font-black text-white/40 uppercase tracking-[0.2em]">Bulanıklık Derinliği</span>
+                                                    <span className="text-[7.5px] font-black text-black/50 dark:text-white/40 uppercase tracking-[0.2em]">Bulanıklık Derinliği</span>
                                                     <span className="text-[7.5px] font-black text-indigo-405">{glassBlur === 10 ? 'SAF' : glassBlur === 40 ? 'HAFİF' : 'YOĞUN'}</span>
                                                 </div>
-                                                <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.06] rounded-full border border-white/10 shrink-0">
+                                                <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.06] rounded-full border border-black/10 dark:border-white/10 shrink-0">
                                                     {[10, 40, 80].map((level) => (
                                                         <button 
                                                             key={level}
@@ -435,7 +435,7 @@ export function MoffiSidebar() {
                                                         >
                                                             <div className={cn(
                                                                 "absolute left-1/2 -translate-x-1/2 bottom-0 w-full h-1 rounded-full transition-all duration-500",
-                                                                glassBlur === level ? "bg-indigo-500 shadow-[0_-4px_12px_rgba(99,102,241,0.6)]" : "bg-transparent group-hover:bg-white/5"
+                                                                glassBlur === level ? "bg-indigo-500 shadow-[0_-4px_12px_rgba(99,102,241,0.6)]" : "bg-transparent group-hover:bg-black/5 dark:bg-white/5"
                                                             )} />
                                                             {glassBlur === level && (
                                                                 <motion.div 
@@ -451,10 +451,10 @@ export function MoffiSidebar() {
                                             {/* HANDLE VISIBILITY TRACK */}
                                             <div className="flex flex-col gap-2.5">
                                                 <div className="flex justify-between items-center px-1">
-                                                    <span className="text-[7.5px] font-black text-white/40 uppercase tracking-[0.2em]">Tutacak Görünümü</span>
+                                                    <span className="text-[7.5px] font-black text-black/50 dark:text-white/40 uppercase tracking-[0.2em]">Tutacak Görünümü</span>
                                                     <span className="text-[7.5px] font-black text-amber-400">{handleOpacity < 0.3 ? 'HAYALET' : handleOpacity < 0.6 ? 'SOFT' : 'BELİRGİN'}</span>
                                                 </div>
-                                                <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.06] rounded-full border border-white/10 shrink-0">
+                                                <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.06] rounded-full border border-black/10 dark:border-white/10 shrink-0">
                                                     {[0.1, 0.4, 0.9].map((op) => (
                                                         <button 
                                                             key={op}
@@ -463,7 +463,7 @@ export function MoffiSidebar() {
                                                         >
                                                             <div className={cn(
                                                                 "absolute left-1/2 -translate-x-1/2 bottom-0 w-full h-1 rounded-full transition-all duration-500",
-                                                                handleOpacity === op ? "bg-amber-500 shadow-[0_-4px_12px_rgba(245,158,11,0.6)]" : "bg-transparent group-hover:bg-white/5"
+                                                                handleOpacity === op ? "bg-amber-500 shadow-[0_-4px_12px_rgba(245,158,11,0.6)]" : "bg-transparent group-hover:bg-black/5 dark:bg-white/5"
                                                             )} />
                                                             {handleOpacity === op && (
                                                                 <motion.div 
@@ -482,14 +482,14 @@ export function MoffiSidebar() {
                                                     onClick={() => { updateEdgeSetting('hapticsEnabled', !hapticsEnabled); triggerHaptic(25); }}
                                                     className="flex-1 flex flex-col gap-2.5 group"
                                                 >
-                                                    <span className="text-[7px] font-black text-white/30 uppercase tracking-[0.2em]">Titreşim</span>
-                                                    <div className="h-4 w-full bg-white/[0.06] rounded-full relative overflow-hidden border border-white/10 p-0.5">
+                                                    <span className="text-[7px] font-black text-black/40 dark:text-white/30 uppercase tracking-[0.2em]">Titreşim</span>
+                                                    <div className="h-4 w-full bg-white/[0.06] rounded-full relative overflow-hidden border border-black/10 dark:border-white/10 p-0.5">
                                                         <motion.div 
                                                             animate={{ x: hapticsEnabled ? "0%" : "-100%" }}
                                                             className="absolute inset-0 bg-gradient-to-r from-cyan-600 to-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.4)]"
                                                         />
                                                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                            <div className={cn("w-1 h-1 rounded-full transition-colors duration-500", hapticsEnabled ? "bg-card" : "bg-white/10")} />
+                                                            <div className={cn("w-1 h-1 rounded-full transition-colors duration-500", hapticsEnabled ? "bg-card" : "bg-black/10 dark:bg-white/10")} />
                                                         </div>
                                                     </div>
                                                 </button>
@@ -498,14 +498,14 @@ export function MoffiSidebar() {
                                                     onClick={() => { updateEdgeSetting('capsulePrivate', !capsulePrivate); triggerHaptic(25); }}
                                                     className="flex-1 flex flex-col gap-2.5 group"
                                                 >
-                                                    <span className="text-[7px] font-black text-white/30 uppercase tracking-[0.2em]">Gizlilik</span>
-                                                    <div className="h-4 w-full bg-white/[0.06] rounded-full relative overflow-hidden border border-white/10 p-0.5">
+                                                    <span className="text-[7px] font-black text-black/40 dark:text-white/30 uppercase tracking-[0.2em]">Gizlilik</span>
+                                                    <div className="h-4 w-full bg-white/[0.06] rounded-full relative overflow-hidden border border-black/10 dark:border-white/10 p-0.5">
                                                         <motion.div 
                                                             animate={{ x: capsulePrivate ? "0%" : "-100%" }}
                                                             className="absolute inset-0 bg-gradient-to-r from-rose-600 to-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.4)]"
                                                         />
                                                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                            <div className={cn("w-1 h-1 rounded-full transition-colors duration-500", capsulePrivate ? "bg-card" : "bg-white/10")} />
+                                                            <div className={cn("w-1 h-1 rounded-full transition-colors duration-500", capsulePrivate ? "bg-card" : "bg-black/10 dark:bg-white/10")} />
                                                         </div>
                                                     </div>
                                                 </button>
@@ -514,23 +514,23 @@ export function MoffiSidebar() {
                                             {/* EDGE POSITION */}
                                             <div className="flex flex-col gap-2.5">
                                                 <div className="flex justify-between items-center px-1">
-                                                    <span className="text-[7.5px] font-black text-white/40 uppercase tracking-[0.2em]">Kenar Konumu</span>
+                                                    <span className="text-[7.5px] font-black text-black/50 dark:text-white/40 uppercase tracking-[0.2em]">Kenar Konumu</span>
                                                     <span className="text-[7.5px] font-black text-cyan-400">{(edgePosition === 'right' ? 'SAĞ' : 'SOL')}</span>
                                                 </div>
-                                                <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.06] rounded-full border border-white/10 shrink-0">
+                                                <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.06] rounded-full border border-black/10 dark:border-white/10 shrink-0">
                                                     {['left', 'right'].map((pos) => (
                                                         <button 
                                                             key={pos}
                                                             onClick={() => { triggerHaptic(15); updateEdgeSetting('position', pos); }}
                                                             className="flex-1 h-full relative z-10 group"
                                                         >
-                                                            <span className="absolute inset-0 flex items-center justify-center text-[8px] font-black uppercase text-white/60 group-hover:text-white tracking-wider">
+                                                            <span className="absolute inset-0 flex items-center justify-center text-[8px] font-black uppercase text-black/60 dark:text-white/60 group-hover:text-white tracking-wider">
                                                                 {pos === 'left' ? 'SOL' : 'SAĞ'}
                                                             </span>
                                                             {edgePosition === pos && (
                                                                 <motion.div 
                                                                     layoutId="pos-active-indicator"
-                                                                    className="absolute inset-x-1 inset-y-1 bg-white/10 rounded-lg border border-white/10"
+                                                                    className="absolute inset-x-1 inset-y-1 bg-black/10 dark:bg-white/10 rounded-lg border border-black/10 dark:border-white/10"
                                                                 />
                                                             )}
                                                         </button>
@@ -549,10 +549,10 @@ export function MoffiSidebar() {
                                             {/* PERSONALITY */}
                                             <div className="flex flex-col gap-2.5">
                                                 <div className="flex justify-between items-center px-1">
-                                                    <span className="text-[7.5px] font-black text-white/40 uppercase tracking-[0.2em]">Asistan Kişiliği</span>
+                                                    <span className="text-[7.5px] font-black text-black/50 dark:text-white/40 uppercase tracking-[0.2em]">Asistan Kişiliği</span>
                                                     <span className="text-[7.5px] font-black text-purple-400 uppercase tracking-widest">{aiPersonality === 'casual' ? 'Samimi' : aiPersonality === 'professional' ? 'Ciddi' : 'Teknik'}</span>
                                                 </div>
-                                                <div className="h-6 flex items-center gap-1 px-1 relative bg-white/[0.06] rounded-full border border-white/10 shrink-0">
+                                                <div className="h-6 flex items-center gap-1 px-1 relative bg-white/[0.06] rounded-full border border-black/10 dark:border-white/10 shrink-0">
                                                     {[
                                                         { id: 'casual', label: 'SAMİMİ' },
                                                         { id: 'professional', label: 'CİDDİ' },
@@ -563,7 +563,7 @@ export function MoffiSidebar() {
                                                             onClick={() => { triggerHaptic(15); updateSettings('ai', { personality: p.id }); }}
                                                             className="flex-1 h-full relative z-10 group flex items-center justify-center"
                                                         >
-                                                            <span className={cn("text-[7px] font-black transition-all duration-300 tracking-tighter", aiPersonality === p.id ? "text-white" : "text-white/40")}>{p.label}</span>
+                                                            <span className={cn("text-[7px] font-black transition-all duration-300 tracking-tighter", aiPersonality === p.id ? "text-white" : "text-black/50 dark:text-white/40")}>{p.label}</span>
                                                             {aiPersonality === p.id && (
                                                                 <motion.div 
                                                                     layoutId="ai-personality-active"
@@ -578,10 +578,10 @@ export function MoffiSidebar() {
                                             {/* CREATIVITY */}
                                             <div className="flex flex-col gap-2.5">
                                                 <div className="flex justify-between items-center px-1">
-                                                    <span className="text-[7.5px] font-black text-white/40 uppercase tracking-[0.2em]">Yaratıcılık</span>
+                                                    <span className="text-[7.5px] font-black text-black/50 dark:text-white/40 uppercase tracking-[0.2em]">Yaratıcılık</span>
                                                     <span className="text-[7.5px] font-black text-purple-400 italic">%{Math.round(aiCreativity * 100)}</span>
                                                 </div>
-                                                <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.06] rounded-full border border-white/10 overflow-hidden shrink-0">
+                                                <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.06] rounded-full border border-black/10 dark:border-white/10 overflow-hidden shrink-0">
                                                     <div className="absolute inset-0 bg-purple-500/5" />
                                                     {[0.3, 0.7, 1.0].map((val) => (
                                                         <button 
@@ -591,7 +591,7 @@ export function MoffiSidebar() {
                                                         >
                                                             <div className={cn(
                                                                 "absolute left-1/2 -translate-x-1/2 bottom-0 w-full h-1 rounded-full transition-all duration-500",
-                                                                aiCreativity === val ? "bg-purple-500 shadow-[0_-4px_12px_rgba(139,92,246,0.6)]" : "bg-transparent group-hover:bg-white/5"
+                                                                aiCreativity === val ? "bg-purple-500 shadow-[0_-4px_12px_rgba(139,92,246,0.6)]" : "bg-transparent group-hover:bg-black/5 dark:bg-white/5"
                                                             )} />
                                                             {aiCreativity === val && (
                                                                 <motion.div 
@@ -607,10 +607,10 @@ export function MoffiSidebar() {
                                             {/* DETAIL DEPTH */}
                                             <div className="flex flex-col gap-2.5">
                                                 <div className="flex justify-between items-center px-1">
-                                                    <span className="text-[7.5px] font-black text-white/40 uppercase tracking-[0.2em]">Yanıt Derinliği</span>
+                                                    <span className="text-[7.5px] font-black text-black/50 dark:text-white/40 uppercase tracking-[0.2em]">Yanıt Derinliği</span>
                                                     <span className="text-[7.5px] font-black text-purple-400">{aiDetailLevel === 'short' ? 'ÖZ' : aiDetailLevel === 'medium' ? 'DENGELİ' : 'DETAYLI'}</span>
                                                 </div>
-                                                <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.06] rounded-full border border-white/10 shrink-0">
+                                                <div className="h-6 flex items-center gap-1.5 px-1 relative bg-white/[0.06] rounded-full border border-black/10 dark:border-white/10 shrink-0">
                                                     {[
                                                         { id: 'short', label: 'ÖZ' },
                                                         { id: 'medium', label: 'DENGELİ' },
@@ -623,7 +623,7 @@ export function MoffiSidebar() {
                                                         >
                                                             <div className={cn(
                                                                 "absolute left-1/2 -translate-x-1/2 bottom-0 w-full h-1 rounded-full transition-all duration-500",
-                                                                aiDetailLevel === d.id ? "bg-purple-500 shadow-[0_-4px_12px_rgba(167,139,250,0.6)]" : "bg-transparent group-hover:bg-white/5"
+                                                                aiDetailLevel === d.id ? "bg-purple-500 shadow-[0_-4px_12px_rgba(167,139,250,0.6)]" : "bg-transparent group-hover:bg-black/5 dark:bg-white/5"
                                                             )} />
                                                             {aiDetailLevel === d.id && (
                                                                 <motion.div 
@@ -640,7 +640,7 @@ export function MoffiSidebar() {
                                         {/* TRAY 3: WIDGET LIBRARY */}
                                         <div className="bg-black/20 border border-white/[0.04] p-3.5 rounded-[1.8rem] shadow-inner flex flex-col gap-4">
                                             <div className="flex flex-col items-center mb-1">
-                                                <h3 className="text-[8.5px] font-black text-white/40 uppercase tracking-[0.3em]">WIDGET KÜTÜPHANESİ</h3>
+                                                <h3 className="text-[8.5px] font-black text-black/50 dark:text-white/40 uppercase tracking-[0.3em]">WIDGET KÜTÜPHANESİ</h3>
                                                 <div className="h-0.5 w-8 bg-cyan-550 mt-1.5 rounded-full" />
                                             </div>
                                             <div className="grid grid-cols-2 gap-3">
@@ -656,13 +656,13 @@ export function MoffiSidebar() {
                                                         }}
                                                         className={cn(
                                                             "flex flex-col items-center gap-1.5 p-2 rounded-2xl transition-all relative border shadow-sm", 
-                                                            activeActions.includes(w.id) ? "bg-white/10 border-white/20" : "bg-transparent border-transparent opacity-20 scale-95"
+                                                            activeActions.includes(w.id) ? "bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20" : "bg-transparent border-transparent opacity-20 scale-95"
                                                         )}
                                                     >
-                                                        <div className={cn("w-[42px] h-[42px] rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center shadow-lg")}>
+                                                        <div className={cn("w-[42px] h-[42px] rounded-xl bg-white/[0.06] border border-black/10 dark:border-white/10 flex items-center justify-center shadow-lg")}>
                                                             <w.icon className={cn("w-5 h-5", w.iconColor)} strokeWidth={2.5} />
                                                         </div>
-                                                        <span className="text-[8px] font-black text-white/60 tracking-tight uppercase text-center">{w.label}</span>
+                                                        <span className="text-[8px] font-black text-black/60 dark:text-white/60 tracking-tight uppercase text-center">{w.label}</span>
                                                         {activeActions.includes(w.id) && (
                                                             <div className="absolute top-1 right-1 w-4.5 h-4.5 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg">
                                                                 <Check className="w-2.5 h-2.5 text-black" strokeWidth={5} />
@@ -681,10 +681,10 @@ export function MoffiSidebar() {
                                         /* EXPANDED WIDGET VIEW */
                                         <div className="flex-1 flex flex-col h-full relative z-10 overflow-hidden">
                                             {/* Header */}
-                                            <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4 shrink-0">
+                                            <div className="flex items-center justify-between border-b border-black/10 dark:border-white/10 pb-3 mb-4 shrink-0">
                                                 <button 
                                                     onClick={() => { triggerHaptic(15); setExpandedWidgetId(null); }}
-                                                    className="p-1.5 rounded-full hover:bg-white/5 transition-colors"
+                                                    className="p-1.5 rounded-full hover:bg-black/5 dark:bg-white/5 transition-colors"
                                                 >
                                                     <ArrowLeft className="w-4 h-4 text-white" />
                                                 </button>
@@ -704,23 +704,23 @@ export function MoffiSidebar() {
                                                     <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center text-center">
                                                         <Sun className="w-14 h-14 text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.4)] mb-3 animate-pulse" />
                                                         <h3 className="text-3xl font-black text-white leading-none">24°</h3>
-                                                        <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mt-1">Güneşli • Kadıköy</p>
+                                                        <p className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest mt-1">Güneşli • Kadıköy</p>
                                                         
-                                                        <div className="mt-5 w-full bg-white/[0.06] border border-white/10 rounded-2xl p-3 text-[10px] text-white/80 font-semibold leading-relaxed shadow-sm">
+                                                        <div className="mt-5 w-full bg-white/[0.06] border border-black/10 dark:border-white/10 rounded-2xl p-3 text-[10px] text-black/80 dark:text-white/80 font-semibold leading-relaxed shadow-sm">
                                                             Pamuk için harika yürüyüş havası! Sıcaklık mükemmel. 🐾
                                                         </div>
 
                                                         <div className="mt-6 w-full flex flex-col gap-3 shrink-0">
                                                             <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider px-1">
-                                                                <span className="text-white/40">Yarın</span>
+                                                                <span className="text-black/50 dark:text-white/40">Yarın</span>
                                                                 <span className="font-black text-white">23° ☀️</span>
                                                             </div>
                                                             <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider px-1">
-                                                                <span className="text-white/40">Cuma</span>
+                                                                <span className="text-black/50 dark:text-white/40">Cuma</span>
                                                                 <span className="font-black text-white">21° ⛅</span>
                                                             </div>
                                                             <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider px-1">
-                                                                <span className="text-white/40">Cumartesi</span>
+                                                                <span className="text-black/50 dark:text-white/40">Cumartesi</span>
                                                                 <span className="font-black text-white">25° ☀️</span>
                                                             </div>
                                                         </div>
@@ -747,7 +747,7 @@ export function MoffiSidebar() {
                                                                 <span className="text-sm font-black text-white">4.2k</span>
                                                             </div>
                                                         </div>
-                                                        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Hedef: 6,000 Adım</span>
+                                                        <span className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest">Hedef: 6,000 Adım</span>
                                                         
                                                         <button 
                                                             onClick={() => { triggerHaptic(30); router.push('/walk/tracking'); setIsOpen(false); }}
@@ -760,7 +760,7 @@ export function MoffiSidebar() {
 
                                                 {expandedWidgetId === 'water' && (
                                                     <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center text-center">
-                                                        <div className="w-20 h-32 bg-white/[0.04] border border-white/10 rounded-2xl relative overflow-hidden mb-4 shadow-inner">
+                                                        <div className="w-20 h-32 bg-white/[0.04] border border-black/10 dark:border-white/10 rounded-2xl relative overflow-hidden mb-4 shadow-inner">
                                                             <motion.div 
                                                                 className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-cyan-600 to-cyan-400"
                                                                 initial={{ height: 0 }}
@@ -773,24 +773,24 @@ export function MoffiSidebar() {
                                                                 </span>
                                                             </div>
                                                         </div>
-                                                        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">{waterLogged}ml / 2000ml</span>
+                                                        <span className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest">{waterLogged}ml / 2000ml</span>
 
                                                         <div className="mt-5 w-full flex flex-col gap-2 shrink-0">
                                                             <button 
                                                                 onClick={() => { triggerHaptic(15); setWaterLogged(prev => Math.min(2000, prev + 250)); }}
-                                                                className="w-full py-2 bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 font-black text-[9px] uppercase tracking-widest rounded-xl text-white transition-colors"
+                                                                className="w-full py-2 bg-white/[0.06] hover:bg-white/[0.12] border border-black/10 dark:border-white/10 font-black text-[9px] uppercase tracking-widest rounded-xl text-white transition-colors"
                                                             >
                                                                 +250ml Ekle 💧
                                                             </button>
                                                             <button 
                                                                 onClick={() => { triggerHaptic(15); setWaterLogged(prev => Math.min(2000, prev + 500)); }}
-                                                                className="w-full py-2 bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 font-black text-[9px] uppercase tracking-widest rounded-xl text-white transition-colors"
+                                                                className="w-full py-2 bg-white/[0.06] hover:bg-white/[0.12] border border-black/10 dark:border-white/10 font-black text-[9px] uppercase tracking-widest rounded-xl text-white transition-colors"
                                                             >
                                                                 +500ml Ekle 💧
                                                             </button>
                                                             <button 
                                                                 onClick={() => { triggerHaptic(30); setWaterLogged(0); }}
-                                                                className="w-full py-1.5 text-white/30 hover:text-white/50 font-black text-[8px] uppercase tracking-widest rounded-xl mt-1 transition-colors"
+                                                                className="w-full py-1.5 text-black/40 dark:text-white/30 hover:text-black/50 dark:text-white/50 font-black text-[8px] uppercase tracking-widest rounded-xl mt-1 transition-colors"
                                                             >
                                                                 Sıfırla
                                                             </button>
@@ -800,7 +800,7 @@ export function MoffiSidebar() {
 
                                                 {expandedWidgetId === 'mood' && (
                                                     <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center">
-                                                        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-4">Dostunun Modu</span>
+                                                        <span className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest mb-4">Dostunun Modu</span>
                                                         <div className="grid grid-cols-2 gap-3 w-full">
                                                             {[
                                                                 { emoji: "😊", label: "Mutlu" },
@@ -823,10 +823,10 @@ export function MoffiSidebar() {
                                                                         }));
                                                                         setExpandedWidgetId(null);
                                                                     }}
-                                                                    className="py-3 bg-white/[0.04] hover:bg-white/[0.12] border border-white/10 rounded-2xl flex flex-col items-center gap-1 transition-all active:scale-95 group"
+                                                                    className="py-3 bg-white/[0.04] hover:bg-white/[0.12] border border-black/10 dark:border-white/10 rounded-2xl flex flex-col items-center gap-1 transition-all active:scale-95 group"
                                                                 >
                                                                     <span className="text-2xl group-hover:scale-110 transition-transform duration-300">{m.emoji}</span>
-                                                                    <span className="text-[9px] font-black text-white/50 uppercase tracking-tight">{m.label}</span>
+                                                                    <span className="text-[9px] font-black text-black/50 dark:text-white/50 uppercase tracking-tight">{m.label}</span>
                                                                 </button>
                                                             ))}
                                                         </div>
@@ -848,10 +848,10 @@ export function MoffiSidebar() {
                                                                 ))}
                                                             </div>
                                                         </div>
-                                                        <span className="text-[10px] font-black text-white/80 uppercase tracking-widest mb-1">Moffi Pasaport Kartı</span>
+                                                        <span className="text-[10px] font-black text-black/80 dark:text-white/80 uppercase tracking-widest mb-1">Moffi Pasaport Kartı</span>
                                                         <p className="text-[9px] text-emerald-450 font-bold uppercase tracking-wider">Taranabilir Kimlik</p>
                                                         
-                                                        <div className="mt-5 w-full bg-white/[0.06] border border-white/10 rounded-2xl p-3 text-[9px] text-white/60 font-semibold leading-relaxed shadow-sm">
+                                                        <div className="mt-5 w-full bg-white/[0.06] border border-black/10 dark:border-white/10 rounded-2xl p-3 text-[9px] text-black/60 dark:text-white/60 font-semibold leading-relaxed shadow-sm">
                                                             Kaybolduğunda bu kodu okutan herkes petinin bilgilerine anında erişebilir.
                                                         </div>
                                                     </motion.div>
@@ -865,14 +865,14 @@ export function MoffiSidebar() {
                                         <>
                                             {/* SEARCH BAR (Premium Pill-Shaped Glass Container) */}
                                             <div className="relative mb-6 group shrink-0">
-                                                <div className="relative w-full flex items-center bg-white/[0.06] border border-white/[0.12] rounded-full px-3.5 h-9 focus-within:border-white/30 focus-within:bg-white/[0.1] transition-all duration-350 shadow-inner">
-                                                    <Search className="w-3.5 h-3.5 text-white/30 mr-2 shrink-0" />
+                                                <div className="relative w-full flex items-center bg-white/[0.06] border border-white/[0.12] rounded-full px-3.5 h-9 focus-within:border-black/30 dark:border-white/30 focus-within:bg-white/[0.1] transition-all duration-350 shadow-inner">
+                                                    <Search className="w-3.5 h-3.5 text-black/40 dark:text-white/30 mr-2 shrink-0" />
                                                     <input 
                                                         type="text"
                                                         placeholder={t('navigation.search_placeholder')}
                                                         value={searchTerm}
                                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                                        className="flex-1 bg-transparent border-none focus:outline-none text-[11px] font-semibold text-white placeholder:text-white/30 tracking-tight"
+                                                        className="flex-1 bg-transparent border-none focus:outline-none text-[11px] font-semibold text-white placeholder:text-black/40 dark:text-white/30 tracking-tight"
                                                     />
                                                     {searchTerm && (
                                                         <button 
@@ -928,7 +928,7 @@ export function MoffiSidebar() {
                                                     {activeMode === 'none' ? (
                                                         <motion.div layout className="flex items-center gap-2">
                                                             <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
-                                                            <span className="text-[9px] font-black text-white/50 tracking-[0.2em] uppercase">Moffi Live</span>
+                                                            <span className="text-[9px] font-black text-black/50 dark:text-white/50 tracking-[0.2em] uppercase">Moffi Live</span>
                                                         </motion.div>
                                                     ) : activeMode === 'sos' ? (
                                                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center w-full px-5">
@@ -948,7 +948,7 @@ export function MoffiSidebar() {
                                                             <div className="flex flex-col items-center gap-2 mb-3">
                                                                 <div className="flex items-center gap-1.5">
                                                                     <Sparkles className="w-4 h-4 text-purple-400 animate-pulse" />
-                                                                    <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">Moffi AI</span>
+                                                                    <span className="text-[10px] font-black text-black/60 dark:text-white/60 uppercase tracking-widest">Moffi AI</span>
                                                                 </div>
                                                                 <span className="text-[12px] font-black text-white text-center italic">"Seni dinliyorum..."</span>
                                                             </div>
@@ -972,10 +972,10 @@ export function MoffiSidebar() {
                                                                     <ShoppingBag className="w-5 h-5 text-amber-500" />
                                                                 </div>
                                                             </div>
-                                                            <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden relative">
+                                                            <div className="w-full h-1.5 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden relative">
                                                                 <motion.div initial={{ x: "-100%" }} animate={{ x: "60%" }} className="absolute inset-y-0 w-full bg-amber-500" />
                                                             </div>
-                                                            <span className="text-[8px] font-black text-white/40 uppercase mt-2 tracking-widest">Teslimat: 8-12 dk</span>
+                                                            <span className="text-[8px] font-black text-black/50 dark:text-white/40 uppercase mt-2 tracking-widest">Teslimat: 8-12 dk</span>
                                                         </motion.div>
                                                     ) : activeMode === 'voice' ? (
                                                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center w-full px-5">
@@ -991,7 +991,7 @@ export function MoffiSidebar() {
                                                                 </div>
                                                             </div>
                                                             <div className="flex items-center gap-2.5 w-full mt-1">
-                                                                <button onClick={() => { triggerHaptic(10); setActiveMode('none'); }} className="flex-1 py-1.5 bg-white/5 text-white/60 rounded-lg font-black text-[8px] uppercase border border-white/10">İPTAL</button>
+                                                                <button onClick={() => { triggerHaptic(10); setActiveMode('none'); }} className="flex-1 py-1.5 bg-black/5 dark:bg-white/5 text-black/60 dark:text-white/60 rounded-lg font-black text-[8px] uppercase border border-black/10 dark:border-white/10">İPTAL</button>
                                                                 <button onClick={() => { triggerHaptic(40); setActiveMode('none'); alert('Sesli not kaydedildi! 🐾'); }} className="flex-1 py-1.5 bg-rose-500 text-white rounded-lg font-black text-[8px] uppercase shadow-lg shadow-rose-500/20">KAYDET</button>
                                                             </div>
                                                         </motion.div>
@@ -1013,7 +1013,7 @@ export function MoffiSidebar() {
                                                                 </motion.div>
                                                             </div>
                                                             <div className="flex items-center gap-2 w-full mt-1">
-                                                                <button onClick={() => { triggerHaptic(20); router.push('/walk/tracking'); setIsOpen(false); }} className="flex-1 py-2 bg-white/5 text-white/80 rounded-xl font-black text-[8px] uppercase tracking-wider border border-white/10 transition-colors hover:bg-white/10">TAKİP</button>
+                                                                <button onClick={() => { triggerHaptic(20); router.push('/walk/tracking'); setIsOpen(false); }} className="flex-1 py-2 bg-black/5 dark:bg-white/5 text-black/80 dark:text-white/80 rounded-xl font-black text-[8px] uppercase tracking-wider border border-black/10 dark:border-white/10 transition-colors hover:bg-black/10 dark:bg-white/10">TAKİP</button>
                                                                 <button onClick={() => { triggerHaptic(50); stopWalk(); }} className="flex-1 py-2 bg-emerald-500 text-black rounded-xl font-black text-[8px] uppercase tracking-wider shadow-lg shadow-emerald-500/20">BİTİR</button>
                                                             </div>
                                                         </motion.div>
@@ -1049,11 +1049,11 @@ export function MoffiSidebar() {
                                                                         className="flex flex-col items-center gap-1.5 group"
                                                                     >
                                                                         {/* Glass square with distinct shadow shading */}
-                                                                        <div className="w-[50px] h-[50px] rounded-[1.2rem] bg-white/[0.05] border border-white/[0.15] flex items-center justify-center shadow-[0_4px_10px_rgba(0,0,0,0.3)] relative overflow-hidden group-hover:bg-white/[0.12] group-hover:border-white/30 transition-all duration-300">
+                                                                        <div className="w-[50px] h-[50px] rounded-[1.2rem] bg-white/[0.05] border border-white/[0.15] flex items-center justify-center shadow-[0_4px_10px_rgba(0,0,0,0.3)] relative overflow-hidden group-hover:bg-white/[0.12] group-hover:border-black/30 dark:border-white/30 transition-all duration-300">
                                                                             <div className="absolute inset-0 bg-gradient-to-tr from-white/[0.03] to-transparent pointer-events-none" />
                                                                             <widget.icon className={cn("w-5 h-5 drop-shadow-[0_2px_8px_rgba(255,255,255,0.15)] group-hover:scale-110 transition-transform duration-300", widget.iconColor)} strokeWidth={2.4} />
                                                                         </div>
-                                                                        <span className="text-[7.5px] font-black text-white/80 uppercase tracking-tighter text-center group-hover:text-white transition-colors">{widget.label}</span>
+                                                                        <span className="text-[7.5px] font-black text-black/80 dark:text-white/80 uppercase tracking-tighter text-center group-hover:text-white transition-colors">{widget.label}</span>
                                                                     </motion.button>
                                                                 );
                                                             })}
@@ -1088,13 +1088,13 @@ export function MoffiSidebar() {
                                                                     className="flex flex-col items-center gap-1.5 group"
                                                                 >
                                                                     {/* Glass square with distinct shadow shading */}
-                                                                    <div className="w-[50px] h-[50px] rounded-[1.2rem] bg-white/[0.05] border border-white/[0.15] flex items-center justify-center shadow-[0_4px_10px_rgba(0,0,0,0.3)] relative overflow-hidden group-hover:bg-white/[0.12] group-hover:border-white/30 transition-all duration-300">
+                                                                    <div className="w-[50px] h-[50px] rounded-[1.2rem] bg-white/[0.05] border border-white/[0.15] flex items-center justify-center shadow-[0_4px_10px_rgba(0,0,0,0.3)] relative overflow-hidden group-hover:bg-white/[0.12] group-hover:border-black/30 dark:border-white/30 transition-all duration-300">
                                                                         <div className="absolute inset-0 bg-gradient-to-tr from-white/[0.03] to-transparent pointer-events-none" />
                                                                         <widget.icon className={cn("w-5.5 h-5.5 drop-shadow-[0_2px_8px_rgba(255,255,255,0.15)] group-hover:scale-110 transition-transform duration-300", widget.iconColor)} strokeWidth={2} />
                                                                     </div>
                                                                     
                                                                     <div className="flex flex-col items-center max-w-[65px]">
-                                                                        <span className="text-[7.5px] font-black text-white/80 uppercase tracking-tighter text-center group-hover:text-white transition-colors truncate w-full">{widget.label}</span>
+                                                                        <span className="text-[7.5px] font-black text-black/80 dark:text-white/80 uppercase tracking-tighter text-center group-hover:text-white transition-colors truncate w-full">{widget.label}</span>
                                                                         {widget.value && (
                                                                             <span className="text-[9px] font-black text-emerald-455 mt-0.5">{widget.value}</span>
                                                                         )}
@@ -1114,10 +1114,10 @@ export function MoffiSidebar() {
                                             </div>
 
                                             {/* Bottom Settings Trigger */}
-                                            <div className="mt-4 flex justify-center border-t border-white/10 pt-4 shrink-0">
+                                            <div className="mt-4 flex justify-center border-t border-black/10 dark:border-white/10 pt-4 shrink-0">
                                                 <button 
                                                     onClick={() => { triggerHaptic(20); setIsConfiguring(true); }} 
-                                                    className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center bg-white/5 text-white/40 hover:bg-white/10 hover:text-white transition-all active:scale-90"
+                                                    className="w-10 h-10 rounded-full border border-black/10 dark:border-white/10 flex items-center justify-center bg-black/5 dark:bg-white/5 text-black/50 dark:text-white/40 hover:bg-black/10 dark:bg-white/10 hover:text-white transition-all active:scale-90"
                                                 >
                                                     <Settings className="w-5 h-5" />
                                                 </button>

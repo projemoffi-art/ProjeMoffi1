@@ -91,7 +91,7 @@ export default function AdminPlatformFinancePage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                 <div className="lg:col-span-2 bg-card rounded-2xl border border-card-border shadow-moffi-card p-6">
                     <h3 className="font-bold text-foreground mb-1">Platform Gelir Özeti</h3>
-                    <p className="text-xs text-gray-400 mb-6">Komisyon bazlı net gelir</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">Komisyon bazlı net gelir</p>
                     <div className="space-y-4">
                         <ProgressRow label="Toplam Komisyon Geliri" value={summary.totalCommission} max={summary.totalGMV} color="bg-green-500" />
                         <ProgressRow label="İade Kayıpları" value={summary.totalRefunds * 0.1} max={summary.totalGMV} color="bg-red-400" />
@@ -105,20 +105,20 @@ export default function AdminPlatformFinancePage() {
 
                 <div className="space-y-4">
                     <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl p-6 text-white shadow-xl">
-                        <PiggyBank className="w-8 h-8 text-white/60 mb-3" />
+                        <PiggyBank className="w-8 h-8 text-black/60 dark:text-white/60 mb-3" />
                         <div className="text-3xl font-black">₺{summary.platformRevenue.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</div>
-                        <div className="text-xs text-white/70 font-medium mt-1">Net Platform Geliri</div>
-                        <div className="mt-4 flex items-center gap-1 text-[10px] text-white/80 bg-white/10 rounded-lg px-2 py-1 w-fit">
+                        <div className="text-xs text-black/70 dark:text-white/70 font-medium mt-1">Net Platform Geliri</div>
+                        <div className="mt-4 flex items-center gap-1 text-[10px] text-black/80 dark:text-white/80 bg-black/10 dark:bg-white/10 rounded-lg px-2 py-1 w-fit">
                             <ArrowUpRight className="w-3 h-3" /> Geçen aya göre +18%
                         </div>
                     </div>
                     <div className="bg-card rounded-2xl border border-card-border shadow-moffi-card p-5">
                         <div className="flex items-center gap-2 mb-3">
-                            <Users className="w-4 h-4 text-gray-400" />
+                            <Users className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                             <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Aktif İşletmeler</span>
                         </div>
                         <div className="text-3xl font-black text-foreground">{summary.activeBiz}</div>
-                        <p className="text-xs text-gray-400 mt-1">Gelir üreten işletme sayısı</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Gelir üreten işletme sayısı</p>
                     </div>
                 </div>
             </div>
@@ -169,7 +169,7 @@ function BigStat({ icon: Icon, label, value, color, trend }: { icon: typeof Doll
                 {trend && <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full flex items-center gap-0.5"><ArrowUpRight className="w-3 h-3" />{trend}</span>}
             </div>
             <div className="text-xl font-black text-foreground">₺{value.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</div>
-            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-1">{label}</div>
+            <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mt-1">{label}</div>
         </div>
     );
 }

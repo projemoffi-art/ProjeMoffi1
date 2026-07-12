@@ -108,7 +108,7 @@ export const OverlaySystem: React.FC<OverlaySystemProps> = ({
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.9, y: 20 }}
                             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                            className="bg-[#1C1C1E] border border-card-border p-6 rounded-[2.5rem] w-full max-w-sm flex flex-col items-center shadow-2xl relative overflow-hidden"
+                            className="bg-card dark:bg-[#1C1C1E] border border-card-border p-6 rounded-[2.5rem] w-full max-w-sm flex flex-col items-center shadow-2xl relative overflow-hidden"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <img src={qrModalPet.avatar} className="absolute inset-0 w-full h-full object-cover opacity-10 blur-xl pointer-events-none" />
@@ -144,7 +144,7 @@ export const OverlaySystem: React.FC<OverlaySystemProps> = ({
                                 </div>
                             </div>
 
-                            <button onClick={() => setQrModalPet(null)} className="absolute top-4 right-4 w-8 h-8 bg-white/10 rounded-full flex items-center justify-center text-white z-20">
+                            <button onClick={() => setQrModalPet(null)} className="absolute top-4 right-4 w-8 h-8 bg-black/10 dark:bg-white/10 rounded-full flex items-center justify-center text-white z-20">
                                 <X className="w-4 h-4" />
                             </button>
                         </motion.div>
@@ -216,18 +216,18 @@ export const OverlaySystem: React.FC<OverlaySystemProps> = ({
                             onDragEnd={(_, info) => {
                                 if (info.offset.y > 100) setIsProfileMenuOpen(false);
                             }}
-                            className="w-full max-w-sm bg-[#0A0A0E]/60 backdrop-blur-3xl border border-card-border rounded-[3rem] p-8 pb-12 shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative"
+                            className="w-full max-w-sm bg-background dark:bg-[#0A0A0E]/60 backdrop-blur-3xl border border-card-border rounded-[3rem] p-8 pb-12 shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <div 
                                 onClick={() => setIsProfileMenuOpen(false)}
                                 className="absolute top-0 left-0 right-0 h-10 flex justify-center items-center cursor-pointer"
                             >
-                                <div className="w-16 h-1.5 bg-white/20 rounded-full" />
+                                <div className="w-16 h-1.5 bg-black/20 dark:bg-white/20 rounded-full" />
                             </div>
 
                             <div className="text-center mb-8 mt-4">
-                                <h3 className="text-[11px] font-black text-white/40 uppercase tracking-[0.4em]">Profil Kategorileri</h3>
+                                <h3 className="text-[11px] font-black text-black/50 dark:text-white/40 uppercase tracking-[0.4em]">Profil Kategorileri</h3>
                                 <p className="text-2xl font-black text-white mt-1">Nereye gitmek istersin?</p>
                             </div>
 
@@ -249,18 +249,18 @@ export const OverlaySystem: React.FC<OverlaySystemProps> = ({
                                             tab.span,
                                             profileViewMode === tab.id 
                                                 ? "bg-card border-white shadow-[0_15px_40px_rgba(255,255,255,0.2)]" 
-                                                : "bg-white/5 border-card-border backdrop-blur-md hover:bg-white/10"
+                                                : "bg-black/5 dark:bg-white/5 border-card-border backdrop-blur-md hover:bg-black/10 dark:bg-white/10"
                                         )}
                                     >
                                         <div className={cn(
                                             "w-10 h-10 rounded-2xl flex items-center justify-center transition-all mb-2",
-                                            profileViewMode === tab.id ? "bg-black text-white" : cn("bg-black/20", tab.color)
+                                            profileViewMode === tab.id ? "bg-white dark:bg-black text-white" : cn("bg-black/20", tab.color)
                                         )}>
                                             <tab.icon className={cn(tab.id === 'grid' ? "w-6 h-6" : "w-5 h-5")} />
                                         </div>
                                         <span className={cn(
                                             "text-[10px] font-black uppercase tracking-widest",
-                                            profileViewMode === tab.id ? "text-black" : "text-white/60"
+                                            profileViewMode === tab.id ? "text-black" : "text-black/60 dark:text-white/60"
                                         )}>{tab.label}</span>
                                     </button>
                                 ))}

@@ -57,7 +57,7 @@ export function ExploreGrid({ posts, onPostClick, isLoading }: ExploreGridProps)
                 {Array(12).fill(0).map((_, i) => (
                     <div 
                         key={i} 
-                        className="aspect-square bg-white/5 animate-pulse relative overflow-hidden"
+                        className="aspect-square bg-black/5 dark:bg-white/5 animate-pulse relative overflow-hidden"
                     >
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-shimmer" />
                     </div>
@@ -149,12 +149,12 @@ export function ExploreGrid({ posts, onPostClick, isLoading }: ExploreGridProps)
                         >
                             {/* Header Info */}
                             <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/60 to-transparent z-10 flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-white/10 border border-card-border overflow-hidden">
+                                <div className="w-8 h-8 rounded-full bg-black/10 dark:bg-white/10 border border-card-border overflow-hidden">
                                     <img src={previewPost.avatar} className="w-full h-full object-cover" alt="" />
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-[10px] font-black text-white uppercase tracking-widest">{previewPost.author}</span>
-                                    <span className="text-[8px] text-white/40 font-bold uppercase tracking-widest">{previewPost.time}</span>
+                                    <span className="text-[8px] text-black/50 dark:text-white/40 font-bold uppercase tracking-widest">{previewPost.time}</span>
                                 </div>
                             </div>
 
@@ -177,7 +177,7 @@ export function ExploreGrid({ posts, onPostClick, isLoading }: ExploreGridProps)
                                         <span className="text-xs font-black text-white">{previewPost.comments || 0}</span>
                                     </div>
                                 </div>
-                                <p className="text-[11px] text-white/80 mt-3 line-clamp-2 leading-relaxed italic">
+                                <p className="text-[11px] text-black/80 dark:text-white/80 mt-3 line-clamp-2 leading-relaxed italic">
                                     {previewPost.desc}
                                 </p>
                             </div>
