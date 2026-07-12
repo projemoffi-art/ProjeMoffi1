@@ -233,7 +233,7 @@ function VetPageContent() {
 
     // Deep Linking query parameter listener
     useEffect(() => {
-        if (!isLoading && allClinics.length > 0 && searchParams) {
+        if (searchParams && !isLoading) {
             const openModal = searchParams.get('open');
             const targetClinicId = searchParams.get('clinicId');
             
@@ -243,7 +243,8 @@ function VetPageContent() {
                 setActiveModal('clinicList');
             }
 
-            if (targetClinicId) {
+            // Only check for targetClinicId if clinics are loaded
+            if (targetClinicId && allClinics.length > 0) {
                 const found = allClinics.find(c => String(c.id) === String(targetClinicId));
                 if (found) {
                     setSelectedClinic(found);
