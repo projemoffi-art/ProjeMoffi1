@@ -11,13 +11,11 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { VaccineModal } from "@/components/vet/VaccineModal";
 import { DentalCareModal } from "@/components/vet/DentalCareModal";
 import { PharmacyModal } from "@/components/vet/PharmacyModal";
 import { ClinicListModal } from "@/components/vet/ClinicListModal";
 import { ClinicDetailDrawer } from "@/components/vet/ClinicDetailDrawer";
 import { MedicationModal } from "@/components/vet/MedicationModal";
-import { NutritionModal } from "@/components/vet/NutritionModal";
 import { PetSwitcher } from "@/components/common/PetSwitcher";
 import { useVet } from "@/hooks/useVet";
 import { VetClinic } from "@/types/domain";
@@ -841,7 +839,7 @@ function VetPageContent() {
                     </div>
 
                     <div className="space-y-4">
-                        {featuredClinics.map((clinic, index) => (
+                        {allClinics.map((clinic, index) => (
                             <motion.div
                                 initial={{ opacity: 0, y: 15 }}
                                 whileInView={{ opacity: 1, y: 0 }}
@@ -1381,7 +1379,6 @@ function VetPageContent() {
                 )}
 
                 {/* MODALS RENDERING */}
-                <VaccineModal isOpen={activeModal === 'vaccine'} onClose={() => setActiveModal(null)} />
                 <DentalCareModal isOpen={activeModal === 'dental'} onClose={() => setActiveModal(null)} />
                 <PharmacyModal isOpen={activeModal === 'pharma'} onClose={() => setActiveModal(null)} />
                 <ClinicListModal 
@@ -1502,12 +1499,6 @@ function VetPageContent() {
                     onClose={() => setActiveMedicationModal(false)} 
                     petId={activePet?.id || ''} 
                 />
-                <NutritionModal 
-                    isOpen={activeNutritionModal} 
-                    onClose={() => setActiveNutritionModal(false)} 
-                    petId={activePet?.id || ''} 
-                />
-
                 {/* Floating Vet-Line Support Button */}
                 <motion.button 
                     whileHover={{ scale: 1.05 }}

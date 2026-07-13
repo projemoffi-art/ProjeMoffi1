@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Poppins, Inter, Pacifico, Satisfy, Playfair_Display } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { SocialProvider } from "@/context/SocialContext";
 import { AuthProvider } from "@/context/AuthContext";
@@ -12,6 +12,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ClientAuthWrapper } from "@/components/auth/ClientAuthWrapper";
 import { DynamicNavigation } from "@/components/common/DynamicNavigation";
 import { GlobalIdentitySync } from "@/components/common/GlobalIdentitySync";
+import { GlobalCareModals } from "@/components/common/GlobalCareModals";
 import { WellbeingProvider } from "@/context/WellbeingContext";
 import { GlobalAuraBackground } from "@/components/common/GlobalAuraBackground";
 import { WeatherProvider } from "@/context/WeatherContext";
@@ -23,32 +24,9 @@ import { GlobalToast } from "@/components/common/GlobalToast";
 import { RootOnboardingWrapper } from "@/components/drafts/RootOnboardingWrapper";
 import CookieBanner from "@/components/common/CookieBanner";
 
-const poppins = Poppins({
-  weight: ['400', '600', '700', '900'],
+const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
-  variable: '--font-poppins',
-});
-
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-});
-
-const pacificoFont = Pacifico({
-  weight: '400',
-  subsets: ['latin'],
-  variable: '--font-pacifico',
-});
-
-const satisfyFont = Satisfy({
-  weight: '400',
-  subsets: ['latin'],
-  variable: '--font-satisfy',
-});
-
-const playfairFont = Playfair_Display({
-  subsets: ['latin'],
-  variable: '--font-playfair',
+  variable: '--font-jakarta',
 });
 
 export const viewport = {
@@ -86,7 +64,7 @@ export default function RootLayout({
   return (
     <html lang="en" translate="no" className="notranslate">
       <body
-        className={`${poppins.variable} ${inter.variable} ${pacificoFont.variable} ${satisfyFont.variable} ${playfairFont.variable} font-sans antialiased bg-background text-foreground`}
+        className={`${jakarta.variable} ${jakarta.className} font-sans antialiased bg-background text-foreground`}
       >
         <LanguageProvider>
           <AuthProvider>
@@ -115,6 +93,7 @@ export default function RootLayout({
                                   <Suspense fallback={null}>
                                     <DynamicNavigation />
                                   </Suspense>
+                                  <GlobalCareModals />
                                   <QuestRewardEngineLoader />
                                   <Phase2Loader />
                                   <AIWidgetLoader />
