@@ -94,7 +94,7 @@ function PetBrandHeader({ title, subtitle }: { title: string; subtitle: string }
             
             {/* Moffi Styled Brand Logo & Title block */}
             <div className="flex flex-col items-center mt-5 mb-4">
-                <span className="text-3xl font-extrabold tracking-[0.18em] bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 bg-clip-text text-transparent px-2 py-1 leading-none select-none font-[family-name:var(--font-poppins)]">
+                <span className="text-3xl font-extrabold tracking-[0.18em] bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 bg-clip-text text-transparent px-2 py-1 leading-none select-none font-[family-name:var(--font-sans)]">
                     MOFFI
                 </span>
                 

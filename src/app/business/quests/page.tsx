@@ -1,56 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Search, Trophy, TrendingUp, Users, Target } from "lucide-react";
 import { QuestCard } from "@/components/business/QuestCard";
 import { Quest } from "@/types/game";
 import { motion } from "framer-motion";
-
-// Mock Data
-const MOCK_QUESTS: Quest[] = [
-    {
-        id: "1",
-        title: "5 Kez Ziyaret Et, Kahve Kazan",
-        description: "Mağazamıza 5 farklı günde check-in yap, ücretsiz filtre kahve kazan!",
-        reward: "Ücretsiz Kahve",
-        type: "visit",
-        status: "active",
-        participants: 124,
-        completions: 45,
-        targetCount: 5,
-        startDate: "2024-01-01",
-        endDate: "2024-02-01"
-    },
-    {
-        id: "2",
-        title: "Hafta Sonu Alışveriş Şenliği",
-        description: "Bu hafta sonu yapacağın 500TL üzeri alışverişte %20 indirim.",
-        reward: "%20 İndirim",
-        type: "purchase",
-        status: "active",
-        participants: 89,
-        completions: 12,
-        targetCount: 1,
-        startDate: "2024-01-12",
-        endDate: "2024-01-14"
-    },
-    {
-        id: "3",
-        title: "Arkadaşını Getir",
-        description: "MoffiPet kullanan bir arkadaşınla gel, ikiniz de sürpriz ödül kazanın.",
-        reward: "Sürpriz Ödül",
-        type: "interaction",
-        status: "draft",
-        participants: 0,
-        completions: 0,
-        targetCount: 1,
-        startDate: "2024-02-01",
-        endDate: "2024-02-28"
-    }
-];
+import { useAuth } from "@/context/AuthContext";
+import { apiService } from "@/services/apiService";
 
 export default function BusinessQuestsPage() {
-    const [quests, setQuests] = useState<Quest[]>(MOCK_QUESTS);
+    const { user } = useAuth();
+    const [quests, setQuests] = useState<Quest[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const fetchQuests = async () => {
+        if (!user?.id) return;
+        setIsLoading(true);
+        try {
+            const data = await apiService.getClinicQuests(user.id);
+            const mappedData = data.map((q: any) => ({
+                id: q.id,
+                title: q.title,
+                description: q.description,
+                reward: q.reward,
+                type: q.quest_type,
+                status: q.status,
+                participants: q.participants,
+                completions: q.completions,
+                targetCount: q.target_count,
+                startDate: q.start_date,
+                endDate: q.end_date
+            }));
+            setQuests(mappedData);
+        } catch (error) {
+            console.error("Görevler yüklenirken hata:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchQuests();
+    }, [user?.id]);
 
     return (
         <div className="min-h-screen p-6 lg:p-10">

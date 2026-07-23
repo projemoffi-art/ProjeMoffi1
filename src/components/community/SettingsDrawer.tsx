@@ -308,28 +308,6 @@ const ProfilePersonalizationView = ({ user, setView, updateSettings }: ViewProps
                         { id: 'gold', label: 'Prime Altın 👑' }
                     ]}
                 />
-
-                {/* 3. Yazı Tipi */}
-                <ChoiceRow 
-                    label="3. Profil Yazı Tipi" 
-                    category="appearance" 
-                    field="font" 
-                    current={user?.settings?.appearance?.font || 'font-sans'} 
-                    onSelect={(cat: any, val: any) => {
-                        if ((val.font === 'font-pacifico' || val.font === 'font-satisfy') && !isPrime) {
-                            window.dispatchEvent(new CustomEvent('open-premium-modal'));
-                        } else {
-                            updateSettings(cat, val);
-                        }
-                    }}
-                    options={[
-                        { id: 'font-sans', label: 'Modern (Sans)' },
-                        { id: 'font-playfair', label: 'Klasik (Serif)' },
-                        { id: 'font-mono', label: 'Kod (Mono)' },
-                        { id: 'font-pacifico', label: 'El Yazısı 👑' },
-                        { id: 'font-satisfy', label: 'İmza 👑' }
-                    ]}
-                />
             </div>
 
             {!isPrime && (

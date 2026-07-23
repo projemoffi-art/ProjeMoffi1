@@ -2124,7 +2124,7 @@ export class SupabaseApiService implements IApiService {
             .select(`
                 *,
                 pet:pets(*),
-                user:profiles(full_name, username, avatar_url, phone)
+                user:profiles!appointments_user_id_fkey(full_name, username, avatar_url, phone)
             `);
             
         if (isUuid) {
@@ -2139,6 +2139,45 @@ export class SupabaseApiService implements IApiService {
         }
         if (!data) return [];
         return data;
+    }
+
+    async getClinicDashboardStats(clinicId: string): Promise<any> {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clinicId);
+        if (!isUuid) return { totalBalance: 0, totalPatients: 0, recentPatients: [] };
+
+        const { data: appointments, error } = await supabase
+            .from('appointments')
+            .select('*, user:profiles!appointments_user_id_fkey(id, full_name, username, avatar_url, phone)')
+            .eq('clinic_id', clinicId)
+            .order('appointment_date', { ascending: false });
+
+        if (error || !appointments) {
+            return { totalBalance: 0, totalPatients: 0, recentPatients: [] };
+        }
+
+        // Bakiye (Balance) calculation
+        const totalBalance = appointments
+            .filter((a: any) => a.status === 'confirmed' || a.status === 'completed')
+            .reduce((sum: number, a: any) => sum + (a.payment_amount || 0), 0);
+
+        // Unique Patients
+        const uniquePatientIds = new Set();
+        const recentPatients: any[] = [];
+        appointments.forEach((a: any) => {
+            if (a.user_id && !uniquePatientIds.has(a.user_id)) {
+                uniquePatientIds.add(a.user_id);
+                if (a.user && recentPatients.length < 5) {
+                    recentPatients.push(a.user);
+                }
+            }
+        });
+
+        return {
+            totalBalance,
+            totalPatients: uniquePatientIds.size,
+            recentPatients,
+            appointmentsCount: appointments.length
+        };
     }
 
     async updateAppointmentStatus(appointmentId: string, status: string): Promise<void> {
@@ -2401,6 +2440,47 @@ export class SupabaseApiService implements IApiService {
 
         if (error || !data) return {};
         return data;
+    }
+
+    async getVetAdvices(): Promise<any[]> {
+        const { data, error } = await supabase
+            .from('vet_advices')
+            .select(`*, profiles(full_name, business_name, avatar_url)`)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error("Error fetching vet advices:", error);
+            return [];
+        }
+        return data || [];
+    }
+
+    // --- FINANCE / TRANSACTIONS ---
+
+    async getClinicTransactions(clinicId: string): Promise<any[]> {
+        const { data, error } = await supabase
+            .from('transactions')
+            .select('*')
+            .eq('clinic_id', clinicId)
+            .order('date', { ascending: false });
+
+        if (error) {
+            console.error("Error fetching transactions:", error);
+            return [];
+        }
+        return data || [];
+    }
+
+    async createTransaction(transaction: {
+        clinic_id: string;
+        type: string;
+        amount: number;
+        status: string;
+        description?: string;
+        reference_id?: string;
+    }): Promise<void> {
+        const { error } = await supabase.from('transactions').insert([transaction]);
+        if (error) throw error;
     }
 
     // --- HİKAYELER (Stories) ---
@@ -2943,6 +3023,18 @@ export class SupabaseApiService implements IApiService {
             .from('products')
             .delete()
             .eq('id', id);
+        if (error) throw error;
+    }
+
+    async updateOrderTracking(orderId: string, trackingNumber: string, carrier: string): Promise<void> {
+        const { error } = await supabase
+            .from('orders')
+            .update({ 
+                tracking_number: trackingNumber, 
+                carrier: carrier, 
+                shipped_at: new Date().toISOString() 
+            })
+            .eq('id', orderId);
         if (error) throw error;
     }
 
@@ -3590,5 +3682,97 @@ export class SupabaseApiService implements IApiService {
             console.error("Supabase getFeedbacks exception:", err);
             return [];
         }
+    }
+    // --- CLINIC SPECIFIC BUSINESS METHODS ---
+
+    async getClinicProducts(clinicId: string): Promise<ShopProduct[]> {
+        const { data, error } = await supabase
+            .from('products')
+            .select('*')
+            .eq('owner_id', clinicId)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error("Error fetching clinic products:", error);
+            return [];
+        }
+        return data || [];
+    }
+
+    async getClinicOrders(clinicId: string): Promise<ShopOrder[]> {
+        const { data, error } = await supabase
+            .from('orders')
+            .select(`
+                *,
+                items:order_items!inner(
+                    id, quantity, price_at_purchase, status,
+                    product:products!inner(*)
+                ),
+                user:profiles!orders_user_id_fkey(full_name, phone, email)
+            `)
+            .eq('items.product.owner_id', clinicId)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error("Error fetching clinic orders:", error);
+            return [];
+        }
+
+        return (data || []).map((o: any) => ({
+            id: o.id,
+            total_amount: o.total_amount,
+            status: o.status,
+            date: o.created_at,
+            shipping_address: o.shipping_address,
+            user_id: o.user_id,
+            user: o.user,
+            items: o.items.map((i: any) => ({
+                quantity: i.quantity,
+                price: i.price_at_purchase,
+                product: i.product,
+                status: i.status
+            }))
+        }));
+    }
+    // --- CAMPAIGNS ---
+    async getClinicCampaigns(clinicId: string): Promise<any[]> {
+        const { data, error } = await supabase
+            .from('campaigns')
+            .select('*')
+            .eq('clinic_id', clinicId)
+            .order('created_at', { ascending: false });
+        if (error) { console.error("Error fetching campaigns:", error); return []; }
+        return data || [];
+    }
+
+    async addClinicCampaign(campaign: any): Promise<void> {
+        const { error } = await supabase.from('campaigns').insert(campaign);
+        if (error) { console.error("Error adding campaign:", error); throw error; }
+    }
+
+    async deleteClinicCampaign(id: string): Promise<void> {
+        const { error } = await supabase.from('campaigns').delete().eq('id', id);
+        if (error) { console.error("Error deleting campaign:", error); throw error; }
+    }
+
+    // --- QUESTS ---
+    async getClinicQuests(clinicId: string): Promise<any[]> {
+        const { data, error } = await supabase
+            .from('quests')
+            .select('*')
+            .eq('clinic_id', clinicId)
+            .order('created_at', { ascending: false });
+        if (error) { console.error("Error fetching quests:", error); return []; }
+        return data || [];
+    }
+
+    async addClinicQuest(quest: any): Promise<void> {
+        const { error } = await supabase.from('quests').insert(quest);
+        if (error) { console.error("Error adding quest:", error); throw error; }
+    }
+
+    async deleteClinicQuest(id: string): Promise<void> {
+        const { error } = await supabase.from('quests').delete().eq('id', id);
+        if (error) { console.error("Error deleting quest:", error); throw error; }
     }
 }

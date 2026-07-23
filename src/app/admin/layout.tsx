@@ -202,7 +202,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             {user?.avatar ? <img src={user.avatar} className="w-full h-full object-cover" alt="" /> : <span className="font-bold text-white">A</span>}
                         </div>
                         <div className={cn("flex-1 overflow-hidden", collapsed && "lg:hidden")}>
-                            <div className="text-sm font-black text-white truncate">{user?.username || 'Admin'}</div>
+                            <div className="text-sm font-black text-white truncate">{user?.user_metadata?.full_name || user?.email || user?.username || 'Admin'}</div>
                             <div className="flex items-center gap-1.5">
                                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                                 <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Secured</span>

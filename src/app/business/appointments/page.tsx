@@ -12,13 +12,8 @@ import { usePet } from "@/context/PetContext";
 import { useAuth } from "@/context/AuthContext";
 import { showToast } from "@/lib/utils";
 import { apiService, isSupabaseEnabled } from "@/services/apiService";
+import { supabase } from "@/lib/supabase";
 import { sendAppointmentConfirmationEmail } from "@/actions/sendAppointmentEmail";
-
-// MOCK APPOINTMENTS (Initial State)
-const INITIAL_APPOINTMENTS = [
-    { id: 101, petName: "Luna", ownerName: "Ayşe Yılmaz", time: "09:30", type: "Rutin Kontrol", status: "confirmed", image: "https://images.unsplash.com/photo-1517849845537-4d257902454a?w=100", petId: "pet-milo" },
-    { id: 102, petName: "Baron", ownerName: "Mehmet Demir", time: "11:00", type: "Aşı (Kuduz)", status: "confirmed", image: "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=100", petId: "pet-max" },
-];
 
 export default function BusinessAppointmentsPage() {
     const { customRecords, setCustomRecords, updatePet } = usePet();
@@ -52,8 +47,8 @@ export default function BusinessAppointmentsPage() {
         }
     };
 
-    // Initialize with mock data to avoid hydration mismatch
-    const [appointments, setAppointments] = useState<any[]>(INITIAL_APPOINTMENTS);
+    // Initialize with empty data
+    const [appointments, setAppointments] = useState<any[]>([]);
     const [pendingRequests, setPendingRequests] = useState<any[]>([]);
 
     // Consultation Form States
@@ -99,6 +94,7 @@ export default function BusinessAppointmentsPage() {
     const [vetAdviceBadge, setVetAdviceBadge] = useState("Genel Sağlık 🩺");
 
     const fetchAppointmentsFromDb = async () => {
+        console.log(`[RANDEVU-TEST] ${new Date().toISOString()} - Fetch BAŞLADI`);
         if (!user?.id) {
             console.warn("Klinik ID'si bulunamadı, kullanıcı oturumu yüklenmemiş olabilir.");
             return;
@@ -167,6 +163,7 @@ export default function BusinessAppointmentsPage() {
             const confirmed = mapped.filter((a: any) => a.status === 'confirmed' || a.status === 'completed');
             const pending = mapped.filter((a: any) => a.status === 'pending');
 
+            console.log(`[RANDEVU-TEST] ${new Date().toISOString()} - Gelen veri sayısı:`, list?.length, list);
             setAppointments(confirmed);
             setPendingRequests(pending);
         } catch (e) {
@@ -217,8 +214,8 @@ export default function BusinessAppointmentsPage() {
             try {
                 const clinicId = user?.id;
                 if (!clinicId) return;
-                const { data: advices } = await supabase.from('vet_advice').select('*');
-                const myAdvice = advices.find((item: any) => item.clinic_id === clinicId);
+                const { data: advices } = await supabase.from('vet_advices').select('*');
+                const myAdvice = (advices || []).find((item: any) => item.clinic_id === clinicId);
                 if (myAdvice) {
                     setVetAdviceText(myAdvice.content);
                     setVetAdviceBadge(myAdvice.badge);
@@ -332,6 +329,20 @@ export default function BusinessAppointmentsPage() {
                         });
                     } catch (emailErr) {
                         console.error("Failed to send appointment confirmation email:", emailErr);
+                    }
+
+                    // --- B2: Create Transaction Record ---
+                    try {
+                        await apiService.createTransaction({
+                            clinic_id: user?.id || "",
+                            type: 'sale',
+                            amount: target.paymentAmount || 350,
+                            status: 'completed',
+                            description: `${target.petName} - ${target.type || "Veteriner Randevusu"}`,
+                            reference_id: id.toString()
+                        });
+                    } catch (txErr) {
+                        console.error("Failed to record transaction:", txErr);
                     }
                 }
                 // --- END B1 ---
@@ -727,8 +738,8 @@ export default function BusinessAppointmentsPage() {
                             {pendingRequests.length > 0 && <span className="absolute top-3 right-3 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-black animate-pulse" />}
                         </button>
                         <div className="hidden md:flex items-center gap-3 bg-card dark:bg-white/5 px-4 py-2 rounded-2xl border border-card-border dark:border-card-border">
-                            <img src="https://images.unsplash.com/photo-1559839734-2b71ea86b48e?w=100" className="w-8 h-8 rounded-full object-cover" />
-                            <span className="font-bold text-sm">Dr. Moffi</span>
+                            <img src={user?.user_metadata?.avatar_url || "https://images.unsplash.com/photo-1559839734-2b71ea86b48e?w=100"} className="w-8 h-8 rounded-full object-cover" />
+                            <span className="font-bold text-sm">{user?.user_metadata?.full_name || user?.email?.split('@')[0] || "Klinik Yöneticisi"}</span>
                         </div>
                     </div>
                 </header>

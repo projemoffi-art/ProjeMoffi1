@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { BusinessSidebar } from "@/components/business/Sidebar";
-import { MOCK_PRODUCTS } from "@/data/mockBusinessRegistry";
 import { useAuth } from "@/context/AuthContext";
 import { BusinessProduct, ProductStatus, ProductCategory } from "@/types/business";
 import { cn } from "@/lib/utils";
@@ -12,6 +11,7 @@ import {
     Tag, Loader2, CheckCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { apiService } from "@/services/apiService";
 
 const CATEGORY_LABELS: Record<ProductCategory, string> = {
     food: 'Mama', toy: 'Oyuncak', accessory: 'Aksesuar', health: 'Sağlık', clothing: 'Giyim', bed: 'Yatak', other: 'Diğer'
@@ -32,9 +32,34 @@ export default function BusinessProductsPage() {
     const [statusFilter, setStatusFilter] = useState<ProductStatus | 'all'>('all');
     const [editModal, setEditModal] = useState<BusinessProduct | null>(null);
     const [showAddModal, setShowAddModal] = useState(false);
+    const [allProducts, setAllProducts] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const businessId = user?.businessId || 'biz_paws1';
-    const allProducts = MOCK_PRODUCTS.filter(p => p.businessId === businessId);
+    const businessId = user?.id;
+
+    useEffect(() => {
+        const fetchProducts = async () => {
+            if (user?.id) {
+                try {
+                    const products = await apiService.getClinicProducts(user.id);
+                    // Map real db schema to UI expected schema
+                    const mappedProducts = products.map((p: any) => ({
+                        ...p,
+                        images: [p.image_url || 'https://via.placeholder.com/150'],
+                        status: p.stock > 0 ? 'active' : 'out_of_stock'
+                    }));
+                    setAllProducts(mappedProducts);
+                } catch (e) {
+                    console.error(e);
+                } finally {
+                    setIsLoading(false);
+                }
+            } else {
+                setIsLoading(false);
+            }
+        };
+        fetchProducts();
+    }, [user?.id]);
 
     const filtered = useMemo(() => {
         let result = [...allProducts];
@@ -121,7 +146,7 @@ export default function BusinessProductsPage() {
                 </div>
 
                 {/* Product Grid/List */}
-                {filtered.length === 0 ? (
+                {filtered.length === 0 && !isLoading ? (
                     <div className="bg-card rounded-2xl border border-card-border p-16 text-center">
                         <Package className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                         <h3 className="font-bold text-foreground mb-1">Ürün bulunamadı</h3>
@@ -129,9 +154,13 @@ export default function BusinessProductsPage() {
                     </div>
                 ) : viewMode === 'grid' ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {filtered.map(product => (
-                            <ProductCard key={product.id} product={product} onEdit={() => setEditModal(product)} />
-                        ))}
+                        {isLoading ? (
+                            <div className="col-span-full p-12 text-center text-gray-500">Ürünler yükleniyor...</div>
+                        ) : (
+                            filtered.map(product => (
+                                <ProductCard key={product.id} product={product} onEdit={() => setEditModal(product)} />
+                            ))
+                        )}
                     </div>
                 ) : (
                     <div className="bg-card rounded-2xl border border-card-border overflow-hidden">
@@ -176,12 +205,8 @@ export default function BusinessProductsPage() {
 
             {/* Edit/Add Modal */}
             <AnimatePresence>
-                {(editModal || showAddModal) && (
-                    <ProductModal
-                        product={editModal}
-                        onClose={() => { setEditModal(null); setShowAddModal(false); }}
-                    />
-                )}
+                {editModal && <ProductModal product={editModal} businessId={user?.id || ''} onClose={() => { setEditModal(null); window.location.reload(); }} />}
+                {showAddModal && <ProductModal product={null} businessId={user?.id || ''} onClose={() => { setShowAddModal(false); window.location.reload(); }} />}
             </AnimatePresence>
         </div>
     );
@@ -246,23 +271,40 @@ function ProductCard({ product, onEdit }: { product: BusinessProduct; onEdit: ()
     );
 }
 
-function ProductModal({ product, onClose }: { product: BusinessProduct | null; onClose: () => void }) {
+function ProductModal({ product, businessId, onClose }: { product: any | null; businessId: string; onClose: () => void }) {
     const isEdit = !!product;
     const [name, setName] = useState(product?.name || '');
-    const [price, setPrice] = useState(product?.price.toString() || '');
-    const [stock, setStock] = useState(product?.stock.toString() || '');
+    const [price, setPrice] = useState(product?.price?.toString() || '');
+    const [stock, setStock] = useState(product?.stock?.toString() || '');
     const [category, setCategory] = useState<ProductCategory>(product?.category || 'food');
     const [description, setDescription] = useState(product?.description || '');
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         setSaving(true);
-        setTimeout(() => {
-            setSaving(false);
+        try {
+            const payload = {
+                name,
+                price: parseFloat(price),
+                stockCount: parseInt(stock, 10),
+                category,
+                description,
+                ownerId: businessId
+            };
+            if (isEdit) {
+                await apiService.updateProduct(product.id, payload);
+            } else {
+                await apiService.addProduct(payload);
+            }
             setSaved(true);
             setTimeout(onClose, 800);
-        }, 1000);
+        } catch (err) {
+            console.error(err);
+            alert("Ürün kaydedilemedi.");
+        } finally {
+            setSaving(false);
+        }
     };
 
     return (

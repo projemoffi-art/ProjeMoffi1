@@ -29,7 +29,7 @@ export async function POST(req: Request) {
 
         // KİMLİK DOĞRULAMA (Sadece gerçek kullanıcılar için)
         if (!isMock && supabaseUrl && supabaseAnonKey) {
-            const cookieStore = cookies();
+            const cookieStore = await cookies();
             const supabase = createServerClient(
                 supabaseUrl,
                 supabaseAnonKey,
@@ -172,8 +172,8 @@ export async function POST(req: Request) {
                     total_amount: amount,
                     shipping_address: fullAddress,
                     status: "pending",
-                    commission_rate: commissionRate,
-                    commission_amount: commissionAmount,
+                    // commission_rate: commissionRate,     // TEMPORARILY DISABLED (Claude's request)
+                    // commission_amount: commissionAmount, // TEMPORARILY DISABLED (Claude's request)
                     expires_at: expiresAt
                 })
                 .select()

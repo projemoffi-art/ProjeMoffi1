@@ -2,10 +2,10 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { BusinessSidebar } from "@/components/business/Sidebar";
-import { MOCK_TRANSACTIONS, MOCK_ORDERS } from "@/data/mockBusinessRegistry";
 import { useAuth } from "@/context/AuthContext";
 import { FinanceTransaction, TransactionType } from "@/types/business";
 import { cn } from "@/lib/utils";
+import { apiService } from "@/services/apiService";
 import {
     Wallet, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
     Menu, DollarSign, BarChart3, CreditCard, Clock, CheckCircle,
@@ -28,40 +28,29 @@ export default function BusinessFinancePage() {
     const [typeFilter, setTypeFilter] = useState<TransactionType | 'all'>('all');
     const [showPayoutModal, setShowPayoutModal] = useState(false);
     const [transactions, setTransactions] = useState<any[]>([]);
-
-    const businessId = user?.businessId || (user?.email === 'doctor@moffipet.com' ? 'biz_vet1' : 'biz_paws1');
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            try {
-                const stored = localStorage.getItem('moffi_business_transactions');
-                let parsed = stored ? JSON.parse(stored) : [...MOCK_TRANSACTIONS];
-                
-                // If it doesn't have the mock seed transactions, seed some
-                const hasSeed = parsed.some((t: any) => t.id === 'tx_seed_1');
-                if (!hasSeed) {
-                    const seedTxs = [
-                        { id: 'tx_seed_1', businessId: 'biz_vet1', type: 'sale', amount: 650, description: 'Randevu Onayı #101 (Luna)', date: '2026-02-20T10:00:00Z', status: 'completed' },
-                        { id: 'tx_seed_2', businessId: 'biz_vet1', type: 'commission', amount: -65, description: 'Sistem komisyon kesintisi (%10)', date: '2026-02-20T10:00:00Z', status: 'completed' },
-                        { id: 'tx_seed_3', businessId: 'biz_vet1', type: 'sale', amount: 650, description: 'Randevu Onayı #102 (Baron)', date: '2026-02-21T08:00:00Z', status: 'completed' },
-                        { id: 'tx_seed_4', businessId: 'biz_vet1', type: 'commission', amount: -65, description: 'Sistem komisyon kesintisi (%10)', date: '2026-02-21T08:00:00Z', status: 'completed' }
-                    ];
-                    parsed = [...parsed, ...seedTxs];
-                    localStorage.setItem('moffi_business_transactions', JSON.stringify(parsed));
+        const fetchTransactions = async () => {
+            if (user?.id) {
+                try {
+                    const data = await apiService.getClinicTransactions(user.id);
+                    setTransactions(data);
+                } catch (e) {
+                    console.error("Failed to fetch transactions:", e);
+                } finally {
+                    setIsLoading(false);
                 }
-                setTransactions(parsed);
-            } catch (e) {
-                console.error("Failed to load business transactions:", e);
-                setTransactions(MOCK_TRANSACTIONS);
+            } else {
+                setIsLoading(false);
             }
-        }
-    }, []);
+        };
+        fetchTransactions();
+    }, [user?.id]);
 
-    const filteredTransactions = useMemo(() => {
-        return transactions.filter(t => t.businessId === businessId || (businessId === 'biz_vet1' && t.businessId === 'vet-1'));
-    }, [transactions, businessId]);
+    const filteredTransactions = transactions;
 
-    const orders = MOCK_ORDERS.filter(o => o.businessId === businessId);
+    const orders: any[] = []; // Phase 3: real orders will come later
 
     const filtered = useMemo(() => {
         let result = [...filteredTransactions];
@@ -181,69 +170,79 @@ export default function BusinessFinancePage() {
                 </div>
 
                 {/* Transaction History */}
-                <div className="bg-card rounded-2xl border border-card-border shadow-moffi-card">
-                    <div className="p-5 border-b border-card-border flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                        <h3 className="font-bold text-foreground">İşlem Geçmişi</h3>
-                        <div 
-                            ref={filterScroll.ref}
-                            onMouseDown={filterScroll.onMouseDown}
-                            onMouseLeave={filterScroll.onMouseLeave}
-                            onMouseUp={filterScroll.onMouseUp}
-                            onMouseMove={filterScroll.onMouseMove}
-                            className="flex gap-2 overflow-x-auto pb-1 cursor-grab active:cursor-grabbing select-none"
-                        >
-                            {(['all', 'sale', 'commission', 'payout', 'refund'] as const).map(t => (
-                                <button
-                                    key={t}
-                                    onClick={() => setTypeFilter(t)}
-                                    className={cn(
-                                        "px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition",
-                                        typeFilter === t ? "bg-indigo-50 text-indigo-700" : "bg-gray-50 text-gray-500 hover:bg-gray-100"
-                                    )}
-                                >
-                                    {t === 'all' ? 'Tümü' : TYPE_CONFIG[t].label}
-                                </button>
-                            ))}
-                        </div>
+                <div className="mb-8">
+                    <div 
+                        ref={filterScroll.ref}
+                        onMouseDown={filterScroll.onMouseDown}
+                        onMouseLeave={filterScroll.onMouseLeave}
+                        onMouseUp={filterScroll.onMouseUp}
+                        onMouseMove={filterScroll.onMouseMove}
+                        className="flex gap-2 overflow-x-auto pb-4 cursor-grab active:cursor-grabbing select-none mb-4"
+                    >
+                        {(['all', 'sale', 'commission', 'payout', 'refund'] as const).map(t => (
+                            <button
+                                key={t}
+                                onClick={() => setTypeFilter(t)}
+                                className={cn(
+                                    "px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition",
+                                    typeFilter === t ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" : "bg-card border border-card-border text-gray-600 hover:bg-gray-50"
+                                )}
+                            >
+                                {t === 'all' ? 'Tümü' : TYPE_CONFIG[t].label}
+                            </button>
+                        ))}
                     </div>
 
-                    {filtered.length === 0 ? (
-                        <div className="p-12 text-center text-gray-500 dark:text-gray-400 text-sm">Bu kategoride işlem bulunamadı.</div>
-                    ) : (
-                        <div className="divide-y divide-gray-50">
-                            {filtered.map(tx => {
-                                const config = TYPE_CONFIG[tx.type];
-                                const TxIcon = config.icon;
-                                const isPositive = tx.amount > 0;
-                                return (
-                                    <div key={tx.id} className="px-5 py-4 flex items-center gap-4 hover:bg-gray-50/50 transition">
-                                        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
-                                            isPositive ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"
-                                        )}>
-                                            <TxIcon className="w-5 h-5" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="font-medium text-foreground text-sm truncate">{tx.description}</div>
-                                            <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
-                                                {new Date(tx.date).toLocaleString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                            </div>
-                                        </div>
-                                        <div className="text-right flex-shrink-0">
-                                            <div className={cn("font-black text-sm", isPositive ? "text-green-600" : "text-red-600")}>
-                                                {isPositive ? '+' : ''}₺{Math.abs(tx.amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
-                                            </div>
-                                            <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded",
-                                                tx.status === 'completed' ? "text-green-600 bg-green-50" :
-                                                    tx.status === 'pending' ? "text-amber-600 bg-amber-50" : "text-gray-500 dark:text-gray-400 bg-gray-50"
-                                            )}>
-                                                {tx.status === 'completed' ? 'Tamamlandı' : tx.status === 'pending' ? 'Bekliyor' : 'İptal'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                    <div className="bg-card dark:bg-[#121212] rounded-[2rem] border border-card-border shadow-moffi-card overflow-hidden">
+                        <div className="p-6 border-b border-card-border flex justify-between items-center bg-gray-50/50 dark:bg-white/5">
+                            <h3 className="font-bold text-foreground">İşlem Geçmişi</h3>
                         </div>
-                    )}
+
+                        <div className="divide-y divide-card-border">
+                            {isLoading ? (
+                                <div className="p-8 text-center text-gray-500">İşlemler yükleniyor...</div>
+                            ) : filtered.length === 0 ? (
+                                <div className="p-12 text-center text-gray-500">Bu kategoride işlem bulunamadı.</div>
+                            ) : (
+                                filtered.map(tx => {
+                                    const conf = TYPE_CONFIG[tx.type as TransactionType] || TYPE_CONFIG['sale'];
+                                    const Icon = conf.icon;
+                                    const isPositive = tx.type === 'sale' || tx.type === 'payout';
+                                    return (
+                                        <div key={tx.id} className="p-5 flex items-center justify-between hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors group">
+                                            <div className="flex items-center gap-4">
+                                                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110",
+                                                    tx.type === 'sale' ? 'bg-green-100 text-green-600' :
+                                                    tx.type === 'commission' ? 'bg-red-100 text-red-600' :
+                                                    tx.type === 'refund' ? 'bg-orange-100 text-orange-600' :
+                                                    'bg-blue-100 text-blue-600'
+                                                )}>
+                                                    <Icon className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <div className="font-bold text-foreground text-sm">{tx.description}</div>
+                                                    <div className="text-xs text-gray-500 mt-1">
+                                                        {new Date(tx.date).toLocaleString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="text-right flex-shrink-0">
+                                                <div className={cn("font-black text-sm", isPositive ? "text-green-600" : "text-red-600")}>
+                                                    {isPositive ? '+' : '-'}₺{Math.abs(tx.amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+                                                </div>
+                                                <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded",
+                                                    tx.status === 'completed' ? "text-green-600 bg-green-50" :
+                                                    tx.status === 'pending' ? "text-amber-600 bg-amber-50" : "text-gray-500 bg-gray-50"
+                                                )}>
+                                                    {tx.status === 'completed' ? 'Tamamlandı' : tx.status === 'pending' ? 'Bekliyor' : 'İptal'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </div>
                 </div>
             </main>
 

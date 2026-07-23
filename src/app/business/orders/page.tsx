@@ -12,6 +12,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { supabase } from "@/lib/supabase";
+import { apiService } from "@/services/apiService";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: typeof Clock }> = {
     awaiting_payment: { label: 'Ödeme Bekliyor', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200', icon: Clock },
@@ -39,61 +40,36 @@ export default function BusinessOrdersPage() {
         if (!user?.id) return;
         setIsLoading(true);
         try {
-            const { data, error } = await supabase
-                .from('order_items')
-                .select(`
-                    id, 
-                    quantity,
-                    price_at_purchase,
-                    status,
-                    products(name, images),
-                    orders!inner(id, status, total_amount, created_at, shipping_address, user_id,
-                        profiles!fk_orders_user_id(full_name, email)
-                    )
-                `)
-                .eq('business_id', user.id)
-                .order('created_at', { ascending: false, referencedTable: 'orders' });
-
-            if (error) throw error;
-
-            if (data) {
-                const groupedOrders = new Map();
-                data.forEach((item: any) => {
-                    const orderId = item.orders.id;
-                    if (!groupedOrders.has(orderId)) {
-                        groupedOrders.set(orderId, {
-                            id: orderId,
-                            businessId: user.id,
-                            customerName: item.orders.profiles?.full_name || "Müşteri",
-                            customerEmail: item.orders.profiles?.email || "-",
-                            items: [],
-                            totalAmount: 0,
-                            orderStatus: item.orders.status, // ödeme durumu ('paid', vb)
-                            status: item.status || 'awaiting_payment',
-                            shippingAddress: item.orders.shipping_address || '',
-                            trackingNumber: '', 
-                            notes: '', 
-                            orderedAt: item.orders.created_at
-                        });
-                    }
-                    const orderGroup = groupedOrders.get(orderId);
-                    
-                    const itemTotal = Number(item.price_at_purchase) * item.quantity;
-                    orderGroup.totalAmount += itemTotal;
-                    
-                    orderGroup.items.push({
-                        itemId: item.id,
-                        productName: item.products?.name || "Bilinmeyen Ürün",
-                        quantity: item.quantity,
-                        price: item.price_at_purchase,
-                        status: item.status || 'awaiting_payment'
-                    });
-                });
+            const rawOrders = await apiService.getClinicOrders(user.id);
+            const mappedOrders = rawOrders.map((order: any) => {
+                const myItems = order.items.filter((i: any) => i.product.owner_id === user.id);
                 
-                setAllOrders(Array.from(groupedOrders.values()));
-            }
-        } catch (err) {
-            console.error("Siparişler çekilemedi:", err);
+                return {
+                    id: order.id,
+                    businessId: user.id,
+                    customerName: order.user?.full_name || "Müşteri",
+                    customerEmail: order.user?.email || "-",
+                    items: myItems.map((i: any) => ({
+                        itemId: i.id || i.product.id,
+                        productName: i.product.name,
+                        quantity: i.quantity,
+                        price: i.price,
+                        status: i.status || 'awaiting_payment'
+                    })),
+                    totalAmount: myItems.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0),
+                    orderStatus: order.status,
+                    status: myItems[0]?.status || 'awaiting_payment',
+                    shippingAddress: order.shipping_address || '',
+                    trackingNumber: order.tracking_number || '',
+                    carrier: order.carrier || '',
+                    notes: '',
+                    orderedAt: order.date || new Date().toISOString()
+                };
+            }).filter((o: any) => o.items.length > 0);
+            
+            setAllOrders(mappedOrders);
+        } catch (error) {
+            console.error("Siparişler yüklenirken hata:", error);
         } finally {
             setIsLoading(false);
         }
@@ -144,7 +120,7 @@ export default function BusinessOrdersPage() {
                     onMouseMove={statusScroll.onMouseMove}
                     className="flex gap-2 mb-6 overflow-x-auto pb-2 no-scrollbar cursor-grab active:cursor-grabbing select-none"
                 >
-                    {(['all', 'pending', 'preparing', 'shipped', 'delivered', 'cancelled', 'returned'] as const).map(s => (
+                    {(['all', 'awaiting_payment', 'preparing', 'shipped', 'delivered', 'cancelled', 'returned'] as const).map(s => (
                         <button
                             key={s}
                             onClick={() => setStatusFilter(s)}
@@ -189,7 +165,7 @@ export default function BusinessOrdersPage() {
                 ) : (
                     <div className="space-y-3">
                         {filtered.map(order => {
-                            const statusInfo = STATUS_CONFIG[order.status] || STATUS_CONFIG['pending'];
+                            const statusInfo = STATUS_CONFIG[order.status] || STATUS_CONFIG['awaiting_payment'];
                             const StatusIcon = statusInfo.icon;
                             return (
                                 <div
@@ -262,7 +238,9 @@ export default function BusinessOrdersPage() {
 function OrderDetailModal({ order, onClose, onStatusUpdate }: { order: any; onClose: () => void; onStatusUpdate: (status: string) => void }) {
     const [updating, setUpdating] = useState(false);
     const [trackingNumber, setTrackingNumber] = useState(order.trackingNumber || '');
-    const statusInfo = STATUS_CONFIG[order.status] || STATUS_CONFIG['pending'];
+    const [carrier, setCarrier] = useState(order.carrier || '');
+    const [savingTracking, setSavingTracking] = useState(false);
+    const statusInfo = STATUS_CONFIG[order.status] || STATUS_CONFIG['awaiting_payment'];
 
     const nextStatus = STATUS_FLOW[STATUS_FLOW.indexOf(order.status) + 1] || null;
 
@@ -283,6 +261,20 @@ function OrderDetailModal({ order, onClose, onStatusUpdate }: { order: any; onCl
             alert("Sipariş durumu güncellenemedi.");
         } finally {
             setUpdating(false);
+        }
+    };
+
+    const handleSaveTracking = async () => {
+        if (!trackingNumber) return;
+        setSavingTracking(true);
+        try {
+            await apiService.updateOrderTracking(order.id, trackingNumber, carrier);
+            alert("Kargo bilgileri başarıyla kaydedildi!");
+        } catch (error) {
+            console.error("Kargo bilgisi kaydedilemedi:", error);
+            alert("Kargo bilgisi kaydedilemedi.");
+        } finally {
+            setSavingTracking(false);
         }
     };
 
@@ -362,14 +354,32 @@ function OrderDetailModal({ order, onClose, onStatusUpdate }: { order: any; onCl
 
                     {/* Tracking Number */}
                     {(order.status === 'preparing' || order.status === 'shipped') && (
-                        <div>
-                            <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Kargo Takip No</h4>
-                            <input
-                                value={trackingNumber}
-                                onChange={e => setTrackingNumber(e.target.value)}
-                                placeholder="Kargo takip numarası girin"
-                                className="w-full bg-gray-50 border border-card-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200"
-                            />
+                        <div className="bg-gray-50 border border-card-border rounded-xl p-4">
+                            <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Kargo Bilgileri</h4>
+                            <div className="flex flex-col gap-3">
+                                <div className="flex gap-3">
+                                    <input
+                                        value={carrier}
+                                        onChange={e => setCarrier(e.target.value)}
+                                        placeholder="Kargo Firması (Örn: Yurtiçi)"
+                                        className="w-1/3 bg-white border border-card-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                                    />
+                                    <input
+                                        value={trackingNumber}
+                                        onChange={e => setTrackingNumber(e.target.value)}
+                                        placeholder="Kargo takip numarası"
+                                        className="flex-1 bg-white border border-card-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                                    />
+                                </div>
+                                <button
+                                    onClick={handleSaveTracking}
+                                    disabled={savingTracking || !trackingNumber}
+                                    className="self-end bg-indigo-100 text-indigo-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-indigo-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                >
+                                    {savingTracking ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
+                                    Kaydet
+                                </button>
+                            </div>
                         </div>
                     )}
 

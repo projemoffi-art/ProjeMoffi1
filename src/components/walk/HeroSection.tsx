@@ -43,7 +43,7 @@ export function HeroSection() {
 
             {/* Pet Name & Status */}
             <div className="mt-4 text-center relative z-10">
-                <h1 className="text-2xl font-black text-foreground dark:text-white font-poppins transition-colors">{currentUser.name}</h1>
+                <h1 className="text-2xl font-black text-foreground dark:text-white font-sans transition-colors">{currentUser.name}</h1>
                 <p className="text-xs font-bold text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1">Golden Retriever • Mutlu 😊</p>
             </div>
 

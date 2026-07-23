@@ -19,10 +19,31 @@ export function useVaccineSchedule(petId: string, countryCode: string = 'TR') {
     const loadData = async () => {
         setIsLoading(true);
         try {
-            const [definitions, records] = await Promise.all([
-                apiService.getVaccineDefinitions(),
-                apiService.getPetVaccines(petId)
-            ]);
+            // MOCK DATA INJECTION FOR UI DEMONSTRATION
+            const definitions = [
+                { id: 'v1', name: 'Karma Aşı (DHPPi)', description: 'Köpekler için hayati öneme sahip temel aşı.', is_core: true, frequency_months: 12, min_age_weeks: 6 },
+                { id: 'v2', name: 'Kuduz Aşısı (Rabies)', description: 'Yasal olarak zorunlu kuduz aşısı.', is_core: true, frequency_months: 12, min_age_weeks: 12 },
+                { id: 'v3', name: 'Lyme Aşısı', description: 'Kenelerden bulaşan Lyme hastalığına karşı koruma.', is_core: false, frequency_months: 12, min_age_weeks: 10 },
+                { id: 'v4', name: 'Bordetella (Barınak Öksürüğü)', description: 'Sosyal köpekler için önerilir.', is_core: false, frequency_months: 6, min_age_weeks: 8 },
+            ];
+
+            const today = new Date();
+            const pastDate1 = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate()).toISOString().split('T')[0];
+            const pastDate2 = new Date(today.getFullYear() - 2, today.getMonth(), today.getDate()).toISOString().split('T')[0];
+            
+            const futureDate1 = new Date(today.getTime() + (1000 * 3600 * 24 * 5)).toISOString().split('T')[0]; // 5 days left
+            const pastDue = new Date(today.getTime() - (1000 * 3600 * 24 * 3)).toISOString().split('T')[0]; // 3 days overdue
+
+            const records = [
+                // History (Passport)
+                { id: 'r1', petId, vaccineId: 'v1', status: 'completed', dueDate: pastDate2, dateAdministered: pastDate2, vetName: 'VetCare Clinic - Dr. Ayşe Yılmaz' },
+                { id: 'r2', petId, vaccineId: 'v2', status: 'completed', dueDate: pastDate1, dateAdministered: pastDate1, vetName: 'PetLife Center' },
+                { id: 'r3', petId, vaccineId: 'v4', status: 'completed', dueDate: pastDate1, dateAdministered: pastDate1, vetName: 'Moffi Doğrulanmış Hekim' },
+                
+                // Upcoming
+                { id: 'r4', petId, vaccineId: 'v1', status: 'pending', dueDate: futureDate1 },
+                { id: 'r5', petId, vaccineId: 'v3', status: 'pending', dueDate: pastDue }, // Overdue
+            ];
 
             // Create a virtual ruleset based on definitions
             const rules: VaccineRuleset = {

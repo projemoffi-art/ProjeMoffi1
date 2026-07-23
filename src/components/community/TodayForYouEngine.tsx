@@ -78,7 +78,7 @@ export const TodayForYouEngine = () => {
             badgeText: 'SAĞLIK',
             title: isPuppy ? 'Yavru Aşı Takvimi' : 'Yıllık Karma Aşı',
             subtitle: isPuppy ? 'Karma 2 Zamanı Geldi' : 'Kontrol Vakti',
-            action: () => router.push('/vet?open=vaccine'),
+            action: () => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'health' } })),
             priority: 10
         });
 
@@ -91,7 +91,7 @@ export const TodayForYouEngine = () => {
             badgeText: 'BESLENME',
             title: isCat ? 'Tüy Yumağı Önleyici' : (isOverweight ? 'Diyet Mamaya Geçiş' : 'Eklem Sağlığı (Glukozamin)'),
             subtitle: isOverweight ? 'Porsiyonları azaltalım' : 'Petshop\'ta İndirimde',
-            action: () => router.push('/vet?open=nutrition'),
+            action: () => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'nutrition' } })),
             priority: 8
         });
 

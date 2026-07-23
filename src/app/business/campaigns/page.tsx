@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Plus, Megaphone, Trash2, Calendar, Tag, BarChart3, Clock, Loader2, Image as ImageIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
+import { apiService } from "@/services/apiService";
 
 interface Deal {
     id: string;
@@ -38,12 +39,11 @@ export default function BusinessCampaignsPage() {
     });
 
     const fetchDeals = async () => {
+        if (!user?.id) return;
+        setIsLoading(true);
         try {
-            const res = await fetch("/api/business/deals");
-            const data = await res.json();
-            if (data.success) {
-                setDeals(data.deals);
-            }
+            const data = await apiService.getClinicCampaigns(user.id);
+            setDeals(data);
         } catch (error) {
             console.error(error);
         } finally {
@@ -53,42 +53,38 @@ export default function BusinessCampaignsPage() {
 
     useEffect(() => {
         fetchDeals();
-    }, []);
+    }, [user?.id]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!user?.id) return;
         setIsSubmitting(true);
         try {
             const expires_at = new Date();
             expires_at.setHours(expires_at.getHours() + Number(formData.hours_valid));
 
-            const res = await fetch("/api/business/deals", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    title: formData.title,
-                    description: formData.description,
-                    media_url: formData.media_url,
-                    value: formData.value,
-                    coupon_code: formData.coupon_code,
-                    target_pet_type: formData.target_pet_type,
-                    expires_at: expires_at.toISOString(),
-                    max_uses: formData.max_uses ? parseInt(formData.max_uses) : null
-                })
+            await apiService.addClinicCampaign({
+                clinic_id: user.id,
+                title: formData.title,
+                description: formData.description,
+                media_url: formData.media_url,
+                discount_value: formData.value,
+                coupon_code: formData.coupon_code,
+                target_pet_type: formData.target_pet_type,
+                expires_at: expires_at.toISOString(),
+                max_uses: formData.max_uses ? parseInt(formData.max_uses) : null,
+                status: 'active'
             });
-            const data = await res.json();
-            if (data.success) {
-                setIsCreating(false);
-                fetchDeals();
-                setFormData({
-                    title: "", description: "", media_url: "https://images.unsplash.com/photo-1554818538-98e34543195f?q=80&w=600",
-                    value: "%15", coupon_code: "", target_pet_type: "all", hours_valid: 24, max_uses: ""
-                });
-            } else {
-                alert("Hata: " + data.error);
-            }
+            
+            setIsCreating(false);
+            fetchDeals();
+            setFormData({
+                title: "", description: "", media_url: "https://images.unsplash.com/photo-1554818538-98e34543195f?q=80&w=600",
+                value: "%15", coupon_code: "", target_pet_type: "all", hours_valid: 24, max_uses: ""
+            });
         } catch (error) {
             console.error(error);
+            alert("Kampanya oluşturulurken bir hata oluştu.");
         } finally {
             setIsSubmitting(false);
         }
@@ -175,7 +171,7 @@ export default function BusinessCampaignsPage() {
                             <div className="p-5 flex-1 flex flex-col">
                                 <h3 className="font-bold text-lg mb-1">{deal.title}</h3>
                                 <div className="flex gap-2 text-xs text-indigo-600 font-bold mb-4">
-                                    <span className="bg-indigo-50 px-2 py-1 rounded-md">{deal.value}</span>
+                                    <span className="bg-indigo-50 px-2 py-1 rounded-md">{deal.discount_value || deal.value}</span>
                                     <span className="bg-orange-50 text-orange-600 px-2 py-1 rounded-md border border-orange-100 border-dashed">{deal.coupon_code}</span>
                                 </div>
                                 <div className="mt-auto space-y-2 text-sm text-gray-500">

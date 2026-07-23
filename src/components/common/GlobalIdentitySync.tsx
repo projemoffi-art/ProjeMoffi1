@@ -32,24 +32,7 @@ export function GlobalIdentitySync() {
         root.style.setProperty('--moffi-accent', accentHex);
         root.style.setProperty('--moffi-accent-transparent', `${accentHex}33`);
 
-        // 3. Inject Font Family
-        const fontMap: Record<string, string> = {
-            'font-sans': 'var(--font-inter), sans-serif',
-            'font-serif': 'var(--font-playfair), serif',
-            'font-mono': 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-            'font-pacifico': 'var(--font-pacifico), cursive'
-        };
-
-        const activeFont = fontMap[appearance.font] || fontMap['font-sans'];
-        root.style.setProperty('--moffi-font-main', activeFont);
-        
-        // Apply class to body for global font injection with redundancy check
-        const fontClass = appearance.font;
-        if (!document.body.classList.contains(fontClass)) {
-            const classesToRemove = Array.from(document.body.classList).filter(c => c.startsWith('font-'));
-            if (classesToRemove.length > 0) document.body.classList.remove(...classesToRemove);
-            document.body.classList.add(fontClass);
-        }
+        // 3. (Font Injection removed - using global Plus Jakarta Sans)
 
     }, [user?.settings?.appearance?.accentColor, user?.settings?.appearance?.font]);
 

@@ -1725,7 +1725,7 @@ export default function LegendaryLightDashboard() {
                         <QuickAccessBtn icon={Stethoscope} title="Veteriner" subtitle="Sağlık Asistanı" bgTint="bg-indigo-100/80 dark:bg-indigo-900/40 hover:bg-indigo-200 dark:hover:bg-indigo-800/60" gradient="from-indigo-400 to-purple-600" delay={0.15} onClick={() => router.push('/vet')} />
                         
                         <QuickAccessBtn icon={ShoppingBag} title="Market" subtitle="Moffi Petshop" bgTint="bg-orange-100/80 dark:bg-orange-900/40 hover:bg-orange-200 dark:hover:bg-orange-800/60" gradient="from-orange-400 to-red-500" delay={0.2} onClick={() => router.push('/petshop')} />
-                        <QuickAccessBtn icon={Syringe} title="Aşı Takvimi" subtitle="Sağlık Geçmişi" bgTint="bg-emerald-100/80 dark:bg-emerald-900/40 hover:bg-emerald-200 dark:hover:bg-emerald-800/60" gradient="from-emerald-400 to-teal-600" delay={0.25} onClick={() => router.push('/vet?open=vaccine')} />
+                        <QuickAccessBtn icon={Syringe} title="Aşı Takvimi" subtitle="Sağlık Geçmişi" bgTint="bg-emerald-100/80 dark:bg-emerald-900/40 hover:bg-emerald-200 dark:hover:bg-emerald-800/60" gradient="from-emerald-400 to-teal-600" delay={0.25} onClick={() => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'health' } }))} />
                         
                         <QuickAccessBtn icon={Trophy} title="Görev Merkezi" subtitle="Kazan & Harca" bgTint="bg-yellow-100/80 dark:bg-yellow-900/40 hover:bg-yellow-200 dark:hover:bg-yellow-800/60" gradient="from-yellow-400 to-amber-600" delay={0.3} onClick={() => router.push('/quests')} />
                         <QuickAccessBtn icon={Star} title="moffi.net" subtitle="Kurumsal Sitemiz" bgTint="bg-purple-100/80 dark:bg-purple-900/40 hover:bg-purple-200 dark:hover:bg-purple-800/60" gradient="from-purple-400 to-fuchsia-600" delay={0.35} onClick={() => window.open('https://moffi.net', '_blank')} />
@@ -1906,7 +1906,7 @@ export default function LegendaryLightDashboard() {
 
                         {/* Integrated Rings & Quick Stats */}
                         <div className="flex justify-between items-center mt-4 pt-4 border-t border-black/10 dark:border-white/10 relative z-10" style={{ transform: "translateZ(30px)" }}>
-                            <div onClick={() => router.push('/vet?open=nutrition')} className="flex items-center gap-3 cursor-pointer hover:opacity-85 transition-opacity duration-200">
+                            <div onClick={() => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'nutrition' } }))} className="flex items-center gap-3 cursor-pointer hover:opacity-85 transition-opacity duration-200">
                                 <div className="relative w-12 h-12 flex items-center justify-center">
                                     <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                                         <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={isDark ? "rgba(34, 197, 94, 0.08)" : "#F0FDF4"} strokeWidth="3" />

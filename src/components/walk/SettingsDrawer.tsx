@@ -37,7 +37,7 @@ export function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
                 </div>
 
                 <div className="flex items-center justify-between mb-8">
-                    <h2 className="text-xl font-black text-foreground dark:text-white font-poppins">Ayarlar</h2>
+                    <h2 className="text-xl font-black text-foreground dark:text-white font-sans">Ayarlar</h2>
                     <button onClick={onClose} className="p-2 bg-gray-50 dark:bg-slate-800 rounded-full text-gray-500 dark:text-gray-400">
                         <X className="w-5 h-5" />
                     </button>

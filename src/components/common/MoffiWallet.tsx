@@ -57,7 +57,7 @@ export function MoffiWallet({ isOpen, onClose }: MoffiWalletProps) {
                         <Wallet className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                     </div>
                     <div>
-                        <h2 className="text-lg font-black text-foreground dark:text-white font-poppins">Moffi Cüzdan</h2>
+                        <h2 className="text-lg font-black text-foreground dark:text-white font-sans">Moffi Cüzdan</h2>
                         <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 font-bold">Resmi Bakiye</p>
                     </div>
                 </div>
