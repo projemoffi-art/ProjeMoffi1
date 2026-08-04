@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
 import { 
-    Heart, MessageCircle, Share2, MoreHorizontal, User, 
+    Heart, MessageCircle, Share2, MoreHorizontal, User, Bookmark, 
     ChevronRight, Info, QrCode, Star, Copy, Bell, 
     Edit2, Trash2, VolumeX, Volume2, EyeOff, ShieldAlert, 
     BadgeCheck, Plus, X, Sparkles, Send, Check,
@@ -385,7 +385,7 @@ export function ImmersivePostCard({
     };
 
     return (
-        <div ref={containerRef} className="w-full max-w-[470px] mx-auto bg-white/80 dark:bg-[#121212]/80 backdrop-blur-2xl sm:border sm:border-gray-200/50 dark:sm:border-white/10 sm:rounded-[2rem] border-b border-gray-100 dark:border-white/5 sm:border-b-0 mb-0 sm:mb-6 flex flex-col shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] transition-all hover:shadow-[0_8px_40px_rgb(0,0,0,0.08)] dark:hover:shadow-[0_8px_40px_rgba(255,255,255,0.03)] overflow-hidden">
+        <div ref={containerRef} className="w-full max-w-[470px] mx-auto bg-white/90 dark:bg-[#121212]/90 backdrop-blur-3xl rounded-[2rem] border border-black/[0.02] dark:border-white/[0.02] mb-6 sm:mb-8 flex flex-col shadow-[0_12px_40px_rgb(0,0,0,0.03)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] transition-all hover:shadow-[0_12px_50px_rgb(0,0,0,0.06)] dark:hover:shadow-[0_12px_50px_rgba(255,255,255,0.02)] overflow-hidden">
             {/* HEADER */}
             <div className="flex items-center justify-between p-4 px-5">
                 <div className="flex items-center gap-3 cursor-pointer group" onClick={handleProfileNavigation}>
@@ -468,91 +468,18 @@ export function ImmersivePostCard({
             {/* ACTIONS */}
             <div className="p-4 px-5">
                 <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                        <button onClick={handleDoubleTap} className="p-2 -ml-2 text-gray-900 dark:text-gray-100 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-all group">
-                            <Heart className={cn("w-6 h-6 transition-transform group-hover:scale-110 group-active:scale-95", post.isLiked ? "fill-red-500 text-red-500" : "")} />
+                    <div className="flex items-center gap-1.5">
+                        <button onClick={handleDoubleTap} className="p-2.5 -ml-2.5 text-gray-800 dark:text-gray-200 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-all group">
+                            <Heart strokeWidth={1.5} className={cn("w-[26px] h-[26px] transition-transform group-hover:scale-110 group-active:scale-90", post.isLiked ? "fill-red-500 text-red-500" : "")} />
                         </button>
-                        <button onClick={() => allowComments ? setShowComments(true) : null} className={cn("p-2 text-gray-900 dark:text-gray-100 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-full transition-all group", !allowComments && "opacity-50")}>
-                            <MessageCircle className="w-6 h-6 transition-transform group-hover:scale-110 group-active:scale-95" />
+                        <button onClick={() => allowComments ? setShowComments(true) : null} className={cn("p-2.5 text-gray-800 dark:text-gray-200 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-full transition-all group", !allowComments && "opacity-50")}>
+                            <MessageCircle strokeWidth={1.5} className="w-[26px] h-[26px] transition-transform group-hover:scale-110 group-active:scale-90" />
                         </button>
-                        <button onClick={handleShareClick} className="p-2 text-gray-900 dark:text-gray-100 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 rounded-full transition-all group">
-                            <Send className="w-6 h-6 transition-transform group-hover:scale-110 group-active:scale-95 -mt-0.5 ml-0.5" />
+                        <button onClick={handleShareClick} className="p-2.5 text-gray-800 dark:text-gray-200 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 rounded-full transition-all group">
+                            <Send strokeWidth={1.5} className="w-[26px] h-[26px] transition-transform group-hover:scale-110 group-active:scale-90" />
                         </button>
                     </div>
-                    {/* Add Save icon placeholder for aesthetic */}
-                    <button className="p-2 -mr-2 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-all active:scale-95">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
-                    </button>
-                </div>
-                
-                {/* LIKES & CAPTION */}
-                <div className="text-[14px] flex flex-col gap-1.5">
-                    {post.likes > 0 && (
-                        <div className="font-bold text-gray-900 dark:text-gray-100 tracking-tight">
-                            {post.likes.toLocaleString()} beğenme
-                        </div>
-                    )}
-                    <div className="flex flex-col gap-1">
-                        <div>
-                            <span className="font-bold tracking-tight text-gray-900 dark:text-gray-100 mr-2 cursor-pointer hover:underline">{post.author || post.user?.username || "kullanici"}</span>
-                            <span className="text-gray-800 dark:text-gray-200 break-words leading-relaxed">
-                                {filterContent(post.desc || post.caption || "")}
-                            </span>
-                        </div>
-                    </div>
-                    {allowComments && post.comments > 0 && (
-                        <button 
-                            onClick={() => setShowComments(true)}
-                            className="text-gray-500 dark:text-gray-400 mt-1 font-medium text-[13px] text-left hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-                        >
-                            {post.comments} yorumun tümünü gör
-                        </button>
-                    )}
-                </div>
-            </div>
-
-            {/* COMMENT DRAWER */}
-            <AnimatePresence>
-                {showComments && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/60 z-[440] backdrop-blur-md"
-                            onClick={() => setShowComments(false)}
-                        />
-                        <motion.div
-                            initial={{ y: "100%", opacity: 0, scale: 0.95 }}
-                            animate={{ y: 0, opacity: 1, scale: 1 }}
-                            exit={{ y: "100%", opacity: 0, scale: 0.95 }}
-                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                            className="fixed bottom-4 left-4 right-4 sm:max-w-[440px] sm:mx-auto z-[450] bg-white/90 dark:bg-[#121212]/90 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl flex flex-col max-h-[85vh] border border-white/20 dark:border-white/10 overflow-hidden"
-                        >
-                            <div className="flex items-center justify-between px-6 py-4 bg-white/50 dark:bg-white/5 backdrop-blur-md border-b border-gray-100 dark:border-white/5 shrink-0">
-                                <h3 className="font-bold text-lg text-gray-900 dark:text-white tracking-tight">Yorumlar</h3>
-                                <button onClick={() => setShowComments(false)} className="p-2 bg-gray-100 dark:bg-white/10 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-white/20 transition-all active:scale-95">
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-                            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
-                                {isLoadingComments ? (
-                                    <div className="flex justify-center p-8"><span className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></span></div>
-                                ) : comments.length === 0 ? (
-                                    <div className="text-center text-gray-400 py-12 flex flex-col items-center gap-3">
-                                        <MessageCircle className="w-14 h-14 opacity-20" />
-                                        <p className="font-medium text-[15px]">Henüz yorum yok. İlk yorumu sen yap!</p>
-                                    </div>
-                                ) : (
-                                    comments.map((c: any) => (
-                                        <div key={c.id} className="flex gap-3 group/comment">
-                                            <img src={c.user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100"} className="w-10 h-10 rounded-full shrink-0 border-2 border-gray-100 dark:border-white/10 shadow-sm" />
-                                            <div className="flex-1">
-                                                <div className="flex items-baseline gap-2">
-                                                    <span className="font-bold text-[14px] tracking-tight text-gray-900 dark:text-gray-100">{c.user?.username || "kullanici"}</span>
-                                                    <span className="text-[11px] font-medium text-gray-400">1s</span>
-                                                </div>
-                                                <p className="text-[14px] text-gray-700 dark:text-gray-300 leading-relaxed mt-0.5">{filterContent(c.text)}</p>
-                                            </div>
-                                            <button className="text-gray-400 hover:text-red-500 opacity-0 group-hover/comment:opacity-100 transition-all p-2 active:scale-95">
+                    <button className="text-gray-400 hover:text-red-500 opacity-0 group-hover/comment:opacity-100 transition-all p-2 active:scale-95">
                                                 <Heart className="w-4 h-4" />
                                             </button>
                                         </div>

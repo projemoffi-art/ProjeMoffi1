@@ -235,7 +235,7 @@ export function FeedTab({
                 />
             ) : (
                 posts.map((post, feedIdx) => (
-                    <section key={post.id} id={`post-${post.id}`} className="w-full flex flex-col items-center px-0 md:px-4">
+                    <section key={post.id} id={`post-${post.id}`} className="w-full flex flex-col items-center px-2 sm:px-4">
                         <ImmersivePostCard
                             post={post}
                             currentUser={user}
