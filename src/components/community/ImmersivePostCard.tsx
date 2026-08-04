@@ -59,6 +59,7 @@ export function ImmersivePostCard({
     const [localCommentPrivacy, setLocalCommentPrivacy] = useState(post?.comment_privacy || 'everyone');
     const [showCommentSettings, setShowCommentSettings] = useState(false);
     const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
+    const [isSendingComment, setIsSendingComment] = useState(false);
     const allowComments = localAllowComments !== false;
     const hiddenWords = currentUser?.settings?.content?.hiddenWords || [];
     const [isAddingToStory, setIsAddingToStory] = useState(false);
@@ -205,7 +206,8 @@ export function ImmersivePostCard({
         y.set(0);
     };
 
-    const isOwner = currentUser?.id === post.user_id || currentUser?.username === post.author?.replace('@', '');
+    const targetId = post.user_id || post.userId || post.authorId || post.owner_id || post.user?.id;
+    const isOwner = currentUser?.id === targetId || (currentUser?.username && post.author && currentUser.username === post.author.replace('@', ''));
 
     const handleProfileNavigation = () => {
         const targetId = post.user_id || post.userId || post.authorId || post.owner_id || post.user?.id;
@@ -280,28 +282,32 @@ export function ImmersivePostCard({
             window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'login' }));
             return;
         }
-        if (!commentInput.trim() && !selectedMedia) return;
+        if (isSendingComment || (!commentInput.trim() && !selectedMedia)) return;
+        
+        setIsSendingComment(true);
         const text = commentInput;
         setCommentInput("");
         setSelectedMedia(null);
 
-        const currentEdit = editingComment;
-        const currentReply = replyingTo;
+        try {
+            const currentEdit = editingComment;
+            const currentReply = replyingTo;
 
-        setReplyingTo(null);
-        setEditingComment(null);
+            setReplyingTo(null);
+            setEditingComment(null);
 
-        if (currentEdit) {
-            await onEditComment?.(currentEdit.id, text);
-            await apiService.editComment(currentEdit.id, text);
-            refetchComments();
-        } else if (currentReply) {
-            await onReplyComment?.(currentReply.id, text);
-            await addComment(text, currentUser, currentReply.id);
-            refetchComments();
-        } else {
-            await addComment(text, currentUser);
-            onAddComment?.(text);
+            if (currentEdit) {
+                await onEditComment?.(currentEdit.id, text);
+                await apiService.editComment(currentEdit.id, text);
+            } else if (currentReply) {
+                await onReplyComment?.(currentReply.id, text);
+                await addComment(text, currentUser, currentReply.id);
+            } else {
+                await addComment(text, currentUser);
+                onAddComment?.(text);
+            }
+        } finally {
+            setIsSendingComment(false);
             refetchComments();
         }
     };
@@ -379,37 +385,38 @@ export function ImmersivePostCard({
     };
 
     return (
-        <div ref={containerRef} className="w-full max-w-[470px] mx-auto bg-white dark:bg-[#121212] sm:border sm:border-gray-200 dark:sm:border-white/10 sm:rounded-2xl mb-8 flex flex-col shadow-sm">
+        <div ref={containerRef} className="w-full max-w-[470px] mx-auto bg-white/80 dark:bg-[#121212]/80 backdrop-blur-2xl sm:border sm:border-gray-200/50 dark:sm:border-white/10 sm:rounded-[2rem] border-b border-gray-100 dark:border-white/5 sm:border-b-0 mb-0 sm:mb-6 flex flex-col shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] transition-all hover:shadow-[0_8px_40px_rgb(0,0,0,0.08)] dark:hover:shadow-[0_8px_40px_rgba(255,255,255,0.03)] overflow-hidden">
             {/* HEADER */}
-            <div className="flex items-center justify-between p-3 border-b border-gray-100 dark:border-white/10">
-                <div className="flex items-center gap-3 cursor-pointer" onClick={handleProfileNavigation}>
-                    <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-200 dark:border-white/20 bg-gray-100 shrink-0">
+            <div className="flex items-center justify-between p-4 px-5">
+                <div className="flex items-center gap-3 cursor-pointer group" onClick={handleProfileNavigation}>
+                    <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-transparent group-hover:border-cyan-500/30 transition-all bg-gray-100 shrink-0 relative">
                         <img 
                             src={post.author_avatar || post.user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200"} 
                             alt={post.author || "User"}
                             className="w-full h-full object-cover"
                         />
+                        <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                     <div className="flex flex-col">
                         <div className="flex items-center gap-1.5">
-                            <span className="font-semibold text-sm text-gray-900 dark:text-gray-100 leading-none">
+                            <span className="font-bold text-[15px] tracking-tight text-gray-900 dark:text-gray-100 leading-none group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
                                 {post.author || post.user?.username || "kullanici"}
                             </span>
                             {post.verified && <BadgeCheck className="w-4 h-4 text-cyan-500" />}
                         </div>
                         {post.location && (
-                            <span className="text-[11px] text-gray-500 mt-0.5">{post.location}</span>
+                            <span className="text-[11px] font-medium text-gray-500 mt-1 tracking-wide uppercase">{post.location}</span>
                         )}
                     </div>
                 </div>
-                <button onClick={() => setIsMoreOpen(true)} className="p-2 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors shrink-0">
+                <button onClick={() => setIsMoreOpen(true)} className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-all shrink-0 active:scale-95">
                     <MoreHorizontal className="w-5 h-5" />
                 </button>
             </div>
 
             {/* MEDIA */}
             <div 
-                className="relative w-full aspect-square sm:aspect-[4/5] bg-gray-100 dark:bg-black overflow-hidden flex items-center justify-center cursor-pointer"
+                className="relative w-full aspect-square sm:aspect-[4/5] bg-gray-100 dark:bg-[#0a0a0a] overflow-hidden flex items-center justify-center cursor-pointer group/media sm:mx-0 sm:w-full"
                 onClick={() => {
                     const isVideo = post?.is_video || (post?.media && (/.(mp4|webm|ogg|mov|avi|m4v|mkv|flv|wmv)$/i.test(post.media)));
                     if (isVideo) {
@@ -426,9 +433,9 @@ export function ImmersivePostCard({
                             muted={isMuted || !!post?.audio_url}
                             loop
                             playsInline
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover/media:scale-[1.01]"
                         />
-                        <div className="absolute bottom-4 right-4 p-2 bg-black/50 backdrop-blur-md rounded-full text-white">
+                        <div className="absolute bottom-4 right-4 p-2 bg-black/30 backdrop-blur-md rounded-full text-white/90 border border-white/10">
                             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                         </div>
                     </>
@@ -436,9 +443,12 @@ export function ImmersivePostCard({
                     <img 
                         src={mediaSrc} 
                         alt="Post Media" 
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover/media:scale-[1.01]"
                     />
                 )}
+                
+                {/* Subtle inner shadow overlay */}
+                <div className="absolute inset-0 ring-1 ring-inset ring-black/5 pointer-events-none" />
 
                 <AnimatePresence>
                     {tapHeart && (
@@ -447,47 +457,53 @@ export function ImmersivePostCard({
                             animate={{ opacity: 1, scale: 1.2 }}
                             exit={{ opacity: 0, scale: 1.5 }}
                             transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                            className="absolute inset-0 m-auto flex items-center justify-center pointer-events-none"
+                            className="absolute inset-0 m-auto flex items-center justify-center pointer-events-none drop-shadow-2xl"
                         >
-                            <Heart className="w-24 h-24 text-red-500 fill-red-500 drop-shadow-2xl" />
+                            <Heart className="w-28 h-28 text-red-500 fill-red-500" />
                         </motion.div>
                     )}
                 </AnimatePresence>
             </div>
 
             {/* ACTIONS */}
-            <div className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-4">
-                        <button onClick={handleDoubleTap} className="text-gray-900 dark:text-gray-100 hover:text-gray-500 transition-colors">
-                            <Heart className={cn("w-6 h-6", post.isLiked ? "fill-red-500 text-red-500" : "")} />
+            <div className="p-4 px-5">
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                        <button onClick={handleDoubleTap} className="p-2 -ml-2 text-gray-900 dark:text-gray-100 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-all group">
+                            <Heart className={cn("w-6 h-6 transition-transform group-hover:scale-110 group-active:scale-95", post.isLiked ? "fill-red-500 text-red-500" : "")} />
                         </button>
-                        <button onClick={() => allowComments ? setShowComments(true) : null} className={cn("text-gray-900 dark:text-gray-100 hover:text-gray-500 transition-colors", !allowComments && "opacity-50")}>
-                            <MessageCircle className="w-6 h-6" />
+                        <button onClick={() => allowComments ? setShowComments(true) : null} className={cn("p-2 text-gray-900 dark:text-gray-100 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-full transition-all group", !allowComments && "opacity-50")}>
+                            <MessageCircle className="w-6 h-6 transition-transform group-hover:scale-110 group-active:scale-95" />
                         </button>
-                        <button onClick={handleShareClick} className="text-gray-900 dark:text-gray-100 hover:text-gray-500 transition-colors">
-                            <Send className="w-6 h-6" />
+                        <button onClick={handleShareClick} className="p-2 text-gray-900 dark:text-gray-100 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 rounded-full transition-all group">
+                            <Send className="w-6 h-6 transition-transform group-hover:scale-110 group-active:scale-95 -mt-0.5 ml-0.5" />
                         </button>
                     </div>
+                    {/* Add Save icon placeholder for aesthetic */}
+                    <button className="p-2 -mr-2 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-all active:scale-95">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+                    </button>
                 </div>
                 
                 {/* LIKES & CAPTION */}
-                <div className="text-[13px]">
+                <div className="text-[14px] flex flex-col gap-1.5">
                     {post.likes > 0 && (
-                        <div className="font-semibold text-gray-900 dark:text-gray-100 mb-1.5">
-                            {post.likes} beğenme
+                        <div className="font-bold text-gray-900 dark:text-gray-100 tracking-tight">
+                            {post.likes.toLocaleString()} beğenme
                         </div>
                     )}
-                    <div className="flex gap-2">
-                        <span className="font-semibold text-gray-900 dark:text-gray-100 shrink-0">{post.author || post.user?.username || "kullanici"}</span>
-                        <span className="text-gray-800 dark:text-gray-200 break-words flex-1 leading-snug">
-                            {filterContent(post.desc || post.caption || "")}
-                        </span>
+                    <div className="flex flex-col gap-1">
+                        <div>
+                            <span className="font-bold tracking-tight text-gray-900 dark:text-gray-100 mr-2 cursor-pointer hover:underline">{post.author || post.user?.username || "kullanici"}</span>
+                            <span className="text-gray-800 dark:text-gray-200 break-words leading-relaxed">
+                                {filterContent(post.desc || post.caption || "")}
+                            </span>
+                        </div>
                     </div>
                     {allowComments && post.comments > 0 && (
                         <button 
                             onClick={() => setShowComments(true)}
-                            className="text-gray-500 dark:text-gray-400 mt-2 font-medium text-xs"
+                            className="text-gray-500 dark:text-gray-400 mt-1 font-medium text-[13px] text-left hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                         >
                             {post.comments} yorumun tümünü gör
                         </button>
@@ -501,49 +517,67 @@ export function ImmersivePostCard({
                     <>
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/50 z-[440] backdrop-blur-sm"
+                            className="fixed inset-0 bg-black/60 z-[440] backdrop-blur-md"
                             onClick={() => setShowComments(false)}
                         />
                         <motion.div
-                            initial={{ y: "100%" }}
-                            animate={{ y: 0 }}
-                            exit={{ y: "100%" }}
-                            transition={{ type: "spring", damping: 30, stiffness: 350 }}
-                            className="fixed bottom-0 left-0 right-0 z-[450] bg-white dark:bg-[#121212] rounded-t-3xl shadow-2xl flex flex-col h-[75vh]"
+                            initial={{ y: "100%", opacity: 0, scale: 0.95 }}
+                            animate={{ y: 0, opacity: 1, scale: 1 }}
+                            exit={{ y: "100%", opacity: 0, scale: 0.95 }}
+                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                            className="fixed bottom-4 left-4 right-4 sm:max-w-[440px] sm:mx-auto z-[450] bg-white/90 dark:bg-[#121212]/90 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl flex flex-col max-h-[85vh] border border-white/20 dark:border-white/10 overflow-hidden"
                         >
-                            <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-white/10">
-                                <h3 className="font-semibold text-gray-900 dark:text-white">Yorumlar</h3>
-                                <button onClick={() => setShowComments(false)} className="p-2 bg-gray-100 dark:bg-white/10 rounded-full text-gray-500">
+                            <div className="flex items-center justify-between px-6 py-4 bg-white/50 dark:bg-white/5 backdrop-blur-md border-b border-gray-100 dark:border-white/5 shrink-0">
+                                <h3 className="font-bold text-lg text-gray-900 dark:text-white tracking-tight">Yorumlar</h3>
+                                <button onClick={() => setShowComments(false)} className="p-2 bg-gray-100 dark:bg-white/10 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-white/20 transition-all active:scale-95">
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
-                            <div className="flex-1 overflow-y-auto p-4 space-y-5">
+                            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
                                 {isLoadingComments ? (
                                     <div className="flex justify-center p-8"><span className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></span></div>
                                 ) : comments.length === 0 ? (
-                                    <div className="text-center text-gray-500 py-8">Henüz yorum yok. İlk yorumu sen yap!</div>
+                                    <div className="text-center text-gray-400 py-12 flex flex-col items-center gap-3">
+                                        <MessageCircle className="w-14 h-14 opacity-20" />
+                                        <p className="font-medium text-[15px]">Henüz yorum yok. İlk yorumu sen yap!</p>
+                                    </div>
                                 ) : (
                                     comments.map((c: any) => (
-                                        <div key={c.id} className="flex gap-3">
-                                            <img src={c.user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100"} className="w-8 h-8 rounded-full shrink-0" />
-                                            <div>
-                                                <span className="font-semibold text-xs text-gray-900 dark:text-gray-100 mr-2">{c.user?.username || "kullanici"}</span>
-                                                <span className="text-sm text-gray-800 dark:text-gray-200">{filterContent(c.text)}</span>
+                                        <div key={c.id} className="flex gap-3 group/comment">
+                                            <img src={c.user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100"} className="w-10 h-10 rounded-full shrink-0 border-2 border-gray-100 dark:border-white/10 shadow-sm" />
+                                            <div className="flex-1">
+                                                <div className="flex items-baseline gap-2">
+                                                    <span className="font-bold text-[14px] tracking-tight text-gray-900 dark:text-gray-100">{c.user?.username || "kullanici"}</span>
+                                                    <span className="text-[11px] font-medium text-gray-400">1s</span>
+                                                </div>
+                                                <p className="text-[14px] text-gray-700 dark:text-gray-300 leading-relaxed mt-0.5">{filterContent(c.text)}</p>
                                             </div>
+                                            <button className="text-gray-400 hover:text-red-500 opacity-0 group-hover/comment:opacity-100 transition-all p-2 active:scale-95">
+                                                <Heart className="w-4 h-4" />
+                                            </button>
                                         </div>
                                     ))
                                 )}
                             </div>
-                            <div className="p-4 border-t border-gray-100 dark:border-white/10 flex gap-3">
-                                <input 
-                                    type="text" 
-                                    value={commentInput}
-                                    onChange={(e) => setCommentInput(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleSendComment()}
-                                    placeholder="Yorum ekle..." 
-                                    className="flex-1 bg-gray-100 dark:bg-white/5 rounded-full px-4 py-2 text-sm focus:outline-none dark:text-white"
-                                />
-                                <button onClick={handleSendComment} disabled={!commentInput.trim()} className="text-cyan-500 font-semibold text-sm disabled:opacity-50">Paylaş</button>
+                            {/* Modern Pill Input */}
+                            <div className="p-4 px-4 border-t border-gray-100 dark:border-white/5 bg-gray-50/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl shrink-0">
+                                <div className="flex items-center gap-2 bg-white dark:bg-white/5 rounded-[2rem] p-1.5 pl-5 border border-gray-200 dark:border-white/10 shadow-sm focus-within:ring-2 focus-within:ring-cyan-500/30 transition-all">
+                                    <input 
+                                        type="text" 
+                                        value={commentInput}
+                                        onChange={(e) => setCommentInput(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleSendComment()}
+                                        placeholder="Güzel bir şey yaz..." 
+                                        className="flex-1 bg-transparent text-[14px] font-medium focus:outline-none dark:text-white placeholder:text-gray-400"
+                                    />
+                                    <button 
+                                        onClick={handleSendComment} 
+                                        disabled={!commentInput.trim() || isSendingComment} 
+                                        className="bg-cyan-500 hover:bg-cyan-600 text-white rounded-[1.5rem] p-2.5 px-4 font-bold text-sm disabled:opacity-40 transition-all active:scale-95 shadow-md shadow-cyan-500/20 flex items-center justify-center shrink-0"
+                                    >
+                                        <Send className="w-4 h-4 -ml-0.5 mt-0.5" />
+                                    </button>
+                                </div>
                             </div>
                         </motion.div>
                     </>
@@ -556,26 +590,41 @@ export function ImmersivePostCard({
                     <>
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/50 z-[440] backdrop-blur-sm pointer-events-auto"
+                            className="fixed inset-0 bg-black/60 z-[440] backdrop-blur-md pointer-events-auto"
                             onClick={() => setIsMoreOpen(false)}
                         />
                         <motion.div
-                            initial={{ y: "100%" }}
-                            animate={{ y: 0 }}
-                            exit={{ y: "100%" }}
-                            transition={{ type: "spring", damping: 30, stiffness: 350 }}
-                            className="fixed bottom-0 left-0 right-0 z-[450] bg-white dark:bg-[#121212] rounded-t-3xl shadow-2xl flex flex-col p-4 pb-8"
+                            initial={{ y: "100%", opacity: 0, scale: 0.95 }}
+                            animate={{ y: 0, opacity: 1, scale: 1 }}
+                            exit={{ y: "100%", opacity: 0, scale: 0.95 }}
+                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                            className="fixed bottom-4 left-4 right-4 sm:max-w-[400px] sm:mx-auto z-[450] bg-white/90 dark:bg-[#121212]/90 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl flex flex-col p-6 border border-white/20 dark:border-white/10"
                         >
                             <div className="w-12 h-1.5 bg-gray-300 dark:bg-white/20 rounded-full mx-auto mb-6" />
-                            <div className="flex flex-col gap-2">
-                                <button onClick={() => { setIsMoreOpen(false); handleProfileNavigation(); }} className="w-full p-4 bg-gray-50 dark:bg-white/5 rounded-xl font-semibold text-gray-900 dark:text-gray-100">Profili Görüntüle</button>
+                            <div className="flex flex-col gap-2.5">
+                                <button onClick={() => { setIsMoreOpen(false); handleProfileNavigation(); }} className="w-full flex items-center gap-3 p-4 bg-white dark:bg-white/5 rounded-2xl font-bold text-gray-900 dark:text-gray-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)] border border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/10 transition-all active:scale-95 text-[15px] tracking-tight group">
+                                    <div className="p-2 bg-gray-100 dark:bg-white/10 rounded-xl group-hover:bg-cyan-500/10 group-hover:text-cyan-500 transition-colors">
+                                        <User className="w-5 h-5" />
+                                    </div>
+                                    Profili Görüntüle
+                                </button>
                                 {isOwner && (
                                     <>
-                                        <button onClick={() => { setIsMoreOpen(false); onEditPost(); }} className="w-full p-4 bg-gray-50 dark:bg-white/5 rounded-xl font-semibold text-gray-900 dark:text-gray-100">Düzenle</button>
-                                        <button onClick={() => { setIsMoreOpen(false); onDeletePost(); }} className="w-full p-4 bg-red-50 dark:bg-red-500/10 rounded-xl font-semibold text-red-500">Sil</button>
+                                        <button onClick={() => { setIsMoreOpen(false); onEditPost(); }} className="w-full flex items-center gap-3 p-4 bg-white dark:bg-white/5 rounded-2xl font-bold text-gray-900 dark:text-gray-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)] border border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/10 transition-all active:scale-95 text-[15px] tracking-tight group">
+                                            <div className="p-2 bg-gray-100 dark:bg-white/10 rounded-xl group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors">
+                                                <Edit2 className="w-5 h-5" />
+                                            </div>
+                                            Düzenle
+                                        </button>
+                                        <button onClick={() => { setIsMoreOpen(false); onDeletePost(); }} className="w-full flex items-center gap-3 p-4 bg-red-50/50 dark:bg-red-500/5 rounded-2xl font-bold text-red-500 shadow-[0_2px_10px_rgb(0,0,0,0.02)] border border-red-100 dark:border-red-500/10 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all active:scale-95 text-[15px] tracking-tight group">
+                                            <div className="p-2 bg-red-100 dark:bg-red-500/20 rounded-xl group-hover:bg-red-200 dark:group-hover:bg-red-500/30 transition-colors">
+                                                <Trash2 className="w-5 h-5" />
+                                            </div>
+                                            Gönderiyi Sil
+                                        </button>
                                     </>
                                 )}
-                                <button onClick={() => setIsMoreOpen(false)} className="w-full p-4 font-semibold text-gray-500">İptal</button>
+                                <button onClick={() => setIsMoreOpen(false)} className="w-full p-4 font-bold text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors text-[15px] tracking-tight mt-2 active:scale-95">İptal</button>
                             </div>
                         </motion.div>
                     </>

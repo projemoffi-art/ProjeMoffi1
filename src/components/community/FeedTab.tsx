@@ -74,10 +74,16 @@ export function FeedTab({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="w-full h-full relative overflow-y-auto overflow-x-hidden bg-[var(--background)] flex flex-col gap-6 pb-24"
+            className="w-full h-full relative overflow-y-auto overflow-x-hidden bg-[var(--background)] flex flex-col gap-0 pb-24"
         >
+            {/* Soft Ambient Background for the Feed */}
+            <div className="fixed inset-0 pointer-events-none z-0 opacity-50 dark:opacity-30">
+                <div className="absolute top-0 left-[-20%] w-[70vw] h-[70vw] bg-cyan-400/10 rounded-full blur-[120px]" />
+                <div className="absolute bottom-[20%] right-[-20%] w-[60vw] h-[60vw] bg-fuchsia-400/10 rounded-full blur-[120px]" />
+            </div>
+
             {/* Header and Stories Combined Snap Block */}
-            <div className="w-full flex flex-col">
+            <div className="w-full flex flex-col relative z-10 mb-2">
                 {headerElement}
                 {/* STORIES BAR */}
                 <div className="w-full px-4 pt-4 pb-4 overflow-hidden mb-2">
