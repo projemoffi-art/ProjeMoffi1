@@ -14,9 +14,9 @@ export function AIWidgetLoader() {
     const pathname = usePathname();
     const { user } = useAuth();
     
-    // Hide AI Assistant on login/landing flows
+    // Hide AI Assistant on login/landing flows and games
     const hidePaths = ['/', '/login', '/register', '/reset-password'];
-    if (hidePaths.includes(pathname)) return null;
+    if (hidePaths.includes(pathname) || pathname.startsWith('/game')) return null;
 
     // Check user preference
     const widgetEnabled = user?.settings?.ai?.widgetEnabled ?? true;
