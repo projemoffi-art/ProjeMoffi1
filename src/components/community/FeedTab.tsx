@@ -71,15 +71,13 @@ export function FeedTab({
 }: FeedTabProps) {
     return (
         <motion.div
-            key="feed"
-            initial={{ opacity: 0, filter: "blur(10px)" }}
-            animate={{ opacity: 1, filter: "blur(0px)" }}
-            exit={{ opacity: 0, filter: "blur(10px)" }}
-            transition={{ duration: 0.3 }}
-            className="w-full h-full overflow-y-auto snap-y snap-mandatory no-scrollbar flex flex-col"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="w-full h-full relative overflow-y-auto overflow-x-hidden bg-[var(--background)] flex flex-col gap-6 pb-24"
         >
             {/* Header and Stories Combined Snap Block */}
-            <div className="w-full flex flex-col snap-start shrink-0">
+            <div className="w-full flex flex-col">
                 {headerElement}
                 {/* STORIES BAR */}
                 <div className="w-full px-4 pt-4 pb-4 overflow-hidden mb-2">
@@ -201,7 +199,7 @@ export function FeedTab({
 
             {isLoading ? (
                 Array(3).fill(0).map((_, i) => (
-                    <div key={i} className="w-full relative flex flex-col items-center justify-center px-4 shrink-0" style={{ height: "calc(100vh - 180px)" }}>
+                    <div key={i} className="w-full relative flex flex-col items-center justify-center px-4 shrink-0 h-96">
                         <div className="relative w-full h-full max-w-lg mx-auto rounded-[3rem] overflow-hidden bg-[var(--card-bg)] border border-black/10 dark:border-white/10 shadow-2xl animate-pulse">
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
                             <div className="absolute inset-0 bg-[var(--card-bg)] overflow-hidden">
@@ -231,7 +229,7 @@ export function FeedTab({
                 />
             ) : (
                 posts.map((post, feedIdx) => (
-                    <section key={post.id} id={`post-${post.id}`} className="h-full w-full snap-start snap-always relative shrink-0 p-0 flex items-center justify-center">
+                    <section key={post.id} id={`post-${post.id}`} className="w-full flex flex-col items-center px-0 md:px-4">
                         <ImmersivePostCard
                             post={post}
                             currentUser={user}

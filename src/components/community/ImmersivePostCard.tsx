@@ -379,1092 +379,209 @@ export function ImmersivePostCard({
     };
 
     return (
-        <motion.div
-            ref={containerRef}
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true, amount: 0.1 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-            className="relative w-full h-full max-w-lg mx-auto bg-white dark:bg-black overflow-hidden group"
-        >
+        <div ref={containerRef} className="w-full max-w-[470px] mx-auto bg-white dark:bg-[#121212] sm:border sm:border-gray-200 dark:sm:border-white/10 sm:rounded-2xl mb-8 flex flex-col shadow-sm">
+            {/* HEADER */}
+            <div className="flex items-center justify-between p-3 border-b border-gray-100 dark:border-white/10">
+                <div className="flex items-center gap-3 cursor-pointer" onClick={handleProfileNavigation}>
+                    <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-200 dark:border-white/20 bg-gray-100 shrink-0">
+                        <img 
+                            src={post.author_avatar || post.user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200"} 
+                            alt={post.author || "User"}
+                            className="w-full h-full object-cover"
+                        />
+                    </div>
+                    <div className="flex flex-col">
+                        <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-sm text-gray-900 dark:text-gray-100 leading-none">
+                                {post.author || post.user?.username || "kullanici"}
+                            </span>
+                            {post.verified && <BadgeCheck className="w-4 h-4 text-cyan-500" />}
+                        </div>
+                        {post.location && (
+                            <span className="text-[11px] text-gray-500 mt-0.5">{post.location}</span>
+                        )}
+                    </div>
+                </div>
+                <button onClick={() => setIsMoreOpen(true)} className="p-2 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors shrink-0">
+                    <MoreHorizontal className="w-5 h-5" />
+                </button>
+            </div>
+
             {/* MEDIA */}
             <div 
-                className={cn("absolute inset-0 bg-white dark:bg-black cursor-pointer touch-pan-y", isZooming ? "z-[100] touch-none" : "z-0")} 
+                className="relative w-full aspect-square sm:aspect-[4/5] bg-gray-100 dark:bg-black overflow-hidden flex items-center justify-center cursor-pointer"
                 onClick={() => {
-                    const isVideo = post?.is_video || (post?.media && (/\.(mp4|webm|ogg|mov|avi|m4v|mkv|flv|wmv)$/i.test(post.media)));
+                    const isVideo = post?.is_video || (post?.media && (/.(mp4|webm|ogg|mov|avi|m4v|mkv|flv|wmv)$/i.test(post.media)));
                     if (isVideo) {
                         setIsMuted(!isMuted);
                     }
                 }}
                 onDoubleClick={handleDoubleTap}
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
             >
-                <motion.div 
-                    style={{ 
-                        scale: springScale,
-                        x: springX,
-                        y: springY,
-                    }}
-                    className="w-full h-full relative"
-                >
-                    {(post?.is_video || (post?.media && (/\.(mp4|webm|ogg|mov|avi|m4v|mkv|flv|wmv)$/i.test(post.media)) )) ? (
-                        <div className="w-full h-full relative bg-white dark:bg-black flex items-center justify-center">
-                            <video
-                                ref={videoRef}
-                                src={mediaSrc}
-                                muted={isMuted || !!post?.audio_url}
-                                loop
-                                playsInline
-                                preload="auto"
-                                onTimeUpdate={(e) => {
-                                    const vid = e.currentTarget;
-                                    if (vid.duration) {
-                                        setVideoProgress((vid.currentTime / vid.duration) * 100);
-                                    }
-                                    if (post?.trim_start !== undefined && post?.trim_end !== undefined) {
-                                        if (vid.currentTime >= post.trim_end || vid.currentTime < post.trim_start) {
-                                            vid.currentTime = post.trim_start;
-                                            if (audioRef.current) {
-                                                audioRef.current.currentTime = 0;
-                                            }
-                                        }
-                                    }
-                                }}
-                                onLoadedData={(e) => {
-                                    setIsVideoLoading(false);
-                                    if (post?.trim_start !== undefined) {
-                                        e.currentTarget.currentTime = post.trim_start;
-                                        if (audioRef.current) {
-                                            audioRef.current.currentTime = 0;
-                                        }
-                                    }
-                                    if (e.currentTarget.paused) {
-                                        e.currentTarget.play().catch(() => {});
-                                    }
-                                }}
-                                onCanPlay={() => setIsVideoLoading(false)}
-                                onWaiting={() => setIsVideoLoading(true)}
-                                onPlaying={() => setIsVideoLoading(false)}
-                                onError={() => {
-                                    setMediaSrc("https://assets.mixkit.co/videos/preview/mixkit-dog-running-on-the-grass-on-a-sunny-day-40048-large.mp4");
-                                }}
-                                className={cn("w-full h-full object-cover opacity-90 transition-opacity duration-700", isVideoLoading ? "opacity-0" : "opacity-90")}
-                            />
-                            {isVideoLoading && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-                                    <div className="w-8 h-8 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
-                                </div>
-                            )}
-                            {!isVideoLoading && (
-                                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-black/20 dark:bg-white/20 overflow-hidden z-[100]">
-                                    <motion.div 
-                                        className="h-full bg-card shadow-[0_0_5px_rgba(255,255,255,0.8)]"
-                                        style={{ width: `${videoProgress}%` }}
-                                        transition={{ ease: "linear", duration: 0.1 }}
-                                    />
-                                </div>
-                            )}
-                        </div>
-                    ) : (
-                        <img 
-                            src={mediaSrc || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=800"} 
-                            alt={post?.caption || post?.desc || "Moffi Gönderisi"}
-                            onError={() => {
-                                setMediaSrc("https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=800");
-                            }}
-                            className="w-full h-full object-cover opacity-90"
+                {(post?.is_video || (post?.media && (/.(mp4|webm|ogg|mov|avi|m4v|mkv|flv|wmv)$/i.test(post.media)) )) ? (
+                    <>
+                        <video
+                            ref={videoRef}
+                            src={mediaSrc}
+                            muted={isMuted || !!post?.audio_url}
+                            loop
+                            playsInline
+                            className="w-full h-full object-cover"
                         />
-                    )}
-                    
-                </motion.div>
-                
-                {/* BACKGROUND AUDIO ELEMENT */}
-                {post?.audio_url && (
-                    <audio 
-                        ref={audioRef}
-                        src={post.audio_url}
-                        muted={isMuted}
-                        loop
+                        <div className="absolute bottom-4 right-4 p-2 bg-black/50 backdrop-blur-md rounded-full text-white">
+                            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                        </div>
+                    </>
+                ) : (
+                    <img 
+                        src={mediaSrc} 
+                        alt="Post Media" 
+                        className="w-full h-full object-cover"
                     />
                 )}
+
+                <AnimatePresence>
+                    {tapHeart && (
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.5 }}
+                            animate={{ opacity: 1, scale: 1.2 }}
+                            exit={{ opacity: 0, scale: 1.5 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                            className="absolute inset-0 m-auto flex items-center justify-center pointer-events-none"
+                        >
+                            <Heart className="w-24 h-24 text-red-500 fill-red-500 drop-shadow-2xl" />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
-
-
-
-
-            {/* TOP BAR BUILT INTO CARD */}
-            <div className="absolute top-5 left-5 right-5 flex justify-between items-start z-20 pointer-events-none">
-                <div className="flex gap-2">
-                    {post.mood && (
-                        <div className="bg-card/40 backdrop-blur-xl border border-card-border px-3 py-1.5 rounded-full text-[10px] font-bold text-foreground flex items-center gap-1.5 shadow-lg relative overflow-hidden group/badge">
-                            <span className="relative z-10">{post.mood}</span>
-                            <div className="absolute inset-0 bg-black/10 dark:bg-white/10 -translate-x-full group-hover/badge:translate-x-full transition-transform duration-700 pointer-events-none" />
+            {/* ACTIONS */}
+            <div className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-4">
+                        <button onClick={handleDoubleTap} className="text-gray-900 dark:text-gray-100 hover:text-gray-500 transition-colors">
+                            <Heart className={cn("w-6 h-6", post.isLiked ? "fill-red-500 text-red-500" : "")} />
+                        </button>
+                        <button onClick={() => allowComments ? setShowComments(true) : null} className={cn("text-gray-900 dark:text-gray-100 hover:text-gray-500 transition-colors", !allowComments && "opacity-50")}>
+                            <MessageCircle className="w-6 h-6" />
+                        </button>
+                        <button onClick={handleShareClick} className="text-gray-900 dark:text-gray-100 hover:text-gray-500 transition-colors">
+                            <Send className="w-6 h-6" />
+                        </button>
+                    </div>
+                </div>
+                
+                {/* LIKES & CAPTION */}
+                <div className="text-[13px]">
+                    {post.likes > 0 && (
+                        <div className="font-semibold text-gray-900 dark:text-gray-100 mb-1.5">
+                            {post.likes} beğenme
                         </div>
                     )}
+                    <div className="flex gap-2">
+                        <span className="font-semibold text-gray-900 dark:text-gray-100 shrink-0">{post.author || post.user?.username || "kullanici"}</span>
+                        <span className="text-gray-800 dark:text-gray-200 break-words flex-1 leading-snug">
+                            {filterContent(post.desc || post.caption || "")}
+                        </span>
+                    </div>
+                    {allowComments && post.comments > 0 && (
+                        <button 
+                            onClick={() => setShowComments(true)}
+                            className="text-gray-500 dark:text-gray-400 mt-2 font-medium text-xs"
+                        >
+                            {post.comments} yorumun tümünü gör
+                        </button>
+                    )}
                 </div>
-                <button onClick={() => setIsMoreOpen(true)} className="w-8 h-8 rounded-full bg-card/40 backdrop-blur-xl border border-card-border flex items-center justify-center text-foreground hover:bg-foreground/10 transition-colors pointer-events-auto">
-                    <MoreHorizontal className="w-4 h-4" />
-                </button>
             </div>
 
-            {/* MORE OPTIONS MENU (APPLE STYLE) */}
+            {/* COMMENT DRAWER */}
+            <AnimatePresence>
+                {showComments && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-[440] backdrop-blur-sm"
+                            onClick={() => setShowComments(false)}
+                        />
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 30, stiffness: 350 }}
+                            className="fixed bottom-0 left-0 right-0 z-[450] bg-white dark:bg-[#121212] rounded-t-3xl shadow-2xl flex flex-col h-[75vh]"
+                        >
+                            <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-white/10">
+                                <h3 className="font-semibold text-gray-900 dark:text-white">Yorumlar</h3>
+                                <button onClick={() => setShowComments(false)} className="p-2 bg-gray-100 dark:bg-white/10 rounded-full text-gray-500">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4 space-y-5">
+                                {isLoadingComments ? (
+                                    <div className="flex justify-center p-8"><span className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></span></div>
+                                ) : comments.length === 0 ? (
+                                    <div className="text-center text-gray-500 py-8">Henüz yorum yok. İlk yorumu sen yap!</div>
+                                ) : (
+                                    comments.map((c: any) => (
+                                        <div key={c.id} className="flex gap-3">
+                                            <img src={c.user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100"} className="w-8 h-8 rounded-full shrink-0" />
+                                            <div>
+                                                <span className="font-semibold text-xs text-gray-900 dark:text-gray-100 mr-2">{c.user?.username || "kullanici"}</span>
+                                                <span className="text-sm text-gray-800 dark:text-gray-200">{filterContent(c.text)}</span>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                            <div className="p-4 border-t border-gray-100 dark:border-white/10 flex gap-3">
+                                <input 
+                                    type="text" 
+                                    value={commentInput}
+                                    onChange={(e) => setCommentInput(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSendComment()}
+                                    placeholder="Yorum ekle..." 
+                                    className="flex-1 bg-gray-100 dark:bg-white/5 rounded-full px-4 py-2 text-sm focus:outline-none dark:text-white"
+                                />
+                                <button onClick={handleSendComment} disabled={!commentInput.trim()} className="text-cyan-500 font-semibold text-sm disabled:opacity-50">Paylaş</button>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+            
+            {/* MORE DRAWER */}
             <AnimatePresence>
                 {isMoreOpen && (
                     <>
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-black/60 z-[440] backdrop-blur-sm pointer-events-auto"
+                            className="fixed inset-0 bg-black/50 z-[440] backdrop-blur-sm pointer-events-auto"
                             onClick={() => setIsMoreOpen(false)}
                         />
                         <motion.div
                             initial={{ y: "100%" }}
                             animate={{ y: 0 }}
                             exit={{ y: "100%" }}
-                            transition={{ type: "spring", damping: 30, stiffness: 350, mass: 0.8 }}
-                            className="absolute bottom-0 left-0 right-0 z-[450] bg-background/80 backdrop-blur-[50px] border-t border-card-border rounded-t-[48px] shadow-2xl flex flex-col pointer-events-auto overflow-hidden max-h-[92%]"
+                            transition={{ type: "spring", damping: 30, stiffness: 350 }}
+                            className="fixed bottom-0 left-0 right-0 z-[450] bg-white dark:bg-[#121212] rounded-t-3xl shadow-2xl flex flex-col p-4 pb-8"
                         >
-                            <div 
-                                onClick={() => setIsMoreOpen(false)}
-                                className="w-full flex flex-col items-center pt-5 pb-2 shrink-0 cursor-pointer group/handle"
-                            >
-                                <div className="w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full mb-1 group-hover/handle:bg-white/40 transition-colors" />
-                            </div>
-
-                            <div className="flex-1 overflow-y-auto no-scrollbar px-6 space-y-6 pb-32 overscroll-contain text-white">
-                                {/* AI SMART ANALYSIS SECTION */}
-                                <div className="flex flex-col bg-gradient-to-br from-accent/10 to-accent/5 rounded-[32px] border border-card-border overflow-hidden">
-                                    <button 
-                                        onClick={() => { setIsMoreOpen(false); alert('AI Akıllı Analiz başlatılıyor... ✨'); }}
-                                        className="w-full px-6 py-6 flex items-center justify-between active:bg-black/10 dark:bg-white/10 transition-all group"
-                                    >
-                                        <div className="flex items-center gap-5">
-                                            <div className="p-3 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-2xl shadow-lg shadow-indigo-500/20 text-white">
-                                                <Sparkles className="w-6 h-6" />
-                                            </div>
-                                            <div className="flex flex-col items-start text-left">
-                                                <span className="font-black text-[18px] bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">Akıllı Analiz (AI)</span>
-                                                <span className="text-indigo-200/50 text-[12px] font-medium">Bu gönderiyi yapay zeka ile incele</span>
-                                            </div>
-                                        </div>
-                                        <Zap className="w-5 h-5 text-indigo-400 animate-pulse" />
-                                    </button>
-                                </div>
-
-                                {/* POST MANAGEMENT SECTION */}
-                                <div className="flex flex-col bg-white/[0.03] rounded-[32px] border border-white/[0.08] divide-y divide-white/[0.05] overflow-hidden">
-                                    <button 
-                                        onClick={() => { 
-                                            setIsMoreOpen(false); 
-                                            handleProfileNavigation();
-                                        }}
-                                        className="w-full px-6 py-5 flex items-center justify-between active:bg-white/[0.07] transition-all group"
-                                    >
-                                        <div className="flex items-center gap-5">
-                                            <div className="p-3 bg-cyan-500/10 rounded-2xl border border-cyan-500/20 text-cyan-400">
-                                                <User className="w-6 h-6" />
-                                            </div>
-                                            <div className="flex flex-col items-start">
-                                                <span className="text-white font-bold text-[17px]">Profili Görüntüle</span>
-                                                <span className="text-black/50 dark:text-white/40 text-[12px]">Kullanıcı detaylarını incele</span>
-                                            </div>
-                                        </div>
-                                        <ChevronRight className="w-5 h-5 text-white/10 group-active:translate-x-1 transition-transform" />
-                                    </button>
-                                    
-                                    <button 
-                                        onClick={() => { setIsMoreOpen(false); alert('Favorilerime eklendi ⭐'); }}
-                                        className="w-full px-6 py-5 flex items-center gap-5 active:bg-white/[0.07] transition-all"
-                                    >
-                                        <div className="p-3 bg-orange-500/10 rounded-2xl border border-orange-500/20 text-orange-400">
-                                            <Star className="w-6 h-6" />
-                                        </div>
-                                        <span className="text-black/90 dark:text-white/90 font-semibold text-[17px]">Favorilerime Ekle</span>
-                                    </button>
-
-                                    <button 
-                                        onClick={() => { setIsMoreOpen(false); alert('Bu hesap hakkında bilgiler...'); }}
-                                        className="w-full px-6 py-5 flex items-center gap-5 active:bg-white/[0.07] transition-all"
-                                    >
-                                        <div className="p-3 bg-black/5 dark:bg-white/5 rounded-2xl border border-card-border text-black/60 dark:text-white/60">
-                                            <Info className="w-6 h-6" />
-                                        </div>
-                                        <span className="text-black/90 dark:text-white/90 font-semibold text-[17px]">Bu Hesap Hakkında</span>
-                                    </button>
-                                </div>
-
+                            <div className="w-12 h-1.5 bg-gray-300 dark:bg-white/20 rounded-full mx-auto mb-6" />
+                            <div className="flex flex-col gap-2">
+                                <button onClick={() => { setIsMoreOpen(false); handleProfileNavigation(); }} className="w-full p-4 bg-gray-50 dark:bg-white/5 rounded-xl font-semibold text-gray-900 dark:text-gray-100">Profili Görüntüle</button>
                                 {isOwner && (
-                                    <div className="flex flex-col bg-white/[0.03] rounded-[32px] border border-white/[0.08] divide-y divide-white/[0.05] overflow-hidden">
-                                        <button 
-                                            onClick={() => { setIsMoreOpen(false); setShowCommentSettings(true); }}
-                                            className="w-full px-6 py-5 flex items-center justify-between active:bg-white/[0.07] transition-all group"
-                                        >
-                                            <div className="flex items-center gap-5">
-                                                <div className="p-3 bg-cyan-500/10 rounded-2xl border border-cyan-500/20 text-cyan-400">
-                                                    <MessageSquare className="w-6 h-6" />
-                                                </div>
-                                                <div className="flex flex-col items-start text-left">
-                                                    <span className="text-white font-semibold text-[17px]">Yorum Ayarları</span>
-                                                    <span className="text-black/50 dark:text-white/40 text-[12px]">Gizlilik ve kapatma seçenekleri</span>
-                                                </div>
-                                            </div>
-                                            <ChevronRight className="w-5 h-5 text-white/10 group-active:translate-x-1 transition-transform" />
-                                        </button>
-
-                                        <button 
-                                            onClick={() => { setIsMoreOpen(false); onEditPost(); }}
-                                            className="w-full px-6 py-5 flex items-center gap-5 active:bg-white/[0.07] transition-all"
-                                        >
-                                            <div className="p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20 text-blue-400">
-                                                <Edit2 className="w-6 h-6" />
-                                            </div>
-                                            <span className="text-white font-semibold text-[17px]">Gönderiyi Düzenle</span>
-                                        </button>
-                                        <button 
-                                            onClick={() => { setIsMoreOpen(false); onDeletePost(); }}
-                                            className="w-full px-6 py-5 flex items-center gap-5 active:bg-red-500/10 transition-all text-red-500"
-                                        >
-                                            <div className="p-3 bg-red-500/10 rounded-2xl border border-red-500/20 text-red-500">
-                                                <Trash2 className="w-6 h-6" />
-                                            </div>
-                                            <span className="font-bold text-[17px]">Gönderiyi Sil</span>
-                                        </button>
-                                    </div>
+                                    <>
+                                        <button onClick={() => { setIsMoreOpen(false); onEditPost(); }} className="w-full p-4 bg-gray-50 dark:bg-white/5 rounded-xl font-semibold text-gray-900 dark:text-gray-100">Düzenle</button>
+                                        <button onClick={() => { setIsMoreOpen(false); onDeletePost(); }} className="w-full p-4 bg-red-50 dark:bg-red-500/10 rounded-xl font-semibold text-red-500">Sil</button>
+                                    </>
                                 )}
-
-                                {!isOwner && (
-                                    <div className="flex flex-col bg-white/[0.03] rounded-[32px] border border-white/[0.08] divide-y divide-white/[0.05] overflow-hidden">
-                                        <button 
-                                            onClick={() => { setIsMoreOpen(false); alert('Sessize alındı 🔇'); }}
-                                            className="w-full px-6 py-5 flex items-center gap-5 active:bg-white/[0.07] transition-all"
-                                        >
-                                            <div className="p-3 bg-black/5 dark:bg-white/5 rounded-2xl border border-card-border text-black/50 dark:text-white/40">
-                                                <VolumeX className="w-6 h-6" />
-                                            </div>
-                                            <span className="text-black/90 dark:text-white/90 font-semibold text-[17px]">Sessize Al</span>
-                                        </button>
-                                        <button 
-                                            onClick={() => { setIsMoreOpen(false); alert('Şikayetiniz iletildi 🛡️'); }}
-                                            className="w-full px-6 py-5 flex items-center gap-5 active:bg-red-500/10 transition-all text-red-500"
-                                        >
-                                            <div className="p-3 bg-red-500/10 rounded-2xl border border-red-500/20 text-red-500">
-                                                <ShieldAlert className="w-6 h-6" />
-                                            </div>
-                                            <span className="font-bold text-[17px]">Şikayet Et</span>
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background via-background/90 to-transparent pt-12 shrink-0">
-                                <button 
-                                    onClick={() => setIsMoreOpen(false)}
-                                    className="w-full py-5 bg-foreground text-background rounded-[28px] font-black text-[18px] active:scale-[0.97] transition-all shadow-xl"
-                                >
-                                    Vazgeç
-                                </button>
+                                <button onClick={() => setIsMoreOpen(false)} className="w-full p-4 font-semibold text-gray-500">İptal</button>
                             </div>
                         </motion.div>
                     </>
                 )}
             </AnimatePresence>
 
-            {/* COMMENT SETTINGS OVERLAY MODAL */}
-            <AnimatePresence>
-                {showCommentSettings && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-black/70 z-[460] backdrop-blur-md pointer-events-auto flex items-center justify-center p-6"
-                            onClick={() => setShowCommentSettings(false)}
-                        >
-                            <motion.div
-                                initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
-                                onClick={(e) => e.stopPropagation()}
-                                className="w-full max-w-sm bg-card dark:bg-[#121316] border border-card-border rounded-[32px] p-6 flex flex-col gap-5 shadow-2xl text-white"
-                            >
-                                <div className="flex items-center justify-between pb-3 border-b border-card-border">
-                                    <div className="flex items-center gap-2">
-                                        <MessageSquare className="w-5 h-5 text-cyan-400" />
-                                        <h4 className="font-bold text-base">Yorum Ayarları</h4>
-                                    </div>
-                                    <button onClick={() => setShowCommentSettings(false)} className="p-1 hover:bg-black/10 dark:bg-white/10 rounded-full transition-colors">
-                                        <X className="w-4 h-4 text-black/60 dark:text-white/60" />
-                                    </button>
-                                </div>
-
-                                <div className="flex flex-col gap-4">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex flex-col">
-                                            <span className="font-bold text-sm">Yorumlara İzin Ver</span>
-                                            <span className="text-xs text-black/50 dark:text-white/40">Kullanıcılar yorum yapabilsin</span>
-                                        </div>
-                                        <button
-                                            onClick={() => setLocalAllowComments(!localAllowComments)}
-                                            className={cn(
-                                                "w-12 h-6 rounded-full p-0.5 transition-colors duration-300 relative",
-                                                localAllowComments ? "bg-cyan-500" : "bg-black/10 dark:bg-white/10"
-                                            )}
-                                        >
-                                            <div className={cn(
-                                                "w-5 h-5 rounded-full bg-card transition-transform duration-300 shadow-moffi-card",
-                                                localAllowComments ? "translate-x-6" : "translate-x-0"
-                                            )} />
-                                        </button>
-                                    </div>
-
-                                    <div className="flex flex-col gap-2 pt-2 border-t border-card-border">
-                                        <span className="font-bold text-sm">Kimler Yorum Yapabilir?</span>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {[
-                                                { id: 'everyone', label: 'Herkes' },
-                                                { id: 'followers', label: 'Sadece Takipçiler' }
-                                            ].map((item) => (
-                                                <button
-                                                    key={item.id}
-                                                    onClick={() => setLocalCommentPrivacy(item.id)}
-                                                    className={cn(
-                                                        "py-2.5 px-3 rounded-xl border text-xs font-bold transition-all",
-                                                        localCommentPrivacy === item.id 
-                                                            ? "bg-cyan-500/20 border-cyan-500 text-cyan-400" 
-                                                            : "bg-black/5 dark:bg-white/5 border-card-border text-black/60 dark:text-white/60 hover:text-white"
-                                                    )}
-                                                >
-                                                    {item.label}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <button
-                                    onClick={() => handleUpdateCommentSettings(localAllowComments, localCommentPrivacy)}
-                                    disabled={isUpdatingSettings}
-                                    className="w-full py-3 mt-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-black font-black text-sm rounded-2xl transition-transform active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 disabled:opacity-50"
-                                >
-                                    {isUpdatingSettings ? (
-                                        <>
-                                            <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                                            Güncelleniyor...
-                                        </>
-                                    ) : (
-                                        'Ayarları Kaydet'
-                                    )}
-                                </button>
-                            </motion.div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
-
-            {/* SHARE SHEET (REMOVED - Using Global ShareSheet) */}
-
-            {/* DOUBLE TAP ANIMATION */}
-            <AnimatePresence>
-                {tapHeart && (
-                    <motion.div
-                        initial={{ scale: 0, opacity: 0, rotate: -15 }}
-                        animate={{ scale: 1.5, opacity: 1, rotate: 0 }}
-                        exit={{ scale: 2, opacity: 0 }}
-                        transition={{ type: "spring", bounce: 0.5 }}
-                        className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none"
-                    >
-                        <Heart className="w-32 h-32 text-red-500 fill-red-500 drop-shadow-[0_0_40px_rgba(239,68,68,0.8)]" />
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* USER INFO & CAPTION & ACTIONS */}
-            {/* Left text Details (Author & Caption) inside a glass card */}
-            <div className="absolute bottom-2 left-4 right-16 z-20 pointer-events-auto drop-shadow-lg pb-4">
-                <div 
-                    onClick={handleProfileNavigation}
-                    className="flex items-center gap-2 cursor-pointer mb-2"
-                >
-                    <img 
-                        src={(isOwner ? (currentUser?.avatar || post.avatar || post.author_avatar || post.user?.avatar) : (post.avatar || post.author_avatar || post.user?.avatar)) || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} 
-                        className="w-9 h-9 rounded-full border border-black/20 dark:border-white/20 object-cover" 
-                        alt="Author"
-                    />
-                    <div>
-                        <div className="flex items-center gap-1">
-                            <span className="text-xs font-black tracking-wide text-white">
-                                @{post.username || post.author_name || (post.author ? post.author.toLowerCase().replace(/\s+/g, '_') : (post.user?.name ? post.user.name.toLowerCase().replace(/\s+/g, '_') : 'anonim'))}
-                            </span>
-                            <BadgeCheck className="w-3.5 h-3.5 text-cyan-400 fill-black" />
-                        </div>
-                        <span className="text-[8px] text-black/50 dark:text-white/50 font-bold uppercase tracking-wider">Moffi Kullanıcısı</span>
-                    </div>
-                </div>
-                
-
-
-                <p className="text-[11px] text-black/90 dark:text-white/90 leading-relaxed mt-1 line-clamp-2">
-                    {filterContent(post.desc || post.caption || post.description || '')}
-                </p>
-                
-            </div>
-
-            {/* Right Sidebar actions */}
-            <div className="absolute bottom-24 right-4 z-20 flex flex-col gap-5 items-center pointer-events-auto">
-                {/* LIKE */}
-                <button 
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        if (!currentUser || String(currentUser.id) === 'local-user') {
-                            alert('❤️ Beğenmek ve etkileşime geçmek için lütfen giriş yapın veya kayıt olun.');
-                            window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'login' }));
-                            return;
-                        }
-                        onLike();
-                    }}
-                    className="flex flex-col items-center gap-1 group active:scale-90 transition"
-                >
-                    <Heart className={cn("w-8 h-8 drop-shadow-md transition-colors", post.isLiked ? "fill-red-500 text-red-500" : "text-white group-hover:text-black/80 dark:text-white/80 fill-transparent")} />
-                    <span className="text-[11px] font-bold text-white drop-shadow-md">{post.likes ?? post.likes_count ?? 0}</span>
-                </button>
-
-                {/* COMMENT */}
-                <button 
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        if (allowComments === false) {
-                            alert('Bu gönderi yorumlara kapatılmıştır. 🔒');
-                            return;
-                        }
-                        setShowComments(true);
-                    }}
-                    className="flex flex-col items-center gap-1 group active:scale-90 transition"
-                >
-                    <MessageCircle className={cn("w-8 h-8 drop-shadow-md transition-colors", allowComments === false ? "text-black/50 dark:text-white/40 fill-transparent" : "text-white group-hover:text-black/80 dark:text-white/80 fill-transparent")} />
-                    <span className="text-[11px] font-bold text-white drop-shadow-md">
-                        {allowComments === false ? '-' : (post.comments ?? post.comments_count ?? 0)}
-                    </span>
-                </button>
-
-                {/* SHARE */}
-                <button 
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        handleShareClick();
-                    }}
-                    className="flex flex-col items-center gap-1 group active:scale-90 transition"
-                >
-                    <Share2 className="w-8 h-8 text-white drop-shadow-md group-hover:text-black/80 dark:text-white/80 transition-colors" />
-                    <span className="text-[11px] font-bold text-white drop-shadow-md">Paylaş</span>
-                </button>
-
-                {/* MUTE BUTTON */}
-                {(post.is_video || (post.media && /\.(mp4|webm|ogg|mov|avi|m4v|mkv)$/i.test(post.media)) || post.audio_url) && (
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
-                        className="mt-2 active:scale-90 transition group"
-                    >
-                        {isMuted ? <VolumeX className="w-6 h-6 text-black/70 dark:text-white/70 drop-shadow-md group-hover:text-black/90 dark:text-white/90" /> : <Volume2 className="w-6 h-6 text-white drop-shadow-md group-hover:text-black/80 dark:text-white/80" />}
-                    </button>
-                )}
-            </div>
-
-            
-
-            <AnimatePresence>
-                {showComments && (
-                    <motion.div
-                        initial={{ y: "100%", opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: "100%", opacity: 0 }}
-                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                        className="absolute inset-x-0 bottom-0 h-[82%] bg-background/90 backdrop-blur-[40px] z-40 rounded-t-[2.5rem] border-t border-card-border p-4 flex flex-col shadow-2xl"
-                    >
-                        {/* HANDLE */}
-                        <div 
-                            onClick={() => setShowComments(false)}
-                            className="w-full flex justify-center pt-2 pb-4 shrink-0 cursor-pointer group/handle"
-                        >
-                            <div className="w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full group-hover/handle:bg-white/40 transition-colors" />
-                        </div>
-
-                        {/* HEADER */}
-                        <div className="flex justify-between items-center mb-4 pb-4 border-b border-foreground/5">
-                            <h3 className="font-bold text-foreground flex items-center gap-2">
-                                <MessageCircle className="w-5 h-5 text-accent" />
-                                {post.comments} Yorum
-                            </h3>
-                            <button onClick={() => setShowComments(false)} className="bg-foreground/10 p-2 rounded-full hover:bg-foreground/20 transition-colors">
-                                <X className="w-4 h-4 text-foreground" />
-                            </button>
-                        </div>
-
-                        {/* COMMENT LIST CONTAINER */}
-                        <div className="flex-1 overflow-y-auto no-scrollbar pt-2 overscroll-contain pb-4">
-                            <div className="space-y-6 px-1">
-                                {isLoadingComments ? (
-                                    <div className="flex flex-col items-center justify-center mt-20">
-                                        <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mb-4" />
-                                        <p className="text-[10px] font-bold text-black/50 dark:text-white/40 uppercase tracking-widest">Yorumlar Yükleniyor...</p>
-                                    </div>
-                                ) : comments && comments.length > 0 ? (
-                                    comments.map((c: any) => (
-                                        <CommentItem 
-                                            key={c.id} 
-                                            comment={c} 
-                                            currentUser={currentUser}
-                                            onLike={async (cid) => {
-                                                await onToggleCommentLike?.(cid);
-                                                await apiService.toggleCommentLike(cid);
-                                                refetchComments();
-                                            }}
-                                            onReply={(target) => {
-                                                setReplyingTo(target);
-                                                setEditingComment(null);
-                                                setCommentInput('');
-                                            }}
-                                            onEdit={(target) => {
-                                                setEditingComment(target);
-                                                setReplyingTo(null);
-                                                setCommentInput(target.text);
-                                            }}
-                                            onDelete={async (cid) => {
-                                                await onDeleteComment?.(cid);
-                                                await apiService.deleteComment(cid);
-                                                refetchComments();
-                                            }}
-                                            onReport={async (cid) => {
-                                                onReportComment?.(cid);
-                                                alert("🛡️ Yorum İhbarı Başarıyla Kaydedildi!\n\nŞikayetiniz Moffi İçerik Güvenliği ve Moderasyon Ekibinin 'Gelen Kutusu / İnceleme Paneline' anında iletilmiştir. Zararlı içerikler 7/24 denetlenmektedir. Geri bildiriminiz için teşekkür ederiz.");
-                                                if (typeof window !== 'undefined') {
-                                                    try {
-                                                        const overrides = JSON.parse(localStorage.getItem('moffi_global_comment_state') || '{}');
-                                                        overrides[String(cid)] = { ...(overrides[String(cid)] || {}), status: 'pending' };
-                                                        localStorage.setItem('moffi_global_comment_state', JSON.stringify(overrides));
-                                                        window.dispatchEvent(new Event('moffi_comments_changed'));
-                                                    } catch {}
-
-                                                    for (let i = 0; i < localStorage.length; i++) {
-                                                        const key = localStorage.key(i);
-                                                        if (key?.startsWith('moffi_local_comments_')) {
-                                                            try {
-                                                                const items = JSON.parse(localStorage.getItem(key) || '[]');
-                                                                let updated = false;
-                                                                const nextItems = items.map((cm: any) => {
-                                                                    if (String(cm.id) === String(cid)) {
-                                                                        updated = true;
-                                                                        return { ...cm, status: 'pending' };
-                                                                    }
-                                                                    return cm;
-                                                                });
-                                                                if (updated) {
-                                                                    localStorage.setItem(key, JSON.stringify(nextItems));
-                                                                    break;
-                                                                }
-                                                            } catch {}
-                                                        }
-                                                    }
-                                                }
-                                                refetchComments();
-                                            }}
-                                            filterContent={filterContent}
-                                        />
-                                    ))
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center mt-20 opacity-30">
-                                        <MessageCircle className="w-12 h-12 mb-3" />
-                                        <p className="text-xs font-black uppercase tracking-widest text-center px-10">Henüz hiç yorum yok.<br/>İlk patiyi sen at!</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* INPUT ACTIONS AREA */}
-                        <div className="mt-auto shrink-0">
-                            {/* AI SUGGESTION BAR */}
-                            <AnimatePresence>
-                                {showAISuggestions && !commentInput && !replyingTo && !editingComment && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: 10 }}
-                                        className="flex gap-2 overflow-x-auto no-scrollbar py-2 mb-1 shrink-0 px-2"
-                                    >
-                                        {AI_SUGGESTIONS.map((suggestion, i) => (
-                                            <button
-                                                key={i}
-                                                onClick={() => setCommentInput(suggestion)}
-                                                className="whitespace-nowrap px-4 py-2 bg-black/10 dark:bg-white/10 hover:bg-black/20 dark:bg-white/20 backdrop-blur-md border border-card-border rounded-full text-[11px] font-bold text-black/90 dark:text-white/90 transition-all active:scale-95"
-                                            >
-                                                {suggestion}
-                                            </button>
-                                        ))}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-
-                            {/* INDICATOR BOX (Replying/Editing) */}
-                            <AnimatePresence>
-                                {(replyingTo || editingComment) && (
-                                    <motion.div
-                                        initial={{ opacity: 0, height: 0 }}
-                                        animate={{ opacity: 1, height: 'auto' }}
-                                        exit={{ opacity: 0, height: 0 }}
-                                        className="px-4 py-2 bg-cyan-500/10 border border-cyan-500/20 rounded-2xl mb-2 flex items-center justify-between mx-2"
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                                            <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">
-                                                {editingComment ? 'YORUM DÜZENLENİYOR' : `YANITLANIYOR: @${replyingTo.author || replyingTo.userName}`}
-                                            </span>
-                                        </div>
-                                        <button
-                                            onClick={() => {
-                                                setReplyingTo(null);
-                                                setEditingComment(null);
-                                                if (editingComment) setCommentInput('');
-                                            }}
-                                            className="p-1 hover:bg-black/10 dark:bg-white/10 rounded-full transition-colors"
-                                        >
-                                            <X className="w-3.5 h-3.5 text-cyan-400" />
-                                        </button>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-
-                            <div className="relative">
-                                {/* MENTION LIST overlay */}
-                                <AnimatePresence>
-                                    {mentionSearch && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                            className="absolute bottom-full left-0 right-0 mb-4 bg-[#1a1b1e]/90 backdrop-blur-3xl border border-card-border rounded-2xl overflow-hidden shadow-2xl z-50 mx-2"
-                                        >
-                                            <div className="p-3 border-b border-card-border bg-black/5 dark:bg-white/5">
-                                                <span className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest">Kişi Etiketle</span>
-                                            </div>
-                                            <div className="max-h-48 overflow-y-auto no-scrollbar divide-y divide-white/5">
-                                                {MOCK_USERS.filter(u => u.username.includes(mentionSearch.slice(1))).map(u => (
-                                                     <button
-                                                         key={u.id}
-                                                         onClick={() => {
-                                                             setCommentInput(prev => prev.replace(mentionSearch, `@${u.username} `));
-                                                             setMentionSearch('');
-                                                         }}
-                                                         className="w-full px-5 py-3 flex items-center gap-3 hover:bg-black/5 dark:bg-white/5 active:bg-black/10 dark:bg-white/10 transition-colors"
-                                                     >
-                                                         <div className="w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 font-bold text-xs">
-                                                             {u.username[0].toUpperCase()}
-                                                         </div>
-                                                         <div className="flex flex-col items-start text-left">
-                                                             <span className="text-sm font-bold text-white">@{u.username}</span>
-                                                             <span className="text-[10px] text-black/50 dark:text-white/40">{u.name}</span>
-                                                         </div>
-                                                     </button>
-                                                 ))}
-                                             </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-
-                                <div className="flex items-center gap-3 relative bg-black/5 dark:bg-white/5 border border-card-border rounded-[2rem] py-2 px-2 shrink-0">
-                                    <div className="flex items-center gap-1 shrink-0">
-                                        <button
-                                            onClick={() => alert('Fotoğraf seçimi yakında aktif! 📸')}
-                                            className="w-8 h-8 rounded-full hover:bg-black/10 dark:bg-white/10 flex items-center justify-center text-black/50 dark:text-white/50 transition-colors"
-                                        >
-                                            <Plus className="w-4 h-4" />
-                                        </button>
-                                        <div className="w-8 h-8 rounded-full border border-card-border relative overflow-hidden">
-                                            <Image src={currentUser?.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} fill className="object-cover" alt="User" />
-                                        </div>
-                                    </div>
-
-                                    <input
-                                        type="text"
-                                        value={commentInput}
-                                        onFocus={() => { setShowAISuggestions(true); setShowGIFPicker(false); }}
-                                        onBlur={() => setTimeout(() => setShowAISuggestions(false), 200)}
-                                        onChange={(e) => {
-                                            setCommentInput(e.target.value);
-                                            const words = e.target.value.split(' ');
-                                            const lastWord = words[words.length - 1];
-                                            if (lastWord.startsWith('@')) {
-                                                setMentionSearch(lastWord);
-                                            } else {
-                                                setMentionSearch('');
-                                            }
-                                        }}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') handleSendComment();
-                                        }}
-                                        placeholder={editingComment ? "Yorumu düzenle..." : (replyingTo ? "Yanıtınızı yazın..." : "Düşüncelerini bir pati ile paylaş...")}
-                                        className="w-full bg-transparent text-sm text-white pr-20 focus:outline-none placeholder:text-black/30 dark:text-white/20"
-                                    />
-
-                                    <div className="absolute right-2 flex items-center gap-1.5">
-                                        <button
-                                            onClick={() => setShowGIFPicker(!showGIFPicker)}
-                                            className={cn(
-                                                "w-8 h-8 rounded-full flex items-center justify-center font-black text-[10px] border transition-all",
-                                                showGIFPicker ? "bg-cyan-500 border-cyan-400 text-black" : "hover:bg-black/10 dark:bg-white/10 text-cyan-400 border-card-border"
-                                            )}
-                                        >
-                                            GIF
-                                        </button>
-                                        <button
-                                            onClick={handleSendComment}
-                                            className="w-9 h-9 rounded-full bg-card hover:bg-gray-200 flex items-center justify-center text-black font-bold transition-transform active:scale-95 shadow-xl"
-                                        >
-                                            <Send className="w-4 h-4 -ml-0.5" />
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* BADGE INFO SHEET */}
-            <AnimatePresence>
-                {activeBadgeInfo && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => setActiveBadgeInfo(null)}
-                        className="absolute inset-0 z-[2000] bg-black/60 backdrop-blur-md flex items-end justify-center"
-                    >
-                        <motion.div
-                            initial={{ y: "100%" }}
-                            animate={{ y: 0 }}
-                            exit={{ y: "100%" }}
-                            transition={{ type: "spring", damping: 25, stiffness: 350 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full bg-[#121318]/95 border-t border-black/10 dark:border-white/10 rounded-t-[2.5rem] p-6 pb-8 flex flex-col items-center text-center shadow-2xl relative pointer-events-auto"
-                        >
-                            {/* Handle */}
-                            <div 
-                                onClick={() => setActiveBadgeInfo(null)}
-                                className="w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full mb-6 cursor-pointer hover:bg-white/40 transition-colors"
-                            />
-
-                            {/* Icon & Glow */}
-                            <div className="relative mb-4 flex items-center justify-center">
-                                <div className={cn(
-                                    "absolute w-20 h-20 rounded-full blur-2xl opacity-20 animate-pulse",
-                                    activeBadgeInfo === 'verified' && "bg-emerald-400",
-                                    activeBadgeInfo === 'premium' && "bg-orange-400",
-                                    activeBadgeInfo === 'walker' && "bg-cyan-400",
-                                    activeBadgeInfo === 'sos' && "bg-red-500"
-                                )} />
-                                <div className={cn(
-                                    "w-16 h-16 rounded-full flex items-center justify-center border shadow-xl relative z-10",
-                                    activeBadgeInfo === 'verified' && "bg-emerald-500/10 border-emerald-500/30 text-emerald-400",
-                                    activeBadgeInfo === 'premium' && "bg-orange-500/10 border-orange-500/30 text-orange-400",
-                                    activeBadgeInfo === 'walker' && "bg-cyan-500/10 border-cyan-500/30 text-cyan-400",
-                                    activeBadgeInfo === 'sos' && "bg-red-500/10 border-red-500/30 text-red-500"
-                                )}>
-                                    {activeBadgeInfo === 'verified' && <ShieldCheck className="w-8 h-8" />}
-                                    {activeBadgeInfo === 'premium' && <Crown className="w-8 h-8" />}
-                                    {activeBadgeInfo === 'walker' && <Footprints className="w-8 h-8" />}
-                                    {activeBadgeInfo === 'sos' && <SOSZap className="w-8 h-8" />}
-                                </div>
-                            </div>
-
-                            {/* Title & Desc */}
-                            <h3 className="text-lg font-black text-white mb-2 uppercase tracking-wide">
-                                {activeBadgeInfo === 'verified' && 'ONAYLI HESAP'}
-                                {activeBadgeInfo === 'premium' && 'PREMIUM ÜYE'}
-                                {activeBadgeInfo === 'walker' && 'ONAYLI GEZDİRİCİ'}
-                                {activeBadgeInfo === 'sos' && 'ACİL DURUM ORTAĞI'}
-                            </h3>
-                            <p className="text-xs text-black/60 dark:text-white/60 font-medium leading-relaxed max-w-xs mb-6">
-                                {activeBadgeInfo === 'verified' && 'Bu profilin ve kimliğinin doğruluğu, Moffi moderasyon ekibi tarafından resmi belgelerle incelenmiş ve onaylanmıştır.'}
-                                {activeBadgeInfo === 'premium' && 'Moffi ekosistemindeki ayrıcalıklı özellikleri, özel avatarları ve gelişmiş akıllı araçları kullanan Moffi Premium üyesidir.'}
-                                {activeBadgeInfo === 'walker' && 'Moffi güvenli gezdirme eğitimi ve kimlik doğrulama süreçlerini tamamlamış, onaylı ve güvenilir köpek gezdiricisidir.'}
-                                {activeBadgeInfo === 'sos' && 'Moffi kayıp ve acil durum ağında aktif rol oynayan, yakın çevredeki acil durum bildirimlerine gönüllü müdahale yetkisine sahip kullanıcıdır.'}
-                            </p>
-
-                            {/* Close Button */}
-                            <button
-                                onClick={() => setActiveBadgeInfo(null)}
-                                className={cn(
-                                    "w-full py-3.5 rounded-full font-black text-xs uppercase tracking-widest text-black shadow-lg transition-transform active:scale-95",
-                                    activeBadgeInfo === 'verified' && "bg-emerald-400 shadow-emerald-400/20",
-                                    activeBadgeInfo === 'premium' && "bg-orange-400 shadow-orange-400/20",
-                                    activeBadgeInfo === 'walker' && "bg-cyan-400 shadow-cyan-400/20",
-                                    activeBadgeInfo === 'sos' && "bg-red-500 shadow-red-500/20 text-white"
-                                )}
-                            >
-                                Anladım
-                            </button>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </motion.div>
-    );
-}
-
-// RENDER HELPER FOR COMMENTS
-// RENDER HELPER FOR COMMENTS
-function CommentItem({ 
-    comment, 
-    onLike, 
-    onReply, 
-    onEdit, 
-    onDelete, 
-    onReport, 
-    filterContent,
-    currentUser,
-    isReply = false 
-}: { 
-    comment: any, 
-    onLike: (commentId: string) => void, 
-    onReply: (comment: any) => void, 
-    onEdit: (comment: any) => void, 
-    onDelete: (commentId: string) => void, 
-    onReport: (commentId: string) => void, 
-    filterContent: (text: string) => string,
-    currentUser?: any,
-    isReply?: boolean 
-}) {
-    const [showReplies, setShowReplies] = useState(false);
-    const [showContextMenu, setShowContextMenu] = useState(false);
-    const [likesCount, setLikesCount] = useState(comment.likes || 0);
-    const [isLikedLocal, setIsLikedLocal] = useState(comment.isLiked || false);
-    const router = useRouter();
-
-    const currentUsername = currentUser?.username || currentUser?.name || currentUser?.full_name;
-    const commentUsername = comment.user || comment.author || comment.userName;
-    const isCommentOwner = 
-        (currentUser?.id && comment.user_id && String(currentUser.id) === String(comment.user_id)) ||
-        (currentUsername && commentUsername && String(currentUsername).toLowerCase() === String(commentUsername).toLowerCase());
-
-    useEffect(() => {
-        setLikesCount(comment.likes || 0);
-        setIsLikedLocal(comment.isLiked || false);
-    }, [comment.likes, comment.isLiked]);
-
-    return (
-        <motion.div
-            initial={{ opacity: 0, x: isReply ? 10 : 0 }}
-            animate={{ opacity: 1, x: 0 }}
-            className={cn("flex flex-col relative", isReply ? "pl-1" : "")}
-        >
-            <div className="flex gap-3 group/comment items-start">
-                <div className="flex flex-col items-center shrink-0 mt-0.5">
-                    {comment.isSystem ? (
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-600 flex items-center justify-center shrink-0 shadow-lg shadow-cyan-500/20 ring-2 ring-cyan-400/20">
-                            <Sparkles className="w-4 h-4 text-white" />
-                        </div>
-                    ) : (
-                        <motion.div
-                            whileTap={{ scale: 0.9 }}
-                            onClick={() => {
-                                const targetId = comment.userId || comment.user_id || comment.authorId;
-                                router.push(targetId ? `/profile/${targetId}` : '/profile');
-                            }}
-                            className="relative cursor-pointer"
-                        >
-                            <div className="w-8 h-8 rounded-full border border-card-border relative overflow-hidden shrink-0">
-                                <Image src={comment.avatar || comment.userImg || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} fill className="object-cover" alt="Commenter" />
-                            </div>
-                            {isLikedLocal && (
-                                <motion.div
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    className="absolute -bottom-0.5 -right-0.5 bg-red-500 rounded-full w-3.5 h-3.5 flex items-center justify-center border border-black shadow-sm"
-                                >
-                                    <Heart className="w-2 h-2 text-white fill-white" />
-                                </motion.div>
-                            )}
-                        </motion.div>
-                    )}
-                    {isReply && <div className="flex-1 w-0.5 bg-gradient-to-b from-white/10 to-transparent my-1 rounded-full" />}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                    <div className="relative overflow-hidden group/reply-target">
-                        <div className="relative z-10">
-                            <div className="flex items-center gap-2 mb-0.5">
-                                <span
-                                    onClick={() => {
-                                        const targetId = comment.userId || comment.user_id || comment.authorId;
-                                        router.push(targetId ? `/profile/${targetId}` : '/profile');
-                                    }}
-                                    className={cn("text-[13px] font-black truncate cursor-pointer hover:underline max-w-[140px] sm:max-w-[180px]", comment.isSystem ? "text-cyan-400" : "text-black/90 dark:text-white/90")}
-                                >
-                                    {comment.user || comment.author || comment.userName || 'Moffi Kullanıcısı'}
-                                </span>
-                                
-                                {comment.isReplyTo && (
-                                    <span className="text-[10px] text-cyan-400/50 font-black flex items-center shrink-0">
-                                        <ChevronRight className="w-2.5 h-2.5" />
-                                        @{comment.isReplyTo}
-                                    </span>
-                                )}
-
-                                {comment.status === 'pending' && (
-                                    <span className="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded font-bold shrink-0">
-                                        Onay Bekliyor 🛡️
-                                    </span>
-                                )}
-
-                                <div className="flex items-center gap-2 ml-auto shrink-0">
-                                    <span className="text-[9px] text-black/30 dark:text-white/20 font-black uppercase tracking-tighter">{comment.time || "YENİ"}</span>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setShowContextMenu(!showContextMenu);
-                                        }}
-                                        className="p-1 hover:bg-black/10 dark:bg-white/10 rounded-full transition-colors opacity-40 hover:opacity-100 group-hover/comment:opacity-100"
-                                    >
-                                        <MoreHorizontal className="w-3.5 h-3.5 text-[#ffffff]" />
-                                    </button>
-                                </div>
-                            </div>
-                            <p className={cn("text-[13px] leading-relaxed font-medium font-sans break-words pl-0.5", comment.status === 'pending' ? "text-amber-400/80 italic" : "text-black/80 dark:text-white/80")}>
-                                {comment.status === 'pending' ? "[İnceleniyor] " + filterContent(comment.text) : filterContent(comment.text)}
-                            </p>
-
-                            {comment.media && (
-                                <div className="mt-2 rounded-2xl overflow-hidden border border-card-border shadow-2xl max-w-[200px]">
-                                    <img src={comment.media.url} className="w-full h-auto object-cover" />
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-5 mt-1.5 ml-0.5">
-                        <button
-                            onClick={async () => {
-                                if (!currentUser || String(currentUser.id) === 'local-user') {
-                                    alert('❤️ Yorumları beğenmek için lütfen giriş yapın veya kayıt olun.');
-                                    window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'login' }));
-                                    return;
-                                }
-                                const newLiked = !isLikedLocal;
-                                setIsLikedLocal(newLiked);
-                                setLikesCount((prev: number) => newLiked ? prev + 1 : Math.max(0, prev - 1));
-                                await onLike(comment.id);
-                            }}
-                            className={cn(
-                                "flex items-center gap-1 text-[10px] font-black uppercase tracking-widest transition-all active:scale-95",
-                                isLikedLocal ? "text-red-500" : "text-black/50 dark:text-white/40 hover:text-black/60 dark:text-white/60"
-                            )}
-                        >
-                            {isLikedLocal ? <Heart className="w-3 h-3 fill-red-500" /> : <Heart className="w-3 h-3" />}
-                            {likesCount > 0 ? likesCount : "BEĞEN"}
-                        </button>
-                        <button
-                            onClick={() => onReply(comment)}
-                            className="flex items-center gap-1 text-[10px] text-black/50 dark:text-white/40 font-black uppercase tracking-widest hover:text-white transition-all active:scale-95"
-                        >
-                            <MessageSquare className="w-3 h-3" />
-                            YANITLA
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* CONTEXT MENU */}
-            <AnimatePresence>
-                {showContextMenu && (
-                    <>
-                        <motion.div 
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setShowContextMenu(false)}
-                            className="fixed inset-0 z-[60] bg-black/20 backdrop-blur-[2px]"
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: -10 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                            className="absolute right-2 top-8 z-[70] min-w-[160px] bg-card dark:bg-[#121316]/95 backdrop-blur-3xl border border-card-border rounded-2xl p-1.5 shadow-2xl"
-                        >
-                            {isCommentOwner && (
-                                <>
-                                    <button 
-                                        onClick={() => {
-                                            onEdit(comment);
-                                            setShowContextMenu(false);
-                                        }}
-                                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-black/10 dark:bg-white/10 text-white transition-colors"
-                                    >
-                                        <span className="text-[11px] font-bold">DÜZENLE</span>
-                                        <Edit2 className="w-3.5 h-3.5 text-black/50 dark:text-white/40" />
-                                    </button>
-                                    <button 
-                                        onClick={() => {
-                                            onDelete(comment.id);
-                                            setShowContextMenu(false);
-                                        }}
-                                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-red-500/20 text-red-400 transition-colors"
-                                    >
-                                        <span className="text-[11px] font-bold">SİL</span>
-                                        <Trash2 className="w-3.5 h-3.5 opacity-60" />
-                                    </button>
-                                    <div className="h-px bg-black/5 dark:bg-white/5 my-1 mx-2" />
-                                </>
-                            )}
-                            <button 
-                                onClick={() => {
-                                    onReport(comment.id);
-                                    setShowContextMenu(false);
-                                }}
-                                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-black/10 dark:bg-white/10 text-black/60 dark:text-white/60 transition-colors"
-                            >
-                                <span className="text-[11px] font-bold">ŞİKAYET ET</span>
-                                <ShieldAlert className="w-3.5 h-3.5 opacity-40" />
-                            </button>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
-
-            {/* NESTED REPLIES */}
-            {comment.replies && comment.replies.length > 0 && (
-                <div className="ml-6 flex flex-col gap-3 mt-1 pl-4 border-l border-card-border relative">
-                    {!showReplies ? (
-                        <button
-                            onClick={() => setShowReplies(true)}
-                            className="flex items-center gap-2 text-[10px] font-black text-cyan-400/80 hover:text-cyan-400 transition-colors py-1 group"
-                        >
-                            <div className="w-5 h-px bg-black/10 dark:bg-white/10 group-hover:bg-cyan-400/30" />
-                            {comment.replies.length} YANITA BAK
-                        </button>
-                    ) : (
-                        <div className="flex flex-col gap-4">
-                            {comment.replies.map((reply: any) => (
-                                <CommentItem
-                                    key={reply.id}
-                                    comment={reply}
-                                    currentUser={currentUser}
-                                    onLike={onLike}
-                                    onReply={onReply}
-                                    onEdit={onEdit}
-                                    onDelete={onDelete}
-                                    onReport={onReport}
-                                    filterContent={filterContent}
-                                    isReply={true}
-                                />
-                            ))}
-                            <button
-                                onClick={() => setShowReplies(false)}
-                                className="flex items-center gap-2 text-[10px] font-black text-black/30 dark:text-white/20 hover:text-white transition-colors py-1"
-                            >
-                                <div className="w-5 h-px bg-black/10 dark:bg-white/10" />
-                                YANITLARI GİZLE
-                            </button>
-                        </div>
-                    )}
-                </div>
-            )}
-        </motion.div>
+        </div>
     );
 }
