@@ -399,17 +399,23 @@ export function ImmersivePostCard({
                         <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                     <div className="flex flex-col">
-                        <div className="flex items-center gap-2">
-                        <button onClick={handleDoubleTap} className="p-2 -ml-2 text-gray-600 dark:text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-all group">
-                            <Heart strokeWidth={1.25} className={cn("w-6 h-6 transition-transform group-hover:scale-105 group-active:scale-95", post.isLiked ? "fill-red-500 text-red-500" : "")} />
-                        </button>
-                        <button onClick={() => allowComments ? setShowComments(true) : null} className={cn("p-2 text-gray-600 dark:text-gray-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-full transition-all group", !allowComments && "opacity-50")}>
-                            <MessageCircle strokeWidth={1.25} className="w-6 h-6 transition-transform group-hover:scale-105 group-active:scale-95" />
-                        </button>
-                        <button onClick={() => setIsShareOpen(true)} className="p-2 text-gray-600 dark:text-gray-300 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 rounded-full transition-all group">
-                            <Send strokeWidth={1.25} className="w-6 h-6 transition-transform group-hover:scale-105 group-active:scale-95 -mt-0.5 ml-0.5" />
-                        </button>
-                    </div>
+                        <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-[15px] tracking-tight text-gray-900 dark:text-gray-100 leading-none group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
+                                {post.author || post.user?.username || "kullanici"}
+                            </span>
+                            {post.verified && <BadgeCheck className="w-4 h-4 text-cyan-500" />}
+                            {!isOwner && (
+                                <>
+                                    <span className="text-gray-300 dark:text-gray-600 mx-1">•</span>
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); setIsFollowingAuthor(!isFollowingAuthor); }}
+                                        className={cn("text-[13px] font-bold transition-colors", isFollowingAuthor ? "text-gray-400" : "text-cyan-500 hover:text-cyan-600")}
+                                    >
+                                        {isFollowingAuthor ? 'Takip Ediliyor' : 'Takip Et'}
+                                    </button>
+                                </>
+                            )}
+                        </div>
                         {post.location && (
                             <span className="text-[11px] font-medium text-gray-500 mt-1 tracking-wide uppercase">{post.location}</span>
                         )}
@@ -476,15 +482,15 @@ export function ImmersivePostCard({
             {/* ACTIONS */}
             <div className="p-4 px-5">
                 <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-1.5">
-                        <button onClick={handleDoubleTap} className="p-2.5 -ml-2.5 text-gray-800 dark:text-gray-200 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-all group">
-                            <Heart strokeWidth={1.5} className={cn("w-[26px] h-[26px] transition-transform group-hover:scale-110 group-active:scale-90", post.isLiked ? "fill-red-500 text-red-500" : "")} />
+                    <div className="flex items-center gap-2">
+                        <button onClick={handleDoubleTap} className="p-2 -ml-2 text-gray-600 dark:text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-all group">
+                            <Heart strokeWidth={1.25} className={cn("w-[22px] h-[22px] transition-transform group-hover:scale-105 group-active:scale-95", post.isLiked ? "fill-red-500 text-red-500" : "")} />
                         </button>
-                        <button onClick={() => allowComments ? setShowComments(true) : null} className={cn("p-2.5 text-gray-800 dark:text-gray-200 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-full transition-all group", !allowComments && "opacity-50")}>
-                            <MessageCircle strokeWidth={1.5} className="w-[26px] h-[26px] transition-transform group-hover:scale-110 group-active:scale-90" />
+                        <button onClick={() => allowComments ? setShowComments(true) : null} className={cn("p-2 text-gray-600 dark:text-gray-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-full transition-all group", !allowComments && "opacity-50")}>
+                            <MessageCircle strokeWidth={1.25} className="w-[22px] h-[22px] transition-transform group-hover:scale-105 group-active:scale-95" />
                         </button>
-                        <button onClick={handleShareClick} className="p-2.5 text-gray-800 dark:text-gray-200 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 rounded-full transition-all group">
-                            <Send strokeWidth={1.5} className="w-[26px] h-[26px] transition-transform group-hover:scale-110 group-active:scale-90" />
+                        <button onClick={() => setIsShareOpen(true)} className="p-2 text-gray-600 dark:text-gray-300 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 rounded-full transition-all group">
+                            <Send strokeWidth={1.25} className="w-[22px] h-[22px] transition-transform group-hover:scale-105 group-active:scale-95 -mt-0.5 ml-0.5" />
                         </button>
                     </div>
                     {/* Add Save icon placeholder for aesthetic */}
@@ -496,8 +502,17 @@ export function ImmersivePostCard({
                 {/* LIKES & CAPTION */}
                 <div className="text-[14px] flex flex-col gap-1.5">
                     {post.likes > 0 && (
-                        <div className="font-bold text-gray-900 dark:text-gray-100 tracking-tight">
-                            {post.likes.toLocaleString()} beğenme
+                        <div className="flex items-center gap-2 cursor-pointer group">
+                            <div className="flex flex-row -space-x-1.5">
+                                {[...Array(Math.min(3, post.likes))].map((_, i) => (
+                                    <div key={i} className="w-[18px] h-[18px] rounded-full ring-2 ring-white dark:ring-[#121212] overflow-hidden relative z-[3] group-hover:-space-x-1 transition-all duration-300">
+                                        <img src={`https://i.pravatar.cc/100?img=${(post.id?.toString().charCodeAt(0) || 0) + i + 10}`} className="w-full h-full object-cover" />
+                                    </div>
+                                ))}
+                            </div>
+                            <span className="font-bold text-[13px] tracking-tight text-gray-900 dark:text-gray-100">
+                                {post.likes.toLocaleString()} beğenme
+                            </span>
                         </div>
                     )}
                     <div className="flex flex-col gap-1">
