@@ -207,7 +207,6 @@ export default function ProfilePage() {
 
     const [isAddPetOpen, setIsAddPetOpen] = useState(false);
     const [addPetStep, setAddPetStep] = useState(1);
-    const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
     const [newPetName, setNewPetName] = useState('');
     const [newPetType, setNewPetType] = useState('🐶');
     const [newPetBreed, setNewPetBreed] = useState('');
@@ -605,7 +604,7 @@ export default function ProfilePage() {
                         src={coverUrl} 
                         className="absolute inset-0 w-full h-full object-cover cursor-pointer" 
                         alt="Kapak" 
-                        onClick={() => coverUrl && setEnlargedImage(coverUrl)}
+                        
                     />
                 ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-[#0f2027] via-[#203a43] to-[#2c5364]">
@@ -630,7 +629,7 @@ export default function ProfilePage() {
                     <div className="relative">
                         <div 
                             className="w-28 h-28 rounded-[2rem] border-4 border-[#0A0A0F] overflow-hidden shadow-2xl shadow-black/50 bg-[#111] cursor-pointer"
-                            onClick={() => avatarUrl && setEnlargedImage(avatarUrl)}
+                            
                         >
                             {avatarUrl ? (
                                 <img src={avatarUrl} className="w-full h-full object-cover" alt="Avatar" />
@@ -1126,34 +1125,7 @@ function PostsGrid({ userId }: { userId: string }) {
                 )}
             </AnimatePresence>
 
-            <AnimatePresence>
-                {enlargedImage && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[99999] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 cursor-zoom-out"
-                        onClick={() => setEnlargedImage(null)}
-                    >
-                        <button 
-                            className="absolute top-6 right-6 w-12 h-12 bg-black/10 dark:bg-white/10 hover:bg-black/20 dark:bg-white/20 rounded-full flex items-center justify-center text-white border border-black/20 dark:border-white/20 transition-all z-10"
-                            onClick={() => setEnlargedImage(null)}
-                        >
-                            <X className="w-6 h-6" />
-                        </button>
-                        <motion.img
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                            src={enlargedImage}
-                            alt="Enlarged"
-                            className="max-w-full max-h-full object-contain rounded-3xl shadow-2xl"
-                            onClick={(e) => e.stopPropagation()}
-                        />
-                    </motion.div>
-                )}
-            </AnimatePresence>
+
         </>
     );
 }
