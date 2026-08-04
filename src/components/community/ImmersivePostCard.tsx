@@ -670,10 +670,26 @@ export function ImmersivePostCard({
                             <div className="flex flex-col gap-2.5">
                                 <button onClick={() => { setIsMoreOpen(false); handleProfileNavigation(); }} className="w-full flex items-center gap-3 p-4 bg-white dark:bg-white/5 rounded-2xl font-bold text-gray-900 dark:text-gray-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)] border border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/10 transition-all active:scale-95 text-[15px] tracking-tight group">
                                     <div className="p-2 bg-gray-100 dark:bg-white/10 rounded-xl group-hover:bg-cyan-500/10 group-hover:text-cyan-500 transition-colors">
-                                        <User className="w-5 h-5" />
+                                        <User strokeWidth={1.5} className="w-5 h-5" />
                                     </div>
                                     Profili Görüntüle
                                 </button>
+                                {!isOwner && (
+                                    <>
+                                        <button onClick={() => { setIsMoreOpen(false); }} className="w-full flex items-center gap-3 p-4 bg-white dark:bg-white/5 rounded-2xl font-bold text-gray-900 dark:text-gray-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)] border border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/10 transition-all active:scale-95 text-[15px] tracking-tight group">
+                                            <div className="p-2 bg-gray-100 dark:bg-white/10 rounded-xl group-hover:bg-gray-200 dark:group-hover:bg-white/20 transition-colors">
+                                                <EyeOff strokeWidth={1.5} className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                                            </div>
+                                            İlgilenmiyorum
+                                        </button>
+                                        <button onClick={() => { setIsMoreOpen(false); }} className="w-full flex items-center gap-3 p-4 bg-red-50/50 dark:bg-red-500/5 rounded-2xl font-bold text-red-500 shadow-[0_2px_10px_rgb(0,0,0,0.02)] border border-red-100 dark:border-red-500/10 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all active:scale-95 text-[15px] tracking-tight group">
+                                            <div className="p-2 bg-red-100 dark:bg-red-500/20 rounded-xl group-hover:bg-red-200 dark:group-hover:bg-red-500/30 transition-colors">
+                                                <ShieldAlert strokeWidth={1.5} className="w-5 h-5 text-red-500" />
+                                            </div>
+                                            Şikayet Et
+                                        </button>
+                                    </>
+                                )}
                                 {isOwner && (
                                     <>
                                         <button onClick={() => { setIsMoreOpen(false); onEditPost(); }} className="w-full flex items-center gap-3 p-4 bg-white dark:bg-white/5 rounded-2xl font-bold text-gray-900 dark:text-gray-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)] border border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/10 transition-all active:scale-95 text-[15px] tracking-tight group">
