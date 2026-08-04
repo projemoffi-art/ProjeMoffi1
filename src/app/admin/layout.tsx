@@ -103,7 +103,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                         <div className="flex flex-col gap-3">
                             <button
-                                onClick={() => router.push('/community')}
+                                onClick={() => { if (typeof window !== 'undefined' && window.history.length > 2) { router.back(); } else { router.push('/home'); } }}
                                 className="w-full py-4 bg-black/5 dark:bg-white/5 border border-card-border hover:bg-black/10 dark:bg-white/10 text-white rounded-2xl font-black text-sm active:scale-95 transition-all cursor-pointer"
                             >
                                 Ana Sayfaya Dön

@@ -705,7 +705,7 @@ function VetPageContent() {
                                     if (window.history.length > 2) {
                                         router.back();
                                     } else {
-                                        router.push('/community');
+                                        router.push('/home');
                                     }
                                 }} 
                                 className="w-10 h-10 rounded-xl bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-[#27272a] flex items-center justify-center hover:bg-zinc-50 dark:hover:bg-[#27272a] hover:scale-105 active:scale-95 transition-all text-zinc-700 dark:text-[#fafafa]/80"

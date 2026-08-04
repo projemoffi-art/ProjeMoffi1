@@ -488,7 +488,7 @@ export function ProfileTab({
                             <button 
                                 onClick={() => {
                                     if (activeSubView === 'passport') {
-                                        router.push('/community');
+                                        router.push('/home');
                                     } else {
                                         onSubViewChange?.('main');
                                     }

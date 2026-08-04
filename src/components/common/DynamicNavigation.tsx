@@ -190,7 +190,7 @@ export function DynamicNavigation() {
             const id = e.detail;
             if (!id) return;
 
-            if (pathname === '/topluluk') {
+            if (pathname === '/community') {
                 if (id === 'feed' || id === 'radar') {
                     window.dispatchEvent(new CustomEvent('moffi-change-tab', { detail: id }));
                     return;
@@ -200,8 +200,8 @@ export function DynamicNavigation() {
             const profileViews = ['wallet', 'passport', 'family', 'orders', 'appointments', 'routes', 'bookmarks', 'identity'];
 
             if (id === 'carehub' || id === 'nutrition') {
-                if (pathname !== '/community' && pathname !== '/topluluk' && pathname !== '/vet') {
-                    router.push('/community');
+                if (pathname !== '/home' && pathname !== '/community' && pathname !== '/vet') {
+                    router.push('/home');
                     setTimeout(() => {
                         window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: id === 'nutrition' ? 'nutrition' : 'health' } }));
                     }, 500);
@@ -209,7 +209,7 @@ export function DynamicNavigation() {
                     window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: id === 'nutrition' ? 'nutrition' : 'health' } }));
                 }
             } else if (id === 'feed' || id === 'radar') {
-                router.push(`/topluluk?tab=${id}`);
+                router.push(`/community?tab=${id}`);
             } else if (id === 'profile') {
                 if (user?.id) router.push(`/profile/${user.id}`);
             } else if (id === 'passport') {
@@ -272,10 +272,10 @@ export function DynamicNavigation() {
         };
 
         const handleOpenPostGlobal = () => {
-            if (pathname === '/topluluk') {
+            if (pathname === '/community') {
                 window.dispatchEvent(new CustomEvent('moffi-open-upload-modal'));
             } else {
-                router.push('/topluluk?openUpload=true');
+                router.push('/community?openUpload=true');
             }
         };
 
@@ -370,11 +370,11 @@ export function DynamicNavigation() {
                 onGameClick={() => { setIsActionHubOverlayOpen(false); router.push('/game'); }}
                 onMoffinetClick={() => window.dispatchEvent(new CustomEvent('moffi-toast', { detail: { message: 'MoffiNet yakında! 🌐', icon: 'Zap' } }))}
                 onSearchClick={() => window.dispatchEvent(new CustomEvent('open-moffi-spotlight'))}
-                onCommunityRadarClick={() => { setIsActionHubOverlayOpen(false); router.push('/topluluk?tab=radar'); }}
+                onCommunityRadarClick={() => { setIsActionHubOverlayOpen(false); router.push('/community?tab=radar'); }}
                 onAIAsistantClick={() => {
-                    window.history.pushState({ modal: 'ai' }, "");
                     setIsActionHubOverlayOpen(false);
-                    window.dispatchEvent(new CustomEvent('open-ai-assistant'));
+                    const evt = new CustomEvent('open-ai-assistant');
+                    window.dispatchEvent(evt);
                 }}
                 onSOSClick={() => window.dispatchEvent(new CustomEvent('open-sos-center'))}
             />
@@ -438,18 +438,18 @@ export function DynamicNavigation() {
             <div className={`fixed bottom-0 inset-x-0 z-[2900] transition-transform duration-300 ${isNavVisible ? 'translate-y-0' : 'translate-y-full'}`}>
                 <MoffiBottomNav
                     activeTab={
-                        pathname === '/community' ? 'home' :
+                        pathname === '/home' ? 'home' :
                         pathname === '/quests' ? 'quests' :
                         pathname?.startsWith('/profile') ? 'profile' :
-                        pathname === '/topluluk' ? (searchParams?.get('tab') || 'feed') :
+                        pathname === '/community' ? (searchParams?.get('tab') || 'feed') :
                         'home'
                     }
                     isVisible={isNavVisible}
                     onTabChange={(tab) => {
                         if (tab === 'home') {
-                            router.push('/community');
+                            router.push('/home');
                         } else if (tab === 'feed') {
-                            router.push('/topluluk?tab=feed');
+                            router.push('/community?tab=feed');
                         } else if (tab === 'quests') {
                             router.push('/quests');
                         } else if (tab === 'profile') {
@@ -459,7 +459,7 @@ export function DynamicNavigation() {
                             params.set('tab', tab);
                             router.replace(`${pathname}?${params.toString()}`, { scroll: false });
 
-                            if (pathname === '/topluluk') {
+                            if (pathname === '/community') {
                                 window.dispatchEvent(new CustomEvent('moffi-change-tab', { detail: tab }));
                             }
                         }

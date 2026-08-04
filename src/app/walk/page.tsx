@@ -57,7 +57,7 @@ export default function WalkPage() {
                             if (window.history.length > 2) {
                                 router.back();
                             } else {
-                                router.push('/community');
+                                router.push('/home');
                             }
                         }} 
                         className="w-10 h-10 rounded-full bg-card dark:bg-white/5 flex items-center justify-center shadow-moffi-card active:scale-95 transition-all border border-card-border dark:border-card-border"
@@ -97,7 +97,7 @@ export default function WalkPage() {
                                 key={tab}
                                 onClick={() => {
                                     if (tab === 'controls') {
-                                        router.push('/community?openWalk=true');
+                                        router.push('/home?openWalk=true');
                                     } else if (tab === 'map') {
                                         router.push('/walk/tracking');
                                     }
@@ -341,3 +341,5 @@ export default function WalkPage() {
         </div>
     );
 }
+
+// forced recompile

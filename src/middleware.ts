@@ -184,7 +184,7 @@ export async function middleware(request: NextRequest) {
             return NextResponse.redirect(new URL("/", request.url));
         }
         if (role !== "business" && role !== "admin") {
-            return NextResponse.redirect(new URL("/community", request.url));
+            return NextResponse.redirect(new URL("/home", request.url));
         }
     }
 

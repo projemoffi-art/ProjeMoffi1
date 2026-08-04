@@ -81,27 +81,49 @@ export function FeedTab({
             {/* Header and Stories Combined Snap Block */}
             <div className="w-full flex flex-col snap-start shrink-0">
                 {headerElement}
-                {/* STORIES BAR */}
-                <div className="w-full flex gap-4 px-4 pt-2 pb-4 overflow-x-auto no-scrollbar">
-                {/* Current User Add Story */}
-                <div className="flex flex-col items-center gap-1.5 shrink-0 group">
-                    <div 
-                        onClick={onAddStoryClick}
-                        className="relative w-16 h-16 rounded-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 flex items-center justify-center cursor-pointer transition-transform group-hover:scale-105"
-                    >
+                {/* STORIES & GREETING BAR WITH PHOTO BACKGROUND */}
+                <div className="w-full relative px-4 pt-6 pb-6 overflow-hidden rounded-b-3xl shadow-sm mb-4">
+                    {/* Background Image & Overlay */}
+                    <div className="absolute inset-0 z-0">
                         <img 
-                            src={user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200"} 
-                            className="w-full h-full rounded-full object-cover"
-                            alt="Hikayen"
+                            src="https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=800" 
+                            alt="Background" 
+                            className="w-full h-full object-cover opacity-20 dark:opacity-10"
                         />
-                        <div className="absolute bottom-0 right-0 w-5 h-5 bg-cyan-500 rounded-full border-2 border-[var(--background)] flex items-center justify-center shadow-lg">
-                            <Plus className="w-3.5 h-3.5 text-white" strokeWidth={3} />
-                        </div>
+                        <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/80 to-background z-10" />
                     </div>
-                    <span className="text-[10px] text-[var(--secondary-text)] font-medium tracking-wide">Hikayen</span>
-                </div>
 
-                {/* Real Database Stories */}
+                    {/* Greeting Header */}
+                    <div className="relative z-20 mb-5">
+                        <h2 className="text-xl font-black text-foreground tracking-tight">
+                            İyi ki bizimlesin, {user?.name?.split(' ')[0] || 'Dostum'}! 🐾
+                        </h2>
+                        <p className="text-xs font-medium text-muted-foreground mt-1 bg-white/50 dark:bg-black/50 p-2 rounded-xl backdrop-blur-md border border-white/20 dark:border-white/5 inline-block">
+                            <span className="font-bold text-accent mr-1">Günün Sözü:</span> 
+                            "Her pati izi, kalpte silinmez bir iz bırakır."
+                        </p>
+                    </div>
+
+                    <div className="w-full flex gap-4 overflow-x-auto no-scrollbar relative z-20">
+                        {/* Current User Add Story */}
+                        <div className="flex flex-col items-center gap-1.5 shrink-0 group">
+                            <div 
+                                onClick={onAddStoryClick}
+                                className="relative w-16 h-16 rounded-full bg-white/80 dark:bg-black/50 backdrop-blur-sm border-2 border-dashed border-accent/50 flex items-center justify-center cursor-pointer transition-transform group-hover:scale-105 shadow-sm"
+                            >
+                                <img 
+                                    src={user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200"} 
+                                    className="w-[90%] h-[90%] rounded-full object-cover opacity-50"
+                                    alt="Hikayen"
+                                />
+                                <div className="absolute inset-0 m-auto w-7 h-7 bg-accent rounded-full border-2 border-background flex items-center justify-center shadow-lg">
+                                    <Plus className="w-4 h-4 text-white" strokeWidth={3} />
+                                </div>
+                            </div>
+                            <span className="text-[10px] text-foreground font-semibold tracking-wide">Ekle</span>
+                        </div>
+
+                        {/* Real Database Stories */}
                 {storyGroups.map((group, index) => (
                     <div 
                         key={group.user_id} 
@@ -128,6 +150,7 @@ export function FeedTab({
                     </div>
                 ))}
                 </div>
+            </div>
             </div>
 
             {/* Feed SOS Alerts */}

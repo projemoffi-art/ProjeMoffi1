@@ -556,7 +556,7 @@ const STORE_EFFECTS = [
     { id: 'neon_heart', name: 'Neon Kalp 💖', cost: 0, emoji: '💖', color: 'text-pink-500 drop-shadow-[0_0_20px_rgba(236,72,153,0.8)]' },
     { id: 'gold_crown', name: 'Altın Taç 👑', cost: 100, emoji: '👑', color: 'text-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.8)]' },
     { id: 'fire_emblem', name: 'Ateş Mührü 🔥', cost: 200, emoji: '🔥', color: 'text-orange-500 drop-shadow-[0_0_20px_rgba(249,115,22,0.8)]' },
-    { id: 'laser_thunder', name: 'Lazer Şimşek ⚡', cost: 350, emoji: '⚡', color: 'text-cyan-400 drop-shadow-[0_0_20px_rgba(34,211,238,0.8)]' },
+    { id: 'laser_thunder', name: 'Lazer Şimşek ⚡', cost: 350, emoji: '⚡', color: 'text-indigo-500 drop-shadow-[0_0_20px_rgba(34,211,238,0.8)]' },
     { id: 'magic_unicorn', name: 'Büyülü Aura 🦄', cost: 500, emoji: '🦄', color: 'text-purple-400 drop-shadow-[0_0_20px_rgba(192,132,252,0.8)]' }
 ];
 
@@ -616,11 +616,11 @@ const DUELLO_THEMES: Record<number, {
         rightName: "Tarçın 🐱",
         rightLoc: "Buzul Evi",
         rightImg: "https://images.unsplash.com/photo-1519052537078-e6302a4968d4?q=80&w=300",
-        primaryColor: "text-cyan-400",
-        primaryGradient: "from-cyan-400 to-sky-600",
-        badgeBg: "bg-cyan-950/40 border-cyan-800 text-cyan-400",
+        primaryColor: "text-indigo-500",
+        primaryGradient: "from-indigo-300 to-sky-600",
+        badgeBg: "bg-cyan-950/40 border-cyan-800 text-indigo-500",
         vsBorder: "border-cyan-500",
-        accentLeft: "text-cyan-400",
+        accentLeft: "text-indigo-500",
         accentRight: "text-sky-400",
         glowColor: "rgba(6,182,212,0.35)"
     },
@@ -641,7 +641,7 @@ const DUELLO_THEMES: Record<number, {
         glowColor: "rgba(239,68,68,0.35)"
     }
 };
-export default function AuraFeedSandbox() {
+export function AuraFeedTab({ posts: externalPosts, user, onLike, onAddComment, onShare }: any) {
     const router = useRouter();
 
     const [isStoreOpen, setIsStoreOpen] = useState(false);
@@ -745,7 +745,7 @@ export default function AuraFeedSandbox() {
                 { borderRadius: "20px 4px 20px 4px / 20px 4px 20px 4px" },
                 { borderRadius: "4px 20px 4px 20px / 4px 20px 4px 20px" },
                 { borderRadius: "15px 5px 15px 5px / 15px 5px 15px 5px" },
-                { borderRadius: "10px 10px 20px 20px / 8px 8px 22px 22px" }
+                { borderRadius: "10px 10px 20px 20px" }
             ];
             return map[idx] || map[0];
         } else {
@@ -765,7 +765,26 @@ export default function AuraFeedSandbox() {
     const [isMuted, setIsMuted] = useState(true);
     const synthRef = useRef<any>(null);
     const [quests, setQuests] = useState(CHAPTER_QUESTS[1]);
-    const [posts, setPosts] = useState(MOCK_POSTS);
+    const [posts, setPosts] = useState([]);
+
+    useEffect(() => {
+        if (!externalPosts) return;
+        const mapped = externalPosts.map((p: any) => ({
+            id: p.id,
+            userId: p.user_id || p.userId || p.authorId,
+            username: p.author || p.profiles?.username || p.username || "kullanici",
+            avatar: p.avatar || p.profiles?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100",
+            media: Array.isArray(p.media) ? p.media[0] : (p.media || "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80"),
+            caption: p.content || p.caption || "",
+            likes: p.likes?.[0]?.count || p.likes || 0,
+            commentsCount: p.comments?.[0]?.count || p.commentsCount || 0,
+            audioName: p.audioName || "Orijinal Ses - Moffi",
+            isLiked: p.is_liked || p.isLiked || false,
+            petType: p.petType || "cat",
+            commentsList: p.commentsList || []
+        }));
+        setPosts(mapped);
+    }, [externalPosts]);
 
     // Adventure mode mini-game states
     const [isMapItemCollected, setIsMapItemCollected] = useState(false);
@@ -1040,6 +1059,7 @@ export default function AuraFeedSandbox() {
         setPosts(prev => prev.map(post => {
             if (post.id === postId && !post.isLiked) {
                 triggerCoinReward(5, e);
+                onLike?.(postId);
                 return { ...post, isLiked: true, likes: post.likes + 1 };
             }
             return post;
@@ -1148,7 +1168,7 @@ export default function AuraFeedSandbox() {
     };
 
     return (
-        <div className="fixed inset-0 bg-[#0d0a1b] text-white overflow-hidden flex flex-col font-sans select-none">
+        <div className="fixed inset-0 bg-[#0d0a1b] text-slate-800 overflow-hidden flex flex-col font-sans select-none">
             
             {/* AMBIENT LIGHTS */}
             <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
@@ -1192,81 +1212,7 @@ export default function AuraFeedSandbox() {
                 ))}
             </div>
 
-            {/* HEADER STICKY OVERLAY */}
-            <header className="absolute top-0 left-0 right-0 z-50 px-6 pt-12 pb-4 flex justify-between items-center bg-gradient-to-b from-black/60 to-transparent">
-                <div className="flex items-center gap-3">
-                    <button 
-                        onClick={() => router.push('/community')}
-                        className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 backdrop-blur-xl border border-black/10 dark:border-white/10 flex items-center justify-center hover:bg-black/10 dark:bg-white/10 active:scale-90 transition"
-                    >
-                        <ArrowLeft className="w-5 h-5 text-white" />
-                    </button>
-                    <div>
-                        <h1 className="text-sm font-black tracking-widest uppercase bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-500 bg-clip-text text-transparent">Aura Feed</h1>
-                        <p className="text-[9px] text-black/50 dark:text-white/50 font-bold uppercase tracking-wider">Geliştirme Paneli (Sandbox)</p>
-                    </div>
-                </div>
 
-                <div className="flex items-center gap-3">
-                    {/* Coin display with glow */}
-                    <div className="flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 backdrop-blur-2xl border border-amber-500/30 rounded-full px-3.5 py-1.5 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
-                        <Coins className="w-4 h-4 text-amber-400 animate-bounce" />
-                        <span className="text-xs font-black text-amber-300 tracking-wider">{coinBalance} 🪙</span>
-                    </div>
-
-                    {/* SOUND MUTE/UNMUTE CONTROL */}
-                    <button 
-                        onClick={() => {
-                            const newMuted = !isMuted;
-                            setIsMuted(newMuted);
-                            synthRef.current?.setMute(newMuted);
-                        }}
-                        className={cn(
-                            "w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-xl border transition active:scale-95 cursor-pointer shadow-md",
-                            isMuted 
-                                ? "bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 text-black/50 dark:text-white/40 hover:text-black/70 dark:text-white/70" 
-                                : "bg-gradient-to-br from-emerald-500 to-teal-600 border-emerald-400 text-white shadow-emerald-500/20"
-                        )}
-                        title={isMuted ? "Sesi Aç" : "Sesi Kapat"}
-                    >
-                        {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4 animate-pulse" />}
-                    </button>
-
-                    {/* COIN STORE BUTTON */}
-                    <button 
-                        onClick={() => setIsStoreOpen(true)}
-                        className="w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br from-amber-500 to-orange-600 border border-amber-400 text-white hover:shadow-lg hover:shadow-amber-500/20 transition active:scale-95 cursor-pointer shadow-md animate-pulse"
-                        style={{ animationDuration: '3s' }}
-                        title="Aura Mağazası"
-                    >
-                        <Crown className="w-4 h-4" />
-                    </button>
-
-                    {/* VIEW MODE TOGGLE BUTTON */}
-                    <div className="bg-black/5 dark:bg-white/5 backdrop-blur-xl border border-black/10 dark:border-white/10 rounded-full p-1 flex">
-                        <button 
-                            onClick={() => setViewMode('aura')}
-                            className={cn(
-                                "p-2 rounded-full transition active:scale-95",
-                                viewMode === 'aura' ? "bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-lg" : "text-black/50 dark:text-white/40 hover:text-black/70 dark:text-white/70"
-                            )}
-                            title="Aura Feed (Kaydırılabilir)"
-                        >
-                            <List className="w-4 h-4" />
-                        </button>
-                        <button 
-                            onClick={() => setViewMode('grid')}
-                            className={cn(
-                                "p-2 rounded-full transition active:scale-95",
-                                viewMode === 'grid' ? "bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-lg" : "text-black/50 dark:text-white/40 hover:text-black/70 dark:text-white/70"
-                            )}
-                            title="Bento Grid Keşfet"
-                        >
-                            <Grid3X3 className="w-4 h-4" />
-                        </button>
-                    </div>
-                </div>
-            </header>
 
             {/* SCROLLABLE MAIN SLIDE FRAME CONTAINER */}
             <main className="flex-1 w-full h-full relative z-10">
@@ -1640,7 +1586,7 @@ export default function AuraFeedSandbox() {
                                                  {/* Weekly Map Change Indicator (Harita Değişim Göstergesi) */}
                                                  <div className="text-[7.5px] font-bold text-amber-400/90 bg-[#78350f]/15 px-1.5 py-0.5 rounded flex items-center gap-1 self-start select-none mt-0.5 border border-amber-500/10">
                                                      <span>Harita Değişimine:</span>
-                                                     <span className="text-white font-mono">{7 - streak > 0 ? `${7 - streak} Gün` : "Hazır! 🔓"}</span>
+                                                     <span className="text-slate-800 font-mono">{7 - streak > 0 ? `${7 - streak} Gün` : "Hazır! 🔓"}</span>
                                                      {7 - streak > 0 ? (
                                                          <span className="text-[7px] text-[#f5e6d3]/40">({activeChapter === 1 ? "🏜️ Kanyon" : activeChapter === 2 ? "❄️ Zirve" : activeChapter === 3 ? "🌋 Krater" : "⏳ Bitiş"})</span>
                                                      ) : null}
@@ -1680,7 +1626,7 @@ export default function AuraFeedSandbox() {
                                                                         ? "bg-emerald-950/20 border-emerald-800 text-emerald-500 cursor-default"
                                                                         : isCompleted
                                                                             ? "bg-gradient-to-tr from-[#854d0e] to-[#a16207] border-[#ca8a04] text-amber-200 shadow-[0_0_15px_rgba(234,179,8,0.4)] animate-bounce cursor-pointer hover:scale-105"
-                                                                            : "bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/5 text-black/30 dark:text-white/20 cursor-not-allowed"
+                                                                            : "bg-black/5 dark:bg-white/5 border-black/5 dark:border-slate-200/60 text-black/30 dark:text-slate-300 cursor-not-allowed"
                                                                 )}
                                                                 title={isCompleted ? "Ahşap Hazineyi Aç!" : "7. Gün Kilidi Kapalı"}
                                                             >
@@ -1695,7 +1641,7 @@ export default function AuraFeedSandbox() {
                                                                     "w-6 h-6 rounded-md flex items-center justify-center text-[9px] font-black border transition",
                                                                     isCompleted
                                                                         ? "bg-amber-800/15 border-amber-800/30 text-amber-400"
-                                                                        : "bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/5 text-black/30 dark:text-white/20"
+                                                                        : "bg-black/5 dark:bg-white/5 border-black/5 dark:border-slate-200/60 text-black/30 dark:text-slate-300"
                                                                 )}
                                                             >
                                                                 🌰
@@ -2158,7 +2104,7 @@ export default function AuraFeedSandbox() {
                                                                      "border-rose-400"
                                                                  )} />
                                                              </div>
-                                                             <span className="text-[6px] font-black text-black/50 dark:text-white/50 tracking-wider bg-black/60 px-1 rounded-full uppercase mt-0.5 select-none">
+                                                             <span className="text-[6px] font-black text-black/50 dark:text-slate-500 tracking-wider bg-white/60 backdrop-blur-lg px-1 rounded-full uppercase mt-0.5 select-none">
                                                                  {activeChapter === 2 && !quests.find(q => q.id === 'q1')?.completed
                                                                      ? `Gıdıkla: ${petClickCount}/${ngLoop > 1 ? 10 : 5}`
                                                                      : "Şimdi"}
@@ -2231,7 +2177,7 @@ export default function AuraFeedSandbox() {
                                                                                 setChoiceClickCount(0);
                                                                                 synthRef.current?.playCoin();
                                                                             }}
-                                                                            className="flex-1 py-1.5 px-2 bg-amber-800 text-white rounded-xl text-[8.5px] font-black uppercase border border-amber-600 hover:bg-amber-900 transition active:scale-95 cursor-pointer leading-tight text-center"
+                                                                            className="flex-1 py-1.5 px-2 bg-amber-800 text-slate-800 rounded-xl text-[8.5px] font-black uppercase border border-amber-600 hover:bg-amber-900 transition active:scale-95 cursor-pointer leading-tight text-center"
                                                                         >
                                                                             {CHAPTER_STORIES[activeChapter]?.choices.optionA}
                                                                         </button>
@@ -2286,7 +2232,7 @@ export default function AuraFeedSandbox() {
                                                                                     setChronicles(prev => [decisionEntry, ...prev]);
                                                                                 }
                                                                             }}
-                                                                            className="w-full py-2 bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-xl text-[9px] font-black uppercase border border-emerald-500 hover:shadow-md transition active:scale-95 cursor-pointer text-center"
+                                                                            className="w-full py-2 bg-gradient-to-r from-emerald-600 to-teal-700 text-slate-800 rounded-xl text-[9px] font-black uppercase border border-emerald-500 hover:shadow-md transition active:scale-95 cursor-pointer text-center"
                                                                         >
                                                                             {activeChoice === 'A' ? "MEŞALEYİ YAK 🕯️" : "DENGEYİ KORU ⚖️"} ({choiceClickCount}/{ngLoop > 1 ? 12 : 6})
                                                                         </button>
@@ -2402,7 +2348,7 @@ export default function AuraFeedSandbox() {
 
                                                         <div className="absolute inset-2 border border-white/40 rounded-xl pointer-events-none" />
                                                         <span className="text-4xl animate-pulse">🧊</span>
-                                                        <span className="text-[10px] font-black text-white uppercase mt-2 tracking-wider drop-shadow-md">Buzu Eritmek İçin Tıkla!</span>
+                                                        <span className="text-[10px] font-black text-slate-800 uppercase mt-2 tracking-wider drop-shadow-md">Buzu Eritmek İçin Tıkla!</span>
                                                         <div className="w-2/3 h-1.5 bg-black/20 dark:bg-white/20 rounded-full mt-2 overflow-hidden border border-white/15">
                                                             <div 
                                                                 className="h-full bg-cyan-400 transition-all duration-200" 
@@ -2425,7 +2371,7 @@ export default function AuraFeedSandbox() {
                                                 </div>
 
                                                 {/* Walking Path Line track */}
-                                                <div className="relative w-full h-8 bg-black/40 border border-amber-950/40 rounded-xl my-2 flex items-center px-4 overflow-hidden">
+                                                <div className="relative w-full h-8 bg-white/40 backdrop-blur-md border border-amber-950/40 rounded-xl my-2 flex items-center px-4 overflow-hidden">
                                                     <div className="absolute inset-x-0 h-[1px] border-b border-dashed border-amber-900/30 top-1/2 -translate-y-1/2 pointer-events-none" />
                                                     
                                                     {/* Walking Pet */}
@@ -2530,25 +2476,25 @@ export default function AuraFeedSandbox() {
                                         <div className="flex justify-center gap-2 mt-0.5 select-none">
                                             <button 
                                                 onClick={() => setActiveChapter(1)}
-                                                className={cn("text-[7.5px] font-black px-2 py-0.5 rounded border transition active:scale-95 cursor-pointer", activeChapter === 1 ? "bg-emerald-950/40 border-emerald-800 text-emerald-400" : "bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/5 text-black/40 dark:text-white/30")}
+                                                className={cn("text-[7.5px] font-black px-2 py-0.5 rounded border transition active:scale-95 cursor-pointer", activeChapter === 1 ? "bg-emerald-950/40 border-emerald-800 text-emerald-400" : "bg-black/5 dark:bg-white/5 border-black/5 dark:border-slate-200/60 text-black/40 dark:text-slate-400")}
                                             >
                                                 Orman 🌲
                                             </button>
                                             <button 
                                                 onClick={() => setActiveChapter(2)}
-                                                className={cn("text-[7.5px] font-black px-2 py-0.5 rounded border transition active:scale-95 cursor-pointer", activeChapter === 2 ? "bg-amber-950/40 border-amber-800 text-amber-400" : "bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/5 text-black/40 dark:text-white/30")}
+                                                className={cn("text-[7.5px] font-black px-2 py-0.5 rounded border transition active:scale-95 cursor-pointer", activeChapter === 2 ? "bg-amber-950/40 border-amber-800 text-amber-400" : "bg-black/5 dark:bg-white/5 border-black/5 dark:border-slate-200/60 text-black/40 dark:text-slate-400")}
                                             >
                                                 Kanyon 🏜️
                                             </button>
                                             <button 
                                                 onClick={() => setActiveChapter(3)}
-                                                className={cn("text-[7.5px] font-black px-2 py-0.5 rounded border transition active:scale-95 cursor-pointer", activeChapter === 3 ? "bg-sky-950/40 border-sky-800 text-sky-400" : "bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/5 text-black/40 dark:text-white/30")}
+                                                className={cn("text-[7.5px] font-black px-2 py-0.5 rounded border transition active:scale-95 cursor-pointer", activeChapter === 3 ? "bg-sky-950/40 border-sky-800 text-sky-400" : "bg-black/5 dark:bg-white/5 border-black/5 dark:border-slate-200/60 text-black/40 dark:text-slate-400")}
                                             >
                                                 Zirve ❄️
                                             </button>
                                             <button 
                                                 onClick={() => setActiveChapter(4)}
-                                                className={cn("text-[7.5px] font-black px-2 py-0.5 rounded border transition active:scale-95 cursor-pointer", activeChapter === 4 ? "bg-rose-950/40 border-rose-800 text-rose-400" : "bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/5 text-black/40 dark:text-white/30")}
+                                                className={cn("text-[7.5px] font-black px-2 py-0.5 rounded border transition active:scale-95 cursor-pointer", activeChapter === 4 ? "bg-rose-950/40 border-rose-800 text-rose-400" : "bg-black/5 dark:bg-white/5 border-black/5 dark:border-slate-200/60 text-black/40 dark:text-slate-400")}
                                             >
                                                 Krater 🌋
                                             </button>
@@ -2568,17 +2514,17 @@ export default function AuraFeedSandbox() {
 
                             {/* SLIDE 2: HAFTALIK PODYUM */}
                             <section className="min-h-screen w-full flex items-center justify-center pt-28 pb-12 px-6 relative">
-                                <div className="w-full max-w-md bg-white/[0.03] backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-[2.5rem] p-6 shadow-2xl flex flex-col gap-6 relative overflow-hidden">
-                                    <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-purple-500/40 to-transparent" />
+                                <div className="w-full max-w-md bg-white/[0.03] backdrop-blur-2xl border border-black/10 dark:border-slate-200 rounded-[2.5rem] p-6 shadow-2xl flex flex-col gap-6 relative overflow-hidden">
+                                    <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-purple-300/40 to-transparent" />
                                     
                                     {/* Header */}
                                     <div className="flex justify-between items-center">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shadow-lg shadow-yellow-500/30">
-                                                <Trophy className="w-5 h-5 text-white" />
+                                                <Trophy className="w-5 h-5 text-slate-800" />
                                             </div>
                                             <div>
-                                                <h2 className="text-sm font-black uppercase tracking-widest text-black/90 dark:text-white/90">Haftalık Podyum</h2>
+                                                <h2 className="text-sm font-black uppercase tracking-widest text-black/90 dark:text-slate-800">Haftalık Podyum</h2>
                                                 <p className="text-[10px] text-amber-400 font-bold tracking-wider">Haftanın Lider Evcil Hayvanları</p>
                                             </div>
                                         </div>
@@ -2599,14 +2545,14 @@ export default function AuraFeedSandbox() {
                                             </div>
                                             <div className="w-full bg-slate-400/10 border border-slate-300/20 rounded-t-2xl py-2 flex flex-col items-center gap-0.5 h-20 justify-center">
                                                 <span className="text-[10px] font-black text-slate-300">Pamuk 🐈</span>
-                                                <span className="text-[9px] text-black/50 dark:text-white/40">{podiumVotes["2"]} Oy</span>
+                                                <span className="text-[9px] text-black/50 dark:text-slate-400">{podiumVotes["2"]} Oy</span>
                                                 <button
                                                     onClick={(e) => handlePodiumVote("2", e)}
                                                     disabled={votedPodium.has("2")}
                                                     className={cn(
                                                         "text-[8px] font-black uppercase px-2.5 py-1 rounded-full mt-1.5 border transition",
                                                         votedPodium.has("2") 
-                                                            ? "bg-slate-500/20 border-slate-500/30 text-black/50 dark:text-white/40 cursor-default" 
+                                                            ? "bg-slate-500/20 border-slate-500/30 text-black/50 dark:text-slate-400 cursor-default" 
                                                             : "bg-slate-300 hover:bg-white text-black border-white active:scale-95"
                                                     )}
                                                 >
@@ -2628,14 +2574,14 @@ export default function AuraFeedSandbox() {
                                             </div>
                                             <div className="w-full bg-yellow-400/10 border border-yellow-400/20 rounded-t-2xl py-2 flex flex-col items-center gap-0.5 h-24 justify-center">
                                                 <span className="text-[11px] font-black text-yellow-400">Tarçın 🐕</span>
-                                                <span className="text-[9px] text-black/50 dark:text-white/40">{podiumVotes["1"]} Oy</span>
+                                                <span className="text-[9px] text-black/50 dark:text-slate-400">{podiumVotes["1"]} Oy</span>
                                                 <button
                                                     onClick={(e) => handlePodiumVote("1", e)}
                                                     disabled={votedPodium.has("1")}
                                                     className={cn(
                                                         "text-[8px] font-black uppercase px-2.5 py-1 rounded-full mt-1.5 border transition",
                                                         votedPodium.has("1") 
-                                                            ? "bg-yellow-500/20 border-yellow-500/30 text-black/50 dark:text-white/40 cursor-default" 
+                                                            ? "bg-yellow-500/20 border-yellow-500/30 text-black/50 dark:text-slate-400 cursor-default" 
                                                             : "bg-yellow-400 hover:bg-white text-black border-white active:scale-95"
                                                     )}
                                                 >
@@ -2656,14 +2602,14 @@ export default function AuraFeedSandbox() {
                                             </div>
                                             <div className="w-full bg-amber-600/10 border border-amber-600/20 rounded-t-2xl py-2 flex flex-col items-center gap-0.5 h-16 justify-center">
                                                 <span className="text-[10px] font-black text-amber-600">Boncuk 🦜</span>
-                                                <span className="text-[9px] text-black/50 dark:text-white/40">{podiumVotes["3"]} Oy</span>
+                                                <span className="text-[9px] text-black/50 dark:text-slate-400">{podiumVotes["3"]} Oy</span>
                                                 <button
                                                     onClick={(e) => handlePodiumVote("3", e)}
                                                     disabled={votedPodium.has("3")}
                                                     className={cn(
                                                         "text-[8px] font-black uppercase px-2.5 py-1 rounded-full mt-1.5 border transition",
                                                         votedPodium.has("3") 
-                                                            ? "bg-amber-500/20 border-amber-500/30 text-black/50 dark:text-white/40 cursor-default" 
+                                                            ? "bg-amber-500/20 border-amber-500/30 text-black/50 dark:text-slate-400 cursor-default" 
                                                             : "bg-amber-600 hover:bg-white text-black border-white active:scale-95"
                                                     )}
                                                 >
@@ -2674,7 +2620,7 @@ export default function AuraFeedSandbox() {
 
                                     </div>
                                     
-                                    <div className="text-center text-[10px] text-black/40 dark:text-white/30 italic">Kaydırmaya devam et ⬇️</div>
+                                    <div className="text-center text-[10px] text-black/40 dark:text-slate-400 italic">Kaydırmaya devam et ⬇️</div>
                                 </div>
                             </section>
 
@@ -2685,7 +2631,7 @@ export default function AuraFeedSandbox() {
                                     return (
                                         <div 
                                             style={{ boxShadow: `0 25px 50px -12px ${curDuel.glowColor}` }}
-                                            className="w-full max-w-md bg-white/[0.03] backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-[2.5rem] p-6 flex flex-col gap-4 relative overflow-hidden transition-all duration-1000"
+                                            className="w-full max-w-md bg-white/[0.03] backdrop-blur-2xl border border-black/10 dark:border-slate-200 rounded-[2.5rem] p-6 flex flex-col gap-4 relative overflow-hidden transition-all duration-1000"
                                         >
                                             <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                                             
@@ -2696,13 +2642,13 @@ export default function AuraFeedSandbox() {
                                                         "w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-1000",
                                                         activeChapter === 1 ? "bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-500/20" :
                                                         activeChapter === 2 ? "bg-gradient-to-br from-amber-500 to-orange-600 shadow-amber-500/20" :
-                                                        activeChapter === 3 ? "bg-gradient-to-br from-cyan-400 to-sky-600 shadow-cyan-500/20" :
+                                                        activeChapter === 3 ? "bg-gradient-to-br from-indigo-300 to-sky-600 shadow-cyan-500/20" :
                                                         "bg-gradient-to-br from-rose-500 to-red-600 shadow-rose-500/20"
                                                     )}>
-                                                        <Swords className="w-5 h-5 text-white" />
+                                                        <Swords className="w-5 h-5 text-slate-800" />
                                                     </div>
                                                     <div>
-                                                        <h2 className="text-sm font-black uppercase tracking-widest text-black/90 dark:text-white/90">Düello Arenası</h2>
+                                                        <h2 className="text-sm font-black uppercase tracking-widest text-black/90 dark:text-slate-800">Düello Arenası</h2>
                                                         <p className={cn("text-[10px] font-black tracking-wider transition-colors duration-1000", curDuel.primaryColor)}>
                                                             Hangisi Daha Tatlı? ⚔️
                                                         </p>
@@ -2719,7 +2665,7 @@ export default function AuraFeedSandbox() {
                                             </div>
 
                                             {/* VS Split Screen Voting */}
-                                            <div className="flex relative rounded-3xl overflow-hidden h-56 border border-black/10 dark:border-white/10 mt-2">
+                                            <div className="flex relative rounded-3xl overflow-hidden h-56 border border-black/10 dark:border-slate-200 mt-2">
                                                 
                                                 {/* Challenger Left */}
                                                 <div 
@@ -2736,11 +2682,11 @@ export default function AuraFeedSandbox() {
                                                     )}
                                                 >
                                                     <img src={curDuel.leftImg} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-white/80 via-black/20 to-transparent" />
                                                     
                                                     <div className="absolute bottom-4 left-4 right-4 flex flex-col items-center">
-                                                        <span className="text-[10px] font-black text-white">{curDuel.leftName}</span>
-                                                        <span className="text-[9px] text-black/50 dark:text-white/40">{curDuel.leftLoc}</span>
+                                                        <span className="text-[10px] font-black text-slate-800">{curDuel.leftName}</span>
+                                                        <span className="text-[9px] text-black/50 dark:text-slate-400">{curDuel.leftLoc}</span>
                                                         
                                                         {duelVote && (
                                                             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className={cn("mt-2 text-xl font-black transition-colors duration-1000", curDuel.accentLeft)}>
@@ -2755,7 +2701,7 @@ export default function AuraFeedSandbox() {
                                                     "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 bg-[#0d0a1b] border-2 w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all duration-1000",
                                                     activeChapter === 1 ? "border-emerald-500 text-emerald-400" :
                                                     activeChapter === 2 ? "border-amber-500 text-amber-400" :
-                                                    activeChapter === 3 ? "border-cyan-500 text-cyan-400" :
+                                                    activeChapter === 3 ? "border-cyan-500 text-indigo-500" :
                                                     "border-rose-500 text-rose-400"
                                                 )}>
                                                     <span className="text-xs font-black">VS</span>
@@ -2776,11 +2722,11 @@ export default function AuraFeedSandbox() {
                                                     )}
                                                 >
                                                     <img src={curDuel.rightImg} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-white/80 via-black/20 to-transparent" />
                                                     
                                                     <div className="absolute bottom-4 left-4 right-4 flex flex-col items-center">
-                                                        <span className="text-[10px] font-black text-white">{curDuel.rightName}</span>
-                                                        <span className="text-[9px] text-black/50 dark:text-white/40">{curDuel.rightLoc}</span>
+                                                        <span className="text-[10px] font-black text-slate-800">{curDuel.rightName}</span>
+                                                        <span className="text-[9px] text-black/50 dark:text-slate-400">{curDuel.rightLoc}</span>
                                                         
                                                         {duelVote && (
                                                             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className={cn("mt-2 text-xl font-black transition-colors duration-1000", curDuel.accentRight)}>
@@ -2795,7 +2741,7 @@ export default function AuraFeedSandbox() {
                                             <div className="text-center min-h-[40px] flex items-center justify-center">
                                                 {!duelVote ? (
                                                     <div className="flex flex-col items-center gap-1">
-                                                        <p className="text-[9px] text-black/50 dark:text-white/40 font-medium">Favorini seçmek için fotoğrafın üzerine dokun 👆</p>
+                                                        <p className="text-[9px] text-black/50 dark:text-slate-400 font-medium">Favorini seçmek için fotoğrafın üzerine dokun 👆</p>
                                                         <span className="text-[8px] text-amber-400 font-bold bg-amber-400/10 border border-amber-400/20 px-2.5 py-0.5 rounded-full shadow-inner animate-pulse">Oy için +15 🪙</span>
                                                     </div>
                                                 ) : (
@@ -2803,7 +2749,7 @@ export default function AuraFeedSandbox() {
                                                 )}
                                             </div>
                                             
-                                            <div className="text-center text-[10px] text-black/40 dark:text-white/30 italic mt-0.5 select-none">Kaydırmaya devam et ⬇️</div>
+                                            <div className="text-center text-[10px] text-black/40 dark:text-slate-400 italic mt-0.5 select-none">Kaydırmaya devam et ⬇️</div>
                                         </div>
                                     );
                                 })()}
@@ -2813,14 +2759,14 @@ export default function AuraFeedSandbox() {
                                 <section key={post.id} className="h-screen w-full relative flex items-center justify-center p-0">
                                     <div 
                                         onDoubleClick={(e) => handleDoubleTap(post.id, e)}
-                                        className="relative w-full h-full max-w-lg mx-auto bg-white dark:bg-black overflow-hidden"
+                                        className="relative w-full h-full max-w-lg mx-auto bg-white dark:bg-slate-50/50 overflow-hidden"
                                     >
                                         {/* Fullscreen cover media */}
                                         <img src={post.media} className="absolute inset-0 w-full h-full object-cover z-0" alt="post" />
 
-                                        {/* Ambient Gradients overlay */}
-                                        <div className="absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-black/80 via-black/20 to-transparent pointer-events-none z-10" />
-                                        <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none z-10" />
+                                        {/* Ambient Gradients overlay - Darkened for Native TikTok feel */}
+                                        <div className="absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-black/60 via-black/20 to-transparent pointer-events-none z-10" />
+                                        <div className="absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none z-10" />
 
                                         {/* GİZEMLİ SİNCAP GÖREVİ (Chapter 1, Quest 1) */}
                                         {activeChapter === 1 && !quests[0].completed && post.id === "post_2" && (
@@ -2860,28 +2806,37 @@ export default function AuraFeedSandbox() {
                                             })}
                                         </AnimatePresence>
 
-                                        {/* Left text Details (Author & Caption) inside a glass card */}
-                                        <div className="absolute bottom-24 left-4 right-20 z-20 bg-black/40 backdrop-blur-md border border-black/10 dark:border-white/10 rounded-[1.8rem] p-4 shadow-2xl">
-                                            <div className="flex items-center gap-2">
-                                                <img src={post.avatar} className="w-9 h-9 rounded-full border border-black/20 dark:border-white/20 object-cover" />
-                                                <div>
-                                                    <div className="flex items-center gap-1">
-                                                        <span className="text-xs font-black tracking-wide text-white">@{post.username}</span>
-                                                        <BadgeCheck className="w-3.5 h-3.5 text-cyan-400 fill-black" />
+                                        {/* Left text Details (Author & Caption) - Native TikTok Style */}
+                                        <div className="absolute bottom-6 left-4 right-20 z-20 flex flex-col gap-3">
+                                            <div 
+                                                className="flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (post.userId) router.push(`/profile/${post.userId}`);
+                                                }}
+                                            >
+                                                <div className="relative">
+                                                    <img src={post.avatar} className="w-11 h-11 rounded-full border-2 border-white object-cover shadow-[0_2px_10px_rgba(0,0,0,0.5)]" />
+                                                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-4 bg-rose-500 rounded-full flex items-center justify-center border border-white">
+                                                        <Plus className="w-3 h-3 text-white" />
                                                     </div>
-                                                    <span className="text-[8px] text-black/50 dark:text-white/50 font-bold uppercase tracking-wider">Halkın Favorisi</span>
+                                                </div>
+                                                <div className="flex flex-col drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-[15px] font-black tracking-wide text-white">@{post.username}</span>
+                                                        <BadgeCheck className="w-4 h-4 text-blue-400 fill-white" />
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <p className="text-[11px] text-black/90 dark:text-white/90 leading-relaxed mt-2">{post.caption}</p>
-                                            <div className="flex items-center gap-1.5 text-cyan-300 mt-2">
-                                                <Compass className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '4s' }} />
-                                                <span className="text-[9px] font-black uppercase tracking-widest">{post.audioName}</span>
+                                            <p className="text-[13px] text-white/95 leading-relaxed drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] font-medium pr-4">{post.caption}</p>
+                                            <div className="flex items-center gap-2 bg-black/20 backdrop-blur-sm self-start px-3 py-1.5 rounded-full border border-white/10 mt-1">
+                                                <Compass className="w-3.5 h-3.5 text-white animate-spin" style={{ animationDuration: '4s' }} />
+                                                <span className="text-[10px] text-white font-bold tracking-wider">{post.audioName}</span>
                                             </div>
                                         </div>
 
-                                        {/* Right Sidebar actions */}
-                                        <div className="absolute bottom-24 right-4 z-20 flex flex-col gap-4 items-center">
-                                            
+                                        {/* Right Sidebar actions - TikTok Style */}
+                                        <div className="absolute bottom-6 right-3 z-20 flex flex-col gap-5 items-center">
                                             {/* Heart Button */}
                                             <button 
                                                 onClick={(e) => {
@@ -2889,6 +2844,7 @@ export default function AuraFeedSandbox() {
                                                         if (p.id === post.id) {
                                                             const newIsLiked = !p.isLiked;
                                                             if (newIsLiked) triggerCoinReward(5, e);
+                                                            onLike?.(post.id);
                                                             return { ...p, isLiked: newIsLiked, likes: newIsLiked ? p.likes + 1 : p.likes - 1 };
                                                         }
                                                         return p;
@@ -2896,15 +2852,10 @@ export default function AuraFeedSandbox() {
                                                 }}
                                                 className="flex flex-col items-center gap-1 group active:scale-90 transition"
                                             >
-                                                <div className={cn(
-                                                    "w-12 h-12 rounded-full backdrop-blur-xl border flex items-center justify-center transition-all",
-                                                    post.isLiked 
-                                                        ? "bg-red-500/20 border-red-500/50 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]" 
-                                                        : "bg-black/40 border-black/10 dark:border-white/10 text-black/80 dark:text-white/80 group-hover:bg-white/15"
-                                                )}>
-                                                    <Heart className={cn("w-5 h-5", post.isLiked && "fill-current")} />
+                                                <div className="w-10 h-10 flex items-center justify-center drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+                                                    <Heart className={cn("w-7 h-7 transition-colors duration-300", post.isLiked ? "fill-red-500 text-red-500" : "fill-slate-200/30 text-slate-200")} strokeWidth={1.5} />
                                                 </div>
-                                                <span className="text-[10px] font-bold text-black/70 dark:text-white/70">{post.likes}</span>
+                                                <span className="text-[11px] font-semibold text-slate-100 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{post.likes}</span>
                                             </button>
 
                                             {/* Comment Button */}
@@ -2912,20 +2863,19 @@ export default function AuraFeedSandbox() {
                                                 onClick={() => setActiveCommentPostId(post.id)}
                                                 className="flex flex-col items-center gap-1 group active:scale-90 transition"
                                             >
-                                                <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-black/10 dark:border-white/10 flex items-center justify-center text-black/80 dark:text-white/80 group-hover:bg-white/15">
-                                                    <MessageCircle className="w-5 h-5" />
+                                                <div className="w-10 h-10 flex items-center justify-center drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+                                                    <MessageCircle className="w-7 h-7 fill-slate-200/30 text-slate-200" strokeWidth={1.5} />
                                                 </div>
-                                                <span className="text-[10px] font-bold text-black/70 dark:text-white/70">{post.commentsCount}</span>
+                                                <span className="text-[11px] font-semibold text-slate-100 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{post.commentsCount}</span>
                                             </button>
 
                                             {/* Share Button */}
                                             <button className="flex flex-col items-center gap-1 group active:scale-90 transition">
-                                                <div className="w-12 h-12 rounded-full bg-black/5 dark:bg-white/5 backdrop-blur-xl border border-black/10 dark:border-white/10 flex items-center justify-center text-black/80 dark:text-white/80 group-hover:bg-white/15">
-                                                    <Share2 className="w-5 h-5" />
+                                                <div className="w-10 h-10 flex items-center justify-center drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+                                                    <Share2 className="w-7 h-7 fill-slate-200/30 text-slate-200" strokeWidth={1.5} />
                                                 </div>
-                                                <span className="text-[10px] font-bold text-black/70 dark:text-white/70">Paylaş</span>
+                                                <span className="text-[11px] font-semibold text-slate-100 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Paylaş</span>
                                             </button>
-
                                         </div>
 
                                     </div>
@@ -2942,12 +2892,12 @@ export default function AuraFeedSandbox() {
                             exit={{ opacity: 0, scale: 0.95 }}
                             className="h-full w-full overflow-y-auto no-scrollbar pt-28 px-4 pb-20 max-w-lg mx-auto"
                         >
-                            <h2 className="text-lg font-black bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent mb-4 uppercase tracking-widest px-2">Keşfet Bento Grid</h2>
+                            <h2 className="text-lg font-black bg-gradient-to-r from-indigo-300 to-purple-400 bg-clip-text text-transparent mb-4 uppercase tracking-widest px-2">Keşfet Bento Grid</h2>
                             
                             <div className="grid grid-cols-2 gap-4">
                                 
                                 {/* Bento Big Card 1 */}
-                                <div className="col-span-2 rounded-[2.5rem] bg-gradient-to-tr from-cyan-500/20 to-purple-500/10 border border-cyan-500/20 p-5 relative overflow-hidden flex flex-col justify-between h-48 shadow-lg shadow-cyan-950/20">
+                                <div className="col-span-2 rounded-[2.5rem] bg-gradient-to-tr from-cyan-500/20 to-purple-500/10 border border-indigo-500/20 p-5 relative overflow-hidden flex flex-col justify-between h-48 shadow-lg shadow-cyan-950/20">
                                     <div className="absolute -inset-10 bg-cyan-400/5 blur-3xl rounded-full" />
                                     <div className="flex justify-between items-start z-10">
                                         <div className="bg-cyan-500/25 border border-cyan-400/30 rounded-full px-3 py-1 text-[10px] font-bold text-cyan-300">Öne Çıkan Seri</div>
@@ -2955,7 +2905,7 @@ export default function AuraFeedSandbox() {
                                     </div>
                                     <div className="z-10">
                                         <h3 className="text-lg font-black">Seriyi Sürdür, Hediye Kazan!</h3>
-                                        <p className="text-xs text-black/50 dark:text-white/50 mt-1">7. günde size özel 50 🪙 serbest bırakılacak.</p>
+                                        <p className="text-xs text-black/50 dark:text-slate-500 mt-1">7. günde size özel 50 🪙 serbest bırakılacak.</p>
                                     </div>
                                 </div>
 
@@ -2968,19 +2918,25 @@ export default function AuraFeedSandbox() {
                                             // Scroll transition mock
                                         }}
                                         className={cn(
-                                            "rounded-3xl border border-black/5 dark:border-white/5 bg-white/[0.02] hover:bg-white/[0.04] overflow-hidden cursor-pointer relative group flex flex-col justify-end transition-all shadow-md",
+                                            "rounded-3xl border border-black/5 dark:border-slate-200/60 bg-white/[0.02] hover:bg-white/[0.04] overflow-hidden cursor-pointer relative group flex flex-col justify-end transition-all shadow-md",
                                             idx === 1 ? "h-64" : "h-52" // Bento asymmetric height logic
                                         )}
                                     >
                                         <img src={post.media} className="absolute inset-0 w-full h-full object-cover z-0 transition-transform duration-500 group-hover:scale-105" />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-white/80 via-black/20 to-transparent z-10" />
                                         
                                         <div className="p-4 z-20">
-                                            <div className="flex items-center gap-1.5 mb-1.5">
+                                            <div 
+                                                className="flex items-center gap-1.5 mb-1.5 cursor-pointer hover:opacity-80 transition z-30 relative"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (post.userId) router.push(`/profile/${post.userId}`);
+                                                }}
+                                            >
                                                 <img src={post.avatar} className="w-5 h-5 rounded-full object-cover" />
-                                                <span className="text-[10px] font-bold text-black/80 dark:text-white/80">@{post.username}</span>
+                                                <span className="text-[10px] font-bold text-black/80 dark:text-slate-700">@{post.username}</span>
                                             </div>
-                                            <p className="text-[10px] text-black/60 dark:text-white/60 line-clamp-2 leading-relaxed">{post.caption}</p>
+                                            <p className="text-[10px] text-black/60 dark:text-slate-500 line-clamp-2 leading-relaxed">{post.caption}</p>
                                         </div>
                                     </div>
                                 ))}
@@ -2989,7 +2945,7 @@ export default function AuraFeedSandbox() {
                                 <div className="col-span-2 rounded-[2.5rem] bg-gradient-to-tr from-fuchsia-500/20 to-purple-500/10 border border-fuchsia-500/20 p-5 relative overflow-hidden flex justify-between items-center h-28 shadow-lg shadow-fuchsia-950/20">
                                     <div>
                                         <h3 className="text-sm font-black text-fuchsia-300 uppercase tracking-widest">Düello Meydanı</h3>
-                                        <p className="text-xs text-black/60 dark:text-white/60 mt-1">Katıl, oy ver ve 15 🪙 cüzdanına gelsin!</p>
+                                        <p className="text-xs text-black/60 dark:text-slate-500 mt-1">Katıl, oy ver ve 15 🪙 cüzdanına gelsin!</p>
                                     </div>
                                     <button 
                                         onClick={() => setViewMode('aura')}
@@ -3015,7 +2971,7 @@ export default function AuraFeedSandbox() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setActiveCommentPostId(null)}
-                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                            className="absolute inset-0 bg-white/60 backdrop-blur-lg backdrop-blur-sm"
                         />
 
                         {/* Sliding Panel */}
@@ -3024,16 +2980,16 @@ export default function AuraFeedSandbox() {
                             animate={{ y: 0 }}
                             exit={{ y: "100%" }}
                             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            className="relative w-full max-w-lg mx-auto h-[60vh] bg-[#120f26]/95 border-t border-black/10 dark:border-white/10 rounded-t-[2.5rem] flex flex-col overflow-hidden z-20 shadow-[0_-15px_30px_rgba(0,0,0,0.5)]"
+                            className="relative w-full max-w-lg mx-auto h-[60vh] bg-[#120f26]/95 border-t border-black/10 dark:border-slate-200 rounded-t-[2.5rem] flex flex-col overflow-hidden z-20 shadow-[0_-15px_30px_rgba(0,0,0,0.5)]"
                         >
                             {/* Panel Drag bar indicator */}
                             <div className="w-12 h-1 bg-black/20 dark:bg-white/20 rounded-full mx-auto my-3 shrink-0" />
 
-                            <div className="flex justify-between items-center px-6 py-2 border-b border-black/5 dark:border-white/5">
+                            <div className="flex justify-between items-center px-6 py-2 border-b border-black/5 dark:border-slate-200/60">
                                 <h3 className="text-sm font-black uppercase tracking-wider text-purple-300">Yorumlar</h3>
                                 <button 
                                     onClick={() => setActiveCommentPostId(null)}
-                                    className="p-1 text-black/50 dark:text-white/40 hover:text-white"
+                                    className="p-1 text-black/50 dark:text-slate-400 hover:text-slate-800"
                                 >
                                     <X className="w-5 h-5" />
                                 </button>
@@ -3048,10 +3004,10 @@ export default function AuraFeedSandbox() {
                                         </div>
                                         <div className="flex-1">
                                             <div className="flex justify-between items-baseline">
-                                                <span className="text-xs font-bold text-black/90 dark:text-white/90">{comment.user}</span>
-                                                <span className="text-[9px] text-black/40 dark:text-white/30">Şimdi</span>
+                                                <span className="text-xs font-bold text-black/90 dark:text-slate-800">{comment.user}</span>
+                                                <span className="text-[9px] text-black/40 dark:text-slate-400">Şimdi</span>
                                             </div>
-                                            <p className="text-xs text-black/70 dark:text-white/70 mt-1 leading-relaxed">{comment.text}</p>
+                                            <p className="text-xs text-black/70 dark:text-slate-600 mt-1 leading-relaxed">{comment.text}</p>
                                         </div>
                                     </div>
                                 ))}
@@ -3059,14 +3015,15 @@ export default function AuraFeedSandbox() {
 
                             {/* AI Quick Replies */}
                             {activeCommentPostId && (
-                                <div className="px-4 py-2.5 bg-[#0d0a1b]/60 border-t border-black/5 dark:border-white/5 flex gap-2 overflow-x-auto no-scrollbar scroll-smooth shrink-0 items-center">
-                                    <span className="text-[8px] font-black text-cyan-400 bg-cyan-400/10 border border-cyan-400/20 px-2.5 py-1 rounded-lg tracking-wider uppercase shrink-0">
+                                <div className="px-4 py-2.5 bg-[#0d0a1b]/60 border-t border-black/5 dark:border-slate-200/60 flex gap-2 overflow-x-auto no-scrollbar scroll-smooth shrink-0 items-center">
+                                    <span className="text-[8px] font-black text-indigo-500 bg-cyan-400/10 border border-cyan-400/20 px-2.5 py-1 rounded-lg tracking-wider uppercase shrink-0">
                                         ⚡ Hızlı Yanıt
                                     </span>
                                     {getAIQuickReplies(posts.find(p => p.id === activeCommentPostId)?.petType || "").map((replyText, idx) => (
                                         <button
                                             key={idx}
                                             onClick={() => {
+                                                onAddComment?.(activeCommentPostId, replyText);
                                                 setPosts(prev => prev.map(p => {
                                                     if (p.id === activeCommentPostId) {
                                                         return {
@@ -3083,7 +3040,7 @@ export default function AuraFeedSandbox() {
                                                 }));
                                                 triggerCoinReward(5);
                                             }}
-                                            className="bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:bg-white/10 active:scale-95 border border-black/10 dark:border-white/10 rounded-full px-3 py-1.5 text-[9px] font-bold text-black/80 dark:text-white/80 transition-all shrink-0"
+                                            className="bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:bg-white/10 active:scale-95 border border-black/10 dark:border-slate-200 rounded-full px-3 py-1.5 text-[9px] font-bold text-black/80 dark:text-slate-700 transition-all shrink-0"
                                         >
                                             {replyText}
                                         </button>
@@ -3092,13 +3049,13 @@ export default function AuraFeedSandbox() {
                             )}
 
                             {/* Comment Input Field */}
-                            <div className="p-4 bg-[#0d0a1b] border-t border-black/5 dark:border-white/5 flex gap-2 items-center">
+                            <div className="p-4 bg-[#0d0a1b] border-t border-black/5 dark:border-slate-200/60 flex gap-2 items-center">
                                 <input 
                                     type="text" 
                                     value={commentInput}
                                     onChange={(e) => setCommentInput(e.target.value)}
                                     placeholder="Bir yorum ekle..." 
-                                    className="flex-1 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-full px-5 py-3 text-xs text-white placeholder-white/30 outline-none focus:border-cyan-400/50"
+                                    className="flex-1 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-slate-200 rounded-full px-5 py-3 text-xs text-slate-800 placeholder-white/30 outline-none focus:border-cyan-400/50"
                                 />
                                 <button 
                                     onClick={() => {
@@ -3117,9 +3074,10 @@ export default function AuraFeedSandbox() {
                                             }
                                             return p;
                                         }));
+                                        onAddComment?.(activeCommentPostId, commentInput);
                                         setCommentInput('');
                                     }}
-                                    className="w-10 h-10 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 flex items-center justify-center text-white active:scale-95 transition"
+                                    className="w-10 h-10 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 flex items-center justify-center text-slate-800 active:scale-95 transition"
                                 >
                                     <Send className="w-4 h-4 ml-0.5" />
                                 </button>
@@ -3283,7 +3241,7 @@ export default function AuraFeedSandbox() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-6"
+                        className="fixed inset-0 bg-white/80 backdrop-blur-xl backdrop-blur-md z-50 flex items-center justify-center p-6"
                     >
                         <motion.div 
                             initial={{ scale: 0.9, y: 20 }}
@@ -3298,11 +3256,11 @@ export default function AuraFeedSandbox() {
                             <div className="flex justify-between items-center">
                                 <div className="flex items-center gap-2">
                                     <Crown className="w-5 h-5 text-amber-400" />
-                                    <h3 className="text-sm font-black text-white uppercase tracking-widest">Aura Mağazası</h3>
+                                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Aura Mağazası</h3>
                                 </div>
                                 <button 
                                     onClick={() => setIsStoreOpen(false)}
-                                    className="w-7 h-7 rounded-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 flex items-center justify-center hover:bg-black/10 dark:bg-white/10 text-white transition active:scale-90"
+                                    className="w-7 h-7 rounded-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-slate-200 flex items-center justify-center hover:bg-black/10 dark:bg-white/10 text-slate-800 transition active:scale-90"
                                 >
                                     <X className="w-4 h-4" />
                                 </button>
@@ -3329,14 +3287,14 @@ export default function AuraFeedSandbox() {
                                                 "flex items-center justify-between p-3 rounded-2xl border transition-all",
                                                 isActive 
                                                     ? "bg-amber-500/10 border-amber-500/40 shadow-inner" 
-                                                    : "bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 hover:bg-white/[0.08]"
+                                                    : "bg-black/5 dark:bg-white/5 border-black/10 dark:border-slate-200 hover:bg-white/[0.08]"
                                             )}
                                         >
                                             <div className="flex items-center gap-3">
                                                 <span className="text-3xl select-none">{effect.emoji}</span>
                                                 <div>
-                                                    <h4 className="text-xs font-black text-white">{effect.name}</h4>
-                                                    <p className="text-[8px] text-black/50 dark:text-white/50 font-bold uppercase tracking-widest mt-0.5">
+                                                    <h4 className="text-xs font-black text-slate-800">{effect.name}</h4>
+                                                    <p className="text-[8px] text-black/50 dark:text-slate-500 font-bold uppercase tracking-widest mt-0.5">
                                                         {isPurchased ? "AURA EFEKTİ" : `Maliyet: ${effect.cost} 🪙`}
                                                     </p>
                                                 </div>
@@ -3355,7 +3313,7 @@ export default function AuraFeedSandbox() {
                                                             "text-[8px] font-black uppercase px-3 py-1.5 rounded-xl border transition active:scale-95 cursor-pointer",
                                                             isActive 
                                                                 ? "bg-amber-500 text-black border-amber-400 shadow-md"
-                                                                : "bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 text-black/60 dark:text-white/60 hover:bg-black/10 dark:bg-white/10"
+                                                                : "bg-black/5 dark:bg-white/5 border-black/10 dark:border-slate-200 text-black/60 dark:text-slate-500 hover:bg-black/10 dark:bg-white/10"
                                                         )}
                                                     >
                                                         {isActive ? "SEÇİLDİ" : "SEÇ"}
@@ -3468,7 +3426,7 @@ export default function AuraFeedSandbox() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-6"
+                        className="fixed inset-0 bg-white/90 backdrop-blur-2xl backdrop-blur-md z-50 flex items-center justify-center p-6"
                     >
                         <motion.div 
                             initial={{ scale: 0.9, y: 30 }}
@@ -3501,7 +3459,7 @@ export default function AuraFeedSandbox() {
                                     setIsActIntroOpen(false);
                                     synthRef.current?.playWin();
                                 }}
-                                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-700 to-amber-900 border border-amber-600 text-white font-black text-[10px] uppercase tracking-wider transition active:scale-95 shadow-md shadow-amber-950/40 cursor-pointer relative z-10 text-center"
+                                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-700 to-amber-900 border border-amber-600 text-slate-800 font-black text-[10px] uppercase tracking-wider transition active:scale-95 shadow-md shadow-amber-950/40 cursor-pointer relative z-10 text-center"
                             >
                                 Macerayı Başlat 🏕️
                             </button>
@@ -3517,7 +3475,7 @@ export default function AuraFeedSandbox() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-6"
+                        className="fixed inset-0 bg-white/90 backdrop-blur-2xl backdrop-blur-md z-50 flex items-center justify-center p-6"
                     >
                         <motion.div 
                             initial={{ scale: 0.9, y: 30 }}
@@ -3577,7 +3535,7 @@ export default function AuraFeedSandbox() {
                                     }
                                     synthRef.current?.playWin();
                                 }}
-                                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-700 to-emerald-900 border border-emerald-600 text-white font-black text-[10px] uppercase tracking-wider transition active:scale-95 shadow-md shadow-emerald-950/40 cursor-pointer relative z-10 text-center"
+                                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-700 to-emerald-900 border border-emerald-600 text-slate-800 font-black text-[10px] uppercase tracking-wider transition active:scale-95 shadow-md shadow-emerald-950/40 cursor-pointer relative z-10 text-center"
                             >
                                 {activeChapter === 4 ? "Tılsımı Birleştir ve NG+ Başlat 🔄" : `Sonraki Bölüme İlerle 🗺️`}
                             </button>

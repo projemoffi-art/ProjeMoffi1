@@ -1,1052 +1,191 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
-import { usePet } from '@/context/PetContext';
-import { useQuestEngine } from '@/context/QuestEngineContext';
-import { PetSettingsModal } from '@/components/profile/PetSettingsModal';
-import { AddPetModal } from '@/components/community/modals/AddPetModal';
-
-import { PatiKartPolicyModal } from '@/components/community/modals/PatiKartPolicyModal';
-import { TodayForYouEngine } from '@/components/community/TodayForYouEngine';
-import { apiService } from '@/services/apiService';
-import { 
-    Bell, 
-    Search, 
-    MessageCircle, 
-    User, 
-    Home, 
-    Plus, 
-    MapPin, 
-    Calendar, 
-    Syringe, 
-    AlertTriangle,
-    Heart,
-    HeartHandshake,
-    Stethoscope,
-    ShoppingBag,
-    Scissors,
-    CalendarDays,
-    Sparkles,
-    ChevronRight,
-    Bone,
-    Users,
-    Play,
-    Navigation,
-    Flame,
-    Droplets,
-    Activity,
-    Compass,
-    Radio,
-    Battery,
-    Volume2,
-    Wifi,
-    Coins,
-    QrCode,
-    Star,
-    Shirt,
-    ArrowUpRight,
-    TrendingUp,
-    CheckCircle2,
-    ShoppingBag as CartIcon,
-    X,
-    Shield,
-    TrendingDown,
-    Sliders,
-    VolumeX,
-    Maximize2,
-    RefreshCw,
-    ChevronLeft,
-    CreditCard,
-    Zap,
-    Fingerprint,
-    Lock,
-    Award,
-    Coffee,
-    Info,
-    Crown,
-    Trophy,
-    SunMoon,
-    Sun,
-    Moon,
-    Clock,
-    ShieldCheck
+import React, { useState, useRef, useEffect, memo, useMemo } from 'react';
+import { motion, AnimatePresence, useScroll, useTransform, useMotionValueEvent, useMotionValue } from 'framer-motion';
+import {
+    Heart, MessageCircle, Share2, MapPin,
+    Plus, Camera, Compass,
+    Users, Activity, Sparkles, X, Send, PawPrint, Search, Menu, MoreHorizontal, Image as ImageIcon, Video, Mic,
+    Settings, Grid3X3, List, Edit3, Bookmark, Edit2, Trash2, ImagePlus,
+    LogOut, ChevronRight, ChevronLeft, User, Bell, Lock, HelpCircle, Check, HeartHandshake, CheckCheck, ShieldAlert, ChevronDown,
+    AlertTriangle, PhoneCall, BadgeCheck, Radar, Palette, ShoppingBag, Gamepad2, Globe, Filter,
+    Coins, Package, Calendar, Plane, ShieldCheck, Route, TrendingUp, Timer, Footprints, Play, Download, Clock, Syringe, Moon, Flame,
+    Sun, Contrast, Droplet, Info
 } from 'lucide-react';
-
-import { useStories } from '../../hooks/useStories';
-import { useWalk } from '../../hooks/useWalk';
-import { useAuth } from '@/context/AuthContext';
-import { useTheme } from '@/context/ThemeContext';
-import { QuestBentoCard } from '@/components/quests/QuestBentoCard';
+import { compressImageToFile } from '@/lib/imageUtils';
 import { cn } from '@/lib/utils';
-import Mascot3DCanvas from '@/components/dressing/Mascot3DCanvas';
-import { useHubData } from "@/hooks/useHubData";
-import { usePetShop } from "@/hooks/usePetShop";
-import { useDragScroll } from '@/hooks/useDragScroll';
+import { useRouter, useSearchParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
+const MapLocationPicker = dynamic(() => import('@/components/common/MapLocationPicker').then(mod => mod.MapLocationPicker), { ssr: false });
 
-
-
-const cleanDefaultTemplate = {
-    name: 'Moffi',
-    image: '',
-    breed: 'Bilinmeyen Cins',
-    health: 'İyi',
-    activity: '0%',
-    weight: '0 kg',
-    ringProgress: { activity: 0, water: 0, food: 0 },
-    status: 'GÜVENDE',
-    statusColor: 'text-green-600 bg-green-100 border-green-200',
-    streak: 0,
-    weeklyData: [0, 0, 0, 0, 0, 0, 0],
-    collar: {
-        connected: false,
-        battery: 0,
-        signal: 'Bağlantı Yok',
-        lastSync: 'Hiçbir zaman',
-        rssi: 'Bağlantı Yok',
-        firmware: 'v1.0.0-Moffi'
-    },
-    wallet: {
-        patipuan: '0',
-        currency: 'PATI',
-        cardNumber: '•••• •••• •••• 0000',
-        transactions: []
-    },
-    passport: {
-        idCode: 'MF-000-NEW',
-        nfcStatus: 'NFC Yok',
-        qrcode: '',
-        vaccines: []
-    },
-    dressing: {
-        activeOutfit: 'Standart Kıyafet 👕',
-        stylePoints: 0,
-        avatarMock: ''
-    },
-    quests: [
-        { id: 1, text: 'Sabah Yürüyüşü Tamamla', done: false },
-        { id: 2, text: 'Günlük Su İhtiyacını Karşıla', done: false },
-        { id: 3, text: 'Bugünkü Beslenme Öğünlerini Bitir', done: false }
-    ],
-    specialOffer: {
-        title: 'Özel Fırsat 🎁',
-        desc: 'Evcil hayvanınız için en kaliteli besinler ve ürünler Moffi Market\'te!',
-        oldPrice: '1.200 TL',
-        newPrice: '960 TL',
-        discount: '%20 İNDİRİM'
-    }
-};
-
-// Story Circle
-const StoryCircle = ({ image, title, type = 'normal', delay = 0 }: { image: string, title: string, type?: 'normal' | 'add' | 'sos' | 'ai' | 'featured', delay?: number }) => (
-    <motion.div 
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay, duration: 0.5, type: 'spring' }}
-        className="flex flex-col items-center gap-1.5 shrink-0"
-    >
-        <div className="relative cursor-pointer group">
-            <div className={`w-16 h-16 rounded-full p-[2px] ${
-                type === 'add' ? 'bg-gray-200' :
-                type === 'sos' ? 'bg-red-500' :
-                type === 'ai' ? 'bg-purple-400' :
-                type === 'featured' ? 'bg-gradient-to-tr from-yellow-400 to-amber-500 shadow-sm' :
-                'bg-green-600'
-            }`}>
-                <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-white">
-                    <img src={image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt={title} />
-                </div>
-            </div>
-            {type === 'add' && (
-                <div className="absolute -bottom-1 right-0 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow-sm border border-gray-100">
-                    <Plus className="w-3.5 h-3.5 text-gray-800" />
-                </div>
-            )}
-            {type === 'sos' && (
-                <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center shadow-sm border border-white text-white animate-pulse">
-                    <span className="text-[10px] font-black">!</span>
-                </div>
-            )}
-            {type === 'ai' && (
-                <div className="absolute -top-1 -right-1 w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center shadow-sm border border-white text-white">
-                    <Sparkles className="w-3 h-3" />
-                </div>
-            )}
+const RadarMap = dynamic(() => import('@/components/community/RadarMap'), {
+    ssr: false,
+    loading: () => (
+        <div className="w-full h-[380px] rounded-[2.5rem] bg-[var(--card-bg)] border border-black/10 dark:border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)]">
+            <Activity className="w-8 h-8 mb-2 animate-spin text-cyan-400" />
+            <p className="text-xs font-bold uppercase tracking-wider">Harita Yükleniyor...</p>
         </div>
-        <span className="text-[9.5px] font-bold text-gray-700 tracking-tight truncate max-w-[72px] text-center mt-0.5">{title}</span>
-    </motion.div>
-);
+    )
+});
 
-const BentoCard = ({ children, className = "", delay = 0, onClick, layoutId }: { children: React.ReactNode, className?: string, delay?: number, onClick?: () => void, layoutId?: string }) => (
-    <motion.div 
-        layoutId={layoutId}
-        onClick={onClick}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay, duration: 0.6 }}
-        className={`rounded-3xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-gray-100 ${className}`}
-    >
-        {children}
-    </motion.div>
-);
+const SightingMapSelector = dynamic(() => import('@/components/community/SightingMapSelector'), {
+    ssr: false,
+    loading: () => (
+        <div className="w-full h-full bg-card dark:bg-[#1A1A1A] animate-pulse rounded-2xl flex items-center justify-center text-black/30 dark:text-white/20 font-bold">Harita Yükleniyor...</div>
+    )
+});
 
-const QuickAccessBtn = ({ 
-    icon: Icon, 
-    title, 
-    subtitle,
-    gradient, 
-    bgTint,
-    delay = 0,
-    className = "",
-    onClick 
-}: { 
-    icon: any, 
-    title: string, 
-    subtitle: string,
-    gradient: string, 
-    bgTint: string,
-    delay?: number,
-    className?: string,
-    onClick?: () => void 
-}) => (
-    <motion.button 
-        initial={{ opacity: 0, scale: 0.95, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ delay, duration: 0.4, type: "spring", stiffness: 200 }}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.96 }}
-        onClick={onClick}
-        className={`relative flex items-center gap-3 px-3.5 py-5 ${bgTint} transition-all duration-300 cursor-pointer group text-left overflow-hidden w-full ${className}`}
-    >
-        {/* Glow Background inside the button */}
-        <div className={`absolute -inset-1 opacity-0 group-hover:opacity-10 dark:opacity-5 dark:group-hover:opacity-15 blur-xl transition-opacity duration-300 bg-gradient-to-br ${gradient} to-transparent`} />
-        
-        <div className={`relative w-10 h-10 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center transform group-hover:scale-105 transition-transform duration-300 shrink-0 shadow-sm`}>
-            <Icon className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.2} />
-        </div>
-        <div className="flex flex-col relative z-10 overflow-hidden">
-            <span className="text-[13px] font-black text-gray-900 dark:text-white tracking-tight leading-tight truncate">{title}</span>
-            <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mt-0.5 leading-none truncate">{subtitle}</span>
-        </div>
-    </motion.button>
-);
+import AuthModal from '../../components/auth/AuthModal';
+import { useAuth } from '../../context/AuthContext';
+import { useUserStories } from '../../hooks/useUserStories';
+import { useTheme } from '../../context/ThemeContext';
+import { PetSettingsModal } from '../../components/profile/PetSettingsModal';
+import { SOSCommandCenter } from '../../components/profile/SOSCommandCenter';
+import { QRCodeSVG } from 'qrcode.react';
+import { InboxModal } from '../../components/community/InboxModal';
+import { FeedbackModal } from '../../components/community/modals/FeedbackModal';
+import { MessageSquareHeart } from 'lucide-react';
 
-const APPAREL_ITEMS = {
-    body: [
-        { id: 'sweatshirt', label: 'Sweatshirt 🧡', icon: '🧥', cost: 0, sp: 80, desc: 'Turuncu Sweatshirt' },
-        { id: 'singlet', label: 'Spor Atlet 🎽', icon: '🎽', cost: 0, sp: 60, desc: 'Hafif ve Esnek' },
-        { id: 'pajamas', label: 'Pijama 💤', icon: '👕', cost: 0, sp: 70, desc: 'Yeşil Çizgili' },
-        { id: null, label: 'Doğal Hali 🐾', icon: '❌', cost: 0, sp: 0, desc: 'Kıyafetsiz' }
-    ],
-    head: [
-        { id: 'beanie', label: 'Örme Bere 🧶', icon: '🧶', cost: 0, sp: 50, desc: 'Mavi Bere' },
-        { id: 'top_hat', label: 'Şapka 🎩', icon: '🎩', cost: 150, sp: 120, desc: 'Retro Silindir' },
-        { id: 'crown', label: 'Altın Taç 👑', icon: '👑', cost: 350, sp: 200, desc: 'Premium Taç' },
-        { id: 'pirate_hat', label: 'Korsan 🏴‍☠️', icon: '🏴‍☠️', cost: 200, sp: 140, desc: 'Kaptan Şapkası' },
-        { id: null, label: 'Şapkasız 👤', icon: '❌', cost: 0, sp: 0, desc: 'Şapkayı Çıkar' }
-    ],
-    eyes: [
-        { id: 'glasses', label: 'Gözlük 🤓', icon: '🤓', cost: 0, sp: 30, desc: 'Optik Gözlük' },
-        { id: 'sunglasses', label: 'Güneş Göz. 😎', icon: '😎', cost: 0, sp: 50, desc: 'Havalı Gözlük' },
-        { id: 'eyepatch', label: 'Göz Bandı 👁️', icon: '👁️', cost: 150, sp: 110, desc: 'Korsan Bandı' },
-        { id: null, label: 'Gözlüksüz 👁️', icon: '❌', cost: 0, sp: 0, desc: 'Gözlüğü Çıkar' }
-    ],
-    hands: [
-        { id: 'gloves', label: 'Eldiven 🧤', icon: '🧤', cost: 0, sp: 40, desc: 'Yeşil Kışlık' },
-        { id: 'boxing', label: 'Boks Eld. 🥊', icon: '🥊', cost: 150, sp: 90, desc: 'Kırmızı Boks' },
-        { id: null, label: 'Eldivensiz 🐾', icon: '❌', cost: 0, sp: 0, desc: 'Eldiveni Çıkar' }
-    ],
-    feet: [
-        { id: 'sneakers', label: 'Spor Ayak. 👟', icon: '👟', cost: 0, sp: 50, desc: 'Sarı Ayakkabı' },
-        { id: 'boots', label: 'Kışlık Bot 🥾', icon: '🥾', cost: 120, sp: 80, desc: 'Kahverengi Bot' },
-        { id: null, label: 'Yalın Ayak 🐾', icon: '❌', cost: 0, sp: 0, desc: 'Ayakkabıyı Çıkar' }
-    ]
-};
+import { ShareSheet } from '../../components/community/ShareSheet';
+import { NotificationsDrawer } from '../../components/community/NotificationsDrawer';
 
-// ─── Profesyonel Kullanıcı Avatar Bileşeni ─────────────────────────────────
-// Foto varsa gösterir, yoksa isimden deterministik renkli baş harf avatarı
-const USER_AVATAR_COLORS = [
-    'from-violet-500 to-purple-600',
-    'from-blue-500 to-indigo-600',
-    'from-emerald-500 to-teal-600',
-    'from-orange-500 to-amber-600',
-    'from-rose-500 to-pink-600',
-    'from-cyan-500 to-sky-600',
-    'from-[#527958] to-emerald-600',
-];
+import { ImmersivePostCard } from '../../components/community/ImmersivePostCard';
+import { ProfileTab } from '@/components/community/ProfileTab';
+import { VetQuickSheet } from '@/components/vet/VetQuickSheet';
+import { WalkQuickSheet } from '@/components/walk/WalkQuickSheet';
+import { MarketQuickSheet } from '@/components/shop/MarketQuickSheet';
+import { StudioQuickSheet } from '@/components/studio/StudioQuickSheet';
+import { GameQuickSheet } from '@/components/game/GameQuickSheet';
+import { PetSwitcher } from '@/components/common/PetSwitcher';
+import { usePet } from '@/context/PetContext';
+import { useWellbeing } from '@/context/WellbeingContext';
+import { EcosystemPortal } from '@/components/community/EcosystemPortal';
+import { SpotlightSearch } from '@/components/community/SpotlightSearch';
+import { DiaryModal } from '@/components/community/DiaryModal';
+import { apiService, isSupabaseEnabled } from '../../services/apiService';
+import { supabase } from '@/lib/supabase';
+import { HubOverlay } from '../../components/community/HubOverlay';
+import { MoffiBottomNav } from '@/components/common/MoffiBottomNav';
+import { OverlaySystem } from '@/components/community/OverlaySystem';
+import { FeedTab } from '@/components/community/FeedTab';
+import { RadarTab } from '@/components/community/RadarTab';
+import { AdoptionTab } from '@/components/community/AdoptionTab';
 
-function getAvatarColor(seed: string): string {
-    let hash = 0;
-    for (let i = 0; i < seed.length; i++) hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-    return USER_AVATAR_COLORS[Math.abs(hash) % USER_AVATAR_COLORS.length];
-}
 
-function getInitials(name?: string, username?: string, email?: string): string {
-    const source = name || username || email || '';
-    const parts = source.split(/[\s@_.-]+/).filter(Boolean);
-    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-    return source.charAt(0).toUpperCase() || 'M';
-}
+import { MOCK_ADOPTIONS } from '@/lib/mockData';
+import Image from 'next/image';
 
-function UserAvatar({ 
-    avatar, 
-    name, 
-    username, 
-    email, 
-    size = 'sm',
-    className = ''
-}: { 
-    avatar?: string | null; 
-    name?: string; 
-    username?: string; 
-    email?: string;
-    size?: 'sm' | 'md' | 'lg';
-    className?: string;
-}) {
-    const seed = username || name || email || 'moffi';
-    const colorClass = getAvatarColor(seed);
-    const initials = getInitials(name, username, email);
-    const textSize = size === 'sm' ? 'text-[11px]' : size === 'md' ? 'text-sm' : 'text-xl';
+import { useChat } from '@/context/ChatContext';
+import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 
-    // Mock/placeholder URL'leri reddet — başharf avatarı tercih et
-    const PLACEHOLDER_DOMAINS = ['pravatar.cc', 'dicebear.com', 'ui-avatars.com', 'robohash.org'];
-    const isPlaceholder = avatar && PLACEHOLDER_DOMAINS.some(d => avatar.includes(d));
 
-    if (avatar && !isPlaceholder) {
-        return (
-            <img 
-                src={avatar} 
-                className={`w-full h-full object-cover ${className}`}
-                alt="Profil"
-                onError={(e) => {
-                    // Foto yüklenemezse baş harf göster
-                    const parent = e.currentTarget.parentElement;
-                    if (parent) {
-                        e.currentTarget.style.display = 'none';
-                        const div = document.createElement('div');
-                        div.className = `w-full h-full bg-gradient-to-tr ${colorClass} flex items-center justify-center text-white ${textSize} font-black`;
-                        div.textContent = initials;
-                        parent.appendChild(div);
-                    }
-                }}
-            />
-        );
-    }
-    return (
-        <div className={`w-full h-full bg-gradient-to-tr ${colorClass} flex items-center justify-center text-white ${textSize} font-black select-none ${className}`}>
-            {initials}
-        </div>
-    );
-}
-// ─────────────────────────────────────────────────────────────────────────────
-
-// Tema Toggle Butonu — community header'ında kullanılır (Sade, çerçevesiz ve klas tasarım)
-function ThemeToggleButton() {
-    const { theme, setTheme } = useTheme();
-    const isDark = theme === 'dark';
-    return (
-        <motion.button
-            whileTap={{ scale: 0.9 }}
-            whileHover={{ scale: 1.05 }}
-            onClick={() => setTheme(isDark ? 'light' : 'dark')}
-            className="relative w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:text-amber-500 dark:text-gray-400 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-black/10 dark:bg-white/10 transition-colors cursor-pointer"
-            title={isDark ? 'Gündüz moduna geç' : 'Gece moduna geç'}
-        >
-            <AnimatePresence mode="wait">
-                <motion.div
-                    key={isDark ? 'dark' : 'light'}
-                    initial={{ y: 5, opacity: 0, scale: 0.8 }}
-                    animate={{ y: 0, opacity: 1, scale: 1 }}
-                    exit={{ y: -5, opacity: 0, scale: 0.8 }}
-                    transition={{ duration: 0.15 }}
-                    className="flex items-center justify-center"
-                >
-                    {isDark ? (
-                        <Sun className="w-5 h-5" />
-                    ) : (
-                        <Moon className="w-5 h-5" />
-                    )}
-                </motion.div>
-            </AnimatePresence>
-        </motion.button>
-    );
-}
-
-export default function LegendaryLightDashboard() {
-    const router = useRouter();
-    const communityCardScroll = useDragScroll();
-    const storiesScroll = useDragScroll();
-    const petSwitcherScroll = useDragScroll();
-    const searchParams = useSearchParams();
-    const { user: authUser, updateProfile } = useAuth();
-    const { pets: userPets, activePet: globalActivePet, switchPet, updatePet, addPet, deletePet, isLoading: isPetLoading, isInitialized } = usePet();
-    const { activeSession, history: walkHistory, stats: walkStats, isLoading: isWalkLoading, startWalk, endWalk } = useWalk();
-    const { subscriptions, cart, cartCount, cartTotal, updateCartItem, products, clearCart } = usePetShop();
-    const { currentStreak, weeklyStamps, totalPatiPuan, spendPatiPuan } = useQuestEngine();
-    const { theme } = useTheme();
-    const isDark = theme === 'dark';
-
-    // Dynamic 3D Parallax Tilt & Specular Shine Motion Values
-    const tiltX = useMotionValue(200);
-    const tiltY = useMotionValue(200);
-    const rotateX = useTransform(tiltY, [0, 400], [5, -5]);
-    const rotateY = useTransform(tiltX, [0, 400], [-5, 5]);
+const StoryProgressBar = ({ isActive, isCompleted, isPaused, onComplete, duration = 6000 }: { isActive: boolean, isCompleted: boolean, isPaused: boolean, onComplete: () => void, duration?: number }) => {
+    const [progress, setProgress] = useState(0);
+    const progressRef = useRef(progress);
+    progressRef.current = progress;
     
-    const shineX = useTransform(tiltX, [0, 400], ['0%', '100%']);
-    const shineY = useTransform(tiltY, [0, 400], ['0%', '100%']);
-
-    const handleMouseMoveCard = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-        tiltX.set((mouseX / rect.width) * 400);
-        tiltY.set((mouseY / rect.height) * 400);
-    };
-
-    const handleMouseLeaveCard = () => {
-        tiltX.set(200);
-        tiltY.set(200);
-    };
-
-    const todayIdx = useMemo(() => {
-        const day = new Date().getDay();
-        return day === 0 ? 6 : day - 1; // Mon=0, Tue=1, ... Sun=6
-    }, []);
-
-    // Kullanıcının aktif peti: önce globalActivePet, sonra ilk pet, son olarak null
-    const activePetObj = globalActivePet || userPets[0] || null;
-
-    const hasNoPets = !isPetLoading && userPets.length === 0;
-
-    const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
-
-    const walkedDistanceToday = useMemo(() => {
-        const historyToday = walkHistory
-            .filter(w => w.created_at && w.created_at.startsWith(todayStr))
-            .reduce((sum, w) => sum + (w.distance_meters || 0), 0);
-        const activeMeters = activeSession ? (activeSession.distance_meters || 0) : 0;
-        return (historyToday + activeMeters) / 1000; // in km
-    }, [activeSession, walkHistory, todayStr]);
-
-    const targetActivityKm = useMemo(() => {
-        const target = typeof activePetObj?.activity_target === 'number' 
-            ? activePetObj.activity_target 
-            : (activePetObj?.sos_settings?.activity_target ?? 70); // default target 70
-        return target > 0 ? (target / 20) : 3.5;
-    }, [activePetObj?.activity_target, activePetObj?.sos_settings?.activity_target]);
-
-    const activityPercent = useMemo(() => {
-        return targetActivityKm > 0 ? Math.min(100, Math.round((walkedDistanceToday / targetActivityKm) * 100)) : 0;
-    }, [walkedDistanceToday, targetActivityKm]);
-
-    // PREMIUM DIJITAL GARDROP STATE YAPISI & COIN ENTEGRASYONU
-
-
-    const [toastMsg, setToastMsg] = useState<string | null>(null);
-    const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
-    const [transactions, setTransactions] = useState<any[]>([]);
-    const [vaccines, setVaccines] = useState<any[]>([]);
-
-    const [goalsTrigger, setGoalsTrigger] = useState(0);
+    const onCompleteRef = useRef(onComplete);
+    onCompleteRef.current = onComplete;
 
     useEffect(() => {
-        const handleGoalsUpdate = () => {
-            setGoalsTrigger(prev => prev + 1);
+        if (isCompleted) return;
+        if (!isActive) {
+            setProgress(0);
+            return;
+        }
+        if (isPaused) return;
+
+        let animationFrameId: number;
+        let start = Date.now() - (progressRef.current / 100) * duration;
+
+        const animate = () => {
+            const now = Date.now();
+            const elapsed = now - start;
+            const p = (elapsed / duration) * 100;
+
+            if (p >= 100) {
+                setProgress(100);
+                onCompleteRef.current();
+            } else {
+                setProgress(p);
+                animationFrameId = requestAnimationFrame(animate);
+            }
         };
-        window.addEventListener('moffi-daily-goals-update', handleGoalsUpdate);
+
+        animationFrameId = requestAnimationFrame(animate);
+
         return () => {
-            window.removeEventListener('moffi-daily-goals-update', handleGoalsUpdate);
+            cancelAnimationFrame(animationFrameId);
         };
-    }, []);
+    }, [isActive, isPaused, duration, isCompleted]);
 
-    const hasOpenedWalkRef = useRef(false);
-    useEffect(() => {
-        if (searchParams.get('openWalk') === 'true' && !hasOpenedWalkRef.current) {
-            hasOpenedWalkRef.current = true;
-            window.dispatchEvent(new CustomEvent('open-walk-panel'));
-        }
-    }, [searchParams]);
+    return (
+        <div
+            className={cn(
+                "absolute top-0 left-0 bottom-0 bg-white",
+                isActive && "shadow-[0_0_10px_white]"
+            )}
+            style={{ width: isCompleted ? '100%' : `${isActive ? progress : 0}%` }}
+        />
+    );
+};
 
-    const waterCurrent = useMemo(() => {
-        if (!activePetObj?.id) return 0;
-        return Number(localStorage.getItem(`moffi_water_${activePetObj.id}_${todayStr}`) || '0');
-    }, [activePetObj?.id, todayStr, goalsTrigger]);
+export default function MoffiSocialMasterpiece() {
+    const { user, logout, updateProfile, updateSettings } = useAuth();
+    const { 
+        isInboxOpen, setIsInboxOpen, 
+        inboxTab, setInboxTab, 
+        unreadCount, 
+        openChat,
+        activeChatUserId, setActiveChatUserId,
+        replyMessage, setReplyMessage,
+        onSendReply, isReplying,
+        sosAlerts, setSosAlerts, inboxMessages,
+        refreshInbox
+    } = useChat();
+    const { theme, setTheme } = useTheme(); // Restored
+    const { storyGroups, uploadStory } = useUserStories(); // Restored
+    const { pets: userPets, activePet, switchPet, updatePet } = usePet();
+    const { isQuietModeActive } = useWellbeing();
 
-    const waterTarget = useMemo(() => {
-        if (!activePetObj?.id) return 1200;
-        return typeof activePetObj?.water_target === 'number'
-            ? activePetObj.water_target
-            : (activePetObj?.sos_settings?.water_target ?? 1200);
-    }, [activePetObj?.water_target, activePetObj?.sos_settings?.water_target, activePetObj?.id]);
-
-    const waterPercent = useMemo(() => {
-        return waterTarget > 0 ? Math.min(100, Math.round((waterCurrent / waterTarget) * 100)) : 0;
-    }, [waterCurrent, waterTarget]);
-
-    const foodCurrent = useMemo(() => {
-        if (!activePetObj?.id) return 0;
-        return Number(localStorage.getItem(`moffi_calories_${activePetObj.id}_${todayStr}`) || '0');
-    }, [activePetObj?.id, todayStr, goalsTrigger]);
-
-    const foodTarget = useMemo(() => {
-        if (!activePetObj?.id) return 1600;
-        return typeof activePetObj?.food_target === 'number'
-            ? activePetObj.food_target
-            : (activePetObj?.sos_settings?.food_target ?? 1600);
-    }, [activePetObj?.food_target, activePetObj?.sos_settings?.food_target, activePetObj?.id]);
-
-    const foodPercent = useMemo(() => {
-        return foodTarget > 0 ? Math.min(100, Math.round((foodCurrent / foodTarget) * 100)) : 0;
-    }, [foodCurrent, foodTarget]);
-
+    // Real-time synchronization for user's own lost pet changes in Radar
+    const userLostPetIdsString = useMemo(() => {
+        return userPets.filter(p => p.is_lost).map(p => p.id).join(',');
+    }, [userPets]);
 
     useEffect(() => {
-        if (!activePetObj?.id) return;
-        
-
-
-        // 2. Transactions
-        const savedTx = localStorage.getItem(`moffi_transactions_${activePetObj.id}`);
-        if (savedTx) {
-            setTransactions(JSON.parse(savedTx));
-        } else {
-            setTransactions([]);
-            localStorage.setItem(`moffi_transactions_${activePetObj.id}`, JSON.stringify([]));
-        }
-
-        // 3. Vaccines
-        const savedVaccines = localStorage.getItem(`moffi_vaccines_${activePetObj.id}`);
-        if (savedVaccines) {
-            setVaccines(JSON.parse(savedVaccines));
-        } else {
-            setVaccines([]);
-            localStorage.setItem(`moffi_vaccines_${activePetObj.id}`, JSON.stringify([]));
-        }
-    }, [activePetObj?.id, goalsTrigger]);
-
-
-
-    const addTransaction = useCallback((type: 'gelir' | 'gider', title: string, amount: number) => {
-        if (!activePetObj?.id) return;
-        const newTx = {
-            id: Date.now(),
-            type,
-            title,
-            amount: `${type === 'gelir' ? '+' : '-'}${amount} PATI`,
-            date: 'Şimdi'
-        };
-        setTransactions(prev => {
-            const next = [newTx, ...prev];
-            localStorage.setItem(`moffi_transactions_${activePetObj.id}`, JSON.stringify(next));
-            return next;
-        });
-    }, [activePetObj?.id]);
-
-    const [expandedPanel, setExpandedPanel] = useState<'wallet' | 'passport' | 'collar' | 'dressing' | 'quests' | 'shop' | 'profile' | 'events' | null>(null);
-    const [isNfcScanning, setIsNfcScanning] = useState(false);
-
-    const handleNfcScan = () => {
-        setExpandedPanel(null); // Profile çekmecesini kapat
-        setIsNfcScanning(true);
-        setTimeout(() => {
-            setIsNfcScanning(false);
-            router.push(`/profile/${authUser?.id || 'me'}?view=passport`);
-        }, 1500);
-    };
-    const [selectedAccessories, setSelectedAccessories] = useState<string[]>(['glasses', 'scarf']);
-    const [unlockedAccessories, setUnlockedAccessories] = useState<string[]>(['glasses', 'scarf']);
-    const [selectedApparel, setSelectedApparel] = useState<{
-        body: 'sweatshirt' | 'singlet' | 'pajamas' | null;
-        head: 'crown' | 'pirate_hat' | 'top_hat' | 'beanie' | null;
-        eyes: 'sunglasses' | 'glasses' | 'eyepatch' | null;
-        hands: 'gloves' | 'boxing' | null;
-        feet: 'sneakers' | 'boots' | null;
-    }>({
-        body: 'sweatshirt',
-        head: null,
-        eyes: 'glasses',
-        hands: null,
-        feet: null
-    });
-    const [unlockedApparel, setUnlockedApparel] = useState<string[]>([
-        'sweatshirt', 'singlet', 'pajamas',
-        'beanie',
-        'glasses', 'sunglasses',
-        'gloves',
-        'sneakers'
-    ]);
-    const [activeApparelTab, setActiveApparelTab] = useState<'body' | 'head' | 'eyes' | 'hands' | 'feet'>('body');
-    const [activeOutfitName, setActiveOutfitName] = useState('Havalı Gözlük 😎 & Kırmızı Boyunluk 🧣');
-    const [stylePoints, setStylePoints] = useState(120);
-
-    // TALKING TOM STYLE DRESSING GAME STATES
-    const [dressingStep, setDressingStep] = useState<'clean' | 'dry' | 'accessorize' | 'photo' | 'completed'>('accessorize');
-    const [cleanProgress, setCleanProgress] = useState(0);
-    const [dryProgress, setDryProgress] = useState(0);
-    const [activeStudioBg, setActiveStudioBg] = useState<'stage' | 'cyber' | 'park' | 'space'>('stage');
-    const [isBlinking, setIsBlinking] = useState(false);
-    const [isFlashActive, setIsFlashActive] = useState(false);
-    const [isShowerActive, setIsShowerActive] = useState(false);
-    const [isDryerActive, setIsDryerActive] = useState(false);
-    const [activeTool, setActiveTool] = useState<'styling' | 'comb' | 'scissors' | 'grow' | 'walk'>('styling');
-
-    const [particles, setParticles] = useState<Array<{ id: number, x: number, y: number, emoji: string }>>([]);
-
-    // NEW LEGENDARY DRESSING STATES
-    const [petSpeech, setPetSpeech] = useState<string | null>(null);
-    const [isChestOpening, setIsChestOpening] = useState(false);
-    const [chestResult, setChestResult] = useState<string | null>(null);
-    const [photoAlbum, setPhotoAlbum] = useState<Array<{ id: string, bg: string, accessories: string[], date: string, theme: string, sp: number }>>([
-        {
-            id: 'photo-default-1',
-            bg: 'stage',
-            accessories: ['glasses', 'scarf'],
-            date: '03.06.2026',
-            theme: 'Tanıtım Kombini ✨',
-            sp: 120
-        }
-    ]);
-
-    const speechTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const triggerSpeechBubble = useCallback((text: string) => {
-        setPetSpeech(text);
-        if (speechTimeoutRef.current) clearTimeout(speechTimeoutRef.current);
-        speechTimeoutRef.current = setTimeout(() => {
-            setPetSpeech(null);
-        }, 2500);
-    }, []);
-
-    const handlePetInteraction = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
-        if (dressingStep !== 'clean' && dressingStep !== 'dry') return;
-
-        const rect = e.currentTarget.getBoundingClientRect();
-        let clientX = 0;
-        let clientY = 0;
-
-        if ('touches' in e) {
-            if (e.touches.length === 0) return;
-            clientX = e.touches[0].clientX;
-            clientY = e.touches[0].clientY;
-        } else {
-            if (e.type === 'mousemove' && e.buttons !== 1) return;
-            clientX = e.clientX;
-            clientY = e.clientY;
-        }
-
-        const x = ((clientX - rect.left) / rect.width) * 100;
-        const y = ((clientY - rect.top) / rect.height) * 100;
-
-        const newParticle = {
-            id: Date.now() + Math.random(),
-            x,
-            y,
-            emoji: dressingStep === 'clean' ? '🫧' : '💨'
-        };
-
-        if (dressingStep === 'clean') {
-            setParticles(prev => [...prev, newParticle]);
-        } else {
-            setParticles(prev => [...prev.slice(-20), newParticle]);
-        }
-
-        if (dressingStep === 'clean') {
-            setCleanProgress(prev => {
-                const next = Math.min(100, prev + 1.5);
-                if (prev < 25 && next >= 25) triggerSpeechBubble("Çok gıdıklandım! 😂");
-                if (prev < 50 && next >= 50) triggerSpeechBubble("Köpükler harika! 🫧");
-                if (prev < 75 && next >= 75) triggerSpeechBubble("Her yerim bembeyaz oldu! 🛁");
-                if (prev < 100 && next >= 100) triggerSpeechBubble("Gıcır gıcır temizlendim! ✨");
-                return next;
-            });
-        } else if (dressingStep === 'dry') {
-            setDryProgress(prev => {
-                const next = Math.min(100, prev + 1.5);
-                if (prev < 25 && next >= 25) triggerSpeechBubble("Fön çok sıcakmış! 💨");
-                if (prev < 50 && next >= 50) triggerSpeechBubble("Tüylerim havalanıyor! 🌬️");
-                if (prev < 75 && next >= 75) triggerSpeechBubble("Pofuduk oluyorum! ✨");
-                if (prev < 100 && next >= 100) triggerSpeechBubble("Kupkuru ve yumuşacığım! 🦁");
-                return next;
-            });
-        }
-    };
-
-    const handleSelectApparel = (category: keyof typeof selectedApparel, item: any) => {
-        const itemId = item?.id;
-        const cost = item?.cost || 0;
-
-        if (itemId && !unlockedApparel.includes(itemId)) {
-            if (totalPatiPuan >= cost) {
-                spendPatiPuan(cost);
-                setUnlockedApparel(prev => [...prev, itemId]);
-                setToastMsg(`🎉 Tebrikler! "${item.label}" açıldı. Cüzdandan ${cost} MoffiCoin harcandı.`);
-                triggerSpeechBubble("Yeni kıyafetime bayıldım! 😍");
-            } else {
-                setToastMsg(`❌ Yetersiz MoffiCoin! Bu kıyafet için ${cost} Coin gerekiyor.`);
-                return;
-            }
-        }
-
-        setSelectedApparel(prev => {
-            const next = { ...prev, [category]: itemId };
-
-            // Synchronize with selectedAccessories so that bonuses, daily theme, and polaroid details work!
-            const newAccs: string[] = [];
-            
-            // Map body items
-            if (next.body === 'sweatshirt') newAccs.push('scarf');
-            if (next.body === 'pajamas') newAccs.push('bowtie');
-            
-            // Map head items
-            if (next.head === 'crown') newAccs.push('crown');
-            if (next.head === 'pirate_hat') newAccs.push('hat');
-            if (next.head === 'top_hat') newAccs.push('hat');
-            if (next.head === 'beanie') newAccs.push('hat');
-            
-            // Map eye items
-            if (next.eyes === 'glasses') newAccs.push('glasses');
-            if (next.eyes === 'sunglasses') newAccs.push('glasses');
-            if (next.eyes === 'eyepatch') newAccs.push('pirate');
-            
-            // Map hands
-            if (next.hands === 'gloves') newAccs.push('bowtie');
-            if (next.hands === 'boxing') newAccs.push('pirate');
-            
-            // Map feet
-            if (next.feet === 'sneakers') newAccs.push('glasses');
-            if (next.feet === 'boots') newAccs.push('hat');
-
-            const uniqueAccs = Array.from(new Set(newAccs));
-            setSelectedAccessories(uniqueAccs);
-
-            // Speech reactions
-            if (category === 'body') {
-                if (itemId === 'sweatshirt') triggerSpeechBubble("Turuncu sweatshirtüm harika! 🧡");
-                else if (itemId === 'singlet') triggerSpeechBubble("Atletle çok rahatım! 🎽");
-                else if (itemId === 'pajamas') triggerSpeechBubble("Pijama partisi başlasın! 💤");
-                else triggerSpeechBubble("Biraz serinledim sanki! 🥶");
-            } else if (category === 'head') {
-                if (itemId === 'crown') triggerSpeechBubble("Taçsız kral olur mu hiç! 👑");
-                else if (itemId === 'pirate_hat') triggerSpeechBubble("Korsan şapkam hazır! 🏴‍☠️");
-                else if (itemId === 'top_hat') triggerSpeechBubble("Sihirli bir numara ister misin? 🎩");
-                else if (itemId === 'beanie') triggerSpeechBubble("Sıcacık tutuyor! 🧶");
-                else triggerSpeechBubble("Şapkamı çıkardım.");
-            } else if (category === 'eyes') {
-                if (itemId === 'sunglasses') triggerSpeechBubble("Geleceğim çok parlak! 😎");
-                else if (itemId === 'eyepatch') triggerSpeechBubble("Kaptan Moffi denizlerde! 🏴‍☠️");
-                else if (itemId === 'glasses') triggerSpeechBubble("Şimdi daha net görüyorum! 🤓");
-            } else if (category === 'hands') {
-                if (itemId === 'boxing') triggerSpeechBubble("Hazır ol, sol kroşe geliyor! 🥊");
-                else if (itemId === 'gloves') triggerSpeechBubble("Kışa hazırım! 🧤");
-            } else if (category === 'feet') {
-                if (itemId === 'sneakers') triggerSpeechBubble("Koşuya hazırız! 👟");
-                else if (itemId === 'boots') triggerSpeechBubble("Çamurlara basabilirim! 🥾");
-            }
-
-            return next;
-        });
-    };
-
-    const handleOpenChest = () => {
-        if (totalPatiPuan < 100) {
-            setToastMsg("❌ Sandık açmak için 100 MoffiCoin gerekiyor! Yetersiz bakiye.");
-            return;
-        }
-
-        spendPatiPuan(100);
-        setIsChestOpening(true);
-        setChestResult(null);
-
-        // After 1.5 seconds shaking animation, roll reward item
-        setTimeout(() => {
-            setIsChestOpening(false);
-            const availableDrops = [];
-            if (!unlockedAccessories.includes('pirate')) availableDrops.push('pirate');
-            if (!unlockedAccessories.includes('bowtie')) availableDrops.push('bowtie');
-
-            let reward = '';
-            if (availableDrops.length > 0) {
-                reward = availableDrops[Math.floor(Math.random() * availableDrops.length)];
-            } else {
-                reward = Math.random() > 0.5 ? 'pirate' : 'bowtie';
-            }
-
-            setUnlockedAccessories(prev => {
-                if (prev.includes(reward)) return prev;
-                return [...prev, reward];
-            });
-
-            setChestResult(reward);
-            
-            if (reward === 'pirate') {
-                triggerSpeechBubble("🏴‍☠️ Ayyay Kaptan! Korsan oldum!");
-                setToastMsg("🏴‍☠️ Tebrikler! Efsanevi Korsan Göz Bandı kazandın! (+140 SP, XP/Like boost)");
-                setUnlockedApparel(prev => [...prev, 'eyepatch', 'pirate_hat']);
-            } else {
-                triggerSpeechBubble("🎀 Çok centilmen bir beyefendi oldum!");
-                setToastMsg("🎀 Tebrikler! Centilmen Papyon kazandın! (+90 SP, Coin/XP boost)");
-                setUnlockedApparel(prev => [...prev, 'bowtie']);
-            }
-        }, 1500);
-    };
-
-    const activeBonus = useMemo(() => {
-        let xpBonus = 0;
-        let walkCoinBonus = 0;
-        let likeBoost = 0;
-        let vipActive = false;
-
-        if (selectedAccessories.includes('glasses')) xpBonus += 15;
-        if (selectedAccessories.includes('scarf')) walkCoinBonus += 10;
-        if (selectedAccessories.includes('hat')) likeBoost += 20;
-        if (selectedAccessories.includes('crown')) {
-            vipActive = true;
-            walkCoinBonus += 25;
-            xpBonus += 10;
-        }
-        if (selectedAccessories.includes('pirate')) {
-            xpBonus += 30;
-            likeBoost += 35;
-        }
-        if (selectedAccessories.includes('bowtie')) {
-            walkCoinBonus += 20;
-            xpBonus += 25;
-        }
-
-        return { xpBonus, walkCoinBonus, likeBoost, vipActive };
-    }, [selectedAccessories]);
-
-    const handleToggleAccessory = (id: string) => {
-        if (!unlockedAccessories.includes(id)) {
-            const costs: Record<string, number> = { hat: 150, crown: 350 };
-            const cost = costs[id] || 0;
-            if (totalPatiPuan >= cost) {
-                spendPatiPuan(cost);
-                setUnlockedAccessories(prev => [...prev, id]);
-                setSelectedAccessories(prev => [...prev, id]);
-                setToastMsg(`🎉 Tebrikler! Premium eşya açıldı. Cüzdandan ${cost} MoffiCoin harcandı.`);
-                triggerSpeechBubble("Yeni eşyama bayıldım! 😍");
-            } else {
-                setToastMsg(`❌ Yetersiz MoffiCoin! Bu eşya için ${cost} Coin gerekiyor.`);
-            }
-            return;
-        }
-
-        setSelectedAccessories(prev => {
-            const isRemoving = prev.includes(id);
-            const next = isRemoving ? prev.filter(a => a !== id) : [...prev, id];
-
-            // Cute speech reactions when wearing/removing accessories
-            if (id === 'glasses') triggerSpeechBubble(isRemoving ? "Gözlerim kamaşıyordu zaten! 😎" : "Çok havalı oldum! 😎");
-            else if (id === 'scarf') triggerSpeechBubble(isRemoving ? "Boynum rahatladı! 🧣" : "Beni sıcacık tutuyor! 🧣");
-            else if (id === 'hat') triggerSpeechBubble(isRemoving ? "Şapkasız daha iyiyim 🎩" : "Retro tarzı severim! 🎩");
-            else if (id === 'crown') triggerSpeechBubble(isRemoving ? "Kraliyet bitti 👑" : "Kraliyet üyesi gibiyim! 👑");
-            else if (id === 'pirate') triggerSpeechBubble(isRemoving ? "Denizler beni bekler! 🌊" : "Ayyay kaptan! 🏴‍☠️");
-            else if (id === 'bowtie') triggerSpeechBubble(isRemoving ? "Gündelik tarza döndüm 🎀" : "Çok şık bir beyefendiyim! 🎀");
-
-            return next;
-        });
-    };
-
-        const handleSaveOutfit = () => {
-        let totalSP = 0;
-        const names: string[] = [];
-
-        // Body
-        if (selectedApparel.body === 'sweatshirt') { totalSP += 80; names.push('Turuncu Sweatshirt 🧡'); }
-        else if (selectedApparel.body === 'singlet') { totalSP += 60; names.push('Spor Atlet 🎽'); }
-        else if (selectedApparel.body === 'pajamas') { totalSP += 70; names.push('Çizgili Pijama 💤'); }
-
-        // Head
-        if (selectedApparel.head === 'beanie') { totalSP += 50; names.push('Örme Bere 🧶'); }
-        else if (selectedApparel.head === 'top_hat') { totalSP += 120; names.push('Silindir Şapka 🎩'); }
-        else if (selectedApparel.head === 'crown') { totalSP += 200; names.push('Altın Taç 👑'); }
-        else if (selectedApparel.head === 'pirate_hat') { totalSP += 140; names.push('Korsan Şapkası 🏴‍☠️'); }
-
-        // Eyes
-        if (selectedApparel.eyes === 'glasses') { totalSP += 30; names.push('Optik Gözlük 🤓'); }
-        else if (selectedApparel.eyes === 'sunglasses') { totalSP += 50; names.push('Güneş Gözlüğü 😎'); }
-        else if (selectedApparel.eyes === 'eyepatch') { totalSP += 110; names.push('Göz Bandı 👁️'); }
-
-        // Hands
-        if (selectedApparel.hands === 'gloves') { totalSP += 40; names.push('Sıcak Eldiven 🧤'); }
-        else if (selectedApparel.hands === 'boxing') { totalSP += 90; names.push('Boks Eldiveni 🥊'); }
-
-        // Feet
-        if (selectedApparel.feet === 'sneakers') { totalSP += 50; names.push('Spor Ayakkabı 👟'); }
-        else if (selectedApparel.feet === 'boots') { totalSP += 80; names.push('Kışlık Bot 🥾'); }
-
-        setStylePoints(totalSP);
-        const joinedName = names.length > 0 ? names.join(' & ') : 'Sade Tarz 🐾';
-        setActiveOutfitName(joinedName);
-
-        // Daily Challenge Theme check: "Korsan Balosu 🏴‍☠️👑" (Requires crown OR pirate_hat OR eyepatch)
-        const meetsTheme = selectedApparel.head === 'crown' || selectedApparel.head === 'pirate_hat' || selectedApparel.eyes === 'eyepatch';
-        let dailyThemeCoins = 0;
-        if (meetsTheme) {
-            dailyThemeCoins = 50;
-            // triggerQuestEvent handles adding points
-        }
-
-        // Add to polaroid album
-        const newPhotoId = 'photo-' + Date.now();
-        const formattedDate = new Date().toLocaleDateString('tr-TR');
-        const newPhoto = {
-            id: newPhotoId,
-            bg: activeStudioBg,
-            accessories: [...names],
-            date: formattedDate,
-            theme: meetsTheme ? 'Korsan Balosu 🏴‍☠️👑' : 'Serbest Tarz ✨',
-            sp: totalSP
-        };
-        setPhotoAlbum(prev => [newPhoto, ...prev]);
-
-        if (meetsTheme) {
-            setToastMsg(`✨ Kombin başarıyla kaydedildi! Tarz Puanı: ${totalSP} P. Günlük Tema "Korsan Balosu 🏴‍☠️👑" Başarıyla Tamamlandı! +50 MoffiCoin Kazanıldı! 🔥`);
-        } else {
-            setToastMsg(`✨ Kombin başarıyla kaydedildi! Tarz Puanı: ${totalSP} P. Ekstra bonuslar aktif edildi!`);
-        }
-        setExpandedPanel(null);
-    };
-
-
-
-    const baseMockTemplate = cleanDefaultTemplate;
-
-    const resolvedStreak = typeof activePetObj?.streak === 'number' 
-        ? activePetObj.streak 
-        : (activePetObj?.sos_settings?.streak ?? baseMockTemplate.streak);
-    
-    const resolvedActivityTarget = typeof activePetObj?.activity_target === 'number' 
-        ? activePetObj.activity_target 
-        : (activePetObj?.sos_settings?.activity_target ?? baseMockTemplate.ringProgress.activity);
-
-    // Streak değerine göre haftalık aktivite grafiği üret — Math.random yerine deterministik seed
-    // Aktivite Raporu - Gerçek Yürüyüş Geçmişine Bağlandı
-    const weeklyData = useMemo(() => {
-        const data = [0, 0, 0, 0, 0, 0, 0];
-        
-        const now = new Date();
-        const currentDayOfWeek = now.getDay(); // 0 is Sunday, 1 is Monday...
-        const distanceToMonday = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1;
-        
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - distanceToMonday);
-        startOfWeek.setHours(0, 0, 0, 0);
-
-        walkHistory.forEach((walk: any) => {
-            const walkDateStr = walk.ended_at || walk.started_at || walk.date;
-            if (!walkDateStr) return;
-            
-            const walkDate = new Date(walkDateStr);
-            if (isNaN(walkDate.getTime())) return;
-            
-            // Check if walk is in the current week
-            if (walkDate >= startOfWeek) {
-                let dayIndex = walkDate.getDay() - 1;
-                if (dayIndex === -1) dayIndex = 6; // Sunday
-                
-                let minutes = walk.duration_minutes || 0;
-                if (!minutes && walk.duration) {
-                     const match = walk.duration.toString().match(/\d+/);
-                     if (match) minutes = parseInt(match[0]);
-                }
-                
-                if (dayIndex >= 0 && dayIndex < 7) {
-                    data[dayIndex] += minutes;
-                }
-            }
-        });
-
-        return data;
-    }, [walkHistory]);
-
-
-    const dynamicOffer = useMemo(() => {
-        if (!activePetObj) return baseMockTemplate.specialOffer;
-        
-        const breed = (activePetObj.breed || '').toLowerCase();
-        const type = activePetObj.type || '🐶';
-        
-        // 1. Yavru (Kitten/Puppy)
-        if (activePetObj.age && parseInt(activePetObj.age.toString()) < 1) {
-             return {
-                title: 'Yavru Gelişim Maması',
-                desc: 'Yavru dostunuzun bağışıklığını ve kemik gelişimini destekleyen Hills premium mama.',
-                oldPrice: '699 TL',
-                newPrice: '549 TL',
-                discount: 'İNDİRİMLİ',
-                link: '/petshop?openProduct=ps-4'
-            };
-        }
-
-        // 2. Kedi
-        if (type === '🐱' || breed.includes('kedi') || breed.includes('scottish') || breed.includes('british')) {
-            return {
-                title: 'Özel Kedi Maması Kampanyası',
-                desc: 'Kediniz için özel formüle edilmiş Pro Plan Yetişkin Kedi Maması.',
-                oldPrice: '799 TL',
-                newPrice: '649 TL',
-                discount: 'ÇOK SATAN',
-                link: '/petshop?openProduct=ps-1'
-            };
-        }
-        
-        // 3. Büyük / Hareketli Köpek
-        if (breed.includes('golden') || breed.includes('labrador') || breed.includes('kangal') || activePetObj.size?.toLowerCase() === 'büyük') {
-            return {
-                title: 'Büyük Irk Eklem Koruyucu',
-                desc: 'Büyük ırk köpekler için özel formüle edilmiş glukozamin destekli koruyucu.',
-                oldPrice: '850 TL',
-                newPrice: '680 TL',
-                discount: '%20 İNDİRİM',
-                link: '/petshop'
-            };
-        }
-
-        // 4. Varsayılan (Herkes için uygun bakım)
-        return {
-            title: 'Tüy Bakım Fırçası',
-            desc: `${activePetObj.name || 'Dostunuz'} için profesyonel dökülme önleyici Furminator tüy bakım fırçası.`,
-            oldPrice: '499 TL',
-            newPrice: '399 TL',
-            discount: 'ÇOK SATAN',
-            link: '/petshop?openProduct=ps-11'
-        };
-    }, [activePetObj, baseMockTemplate.specialOffer]);
-
-    const pet = {
-        ...baseMockTemplate,
-        specialOffer: dynamicOffer,
-        id: activePetObj?.id,
-        name: activePetObj?.name || baseMockTemplate.name,
-        image: activePetObj?.image || activePetObj?.avatar || '',
-        breed: activePetObj?.breed || baseMockTemplate.breed,
-        weight: activePetObj?.weight || activePetObj?.sos_settings?.weight || baseMockTemplate.weight,
-        gender: activePetObj?.gender || '',
-        health: activePetObj?.health || activePetObj?.sos_settings?.health || baseMockTemplate.health,
-        streak: resolvedStreak,
-        weeklyData,
-        ringProgress: {
-            activity: resolvedActivityTarget,
-            water: typeof activePetObj?.water_target === 'number' ? activePetObj.water_target : (activePetObj?.sos_settings?.water_target ?? baseMockTemplate.ringProgress.water),
-            food: typeof activePetObj?.food_target === 'number' ? activePetObj.food_target : (activePetObj?.sos_settings?.food_target ?? baseMockTemplate.ringProgress.food),
-        },
-        passport: {
-            ...baseMockTemplate.passport,
-            idCode: activePetObj?.microchip || activePetObj?.microchip_id || baseMockTemplate.passport.idCode,
-            qrcode: activePetObj?.id ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=moffi-passport-${activePetObj.id}` : baseMockTemplate.passport.qrcode,
-        },
-        dressing: {
-            activeOutfit: activeOutfitName,
-            stylePoints: stylePoints,
-            avatarMock: activePetObj?.image || activePetObj?.avatar || '',
-        }
-    };
-
-    const [isPetSettingsOpen, setIsPetSettingsOpen] = useState(false);
+        fetchLostPets();
+    }, [userLostPetIdsString]);
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const [activeTab, setActiveTab] = useState('feed'); 
+    const [radarTabMode, setRadarTabMode] = useState<'lost' | 'adopt'>('lost');
+    const [posts, setPosts] = useState<any[]>([]);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [isPublishing, setIsPublishing] = useState(false);
+    const [isLoadingPosts, setIsLoadingPosts] = useState(false);
+    const [isLoadingLost, setIsLoadingLost] = useState(false);
+    const [isLoadingAdoptions, setIsLoadingAdoptions] = useState(false);
+    const [profileSubView, setProfileSubView] = useState<'main' | 'family' | 'passport' | 'orders' | 'wallet' | 'appointments' | 'routes' | 'impact' | 'bookmarks'>('main');
+    const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+    const { notifications, unreadCount: notifUnreadCount, markAllRead } = useRealtimeNotifications(user?.id);
+    const [selectedSharePost, setSelectedSharePost] = useState<any>(null);
+    const [profileViewMode, setProfileViewMode] = useState('grid');
+    const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+    const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+    const [editName, setEditName] = useState("");
+    const [editUsername, setEditUsername] = useState("");
+    const [editBio, setEditBio] = useState("");
+    const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
+    const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
+    const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
+    const [editCoverPreview, setEditCoverPreview] = useState<string | null>(null);
+    const [isSavingProfile, setIsSavingProfile] = useState(false);
     const [isAddPetOpen, setIsAddPetOpen] = useState(false);
-    const [selectedAnn, setSelectedAnn] = useState<any | null>(null);
+    const [storyPreview, setStoryPreview] = useState<string | null>(null);
+    const [pendingStoryFile, setPendingStoryFile] = useState<File | null>(null);
+    const [isUploadingStory, setIsUploadingStory] = useState(false);
     const [addPetStep, setAddPetStep] = useState(1);
     const [newPetName, setNewPetName] = useState("");
     const [newPetType, setNewPetType] = useState("🐶");
@@ -1060,358 +199,1006 @@ export default function LegendaryLightDashboard() {
     const [newPetCharacter, setNewPetCharacter] = useState("");
     const [newPetMicrochip, setNewPetMicrochip] = useState("");
     const [newPetShowPhone, setNewPetShowPhone] = useState(true);
-    const [newPetPhotos, setNewPetPhotos] = useState<any[]>([]);
+    const [newPetPhotos, setNewPetPhotos] = useState<{ file: File, preview: string }[]>([]);
     const [isSavingPet, setIsSavingPet] = useState(false);
+    const [qrModalPet, setQrModalPet] = useState<{ name: string, id: string, avatar: string } | null>(null);
+    const [isFullScreenQR, setIsFullScreenQR] = useState(false);
+    const [isPetSettingsOpen, setIsPetSettingsOpen] = useState(false);
+    const [settingsPet, setSettingsPet] = useState<any>(null);
+    const [isSOSCommandCenterOpen, setIsSOSCommandCenterOpen] = useState(false);
+    const [sosActivePet, setSosActivePet] = useState<any>(null);
+    const [isSosFromHub, setIsSosFromHub] = useState(false);
+    const [isLostAdModalOpen, setIsLostAdModalOpen] = useState(false);
+    const [selectedLostPet, setSelectedLostPet] = useState<any | null>(null);
+    const [userCoords, setUserCoords] = useState<[number, number] | undefined>(undefined);
+    const [petSightings, setPetSightings] = useState<any[]>([]);
+    const [isLoadingSightings, setIsLoadingSightings] = useState(false);
+    const [radarViewMode, setRadarViewMode] = useState<'list' | 'map'>('list');
+    const [selectedCategory, setSelectedCategory] = useState("Tümü");
+    const [filterDistance, setFilterDistance] = useState<'all' | number>('all');
 
-    const [newPetWeight, setNewPetWeight] = useState("");
-    const [newPetHealthStatus, setNewPetHealthStatus] = useState("İyi");
-    const [newPetActivityTarget, setNewPetActivityTarget] = useState("70");
-    const [newPetWaterTarget, setNewPetWaterTarget] = useState("1200");
-    const [newPetFoodTarget, setNewPetFoodTarget] = useState("1600");
-    const isAnyModalOpen = !!expandedPanel || isPetSettingsOpen || isAddPetOpen;
+    const [lostPets, setLostPets] = useState<any[]>([]);
 
-    const handleSavePetSettings = async (updatedFields: any) => {
-        try {
-            if (activePetObj && activePetObj.id) {
-                // Mevcut sos_settings ile birleştir, weight, sağlık, renk, veli bilgisi ve hedefleri ekle
-                const mergedSosSettings = {
-                    ...(activePetObj.sos_settings || {}),
-                    weight: updatedFields.weight ? `${updatedFields.weight} kg` : (activePetObj.sos_settings?.weight || ''),
-                    health: updatedFields.healthStatus || updatedFields.health || (activePetObj.sos_settings?.health || 'İyi'),
-                    color: updatedFields.color || (activePetObj.sos_settings?.color || ''),
-                    activity_target: typeof updatedFields.activityTarget !== 'undefined' ? Number(updatedFields.activityTarget) : (activePetObj.sos_settings?.activity_target ?? 70),
-                    water_target: typeof updatedFields.waterTarget !== 'undefined' ? Number(updatedFields.waterTarget) : (activePetObj.sos_settings?.water_target ?? 1200),
-                    food_target: typeof updatedFields.foodTarget !== 'undefined' ? Number(updatedFields.foodTarget) : (activePetObj.sos_settings?.food_target ?? 1600),
-                    // Parazit tarihleri sos_settings JSON'unda saklanıyor
-                    parasiteInternal: updatedFields.parasiteInternal || (activePetObj.sos_settings?.parasiteInternal || ''),
-                    parasiteExternal: updatedFields.parasiteExternal || (activePetObj.sos_settings?.parasiteExternal || ''),
-                    // Doğum tarihi
-                    birthday: updatedFields.birthday || (activePetObj.sos_settings?.birthday || ''),
-                    // Yeni alanlar
-                    size: updatedFields.size || (activePetObj.sos_settings?.size || ''),
-                    character: updatedFields.character || (activePetObj.sos_settings?.character || ''),
-                    features: updatedFields.features || (activePetObj.sos_settings?.features || ''),
-                    owner: {
-                        name: updatedFields.ownerName || '',
-                        phone: updatedFields.ownerPhone || '',
-                        address: updatedFields.ownerAddress || '',
-                    }
-                };
-
-                const petUpdates = {
-                    ...updatedFields,
-                    // Fotoğraf güncellemesi
-                    image: updatedFields.image || activePetObj.image || activePetObj.avatar || '',
-                    avatar: updatedFields.avatar || updatedFields.image || activePetObj.avatar || '',
-                    // Alan normalizasyonları
-                    microchip_id: updatedFields.microchip || updatedFields.microchip_id,
-                    microchip: updatedFields.microchip || updatedFields.microchip_id,
-                    is_neutered: updatedFields.neutered,
-                    // Yeni alanlar direkt yazılıyor
-                    type: updatedFields.type || activePetObj.type || '',
-                    size: updatedFields.size || '',
-                    health: mergedSosSettings.health,
-                    health_notes: updatedFields.healthNotes || '',
-                    character: updatedFields.character || '',
-                    color: mergedSosSettings.color,
-                    owner: mergedSosSettings.owner,
-                    activity_target: mergedSosSettings.activity_target,
-                    water_target: mergedSosSettings.water_target,
-                    food_target: mergedSosSettings.food_target,
-                    sos_settings: mergedSosSettings,
-                };
-
-                await apiService.updatePet(activePetObj.id, petUpdates);
-                updatePet(activePetObj.id, {
-                    ...petUpdates,
-                    weight: mergedSosSettings.weight,
-                    health: mergedSosSettings.health,
-                });
-                setToastMsg("Pasaport bilgileri Moffi Cloud'a mühürlendi! 🛡️");
+    const filteredLostPets = useMemo(() => {
+        return lostPets.filter(pet => {
+            if (selectedCategory !== "Tümü" && selectedCategory !== "Hepsi") {
+                const type = pet.pet_type?.toLowerCase() || pet.type?.toLowerCase() || "";
+                if (selectedCategory === "Kediler" && type !== "cat" && !type.includes("kedi")) return false;
+                if (selectedCategory === "Köpekler" && type !== "dog" && !type.includes("köpek")) return false;
+                if (selectedCategory === "Kuşlar" && type !== "bird" && !type.includes("kuş")) return false;
+                if (selectedCategory === "Diğer" && type !== "other") return false;
             }
-            setIsPetSettingsOpen(false);
-        } catch (err) {
-            console.error(err);
-            setToastMsg("Pati bilgileri güncellenirken bir hata oluştu.");
+            if (filterDistance !== 'all' && userCoords && pet.latitude && pet.longitude) {
+                const R = 6371; // Earth radius in km
+                const dLat = (pet.latitude - userCoords[0]) * Math.PI / 180;
+                const dLon = (pet.longitude - userCoords[1]) * Math.PI / 180;
+                const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                          Math.cos(userCoords[0] * Math.PI / 180) * Math.cos(pet.latitude * Math.PI / 180) *
+                          Math.sin(dLon/2) * Math.sin(dLon/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                const d = R * c;
+                if (d > filterDistance) return false;
+            }
+            return true;
+        });
+    }, [lostPets, selectedCategory, filterDistance, userCoords]);
+
+    const [lostPetType, setLostPetType] = useState("cat");
+    const [lostPetName, setLostPetName] = useState("");
+    const [lostPetBreed, setLostPetBreed] = useState("");
+    const [lostPetLocation, setLostPetLocation] = useState("");
+    const [newLostPetCoords, setNewLostPetCoords] = useState<[number, number]>([40.9850, 29.0300]);
+    useEffect(() => {
+        if (userCoords) {
+            setNewLostPetCoords(userCoords);
         }
+    }, [userCoords]);
+    const [lostPetDesc, setLostPetDesc] = useState("");
+    const [lostPetPhotos, setLostPetPhotos] = useState<{ file: File, preview: string }[]>([]);
+    const [isSubmittingSOS, setIsSubmittingSOS] = useState(false);
+    const [isReportingLocation, setIsReportingLocation] = useState(false);
+    const [selectedAdoptionPet, setSelectedAdoptionPet] = useState<any | null>(null);
+    const [isAddAdoptionModalOpen, setIsAddAdoptionModalOpen] = useState(false);
+    const [adoptionAds, setAdoptionAds] = useState<any[]>([]);
+    const [selectedAdoptionCategory, setSelectedAdoptionCategory] = useState("Hepsi");
+    const [adoptionPetName, setAdoptionPetName] = useState("");
+    const [adoptionPetBreed, setAdoptionPetBreed] = useState("");
+    const [adoptionPetAge, setAdoptionPetAge] = useState("");
+    const [adoptionPetDesc, setAdoptionPetDesc] = useState("");
+    const [adoptionPetPhotos, setAdoptionPetPhotos] = useState<{ file: File, preview: string }[]>([]);
+    const [adoptionPetType, setAdoptionPetType] = useState("cat");
+    const [isSubmittingAdoption, setIsSubmittingAdoption] = useState(false);
+    const [isApplicationFormOpen, setIsApplicationFormOpen] = useState(false);
+    const [appExperience, setAppExperience] = useState('0-2 Yıl');
+    const [viewMode, setViewMode] = useState<'immersive' | 'grid'>('immersive');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isSearchFocused, setIsSearchFocused] = useState(false);
+    const [isSosAlertDismissed, setIsSosAlertDismissed] = useState(false);
+
+
+
+    const handlePostClickFromGrid = (post: any) => {
+        setViewMode('immersive');
+        setTimeout(() => {
+            const element = document.getElementById(`post-${post.id}`);
+            if (element) {
+                element.scrollIntoView({ behavior: 'auto', block: 'center' });
+            }
+        }, 100);
     };
 
-    const handleAddPetSave = async () => {
-        setIsSavingPet(true);
-        try {
-            let imageUrl = "";
-            if (newPetPhotos.length > 0) {
-                try {
-                    // 'avatars' bucket: pet profil fotoğrafları için doğru bucket
-                    imageUrl = await apiService.uploadMedia(newPetPhotos[0].file, 'avatars');
-                } catch (uploadErr) {
-                    console.warn('Fotoğraf yüklenemedi, pet fotoğrafsız kaydedilecek:', uploadErr);
-                    // Upload başarısız olsa bile devam et
-                    imageUrl = "";
-                }
-            }
 
-            const newPetData = {
-                name: newPetName,
-                type: newPetType,
-                breed: newPetBreed,
-                age: newPetAge,
-                gender: newPetGender,
-                is_neutered: newPetNeutered === 'Evet',
-                size: newPetSize,
-                health_notes: newPetHealth,
-                character: newPetCharacter,
-                microchip_id: newPetMicrochip,
-                show_phone: newPetShowPhone,
-                // Fotoğraf: kullanıcı yüklemediyse boş bırak (avatar_url boş olur, UI placeholder gösterir)
-                image: imageUrl || '',
-                // Pet tipine göre tema rengi
-                themeColor: newPetType === '🐱' ? '#A78BFA' : newPetType === '🦜' ? '#34D399' : newPetType === '🐰' ? '#F472B6' : '#FBBF24',
-                
-                weight: newPetWeight ? `${newPetWeight} kg` : '',
-                health: newPetHealthStatus,
-                streak: 0,
-                activity_target: Number(newPetActivityTarget) || 70,
-                water_target: Number(newPetWaterTarget) || 1200,
-                food_target: Number(newPetFoodTarget) || 1600,
-                
-                sos_settings: {
-                    auto_post_sos: true,
-                    sos_radius: '5km' as const,
-                    secure_proxy_only: false,
-                    location_precision: 'exact' as const,
-                    emergency_sms_number: "",
-                    reward_amount: 0,
-                    reward_currency: "TL",
-                    critical_health_note: newPetHealth,
-                    finder_message: "",
-                    reward_enabled: false,
-                    header_sos_alert_enabled: true,
-                    
-                    weight: newPetWeight ? `${newPetWeight} kg` : '',
-                    health: newPetHealthStatus,
-                    streak: 0,
-                    activity_target: Number(newPetActivityTarget) || 70,
-                    water_target: Number(newPetWaterTarget) || 1200,
-                    food_target: Number(newPetFoodTarget) || 1600,
-                }
-            };
-
-            const savedPet = await apiService.addPet(newPetData as any);
-            
-            // savedPet.image: DB'den gelen avatar_url. Yoksa imageUrl (upload URL) kullan.
-            // Her iki durumda da doğru fotoğraf context'te geri kazanılır.
-            const finalImage = savedPet.image || imageUrl || '';
-            
-            // Eğer DB'de avatar_url boş kaldıysa ve elimizde bir imageUrl varsa, DB'ye yaz
-            if (imageUrl && !savedPet.image && savedPet.id) {
-                try {
-                    await apiService.updatePet(savedPet.id, { image: imageUrl, avatar: imageUrl });
-                } catch (updateErr) {
-                    console.warn('Pet avatar_url güncellenemedi:', updateErr);
-                }
-            }
-            
-            addPet({
-                ...newPetData,
-                id: savedPet.id,
-                image: finalImage,
-                avatar: finalImage,
-            } as any);
-
-            setIsAddPetOpen(false);
-            setToastMsg(`🎉 ${newPetName} aileye hoş geldin! 🐾`);
-            
-            setAddPetStep(1);
-            setNewPetName("");
-            setNewPetPhotos([]);
-            setNewPetWeight("");
-            setNewPetHealthStatus("İyi");
-            setNewPetActivityTarget("70");
-            setNewPetWaterTarget("1200");
-            setNewPetFoodTarget("1600");
-        } catch (err: any) {
-            console.error('Pet kayıt hatası:', err);
-            const msg = err?.message || err?.details || 'Bilinmeyen hata';
-            setToastMsg(`❌ Pati kaydedilemedi: ${msg.slice(0, 80)}`);
-        } finally {
-            setIsSavingPet(false);
-        }
-    };
-
-    const [profileOrdersTab, setProfileOrdersTab] = useState<'active' | 'past' | 'cart' | 'settings'>('active');
-
+    const [appHomeType, setAppHomeType] = useState('Apartman');
+    const [appNote, setAppNote] = useState('');
+    const [isSubmittingApp, setIsSubmittingApp] = useState(false);
+    const [isAdoptionChatOpen, setIsAdoptionChatOpen] = useState(false);
+    const [adoptionChatPet, setAdoptionChatPet] = useState<any | null>(null);
+    const [adoptionMessages, setAdoptionMessages] = useState<any[]>([]);
+    const [adoptionNewMsg, setAdoptionNewMsg] = useState("");
+    const [isSendingAdoptionMsg, setIsSendingAdoptionMsg] = useState(false);
+    const [anonModalType, setAnonModalType] = useState<'report' | 'message' | null>(null);
+    const [isHubOpen, setIsHubOpen] = useState(false);
+    const [anonMessage, setAnonMessage] = useState("");
+    const [anonError, setAnonError] = useState<string | null>(null);
+    const [isSubmittingAnon, setIsSubmittingAnon] = useState(false);
+    const [isHubLongPressing, setIsHubLongPressing] = useState(false);
+    const [activeTimePicker, setActiveTimePicker] = useState<'from' | 'to' | null>(null);
+    const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+    const [activeMessageMenuId, setActiveMessageMenuId] = useState<string | null>(null);
+    const [isVetQuickSheetOpen, setIsVetQuickSheetOpen] = useState(false);
+    const [isWalkQuickSheetOpen, setIsWalkQuickSheetOpen] = useState(false);
+    const [isMarketQuickSheetOpen, setIsMarketQuickSheetOpen] = useState(false);
+    const [isStudioQuickSheetOpen, setIsStudioQuickSheetOpen] = useState(false);
+    const [isGameQuickSheetOpen, setIsGameQuickSheetOpen] = useState(false);
+    const [isEcosystemPortalOpen, setIsEcosystemPortalOpen] = useState(false);
+    const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
+    const [isDiaryOpen, setIsDiaryOpen] = useState(false);
+    const [isSOSOpen, setIsSOSOpen] = useState(false);
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [uploadImageURL, setUploadImageURL] = useState<string | null>(null);
+    const [uploadCaption, setUploadCaption] = useState('');
+    const [uploadLocationEnabled, setUploadLocationEnabled] = useState(false);
+    const [uploadMood, setUploadMood] = useState<string | null>(null);
+    const [imageFilter, setImageFilter] = useState('');
+    const [activeFilterIndex, setActiveFilterIndex] = useState(0);
+    const [showFilterName, setShowFilterName] = useState(false);
+    const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+    const [taggedPetIds, setTaggedPetIds] = useState<string[]>([]);
     
+    // Pro Adjustments States
+    const [brightness, setBrightness] = useState(100);
+    const [contrast, setContrast] = useState(100);
+    const [saturation, setSaturation] = useState(100);
+    const [activeAdjustSubTool, setActiveAdjustSubTool] = useState<'brightness' | 'contrast' | 'saturation'>('brightness');
+    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+    const uploadImageRef = useRef<HTMLImageElement>(null);
+    const uploadVideoRef = useRef<HTMLVideoElement>(null);
+    
+    // Scheduling States
+    const [scheduledDate, setScheduledDate] = useState<string | null>(null);
+    const [isSchedulingMode, setIsSchedulingMode] = useState(false);
+    const [activeTool, setActiveTool] = useState<'adjust' | 'tag' | 'schedule' | 'mood' | 'ai' | null>(null);
+    
+    const touchStartX = useRef<number | null>(null);
+
+    const IMAGE_FILTERS = useMemo(() => [
+        { name: 'Orijinal', filter: '' },
+        { name: 'Aydınlık', filter: 'brightness(1.1) contrast(1.1)' },
+        { name: 'Canlı', filter: 'contrast(1.2) saturate(1.3)' },
+        { name: 'Sıcak', filter: 'sepia(0.3) saturate(1.2) contrast(1.1)' },
+        { name: 'Soğuk', filter: 'saturate(1.2) contrast(1.1) hue-rotate(-10deg)' },
+        { name: 'Soluk', filter: 'contrast(0.9) brightness(1.1) saturate(0.8)' },
+        { name: 'Krem', filter: 'sepia(0.2) brightness(1.05) saturate(0.9)' },
+        { name: 'Pastel', filter: 'contrast(0.85) brightness(1.1) saturate(1.1) sepia(0.1)' },
+        { name: 'Tozlu', filter: 'sepia(0.4) contrast(0.9) brightness(1.05)' },
+        { name: 'Minimal', filter: 'contrast(1.05) saturate(0.7)' },
+        { name: 'Siyah Beyaz', filter: 'grayscale(1) contrast(1.2)' },
+        { name: 'Sert Siyah', filter: 'grayscale(1) contrast(1.4) brightness(0.9)' },
+        { name: 'Vintage', filter: 'sepia(0.6) contrast(1.1) brightness(0.9) saturate(1.2)' },
+        { name: 'Nostalji', filter: 'sepia(0.8) contrast(1.2) brightness(0.8)' },
+        { name: 'Sinematik', filter: 'contrast(1.3) saturate(0.8) sepia(0.2)' }
+    ], []);
+
     useEffect(() => {
-        if (isInitialized && !isPetLoading && userPets.length === 0) {
-            setIsAddPetOpen(true);
+        if (showFilterName) {
+            const timer = setTimeout(() => setShowFilterName(false), 1250);
+            return () => clearTimeout(timer);
         }
-    }, [isInitialized, isPetLoading, userPets.length]);
-
-    const [showLiveMap, setShowLiveMap] = useState(false);
-    const [geofenceAlerts, setGeofenceAlerts] = useState(true);
-    const [collarLowBattery, setCollarLowBattery] = useState(true);
-    const [anomaliesSms, setAnomaliesSms] = useState(false);
-    const [activeOrders, setActiveOrders] = useState<Array<{id: string, name: string, desc: string, timeRemaining: string, status: string, progress: number}>>([]);
-
-    // Roadmap States
-    const [nfcPaymentLocked, setNfcPaymentLocked] = useState(false);
-    const [dailySpendLimit, setDailySpendLimit] = useState(250);
-    const [lostPetMode, setLostPetMode] = useState(false);
+    }, [showFilterName, activeFilterIndex]);
 
     useEffect(() => {
-        if (activePetObj) {
-            setLostPetMode(!!activePetObj.is_lost);
+        const openWalk = searchParams.get('openWalk');
+        const tabParam = searchParams.get('tab');
+        if (tabParam) {
+            setActiveTab(tabParam);
         }
-    }, [activePetObj?.is_lost, activePetObj?.id]);
-
-
-
-
-    // Yürüyüş canlı zamanlayıcı
-    const [walkElapsedSeconds, setWalkElapsedSeconds] = useState(0);
-    const walkTimerRef = useRef<NodeJS.Timeout | null>(null);
+        if (openWalk === 'true') {
+            setIsWalkQuickSheetOpen(true);
+        }
+    }, [searchParams]);
 
     useEffect(() => {
-        if (activeSession) {
-            // Başlangıç zamanından geçen süreyi hesapla
-            const startMs = new Date(activeSession.startTime || Date.now()).getTime();
-            setWalkElapsedSeconds(Math.floor((Date.now() - startMs) / 1000));
-            
-            walkTimerRef.current = setInterval(() => {
-                setWalkElapsedSeconds(Math.floor((Date.now() - startMs) / 1000));
-            }, 1000);
+        // Eğer URL'de lat ve lng parametreleri varsa, konum alıp haritayı oraya kaydırmayalım (race condition engelleme)
+        if (searchParams.get('lat') && searchParams.get('lng')) {
+            return;
+        }
+
+        if (typeof window !== 'undefined' && navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    setUserCoords([pos.coords.latitude, pos.coords.longitude]);
+                },
+                (err) => {
+                    console.log("Radar Geolocation error:", err);
+                    setUserCoords([40.9850, 29.0300]); // Fallback Kadikoy/Moda on land
+                }
+            );
+        }
+    }, [searchParams]);
+
+    useEffect(() => {
+        const loadSightings = async () => {
+            if (!selectedLostPet) {
+                setPetSightings([]);
+                return;
+            }
+            setIsLoadingSightings(true);
+            try {
+                const data = await apiService.getLostPetSightings(selectedLostPet.id);
+                setPetSightings(data || []);
+            } catch (err) {
+                console.error("Error loading sightings:", err);
+                setPetSightings([]);
+            } finally {
+                setIsLoadingSightings(false);
+            }
+        };
+        loadSightings();
+    }, [selectedLostPet]);
+
+    const handleSwipeFilter = (direction: 'left' | 'right') => {
+        let newIndex = activeFilterIndex;
+        if (direction === 'left') {
+            newIndex = (activeFilterIndex + 1) % IMAGE_FILTERS.length;
         } else {
-            if (walkTimerRef.current) clearInterval(walkTimerRef.current);
-            setWalkElapsedSeconds(0);
+            newIndex = (activeFilterIndex - 1 + IMAGE_FILTERS.length) % IMAGE_FILTERS.length;
         }
-        return () => { if (walkTimerRef.current) clearInterval(walkTimerRef.current); };
-    }, [activeSession?.id]);
-
-    // Maskot göz kırpma efekti (Blinking effect)
-    useEffect(() => {
-        const blinkInterval = setInterval(() => {
-            setIsBlinking(true);
-            setTimeout(() => {
-                setIsBlinking(false);
-            }, 180);
-        }, 3500 + Math.random() * 2500); // 3.5 - 6 saniyede bir göz kırpar
-        return () => clearInterval(blinkInterval);
-    }, []);
-
-    const formatWalkTime = (totalSeconds: number) => {
-        const h = Math.floor(totalSeconds / 3600);
-        const m = Math.floor((totalSeconds % 3600) / 60);
-        const s = totalSeconds % 60;
-        if (h > 0) return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-        return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        setActiveFilterIndex(newIndex);
+        setImageFilter(IMAGE_FILTERS[newIndex].filter);
+        setShowFilterName(true);
     };
 
-    const handleStartWalk = useCallback(async () => {
-        const session = await startWalk();
-        if (session) setToastMsg(`🐾 ${pet.name} ile yürüyüş başladı! GPS aktif.`);
-        else setToastMsg('⚠️ Yürüyüş başlatılamadı. Konuma izin verdiğinizden emin olun.');
-    }, [startWalk, pet.name]);
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX;
+    };
 
-    const handleEndWalk = useCallback(async () => {
-        const result = await endWalk('happy');
-        if (result) {
-            const distM = result.distance_meters || 0;
-            const distKm = (distM / 1000).toFixed(2);
-            const patiEarned = Math.round(distM * 0.05); // ~50 PATI/km
-            if (patiEarned > 0) {
-                // setWalletBalance(prev => prev + patiEarned);
-                addTransaction('gelir', 'Yürüyüş Ödülü 🐾', patiEarned);
-            }
-            setToastMsg(`🎉 Yürüyüş tamamlandı! ${distKm} KM • +${patiEarned} PATI kazanıldı 🔥`);
-        }
-    }, [endWalk, addTransaction]);
-
-
-
-    // Dynamic Stories Hook & States
-    const { storyGroups } = useStories();
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (touchStartX.current === null) return;
+        const touchEndX = e.changedTouches[0].clientX;
+        const diff = touchEndX - touchStartX.current;
+        if (diff > 50) handleSwipeFilter('right');
+        else if (diff < -50) handleSwipeFilter('left');
+        touchStartX.current = null;
+    };
     const [viewerStoryGroupIndex, setViewerStoryGroupIndex] = useState<number | null>(null);
     const [viewerStoryIndex, setViewerStoryIndex] = useState(0);
 
     useEffect(() => {
-        window.dispatchEvent(new CustomEvent('moffi-toggle-nav', { detail: viewerStoryGroupIndex === null && selectedAnn === null }));
-    }, [viewerStoryGroupIndex, selectedAnn]);
-    const [storyProgress, setStoryProgress] = useState(0);
+        window.dispatchEvent(new CustomEvent('moffi-toggle-nav', { detail: viewerStoryGroupIndex === null }));
+    }, [viewerStoryGroupIndex]);
+    
     const [isStoryPaused, setIsStoryPaused] = useState(false);
     const storyPressStartTime = useRef<number>(0);
+    const [postToDelete, setPostToDelete] = useState<number | null>(null);
+    const [editingPost, setEditingPost] = useState<{ id: number, desc: string, mood: string | null, media: string } | null>(null);
+    const [isReportAdModalOpen, setIsReportAdModalOpen] = useState(false);
+    const [reportingAdId, setReportingAdId] = useState<string | null>(null);
+    const [reportReason, setReportReason] = useState<string>('');
+    const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
-    const activeGroup = viewerStoryGroupIndex !== null ? storyGroups[viewerStoryGroupIndex] : null;
-    const activeStory = activeGroup ? activeGroup.stories[viewerStoryIndex] : null;
+    const generateAICaption = () => {
+        setIsGeneratingAI(true);
+        setTimeout(() => {
+            const templates: Record<string, string[]> = {
+                'Mutlu ✨': [
+                    "Bugün enerjimiz yerinde! 🐾",
+                    "Gülümsememizle dünyayı aydınlatıyoruz. ✨",
+                    "En mutlu anlar patilerle geçer. ❤️",
+                    "Mutluluk bir kuyruk sallaması kadar yakın! 🐕"
+                ],
+                'Uykulu 💤': [
+                    "Biraz kestirmenin kimseye zararı olmaz... 😴",
+                    "Rüyalar alemine yolculuk başlıyor. 🌙",
+                    "En sevdiğim aktivite: Uyumak! 💤",
+                    "Pazartesi modumuz tam olarak bu... 😴"
+                ],
+                'Enerjik ⚡': [
+                    "Beni kimse durduramaz! 🔥",
+                    "Koşmak, zıplamak, keşfetmek... 🐾",
+                    "Enerji tavan! ⚡",
+                    "Hadi oyna artık! Bekliyorum... 🎾"
+                ],
+                'Sabırsız 🦉': [
+                    "Mama saati ne zaman? 🍖",
+                    "Dışarı çıkmak için sabırsızlanıyoruz! 🐾",
+                    "Hala bekliyor muyuz? Cidden mi? 🦉"
+                ],
+                'Oyunbaz 🎾': [
+                    "Topu at, getiriyim! 🎾",
+                    "Oyun vakti geldi de geçiyor bile. 🐾",
+                    "Hadi biraz eğlenelim! ✨"
+                ],
+                'Yorgun 🔋': [
+                    "Pillerimiz bitti... 🔋",
+                    "Bugün çok koşturduk, dinlenme vakti. 💤",
+                    "Beni buraya bırakın, uyanınca gelirim. 😴"
+                ]
+            };
 
-    const handleCtaClick = () => {
-        if (!activeStory) return;
-        
-        const ctaVal = activeStory.ctaValue?.trim() || "";
-        const ctaType = activeStory.ctaType;
-        
-        // 1. If it is a coupon, copy to clipboard & show toast
-        if (ctaType === 'coupon') {
-            try {
-                navigator.clipboard.writeText(ctaVal);
-                setToastMsg(`🎟️ Kupon Kodu Kopyalandı: ${ctaVal}`);
-            } catch (e) {
-                setToastMsg(`Kupon: ${ctaVal}`);
-            }
-            closeStoryViewer();
-            return;
-        }
-        
-        // 2. If it is a map link
-        if (ctaType === 'map' || ctaVal.startsWith('map:')) {
-            const cleanCoords = ctaVal.replace('map:', '');
-            setToastMsg(`📍 Konum Haritada Gösteriliyor...`);
-            setShowLiveMap(true);
-            closeStoryViewer();
-            return;
-        }
-        
-        // 3. If it is an internal application route
-        if (ctaType === 'link' || ctaVal.startsWith('/')) {
-            router.push(ctaVal);
-            closeStoryViewer();
-            return;
-        }
+            const pool = uploadMood && templates[uploadMood] ? templates[uploadMood] : [
+                "Moffi ile anı biriktiriyoruz. 🐾",
+                "Günün en güzel anı. ✨",
+                "Patili dostumla hayat daha güzel. ❤️",
+                "Harika bir gün! 🐕",
+                "Moffi dünyasında sıradan bir an. 🌍"
+            ];
 
-        // 4. If it is an external URL link
-        if (ctaType === 'url' || ctaVal.startsWith('http://') || ctaVal.startsWith('https://')) {
-            window.open(ctaVal, '_blank', 'noopener,noreferrer');
-            closeStoryViewer();
-            return;
-        }
-
-        // 5. Fallback: If it's a general informational message (toast type with no url/path), open the detailed modal
-        setSelectedAnn(activeStory);
-        closeStoryViewer();
+            const randomCaption = pool[Math.floor(Math.random() * pool.length)];
+            setUploadCaption(randomCaption);
+            setIsGeneratingAI(false);
+            showToast("AI Başarılı! ✨", "Senin için harika bir açıklama buldum.", "success");
+        }, 800);
     };
+    
+    // VIDEO TRIMMER STATES
+    const [videoDuration, setVideoDuration] = useState(0);
+    const [videoTrimRange, setVideoTrimRange] = useState<[number, number]>([0, 10]);
+    const [videoCurrentTime, setVideoCurrentTime] = useState(0);
+    const [draggingHandle, setDraggingHandle] = useState<'start' | 'end' | 'window' | null>(null);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    
+    const trimmerRef = useRef<HTMLDivElement>(null);
+    const uploadAudioRef = useRef<HTMLAudioElement>(null);
+    const isDraggingRef = useRef<boolean>(false);
+    
+    // AUDIO SHARING STATES
+    const [audioFile, setAudioFile] = useState<File | null>(null);
+    const [audioURL, setAudioURL] = useState<string | null>(null);
+    const audioInputRef = useRef<HTMLInputElement>(null);
+
+    // Synchronize preview video and audio play/pause states
+    useEffect(() => {
+        const video = uploadVideoRef.current;
+        const audio = uploadAudioRef.current;
+        if (!video || !audio) return;
+
+        const handlePlay = () => {
+            audio.currentTime = Math.max(0, video.currentTime - videoTrimRange[0]);
+            audio.play().catch(() => {});
+        };
+        const handlePause = () => {
+            audio.pause();
+        };
+
+        video.addEventListener('play', handlePlay);
+        video.addEventListener('pause', handlePause);
+        
+        if (!video.paused) {
+            audio.play().catch(() => {});
+        } else {
+            audio.pause();
+        }
+
+        return () => {
+            video.removeEventListener('play', handlePlay);
+            video.removeEventListener('pause', handlePause);
+        };
+    }, [audioURL, videoTrimRange[0]]);
+    
+    // DERIVED STATES
+    const isAnyPetLost = useMemo(() => userPets.some(p => p.is_lost), [userPets]);
+    
+    // TOAST NOTIFICATIONS
+    const [toastMessage, setToastMessage] = useState<{ title: string; desc?: string; type: 'success' | 'error' | 'info' } | null>(null);
+    const showToast = (title: string, desc?: string, type: 'success' | 'error' | 'info' = 'info') => {
+        setToastMessage({ title, desc, type });
+        setTimeout(() => setToastMessage(null), 4000);
+    };
+
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // --- PROFESSIONAL MEDIA ENGINE (Compression & Preview) ---
+    const processVideo = async (file: File, startTime: number, duration: number): Promise<Blob> => {
+        return new Promise((resolve, reject) => {
+            const video = document.createElement('video');
+            video.src = URL.createObjectURL(file);
+            video.muted = false; // Must be false to extract audio track via Web Audio API
+            video.playsInline = true;
+            video.crossOrigin = "anonymous";
+            
+            let isResolvedOrRejected = false;
+            
+            const cleanup = () => {
+                if (!video.paused) video.pause();
+                video.removeAttribute('src');
+                video.load();
+            };
+
+            const safeReject = (err: any) => {
+                if (isResolvedOrRejected) return;
+                isResolvedOrRejected = true;
+                cleanup();
+                reject(err);
+            };
+
+            // Timeout to prevent hanging forever if video metadata/playback fails
+            const timeoutId = setTimeout(() => {
+                safeReject(new Error("Video işleme zaman aşımına uğradı. Orijinal dosya kullanılacak."));
+            }, 10000); 
+
+            video.onloadedmetadata = () => {
+                video.currentTime = startTime;
+            };
+            
+            video.onseeked = () => {
+                video.play().catch(err => {
+                    clearTimeout(timeoutId);
+                    safeReject(err);
+                });
+            };
+
+            video.onplaying = () => {
+                clearTimeout(timeoutId);
+                try {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    const scaleFactor = Math.min(1, 480 / video.videoWidth);
+                    canvas.width = video.videoWidth * scaleFactor;
+                    canvas.height = video.videoHeight * scaleFactor;
+                    
+                    const stream = canvas.captureStream(30); 
+                    
+                    // --- AUDIO EXTRACTION ENGINE ---
+                    // Canvas captureStream only captures video frames. We must extract the audio manually.
+                    try {
+                        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+                        if (AudioContextClass) {
+                            const audioCtx = new AudioContextClass();
+                            const source = audioCtx.createMediaElementSource(video);
+                            const dest = audioCtx.createMediaStreamDestination();
+                            
+                            // Connect source to destination stream (but NOT to speakers/audioCtx.destination)
+                            // This keeps the processing silent while preserving the audio track.
+                            source.connect(dest);
+                            
+                            const audioTrack = dest.stream.getAudioTracks()[0];
+                            if (audioTrack) {
+                                stream.addTrack(audioTrack);
+                            }
+                        }
+                    } catch (audioErr) {
+                        console.warn("Moffi Audio Engine: Ses izi alınamadı veya video sessiz.", audioErr);
+                    }
+
+                    const recorder = new MediaRecorder(stream, { 
+                        mimeType: 'video/webm;codecs=vp8',
+                        videoBitsPerSecond: 1200000 
+                    });
+                    
+                    const chunks: Blob[] = [];
+                    recorder.ondataavailable = (e) => chunks.push(e.data);
+                    
+                    recorder.onstop = () => {
+                        if (isResolvedOrRejected) return;
+                        isResolvedOrRejected = true;
+                        cleanup();
+                        resolve(new Blob(chunks, { type: 'video/webm' }));
+                    };
+                    
+                    recorder.start();
+                    
+                    const drawFrame = () => {
+                        if (isResolvedOrRejected) return;
+                        if (video.paused || video.ended || (video.currentTime >= startTime + duration)) {
+                            if (recorder.state === 'recording') recorder.stop();
+                            return;
+                        }
+                        ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        requestAnimationFrame(drawFrame);
+                    };
+                    drawFrame();
+
+                    // Hard limit safety (21s)
+                    setTimeout(() => {
+                        if (recorder.state === 'recording') recorder.stop();
+                    }, (duration + 1) * 1000);
+                } catch (err) {
+                    safeReject(err);
+                }
+            };
+
+            video.onerror = (e) => {
+                clearTimeout(timeoutId);
+                console.error("Video processing error:", e);
+                safeReject(new Error("Video işlenirken bir hata oluştu."));
+            };
+            
+            video.load();
+        });
+    };
+
+    const compressImage = async (file: File): Promise<File> => {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                                 const img = new window.Image();
+                img.src = event.target?.result as string;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 1200;
+                    const MAX_HEIGHT = 1600;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width *= MAX_HEIGHT / height;
+                            height = MAX_HEIGHT;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx?.drawImage(img, 0, 0, width, height);
+
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            const compressedFile = new File([blob], file.name, {
+                                type: 'image/jpeg',
+                                lastModified: Date.now(),
+                            });
+                            resolve(compressedFile);
+                        } else {
+                            resolve(file);
+                        }
+                    }, 'image/jpeg', 0.8);
+                };
+            };
+        });
+    };
+
+    const handleStoryClick = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = async (e: any) => {
+            const file = e.target.files[0];
+            if (file) {
+                setPendingStoryFile(file);
+                const reader = new FileReader();
+                reader.onloadend = () => setStoryPreview(reader.result as string);
+                reader.readAsDataURL(file);
+            }
+        };
+        input.click();
+    };
+
+    const confirmUploadStory = async () => {
+        if (!pendingStoryFile) return;
+        setIsUploadingStory(true);
+        try {
+            // --- PROFESSIONAL COMPRESSION ---
+            const compressed = await compressImage(pendingStoryFile);
+            const res = await uploadStory(compressed);
+            if (res.success) {
+                showToast("Harika!", "Hikayen başarıyla paylaşıldı.", "success");
+            } else {
+                showToast("Hata", `Hikaye yüklenemedi: ${res.error || "Bilinmeyen hata"}`, "error");
+            }
+            setStoryPreview(null);
+            setPendingStoryFile(null);
+        } catch (err) {
+            console.error("Story upload failed:", err);
+            showToast("Hata", "Sistem hatası oluştu.", "error");
+        } finally {
+            setIsUploadingStory(false);
+        }
+    };
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const sosInputRef = useRef<HTMLInputElement>(null);
+    const adoptionPhotoRef = useRef<HTMLInputElement>(null);
+    const coverInputRef = useRef<HTMLInputElement>(null);
+         const globalScrollRef = useRef<HTMLDivElement>(null);
+     const uploadScrollRef = useRef<HTMLDivElement>(null);
+     const scrollY = useMotionValue(0);
+    const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+    const longPressHubTimer = useRef<NodeJS.Timeout | null>(null);
+    const storyTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const feedRef = useRef<HTMLDivElement>(null);
+    const mapRef = useRef<HTMLDivElement>(null);
+    const radarRef = useRef<HTMLDivElement>(null);
+    const profileRef = useRef<HTMLDivElement>(null);
+    const footerRef = useRef<HTMLDivElement>(null);
+    const lastScrollY = useRef(0);
+    const lastInboxScroll = useRef(0);
+    
+    // Global Navigation & Hub Controller (Restored)
+    useEffect(() => {
+        const handleOpenPost = () => {
+            setIsUploadModalOpen(true);
+            setTimeout(() => {
+                cameraInputRef.current?.click();
+            }, 300);
+        };
+        const handleOpenSOS = () => {
+            // Toggle SOS view or state
+            window.dispatchEvent(new CustomEvent('open-sos-command'));
+        };
+
+        const handleOpenSpotlight = () => setIsSpotlightOpen(true);
+        const handleOpenDiary = () => setIsDiaryOpen(true);
+        const handleOpenAuraStudio = () => setIsStudioQuickSheetOpen(true);
+        const handleOpenMarket = () => setIsMarketQuickSheetOpen(true);
+        const handleOpenVet = () => setIsVetQuickSheetOpen(true);
+        const handleOpenWalk = () => setIsWalkQuickSheetOpen(true);
+        const handleOpenNotif = () => setIsNotificationsOpen(true);
+        const handleOpenAddLostPet = () => setIsLostAdModalOpen(true);
+        const handleOpenAddAdoptionPet = () => setIsAddAdoptionModalOpen(true);
+
+        window.addEventListener('open-add-post', handleOpenPost);
+        window.addEventListener('moffi-open-upload-modal', handleOpenPost);
+        window.addEventListener('open-sos-center', handleOpenSOS);
+        window.addEventListener('open-moffi-spotlight', handleOpenSpotlight);
+        window.addEventListener('open-moffi-diary', handleOpenDiary);
+        window.addEventListener('open-aura-studio', handleOpenAuraStudio);
+        window.addEventListener('open-market-sheet', handleOpenMarket);
+        window.addEventListener('open-vet-sheet', handleOpenVet);
+        window.addEventListener('open-walk-sheet', handleOpenWalk);
+        window.addEventListener('open-notification-drawer', handleOpenNotif);
+        window.addEventListener('open-add-lost-pet', handleOpenAddLostPet);
+        window.addEventListener('open-add-adoption-pet', handleOpenAddAdoptionPet);
+        
+        const handleChangeTab = (e: any) => {
+            setActiveTab(e.detail);
+        };
+        window.addEventListener('moffi-change-tab', handleChangeTab);
+
+        return () => {
+            window.removeEventListener('open-add-post', handleOpenPost);
+            window.removeEventListener('moffi-open-upload-modal', handleOpenPost);
+            window.removeEventListener('open-sos-center', handleOpenSOS);
+            window.removeEventListener('open-moffi-spotlight', handleOpenSpotlight);
+            window.removeEventListener('open-moffi-diary', handleOpenDiary);
+            window.removeEventListener('open-aura-studio', handleOpenAuraStudio);
+            window.removeEventListener('open-market-sheet', handleOpenMarket);
+            window.removeEventListener('open-vet-sheet', handleOpenVet);
+            window.removeEventListener('open-walk-sheet', handleOpenWalk);
+            window.removeEventListener('open-notification-drawer', handleOpenNotif);
+            window.removeEventListener('moffi-change-tab', handleChangeTab);
+            window.removeEventListener('open-add-lost-pet', handleOpenAddLostPet);
+            window.removeEventListener('open-add-adoption-pet', handleOpenAddAdoptionPet);
+        };
+    }, [router]);
+
+             useEffect(() => {
+        if (searchParams.get('openUpload') === 'true') {
+            setIsUploadModalOpen(true);
+            setTimeout(() => {
+                cameraInputRef.current?.click();
+            }, 300);
+        }
+    }, [searchParams]);
+
+    useEffect(() => {
+        if (activeTool && uploadScrollRef.current) {
+            setTimeout(() => {
+                const drawerElement = document.getElementById('upload-tool-drawer');
+                if (drawerElement) {
+                    drawerElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'nearest'
+                    });
+                } else {
+                    uploadScrollRef.current?.scrollTo({
+                        top: uploadScrollRef.current.scrollHeight,
+                        behavior: 'smooth'
+                    });
+                }
+            }, 150);
+        }
+    }, [activeTool]);
+
+     useEffect(() => {
+         if (activeTool && uploadScrollRef.current) {
+             setTimeout(() => {
+                 uploadScrollRef.current?.scrollTo({
+                     top: uploadScrollRef.current.scrollHeight,
+                     behavior: 'smooth'
+                 });
+             }, 100);
+         }
+     }, [activeTool]);
+
+    // Unified Header Scroll Logic (Works for all tabs)
+
+    
+    // Unified Scroll Handler (Main Container)
+    const handleMainScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const current = e.currentTarget.scrollTop;
+        scrollY.set(current); // Synchronize motion value for header animations
+        
+        // Navigation Hide/Show Logic (Global)
+        if (current > lastScrollY.current && current > 150) {
+            window.dispatchEvent(new CustomEvent('moffi-toggle-nav', { detail: false }));
+        } else if (current < lastScrollY.current - 10 || current < 80) {
+            window.dispatchEvent(new CustomEvent('moffi-toggle-nav', { detail: true }));
+        }
+        lastScrollY.current = current;
+    };
+
+
+
+    useEffect(() => {
+        const loadInitialData = async () => {
+            // Fetch everything independently so one slow request doesn't block others
+            fetchPosts();
+            fetchLostPets();
+            fetchAdoptionAds();
+            fetchNotifications();
+            fetchInbox();
+        };
+        loadInitialData();
+    }, []);
+
+    const fetchNotifications = async () => {
+        // Obsolete, handled by useRealtimeNotifications hook
+    };
+
+    // REAL-TIME GLOBAL SYNC (Professional Event-Driven Architecture)
+    useEffect(() => {
+        const handleCustomPostsSync = () => {
+            fetchPosts(true);
+        };
+        window.addEventListener('moffi_posts_changed', handleCustomPostsSync);
+
+        let channel: any = null;
+        if (isSupabaseEnabled) {
+            channel = supabase
+                .channel('global-feed-events')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => {
+                    fetchPosts(true);
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'likes' }, () => {
+                    fetchPosts(true);
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => {
+                    fetchPosts(true);
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
+                    fetchNotifications();
+                })
+                .subscribe();
+        }
+
+        return () => {
+            window.removeEventListener('moffi_posts_changed', handleCustomPostsSync);
+            if (channel) {
+                supabase.removeChannel(channel);
+            }
+        };
+    }, [user, activeTab]);
+
+    // HANDLE DEEP LINKING (TABS & CHAT & FOCUS PET)
+    useEffect(() => {
+        const chatWithId = searchParams.get('chat');
+        if (chatWithId) {
+            setActiveChatUserId(chatWithId);
+            setInboxTab('chats');
+            setIsInboxOpen(true);
+        }
+
+        const tab = searchParams.get('tab');
+        if (tab === 'profile') {
+            setActiveTab('profile');
+        } else if (tab === 'feed' || tab === 'radar') {
+            setActiveTab(tab as any);
+        }
+
+        const mode = searchParams.get('mode');
+        if (mode === 'lost' || mode === 'adopt') {
+            setRadarTabMode(mode as any);
+        }
+
+        const latParam = searchParams.get('lat');
+        const lngParam = searchParams.get('lng');
+        if (latParam && lngParam) {
+            setUserCoords([parseFloat(latParam), parseFloat(lngParam)]);
+            setRadarViewMode('map');
+        }
+
+        const petId = searchParams.get('pet');
+        if (petId && lostPets.length > 0) {
+            const foundPet = lostPets.find(p => p.id === petId);
+            if (foundPet) {
+                showToast(
+                    "📍 Konum İşaretlendi",
+                    `${foundPet.pet_name} için kayıp konumu haritada gösteriliyor. Detaylar için haritadaki fotoğraflı patili işarete tıkla! 🐾`,
+                    "info"
+                );
+            }
+        }
+    }, [searchParams, lostPets]);
+    
+    // Keyboard Shortcut for AI Spotlight (Cmd+K / Ctrl+K)
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                setIsSpotlightOpen(prev => !prev);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+
+    const fetchPosts = async (isBackground = false) => {
+        if (!isBackground) {
+            setIsLoadingPosts(true);
+        }
+        try {
+            const data = await apiService.getFeedContent();
+            
+            // 1. Filter out Blocked Users
+            const blockedIds = (user?.settings?.moderation?.blockedUsers || []).map((u: any) => u.id);
+            const filteredData = data.filter((post: any) => {
+                const authorId = post.user_id || post.userId || post.authorId || post.owner_id || post.user?.id;
+                return !blockedIds.includes(authorId);
+            });
+
+            // 2. Apply initial sorting
+            const sortType = user?.settings?.feed?.defaultSort || 'new';
+            const sortedData = sortPostsLocally(filteredData, sortType);
+            
+            setPosts(sortedData);
+        } catch (err) {
+            console.error("Posts fetch error:", err);
+            // DO NOT fall back to MOCK_POSTS — show empty feed if Supabase fails
+            // This prevents hardcoded dog photos from appearing
+        } finally {
+            if (!isBackground) {
+                setIsLoadingPosts(false);
+            }
+        }
+    };
+
+    const filteredPosts = useMemo(() => {
+        if (!searchQuery) return posts;
+        return posts.filter(post => 
+            post.desc?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            post.author_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            post.category?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [posts, searchQuery]);
+
+
+    const sortPostsLocally = (data: any[], sortType: string) => {
+        const sorted = [...data];
+        if (sortType === 'popular') {
+            return sorted.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+        } else {
+            // Newest first: Sort by ID descending (Date.now proxy) or index
+            return sorted.sort((a, b) => {
+                const idA = typeof a.id === 'string' ? (parseInt(a.id.split('-').pop() || '0') || 0) : a.id;
+                const idB = typeof b.id === 'string' ? (parseInt(b.id.split('-').pop() || '0') || 0) : b.id;
+                return idB - idA;
+            });
+        }
+    };
+
+    // Reactive Re-sorting when preference changes
+    useEffect(() => {
+        if (posts.length > 0) {
+            const sortType = user?.settings?.feed?.defaultSort || 'new';
+            const sorted = sortPostsLocally(posts, sortType);
+            
+            // Only update if order actually changed to avoid infinite loop
+            const orderChanged = sorted.some((p, i) => p.id !== posts[i].id);
+            if (orderChanged) {
+                setPosts(sorted);
+                
+                // Pure Apple UX: Scroll to top when sorting changes
+                if (globalScrollRef.current) {
+                    globalScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }
+        }
+    }, [user?.settings?.feed?.defaultSort]);
+
+
+    const fetchAdoptionAds = async () => {
+        setIsLoadingAdoptions(true);
+        try {
+            const data = await apiService.getAdoptions();
+            setAdoptionAds(data);
+        } catch (err) {
+            console.error("Sahiplendirme ilanları çekilirken hata:", err);
+            setAdoptionAds(MOCK_ADOPTIONS);
+        } finally {
+            setIsLoadingAdoptions(false);
+        }
+    };
+
+
+
+
+
+
+    // Premium Header Transformations (Apple-Style) - Defined after activeTab
+    const headerHeight = [165, 108];
+
+    const headerHeightTransform = useTransform(scrollY, [0, 80], headerHeight);
+    
+    const headerPadding = useTransform(scrollY, [0, 80], [
+        "48px 24px 16px", 
+        "8px 24px 8px"
+    ]);
+    const logoScale = useTransform(scrollY, [0, 80], [1, 0.8]);
+    const headerBgOpacity = useTransform(scrollY, [0, 60], [0, 0.95]);
+    const headerBlur = useTransform(scrollY, [0, 60], [0, 50]);
+    const headerBorderOpacity = useTransform(scrollY, [0, 60], [0, 0.15]);
+    const headerOpacity = useTransform(scrollY, [0, 80], [1, 1]); // Keeping it 1 for now as per user request to move grid to top
+    const logoY = useTransform(scrollY, [0, 80], [0, -4]); 
+    const iconScale = useTransform(scrollY, [0, 80], [1, 0.9]);
+    const headerBlurTransform = useTransform(headerBlur, (b) => `blur(${b}px)`);
+
+    // Reset scroll when switching tabs for a fresh start
+    useEffect(() => {
+        if (globalScrollRef.current) {
+            globalScrollRef.current.scrollTop = 0;
+        }
+    }, [activeTab]);
+
+    // ADOPTION APPLICATION STATES
+
+
+
+
+    // INBOX & SOS DATA STATES (Consolidated at top level)
+
+
+
+    
+    
+    
+
+
+    
+
+
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    useEffect(() => {
+        if (isInboxOpen) {
+            scrollToBottom();
+        }
+    }, [isInboxOpen, inboxMessages]);
+
+    // TOAST NOTIFICATIONS
+
+
+    // SETTINGS / KVKK STATES
+
+
+
+
+
+
+
+    const MOOD_OPTIONS = ["Mutlu ✨", "Uykulu 💤", "Enerjik ⚡", "Sabırsız 🥶", "Oyunbaz 🎾", "Acıkmış 🦴", "Havalı 😎"];
+
+    // STORY VIEWER STATES
+
 
     const closeStoryViewer = () => {
         setViewerStoryGroupIndex(null);
         setViewerStoryIndex(0);
-        setStoryProgress(0);
+        
     };
 
     const nextStory = () => {
-        setStoryProgress(0);
+        
         if (viewerStoryGroupIndex === null) return;
         const group = storyGroups[viewerStoryGroupIndex];
         if (viewerStoryIndex < group.stories.length - 1) {
             setViewerStoryIndex(prev => prev + 1);
+        } else if (viewerStoryGroupIndex < storyGroups.length - 1) {
+            setViewerStoryGroupIndex(prev => prev! + 1);
+            setViewerStoryIndex(0);
         } else {
             closeStoryViewer();
         }
     };
 
     const prevStory = () => {
-        setStoryProgress(0);
+        
         if (viewerStoryGroupIndex === null) return;
         if (viewerStoryIndex > 0) {
             setViewerStoryIndex(prev => prev - 1);
+        } else if (viewerStoryGroupIndex > 0) {
+            setViewerStoryGroupIndex(prev => prev! - 1);
+            setViewerStoryIndex(storyGroups[viewerStoryGroupIndex - 1].stories.length - 1);
         } else {
             closeStoryViewer();
         }
@@ -1419,2782 +1206,3859 @@ export default function LegendaryLightDashboard() {
 
     useEffect(() => {
         if (viewerStoryGroupIndex === null) return;
-        if (isStoryPaused) return;
-
-        const intervalTime = 50;
-        const timer = setInterval(() => {
-            setStoryProgress(prev => {
-                if (prev >= 100) {
-                    clearInterval(timer);
-                    nextStory();
-                    return 0;
-                }
-                return prev + 1;
-            });
-        }, intervalTime);
-
-        return () => {
-            clearInterval(timer);
-        };
-    }, [viewerStoryGroupIndex, viewerStoryIndex, isStoryPaused, storyGroups]);
+        // Preload next story image for seamless transition
+        const group = storyGroups[viewerStoryGroupIndex];
+        if (group && viewerStoryIndex + 1 < group.stories.length) {
+            const img = new window.Image();
+            img.src = group.stories[viewerStoryIndex + 1].media_url;
+        } else if (viewerStoryGroupIndex + 1 < storyGroups.length) {
+            const nextGroup = storyGroups[viewerStoryGroupIndex + 1];
+            if (nextGroup && nextGroup.stories.length > 0) {
+                const img = new window.Image();
+                img.src = nextGroup.stories[0].media_url;
+            }
+        }
+    }, [viewerStoryGroupIndex, viewerStoryIndex, storyGroups]);
 
     const formatTimeAgo = (dateStr?: string) => {
-        if (!dateStr) return "şimdi";
+        if (!dateStr) return "Şimdi";
         const diffInSeconds = Math.floor((new Date().getTime() - new Date(dateStr).getTime()) / 1000);
         if (diffInSeconds < 60) return `${Math.max(0, diffInSeconds)}s`;
         const diffInMinutes = Math.floor(diffInSeconds / 60);
         if (diffInMinutes < 60) return `${diffInMinutes}d`;
         const diffInHours = Math.floor(diffInMinutes / 60);
-        if (diffInHours < 24) return `${diffInHours}sa`;
-        return `${Math.floor(diffInHours / 24)}g`;
+        if (diffInHours < 24) return `${diffInHours}s`;
+        const diffInDays = Math.floor(diffInHours / 24);
+        return `${diffInDays}g`;
+    };
+
+    const cameraInputRef = useRef<HTMLInputElement>(null);
+
+    const toggleLike = async (id: string) => {
+        setPosts(prev => prev.map(post => {
+            if (post.id === id) {
+                const newIsLiked = !post.isLiked;
+                return {
+                    ...post,
+                    isLiked: newIsLiked,
+                    likes: newIsLiked ? (post.likes + 1) : Math.max(0, post.likes - 1)
+                };
+            }
+            return post;
+        }));
+
+        try {
+            await apiService.reactToPost(id, '❤️');
+            window.dispatchEvent(new Event('moffi_posts_changed'));
+        } catch (err) {
+            console.error("Beğeni hatası:", err);
+            fetchPosts(); 
+        }
+    };
+
+    const addComment = async (postId: string, text: string) => {
+        if (!text.trim()) return;
+        
+        // Optimistic UI Update - DB write is handled directly by useRealtimeComments hook
+        setPosts(prev => prev.map(p => {
+            if (p.id === postId) {
+                return { ...p, comments: (Number(p.comments) || 0) + 1 };
+            }
+            return p;
+        }));
+    };
+
+    const toggleCommentLike = (postId: number, commentId: number) => {
+        setPosts(prev => prev.map(p => {
+            if (p.id !== postId) return p;
+
+            const updateCommentLikes = (comments: any[]): any[] => {
+                return comments.map(c => {
+                    if (c.id === commentId) {
+                        return {
+                            ...c,
+                            isLiked: !c.isLiked,
+                            likes: c.isLiked ? c.likes - 1 : c.likes + 1
+                        };
+                    }
+                    if (c.replies && c.replies.length > 0) {
+                        return { ...c, replies: updateCommentLikes(c.replies) };
+                    }
+                    return c;
+                });
+            };
+
+            return { ...p, commentsList: updateCommentLikes(p.commentsList || []) };
+        }));
+    };
+
+    const addCommentReply = (postId: number, parentCommentId: number, text: string) => {
+        if (!text.trim()) return;
+        setPosts(prev => prev.map(p => {
+            if (p.id !== postId) return p;
+
+            const newReply = {
+                id: Date.now(),
+                author: `@${user?.username || 'moffi_user'}`,
+                avatar: user?.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300",
+                text: text,
+                time: "Şimdi",
+                likes: 0,
+                isLiked: false,
+                replies: []
+            };
+
+            const updateCommentReplies = (comments: any[]): any[] => {
+                return comments.map(c => {
+                    if (c.id === parentCommentId) {
+                        return { 
+                            ...c, 
+                            replies: [...(c.replies || []), { ...newReply, isReplyTo: c.author }] 
+                        };
+                    }
+                    if (c.replies && c.replies.length > 0) {
+                        return { ...c, replies: updateCommentReplies(c.replies) };
+                    }
+                    return c;
+                });
+            };
+
+            return { ...p, commentsList: updateCommentReplies(p.commentsList || []) };
+        }));
+    };
+
+    const deleteComment = (postId: number, commentId: number) => {
+        setPosts(prev => prev.map(p => {
+            if (p.id !== postId) return p;
+
+            const removeComment = (comments: any[]): any[] => {
+                return comments
+                    .filter(c => c.id !== commentId)
+                    .map(c => ({
+                        ...c,
+                        replies: c.replies ? removeComment(c.replies) : []
+                    }));
+            };
+
+            return { 
+                ...p, 
+                comments: p.comments - 1,
+                commentsList: removeComment(p.commentsList || []) 
+            };
+        }));
+        showToast("Yorum Silindi", "Yorum ve yanıtları kaldırıldı.", "info");
+    };
+
+    const editComment = (postId: number, commentId: number, text: string) => {
+        setPosts(prev => prev.map(p => {
+            if (p.id !== postId) return p;
+
+            const updateCommentText = (comments: any[]): any[] => {
+                return comments.map(c => {
+                    if (c.id === commentId) {
+                        return { ...c, text };
+                    }
+                    if (c.replies && c.replies.length > 0) {
+                        return { ...c, replies: updateCommentText(c.replies) };
+                    }
+                    return c;
+                });
+            };
+
+            return { ...p, commentsList: updateCommentText(p.commentsList || []) };
+        }));
+        showToast("Yorum Güncellendi", "Değişiklikler kaydedildi.", "success");
+    };
+
+    const reportComment = (postId: number, commentId: number) => {
+        showToast("Bildirim Alındı", "Yorum incelemeye alındı. Teşekkürler!", "info");
     };
 
 
 
-    useEffect(() => {
-        if (toastMsg) {
-            const timer = setTimeout(() => {
-                setToastMsg(null);
-            }, 4000);
-            return () => clearTimeout(timer);
+    const deletePost = async () => {
+        if (!postToDelete) return;
+        try {
+            await apiService.deletePost(postToDelete);
+            setPosts(prev => prev.filter(p => p.id !== postToDelete));
+            setPostToDelete(null);
+            showToast("Gönderi Silindi", "Gönderiniz başarıyla kaldırıldı.", "success");
+        } catch (err: any) {
+            console.error(err);
+            showToast("Hata", "Gönderi silinemedi.", "error");
         }
-    }, [toastMsg]);
+    };
 
-    if (isPetLoading) {
-        return (
-            <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
-                <div className="relative w-16 h-16 mb-4 flex items-center justify-center">
-                    <div className="absolute inset-0 rounded-full border-4 border-green-100 animate-pulse" />
-                    <div className="absolute inset-0 rounded-full border-4 border-t-[#527958] animate-spin" />
-                    <span className="text-xl">🐾</span>
-                </div>
-                <h3 className="text-sm font-black text-gray-805 animate-pulse">Moffi Dünyası Yükleniyor...</h3>
-                <p className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold mt-1">Evcil hayvan verileri güvenli şekilde çekiliyor</p>
-            </div>
-        );
-    }
+    const saveEditPost = async () => {
+        if (!editingPost) return;
+        setIsPublishing(true);
+        try {
+            await apiService.updatePost(editingPost.id, {
+                desc: editingPost.desc,
+                                 mood: editingPost.mood || undefined
+            });
+            setPosts(prev => prev.map(p => p.id === editingPost.id ? { ...p, desc: editingPost.desc, mood: editingPost.mood } : p));
+            setEditingPost(null);
+            showToast("Güncellendi", "Değişiklikler kaydedildi.", "success");
+        } catch (err: any) {
+            console.error(err);
+            showToast("Hata", "Gönderi güncellenemedi.", "error");
+        } finally {
+            setIsPublishing(false);
+        }
+    };
+
+    const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        
+        const MAX_AUDIO_SIZE = 10 * 1024 * 1024; // 10MB
+        if (file.size > MAX_AUDIO_SIZE) {
+            showToast("Ses Dosyası Çok Büyük", "Lütfen 10MB'dan daha küçük bir ses dosyası seçin. 🎵", "error");
+            if (audioInputRef.current) audioInputRef.current.value = '';
+            return;
+        }
+
+        setAudioFile(file);
+        setAudioURL(URL.createObjectURL(file));
+        showToast("Ses Eklendi 🎵", `${file.name} başarıyla eklendi.`, "success");
+        if (audioInputRef.current) audioInputRef.current.value = '';
+    };
+
+    const handleTrimmerPointerDown = (e: React.PointerEvent<HTMLDivElement>, handle: 'start' | 'end' | 'window') => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        isDraggingRef.current = true;
+        setDraggingHandle(handle);
+        
+        if (uploadVideoRef.current) {
+            uploadVideoRef.current.pause();
+        }
+        
+        let lastClientX = e.clientX;
+        let latestStart = videoTrimRange[0];
+        
+        const handlePointerMove = (moveEvent: PointerEvent) => {
+            if (!trimmerRef.current || videoDuration <= 0) return;
+            const rect = trimmerRef.current.getBoundingClientRect();
+            const deltaX = moveEvent.clientX - lastClientX;
+            const deltaSeconds = (deltaX / rect.width) * videoDuration;
+            
+            lastClientX = moveEvent.clientX;
+            
+            setVideoTrimRange((prev) => {
+                const [start, end] = prev;
+                const rangeDuration = end - start;
+                
+                if (handle === 'start') {
+                    const newStart = Math.max(0, Math.min(start + deltaSeconds, end - 0.5));
+                    if (end - newStart > 10) {
+                        latestStart = end - 10;
+                        if (uploadVideoRef.current) uploadVideoRef.current.currentTime = latestStart;
+                        return [latestStart, end];
+                    }
+                    latestStart = newStart;
+                    if (uploadVideoRef.current) uploadVideoRef.current.currentTime = newStart;
+                    return [newStart, end];
+                } else if (handle === 'end') {
+                    const newEnd = Math.max(start + 0.5, Math.min(end + deltaSeconds, videoDuration));
+                    if (newEnd - start > 10) {
+                        latestStart = start;
+                        if (uploadVideoRef.current) uploadVideoRef.current.currentTime = start + 10;
+                        return [start, start + 10];
+                    }
+                    latestStart = start;
+                    if (uploadVideoRef.current) uploadVideoRef.current.currentTime = newEnd;
+                    return [start, newEnd];
+                } else {
+                    let newStart = start + deltaSeconds;
+                    let newEnd = end + deltaSeconds;
+                    
+                    if (newStart < 0) {
+                        newStart = 0;
+                        newEnd = rangeDuration;
+                    } else if (newEnd > videoDuration) {
+                        newEnd = videoDuration;
+                        newStart = videoDuration - rangeDuration;
+                    }
+                    latestStart = newStart;
+                    if (uploadVideoRef.current) {
+                        uploadVideoRef.current.currentTime = newStart;
+                    }
+                    return [newStart, newEnd];
+                }
+            });
+        };
+        
+        const handlePointerUp = () => {
+            isDraggingRef.current = false;
+            setDraggingHandle(null);
+            
+            window.removeEventListener('pointermove', handlePointerMove);
+            window.removeEventListener('pointerup', handlePointerUp);
+            
+            if (uploadVideoRef.current) {
+                uploadVideoRef.current.currentTime = latestStart;
+                uploadVideoRef.current.play().catch(() => {});
+            }
+        };
+        
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerUp);
+    };
+
+    const handleVideoTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+        if (isDraggingRef.current) return;
+        
+        const video = e.currentTarget;
+        const start = videoTrimRange[0];
+        const end = videoTrimRange[1];
+        setVideoCurrentTime(video.currentTime);
+        
+        if (video.currentTime < start || video.currentTime >= end) {
+            video.currentTime = start;
+            if (uploadAudioRef.current) {
+                uploadAudioRef.current.currentTime = 0;
+                uploadAudioRef.current.play().catch(() => {});
+            }
+        } else {
+            if (uploadAudioRef.current) {
+                const expectedAudioTime = video.currentTime - start;
+                if (Math.abs(uploadAudioRef.current.currentTime - expectedAudioTime) > 0.15) {
+                    uploadAudioRef.current.currentTime = expectedAudioTime;
+                }
+            }
+        }
+    };
+
+    const handleCameraUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // --- GLOBAL STANDARDS CHECK ---
+        const MAX_FILE_SIZE = 40 * 1024 * 1024; // 40MB
+        const MAX_VIDEO_DURATION = 10; // 10 Seconds Standard
+
+        if (file.size > MAX_FILE_SIZE) {
+            showToast("Dosya Çok Büyük", "Lütfen 40MB'dan daha küçük bir video/resim seçin. 📏", "error");
+            if (cameraInputRef.current) cameraInputRef.current.value = '';
+            return;
+        }
+
+        if (file.type.startsWith('video/')) {
+            const video = document.createElement('video');
+            video.preload = 'metadata';
+            video.onloadedmetadata = () => {
+                window.URL.revokeObjectURL(video.src);
+                setVideoDuration(video.duration);
+                
+                if (video.duration > MAX_VIDEO_DURATION) {
+                    // Long video: Don't block, just set initial trim
+                    setVideoTrimRange([0, 10]);
+                    showToast("Video Ayarlama", "Videonuz 10 saniyeden uzun. En iyi kısmını seçebilirsiniz. ✨", "info");
+                } else {
+                    setVideoTrimRange([0, video.duration]);
+                }
+                
+                setSelectedFile(file);
+                setUploadImageURL(URL.createObjectURL(file));
+                setIsUploadModalOpen(true);
+            };
+            video.src = URL.createObjectURL(file);
+        } else {
+            setSelectedFile(file);
+            setUploadImageURL(URL.createObjectURL(file));
+            setIsUploadModalOpen(true);
+        }
+        
+        if (cameraInputRef.current) cameraInputRef.current.value = '';
+    };
+
+    const publishPost = async () => {
+        if (!uploadImageURL || !selectedFile) return;
+        if (!user) {
+            showToast("Giriş Gerekli", "Paylaşım yapmak için giriş yapmalısınız.", "error");
+            window.dispatchEvent(new CustomEvent('open-auth-modal'));
+            return;
+        }
+
+        if (isSchedulingMode) {
+            if (!scheduledDate) {
+                showToast("Tarih Seçilmedi 📅", "Lütfen paylaşım zamanı için geçerli bir tarih ve saat seçin kral!", "info");
+                return;
+            }
+            const selectedTime = new Date(scheduledDate).getTime();
+            const nowTime = new Date().getTime();
+            if (selectedTime <= nowTime) {
+                showToast("Geçersiz Tarih 📅", "Paylaşım zamanı şu andan ileri bir tarih olmalıdır kral!", "info");
+                return;
+            }
+        }
+
+        setIsPublishing(true);
+        setUploadProgress(0);
+        try {
+            let fileToUpload: any = selectedFile;
+            
+            if (selectedFile.type.startsWith('image/')) {
+                fileToUpload = await compressImage(selectedFile);
+            } else if (selectedFile.type.startsWith('video/')) {
+                // Show "Processing" state
+                showToast("Video Hazırlanıyor...", "Seçtiğiniz 10 saniyelik kısım işleniyor ve optimize ediliyor. ✨", "info");
+                
+                try {
+                    const trimmedVideoBlob = await processVideo(
+                        selectedFile, 
+                        videoTrimRange[0], 
+                        Math.min(10, videoTrimRange[1] - videoTrimRange[0])
+                    );
+                    
+                    fileToUpload = new File([trimmedVideoBlob], "trimmed_video.webm", { type: 'video/webm' });
+                    
+                    // Since we already trimmed it physically, let's reset metadata to the full length of the new file
+                    // But we keep the original intent for the DB check
+                } catch (err) {
+                    console.error("Video processing failed, falling back to original:", err);
+                    showToast("Hata", "Video işlenemedi, orijinal dosya yükleniyor.", "error");
+                    // Fallback to original file
+                }
+            }
+            
+            // 1. Upload to Storage
+            const publicUrl = await apiService.uploadMedia(fileToUpload, 'posts', (p) => {
+                setUploadProgress(p);
+            });
+            if (!publicUrl) throw new Error("Dosya sunucuya yüklenemedi.");
+            
+            // 1.5 Upload Audio if exists
+            let audioPublicUrl = null;
+            if (audioFile) {
+                audioPublicUrl = await apiService.uploadMedia(audioFile, 'sounds');
+            }
+
+            // 2. Add Post to DB
+            const isVideo = selectedFile.type.startsWith('video/');
+            const wasProcessed = fileToUpload.name === "trimmed_video.webm";
+
+            const newPostResult = await apiService.addPost({
+                media: publicUrl,
+                caption: uploadCaption,
+                mood: uploadMood || undefined,
+                is_video: isVideo,
+                audio_url: audioPublicUrl || undefined,
+                tagged_pets: taggedPetIds,
+                scheduled_at: isSchedulingMode && scheduledDate ? new Date(scheduledDate).toISOString() : null,
+                status: isSchedulingMode ? 'scheduled' : 'published',
+                trim_start: isVideo ? (wasProcessed ? 0 : videoTrimRange[0]) : undefined,
+                trim_end: isVideo ? (wasProcessed ? (videoTrimRange[1] - videoTrimRange[0]) : videoTrimRange[1]) : undefined
+            });
+
+            // 3. OPTIMISTIC UPDATE / UI Notification
+            if (newPostResult.status !== 'scheduled') {
+                setPosts(prev => [newPostResult, ...prev]);
+                showToast("Paylaşıldı", "Yeni gönderiniz yayında! ✨", "success");
+            } else {
+                showToast("Zamanlandı 📅", "Gönderiniz belirtilen tarih ve saatte otomatik olarak yayınlanacaktır.", "success");
+            }
+
+            // 4. Clean up
+            setIsUploadModalOpen(false);
+            setUploadImageURL(null);
+            setSelectedFile(null);
+            setAudioFile(null);
+            setAudioURL(null);
+            setUploadCaption('');
+            setUploadMood(null);
+            setTaggedPetIds([]);
+            setBrightness(100);
+            setContrast(100);
+            setSaturation(100);
+            setScheduledDate(null);
+            setIsSchedulingMode(false);
+            setActiveTool(null);
+            setUploadLocationEnabled(false);
+            setActiveTab('feed');
+
+            // 5. Background sync
+            fetchPosts();
+        } catch (error: any) {
+            console.error("Post upload error:", error);
+            const errorMsg = error?.message || "Sunucuyla bağlantı kurulamadı veya bir hata oluştu.";
+            showToast("Hata", `Paylaşım yapılamadı: ${errorMsg}`, "error");
+        } finally {
+            setIsPublishing(false);
+        }
+    };
+
+    const handleSosImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (files) {
+            const newPhotos = Array.from(files).map(file => ({
+                file,
+                preview: URL.createObjectURL(file)
+            }));
+            setLostPetPhotos(prev => [...prev, ...newPhotos]);
+            if (sosInputRef.current) sosInputRef.current.value = '';
+        }
+    };
+
+    const submitSos = async () => {
+        if (!lostPetName || !lostPetLocation) {
+            showToast("Eksik Bilgi", "Lütfen isim ve son görüldüğü yer alanlarını doldurun!", "error");
+            return;
+        }
+        if (!user) {
+            showToast("Giriş Gerekli", "Kayıp ilanı verebilmek için üye girişi yapmalısınız!", "error");
+            window.dispatchEvent(new CustomEvent('open-auth-modal'));
+            return;
+        }
+
+        setIsSubmittingSOS(true);
+        try {
+            const photoUrls: string[] = [];
+            // 1. Upload Images using apiService (Mockable)
+            for (const photo of lostPetPhotos) {
+                const publicUrl = await apiService.uploadMedia(photo.file, 'posts');
+                if (publicUrl) photoUrls.push(publicUrl);
+            }
+
+            // 2. Insert Record via API
+            const newAlert = await apiService.addLostPet({
+                name: lostPetName,
+                type: lostPetType,
+                img: photoUrls[0] || undefined,
+                images: photoUrls,
+                location: lostPetLocation,
+                description: lostPetDesc,
+                latitude: newLostPetCoords[0],
+                longitude: newLostPetCoords[1]
+            });
+
+            setSosAlerts(prev => [newAlert, ...prev]);
+
+            showToast("GÜÇLÜ SİNYAL GÖNDERİLDİ!", "Acil Durum İlanınız 5km çapındaki herkese ulaştı.", "success");
+
+            setIsLostAdModalOpen(false);
+            setLostPetName("");
+            setLostPetBreed("");
+            setLostPetLocation("");
+            setLostPetDesc("");
+            setLostPetPhotos([]);
+
+        } catch (error: any) {
+            console.error("SOS submission error:", error);
+            showToast("Hata", "İlan gönderilirken hata oluştu.", "error");
+        } finally {
+            setIsSubmittingSOS(false);
+        }
+    };
+
+    const handleDeleteLostPet = async (petId: string) => {
+        if (!window.confirm("Kayıp ilanını sistemden kaldırmak/silmek istediğinize emin misiniz?")) return;
+        try {
+            if (isSupabaseEnabled) {
+                await apiService.deleteLostPet(petId);
+            }
+            setSosAlerts(prev => prev.filter(p => p.id !== petId));
+            showToast("İlan Kaldırıldı", "İlanınız başarıyla sistemden kaldırıldı.", "success");
+        } catch (err: any) {
+            console.error("Failed to delete lost pet:", err);
+            showToast("Hata", "İlan silinemedi.", "error");
+        }
+    };
+
+    // Logic for adoption posts
+
+    const handleAdoptionPost = async () => {
+        if (!user) {
+            window.dispatchEvent(new CustomEvent('open-auth-modal'));
+            return;
+        }
+
+        if (!adoptionPetName || !adoptionPetBreed || adoptionPetPhotos.length === 0) {
+            showToast('Eksik Bilgi', 'Lütfen isim, tür ve en az bir fotoğraf ekleyin.', 'error');
+            return;
+        }
+
+        setIsSubmittingAdoption(true);
+        showToast('Yükleniyor...', 'Fotoğraflar işleniyor ve Moffi AI denetimi başlatılıyor...', 'info');
+        try {
+            const photoUrls: string[] = [];
+            // 1. Upload Photos using apiService (Mockable)
+            for (const photo of adoptionPetPhotos) {
+                const publicUrl = await apiService.uploadMedia(photo.file, 'posts');
+                if (publicUrl) photoUrls.push(publicUrl);
+            }
+
+            // 2. Add via API
+            const newAd = await apiService.addAdoption({
+                name: adoptionPetName,
+                type: adoptionPetType,
+                description: adoptionPetDesc,
+                img: photoUrls[0] || undefined,
+                images: photoUrls,
+                breed: adoptionPetBreed,
+                age: adoptionPetAge,
+                owner: user.user_metadata?.username || user.email?.split('@')[0] || 'Moffi Üyesi'
+            });
+
+            setAdoptionAds(prev => [newAd, ...prev]);
+
+            // Simulation: Artificial delay for "AI Moderation"
+            setTimeout(() => {
+                showToast('✅ İlan Yayınlandı!', 'Moffi AI denetiminden geçti. İlanınız görünmeye başladı.', 'success');
+            }, 1000);
+
+            // Reset form
+            setIsAddAdoptionModalOpen(false);
+            setAdoptionPetName("");
+            setAdoptionPetBreed("");
+            setAdoptionPetAge("");
+            setAdoptionPetDesc("");
+            setAdoptionPetPhotos([]);
+            setAdoptionPetType("cat");
+
+        } catch (err: any) {
+            showToast('Hata', "İlan oluşturulamadı.", 'error');
+        } finally {
+            setIsSubmittingAdoption(false);
+        }
+    };
+
+    const handleDeleteAdoptionAd = async (adId: string) => {
+        if (!confirm('Bu ilanı kaldırmak istediğinizden emin misiniz?')) return;
+        try {
+            setAdoptionAds(prev => prev.filter(ad => ad.id !== adId));
+            showToast('İlan Kaldırıldı', 'Sahiplendirme ilanınız silindi.', 'success');
+        } catch (err: any) {
+            showToast('Hata', "İlan silinemedi.", 'error');
+        }
+    };
+
+
+
+    const handleReportAdoption = async () => {
+        if (!reportingAdId || !reportReason) return;
+        setIsSubmittingReport(true);
+        try {
+            await fetch('/api/adoption/report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    adId: reportingAdId,
+                    reportedBy: user?.id || null,
+                    reason: reportReason,
+                    details: ''
+                })
+            });
+            showToast('🚨 Bildirim Alındı', 'Moffi ekibi en kısa sürede inceleyecek.', 'success');
+            setIsReportAdModalOpen(false);
+            setReportReason('');
+            setReportingAdId(null);
+        } catch (err: any) {
+            showToast('Hata', err.message, 'error');
+        } finally {
+            setIsSubmittingReport(false);
+        }
+    };
+
+    const handleStartAdoptionChat = (pet: any) => {
+        setAdoptionChatPet(pet);
+        setIsAdoptionChatOpen(true);
+        // Mock initial system message
+        setAdoptionMessages([
+            { id: 'sys-1', text: `Merhaba! ${pet.name} için sahiplenme süreci başlatıldı. 👋`, sender: 'system', time: 'Şimdi' },
+            { id: 'sys-2', text: 'Moffi Güvenli Mesajlaşma üzerinden ilan sahibiyle iletişime geçiyorsunuz. Lütfen kişisel bilgilerinizi paylaşırken dikkatli olun.', sender: 'system', time: 'Şimdi' }
+        ]);
+    };
+
+    const submitAdoptionApplication = async () => {
+        if (!user || !selectedAdoptionPet) return;
+        setIsSubmittingApp(true);
+        try {
+            // Mock submission
+            showToast("Başvuru İletildi! ❤️", "İlan sahibi başvurunuzu inceledikten sonra size dönecek.", "success");
+            setIsApplicationFormOpen(false);
+            setAppNote("");
+            setSelectedAdoptionPet(null);
+        } catch (err: any) {
+            showToast("Hata", "Başvuru yapılamadı.", "error");
+        } finally {
+            setIsSubmittingApp(false);
+        }
+    };
+
+    const handleSendAdoptionMsg = () => {
+        if (!adoptionNewMsg.trim()) return;
+        const newMsg = {
+            id: Date.now().toString(),
+            text: adoptionNewMsg,
+            sender: 'me',
+            time: 'Şimdi'
+        };
+        setAdoptionMessages(prev => [...prev, newMsg]);
+        setAdoptionNewMsg("");
+
+        // Mock a response after 1s
+        setIsSendingAdoptionMsg(true);
+        setTimeout(() => {
+            setIsSendingAdoptionMsg(false);
+            setAdoptionMessages(prev => [...prev, {
+                id: (Date.now() + 1).toString(),
+                text: "İlginiz için teşekkürler! Birazdan size detaylı bilgi vereceğim. 😊",
+                sender: 'them',
+                time: 'Şimdi'
+            }]);
+        }, 1500);
+    };
+
+    const handleReportLocation = () => {
+        if (!user) {
+            showToast("Giriş Gerekli", "Anonim olarak ihbar verebilmek için üye girişi yapmalısınız.", "error");
+            window.dispatchEvent(new CustomEvent('open-auth-modal'));
+            return;
+        }
+        setAnonModalType('report');
+        setAnonMessage("");
+        setAnonError(null);
+    };
+
+    const handleMessageOwner = () => {
+        if (!user) {
+            showToast("Giriş Gerekli", "Mesaj atabilmek için giriş yapmalısınız.", "error");
+            window.dispatchEvent(new CustomEvent('open-auth-modal'));
+            return;
+        }
+        setAnonModalType('message');
+        setAnonMessage("");
+        setAnonError(null);
+    };
+
+    const submitAnonAction = async () => {
+        if (!anonMessage.trim()) return;
+        setAnonError(null);
+
+        // --- AI MODERATION / PII CHECK ---
+        // Telefon Numarası Regex: (Örn: 0555 555 55 55, +905555555555, 532 123 4567)
+        const phoneRegex = /(?:\+90|0)?\s?[5]\d{2}\s?\d{3}\s?\d{2}\s?\d{2}/i;
+        // IBAN Regex: TR ile başlayıp 24 hane sayılan temel mantık
+        const ibanRegex = /TR[a-zA-Z0-9]{24}/i;
+
+        // Kelime bazlı basit spam/adres yakalama algoritması (örn. 'mah', 'sokak', 'no:')
+        const rawText = anonMessage.toLowerCase();
+
+        if (phoneRegex.test(rawText)) {
+            setAnonError("Hata: Sistemimiz iletişim bilginizi veya telefon numarası formatı tespit etti. Güvenliğiniz için direkt iletişim bilgisi paylaşmak yasaktır.");
+            return;
+        }
+        if (ibanRegex.test(rawText)) {
+            setAnonError("Hata: İbana ve para transferine yönelik teşebbüsleri reddediyoruz.");
+            return;
+        }
+
+        setIsSubmittingAnon(true);
+        try {
+            if (anonModalType === 'report' || anonModalType === 'message') {
+                const isMsg = anonModalType === 'message';
+                // Mock sighting submission
+                showToast("Sinyal İletildi", isMsg ? "Moffi Acil İhbar Hattına şifreli mesajınız ulaştı." : "Bölge bilgisini güvenle ulaştırdık.", "success");
+            }
+            setAnonModalType(null);
+            setAnonMessage("");
+        } catch (err: any) {
+            showToast("Bağlantı Hatası", "İşlem sırasında beklenmedik bir hata oluştu.", "error");
+        } finally {
+            setIsSubmittingAnon(false);
+        }
+    };
+
+    const fetchInbox = async () => {
+        try {
+            await refreshInbox();
+        } catch (err) {
+            console.error("Inbox load error:", err);
+        }
+    };
+
+
+    // Unified SOS/Lost Pet fetcher used across the component
+    const fetchLostPets = async () => {
+        setIsLoadingLost(true);
+        try {
+            const data = await apiService.getLostPets();
+            setLostPets(data || []);
+            setSosAlerts(data || []);
+        } catch (err) {
+            console.error("Kayıp ilanlar çekilirken hata:", err);
+            setLostPets([]);
+            setSosAlerts([]);
+        } finally {
+            setIsLoadingLost(false);
+        }
+    };
+
+    const filteredSOSAlerts = useMemo(() => {
+        const sosSettings = {
+            radius: 5,
+            quietHours: { enabled: false, from: '23:00', to: '07:00' },
+            petTypes: ['dog', 'cat', 'bird', 'other'],
+            emergencyBypass: true
+        };
+
+        return sosAlerts.filter(alert => {
+            // 1. Radius Filter
+            if (alert.distance > (sosSettings.radius || 5)) return false;
+
+            // 2. Pet Type Filter
+            if (!(sosSettings.petTypes || []).includes(alert.type)) return false;
+
+            // 3. Quiet Hours & Emergency Bypass Logic
+            if (sosSettings.quietHours?.enabled) {
+                const now = new Date();
+                const currentMins = now.getHours() * 60 + now.getMinutes();
+                const [fromH, fromM] = (sosSettings.quietHours.from || '23:00').split(':').map(Number);
+                const [toH, toM] = (sosSettings.quietHours.to || '07:00').split(':').map(Number);
+                const fromMins = fromH * 60 + fromM;
+                const toMins = toH * 60 + toM;
+
+                let isQuietTime = false;
+                if (fromMins < toMins) {
+                    isQuietTime = currentMins >= fromMins && currentMins <= toMins;
+                } else {
+                    isQuietTime = currentMins >= fromMins || currentMins <= toMins;
+                }
+
+                if (isQuietTime) {
+                    // EMERGENCY BYPASS: If enabled, show very close alerts (< 1km) regardless of quiet hours
+                    if (sosSettings.emergencyBypass && alert.distance < 1.0) {
+                        return true;
+                    }
+                    return false;
+                }
+            }
+
+            return true;
+        });
+    }, [sosAlerts, user?.settings?.sos]);
+
+
+
 
     return (
-        <div className="min-h-screen w-full bg-background text-foreground font-sans selection:bg-green-500/30 overflow-x-hidden pb-32">
-            
-            {/* Top Floating Toast Notification */}
+        <div className="fixed inset-0 bg-[var(--background)] text-[var(--foreground)] overflow-hidden flex flex-col font-sans pb-[72px] md:pb-0">
+
+            {/* iOS STYLE TOAST NOTIFICATION */}
             <AnimatePresence>
-                {toastMsg && (
-                    <motion.div 
-                        initial={{ y: -60, opacity: 0, scale: 0.95 }}
-                        animate={{ y: 16, opacity: 1, scale: 1 }}
-                        exit={{ y: -60, opacity: 0, scale: 0.95 }}
-                        transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-                        className="fixed top-4 inset-x-0 mx-auto w-[90%] max-w-xs bg-gray-900 text-white text-[11px] font-bold py-3 px-4.5 rounded-2xl shadow-xl flex items-center justify-between gap-3 z-[99999] pointer-events-auto"
+                {toastMessage && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -50, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -50, scale: 0.95 }}
+                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                        className="fixed top-20 left-1/2 -translate-x-1/2 z-[9999] w-[90%] max-w-sm pointer-events-none"
                     >
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm shrink-0">🐾</span>
-                            <span className="leading-snug text-left">{toastMsg}</span>
+                        <div className={cn(
+                            "backdrop-blur-xl border rounded-[1.5rem] p-4 shadow-2xl flex items-start gap-4 pointer-events-auto",
+                            toastMessage.type === 'success' ? "bg-cyan-500/20 border-cyan-500/30 text-cyan-100" :
+                                toastMessage.type === 'error' ? "bg-red-500/20 border-red-500/30 text-red-100" :
+                                    "bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 text-[var(--foreground)]"
+                        )}>
+                            <div className={cn(
+                                "flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center shadow-lg",
+                                toastMessage.type === 'success' ? "bg-cyan-500" :
+                                    toastMessage.type === 'error' ? "bg-red-500" :
+                                        "bg-blue-500"
+                            )}>
+                                {toastMessage.type === 'success' ? <Check className="w-5 h-5 text-black" strokeWidth={3} /> :
+                                    toastMessage.type === 'error' ? <X className="w-5 h-5 text-[var(--foreground)]" strokeWidth={3} /> :
+                                        <Activity className="w-5 h-5 text-[var(--foreground)]" strokeWidth={3} />}
+                            </div>
+                            <div className="flex flex-col gap-0.5 justify-center mt-0.5">
+                                <h4 className="font-black text-[15px] leading-tight text-[var(--foreground)]">{toastMessage.title}</h4>
+                                {toastMessage.desc && <p className="text-xs font-medium text-[var(--foreground)]/80 leading-snug">{toastMessage.desc}</p>}
+                            </div>
                         </div>
-                        <button 
-                            onClick={() => setToastMsg(null)} 
-                            className="text-gray-500 dark:text-gray-400 hover:text-white font-bold text-sm shrink-0 px-1 cursor-pointer"
-                        >
-                            ×
-                        </button>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* Main Dashboard Wrapper */}
-            <motion.div 
-                animate={{ 
-                    scale: isAnyModalOpen ? 0.93 : 1,
-                    filter: isAnyModalOpen ? 'blur(16px)' : 'blur(0px)',
-                    opacity: isAnyModalOpen ? 0.05 : 1,
-                    pointerEvents: isAnyModalOpen ? 'none' : 'auto'
-                }}
-                transition={{ duration: 0.4, ease: 'easeInOut' }}
-                className="max-w-md mx-auto pt-6 px-5"
-            >
-                
-                {/* 1. Header */}
-                <header className="flex justify-between items-center mb-6">
-                    {hasNoPets ? (
-                        <div className="flex items-center gap-2.5">
-                            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-[#527958] to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/20 text-white">
-                                <Sparkles className="w-5 h-5" />
-                            </div>
-                            <div className="flex flex-col text-left">
-                                <span className="text-[14px] font-black text-gray-905 tracking-tight leading-none">Moffi</span>
-                                <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 mt-0.5 leading-none">Süper App</span>
-                            </div>
-                        </div>
-                    ) : (
-                        <>
-                            {/* [V2_FEATURE_TASMA] - Akıllı tasma durumu gizlendi
-                            <motion.div 
-                                layoutId="collar-card-container"
-                                onClick={() => setExpandedPanel('collar')}
-                                className="flex items-center gap-2.5 cursor-pointer group"
-                            >
-                                <div className="relative">
-                                    <div className="w-9 h-9 rounded-2xl bg-gray-900 flex items-center justify-center shadow-lg shadow-gray-900/10 text-green-400">
-                                        <Radio className="w-5 h-5" />
-                                    </div>
-                                    {pet.collar.connected && (
-                                        <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white animate-pulse" />
-                                    )}
-                                </div>
-                                <div className="flex flex-col text-left">
-                                    <span className="text-[8px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest leading-none">TASMA DURUMU</span>
-                                    <span className="text-[10px] font-bold text-gray-700 mt-0.5 flex items-center gap-1.5 leading-none">
-                                        {pet.collar.connected ? `Bağlı (%${pet.collar.battery})` : 'Bağlantı Yok'}
-                                    </span>
-                                </div>
-                            </motion.div>
-                            */}
-                            {!hasNoPets && (
-                                <motion.button 
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={() => window.dispatchEvent(new CustomEvent('open-sos-center'))}
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full shadow-sm relative overflow-hidden group cursor-pointer border ${
-                                        lostPetMode 
-                                            ? 'bg-red-600 border-red-500 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]' 
-                                            : 'bg-red-50 border-red-200/60 text-red-600 hover:bg-red-100/50'
-                                     }`}
-                                >
-                                    <span className="absolute inset-0 bg-red-500/10 animate-pulse rounded-full" />
-                                    <span className="w-2 h-2 rounded-full bg-red-500 animate-ping absolute left-3" />
-                                    <span className="w-2 h-2 rounded-full bg-red-500" />
-                                    <span className={`text-[10px] font-black tracking-wider uppercase ml-1 ${lostPetMode ? 'text-white' : 'text-red-600'}`}>SOS</span>
-                                </motion.button>
-                            )}
-                        </>
-                    )}
-                    
-                    <div className="flex items-center gap-3">
+            {/* AMBIENT BACKGROUND GLOW */}
+            <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden dark:opacity-100 opacity-40">
+                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-accent/10 blur-[120px] rounded-full" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-accent/5 blur-[120px] rounded-full" />
+            </div>
 
-                        <button className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
-                            <Bell className="w-5 h-5" />
-                            <div className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-white" />
+            {/* MAIN IMMERSIVE CONTENT - Unified Scroll per tab */}
+            <main 
+                id="community-scroll-container"
+                ref={globalScrollRef}
+                onScroll={handleMainScroll}
+                className={`flex-1 relative z-10 w-full no-scrollbar ${activeTab === 'feed' ? 'overflow-hidden flex flex-col' : 'overflow-y-auto overscroll-contain'}`}
+            >
+                {activeTab === 'radar' && (
+                    <motion.header 
+                        id="community-radar-header"
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="relative w-full z-[150] px-6 pt-10 pb-4 flex items-center justify-between transition-all duration-300"
+                    >
+                        {/* Back button */}
+                        <button 
+                            onClick={() => setActiveTab('feed')}
+                            className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 flex items-center justify-center text-[var(--secondary-text)] hover:text-white transition-all active:scale-90 shadow-sm"
+                            title="Geri Dön"
+                        >
+                            <ChevronLeft className="w-5 h-5 text-white" />
                         </button>
 
-                        {/* Tema Toggle — sadece community'de */}
-                        <ThemeToggleButton />
-
-                        <motion.button 
-                            whileTap={{ scale: 0.9 }}
-                            onClick={() => setExpandedPanel('profile')}
-                            className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 shadow-sm cursor-pointer hover:border-gray-400 transition-colors"
-                        >
-                            <UserAvatar
-                                avatar={authUser?.avatar}
-                                name={authUser?.name}
-                                username={authUser?.username}
-                                email={authUser?.email}
-                                size="sm"
-                            />
-                        </motion.button>
-                    </div>
-                </header>
-
-                {hasNoPets ? (
-                    <motion.div 
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, type: 'spring' }}
-                        className="bg-gradient-to-br from-white/95 to-gray-50/90 backdrop-blur-xl rounded-[40px] p-8 shadow-[0_24px_70px_rgba(0,0,0,0.04)] border border-gray-100/80 mb-6 text-center relative overflow-hidden"
-                    >
-                        {/* Glow effects */}
-                        <div className="absolute -right-10 -top-10 w-40 h-40 bg-green-500/10 rounded-full blur-3xl pointer-events-none animate-pulse" />
-                        <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none animate-pulse" />
-
-                        <div className="relative z-10 flex flex-col items-center">
-                            {/* Animated Paw Icon Container */}
-                            <motion.div 
-                                animate={{ 
-                                    scale: [1, 1.05, 1],
-                                    rotate: [0, 2, -2, 0]
-                                }}
-                                transition={{ 
-                                    repeat: Infinity,
-                                    duration: 4,
-                                    ease: "easeInOut"
-                                }}
-                                className="w-24 h-24 rounded-[32px] bg-gradient-to-tr from-[#EAF5EC] to-emerald-50 border border-green-100 flex items-center justify-center shadow-lg shadow-green-100/40 mb-6"
-                            >
-                                <span className="text-4xl filter drop-shadow-md">🐾</span>
-                            </motion.div>
-
-                            <h2 className="text-2xl font-black text-gray-805 tracking-tight leading-tight">
-                                Moffi Dünyasına<br />Hoş Geldiniz!
-                            </h2>
-
-                            <p className="text-xs font-semibold text-gray-450 mt-4 max-w-[280px] leading-relaxed">
-                                Evcil hayvanınızın pasaport kaydını oluşturarak aşı takvimi, akıllı tasma özellikleri, beslenme hedefleri ve topluluk aktivitelerini hemen yönetmeye başlayın.
-                            </p>
-
-                            {/* Benefit badges */}
-                            <div className="grid grid-cols-2 gap-2 w-full my-6">
-                                <div className="bg-white/60 border border-gray-100/50 p-2.5 rounded-2xl flex items-center gap-2">
-                                    <span className="text-base">📍</span>
-                                    <div className="text-left">
-                                        <span className="text-[9px] font-black text-gray-800 block leading-tight">Canlı Takip</span>
-                                        <span className="text-[7.5px] text-gray-500 dark:text-gray-400 font-semibold block leading-none mt-0.5">GPS & Konum</span>
-                                    </div>
-                                </div>
-                                <div className="bg-white/60 border border-gray-100/50 p-2.5 rounded-2xl flex items-center gap-2">
-                                    <span className="text-base">📅</span>
-                                    <div className="text-left">
-                                        <span className="text-[9px] font-black text-gray-800 block leading-tight">Sağlık Takibi</span>
-                                        <span className="text-[7.5px] text-gray-500 dark:text-gray-400 font-semibold block leading-none mt-0.5">Aşı & Randevu</span>
-                                    </div>
-                                </div>
-                                <div className="bg-white/60 border border-gray-100/50 p-2.5 rounded-2xl flex items-center gap-2">
-                                    <span className="text-base">🥣</span>
-                                    <div className="text-left">
-                                        <span className="text-[9px] font-black text-gray-800 block leading-tight">Beslenme</span>
-                                        <span className="text-[7.5px] text-gray-500 dark:text-gray-400 font-semibold block leading-none mt-0.5">Kalori & Su</span>
-                                    </div>
-                                </div>
-                                <div className="bg-white/60 border border-gray-100/50 p-2.5 rounded-2xl flex items-center gap-2">
-                                    <span className="text-base">👗</span>
-                                    <div className="text-left">
-                                        <span className="text-[9px] font-black text-gray-800 block leading-tight">Gardırop</span>
-                                        <span className="text-[7.5px] text-gray-500 dark:text-gray-400 font-semibold block leading-none mt-0.5">AI Stil & Kombin</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Large Premium Add Pet Button */}
-                            <motion.button
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                onClick={() => setIsAddPetOpen(true)}
-                                className="w-full bg-[#527958] hover:bg-[#436448] text-white text-[13px] font-black py-4 rounded-3xl shadow-lg shadow-green-900/10 transition-colors flex items-center justify-center gap-2 cursor-pointer mt-2"
-                            >
-                                <Plus className="w-4.5 h-4.5 stroke-[3]" />
-                                <span>Evcil Hayvan Ekle</span>
-                            </motion.button>
-                        </div>
-                    </motion.div>
-                ) : (
-                    <>
-
-                {/* 2. Hikayeler (Stories) - Dynamic from useStories */}
-                <section className="mb-6">
-                    {/* Hikayeler başlığı kaldırıldı */}
-                    <div 
-                        ref={storiesScroll.ref}
-                        onMouseDown={storiesScroll.onMouseDown}
-                        onMouseLeave={storiesScroll.onMouseLeave}
-                        onMouseUp={storiesScroll.onMouseUp}
-                        onMouseMove={storiesScroll.onMouseMove}
-                        className="flex gap-4 overflow-x-auto no-scrollbar pb-2 pt-1 -mx-5 px-5 items-center cursor-grab active:cursor-grabbing select-none"
-                    >
-                        {storyGroups.map((group, index) => {
-                            let customType: 'normal' | 'sos' | 'ai' | 'featured' = 'normal';
-                            if (group.user_id === 'system_sos') customType = 'sos';
-                            if (group.user_id === 'system_announcements') customType = 'ai';
-                            if (group.user_id === 'system_featured_pets') customType = 'featured';
-                            
-                            // Get last word or a clean subtitle
-                            const cleanTitle = group.author_name.split(' ').slice(1).join(' ') || group.author_name;
-
-                            return (
-                                <div 
-                                    key={group.user_id} 
-                                    className="cursor-pointer"
-                                    onClick={() => {
-                                        setViewerStoryGroupIndex(index);
-                                        setViewerStoryIndex(0);
-                                        setStoryProgress(0);
-                                    }}
-                                >
-                                    <StoryCircle 
-                                        image={group.author_avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200"} 
-                                        title={cleanTitle} 
-                                        type={customType} 
-                                        delay={0.1 + index * 0.05} 
-                                    />
-                                </div>
-                            );
-                        })}
-                    </div>
-                </section>
-                {/* 2.5 Hızlı Erişim (Quick Access) - Edge to Edge, No Frame */}
-                <section className="mb-6 -mx-5">
-                    <div className="grid grid-cols-2 gap-0">
-                        <QuickAccessBtn icon={Radio} title="Kayıp & Sahiplen" subtitle="İlan Merkezi" bgTint="bg-red-100/80 dark:bg-red-900/40 hover:bg-red-200 dark:hover:bg-red-800/60" gradient="from-red-400 to-rose-600" delay={0.1} onClick={() => router.push('/topluluk?tab=radar')} />
-                        <QuickAccessBtn icon={Stethoscope} title="Veteriner" subtitle="Sağlık Asistanı" bgTint="bg-indigo-100/80 dark:bg-indigo-900/40 hover:bg-indigo-200 dark:hover:bg-indigo-800/60" gradient="from-indigo-400 to-purple-600" delay={0.15} onClick={() => router.push('/vet')} />
-                        
-                        <QuickAccessBtn icon={ShoppingBag} title="Market" subtitle="Moffi Petshop" bgTint="bg-orange-100/80 dark:bg-orange-900/40 hover:bg-orange-200 dark:hover:bg-orange-800/60" gradient="from-orange-400 to-red-500" delay={0.2} onClick={() => router.push('/petshop')} />
-                        <QuickAccessBtn icon={Syringe} title="Aşı Takvimi" subtitle="Sağlık Geçmişi" bgTint="bg-emerald-100/80 dark:bg-emerald-900/40 hover:bg-emerald-200 dark:hover:bg-emerald-800/60" gradient="from-emerald-400 to-teal-600" delay={0.25} onClick={() => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'health' } }))} />
-                        
-                        <QuickAccessBtn icon={Trophy} title="Görev Merkezi" subtitle="Kazan & Harca" bgTint="bg-yellow-100/80 dark:bg-yellow-900/40 hover:bg-yellow-200 dark:hover:bg-yellow-800/60" gradient="from-yellow-400 to-amber-600" delay={0.3} onClick={() => router.push('/quests')} />
-                        <QuickAccessBtn icon={Star} title="moffi.net" subtitle="Kurumsal Sitemiz" bgTint="bg-purple-100/80 dark:bg-purple-900/40 hover:bg-purple-200 dark:hover:bg-purple-800/60" gradient="from-purple-400 to-fuchsia-600" delay={0.35} onClick={() => window.open('https://moffi.net', '_blank')} />
-                    </div>
-                </section>
-                {/* 9. Hero Pet Identity Card - Premium 3D Parallax Card */}
-                <div 
-                    className="relative"
-                    onMouseMove={handleMouseMoveCard}
-                    onMouseLeave={handleMouseLeaveCard}
-                >
-                    {/* Breathing Organic Glow Blobs behind the Card */}
-                    <div className="absolute top-0 left-0 w-48 h-48 bg-emerald-500/20 dark:bg-emerald-500/30 rounded-full blur-3xl pointer-events-none z-0 animate-pulse" />
-                    <div className="absolute bottom-0 right-0 w-48 h-48 bg-purple-500/20 dark:bg-purple-500/30 rounded-full blur-3xl pointer-events-none z-0 animate-pulse" />
-
-                    <motion.div 
-                        layout
-                        style={{
-                            rotateX,
-                            rotateY,
-                            transformStyle: "preserve-3d",
-                            perspective: 1000,
-                            background: isDark 
-                                ? 'linear-gradient(135deg, rgba(28, 28, 33, 0.95) 0%, rgba(20, 20, 25, 0.98) 100%)' 
-                                : 'linear-gradient(135deg, rgba(255, 255, 255, 0.90) 0%, rgba(248, 250, 247, 0.95) 100%)',
-                            borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(34, 197, 94, 0.25)',
-                        }}
-                        className="rounded-[36px] p-5 mb-6 border relative overflow-hidden transition-all duration-300 z-10 shadow-[0_20px_60px_-15px_rgba(16,185,129,0.15)] dark:shadow-[0_20px_60px_-15px_rgba(16,185,129,0.25)] ring-4 ring-emerald-500/5 dark:ring-emerald-500/10"
-                    >
-                        {/* Specular Light Reflection Overlay */}
-                        <motion.div 
-                            className="absolute inset-0 pointer-events-none z-20"
-                            style={{
-                                background: `radial-gradient(circle at ${shineX} ${shineY}, ${
-                                    isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.20)'
-                                } 0%, transparent 60%)`
-                            }}
-                        />
-
-                        {/* Switcher & Badges */}
-                        <div className="flex justify-between items-start mb-4 relative z-10" style={{ transform: "translateZ(25px)" }}>
-                            <div 
-                                ref={petSwitcherScroll.ref}
-                                onMouseDown={petSwitcherScroll.onMouseDown}
-                                onMouseLeave={petSwitcherScroll.onMouseLeave}
-                                onMouseUp={petSwitcherScroll.onMouseUp}
-                                onMouseMove={petSwitcherScroll.onMouseMove}
-                                className="flex items-center gap-2 bg-black/5 dark:bg-white/10 p-1.5 rounded-full border border-black/10 dark:border-white/10 shadow-inner max-w-[240px] overflow-x-auto no-scrollbar shrink-0 cursor-grab active:cursor-grabbing select-none"
-                            >
-                                {userPets.map((p) => (
-                                    <motion.button
-                                        key={p.id}
-                                        whileTap={{ scale: 0.9 }}
-                                        onClick={() => switchPet(p.id)}
-                                        className={`relative w-8 h-8 rounded-full overflow-hidden border-2 transition-all shrink-0 ${
-                                            activePetObj?.id === p.id 
-                                                ? 'border-green-600 scale-105 shadow-sm' 
-                                                : 'border-transparent opacity-60'
-                                        }`}
-                                    >
-                                        {p.image || p.avatar ? (
-                                            <img src={p.image || p.avatar} className="w-full h-full object-cover" alt={p.name} />
-                                        ) : (
-                                            <div className="w-full h-full bg-gradient-to-tr from-gray-150 to-gray-250 dark:from-zinc-800 dark:to-zinc-700 flex items-center justify-center">
-                                                <span className="text-[10px] font-black text-gray-500 uppercase tracking-tighter">
-                                                    {p.name ? p.name[0] : '🐾'}
-                                                </span>
-                                            </div>
-                                        )}
-                                    </motion.button>
-                                ))}
-                                <motion.button
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={() => setIsAddPetOpen(true)}
-                                    className="w-8 h-8 rounded-full bg-black/20 dark:bg-white/20 dark:bg-white/10 border border-black/10 dark:border-white/10 flex items-center justify-center text-gray-500 dark:text-white hover:bg-black/10 dark:hover:bg-black/20 dark:bg-white/20 transition-colors shrink-0 shadow-sm"
-                                >
-                                    <Plus className="w-4.5 h-4.5" />
-                                </motion.button>
-                            </div>
-
-                            <motion.div 
-                                key={lostPetMode ? "KAYIP" : pet.status}
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                className={`px-3 py-1 rounded-full border text-[9px] font-black tracking-widest uppercase ${
-                                    lostPetMode 
-                                        ? "text-white bg-red-600 border-red-500 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]" 
-                                        : "text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-500/20 shadow-sm"
-                                }`}
-                            >
-                                {lostPetMode ? "KAYIP 🚨" : pet.status}
-                            </motion.div>
-                        </div>
-
-                        <div className="flex items-center gap-5 relative z-10" style={{ transform: "translateZ(35px)" }}>
-                            <div className="relative">
-                                <div className="w-20 h-20 rounded-[28px] overflow-hidden shadow-md border-2 border-white/50 dark:border-zinc-700/50 relative group bg-black/5 dark:bg-white/5 flex items-center justify-center">
-                                    {pet.image ? (
-                                        <motion.img 
-                                            key={pet.image}
-                                            initial={{ opacity: 0, scale: 0.95 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            transition={{ duration: 0.3 }}
-                                            src={pet.image} 
-                                            className="w-full h-full object-cover animate-fade-in" 
-                                            alt={pet.name} 
-                                        />
-                                    ) : (
-                                        <span className="text-gray-500 dark:text-gray-400 dark:text-zinc-500 text-3xl font-black select-none uppercase">
-                                            {pet.name ? pet.name[0] : '🐾'}
-                                        </span>
-                                    )}
-                                    <div className="absolute inset-0 bg-black/15 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-[28px] cursor-pointer">
-                                        <Shirt className="w-5 h-5 text-white" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex-1">
-                                <div className="flex items-center justify-between">
-                                    <motion.h2 
-                                        key={pet.name}
-                                        initial={{ opacity: 0, y: -5 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className="text-2xl font-black text-gray-800 dark:text-white tracking-tight"
-                                    >
-                                        {pet.name} <span className="text-sm opacity-50">🦴</span>
-                                    </motion.h2>
-                                    <button 
-                                        onClick={() => setIsPetSettingsOpen(true)}
-                                        className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-green-600 dark:hover:text-emerald-450 rounded-full hover:bg-black/5 dark:hover:bg-black/10 dark:bg-white/10 transition-all cursor-pointer"
-                                    >
-                                        <Sliders className="w-4.5 h-4.5" />
-                                    </button>
-                                </div>
-                                <motion.p 
-                                    key={pet.breed}
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 dark:text-zinc-400 mt-0.5"
-                                >
-                                    {pet.breed}
-                                </motion.p>
-                            </div>
-                        </div>
-
-                        {/* AI Dressing Closet Portal */}
-                        <motion.div 
-                            layoutId="dressing-card-container"
-                            onClick={() => setExpandedPanel('dressing')}
-                            style={{ transform: "translateZ(25px)" }}
-                            className="mt-4 p-3 bg-black/5 dark:bg-white/5 rounded-2xl border border-black/10 dark:border-white/10 flex justify-between items-center cursor-pointer group hover:bg-black/10 dark:hover:bg-black/10 dark:bg-white/10 transition-colors duration-300 relative z-10 shadow-inner"
-                        >
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-950 flex items-center justify-center text-purple-650 dark:text-purple-400">
-                                    <Shirt className="w-4 h-4" />
-                                </div>
-                                <div>
-                                    <span className="text-[8.5px] font-black text-purple-700 dark:text-purple-400 uppercase tracking-widest block">AI TARZI & GARDIROP</span>
-                                    <span className="text-[10px] font-bold text-gray-700 dark:text-zinc-300 mt-0.5 block group-hover:text-purple-800 dark:group-hover:text-purple-300 transition-colors">{pet.dressing.activeOutfit}</span>
-                                </div>
-                            </div>
+                        {/* Segment Switcher: Kayıp / Sahiplen */}
+                        <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded-2xl border border-black/10 dark:border-white/10 w-full max-w-[200px] shadow-inner backdrop-blur-md">
                             <button 
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (typeof window !== 'undefined') {
-                                        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-                                        const query = `petName=${encodeURIComponent(pet.name || 'Zeytin')}&petBreed=${encodeURIComponent(pet.breed || 'Dog')}`;
-                                        window.location.href = isLocal ? `http://localhost:5173/?${query}` : `/kombinle?${query}`;
-                                    }
-                                }}
-                                className="flex items-center gap-1 bg-white dark:bg-zinc-800 text-purple-700 dark:text-purple-400 border border-purple-200/50 dark:border-purple-900/50 text-[9.5px] font-black px-2.5 py-1.5 rounded-xl cursor-pointer transition-all hover:scale-95 shadow-sm shrink-0"
+                                onClick={() => setRadarTabMode('lost')}
+                                className={cn(
+                                    "flex-1 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                    radarTabMode === 'lost' ? "bg-white text-black shadow-lg font-black" : "text-[var(--secondary-text)] hover:text-[var(--foreground)]"
+                                )}
                             >
-                                <span>Kombinle</span>
-                                <Plus className="w-3 h-3" />
+                                Kayıp
                             </button>
-                        </motion.div>
-
-                        {/* Integrated Rings & Quick Stats */}
-                        <div className="flex justify-between items-center mt-4 pt-4 border-t border-black/10 dark:border-white/10 relative z-10" style={{ transform: "translateZ(30px)" }}>
-                            <div onClick={() => window.dispatchEvent(new CustomEvent('open-care-hub', { detail: { tab: 'nutrition' } }))} className="flex items-center gap-3 cursor-pointer hover:opacity-85 transition-opacity duration-200">
-                                <div className="relative w-12 h-12 flex items-center justify-center">
-                                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={isDark ? "rgba(34, 197, 94, 0.08)" : "#F0FDF4"} strokeWidth="3" />
-                                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#22C55E" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${activityPercent}, 100`} />
-                                        
-                                        <path d="M18 6.0845 a 11.9155 11.9155 0 0 1 0 23.831 a 11.9155 11.9155 0 0 1 0 -23.831" fill="none" stroke={isDark ? "rgba(59, 130, 246, 0.08)" : "#EFF6FF"} strokeWidth="3" />
-                                        <path d="M18 6.0845 a 11.9155 11.9155 0 0 1 0 23.831 a 11.9155 11.9155 0 0 1 0 -23.831" fill="none" stroke="#3B82F6" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${waterPercent}, 100`} />
-                                        
-                                        <path d="M18 10.0845 a 7.9155 7.9155 0 0 1 0 15.831 a 7.9155 7.9155 0 0 1 0 -15.831" fill="none" stroke={isDark ? "rgba(249, 115, 22, 0.08)" : "#FFF7ED"} strokeWidth="3" />
-                                        <path d="M18 10.0845 a 7.9155 7.9155 0 0 1 0 15.831 a 7.9155 7.9155 0 0 1 0 -15.831" fill="none" stroke="#F97316" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${foodPercent}, 100`} />
-                                    </svg>
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-[10px] font-bold text-gray-700 dark:text-zinc-300 tracking-tight">Günlük Hedefler</span>
-                                    <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400 dark:text-zinc-500 flex items-center gap-1.5 mt-0.5">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Gezi
-                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Su
-                                        <span className="w-1.5 h-1.5 rounded-full bg-orange-500" /> Beslenme
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div className="flex gap-4">
-                                <div className="flex items-center gap-1.5">
-                                    <div className="w-7 h-7 rounded-full bg-green-50 dark:bg-green-950/50 flex items-center justify-center">
-                                        <Heart className="w-3.5 h-3.5 text-green-600 dark:text-green-400" fill="currentColor" />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[8px] text-gray-500 dark:text-gray-400 dark:text-zinc-500 font-bold uppercase tracking-wider">Sağlık</span>
-                                        <span className="text-[10px] font-black text-gray-750 dark:text-zinc-300">{pet.health}</span>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    <div className="w-7 h-7 rounded-full bg-gray-50 dark:bg-zinc-800/50 flex items-center justify-center">
-                                        <span className="text-gray-500 dark:text-zinc-400 font-black text-[9px]">KG</span>
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[8px] text-gray-500 dark:text-gray-400 dark:text-zinc-500 font-bold uppercase tracking-wider">Ağırlık</span>
-                                        <span className="text-[10px] font-black text-gray-750 dark:text-zinc-300">{pet.weight}</span>
-                                    </div>
-                                </div>
-                            </div>
+                            <button 
+                                onClick={() => setRadarTabMode('adopt')}
+                                className={cn(
+                                    "flex-1 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                    radarTabMode === 'adopt' ? "bg-white text-black shadow-lg font-black" : "text-[var(--secondary-text)] hover:text-[var(--foreground)]"
+                                )}
+                            >
+                                Sahiplen
+                            </button>
                         </div>
 
-                        {/* Integrated Weekly Streak Grid */}
-                        <div className="mt-4 pt-4 border-t border-black/10 dark:border-white/10 flex justify-between items-center relative z-10" style={{ transform: "translateZ(20px)" }}>
-                            <div className="flex flex-col">
-                                <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 dark:text-zinc-500 uppercase tracking-widest">İstikrar Serisi</span>
-                                <span className="text-[10px] font-bold text-gray-600 dark:text-zinc-450 mt-0.5">Haftalık Gezi</span>
-                            </div>
-                            <div className="flex gap-1.5">
-                                {['P', 'S', 'Ç', 'P', 'C', 'C', 'P'].map((day, idx) => {
-                                    const isCompleted = idx < weeklyStamps;
-                                    const isCurrentDay = idx === todayIdx;
-                                    return (
-                                        <div key={idx} className="flex flex-col items-center">
-                                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black border transition-all ${
-                                                isCompleted 
-                                                    ? 'bg-[#EAF5EC] dark:bg-green-950/40 border-green-200 dark:border-green-900/30 text-green-700 dark:text-green-400 shadow-sm shadow-green-100 dark:shadow-none' 
-                                                    : isCurrentDay
-                                                        ? 'bg-purple-500/10 dark:bg-purple-500/20 border-purple-500/30 dark:border-purple-500/40 text-purple-600 dark:text-purple-400 animate-pulse shadow-[0_0_8px_rgba(168,85,247,0.2)]'
-                                                        : 'bg-gray-50 dark:bg-zinc-800/40 border-gray-100 dark:border-zinc-700/30 text-gray-300 dark:text-zinc-650'
-                                            }`}>
-                                                {isCompleted ? '✓' : day}
+                        {/* Right Spacer */}
+                        <div className="w-10 h-10" />
+                    </motion.header>
+                )}
+                <AnimatePresence>
+                    {/* FEED TAB */}
+                    {activeTab === 'feed' && (
+                        <FeedTab
+                            headerElement={
+                                <motion.header 
+                                    id="community-main-header"
+                                    className="relative w-full z-[150] px-4 sm:px-6 flex flex-col transition-all duration-300 pb-2 pt-6 pointer-events-none"
+                                >
+                                    <div className="flex justify-between items-center w-full pointer-events-auto">
+                                        <div className="flex items-center gap-2">
+                                            <div className="relative w-9 h-9">
+                                                <motion.button
+                                                    style={{ scale: iconScale }}
+                                                    className="w-full h-full flex items-center justify-center hover:bg-black/10 dark:bg-white/10 rounded-full transition-all active:scale-90 bg-black/20 backdrop-blur-md border border-black/10 dark:border-white/10 shadow-lg"
+                                                >
+                                                    <Camera className="w-4 h-4 text-black/90 dark:text-white/90" />
+                                                </motion.button>
+                                                <input 
+                                                    type="file" 
+                                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50" 
+                                                    accept="image/*,video/*" 
+                                                    onChange={handleCameraUpload} 
+                                                />
                                             </div>
                                         </div>
-                                    );
-                                })}
-                            </div>
-                            <div className="flex items-center gap-1 bg-orange-50 dark:bg-orange-950/30 px-2.5 py-1 rounded-full border border-orange-100 dark:border-orange-900/30 shrink-0">
-                                <span className="text-[9px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-wider">{currentStreak} GÜN 🔥</span>
-                            </div>
-                        </div>
-                    </motion.div>
-                </div>
 
+                                        <div className="flex gap-1.5 items-center">
+                                            <motion.button 
+                                                style={{ scale: iconScale }}
+                                                onClick={() => setIsSpotlightOpen(true)}
+                                                className="p-2 hover:bg-black/10 dark:bg-white/10 rounded-full transition-colors bg-black/20 backdrop-blur-md border border-black/10 dark:border-white/10 shadow-lg"
+                                            >
+                                                <Search className="w-4 h-4 text-black/90 dark:text-white/90" />
+                                            </motion.button>
 
-                {/* 3. Live Walk Tracking Widget - useWalk hook ile canlı */}
-                <section className="mb-6">
-                    <BentoCard className="bg-white !p-4 flex flex-col gap-4 relative overflow-hidden border border-gray-100/50 shadow-sm transition-all">
-                        <div className="absolute right-[-20px] top-[-20px] w-48 h-48 bg-green-500/[0.03] rounded-full pointer-events-none" />
-                        
-                        <div className="flex justify-between items-start relative z-10">
-                            <div>
-                                <div className="flex items-center gap-1.5">
-                                    <div className={`w-2 h-2 rounded-full ${activeSession ? 'bg-green-500 animate-ping' : 'bg-gray-300'}`} />
-                                    <span className={`text-[10px] font-black tracking-wider uppercase ${activeSession ? 'text-green-700' : 'text-gray-500'}`}>
-                                        {activeSession ? 'CANLI • YÜRÜYÜŞTESİN' : 'YÜRÜYÜŞ RADARI'}
-                                    </span>
-                                </div>
-                                <h4 className="text-base font-black text-gray-800 mt-1">
-                                    {activeSession ? `${pet.name} Yürüyor! 🐾` : 'Yürüyüşü Başlat'}
-                                </h4>
-                                <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mt-0.5">
-                                    {activeSession
-                                        ? `GPS aktif • ${walkStats?.totalWalks || 0} toplam yürüyüş`
-                                        : `${pet.name}'in günlük gezi hedefini tamamlayın`}
-                                </p>
-                            </div>
-                            {activeSession && (
-                                <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm border bg-green-500 text-white border-green-400">
-                                    <Navigation className="w-5 h-5" />
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Rota Haritası */}
-                        <div className="h-20 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-center p-3 relative overflow-hidden shadow-inner">
-                            <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:16px_16px]" />
-                            <svg className="w-full h-full relative z-10" viewBox="0 0 300 60">
-                                {/* Zemin yolu */}
-                                <path d="M 10 30 Q 80 10 150 40 T 290 20" fill="none" stroke="#E5E7EB" strokeWidth="4" strokeLinecap="round" />
-                                {/* Tamamlanan yol — mesafeye göre dolduruluyor */}
-                                <path 
-                                    d="M 10 30 Q 80 10 150 40 T 290 20" 
-                                    fill="none" 
-                                    stroke="#22C55E" 
-                                    strokeWidth="4" 
-                                    strokeLinecap="round" 
-                                    strokeDasharray={`${Math.min(280, (activeSession?.distanceKm || 0) * 80)}, 300`}
-                                    style={{ transition: 'stroke-dasharray 1s ease' }}
-                                />
-                                {/* Başlangıç noktası */}
-                                <circle cx="10" cy="30" r="4" fill="#22C55E" stroke="white" strokeWidth="2" />
-                                {/* Canlı konum noktası */}
-                                {activeSession ? (
-                                    <>
-                                        <circle 
-                                            cx={Math.min(280, 10 + (activeSession.distanceKm || 0) * 80)} 
-                                            cy={30 - Math.sin((activeSession.distanceKm || 0) * 1.5) * 10}
-                                            r="6" fill="#22C55E" stroke="white" strokeWidth="3" 
-                                        />
-                                        <circle 
-                                            cx={Math.min(280, 10 + (activeSession.distanceKm || 0) * 80)} 
-                                            cy={30 - Math.sin((activeSession.distanceKm || 0) * 1.5) * 10}
-                                            r="12" fill="none" stroke="#22C55E" strokeWidth="1.5" 
-                                            className="animate-ping" 
-                                        />
-                                    </>
-                                ) : (
-                                    <circle cx="10" cy="30" r="5" fill="#D1D5DB" stroke="white" strokeWidth="2" />
-                                )}
-                            </svg>
-                            <span className="absolute right-4 bottom-2.5 text-[9px] font-bold text-gray-500 dark:text-gray-400">
-                                {activeSession
-                                    ? `${(activeSession.distanceKm || 0).toFixed(2)} / ${pet.ringProgress.activity > 0 ? (pet.ringProgress.activity / 28).toFixed(1) : '3.5'} KM`
-                                    : 'GPS ile canlı takip'}
-                            </span>
-                        </div>
-
-                        {/* İstatistikler & Buton */}
-                        <div className="flex justify-between items-center gap-3">
-                            <div className="flex gap-4">
-                                <div>
-                                    <span className="text-[8px] font-bold text-gray-500 dark:text-gray-400 uppercase">Süre</span>
-                                    <h5 className={`text-[13px] font-black mt-0.5 ${activeSession ? 'text-green-700' : 'text-gray-500 dark:text-gray-400'}`}>
-                                        {activeSession ? formatWalkTime(walkElapsedSeconds) : '--:--'}
-                                    </h5>
-                                </div>
-                                <div>
-                                    <span className="text-[8px] font-bold text-gray-500 dark:text-gray-400 uppercase">Mesafe</span>
-                                    <h5 className={`text-[13px] font-black mt-0.5 ${activeSession ? 'text-green-700' : 'text-gray-500 dark:text-gray-400'}`}>
-                                        {activeSession ? `${(activeSession.distanceKm || 0).toFixed(2)} KM` : '— KM'}
-                                    </h5>
-                                </div>
-                                {walkStats && walkStats.totalWalks > 0 && (
-                                    <div>
-                                        <span className="text-[8px] font-bold text-gray-500 dark:text-gray-400 uppercase">Toplam</span>
-                                        <h5 className="text-[13px] font-black text-gray-700 mt-0.5">{walkStats.totalDistanceKm?.toFixed(1) || '0'} KM</h5>
-                                    </div>
-                                )}
-                            </div>
-                            {activeSession ? (
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-walk-panel')); }}
-                                    className="flex items-center gap-1.5 bg-red-500 hover:bg-red-600 text-white text-[11px] font-bold px-4 py-2.5 rounded-2xl shadow-md shadow-red-900/10 transition-colors cursor-pointer"
-                                >
-                                    <span className="w-3.5 h-3.5 bg-white rounded-sm block shrink-0" />
-                                    <span>Bitir</span>
-                                </button>
-                            ) : (
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-walk-panel')); }}
-                                    className="flex items-center gap-2 bg-[#527958] hover:bg-[#436448] text-white text-[11px] font-black px-4.5 py-2.5 rounded-2xl shadow-md shadow-green-900/10 transition-all hover:scale-[1.02] cursor-pointer"
-                                >
-                                    <Compass className="w-3.5 h-3.5" />
-                                    <span>Yürüyüşe Başla</span>
-                                </button>
-                            )}
-                        </div>
-
-                        {/* Geçmiş yürüyüşler özeti */}
-                        {walkHistory.length > 0 && !activeSession && (
-                            <div className="pt-3 border-t border-gray-100 flex gap-3 overflow-x-auto no-scrollbar">
-                                {walkHistory.slice(0, 3).map((w: any, i: number) => (
-                                    <div key={w.id || i} className="shrink-0 bg-gray-50 rounded-2xl px-3 py-2 flex items-center gap-2 border border-gray-100">
-                                        <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
-                                            <Navigation className="w-3 h-3 text-green-600" />
-                                        </div>
-                                        <div>
-                                            <span className="text-[10px] font-black text-gray-700 block">
-                                                {((w.distance_meters || 0) / 1000).toFixed(2)} KM
-                                            </span>
-                                            <span className="text-[8px] font-semibold text-gray-500 dark:text-gray-400">
-                                                {w.ended_at ? (() => {
-                                                    try {
-                                                        const d = new Date(w.ended_at);
-                                                        if (isNaN(d.getTime())) return 'Tamamlandı';
-                                                        return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
-                                                    } catch {
-                                                        return 'Tamamlandı';
+                                            <motion.button
+                                                style={{ scale: iconScale }}
+                                                whileTap={{ scale: 0.9 }}
+                                                onClick={() => {
+                                                    if (user?.id) {
+                                                        router.push(`/profile/${user.id}`);
                                                     }
-                                                })() : 'Tamamlandı'}
-                                            </span>
+                                                }}
+                                                className="w-8 h-8 rounded-full overflow-hidden border border-black/20 dark:border-white/20 shadow-lg cursor-pointer hover:border-white/50 transition-colors ml-1"
+                                            >
+                                                <img src={user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100"} className="w-full h-full object-cover" alt="User Profile" />
+                                            </motion.button>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        )}
-                    </BentoCard>
-                </section>
+                                </motion.header>
+                            }
+                            user={user}
+                            activePet={activePet}
+                            isSosAlertDismissed={isSosAlertDismissed}
+                            setIsSosAlertDismissed={setIsSosAlertDismissed}
+                            setSosActivePet={setSosActivePet}
+                            setIsSOSCommandCenterOpen={setIsSOSCommandCenterOpen}
+                            posts={filteredPosts}
+                            storyGroups={storyGroups}
+                            isLoading={isLoadingPosts}
+                            viewMode={viewMode}
+                            onLike={toggleLike}
+                            onShare={(post) => setSelectedSharePost(post)}
+                            onAddComment={addComment}
+                            onToggleCommentLike={toggleCommentLike}
+                            onReplyComment={addCommentReply}
+                            onDeleteComment={deleteComment}
+                            onEditComment={editComment}
+                            onReportComment={reportComment}
+                            onDeletePost={(postId) => setPostToDelete(postId)}
+                            onEditPost={(post) => setEditingPost({ id: post.id, desc: post.desc, mood: post.mood, media: post.media })}
+                            onStoryClick={(index) => {
+                                setViewerStoryGroupIndex(index);
+                                setViewerStoryIndex(0);
+                            }}
+                            onAddStoryClick={handleStoryClick}
+                            onPostClickFromGrid={handlePostClickFromGrid}
+                            isCommentsDisabled={!user?.settings?.privacy?.allowComments}
+                        />
+                    )}
 
-                {/* 4. Mini Trends & Comparison Chart (Sağlık Gelişim) */}
-                <section className="mb-6">
-                    <div className="flex justify-between items-end mb-3 px-1">
-                        <h3 className="text-[15px] font-bold text-gray-900 dark:text-gray-100 tracking-tight">Haftalık Aktivite & Gelişim</h3>
-                        <span className="text-[10px] font-black text-emerald-700 dark:text-emerald-400 bg-emerald-100/50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
-                            <TrendingUp className="w-3.5 h-3.5" /> +12% Performans
-                        </span>
-                    </div>
-                    
-                    <BentoCard className="bg-white dark:bg-zinc-900/50 !p-5 relative overflow-hidden shadow-md border border-gray-200 dark:border-white/5">
-                        {/* Header Stats */}
-                        <div className="flex justify-between items-start mb-6">
-                            <div>
-                                <h4 className="text-base font-black text-gray-900 dark:text-gray-100">Aktivite Raporu</h4>
-                                <p className="text-[11px] text-gray-500 dark:text-gray-400 font-bold mt-1">Son 7 günlük hareket analizi</p>
+                    {/* UNIFIED COMMUNITY RADAR TAB */}
+                    {activeTab === 'radar' && radarTabMode === 'lost' && (
+                        <RadarTab
+                            user={user}
+                            lostPets={filteredLostPets}
+                            isLoading={isLoadingLost}
+                            userCoords={userCoords}
+                            selectedCategory={selectedCategory}
+                            setSelectedCategory={setSelectedCategory}
+                            filterDistance={filterDistance}
+                            setFilterDistance={setFilterDistance}
+                            radarViewMode={radarViewMode}
+                            setRadarViewMode={setRadarViewMode}
+                            radarTabMode={radarTabMode}
+                            setRadarTabMode={setRadarTabMode}
+                            setActiveTab={setActiveTab}
+                            setIsLostAdModalOpen={setIsLostAdModalOpen}
+                            setSelectedLostPet={setSelectedLostPet}
+                            onDeleteSOS={handleDeleteLostPet}
+                        />
+                    )}
+
+                    {/* ADOPTION PANEL CONTENT */}
+                    {activeTab === 'radar' && radarTabMode === 'adopt' && (
+                        <AdoptionTab
+                            user={user}
+                            onAddAd={() => setIsAddAdoptionModalOpen(true)}
+                            selectedCategory={selectedAdoptionCategory}
+                            setSelectedCategory={setSelectedAdoptionCategory}
+                            onAdClick={setSelectedAdoptionPet}
+                            ads={adoptionAds}
+                            isLoading={isLoadingAdoptions}
+                            onDeleteAd={handleDeleteAdoptionAd}
+                        />
+                    )}
+                </AnimatePresence>
+            </main>
+
+            <input type="file" ref={cameraInputRef} className="absolute opacity-0 w-0 h-0 pointer-events-none" accept="image/*,video/*" onChange={handleCameraUpload} />
+
+            {/* MODALS AND DRAWERS */}
+
+            {/* EDIT PROFILE MODAL (Apple Modern Style) */}
+            <AnimatePresence>
+                {isEditProfileOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[320] bg-black/60 backdrop-blur-xl flex items-center justify-center p-4"
+                        onClick={() => setIsEditProfileOpen(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, y: 20, opacity: 0 }}
+                            animate={{ scale: 1, y: 0, opacity: 1 }}
+                            exit={{ scale: 0.95, y: 20, opacity: 0 }}
+                            className="w-full max-w-sm bg-card dark:bg-[#1C1C1E]/80 border border-black/10 dark:border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Navigation Header */}
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-black/5 dark:border-white/5 bg-black/5 dark:bg-white/5 backdrop-blur-md">
+                                <button onClick={() => setIsEditProfileOpen(false)} className="flex items-center gap-1 text-sm font-medium text-black/60 dark:text-white/60 hover:text-white transition-all active:scale-95 group">
+                                    <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+                                    Vazgeç
+                                </button>
+                                <h2 className="text-sm font-black text-white uppercase tracking-[0.2em]">Profili Düzenle</h2>
+                                <button 
+                                    disabled={isSavingProfile}
+                                    onClick={async () => {
+                                        if (!user) return;
+                                        setIsSavingProfile(true);
+                                        try {
+                                            let finalAvatarUrl = null;
+                                            if (editAvatarFile) {
+                                                finalAvatarUrl = await apiService.uploadMedia(editAvatarFile, 'avatars');
+                                            }
+
+                                            let finalCoverUrl = null;
+                                            if (editCoverFile) {
+                                                finalCoverUrl = await apiService.uploadMedia(editCoverFile, 'avatars');
+                                            }
+
+                                            await updateProfile({
+                                                username: editUsername, // Use username correctly
+                                                name: editName,
+                                                bio: editBio,
+                                                ...(finalAvatarUrl && { avatar: finalAvatarUrl }),
+                                                ...(finalCoverUrl && { cover_photo: finalCoverUrl })
+                                            });
+
+                                            setIsEditProfileOpen(false);
+                                        } catch (err) {
+                                            console.error("Profile update error:", err);
+                                            showToast("Hata", "Profil güncellenemedi.", "error");
+                                        } finally {
+                                            setIsSavingProfile(false);
+                                        }
+                                    }}
+                                    className="text-sm font-black text-cyan-400 hover:text-cyan-300 transition-colors disabled:opacity-50"
+                                >
+                                    {isSavingProfile ? (
+                                        <div className="w-4 h-4 border-2 border-cyan-400/20 border-t-cyan-400 rounded-full animate-spin" />
+                                    ) : 'Kaydet'}
+                                </button>
                             </div>
-                            <div className="text-right">
-                                <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 block mb-1 tracking-widest">ORTALAMA</span>
-                                <span className="text-xl font-black text-gray-900 dark:text-gray-100">{Math.round(pet.weeklyData.reduce((a, b) => a + b, 0) / 7)} <span className="text-[11px] font-bold text-gray-500">dk/gün</span></span>
-                            </div>
-                        </div>
-                        
-                        {/* Bar Chart */}
-                        <div className="h-36 w-full flex items-end justify-between gap-1.5 relative pt-4">
-                            {/* Grid Lines */}
-                            <div className="absolute inset-x-0 top-0 border-b border-gray-200 dark:border-gray-800/60 border-dashed z-0" />
-                            <div className="absolute inset-x-0 top-1/2 border-b border-gray-200 dark:border-gray-800/60 border-dashed z-0" />
-                            <div className="absolute inset-x-0 bottom-[18px] border-b border-gray-300 dark:border-gray-800 z-0" />
-                            
-                            {/* Bars */}
-                            {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map((day, i) => {
-                                const val = pet.weeklyData[i];
-                                const isCompleted = i < resolvedStreak;
-                                const heightPercent = Math.min(100, Math.max(5, (val / 100) * 100)); // Normalized to 100 max
-                                
-                                return (
-                                    <div key={day} className="flex flex-col items-center gap-2 z-10 w-full h-full group relative">
-                                        {/* Tooltip */}
-                                        <div className="absolute -top-7 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg pointer-events-none z-20">
-                                            {val} dk
+
+                            <div className="flex-1 overflow-y-auto no-scrollbar pb-8">
+                                {/* Photo Management Area */}
+                                <div className="relative h-44 mb-16">
+                                    {/* Cover Photo */}
+                                    <div className="w-full h-full bg-black/5 dark:bg-white/5 relative overflow-hidden group cursor-pointer" onClick={() => coverInputRef.current?.click()}>
+                                        {editCoverPreview ? (
+                                            <img src={editCoverPreview} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full bg-gradient-to-tr from-cyan-900/40 to-purple-900/40" />
+                                        )}
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="w-10 h-10 rounded-full bg-black/10 dark:bg-white/10 backdrop-blur-md border border-black/20 dark:border-white/20 flex items-center justify-center">
+                                                <Camera className="w-5 h-5 text-white" />
+                                            </div>
                                         </div>
-                                        {/* Bar Wrapper */}
-                                        <div className="w-full h-[calc(100%-20px)] flex items-end justify-center">
-                                            <div 
-                                                className={`w-full max-w-[28px] rounded-t-lg transition-all duration-700 ease-out cursor-pointer ${
-                                                    isCompleted 
-                                                        ? 'bg-gradient-to-t from-emerald-500 to-emerald-400 dark:from-emerald-400 dark:to-emerald-300 shadow-[0_4px_12px_rgba(52,211,153,0.4)] group-hover:from-emerald-400 group-hover:to-emerald-300' 
-                                                        : 'bg-gray-200 dark:bg-zinc-800/50 group-hover:bg-gray-300 dark:group-hover:bg-zinc-700/50'
-                                                }`}
-                                                style={{ height: `${heightPercent}%` }}
+                                        <input type="file" ref={coverInputRef} className="hidden" accept="image/*" onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                setEditCoverFile(file);
+                                                setEditCoverPreview(URL.createObjectURL(file));
+                                            }
+                                        }} />
+                                    </div>
+
+                                    {/* Avatar Overlap */}
+                                    <div className="absolute -bottom-12 left-6">
+                                        <label htmlFor="edit-avatar-upload" className="block relative w-24 h-24 rounded-full border-4 border-[#1C1C1E] shadow-2xl cursor-pointer group bg-card dark:bg-[#1C1C1E] overflow-hidden">
+                                            {editAvatarPreview ? (
+                                                <img src={editAvatarPreview} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full bg-black/5 dark:bg-white/5 flex items-center justify-center">
+                                                    <Camera className="w-6 h-6 text-black/50 dark:text-white/40" />
+                                                </div>
+                                            )}
+                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Camera className="w-5 h-5 text-white" />
+                                            </div>
+                                            <input id="edit-avatar-upload" type="file" className="hidden" accept="image/*" onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) {
+                                                    setEditAvatarFile(file);
+                                                    setEditAvatarPreview(URL.createObjectURL(file));
+                                                }
+                                            }} />
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {/* Form Section: iOS Style Rows */}
+                                <div className="px-4 space-y-6">
+                                    <div className="bg-black/5 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/5 overflow-hidden">
+                                        <div className="px-4 py-4 border-b border-black/5 dark:border-white/5">
+                                            <label className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest block mb-1">Görünen Ad</label>
+                                            <input 
+                                                type="text" 
+                                                value={editName} 
+                                                onChange={e => setEditName(e.target.value)} 
+                                                className="w-full bg-transparent text-sm font-bold text-white outline-none placeholder:text-black/30 dark:text-white/20"
+                                                placeholder="İsminiz"
                                             />
                                         </div>
-                                        {/* Day Label */}
-                                        <span className={`text-[9px] font-black uppercase tracking-wider shrink-0 ${isCompleted ? 'text-gray-800 dark:text-gray-300' : 'text-gray-500 dark:text-gray-400 dark:text-gray-600'}`}>
-                                            {day}
-                                        </span>
+                                        <div className="px-4 py-4">
+                                            <label className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest block mb-1">Kullanıcı Adı</label>
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-sm font-bold text-black/50 dark:text-white/40">@</span>
+                                                <input 
+                                                    type="text" 
+                                                    value={editUsername} 
+                                                    onChange={e => setEditUsername(e.target.value)} 
+                                                    className="w-full bg-transparent text-sm font-bold text-white outline-none placeholder:text-black/30 dark:text-white/20"
+                                                    placeholder="kullanici_adi"
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
-                                );
-                            })}
-                        </div>
-                    </BentoCard>
-                </section>
 
-                <TodayForYouEngine />
-
-                <section className="mb-6">
-                    {/* Hızlı Erişim was moved to the top of the feed */}
-                </section>
-
-                {/* 7. Super App Vision Banner */}
-                <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    className="relative bg-gradient-to-br from-slate-900 to-indigo-950 dark:from-zinc-900 dark:to-zinc-950 rounded-[32px] p-1 overflow-hidden shadow-2xl mb-8 group"
-                >
-                    {/* Animated background glows */}
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl group-hover:bg-indigo-500/30 transition-all duration-700 pointer-events-none" />
-                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-fuchsia-500/10 rounded-full blur-3xl group-hover:bg-fuchsia-500/20 transition-all duration-700 pointer-events-none" />
-                    
-                    <div className="bg-slate-900/60 dark:bg-zinc-900/80 backdrop-blur-xl rounded-[28px] p-6 relative z-10 border border-black/10 dark:border-white/10 h-full flex flex-col">
-                        
-                        <div className="flex items-center gap-2 mb-4">
-                            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
-                                <Sparkles className="w-4 h-4 text-white" />
-                            </div>
-                            <div>
-                                <h4 className="text-lg font-black text-white tracking-tight leading-none">Moffi Ekosistemi</h4>
-                                <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest mt-0.5 block">Süper Uygulama</span>
-                            </div>
-                        </div>
-
-                        <p className="text-xs text-slate-300 font-medium leading-relaxed mb-6">
-                            Evcil dostunuzun tüm ihtiyaçları tek bir merkezde. Yapay zeka destekli sağlık asistanından akıllı tasmaya, kişiselleştirilmiş petshop'tan sosyal ağa kadar her şey parmaklarınızın ucunda.
-                        </p>
-
-                        <div className="grid grid-cols-2 gap-3 mb-6">
-                            {[
-                                { icon: Stethoscope, title: "Moffi AI Vet", desc: "Anlık Sağlık Analizi" },
-                                { icon: Navigation, title: "Akıllı Tasma", desc: "Canlı GPS & Aktivite" },
-                                { icon: ShoppingBag, title: "Moffi Market", desc: "Özel Fırsatlar" },
-                                { icon: Trophy, title: "Görev & Ödül", desc: "PatiPuan Kazan" }
-                            ].map((feature, idx) => (
-                                <div key={idx} className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-3 flex flex-col gap-2 hover:bg-black/10 dark:bg-white/10 transition-colors cursor-default">
-                                    <feature.icon className="w-5 h-5 text-indigo-400" />
-                                    <div>
-                                        <h5 className="text-[11px] font-bold text-white">{feature.title}</h5>
-                                        <span className="text-[9px] text-slate-400 font-medium leading-none block mt-0.5">{feature.desc}</span>
+                                    <div className="bg-black/5 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/5 px-4 py-4">
+                                        <label className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest block mb-1">Biyografi</label>
+                                        <textarea 
+                                            value={editBio} 
+                                            onChange={e => setEditBio(e.target.value)} 
+                                            className="w-full bg-transparent text-sm font-medium text-black/80 dark:text-white/80 outline-none placeholder:text-black/30 dark:text-white/20 resize-none h-24"
+                                            placeholder="Kendinizden bahsedin..."
+                                        />
                                     </div>
                                 </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ADD PET (Apple Bottom Sheet Style) MODAL */}
+            <AnimatePresence>
+                {isAddPetOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[600] flex flex-col justify-end bg-black/60 backdrop-blur-sm px-2 pb-8"
+                        onClick={() => setIsAddPetOpen(false)}
+                    >
+                        <motion.div
+                            initial={{ y: "100%", opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: "100%", opacity: 0 }}
+                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                            drag="y"
+                            dragConstraints={{ top: 0 }}
+                            dragElastic={0.2}
+                            onDragEnd={(e, { offset, velocity }) => {
+                                if (offset.y > 100 || velocity.y > 500) {
+                                    setIsAddPetOpen(false);
+                                    setTimeout(() => setAddPetStep(1), 300);
+                                }
+                            }}
+                            className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-[2.5rem] p-4 sm:p-6 pb-12 shadow-[0_-20px_50px_rgba(0,0,0,0.8)] relative flex flex-col items-center"
+                            onClick={(e) => e.stopPropagation()} // Prevent close on clicking inside modal
+                        >
+                            {/* Drag Indicator */}
+                            <button 
+                                onClick={() => {
+                                    setIsAddPetOpen(false);
+                                    setTimeout(() => setAddPetStep(1), 300);
+                                }}
+                                className="w-12 h-1.5 bg-gray-600 rounded-full mb-6 hover:bg-gray-500 transition-colors cursor-pointer" 
+                            />
+
+                            <div className="w-full flex justify-between items-center mb-6 px-1">
+                                <div className="w-9">
+                                    {addPetStep === 1 && (
+                                        <button onClick={() => setIsAddPetOpen(false)} className="p-2 bg-[var(--card-bg)] rounded-full text-[var(--foreground)]/50 hover:text-[var(--foreground)] transition-colors">
+                                            <ChevronLeft className="w-5 h-5" />
+                                        </button>
+                                    )}
+                                    {addPetStep > 1 && (
+                                        <button onClick={() => setAddPetStep(prev => prev - 1)} className="p-2 bg-[var(--card-bg)] rounded-full text-[var(--foreground)]/50 hover:text-[var(--foreground)] transition-colors">
+                                            <ChevronLeft className="w-5 h-5" />
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="text-center">
+                                    <h2 className="text-2xl font-black text-[var(--foreground)] tracking-tight">
+                                        {addPetStep === 1 ? 'Temel Kimlik' : addPetStep === 2 ? 'Karakter & Tıbbi' : 'Güvenlik & Kayıt'}
+                                    </h2>
+                                    <p className="text-cyan-400 text-xs font-bold tracking-widest uppercase mt-1">Adım {addPetStep} / 3</p>
+                                </div>
+                                <div className="w-9" />
+                            </div>
+
+                            {/* SCROLLABLE FORM AREA */}
+                            <div className="w-full max-h-[60vh] overflow-y-auto no-scrollbar pb-6 px-1 flex flex-col items-center">
+
+                                {addPetStep === 1 && (
+                                    <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="w-full space-y-4 max-w-sm flex flex-col items-center">
+                                        {/* Multi-Photo Picker */}
+                                        <div className="w-full mb-2">
+                                            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 pt-1 items-center px-1">
+                                                {newPetPhotos.map((photo, index) => (
+                                                    <div key={index} className="relative shrink-0 w-24 h-24 rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 shadow-lg group">
+                                                        <img src={photo.preview} className="w-full h-full object-cover" />
+                                                        <button
+                                                            onClick={() => setNewPetPhotos(prev => prev.filter((_, i) => i !== index))}
+                                                            className="absolute top-1 right-1 w-6 h-6 bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        >
+                                                            <X className="w-3 h-3 text-[var(--foreground)]" />
+                                                        </button>
+                                                        {index === 0 && (
+                                                            <div className="absolute bottom-1 left-1 right-1 bg-cyan-500/80 backdrop-blur-md flex items-center justify-center py-0.5 rounded-lg">
+                                                                <span className="text-[9px] font-bold text-[var(--foreground)] uppercase tracking-wider">Kapak</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+
+                                                {newPetPhotos.length < 5 && (
+                                                    <label htmlFor="add-pet-photos" className="shrink-0 w-24 h-24 rounded-2xl bg-gradient-to-tr from-cyan-900/20 to-purple-900/20 border-2 border-dashed border-cyan-500/30 flex flex-col items-center justify-center cursor-pointer hover:border-cyan-400/60 transition-colors">
+                                                        <div className="w-8 h-8 bg-cyan-500/20 rounded-full flex items-center justify-center mb-1">
+                                                            <Plus className="w-4 h-4 text-cyan-400" />
+                                                        </div>
+                                                        <span className="text-[9px] text-cyan-200 font-bold uppercase tracking-wide px-2 text-center">Foto Ekle<br />(Max 5)</span>
+                                                        <input
+                                                            type="file"
+                                                            id="add-pet-photos"
+                                                            className="hidden"
+                                                            accept="image/*"
+                                                            multiple
+                                                            onChange={(e) => {
+                                                                const files = Array.from(e.target.files || []);
+                                                                if (files.length > 0) {
+                                                                    const validFiles = files.slice(0, 5 - newPetPhotos.length);
+                                                                    const newPhotos = validFiles.map(file => ({
+                                                                        file,
+                                                                        preview: URL.createObjectURL(file)
+                                                                    }));
+                                                                    setNewPetPhotos(prev => [...prev, ...newPhotos]);
+                                                                }
+                                                            }}
+                                                        />
+                                                    </label>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* İsim ve Tür */}
+                                        <div className="flex gap-3 w-full">
+                                            <div className="flex-1">
+                                                <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">İsim</label>
+                                                <input type="text" value={newPetName} onChange={e => setNewPetName(e.target.value)} placeholder="Örn: Pamuk" className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors font-bold" />
+                                            </div>
+                                            <div className="w-24">
+                                                <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Tür</label>
+                                                <select value={newPetType} onChange={e => setNewPetType(e.target.value)} className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl px-2 py-3.5 text-center text-xl mt-1 outline-none focus:border-cyan-400 transition-colors appearance-none" style={{ textAlignLast: "center" }}>
+                                                    <option value="🐶">🐶</option>
+                                                    <option value="🐱">🐱</option>
+                                                    <option value="🦜">🦜</option>
+                                                    <option value="🐰">🐰</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        {/* Irk ve Yaş */}
+                                        <div className="flex gap-3 w-full">
+                                            <div className="flex-[2]">
+                                                <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Irkı</label>
+                                                <input type="text" value={newPetBreed} onChange={e => setNewPetBreed(e.target.value)} placeholder="Örn: Golden Retriever" className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors font-medium text-sm" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Yaş</label>
+                                                <input type="text" value={newPetAge} onChange={e => setNewPetAge(e.target.value)} placeholder="Örn: 2 Yaş" className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors font-medium text-sm text-center" />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-3 w-full">
+                                            <div className="flex-1">
+                                                <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Cinsiyet</label>
+                                                <select value={newPetGender} onChange={e => setNewPetGender(e.target.value)} className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors text-sm">
+                                                    <option value="Erkek">Erkek</option>
+                                                    <option value="Dişi">Dişi</option>
+                                                </select>
+                                            </div>
+                                            <div className="flex-1">
+                                                <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Kısır Mı?</label>
+                                                <select value={newPetNeutered} onChange={e => setNewPetNeutered(e.target.value)} className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors text-sm">
+                                                    <option value="Evet">Evet</option>
+                                                    <option value="Hayır">Hayır</option>
+                                                </select>
+                                            </div>
+                                            <div className="flex-1">
+                                                <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Boyut</label>
+                                                <select value={newPetSize} onChange={e => setNewPetSize(e.target.value)} className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors text-sm">
+                                                    <option value="Küçük">Küçük</option>
+                                                    <option value="Orta">Orta</option>
+                                                    <option value="Büyük">Büyük</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <button onClick={() => setAddPetStep(2)} disabled={!newPetName || !newPetBreed} className="w-full py-4 mt-4 bg-white rounded-2xl font-black text-black hover:bg-gray-200 transition-colors disabled:opacity-50">
+                                            Sonraki Adım
+                                        </button>
+                                    </motion.div>
+                                )}
+
+                                {addPetStep === 2 && (
+                                    <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="w-full space-y-4 max-w-sm">
+                                        <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-2xl flex items-start gap-3">
+                                            <AlertTriangle className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
+                                            <div>
+                                                <h4 className="text-orange-400 text-sm font-bold mb-1">Tıbbi & Fiziksel İşaretler</h4>
+                                                <p className="text-[11px] text-orange-200/80 leading-relaxed font-medium">Bu bilgiler, kayıp durumunda sizi temsil edecek Acil QR Sayfasında (SOS) hayati önem taşır. Doğru girmeye özen gösterin.</p>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Sağlık & Alerji (Kritik!)</label>
+                                            <textarea value={newPetHealth} onChange={e => setNewPetHealth(e.target.value)} placeholder="Örn: Tavuk alerjisi var, lütfen tavuklu mama vermeyin!" className="w-full bg-red-950/20 border border-red-500/30 rounded-2xl px-5 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-red-500 transition-colors font-medium text-sm h-20 resize-none shadow-[0_0_15px_rgba(239,68,68,0.1) inset]" />
+                                        </div>
+
+                                        <div>
+                                            <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Ayırt Edici Özellikleri</label>
+                                            <textarea value={newPetFeatures} onChange={e => setNewPetFeatures(e.target.value)} placeholder="Örn: Sol kulağındaki hafif kesik, kuyruk ucu beyaz..." className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors font-medium text-sm h-16 resize-none" />
+                                        </div>
+
+                                        <div>
+                                            <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Karakteri (Bulan Kişiye Tavsiye)</label>
+                                            <textarea value={newPetCharacter} onChange={e => setNewPetCharacter(e.target.value)} placeholder="Örn: Çok uysaldır ancak ani seslerden korkup kaçabilir." className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-[var(--foreground)] mt-1 outline-none focus:border-cyan-400 transition-colors font-medium text-sm h-16 resize-none" />
+                                        </div>
+
+                                        <button onClick={() => setAddPetStep(3)} className="w-full py-4 mt-4 bg-white rounded-2xl font-black text-black hover:bg-gray-200 transition-colors disabled:opacity-50">
+                                            Sonraki Adım
+                                        </button>
+                                    </motion.div>
+                                )}
+
+                                {addPetStep === 3 && (
+                                    <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="w-full space-y-5 max-w-sm">
+
+                                        <div>
+                                            <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Mikroçip Numarası</label>
+                                            <div className="relative mt-1">
+                                                <input type="text" value={newPetMicrochip} onChange={e => setNewPetMicrochip(e.target.value)} placeholder="TR-000000000" className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl pl-12 pr-5 py-4 text-[var(--foreground)] outline-none focus:border-cyan-400 transition-colors font-mono tracking-widest text-sm" />
+                                                <ShieldAlert className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--secondary-text)]" />
+                                            </div>
+                                            <p className="text-[10px] text-[var(--secondary-text)] ml-3 mt-1.5 font-medium">Veteriner sorgulamaları için resmi numarasını girebilirsiniz. Uygulamada güvenle saklanır.</p>
+                                        </div>
+
+                                        <div className="bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-3xl p-5 mt-4">
+                                            <div className="flex justify-between items-center mb-1">
+                                                <div className="flex items-center gap-2">
+                                                    <PhoneCall className={cn("w-5 h-5 transition-colors", newPetShowPhone ? "text-cyan-400" : "text-[var(--secondary-text)]")} />
+                                                    <span className="font-bold text-[var(--foreground)] text-sm">Telefonu Göster</span>
+                                                </div>
+                                                <div
+                                                    className={cn("w-12 h-6 rounded-full p-1 cursor-pointer transition-colors relative", newPetShowPhone ? "bg-cyan-500" : "bg-gray-700")}
+                                                    onClick={() => setNewPetShowPhone(!newPetShowPhone)}
+                                                >
+                                                    <motion.div
+                                                        animate={{ x: newPetShowPhone ? 24 : 0 }}
+                                                        className="w-4 h-4 rounded-full bg-white shadow-md"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <p className="text-[11px] text-[var(--secondary-text)] leading-relaxed font-medium mt-2">
+                                                Eğer "Kayıp Alarmı" verirseniz, Moffi QR kodunuzu okutan kişiler doğrudan sizinle telefon numaranız üzerinden görüşebilir. Kapatırsanız; sadece anonim uygulama-içi mesaj atabilirler.
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            disabled={isSavingPet || !user}
+                                            onClick={async () => {
+                                                if (!user) {
+                                                    showToast("Giriş Gerekli", "Lütfen önce giriş yapın.", "error");
+                                                    window.dispatchEvent(new CustomEvent('open-auth-modal'));
+                                                    return;
+                                                }
+                                                setIsSavingPet(true);
+
+                                                try {
+                                                    // 1. Upload Photos using apiService
+                                                    const photoUrls: string[] = [];
+                                                    for (const photo of newPetPhotos) {
+                                                        const publicUrl = await apiService.uploadMedia(photo.file, 'posts');
+                                                        if (publicUrl) photoUrls.push(publicUrl);
+                                                    }
+
+                                                    // 2. Add Pet via apiService
+                                                                                                        await apiService.addPet({
+                                                         name: newPetName,
+                                                         type: newPetType,
+                                                         breed: newPetBreed,
+                                                         age: newPetAge,
+                                                         gender: newPetGender,
+                                                         is_neutered: newPetNeutered === "Evet",
+                                                         size: (newPetSize === 'small' || newPetSize === 'medium' || newPetSize === 'large') ? newPetSize : undefined,
+                                                         features: newPetFeatures,
+                                                         health_notes: newPetHealth,
+                                                         character_notes: newPetCharacter,
+                                                         microchip_number: newPetMicrochip,
+                                                         communication_preference: newPetShowPhone ? 'public_phone' : 'anonymous_only',
+                                                         avatar: photoUrls[0] || undefined,
+                                                         image: photoUrls[0] || undefined,
+                                                         images: photoUrls,
+                                                     } as any);
+
+                                                    showToast("Hoş Geldin! 🐾", `${newPetName} Moffi ailesine katıldı.`, "success");
+                                                    setIsAddPetOpen(false);
+                                                    setAddPetStep(1);
+                                                    
+                                                    // Reset form
+                                                    setNewPetName("");
+                                                    setNewPetBreed("");
+                                                    setNewPetAge("");
+                                                    setNewPetPhotos([]);
+                                                } catch (err: any) {
+                                                    console.error("Pet saving error:", err);
+                                                    showToast("Hata", "Dostunuz kaydedilemedi.", "error");
+                                                } finally {
+                                                    setIsSavingPet(false);
+                                                }
+                                            }}
+                                            className="w-full py-4 mt-6 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl font-black text-[var(--foreground)] shadow-[0_10px_30px_rgba(34,211,238,0.3)] hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2"
+                                        >
+                                            {isSavingPet ? (
+                                                <div className="w-5 h-5 border-2 border-black/20 dark:border-white/20 border-t-white rounded-full animate-spin" />
+                                            ) : (
+                                                <>Aileye Ekle & QR Kimlik Oluştur <BadgeCheck className="w-5 h-5" /></>
+                                            )}
+                                        </button>
+                                    </motion.div>
+                                )}
+                            </div>
+
+                            <button onClick={() => setIsAddPetOpen(false)} className="w-full text-center py-2 text-sm text-[var(--secondary-text)] font-bold hover:text-[var(--foreground)] transition-colors mt-2">
+                                Vazgeç
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* UPLOAD NEW POST MODAL */}
+            <AnimatePresence>
+                {isUploadModalOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[9999] bg-[#0a0a0b]/95 backdrop-blur-3xl flex flex-col"
+                    >
+                        {/* Header */}
+                        <div className="flex justify-between items-center px-6 pt-12 pb-4 shrink-0 border-b border-[var(--card-border)]">
+                            <button
+                                onClick={() => { setIsUploadModalOpen(false); setUploadImageURL(null); setUploadCaption(''); setUploadMood(null); }}
+                                className="w-10 h-10 rounded-full bg-black/10 dark:bg-white/10 flex items-center justify-center -ml-2"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                            <h2 className="text-xl font-black text-[var(--foreground)]">Yeni Gönderi</h2>
+                            <div className="w-10" />
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 overflow-y-auto w-full max-w-lg mx-auto p-4 pb-32 flex flex-col gap-6">
+
+                            {/* MEDIA PICKER / PREVIEW (Apple Native Style) */}
+                            {uploadImageURL ? (
+                                                                    <motion.div 
+                                        initial={{ scale: 0.9, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        className={cn(
+                                            "w-full rounded-[2.5rem] overflow-hidden bg-white dark:bg-black border border-black/10 dark:border-white/10 relative shadow-2xl group transition-all duration-500 ease-in-out shrink-0",
+                                            activeTool 
+                                                ? "h-[30vh] min-h-[220px]" 
+                                                : "h-[50vh] min-h-[380px] max-h-[500px]"
+                                        )}
+                                    >
+                                    {selectedFile?.type.startsWith('video/') ? (
+                                        <div className="relative w-full h-full">
+                                                                                                                                             <video 
+                                                     ref={uploadVideoRef}
+                                                     src={uploadImageURL} 
+                                                     className="w-full h-full object-cover" 
+                                                     style={{ 
+                                                         filter: `${IMAGE_FILTERS[activeFilterIndex].filter} brightness(var(--preview-brightness, ${brightness}%)) contrast(var(--preview-contrast, ${contrast}%)) saturate(var(--preview-saturation, ${saturation}%))` 
+                                                     }}
+                                                    autoPlay 
+                                                    muted={!!audioURL} 
+                                                    loop 
+                                                    playsInline 
+                                                    onTimeUpdate={handleVideoTimeUpdate}
+                                                />
+                                            {/* Video Indicator Badge */}
+                                            <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-2 border border-black/10 dark:border-white/10">
+                                                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                                                <span className="text-[10px] font-black text-white uppercase tracking-widest">Video Yayında</span>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div 
+                                            className="relative w-full h-full overflow-hidden"
+                                            onTouchStart={handleTouchStart}
+                                            onTouchEnd={handleTouchEnd}
+                                            onMouseDown={(e) => { touchStartX.current = e.clientX; }}
+                                            onMouseUp={(e) => {
+                                                if (touchStartX.current === null) return;
+                                                const diff = e.clientX - touchStartX.current;
+                                                if (diff > 50) handleSwipeFilter('right');
+                                                else if (diff < -50) handleSwipeFilter('left');
+                                                touchStartX.current = null;
+                                            }}
+                                        >
+                                                                                             <img 
+                                                     ref={uploadImageRef}
+                                                     src={uploadImageURL} 
+                                                     className="w-full h-full object-cover touch-pan-y" 
+                                                style={{ 
+                                                                                                            filter: `${IMAGE_FILTERS[activeFilterIndex].filter} brightness(var(--preview-brightness, ${brightness}%)) contrast(var(--preview-contrast, ${contrast}%)) saturate(var(--preview-saturation, ${saturation}%))` 
+                                                }}
+                                                draggable={false}
+                                            />
+                                            {/* Elegant Filter Name Overlay */}
+                                            <AnimatePresence>
+                                                {showFilterName && (
+                                                    <motion.div 
+                                                        initial={{ opacity: 0 }}
+                                                        animate={{ opacity: 1 }}
+                                                        exit={{ opacity: 0 }}
+                                                        transition={{ duration: 1, ease: 'easeInOut' }}
+                                                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none w-full px-4"
+                                                    >
+                                                        <p className="text-white font-light tracking-[0.4em] uppercase text-2xl drop-shadow-[0_2px_15px_rgba(0,0,0,0.8)] text-center">
+                                                            {IMAGE_FILTERS[activeFilterIndex].name}
+                                                        </p>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+
+                                            {/* Magic Wand Auto-Enhance Button (Streamlined) */}
+                                            {selectedFile?.type.startsWith('image/') && (
+                                                <motion.button
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setActiveFilterIndex(0);
+                                                        setBrightness(115);
+                                                        setContrast(115);
+                                                        setSaturation(130);
+                                                        showToast("AI İyileştirme ✨", "Profesyonel ayarlar uygulandı.", "success");
+                                                    }}
+                                                    className="absolute bottom-6 right-6 z-20 w-8 h-8 flex items-center justify-center text-yellow-400 hover:scale-110 transition-all active:scale-95 group"
+                                                    title="AI İyileştir"
+                                                >
+                                                    <Sparkles className="w-5 h-5 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]" />
+                                                </motion.button>
+                                            )}
+                                        </div>
+                                    )}
+                                    
+                                    {/* Glassmorphism Overlays */}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                                    
+                                    {/* Streamlined Action Sidebar */}
+                                    <div className="absolute top-6 right-6 flex flex-col gap-5 opacity-0 group-hover:opacity-100 transition-all duration-300 z-30">
+                                        <div className="relative w-5 h-5">
+                                            <button 
+                                                type="button"
+                                                className="text-black/60 dark:text-white/60 hover:text-white transition-all active:scale-90"
+                                                title="Medyayı Değiştir"
+                                            >
+                                                <Camera className="w-5 h-5" />
+                                            </button>
+                                            <input 
+                                                type="file" 
+                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50" 
+                                                accept="image/*,video/*" 
+                                                onChange={handleCameraUpload} 
+                                            />
+                                        </div>
+                                        
+                                        <button 
+                                            type="button"
+                                            onClick={() => audioInputRef.current?.click()}
+                                            className={cn(
+                                                "transition-all active:scale-90",
+                                                audioURL ? "text-cyan-400" : "text-black/60 dark:text-white/60 hover:text-white"
+                                            )}
+                                            title="Müzik/Ses Ekle"
+                                        >
+                                            <Mic className="w-5 h-5" />
+                                        </button>
+                                        <input 
+                                            type="file" 
+                                            ref={audioInputRef}
+                                            className="hidden" 
+                                            accept="audio/*" 
+                                            onChange={handleAudioUpload} 
+                                        />
+                                        {audioURL && (
+                                            <audio 
+                                                ref={uploadAudioRef}
+                                                src={audioURL}
+                                                loop
+                                            />
+                                        )}
+                                        <input 
+                                            type="file" 
+                                            ref={audioInputRef}
+                                            className="hidden" 
+                                            accept="audio/*" 
+                                            onChange={handleAudioUpload} 
+                                        />
+                                        {audioURL && (
+                                            <audio 
+                                                ref={uploadAudioRef}
+                                                src={audioURL}
+                                                loop
+                                            />
+                                        )}
+
+                                        <button 
+                                            type="button"
+                                            onClick={() => { setUploadImageURL(null); setSelectedFile(null); setAudioFile(null); setAudioURL(null); }}
+                                            className="text-red-500/60 hover:text-red-500 transition-all active:scale-90"
+                                            title="Sil"
+                                        >
+                                            <Trash2 className="w-5 h-5" />
+                                        </button>
+                                    </div>
+
+                                    {/* Bottom Info Pill */}
+                                    <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between translate-y-4 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-500">
+                                        <div className="flex gap-2">
+                                            {uploadMood ? (
+                                                <div className="bg-cyan-500 text-black px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-[0_0_20px_rgba(6,182,212,0.5)]">
+                                                    {uploadMood}
+                                                </div>
+                                            ) : (
+                                                <div className="bg-black/10 dark:bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black text-black/60 dark:text-white/60 uppercase tracking-widest border border-black/10 dark:border-white/10">
+                                                    Duygu Durumu Yok
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex -space-x-2">
+                                            {/* Removed decorative icons */}
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            ) : (
+                                <motion.div 
+                                    initial={{ y: 20, opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    className="w-full h-[45vh] min-h-[320px] max-h-[420px] rounded-[2rem] border-2 border-dashed border-black/10 dark:border-white/10 bg-white/[0.02] flex flex-col items-center justify-center gap-6 cursor-pointer hover:bg-white/[0.05] hover:border-cyan-500/40 transition-all duration-700 group relative overflow-hidden shrink-0"
+                                >
+                                    {/* Background Glow */}
+                                    <div className="absolute inset-0 bg-cyan-500/5 blur-[100px] group-hover:bg-cyan-500/10 transition-colors" />
+                                    
+                                    <div className="relative">
+                                        <div className="w-20 h-20 rounded-[1.5rem] bg-gradient-to-tr from-cyan-500/20 to-purple-500/20 flex items-center justify-center border border-black/10 dark:border-white/10 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-xl">
+                                            <ImagePlus className="w-8 h-8 text-cyan-400 drop-shadow-[0_0_15px_rgba(34,211,238,0.5)]" />
+                                        </div>
+                                        <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-cyan-500 flex items-center justify-center text-black border-4 border-[#0a0a0b] shadow-xl group-hover:scale-110 transition-transform">
+                                            <Plus className="w-4 h-4" strokeWidth={3} />
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="text-center relative z-10">
+                                        <p className="text-white font-black text-lg tracking-tight">Anıyı Ölümsüzleştir</p>
+                                        <p className="text-[var(--secondary-text)] text-xs font-medium mt-1.5 max-w-[200px] mx-auto leading-relaxed">
+                                            En sevdiğin fotoğrafı veya videoyu seç, Moffi topluluğuyla paylaş!
+                                        </p>
+                                    </div>
+
+                                    {/* Direct transparent file input overlay. Fully native & synchronous. */}
+                                    <input 
+                                        type="file" 
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-[60]" 
+                                        accept="image/*,video/*" 
+                                        onChange={handleCameraUpload} 
+                                    />
+                                </motion.div>
+                            )}
+
+                            {selectedFile?.type.startsWith('video/') && videoDuration > 0 && (
+                                <div className="flex flex-col gap-3 py-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                    <div className="flex justify-between items-center text-[10px] font-black tracking-wide text-black/50 dark:text-white/50 px-1">
+                                        <div className="flex items-center gap-1.5 text-cyan-400">
+                                            <Timer className="w-3.5 h-3.5" />
+                                            <span className="font-extrabold uppercase text-[9px] tracking-wider">{(videoTrimRange[1] - videoTrimRange[0]).toFixed(1)} sn seçildi</span>
+                                        </div>
+                                        <div className="font-mono text-[9px] text-black/40 dark:text-white/30 flex gap-2">
+                                            <span>{videoTrimRange[0].toFixed(1)}s – {videoTrimRange[1].toFixed(1)}s</span>
+                                            <span className="text-white/10">|</span>
+                                            <span>Toplam: {videoDuration.toFixed(1)}s</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Visual Trimmer Timeline Track */}
+                                    <div 
+                                        ref={trimmerRef}
+                                        className="relative h-8 bg-white/[0.01] rounded-xl border border-black/5 dark:border-white/5 overflow-visible select-none mt-2"
+                                    >
+                                        {/* Background waveform mock bars to look like a timeline */}
+                                        <div className="absolute inset-0 flex items-center justify-between px-3 gap-[2px] opacity-25 pointer-events-none z-0">
+                                            {Array.from({ length: 48 }).map((_, i) => {
+                                                const height = 10 + Math.sin(i * 0.4) * 6 + Math.cos(i * 0.7) * 3;
+                                                const barTime = (i / 47) * videoDuration;
+                                                const isActive = barTime >= videoTrimRange[0] && barTime <= videoTrimRange[1];
+                                                return (
+                                                    <div 
+                                                        key={i} 
+                                                        style={{ height: `${Math.max(4, Math.min(20, height))}px` }} 
+                                                        className={cn(
+                                                            "w-[1.5px] rounded-full transition-all duration-350", 
+                                                            isActive 
+                                                                ? "bg-gradient-to-t from-cyan-400 to-purple-400 opacity-90 scale-y-110" 
+                                                                : "bg-white/40 opacity-30"
+                                                        )}
+                                                    />
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Dimmed Areas (Discarded parts) */}
+                                        {/* Left dim */}
+                                        <div 
+                                            className="absolute left-0 top-0 bottom-0 bg-black/75 backdrop-blur-[1px] z-10 transition-all pointer-events-none rounded-l-xl"
+                                            style={{ width: `${(videoTrimRange[0] / videoDuration) * 100}%` }}
+                                        />
+                                        {/* Right dim */}
+                                        <div 
+                                            className="absolute right-0 top-0 bottom-0 bg-black/75 backdrop-blur-[1px] z-10 transition-all pointer-events-none rounded-r-xl"
+                                            style={{ width: `${100 - (videoTrimRange[1] / videoDuration) * 100}%` }}
+                                        />
+
+                                        {/* Active Selected Range Window (Draggable) */}
+                                        <div 
+                                            onPointerDown={(e) => handleTrimmerPointerDown(e, 'window')}
+                                            className="absolute top-0 bottom-0 border-y-[1.5px] border-cyan-400 bg-cyan-500/[0.03] shadow-[inset_0_0_15px_rgba(34,211,238,0.05)] z-10 cursor-grab active:cursor-grabbing hover:bg-cyan-400/[0.08] transition-colors"
+                                            style={{ 
+                                                left: `${(videoTrimRange[0] / videoDuration) * 100}%`,
+                                                right: `${100 - (videoTrimRange[1] / videoDuration) * 100}%`
+                                            }}
+                                        />
+
+                                        {/* Live Playhead Indicator */}
+                                        <div 
+                                            className="absolute top-0 bottom-0 w-[1.5px] bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)] z-20 pointer-events-none transition-all"
+                                            style={{ left: `${(videoCurrentTime / videoDuration) * 100}%` }}
+                                        />
+
+                                        {/* Dynamic Drag Tooltips */}
+                                        {draggingHandle === 'start' && (
+                                            <div 
+                                                className="absolute -top-9 bg-cyan-400 text-black text-[9px] font-black px-2 py-0.5 rounded-md shadow-[0_4px_12px_rgba(34,211,238,0.3)] -translate-x-1/2 pointer-events-none z-40 after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-cyan-400"
+                                                style={{ left: `${(videoTrimRange[0] / videoDuration) * 100}%` }}
+                                            >
+                                                {videoTrimRange[0].toFixed(1)}s
+                                            </div>
+                                        )}
+                                        {draggingHandle === 'end' && (
+                                            <div 
+                                                className="absolute -top-9 bg-cyan-400 text-black text-[9px] font-black px-2 py-0.5 rounded-md shadow-[0_4px_12px_rgba(34,211,238,0.3)] -translate-x-1/2 pointer-events-none z-40 after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-cyan-400"
+                                                style={{ left: `${(videoTrimRange[1] / videoDuration) * 100}%` }}
+                                            >
+                                                {videoTrimRange[1].toFixed(1)}s
+                                            </div>
+                                        )}
+                                        {draggingHandle === 'window' && (
+                                            <div 
+                                                className="absolute -top-9 bg-purple-500 text-white text-[9px] font-black px-2 py-0.5 rounded-md shadow-[0_4px_12px_rgba(168,85,247,0.3)] -translate-x-1/2 pointer-events-none z-40 after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-purple-500"
+                                                style={{ left: `${((videoTrimRange[0] + videoTrimRange[1]) / 2) / videoDuration * 100}%` }}
+                                            >
+                                                {((videoTrimRange[1] - videoTrimRange[0])).toFixed(1)}s
+                                            </div>
+                                        )}
+
+                                        {/* Left Handle */}
+                                        <div 
+                                            onPointerDown={(e) => handleTrimmerPointerDown(e, 'start')}
+                                            className="absolute top-0 bottom-0 w-6 cursor-ew-resize z-30 flex items-center justify-center touch-none"
+                                            style={{ left: `calc(${(videoTrimRange[0] / videoDuration) * 100}% - 12px)` }}
+                                        >
+                                            <div 
+                                                className={cn(
+                                                    "w-[3px] h-full bg-cyan-400 rounded-full transition-all duration-200 shadow-md",
+                                                    draggingHandle === 'start' ? "bg-cyan-300 scale-y-105 shadow-[0_0_10px_rgba(34,211,238,0.6)]" : "hover:bg-cyan-300"
+                                                )}
+                                            />
+                                        </div>
+
+                                        {/* Right Handle */}
+                                        <div 
+                                            onPointerDown={(e) => handleTrimmerPointerDown(e, 'end')}
+                                            className="absolute top-0 bottom-0 w-6 cursor-ew-resize z-30 flex items-center justify-center touch-none"
+                                            style={{ left: `calc(${(videoTrimRange[1] / videoDuration) * 100}% - 12px)` }}
+                                        >
+                                            <div 
+                                                className={cn(
+                                                    "w-[3px] h-full bg-cyan-400 rounded-full transition-all duration-200 shadow-md",
+                                                    draggingHandle === 'end' ? "bg-cyan-300 scale-y-105 shadow-[0_0_10px_rgba(34,211,238,0.6)]" : "hover:bg-cyan-300"
+                                                )}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            {/* Filter guide hint */}
+                            {selectedFile?.type.startsWith('image/') && (
+                                <p className="text-center text-[10px] text-black/40 dark:text-white/30 font-medium tracking-widest uppercase mt-2 mb-1 animate-pulse">
+                                    Filtreleri değiştirmek için fotoğrafı sağa sola kaydır
+                                </p>
+                            )}
+
+                            {/* MINIMAL CAPTION BOX */}
+                            <div className="px-2 pt-2 shrink-0">
+                                <textarea
+                                    value={uploadCaption}
+                                    onChange={(e) => setUploadCaption(e.target.value)}
+                                    onInput={(e) => {
+                                        e.currentTarget.style.height = 'auto';
+                                        e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
+                                    }}
+                                    placeholder="Neler oluyor?.."
+                                    className="w-full bg-transparent outline-none text-[var(--foreground)] resize-none min-h-[40px] max-h-[100px] text-lg font-medium py-1 overflow-hidden placeholder:text-black/30 dark:text-white/20"
+                                    rows={1}
+                                />
+                            </div>
+
+
+
+
+
+
+
+
+
+                                                                                     {/* SMART TOOLBAR */}
+                            <div className="flex items-center justify-between px-2 py-4 border-y border-black/5 dark:border-white/5 mt-2 shrink-0">
+                                 <div className="flex items-center gap-6">
+                                     <button 
+                                         type="button"
+                                         onClick={() => { console.log("Adjust clicked. Current activeTool:", activeTool); setActiveTool(activeTool === 'adjust' ? null : 'adjust'); }}
+                                         className={cn("transition-all active:scale-90", activeTool === 'adjust' ? "text-cyan-400" : "text-black/50 dark:text-white/40 hover:text-white")}
+                                         title="İnce Ayar"
+                                     >
+                                         <Palette className="w-5 h-5" />
+                                     </button>
+                                     <button 
+                                         type="button"
+                                         onClick={() => { console.log("Tag clicked. Current activeTool:", activeTool); setActiveTool(activeTool === 'tag' ? null : 'tag'); }}
+                                         className={cn("transition-all active:scale-90", activeTool === 'tag' ? "text-cyan-400" : "text-black/50 dark:text-white/40 hover:text-white")}
+                                         title="Etiketle"
+                                     >
+                                         <PawPrint className="w-5 h-5" />
+                                     </button>
+                                     <button 
+                                         type="button"
+                                         onClick={() => { console.log("Schedule clicked. Current activeTool:", activeTool); setActiveTool(activeTool === 'schedule' ? null : 'schedule'); }}
+                                         className={cn("transition-all active:scale-90", activeTool === 'schedule' ? "text-cyan-400" : "text-black/50 dark:text-white/40 hover:text-white")}
+                                         title="Zamanla"
+                                     >
+                                         <Clock className="w-5 h-5" />
+                                     </button>
+                                     <button 
+                                         type="button"
+                                         onClick={() => { console.log("Mood clicked. Current activeTool:", activeTool); setActiveTool(activeTool === 'mood' ? null : 'mood'); }}
+                                         className={cn("transition-all active:scale-90", activeTool === 'mood' ? "text-cyan-400" : "text-black/50 dark:text-white/40 hover:text-white")}
+                                         title="Ruh Hali"
+                                     >
+                                         <Heart className="w-5 h-5" />
+                                     </button>
+                                 </div>
+                                
+                                <button 
+                                    type="button"
+                                    onClick={generateAICaption}
+                                    disabled={isGeneratingAI}
+                                    className={cn(
+                                        "flex items-center gap-2 px-4 py-2 rounded-full transition-all active:scale-95",
+                                        isGeneratingAI ? "bg-black/5 dark:bg-white/5 opacity-50" : "bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20"
+                                    )}
+                                >
+                                    {isGeneratingAI ? <div className="w-3 h-3 border-2 border-cyan-400/20 border-t-cyan-400 rounded-full animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                                    <span className="text-[10px] font-black uppercase tracking-widest">AI Öner</span>
+                                </button>
+                            </div>
+
+                            {/* DYNAMIC TOOL DRAWER */}
+                            {activeTool && (
+                                                                         <motion.div
+                                             key={activeTool}
+                                             id="upload-tool-drawer"
+                                             initial={{ opacity: 0, y: -10 }}
+                                             animate={{ opacity: 1, y: 0 }}
+                                             className="bg-[#0c0c0d]/30 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-2xl overflow-hidden shrink-0"
+                                         >
+                                             <div className="p-4">
+                                                 {activeTool === 'adjust' && (
+                                                     <div className="flex flex-col gap-4">
+                                                         {/* Sub-tool selector & Reset */}
+                                                         <div className="flex justify-between items-center border-b border-black/5 dark:border-white/5 pb-2.5">
+                                                             <div className="flex gap-4 sm:gap-6 overflow-x-auto no-scrollbar py-1">
+                                                                 <button 
+                                                                     type="button" 
+                                                                     onClick={() => setActiveAdjustSubTool('brightness')} 
+                                                                     className={cn(
+                                                                         "flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest transition-all shrink-0 relative py-1",
+                                                                         activeAdjustSubTool === 'brightness' 
+                                                                             ? "text-cyan-400" 
+                                                                             : "text-white/35 hover:text-black/60 dark:text-white/60"
+                                                                     )}
+                                                                 >
+                                                                     <Sun className="w-3.5 h-3.5" /> Parlaklık
+                                                                     {activeAdjustSubTool === 'brightness' && (
+                                                                         <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-cyan-400 rounded-full" />
+                                                                     )}
+                                                                 </button>
+                                                                 <button 
+                                                                     type="button" 
+                                                                     onClick={() => setActiveAdjustSubTool('contrast')} 
+                                                                     className={cn(
+                                                                         "flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest transition-all shrink-0 relative py-1",
+                                                                         activeAdjustSubTool === 'contrast' 
+                                                                             ? "text-cyan-400" 
+                                                                             : "text-white/35 hover:text-black/60 dark:text-white/60"
+                                                                     )}
+                                                                 >
+                                                                     <Contrast className="w-3.5 h-3.5" /> Kontrast
+                                                                     {activeAdjustSubTool === 'contrast' && (
+                                                                         <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-cyan-400 rounded-full" />
+                                                                     )}
+                                                                 </button>
+                                                                 <button 
+                                                                     type="button" 
+                                                                     onClick={() => setActiveAdjustSubTool('saturation')} 
+                                                                     className={cn(
+                                                                         "flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest transition-all shrink-0 relative py-1",
+                                                                         activeAdjustSubTool === 'saturation' 
+                                                                             ? "text-cyan-400" 
+                                                                             : "text-white/35 hover:text-black/60 dark:text-white/60"
+                                                                     )}
+                                                                 >
+                                                                     <Droplet className="w-3.5 h-3.5" /> Doygunluk
+                                                                     {activeAdjustSubTool === 'saturation' && (
+                                                                         <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-cyan-400 rounded-full" />
+                                                                     )}
+                                                                 </button>
+                                                             </div>
+                                                             <button 
+                                                                 type="button" 
+                                                                 onClick={() => { setBrightness(100); setContrast(100); setSaturation(100); }} 
+                                                                 className="text-[9px] font-black text-black/40 dark:text-white/30 hover:text-red-400 uppercase tracking-widest active:scale-95 transition-all shrink-0 ml-2"
+                                                             >
+                                                                 Sıfırla
+                                                             </button>
+                                                         </div>
+
+                                                         {/* Slider section - merged value label inline to save vertical space */}
+                                                         <div className="py-1">
+                                                             {activeAdjustSubTool === 'brightness' && (
+                                                                 <div className="flex items-center gap-4">
+                                                                     <input 
+                                                                         type="range" 
+                                                                         min="50" 
+                                                                         max="150" 
+                                                                         step="1" 
+                                                                         value={brightness} 
+                                                                         onChange={(e) => setBrightness(parseInt(e.target.value))} 
+                                                                         className="flex-1 pro-range-slider cursor-pointer animate-none" 
+                                                                         style={{
+                                                                             background: `linear-gradient(to right, #06b6d4 0%, #8b5cf6 ${((brightness - 50) / (150 - 50)) * 100}%, rgba(255, 255, 255, 0.08) ${((brightness - 50) / (150 - 50)) * 100}%)`
+                                                                         }}
+                                                                     />
+                                                                     <span className="font-mono text-cyan-400 text-xs min-w-[36px] text-right font-bold">{Math.round(brightness)}%</span>
+                                                                 </div>
+                                                             )}
+                                                             {activeAdjustSubTool === 'contrast' && (
+                                                                 <div className="flex items-center gap-4">
+                                                                     <input 
+                                                                         type="range" 
+                                                                         min="50" 
+                                                                         max="150" 
+                                                                         step="1" 
+                                                                         value={contrast} 
+                                                                         onChange={(e) => setContrast(parseInt(e.target.value))} 
+                                                                         className="flex-1 pro-range-slider cursor-pointer animate-none" 
+                                                                         style={{
+                                                                             background: `linear-gradient(to right, #06b6d4 0%, #8b5cf6 ${((contrast - 50) / (150 - 50)) * 100}%, rgba(255, 255, 255, 0.08) ${((contrast - 50) / (150 - 50)) * 100}%)`
+                                                                         }}
+                                                                     />
+                                                                     <span className="font-mono text-cyan-400 text-xs min-w-[36px] text-right font-bold">{Math.round(contrast)}%</span>
+                                                                 </div>
+                                                             )}
+                                                             {activeAdjustSubTool === 'saturation' && (
+                                                                 <div className="flex items-center gap-4">
+                                                                     <input 
+                                                                         type="range" 
+                                                                         min="0" 
+                                                                         max="200" 
+                                                                         step="1" 
+                                                                         value={saturation} 
+                                                                         onChange={(e) => setSaturation(parseInt(e.target.value))} 
+                                                                         className="flex-1 pro-range-slider cursor-pointer animate-none" 
+                                                                         style={{
+                                                                             background: `linear-gradient(to right, #06b6d4 0%, #8b5cf6 ${(saturation / 200) * 100}%, rgba(255, 255, 255, 0.08) ${(saturation / 200) * 100}%)`
+                                                                         }}
+                                                                     />
+                                                                     <span className="font-mono text-cyan-400 text-xs min-w-[36px] text-right font-bold">{Math.round(saturation)}%</span>
+                                                                 </div>
+                                                             )}
+                                                         </div>
+                                                     </div>
+                                                 )}
+
+                                            {activeTool === 'tag' && (
+                                                <div className="flex flex-col gap-4">
+                                                    <span className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest">Dostunu Etiketle</span>
+                                                    <div className="flex gap-4 overflow-x-auto no-scrollbar py-2">
+                                                        {userPets?.map(pet => (
+                                                            <button 
+                                                                key={pet.id} 
+                                                                type="button"
+                                                                onClick={() => setTaggedPetIds(prev => prev.includes(pet.id) ? prev.filter(id => id !== pet.id) : [...prev, pet.id])}
+                                                                className="flex flex-col items-center gap-2 shrink-0"
+                                                            >
+                                                                <div className={cn("w-12 h-12 rounded-full border-2 transition-all relative", taggedPetIds.includes(pet.id) ? "border-cyan-500 scale-110 shadow-[0_0_15px_rgba(6,182,212,0.3)]" : "border-black/10 dark:border-white/10")}>
+                                                                    <img src={pet.avatar} className="w-full h-full rounded-full object-cover p-0.5" />
+                                                                    {taggedPetIds.includes(pet.id) && <div className="absolute -top-1 -right-1 w-4 h-4 bg-cyan-500 rounded-full flex items-center justify-center border-2 border-black"><Check size={8} /></div>}
+                                                                </div>
+                                                                <span className={cn("text-[9px] font-bold uppercase", taggedPetIds.includes(pet.id) ? "text-cyan-400" : "text-black/50 dark:text-white/40")}>{pet.name}</span>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {activeTool === 'schedule' && (
+                                                <div className="flex flex-col gap-4">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest">Paylaşım Zamanı</span>
+                                                        <button type="button" onClick={() => setIsSchedulingMode(!isSchedulingMode)} className={cn("px-3 py-1 rounded-full text-[9px] font-black uppercase transition-all", isSchedulingMode ? "bg-cyan-500 text-black" : "bg-black/10 dark:bg-white/10 text-black/50 dark:text-white/40")}>
+                                                            {isSchedulingMode ? 'Zamanlandı' : 'Şimdi'}
+                                                        </button>
+                                                    </div>
+                                                    {isSchedulingMode && (
+                                                        <input type="datetime-local" value={scheduledDate || ''} onChange={(e) => setScheduledDate(e.target.value)} className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-xs text-white [color-scheme:dark]" />
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {activeTool === 'mood' && (
+                                                <div className="flex flex-col gap-4">
+                                                    <span className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest">Ruh Hali</span>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {MOOD_OPTIONS.map(mood => (
+                                                            <button type="button" key={mood} onClick={() => setUploadMood(uploadMood === mood ? null : mood)} className={cn("px-4 py-2 rounded-full text-xs font-bold transition-all", uploadMood === mood ? "bg-white text-black scale-105" : "bg-black/5 dark:bg-white/5 text-black/50 dark:text-white/40 hover:bg-black/10 dark:bg-white/10")}>
+                                                                {mood}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                )}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* STORY PREVIEW MODAL (The Professional Review Phase) */}
+            <AnimatePresence>
+                {storyPreview && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[9999] bg-white dark:bg-black overflow-y-auto"
+                    >
+                        {/* Immersive Background Blur - FIXED & TOP PRIORITY */}
+                        <div className="fixed inset-0 z-0 pointer-events-none">
+                            <img src={storyPreview} className="w-full h-full object-cover blur-3xl opacity-50" />
+                        </div>
+
+                        <div className="relative z-10 flex flex-col min-h-screen">
+                            {/* Header */}
+                            <div className="flex justify-between items-center p-4 sm:p-6 pt-8">
+                                <button
+                                    onClick={() => setStoryPreview(null)}
+                                    className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white border border-black/10 dark:border-white/10 active:scale-90 transition-transform"
+                                >
+                                    <X className="w-6 h-6" />
+                                </button>
+                                <h2 className="text-white font-black text-lg uppercase tracking-tighter">Hikaye Önizleme</h2>
+                                <div className="w-10" />
+                            </div>
+
+                            {/* Preview Content - Responsive & Safe */}
+                            <div className="flex-1 flex items-center justify-center p-4 sm:p-6 py-10">
+                                <div className="w-full max-w-[300px] sm:max-w-[340px] max-h-[65vh] aspect-[9/16] rounded-[48px] overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border-[6px] border-black/10 dark:border-white/10 relative">
+                                    <img src={storyPreview} className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60 pointer-events-none" />
+                                    
+                                    {/* Glass Overlay for extra premium feel */}
+                                    <div className="absolute inset-0 border border-black/10 dark:border-white/10 rounded-[42px] pointer-events-none" />
+                                </div>
+                            </div>
+
+                            {/* Footer Controls - Clears Nav Bar */}
+                            <div className="p-4 sm:p-8 pb-32 flex flex-col gap-5">
+                            <button
+                                onClick={confirmUploadStory}
+                                disabled={isUploadingStory}
+                                className={cn(
+                                    "w-full py-4 rounded-full font-black text-white text-lg flex items-center justify-center gap-2 shadow-2xl transition-all",
+                                    isUploadingStory ? "bg-gray-600 opacity-50 cursor-not-allowed" : "bg-gradient-to-r from-cyan-400 to-purple-500 hover:scale-[1.02] active:scale-95"
+                                )}
+                            >
+                                {isUploadingStory ? (
+                                    <><div className="w-5 h-5 border-2 border-black/30 dark:border-white/30 border-t-white rounded-full animate-spin" /> Yükleniyor...</>
+                                ) : (
+                                    <><Sparkles className="w-5 h-5" /> Hikayeyi Paylaş</>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setStoryPreview(null)}
+                                className="w-full py-3 text-black/60 dark:text-white/60 font-bold hover:text-white transition-colors"
+                            >
+                                Vazgeç
+                            </button>
+                        </div>
+                    </div>
+                </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* EDIT POST MODAL */}
+            <AnimatePresence>
+                {editingPost && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[505] bg-black/95 backdrop-blur-xl flex flex-col"
+                    >
+                        {/* Header */}
+                        <div className="flex justify-between items-center p-4 sm:p-6 shrink-0 border-b border-[var(--card-border)]">
+                            <button
+                                onClick={() => setEditingPost(null)}
+                                className="w-10 h-10 rounded-full bg-black/10 dark:bg-white/10 flex items-center justify-center -ml-2 text-[var(--foreground)] hover:bg-black/20 dark:bg-white/20"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                            <h2 className="text-xl font-black text-[var(--foreground)]">Gönderiyi Düzenle</h2>
+                            <div className="w-10" />
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 overflow-y-auto w-full max-w-lg mx-auto p-4 pb-32 flex flex-col gap-6">
+
+                            {/* PREVIEW */}
+                            <div className="w-full aspect-[4/5] rounded-3xl overflow-hidden bg-gray-900 border border-black/10 dark:border-white/10 relative shadow-2xl">
+                                <img src={editingPost.media} className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+                                <div className="absolute bottom-4 left-4 flex gap-2">
+                                    {editingPost.mood && (
+                                        <div className="bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-[var(--foreground)] border border-black/20 dark:border-white/20">
+                                            {editingPost.mood}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* CAPTION */}
+                            <div className="bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-3xl p-4 flex gap-4">
+                                <img src={user?.avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300"} className="w-10 h-10 rounded-full shrink-0" />
+                                <textarea
+                                    value={editingPost.desc}
+                                    onChange={(e) => setEditingPost({ ...editingPost, desc: e.target.value })}
+                                    placeholder="Bu harika anı anlat..."
+                                    className="w-full bg-transparent outline-none text-[var(--foreground)] resize-none h-24 text-sm mt-1"
+                                />
+                            </div>
+
+
+
+                            {/* MOOD SELECTOR */}
+                            <div className="flex flex-col gap-2">
+                                <span className="text-[var(--foreground)]/60 text-[11px] font-bold uppercase tracking-widest px-1">Ruh Hali (İsteğe Bağlı)</span>
+                                <div className="w-full overflow-x-auto no-scrollbar flex gap-2 pb-2">
+                                    {MOOD_OPTIONS.map(mood => (
+                                        <button
+                                            key={mood}
+                                            onClick={() => setEditingPost({ ...editingPost, mood: editingPost.mood === mood ? null : mood })}
+                                            className={cn(
+                                                "shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors border",
+                                                editingPost.mood === mood ? "bg-cyan-500 text-black border-cyan-400 font-bold" : "bg-[var(--card-bg)] border-black/10 dark:border-white/10 text-[var(--foreground)] hover:bg-black/10 dark:bg-white/10"
+                                            )}
+                                        >
+                                            {mood}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* SAVE BUTTON */}
+                            <button
+                                onClick={saveEditPost}
+                                disabled={isPublishing}
+                                className={cn("w-full py-4 mt-auto rounded-full font-black text-[var(--foreground)] flex items-center justify-center gap-2 shadow-[0_10px_40px_rgba(34,211,238,0.3)] transition-all", isPublishing ? "bg-gray-600 cursor-not-allowed" : "bg-gradient-to-r from-cyan-400 to-purple-500 hover:scale-[1.02] active:scale-95")}
+                            >
+                                {isPublishing ? (
+                                    <span className="animate-pulse">Kaydediliyor...</span>
+                                ) : (
+                                    <><Edit2 className="w-5 h-5" /> Kaydet</>
+                                )}
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* APPLE STYLE DELETE CONFIRMATION ALERT (CENTERED DIALOG) */}
+            <AnimatePresence>
+                {postToDelete !== null && (
+                    <>
+                        {/* Overlay */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[290] bg-black/60 backdrop-blur-sm"
+                            onClick={() => setPostToDelete(null)}
+                        />
+                        {/* Elegant iOS-like Center Alert Popup */}
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            transition={{ duration: 0.2, ease: "easeOut" }}
+                            className="fixed inset-0 z-[300] flex items-center justify-center p-4 pointer-events-none"
+                        >
+                            <div className="w-full max-w-[280px] bg-[#252528]/95 backdrop-blur-xl rounded-3xl overflow-hidden pointer-events-auto shadow-2xl border border-black/10 dark:border-white/10 flex flex-col">
+                                <div className="p-4 sm:p-6 flex flex-col items-center text-center gap-2 border-b border-black/10 dark:border-white/10">
+                                    <h3 className="text-[var(--foreground)] text-base font-bold">Gönderiyi Sil</h3>
+                                    <p className="text-[var(--foreground)]/70 text-sm leading-snug">Bu gönderiyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.</p>
+                                </div>
+                                <div className="flex flex-col">
+                                    <button
+                                        onClick={deletePost}
+                                        className="w-full py-3.5 text-red-500 font-bold text-[15px] border-b border-black/10 dark:border-white/10 hover:bg-[var(--card-bg)] transition-colors active:bg-black/10 dark:bg-white/10"
+                                    >
+                                        Sil
+                                    </button>
+                                    <button
+                                        onClick={() => setPostToDelete(null)}
+                                        className="w-full py-3.5 text-cyan-500 font-normal text-[15px] hover:bg-[var(--card-bg)] transition-colors active:bg-black/10 dark:bg-white/10"
+                                    >
+                                        Vazgeç
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* LOST AD (SOS) MODAL */}
+            <AnimatePresence>
+                {isLostAdModalOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, y: "100%" }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: "100%" }}
+                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                        className="fixed inset-0 z-[280] bg-[var(--background)] flex flex-col pt-12 text-[var(--foreground)]"
+                    >
+                        {/* Emergency Header */}
+                        <div className="flex justify-between items-center px-6 pb-4 border-b border-red-500/20">
+                            <button
+                                onClick={() => setIsLostAdModalOpen(false)}
+                                className="w-10 h-10 rounded-full bg-[var(--card-bg)] flex items-center justify-center -ml-2 hover:bg-black/10 dark:bg-white/10 transition-colors"
+                            >
+                                <ChevronLeft className="w-6 h-6 text-[var(--foreground)]" />
+                            </button>
+                            <h2 className="text-lg font-black text-red-500 tracking-wider">ACİL DURUM İLANI</h2>
+                            <div className="w-10" />
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 overflow-y-auto w-full max-w-lg mx-auto p-4 sm:p-6 space-y-6">
+
+                            <div className="bg-red-500/10 border border-red-500/30 rounded-3xl p-4 sm:p-6 text-center shadow-inner relative overflow-hidden">
+                                <div className="absolute inset-0 bg-red-500/10 animate-pulse pointer-events-none" />
+                                <div className="w-16 h-16 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center mx-auto mb-4 border border-red-500/30">
+                                    <MapPin className="w-8 h-8" />
+                                </div>
+                                <h3 className="text-xl font-bold text-[var(--foreground)] mb-2">Çevredeki Herkesi Uyar!</h3>
+                                <p className="text-sm text-red-500 font-medium leading-relaxed">
+                                    Kaybolan dostunuzun bilgilerini girdiğinizde, 5 km çapındaki tüm Moffi üyelerine anında acil durum (SOS) bildirimi gönderilecektir.
+                                </p>
+                            </div>
+
+                            <div className="flex gap-2">
+                                {[
+                                    { id: 'cat', label: 'Kedi', icon: '🐈' },
+                                    { id: 'dog', label: 'Köpek', icon: '🐕' },
+                                    { id: 'bird', label: 'Kuş', icon: '🦜' },
+                                    { id: 'other', label: 'Diğer', icon: '🐾' },
+                                ].map(type => (
+                                    <button
+                                        key={type.id}
+                                        onClick={() => setLostPetType(type.id)}
+                                        className={cn(
+                                            "flex-1 py-3 rounded-2xl text-xs font-bold transition-all flex flex-col items-center gap-1 border",
+                                            lostPetType === type.id
+                                                ? "bg-red-500/20 border-red-500 text-red-400"
+                                                : "bg-[var(--card-bg)] border-black/10 dark:border-white/10 text-[var(--secondary-text)]"
+                                        )}
+                                    >
+                                        <span className="text-xl">{type.icon}</span>
+                                        {type.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-xs font-bold text-[var(--secondary-text)] ml-1 uppercase tracking-wider">İsmi</label>
+                                    <input value={lostPetName} onChange={e => setLostPetName(e.target.value)} type="text" placeholder="Örn: Buster" className="w-full mt-1 bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl py-4 px-5 text-[var(--foreground)] outline-none focus:border-red-500 transition-colors" />
+                                </div>
+
+                                <div>
+                                    <label className="text-xs font-bold text-[var(--secondary-text)] ml-1 uppercase tracking-wider">Cinsi / Türü</label>
+                                    <input value={lostPetBreed} onChange={e => setLostPetBreed(e.target.value)} type="text" placeholder="Örn: Golden Retriever" className="w-full mt-1 bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl py-4 px-5 text-[var(--foreground)] outline-none focus:border-red-500 transition-colors" />
+                                </div>
+
+                                <div>
+                                    <label className="text-xs font-bold text-[var(--secondary-text)] ml-1 mb-2 block uppercase tracking-wider">En Son Göründüğü Yer (Harita)</label>
+                                    <MapLocationPicker 
+                                        coords={newLostPetCoords} 
+                                        onChange={(coords, address) => {
+                                            setNewLostPetCoords(coords);
+                                            if (address) setLostPetLocation(address);
+                                        }} 
+                                        height="220px" 
+                                    />
+                                </div>
+
+
+
+                                <div>
+                                    <label className="text-xs font-bold text-[var(--secondary-text)] ml-1 uppercase tracking-wider">Detaylar / İletişim Notu</label>
+                                    <textarea value={lostPetDesc} onChange={e => setLostPetDesc(e.target.value)} placeholder="Tasma rengi, belirgin özelliği veya ek iletişim bilgileriniz..." className="w-full mt-1 bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl py-4 px-5 text-[var(--foreground)] outline-none focus:border-red-500 transition-colors resize-none h-24" />
+                                </div>
+
+                                <div>
+                                    <div className="flex justify-between items-center mb-2 px-1">
+                                        <label className="text-xs font-bold text-[var(--secondary-text)] uppercase tracking-wider">Fotoğraflar</label>
+                                        <button onClick={() => sosInputRef.current?.click()} className="text-[10px] bg-red-500/10 text-red-500 px-3 py-1 rounded-full border border-red-500/20 font-bold hover:bg-red-500/20 transition-all uppercase tracking-tighter flex items-center gap-1">
+                                            <Camera className="w-3 h-3" /> Fotoğraf Ekle
+                                        </button>
+                                        <input type="file" ref={sosInputRef} className="hidden" accept="image/*" multiple onChange={handleSosImageSelect} />
+                                    </div>
+
+                                    {lostPetPhotos.length > 0 ? (
+                                        <div className="grid grid-cols-4 gap-3">
+                                            {lostPetPhotos.map((photo, idx) => (
+                                                <div key={idx} className="aspect-square rounded-xl bg-[var(--card-bg)] border border-black/10 dark:border-white/10 relative overflow-hidden group">
+                                                    <img src={photo.preview} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                                                    <button
+                                                        onClick={() => setLostPetPhotos(prev => prev.filter((_, i) => i !== idx))}
+                                                        className="absolute top-1 right-1 w-5 h-5 bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center text-[var(--foreground)]/70 hover:text-[var(--foreground)]"
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            {lostPetPhotos.length < 4 && (
+                                                <button
+                                                    onClick={() => sosInputRef.current?.click()}
+                                                    className="aspect-square rounded-xl border-2 border-dashed border-black/10 dark:border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-red-500/50 hover:text-red-500 transition-all"
+                                                >
+                                                    <Plus className="w-5 h-5" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div
+                                            onClick={() => sosInputRef.current?.click()}
+                                            className="w-full py-8 border-2 border-dashed border-black/10 dark:border-white/10 rounded-2xl flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-red-500/30 hover:bg-red-500/5 transition-all cursor-pointer"
+                                        >
+                                            <Camera className="w-8 h-8 mb-2 opacity-30" />
+                                            <p className="text-xs font-bold">Fotoğraf Ekle</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Sticky Action Button */}
+                        <div className="p-4 sm:p-6 border-t border-red-500/20 bg-[var(--background)] shrink-0">
+                            <button
+                                onClick={submitSos}
+                                disabled={isSubmittingSOS}
+                                className={cn("w-full py-4 rounded-2xl font-black text-[var(--foreground)] text-base tracking-wide flex items-center justify-center gap-2 shadow-[0_10px_30px_rgba(220,38,38,0.4)] transition-all", isSubmittingSOS ? "bg-red-800 cursor-not-allowed" : "bg-red-600 active:scale-95")}
+                            >
+                                {isSubmittingSOS ? (
+                                    <span className="animate-pulse">Sinyal İletiliyor...</span>
+                                ) : (
+                                    <><Activity className="w-5 h-5 animate-pulse" /> S.O.S Sinyali Gönder</>
+                                )}
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* IMMERSIVE LOST PET DETAIL BOTTOM SHEET / DRAWER */}
+            <AnimatePresence>
+                        {selectedLostPet && (
+                    <div className="fixed inset-0 z-[120] flex items-end justify-center sm:p-4 pb-0">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                            onClick={() => setSelectedLostPet(null)}
+                        />
+                        <motion.div
+                            drag="y"
+                            dragConstraints={{ top: 0, bottom: 0 }}
+                            dragElastic={0.2}
+                            onDragEnd={(e, info) => {
+                                if (info.offset.y > 100) setSelectedLostPet(null);
+                            }}
+                            initial={{ y: "100%", opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: "100%", opacity: 0 }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="w-full sm:max-w-md bg-[var(--background)] sm:rounded-[3rem] rounded-t-[2.5rem] shadow-2xl relative z-10 flex flex-col overflow-hidden max-h-[90vh] sm:max-h-[85vh] border-t border-black/10 dark:border-white/10 sm:border"
+                        >
+                            {/* Drag Handle */}
+                            <button 
+                                onClick={() => setSelectedLostPet(null)}
+                                className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full z-50 hover:bg-white/40 transition-colors cursor-pointer"
+                            />
+
+                            <div className="flex-1 overflow-y-auto no-scrollbar w-full flex flex-col relative">
+                                {/* Hero Image Section */}
+                            {selectedLostPet.active_image_url || selectedLostPet.media_url ? (
+                                <div 
+                                    className="relative w-full h-[260px] sm:h-[300px] bg-white dark:bg-black shrink-0 overflow-hidden"
+                                    onTouchStart={(e) => {
+                                        const touch = e.touches[0];
+                                        (window as any).heroTouchStartX = touch.clientX;
+                                    }}
+                                    onTouchEnd={(e) => {
+                                        const touchX = e.changedTouches[0].clientX;
+                                        const startX = (window as any).heroTouchStartX;
+                                        if (startX && selectedLostPet.images && selectedLostPet.images.length > 1) {
+                                            const diff = startX - touchX;
+                                            const currentIndex = selectedLostPet.images.indexOf(selectedLostPet.active_image_url || selectedLostPet.images[0] || selectedLostPet.media_url);
+                                            if (diff > 40 && currentIndex < selectedLostPet.images.length - 1) {
+                                                setSelectedLostPet({ ...selectedLostPet, active_image_url: selectedLostPet.images[currentIndex + 1] });
+                                            } else if (diff < -40 && currentIndex > 0) {
+                                                setSelectedLostPet({ ...selectedLostPet, active_image_url: selectedLostPet.images[currentIndex - 1] });
+                                            }
+                                        }
+                                    }}
+                                >
+                                    <img 
+                                        key={selectedLostPet.active_image_url || selectedLostPet.media_url}
+                                        src={selectedLostPet.active_image_url || selectedLostPet.media_url} 
+                                        alt={selectedLostPet.pet_name || 'Kayıp Pet'} 
+                                        className="w-full h-full object-cover animate-in fade-in zoom-in-95 duration-300" 
+                                    />
+                                    
+                                    {/* Pagination Dots */}
+                                    {selectedLostPet.images && selectedLostPet.images.length > 1 && (
+                                        <div className="absolute top-4 inset-x-0 flex justify-center gap-1.5 z-20 pointer-events-none">
+                                            {selectedLostPet.images.map((url: string, i: number) => (
+                                                <div key={i} className={cn("h-1.5 rounded-full transition-all duration-300", (selectedLostPet.active_image_url || selectedLostPet.images[0]) === url ? "w-4 bg-white shadow-sm" : "w-1.5 bg-white/50 backdrop-blur-sm")} />
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Header Info Layered on Image */}
+                                    <div className="absolute bottom-0 inset-x-0 p-6 flex items-end justify-between z-10 pointer-events-none">
+                                        <div className="flex flex-col gap-1 min-w-0 pr-4">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <div className="px-2.5 py-1 rounded-lg bg-red-500 text-white text-[10px] font-black tracking-widest uppercase shadow-lg shadow-red-500/30 flex items-center gap-1.5">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" /> S.O.S
+                                                </div>
+                                                <span className="text-[10px] font-bold text-black/80 dark:text-white/80 bg-black/40 backdrop-blur-md px-2 py-1 rounded-lg">
+                                                    {new Date(selectedLostPet.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Floating Actions (Close & Share) on top of image */}
+                                    <div className="absolute top-6 right-6 flex items-center gap-2 z-20">
+                                        <button 
+                                            onClick={async () => {
+                                                try {
+                                                    if (navigator.share) {
+                                                        await navigator.share({
+                                                            title: 'Kayıp İlanı: ' + selectedLostPet.pet_name,
+                                                            text: 'Lütfen bu kayıp dostumuzu bulmamıza yardım edin!',
+                                                            url: window.location.href,
+                                                        });
+                                                    } else {
+                                                        showToast("Bağlantı Kopyalandı", "İlan linki panoya kopyalandı", "success");
+                                                    }
+                                                } catch (err) {
+                                                    console.error("Share failed:", err);
+                                                }
+                                            }}
+                                            className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-black/10 dark:border-white/10 flex items-center justify-center text-black/80 dark:text-white/80 hover:bg-black/60 hover:text-white transition-all active:scale-95"
+                                        >
+                                            <Share2 className="w-4 h-4" />
+                                        </button>
+                                        <button 
+                                            onClick={() => setSelectedLostPet(null)}
+                                            className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-black/10 dark:border-white/10 flex items-center justify-center text-black/80 dark:text-white/80 hover:bg-black/60 hover:text-white transition-all active:scale-95"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-red-900/40 to-[var(--background)] border-b border-red-500/10 pb-6 pt-12 px-6">
+                                    {/* Floating Actions (Close & Share) for No Image version */}
+                                    <div className="absolute top-6 right-6 flex items-center gap-2 z-20">
+                                        <button 
+                                            onClick={async () => {
+                                                try {
+                                                    if (navigator.share) {
+                                                        await navigator.share({
+                                                            title: 'Kayıp İlanı: ' + selectedLostPet.pet_name,
+                                                            text: 'Lütfen bu kayıp dostumuzu bulmamıza yardım edin!',
+                                                            url: window.location.href,
+                                                        });
+                                                    } else {
+                                                        showToast("Bağlantı Kopyalandı", "İlan linki panoya kopyalandı", "success");
+                                                    }
+                                                } catch (err) {
+                                                    console.error("Share failed:", err);
+                                                }
+                                            }}
+                                            className="w-10 h-10 rounded-full bg-[var(--card-bg)] border border-[var(--card-border)] flex items-center justify-center text-[var(--foreground)] hover:bg-black/5 dark:bg-white/5 transition-all active:scale-95 shadow-sm"
+                                        >
+                                            <Share2 className="w-4 h-4" />
+                                        </button>
+                                        <button 
+                                            onClick={() => setSelectedLostPet(null)}
+                                            className="w-10 h-10 rounded-full bg-[var(--card-bg)] border border-[var(--card-border)] flex items-center justify-center text-[var(--foreground)] hover:bg-black/5 dark:bg-white/5 transition-all active:scale-95 shadow-sm"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+
+                                    <div className="flex flex-col gap-1 min-w-0 pr-4 relative z-10 mt-6">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <div className="px-2.5 py-1 rounded-lg bg-red-500 text-white text-[10px] font-black tracking-widest uppercase shadow-lg shadow-red-500/30 flex items-center gap-1.5">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" /> S.O.S
+                                            </div>
+                                            <span className="text-[10px] font-bold text-[var(--secondary-text)] bg-[var(--card-bg)] px-2 py-1 rounded-lg border border-[var(--card-border)]">
+                                                {new Date(selectedLostPet.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}
+                                            </span>
+                                        </div>
+                                        <h1 className="text-3xl font-black text-[var(--foreground)] tracking-tight truncate">
+                                            {selectedLostPet.pet_name}
+                                        </h1>
+                                    </div>
+                                    
+                                    {/* Big decorative background icon */}
+                                    <div className="absolute -right-8 -bottom-8 opacity-5 pointer-events-none">
+                                        <PawPrint className="w-48 h-48 text-red-500" />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Scrollable details */}
+                            <div className="flex-1 px-6 pt-2 pb-4 space-y-6 pb-[calc(100px+env(safe-area-inset-bottom))] bg-[var(--background)] relative z-10 -mt-4 rounded-t-3xl">
+                                <h1 className="text-3xl font-black text-[var(--foreground)] tracking-tight truncate mt-1">
+                                    {selectedLostPet.pet_name}
+                                </h1>
+
+                                {/* Thumbnail Gallery */}
+                                {selectedLostPet.images && selectedLostPet.images.length > 1 && (
+                                    <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                                        {selectedLostPet.images.map((url: string, i: number) => (
+                                            <button 
+                                                key={i} 
+                                                onClick={() => setSelectedLostPet({ ...selectedLostPet, active_image_url: url })}
+                                                className={cn(
+                                                    "w-16 h-16 rounded-2xl overflow-hidden shrink-0 transition-all border-2",
+                                                    (selectedLostPet.active_image_url || selectedLostPet.media_url) === url ? "border-red-500 scale-105 shadow-md" : "border-black/10 dark:border-white/10 opacity-60 hover:opacity-100"
+                                                )}
+                                            >
+                                                <img src={url} alt={`Görsel ${i+1}`} className="w-full h-full object-cover" />
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Metadata Grid */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="bg-[var(--card-bg)] border border-black/5 dark:border-white/5 rounded-2xl p-2.5 flex items-center gap-2.5 shadow-sm">
+                                        <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 shrink-0">
+                                            <MapPin className="w-3.5 h-3.5" />
+                                        </div>
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="text-[8px] text-[var(--secondary-text)] font-bold uppercase tracking-wider">Son Görülen Yer</span>
+                                            <span className="text-[11px] text-[var(--foreground)] font-black truncate">{selectedLostPet.last_location || selectedLostPet.location}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-[var(--card-bg)] border border-black/5 dark:border-white/5 rounded-2xl p-2.5 flex items-center gap-2.5 shadow-sm">
+                                        <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 shrink-0">
+                                            <User className="w-3.5 h-3.5" />
+                                        </div>
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="text-[8px] text-[var(--secondary-text)] font-bold uppercase tracking-wider">İlan Sahibi</span>
+                                            <span className="text-[11px] text-[var(--foreground)] font-black truncate">{selectedLostPet.author_name || 'Moffi Üyesi'}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-[var(--card-bg)] border border-black/5 dark:border-white/5 rounded-2xl p-2.5 flex items-center gap-2.5 shadow-sm">
+                                        <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 shrink-0">
+                                            <PawPrint className="w-3.5 h-3.5" />
+                                        </div>
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="text-[8px] text-[var(--secondary-text)] font-bold uppercase tracking-wider">Cinsi / Türü</span>
+                                            <span className="text-[11px] text-[var(--foreground)] font-black truncate">{selectedLostPet.pet_breed || selectedLostPet.type || 'Belirtilmedi'}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-[var(--card-bg)] border border-black/5 dark:border-white/5 rounded-2xl p-2.5 flex items-center gap-2.5 shadow-sm">
+                                        <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 shrink-0">
+                                            <Coins className="w-3.5 h-3.5" />
+                                        </div>
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="text-[8px] text-[var(--secondary-text)] font-bold uppercase tracking-wider">Ödül Miktarı</span>
+                                            <span className="text-[11px] text-[var(--foreground)] font-black truncate">
+                                                {selectedLostPet.reward_enabled && selectedLostPet.reward_amount 
+                                                    ? `${Number(selectedLostPet.reward_amount).toLocaleString('tr-TR')} TL` 
+                                                    : 'Ödül Yok'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Map Location Readonly */}
+                                {selectedLostPet.latitude && selectedLostPet.longitude && (
+                                    <div className="space-y-2">
+                                        <h3 className="text-sm font-black text-[var(--foreground)] uppercase tracking-wider">Son Konumu (Harita)</h3>
+                                        <MapLocationPicker 
+                                            coords={[selectedLostPet.latitude, selectedLostPet.longitude]} 
+                                            readonly={true}
+                                            height="160px"
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Description */}
+                                <div className="space-y-1.5">
+                                    <h3 className="text-[13px] font-black text-[var(--foreground)] uppercase tracking-wider">İlan Detayı</h3>
+                                    <p className="text-[11px] text-[var(--secondary-text)] leading-relaxed font-medium bg-[var(--card-bg)]/50 border border-black/5 dark:border-white/5 rounded-xl p-3.5">
+                                        {selectedLostPet.description || "Ek detay girilmemiş."}
+                                    </p>
+                                </div>
+
+                                {/* Warning Box */}
+                                <div className="bg-red-500/5 border border-red-500/15 p-3.5 rounded-xl flex gap-2.5 items-start">
+                                    <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5 animate-pulse" />
+                                    <p className="text-[10px] text-red-400 font-medium leading-relaxed">
+                                        Eğer bu dostumuzu görüyorsanız lütfen ani hareketler yapmadan, nazikçe yaklaşın ve hemen aşağıdaki butonlar yardımıyla sahibiyle iletişime geçin.
+                                    </p>
+                                </div>
+                            </div>
+                            </div>
+
+                            {/* Floating Actions Bottom Bar */}
+                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[var(--background)] via-[var(--background)]/95 to-transparent p-3 sm:px-5 pt-6 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shrink-0 flex gap-2 z-30">
+                                <button 
+                                    className="flex-1 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-black text-[13px] flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-lg shadow-cyan-500/20" 
+                                    onClick={handleMessageOwner}
+                                >
+                                    <MessageCircle className="w-4 h-4" /> Sahibine Mesaj At
+                                </button>
+                                <button 
+                                    disabled={isReportingLocation} 
+                                    className={cn(
+                                        "flex-[0.8] py-3 rounded-2xl border border-black/10 dark:border-white/10 font-black text-sm flex items-center justify-center gap-2 transition-transform shadow-lg", 
+                                        isReportingLocation 
+                                            ? "bg-black/5 dark:bg-white/5 text-[var(--secondary-text)] cursor-not-allowed" 
+                                            : "bg-black/5 dark:bg-white/5 text-[var(--foreground)] hover:bg-black/10 dark:bg-white/10 active:scale-95"
+                                    )} 
+                                    onClick={handleReportLocation}
+                                >
+                                    {isReportingLocation ? <Activity className="w-4 h-4 animate-spin" /> : <Flame className="w-4 h-4 text-red-500" />} 
+                                    {isReportingLocation ? "Bulunuyor..." : "Onu Gördüm!"}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* SECURE ANON COMMUNICATION MODAL */}
+            <AnimatePresence>
+                {anonModalType && (
+                    <div className="fixed inset-0 z-[140] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                            onClick={() => setAnonModalType(null)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="w-full max-w-md bg-[var(--card-bg)] rounded-[2rem] border border-black/10 dark:border-white/10 shadow-2xl relative z-10 overflow-hidden flex flex-col"
+                        >
+                            <div className="p-4 sm:p-6 pb-4 border-b border-[var(--card-border)] flex flex-col items-center">
+                                <div className="w-16 h-16 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center mb-4 ring-4 ring-blue-500/10">
+                                    <Lock className="w-8 h-8" />
+                                </div>
+                                <h3 className="text-xl font-black text-[var(--foreground)] text-center">
+                                    {anonModalType === 'report' ? "Gizli İhbar Yap" : "Anonim Mesaj Gönder"}
+                                </h3>
+                            </div>
+
+                            <div className="p-4 sm:p-6 space-y-4">
+                                <p className="text-[var(--secondary-text)] text-sm font-medium leading-relaxed text-center">
+                                    Moffi KVKK yükümlülükleri gereğince, iletişim bilgileriniz, gerçek adınız veya net GPS konumunuz {selectedLostPet?.author_name} kullanıcısı ile <strong className="text-[var(--foreground)]">asla paylaşılmayacaktır.</strong>
+                                </p>
+
+                                <div className="bg-red-500/10 border-l-2 border-red-500 p-3 rounded-r-lg">
+                                    <p className="text-xs text-red-400">
+                                        Güvenliğiniz için lütfen buluşma tekliflerini doğrudan kabul etmeyin. Eğer kayıp dostumuzu bulursanız, teslimatı her iki taraf için de kalabalık bir alanda (Örn: Veteriner veya Polis Merkezi) gerçekleştirin.
+                                    </p>
+                                </div>
+
+                                {anonError && (
+                                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="bg-red-500/20 text-red-400 p-3 rounded-xl text-xs font-bold border border-red-500/50">
+                                        <Activity className="w-4 h-4 inline-block mr-1 mb-0.5" /> {anonError}
+                                    </motion.div>
+                                )}
+
+                                <div className="relative">
+                                    <textarea
+                                        value={anonMessage}
+                                        onChange={e => {
+                                            setAnonMessage(e.target.value);
+                                            if (anonError) setAnonError(null);
+                                        }}
+                                        placeholder={anonModalType === 'report' ? "Hangi bölgede gördünüz? (Sadece sokak, park veya mekan adı)" : "Mesajınız (Numaranız veya isminiz gizli kalacaktır)..."}
+                                        className={cn("w-full bg-[var(--background)] border rounded-xl p-4 text-[var(--foreground)] text-sm outline-none transition-colors h-28 resize-none", anonError ? "border-red-500 focus:border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]" : "border-black/10 dark:border-white/10 focus:border-cyan-500")}
+                                    />
+                                    {anonError && (
+                                        <div className="absolute top-2 right-2 p-1.5 bg-red-500 rounded-full animate-bounce">
+                                            <Lock className="w-3 h-3 text-[var(--foreground)]" />
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex gap-3 pt-2">
+                                    <button
+                                        onClick={() => { setAnonModalType(null); setAnonError(null); }}
+                                        className="flex-1 py-3 rounded-xl bg-[var(--card-bg)] text-[var(--secondary-text)] font-bold hover:bg-black/10 dark:bg-white/10 transition-colors"
+                                    >
+                                        İptal
+                                    </button>
+                                    <button
+                                        disabled={isSubmittingAnon || !anonMessage.trim()}
+                                        onClick={submitAnonAction}
+                                        className={cn("flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all", (!anonMessage.trim() || isSubmittingAnon) ? "bg-cyan-900 text-cyan-500/50 cursor-not-allowed" : "bg-cyan-500 text-black active:scale-95")}
+                                    >
+                                        {isSubmittingAnon ? "Gönderiliyor..." : "Güvenli Gönder"}
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+
+            {/* ADD ADOPTION PET MODAL (Apple Bottom Sheet Style) */}
+            <AnimatePresence>
+                {isAddAdoptionModalOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[300] flex flex-col justify-end"
+                    >
+                        {/* Blur Backdrop */}
+                        <motion.div
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                            onClick={() => setIsAddAdoptionModalOpen(false)}
+                        />
+
+                        {/* Sliding Sheet */}
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="relative w-full h-[90vh] bg-[var(--card-bg)] rounded-t-[2.5rem] flex flex-col overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.5)] border-t border-black/10 dark:border-white/10"
+                        >
+                            {/* Grab Handle */}
+                            {/* Grab Handle (Click to close) */}
+                            <button 
+                                onClick={() => setIsAddAdoptionModalOpen(false)}
+                                className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full z-50 hover:bg-white/40 transition-colors cursor-pointer"
+                            />
+
+
+
+                            <div className="p-4 sm:p-6 pt-12 pb-4 border-b border-[var(--card-border)] shrink-0 flex items-center gap-4">
+                                <button onClick={() => setIsAddAdoptionModalOpen(false)} className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center -ml-2 hover:bg-black/10 dark:bg-white/10 transition-colors">
+                                    <ChevronLeft className="w-6 h-6" />
+                                </button>
+                                <div>
+                                    <h2 className="text-2xl font-black text-[var(--foreground)] flex items-center gap-2">
+                                        <HeartHandshake className="w-6 h-6 text-cyan-400" /> Sahiplendirme İlanı Ver
+                                    </h2>
+                                    <p className="text-xs text-[var(--secondary-text)] mt-1">Dostumuz için en iyi yuvayı bulalım.</p>
+                                </div>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto no-scrollbar p-4 sm:p-6 space-y-6">
+                                {/* Photo Upload Apple Style */}
+                                <input
+                                    type="file"
+                                    ref={adoptionPhotoRef}
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        const files = e.target.files;
+                                        if (files) {
+                                            const newPhotos = Array.from(files).map(file => ({
+                                                file,
+                                                preview: URL.createObjectURL(file)
+                                            }));
+                                            setAdoptionPetPhotos(prev => [...prev, ...newPhotos]);
+                                            if (adoptionPhotoRef.current) adoptionPhotoRef.current.value = '';
+                                        }
+                                    }}
+                                />
+                                {adoptionPetPhotos.length > 0 ? (
+                                    <div className="grid grid-cols-4 gap-3 mb-2">
+                                        {adoptionPetPhotos.map((photo, idx) => (
+                                            <div key={idx} className="aspect-square rounded-2xl bg-card dark:bg-[#1C1C1E] border border-black/10 dark:border-white/10 relative overflow-hidden group">
+                                                <img src={photo.preview} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                                                <button
+                                                    onClick={() => setAdoptionPetPhotos(prev => prev.filter((_, i) => i !== idx))}
+                                                    className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center text-[var(--foreground)]/70 hover:text-[var(--foreground)] transition-colors"
+                                                >
+                                                    <X className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {adoptionPetPhotos.length < 4 && (
+                                            <button
+                                                onClick={() => adoptionPhotoRef.current?.click()}
+                                                className="aspect-square rounded-2xl border-2 border-dashed border-black/10 dark:border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-cyan-400/50 hover:text-cyan-400 transition-all font-bold"
+                                            >
+                                                <Plus className="w-6 h-6" />
+                                                <span className="text-[10px] mt-1">Ekle</span>
+                                            </button>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div
+                                        onClick={() => adoptionPhotoRef.current?.click()}
+                                        className="w-full h-52 rounded-3xl bg-card dark:bg-[#1C1C1E] border-2 border-dashed border-black/10 dark:border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-cyan-400/50 hover:bg-cyan-400/5 transition-colors cursor-pointer group mb-2 shadow-inner overflow-hidden"
+                                    >
+                                        <Camera className="w-8 h-8 mb-2 group-hover:text-cyan-400 group-hover:scale-110 transition-all drop-shadow-md" />
+                                        <span className="text-sm font-bold tracking-wide">Net Fotoğraflar Yükle</span>
+                                        <span className="text-[10px] mt-1 text-[var(--secondary-text)] font-medium italic">Sahiplendirme şansını %80 artırır</span>
+                                    </div>
+                                )}
+
+                                <div className="space-y-5">
+                                    <div>
+                                        <label className="text-xs font-bold text-[var(--secondary-text)] uppercase tracking-widest ml-1 mb-2 block">Kategori</label>
+                                        <div className="flex gap-2 mb-4">
+                                            {[
+                                                { id: 'cat', label: 'Kedi', icon: '🐱' },
+                                                { id: 'dog', label: 'Köpek', icon: '🐶' },
+                                                { id: 'bird', label: 'Kuş', icon: '🦜' },
+                                                { id: 'other', label: 'Diğer', icon: '🐾' },
+                                            ].map(type => (
+                                                <button
+                                                    key={type.id}
+                                                    onClick={() => setAdoptionPetType(type.id)}
+                                                    className={cn(
+                                                        "flex-1 py-3 rounded-2xl text-xs font-bold transition-all flex flex-col items-center gap-1 border",
+                                                        adoptionPetType === type.id
+                                                            ? "bg-cyan-500/20 border-cyan-400 text-cyan-400"
+                                                            : "bg-[var(--background)] border-[var(--card-border)] text-[var(--secondary-text)]"
+                                                    )}
+                                                >
+                                                    <span className="text-xl">{type.icon}</span>
+                                                    {type.label}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        <label className="text-xs font-bold text-[var(--secondary-text)] uppercase tracking-widest ml-1 mb-1.5 block">İsim & Tür</label>
+                                        <div className="flex gap-3">
+                                            <input
+                                                type="text"
+                                                placeholder="İsim (Örn: Pamuk)"
+                                                value={adoptionPetName}
+                                                onChange={(e) => setAdoptionPetName(e.target.value)}
+                                                className="w-1/2 bg-[var(--background)] border border-[var(--card-border)] rounded-2xl px-4 py-3 text-[var(--foreground)] text-[15px] focus:outline-none focus:border-cyan-400 focus:bg-[var(--card-bg)] transition-colors placeholder:text-gray-600"
+                                            />
+                                            <input
+                                                type="text"
+                                                placeholder="Tür / Irk"
+                                                value={adoptionPetBreed}
+                                                onChange={(e) => setAdoptionPetBreed(e.target.value)}
+                                                className="w-1/2 bg-[var(--background)] border border-[var(--card-border)] rounded-2xl px-4 py-3 text-[var(--foreground)] text-[15px] focus:outline-none focus:border-cyan-400 focus:bg-[var(--card-bg)] transition-colors placeholder:text-gray-600"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="text-xs font-bold text-[var(--secondary-text)] uppercase tracking-widest ml-1 mb-1.5 block">Yaş & Açıklama</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Yaşı (Örn: 2 Aylık, 3 Yaşında)"
+                                            value={adoptionPetAge}
+                                            onChange={(e) => setAdoptionPetAge(e.target.value)}
+                                            className="w-full bg-[var(--background)] border border-[var(--card-border)] rounded-2xl px-4 py-3 text-[var(--foreground)] text-[15px] focus:outline-none focus:border-cyan-400 focus:bg-[var(--card-bg)] transition-colors mb-3 placeholder:text-gray-600"
+                                        />
+                                        <textarea
+                                            rows={4}
+                                            placeholder="Onu biraz anlatın... Tuvalet eğitimi var mı? Karakteri nasıl?"
+                                            value={adoptionPetDesc}
+                                            onChange={(e) => setAdoptionPetDesc(e.target.value)}
+                                            className="w-full bg-[var(--background)] border border-[var(--card-border)] rounded-2xl px-4 py-3 text-[var(--foreground)] text-[15px] focus:outline-none focus:border-cyan-400 focus:bg-[var(--card-bg)] transition-colors resize-none placeholder:text-gray-600"
+                                        />
+                                    </div>
+
+                                    {/* Alert / Warning Box */}
+                                    <div className="flex items-start gap-3 p-4 bg-red-500/10 rounded-3xl border border-red-500/20 mt-2">
+                                        <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">
+                                            <ShieldAlert className="w-4 h-4 text-red-500" />
+                                        </div>
+                                        <p className="text-[11px] text-gray-300 leading-relaxed font-medium mt-0.5">
+                                            <span className="text-red-400 font-bold tracking-wide">ÜCRET TALEP ETMEK YASAKTIR.</span> Moffi tamamen ücretsiz sahiplendirme üzerine kuruludur. Canlı satışı veya para talebi tespit edildiğinde hesaplar <strong className="text-[var(--foreground)]">kalıcı olarak</strong> kapatılır.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-4 sm:p-6 pt-3 pb-8 bg-[var(--card-bg)] shrink-0 border-t border-[var(--card-border)] relative z-20">
+                                <button
+                                    onClick={handleAdoptionPost}
+                                    disabled={isSubmittingAdoption}
+                                    className="w-full py-4 rounded-full bg-white text-black font-black text-[15px] shadow-[0_10px_30px_rgba(255,255,255,0.15)] active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
+                                >
+                                    {isSubmittingAdoption ? (
+                                        <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                                    ) : (
+                                        <><CheckCheck className="w-5 h-5" /> İlanı Onaya Gönder</>
+                                    )}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+
+            {/* APPLE BOTTOM SHEET - ADOPTION DETAY MODAL */}
+            <AnimatePresence>
+                {selectedAdoptionPet && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[310] flex flex-col justify-end"
+                    >
+                        {/* Blur Backdrop */}
+                        <motion.div
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                            onClick={() => setSelectedAdoptionPet(null)}
+                        />
+
+                        {/* Sliding Sheet */}
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            drag="y"
+                            dragConstraints={{ top: 0 }}
+                            dragElastic={0.2}
+                            onDragEnd={(e, { offset, velocity }) => {
+                                if (offset.y > 100 || velocity.y > 500) {
+                                    setSelectedAdoptionPet(null);
+                                }
+                            }}
+                            className="relative w-full h-[85vh] bg-[var(--background)] rounded-t-[2.5rem] flex flex-col overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.5)] border-t border-black/10 dark:border-white/10"
+                        >
+                            {/* Grab Handle (Click to close) */}
+                            <button 
+                                onClick={() => setSelectedAdoptionPet(null)}
+                                className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full z-50 hover:bg-white/40 transition-colors cursor-pointer"
+                            />
+
+                            <div className="flex-1 overflow-y-auto no-scrollbar w-full flex flex-col relative">
+                                {/* Hero Image */}
+                                <div 
+                                    className="w-full h-[350px] relative shrink-0 overflow-hidden bg-white dark:bg-black"
+                                    onTouchStart={(e) => {
+                                        const touch = e.touches[0];
+                                        (window as any).adoptionHeroTouchStartX = touch.clientX;
+                                    }}
+                                    onTouchEnd={(e) => {
+                                        const touchX = e.changedTouches[0].clientX;
+                                        const startX = (window as any).adoptionHeroTouchStartX;
+                                        if (startX && selectedAdoptionPet.images && selectedAdoptionPet.images.length > 1) {
+                                            const diff = startX - touchX;
+                                            const currentIndex = selectedAdoptionPet.images.indexOf(selectedAdoptionPet.img || selectedAdoptionPet.images[0]);
+                                            if (diff > 40 && currentIndex < selectedAdoptionPet.images.length - 1) {
+                                                setSelectedAdoptionPet({ ...selectedAdoptionPet, img: selectedAdoptionPet.images[currentIndex + 1] });
+                                            } else if (diff < -40 && currentIndex > 0) {
+                                                setSelectedAdoptionPet({ ...selectedAdoptionPet, img: selectedAdoptionPet.images[currentIndex - 1] });
+                                            }
+                                        }
+                                    }}
+                                >
+                                    <img 
+                                        key={selectedAdoptionPet.img}
+                                        src={selectedAdoptionPet.img} 
+                                        className="w-full h-full object-cover animate-in fade-in zoom-in-95 duration-300" 
+                                    />
+
+                                    {/* Badge Layering */}
+                                    <div className="absolute bottom-0 inset-x-0 p-6 flex items-end justify-between z-10 pointer-events-none">
+                                        <div className="flex flex-col gap-1 min-w-0 pr-4">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <div className="px-2 py-1 rounded-md bg-cyan-500 text-black text-[9px] font-black tracking-widest uppercase shadow-lg shadow-cyan-500/30 flex items-center gap-1">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-white dark:bg-black animate-pulse" /> YUVASINI ARIYOR
+                                                </div>
+                                                {selectedAdoptionPet.created_at && (
+                                                    <span className="text-[9px] font-bold text-black/80 dark:text-white/80 bg-black/40 backdrop-blur-md px-2 py-1 rounded-md">
+                                                        {new Date(selectedAdoptionPet.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Pagination Dots */}
+                                    {selectedAdoptionPet.images && selectedAdoptionPet.images.length > 1 && (
+                                        <div className="absolute top-6 inset-x-0 flex justify-center gap-1.5 z-20 pointer-events-none">
+                                            {selectedAdoptionPet.images.map((url: string, i: number) => (
+                                                <div key={i} className={cn("h-1.5 rounded-full transition-all duration-300", (selectedAdoptionPet.img || selectedAdoptionPet.images[0]) === url ? "w-4 bg-white shadow-sm" : "w-1.5 bg-white/50 backdrop-blur-sm")} />
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Floating Actions (Close & Share) on top of image */}
+                                    <div className="absolute top-12 sm:top-6 right-6 flex items-center gap-2 z-20">
+                                        <button 
+                                            onClick={async () => {
+                                                try {
+                                                    if (navigator.share) {
+                                                        await navigator.share({
+                                                            title: 'Sahiplenme İlanı: ' + selectedAdoptionPet.name,
+                                                            text: 'Bu tatlı dosta yuva olmak ister misin?',
+                                                            url: window.location.href,
+                                                        });
+                                                    } else {
+                                                        showToast("Bağlantı Kopyalandı", "İlan linki panoya kopyalandı", "success");
+                                                    }
+                                                } catch (err) {
+                                                    console.error("Share failed:", err);
+                                                }
+                                            }}
+                                            className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-md border border-black/10 dark:border-white/10 flex items-center justify-center text-black/80 dark:text-white/80 hover:bg-black/60 hover:text-white transition-all active:scale-95"
+                                        >
+                                            <Share2 className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button 
+                                            onClick={() => setSelectedAdoptionPet(null)}
+                                            className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-md border border-black/10 dark:border-white/10 flex items-center justify-center text-black/80 dark:text-white/80 hover:bg-black/60 hover:text-white transition-all active:scale-95"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Content */}
+                                <div className="flex-1 px-6 pt-2 pb-6 bg-[var(--background)] relative z-10 -mt-4 rounded-t-3xl">
+                                    <h1 className="text-2xl font-black text-[var(--foreground)] leading-tight mt-1">{selectedAdoptionPet.name}</h1>
+
+                                    {/* Thumbnail Gallery */}
+                                    {selectedAdoptionPet.images && selectedAdoptionPet.images.length > 1 && (
+                                        <div className="flex gap-2 overflow-x-auto no-scrollbar py-2 mb-2">
+                                            {selectedAdoptionPet.images.map((url: string, i: number) => (
+                                                <button 
+                                                    key={i} 
+                                                    onClick={() => setSelectedAdoptionPet({ ...selectedAdoptionPet, img: url })}
+                                                    className={cn(
+                                                        "w-14 h-14 rounded-xl overflow-hidden shrink-0 transition-all border",
+                                                        (selectedAdoptionPet.img || selectedAdoptionPet.images[0]) === url ? "border-cyan-500 scale-105 shadow-md" : "border-black/10 dark:border-white/10 opacity-60 hover:opacity-100"
+                                                    )}
+                                                >
+                                                    <img src={url} alt={`Görsel ${i+1}`} className="w-full h-full object-cover" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Author Profile Snippet */}
+                                    <div className="flex items-center gap-3 mt-3 mb-4">
+                                        <div className="w-7 h-7 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden border border-black/20 dark:border-white/20">
+                                            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedAdoptionPet.user_id}`} className="w-full h-full object-cover" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-widest leading-tight">İlan Sahibi</span>
+                                            <span className="text-sm font-black text-[var(--foreground)] leading-tight">{selectedAdoptionPet.author_name || selectedAdoptionPet.owner}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Capsules */}
+                                    <div className="flex gap-2 flex-wrap mb-5">
+                                        {selectedAdoptionPet.breed && (
+                                            <div className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 px-3 py-1.5 rounded-lg text-[11px] font-bold text-[var(--foreground)] flex items-center gap-1.5">
+                                                <span className="text-[15px]">🐾</span> {selectedAdoptionPet.breed}
+                                            </div>
+                                        )}
+                                        {selectedAdoptionPet.age && (
+                                            <div className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 px-3 py-1.5 rounded-lg text-[11px] font-bold text-[var(--foreground)] flex items-center gap-1.5">
+                                                <span className="text-[15px]">🎂</span> {selectedAdoptionPet.age}
+                                            </div>
+                                        )}
+                                        {selectedAdoptionPet.gender && (
+                                            <div className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 px-3 py-1.5 rounded-lg text-[11px] font-bold text-[var(--foreground)] flex items-center gap-1.5">
+                                                <span className="text-[15px]">{selectedAdoptionPet.gender === 'Erkek' ? '♂️' : '♀️'}</span> {selectedAdoptionPet.gender}
+                                            </div>
+                                        )}
+                                        {selectedAdoptionPet.tags?.map((tag: string) => (
+                                            <div key={tag} className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 px-3 py-1.5 rounded-lg text-[11px] font-bold text-[var(--foreground)] flex items-center gap-1.5">
+                                                <Check className="w-3.5 h-3.5 text-cyan-400" /> {tag}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="bg-card dark:bg-[#1C1C1E] rounded-xl p-3.5 border border-black/5 dark:border-white/5 relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 blur-3xl rounded-full" />
+                                        <h3 className="text-cyan-400/80 text-[10px] font-black uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                                            <Info className="w-3 h-3" /> Hikaye & Durum
+                                        </h3>
+                                        <p className="text-gray-300 text-xs leading-relaxed font-medium whitespace-pre-wrap relative z-10">
+                                            {selectedAdoptionPet.description || selectedAdoptionPet.desc}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Apple iOS Style Floating Action Bar */}
+                            <div className="w-full p-4 sm:px-5 pt-2 pb-5 bg-gradient-to-t from-[var(--background)] via-[var(--background)] to-transparent relative z-20 shrink-0">
+                                <div className="flex gap-2.5">
+                                    <button
+                                        onClick={() => handleStartAdoptionChat(selectedAdoptionPet)}
+                                        className="flex-1 py-3 rounded-xl bg-black/10 dark:bg-white/10 border border-black/10 dark:border-white/10 text-[var(--foreground)] font-bold text-xs active:scale-95 transition-transform flex items-center justify-center gap-1.5"
+                                    >
+                                        <MessageCircle className="w-4 h-4" /> Mesaj
+                                    </button>
+                                    <button
+                                        onClick={() => setIsApplicationFormOpen(true)}
+                                        className="flex-[2] py-3 rounded-xl bg-cyan-500 text-black font-black text-xs shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-1.5"
+                                    >
+                                        <HeartHandshake className="w-4 h-4" /> Sahiplenme Başvurusu
+                                    </button>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        setReportingAdId(selectedAdoptionPet?.id || null);
+                                        setIsReportAdModalOpen(true);
+                                    }}
+                                    className="w-full mt-2 py-2.5 rounded-xl bg-red-500/10 text-red-400 font-bold text-[11px] border border-red-500/20 active:scale-95 transition-transform flex items-center justify-center gap-1.5"
+                                >
+                                    <ShieldAlert className="w-3.5 h-3.5" /> Ücret Talep Ediyor / İhbar Et
+                                </button>
+                                <p className="text-[9px] text-[var(--secondary-text)] text-center font-medium mt-1.5">Moffi Güvenli Mesajlaşma ile verileriniz uçtan uca korunur.</p>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+
+            {/* REPORT ADOPTION AD MODAL (Apple Action Sheet) */}
+            <AnimatePresence>
+                {isReportAdModalOpen && selectedAdoptionPet && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[501] flex flex-col justify-end"
+                    >
+                        <motion.div
+                            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                            onClick={() => setIsReportAdModalOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 28, stiffness: 250 }}
+                            drag="y"
+                            dragConstraints={{ top: 0 }}
+                            dragElastic={0.2}
+                            onDragEnd={(e, { offset, velocity }) => {
+                                if (offset.y > 100 || velocity.y > 500) {
+                                    setIsReportAdModalOpen(false);
+                                }
+                            }}
+                            className="relative bg-[var(--card-bg)] rounded-t-[2.5rem] p-4 sm:p-6 pb-12 border-t border-black/10 dark:border-white/10 z-10"
+                        >
+                            <button 
+                                onClick={() => setIsReportAdModalOpen(false)}
+                                className="w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full mx-auto mb-6 hover:bg-white/40 transition-colors cursor-pointer block" 
+                            />
+
+                            <div className="flex items-center gap-3 mb-6">
+                                <button onClick={() => setIsReportAdModalOpen(false)} className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center -ml-2 hover:bg-black/10 dark:bg-white/10 transition-colors">
+                                    <ChevronLeft className="w-6 h-6" />
+                                </button>
+                                <div className="w-12 h-12 rounded-2xl bg-red-500/20 flex items-center justify-center ml-1">
+                                    <ShieldAlert className="w-6 h-6 text-red-500" />
+                                </div>
+                                <div>
+                                    <h3 className="text-[var(--foreground)] font-black text-lg">İlanı Bildir</h3>
+                                    <p className="text-[var(--secondary-text)] text-xs">Moffi ekibi en kısa sürede inceleyecek</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 mb-6">
+                                {[
+                                    { value: 'fee', label: '💸 Ücret Talep Ediyor', desc: 'Sahiplendirme için para isteniyor' },
+                                    { value: 'sale', label: '🏷️ Hayvan Satışı', desc: 'Ticari amaçlı satış ilanı' },
+                                    { value: 'fake', label: '❌ Sahte İlan', desc: 'Görsel veya bilgiler gerçek değil' },
+                                    { value: 'inappropriate', label: '⚠️ Uygunsuz İçerik', desc: 'Kötü muamele veya şiddet' },
+                                    { value: 'other', label: '🔍 Diğer', desc: 'Diğer güvenlik sorunları' }
+                                ].map((opt) => (
+                                    <button
+                                        key={opt.value}
+                                        onClick={() => setReportReason(opt.value)}
+                                        className={cn(
+                                            "w-full flex items-start gap-3 p-4 rounded-2xl border transition-all text-left",
+                                            reportReason === opt.value ? "bg-red-500/10 border-red-500/30" : "bg-[var(--card-bg)] border-[var(--card-border)]"
+                                        )}
+                                    >
+                                        <div className="flex-1">
+                                            <p className="text-[var(--foreground)] font-bold text-sm">{opt.label}</p>
+                                            <p className="text-[var(--secondary-text)] text-xs mt-0.5">{opt.desc}</p>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+
+                            <button
+                                onClick={handleReportAdoption}
+                                disabled={!reportReason || isSubmittingReport}
+                                className="w-full py-4 rounded-full bg-red-500 text-[var(--foreground)] font-black text-[15px] active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-40"
+                            >
+                                {isSubmittingReport ? (
+                                    <div className="w-5 h-5 border-2 border-black/30 dark:border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    <><ShieldAlert className="w-5 h-5" /> Bildirimi Gönder</>
+                                )}
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ADOPTION APPLICATION FORM MODAL (Apple Style) */}
+            <AnimatePresence>
+                {isApplicationFormOpen && selectedAdoptionPet && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[400] flex flex-col justify-end"
+                    >
+                        <motion.div
+                            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                            onClick={() => setIsApplicationFormOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 28, stiffness: 250 }}
+                            drag="y"
+                            dragConstraints={{ top: 0 }}
+                            dragElastic={0.2}
+                            onDragEnd={(e, { offset, velocity }) => {
+                                if (offset.y > 100 || velocity.y > 500) {
+                                    setIsApplicationFormOpen(false);
+                                }
+                            }}
+                            className="relative bg-[var(--background)] rounded-t-[3rem] p-4 sm:p-6 pb-12 border-t border-black/10 dark:border-white/10 z-10 flex flex-col max-h-[90vh]"
+                        >
+                            <button 
+                                onClick={() => setIsApplicationFormOpen(false)}
+                                className="w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full mx-auto mb-6 hover:bg-white/40 transition-colors cursor-pointer block" 
+                            />
+
+                            <div className="flex items-center gap-4 mb-8">
+                                <button onClick={() => setIsApplicationFormOpen(false)} className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center -ml-2 hover:bg-black/10 dark:bg-white/10 transition-colors">
+                                    <ChevronLeft className="w-6 h-6" />
+                                </button>
+                                <div className="w-16 h-16 rounded-[1.5rem] overflow-hidden border border-black/10 dark:border-white/10">
+                                    <img src={selectedAdoptionPet.img} className="w-full h-full object-cover" />
+                                </div>
+                                <div>
+                                    <h3 className="text-[var(--foreground)] font-black text-xl">{selectedAdoptionPet.name} İçin Başvuru</h3>
+                                    <p className="text-cyan-400 text-xs font-bold uppercase tracking-widest mt-1">Son Adım: Yuva Olma Formu</p>
+                                </div>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto no-scrollbar space-y-6">
+                                <div>
+                                    <label className="text-[var(--secondary-text)] text-[11px] font-black uppercase tracking-widest ml-1 mb-2 block">Evcil Hayvan Tecrübeniz</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {['0-2 Yıl', '3-5 Yıl', '5+ Yıl'].map(lvl => (
+                                            <button
+                                                key={lvl}
+                                                onClick={() => setAppExperience(lvl)}
+                                                className={cn(
+                                                    "py-3 rounded-2xl text-[13px] font-bold border transition-all",
+                                                    appExperience === lvl ? "bg-cyan-500/20 border-cyan-400 text-cyan-400" : "bg-[var(--card-bg)] border-[var(--card-border)] text-[var(--secondary-text)]"
+                                                )}
+                                            >
+                                                {lvl}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-[var(--secondary-text)] text-[11px] font-black uppercase tracking-widest ml-1 mb-2 block">Yaşam Alanınız</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {['Apartman', 'Müstakil', 'Bahçeli'].map(type => (
+                                            <button
+                                                key={type}
+                                                onClick={() => setAppHomeType(type)}
+                                                className={cn(
+                                                    "py-3 rounded-2xl text-[13px] font-bold border transition-all",
+                                                    appHomeType === type ? "bg-cyan-500/20 border-cyan-400 text-cyan-400" : "bg-[var(--card-bg)] border-[var(--card-border)] text-[var(--secondary-text)]"
+                                                )}
+                                            >
+                                                {type}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-[var(--secondary-text)] text-[11px] font-black uppercase tracking-widest ml-1 mb-2 block">Kendinizden Bahsedin</label>
+                                    <textarea
+                                        rows={4}
+                                        placeholder="Neden onu sahiplenmek istiyorsunuz? Ona nasıl bir hayat sunacaksınız?"
+                                        value={appNote}
+                                        onChange={(e) => setAppNote(e.target.value)}
+                                        className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl px-5 py-4 text-[var(--foreground)] text-[15px] focus:outline-none focus:border-cyan-400 transition-colors resize-none placeholder:text-gray-600"
+                                    />
+                                </div>
+
+                                <div className="bg-cyan-500/5 border border-cyan-500/10 rounded-3xl p-4 flex items-start gap-3">
+                                    <ShieldAlert className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
+                                    <p className="text-[11px] text-[var(--secondary-text)] leading-relaxed">
+                                        Moffi, sahiplendirme sürecinde aracıdır. Başvurunuz ilan sahibine iletilir. Kişisel güvenliğiniz için buluşmaları halka açık yerlerde gerçekleştirmenizi öneririz.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={submitAdoptionApplication}
+                                disabled={!appNote.trim() || isSubmittingApp}
+                                className="w-full mt-8 py-4 rounded-full bg-cyan-500 text-black font-black text-[16px] shadow-[0_15px_40px_rgba(34,211,238,0.2)] active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-40"
+                            >
+                                {isSubmittingApp ? (
+                                    <div className="w-6 h-6 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                                ) : (
+                                    <><CheckCheck className="w-5 h-5" /> Başvuruyu Tamamla</>
+                                )}
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* DEDICATED ADOPTION CHAT (Apple iMessage Style) */}
+            <AnimatePresence>
+                {isAdoptionChatOpen && adoptionChatPet && (
+                    <motion.div
+                        initial={{ x: "100%" }}
+                        animate={{ x: 0 }}
+                        exit={{ x: "100%" }}
+                        transition={{ type: "spring", damping: 30, stiffness: 300 }}
+                        className="fixed inset-0 z-[500] bg-white dark:bg-black flex flex-col"
+                    >
+                        {/* Header */}
+                        <div className="pt-12 pb-4 px-4 bg-black/80 backdrop-blur-xl border-b border-[var(--card-border)] flex items-center gap-3">
+                            <button onClick={() => setIsAdoptionChatOpen(false)} className="w-10 h-10 rounded-full flex items-center justify-center text-[var(--secondary-text)] hover:text-[var(--foreground)] transition-colors">
+                                <ChevronLeft className="w-6 h-6" />
+                            </button>
+                            <div className="flex items-center gap-3">
+                                <img src={adoptionChatPet.img} className="w-10 h-10 rounded-full object-cover border border-black/10 dark:border-white/10" />
+                                <div>
+                                    <h3 className="text-[var(--foreground)] font-bold text-sm leading-tight">{adoptionChatPet.name} İlanı</h3>
+                                    <p className="text-green-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
+                                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" /> Sahiplendirme Süreci Aktif
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Messages Area */}
+                        <div className="flex-1 overflow-y-auto no-scrollbar p-4 sm:p-6 space-y-4">
+                            {adoptionMessages.map((msg) => (
+                                <motion.div
+                                    key={msg.id}
+                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    className={cn(
+                                        "max-w-[80%] flex flex-col",
+                                        msg.sender === 'me' ? "ml-auto items-end" : msg.sender === 'system' ? "mx-auto items-center" : "mr-auto items-start"
+                                    )}
+                                >
+                                    {msg.sender === 'system' ? (
+                                        <div className="bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl px-4 py-2 text-[11px] text-[var(--secondary-text)] text-center leading-relaxed">
+                                            {msg.text}
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className={cn(
+                                                "px-4 py-2.5 rounded-2xl text-[14px] font-medium leading-[1.4]",
+                                                msg.sender === 'me' ? "bg-cyan-500 text-[var(--foreground)] rounded-tr-sm" : "bg-card dark:bg-[#1C1C1E] text-[var(--foreground)] rounded-tl-sm border border-[var(--card-border)]"
+                                            )}>
+                                                {msg.text}
+                                            </div>
+                                            <span className="text-[9px] text-[var(--secondary-text)] font-bold mt-1 uppercase tracking-tight">{msg.time}</span>
+                                        </>
+                                    )}
+                                </motion.div>
                             ))}
                         </div>
 
-                        <button 
-                            onClick={() => setExpandedPanel('about')}
-                            className="w-full bg-white hover:bg-slate-100 text-slate-900 text-[12px] font-black py-3.5 rounded-2xl transition-all duration-300 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] cursor-pointer"
-                        >
-                            Uygulama Vizyonunu Keşfet
-                        </button>
-                    </div>
-                </motion.div>
-
-
-
-                {/* Eski Akıllı Tasma Durumu kartı buradan kaldırıldı (header alanına taşındı) */}
-
-
-                {/* 12. Dynamic Shop Live Offer */}
-                <section className="mb-6">
-                    <div className="flex justify-between items-end mb-3 px-1">
-                        <h3 className="text-[15px] font-bold text-gray-800 tracking-tight">Kişiselleştirilmiş Alışveriş Fırsatı</h3>
-                        <span className="text-[9px] font-black text-orange-600 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                            Akıllı Takip
-                        </span>
-                    </div>
-
-                    <BentoCard 
-                        layoutId="shop-card-container"
-                        onClick={() => router.push(pet.specialOffer.link || '/petshop')}
-                        className="bg-gradient-to-br from-amber-50/70 to-orange-50/50 !p-4 border border-orange-100/30 flex gap-4 items-center relative overflow-hidden cursor-pointer group hover:scale-[1.01] transition-transform duration-300"
-                    >
-                        <div className="absolute right-[-10px] top-[-10px] w-20 h-20 bg-orange-400/5 rounded-full blur-xl pointer-events-none" />
-                        <div className="w-16 h-16 rounded-2xl bg-white border border-orange-100/60 p-2 flex items-center justify-center shadow-sm shrink-0">
-                            <ShoppingBag className="w-8 h-8 text-orange-600" />
-                        </div>
-                        <div className="flex-1">
-                            <div className="flex items-center gap-1.5">
-                                <span className="text-[9px] font-black text-orange-600 uppercase tracking-widest">{pet.specialOffer.discount}</span>
-                                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
-                            </div>
-                            <h4 className="text-xs font-black text-gray-800 mt-0.5">{pet.name}'in {pet.specialOffer.title}</h4>
-                            <p className="text-[10px] font-semibold text-gray-500 mt-0.5 leading-snug">{pet.specialOffer.desc}</p>
-                            
-                            <div className="mt-2.5 flex items-center gap-2">
-                                <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 line-through">{pet.specialOffer.oldPrice}</span>
-                                <span className="text-xs font-black text-orange-600">{pet.specialOffer.newPrice}</span>
-                            </div>
-                        </div>
-                    </BentoCard>
-                </section>
-
-
-                    </>
-                )}
-
-            </motion.div>
-
-
-
-            {/* 3D FLUID CARD MORPHING OVERLAYS */}
-            <AnimatePresence>
-                {expandedPanel && (
-                    <motion.div 
-                        key="dim-backdrop"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => setExpandedPanel(null)}
-                        className="fixed inset-0 bg-black/35 backdrop-blur-md z-[100] cursor-pointer"
-                    />
-                )}
-            </AnimatePresence>
-
-            <AnimatePresence>
-                {expandedPanel && (
-                    <motion.div
-                        key="modal-wrapper"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0, transition: { duration: 0.1 } }}
-                        className={`fixed inset-0 z-[101] flex items-center justify-center pointer-events-none ${expandedPanel === 'profile' ? 'p-0' : 'p-4'}`}
-                    >
-                            <motion.div
-                                layoutId={`${expandedPanel}-card-container`}
-                                transition={{ type: 'spring', damping: 22, stiffness: 180 }}
-                                className={expandedPanel === 'profile' 
-                                    ? "w-full md:max-w-md h-full md:h-[95vh] md:max-h-[850px] bg-[#FBFBFB] rounded-none md:rounded-[40px] shadow-[0_25px_60px_rgba(0,0,0,0.18)] border-0 md:border border-gray-100 overflow-hidden pointer-events-auto flex flex-col overflow-y-auto no-scrollbar"
-                                    : "w-full max-w-sm bg-white rounded-[38px] shadow-[0_25px_60px_rgba(0,0,0,0.18)] border border-gray-100 overflow-hidden pointer-events-auto flex flex-col max-h-[80vh] overflow-y-auto"
-                                }
-                            >
-                                {/* Drag Indicator & Close Pill */}
-                                {expandedPanel === 'profile' ? (
-                                    <div className="flex justify-between items-center px-6 py-4.5 bg-white/95 backdrop-blur-md border-b border-gray-100 sticky top-0 z-20 shadow-[0_2px_15px_rgba(0,0,0,0.01)] shrink-0">
-                                        <motion.button 
-                                            whileTap={{ scale: 0.95 }}
-                                            onClick={() => setExpandedPanel(null)}
-                                            className="flex items-center gap-1 text-[11px] font-black text-gray-800 cursor-pointer"
-                                        >
-                                            <ChevronLeft className="w-5 h-5 text-gray-850" strokeWidth={2.5} />
-                                            <span>Geri</span>
-                                        </motion.button>
-                                        <span className="text-sm font-black text-gray-900 tracking-tight">Moffi Hesabım</span>
-                                        <motion.button 
-                                            whileTap={{ scale: 0.95 }}
-                                            onClick={() => window.dispatchEvent(new CustomEvent('open-moffi-settings'))}
-                                            className="p-2 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-xl cursor-pointer transition-colors"
-                                        >
-                                            <Sliders className="w-4.5 h-4.5" />
-                                        </motion.button>
-                                    </div>
-                                ) : (
-                                    <div className="flex justify-between items-center px-6 pt-5 pb-3 bg-gray-50/50 border-b border-gray-100/50 shrink-0">
-                                        <div className="flex items-center gap-1">
-                                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                                            <span className="text-[9px] font-black tracking-widest text-gray-500 dark:text-gray-400 uppercase">Moffi Smartwatch OS</span>
-                                        </div>
-                                        <motion.button 
-                                            whileTap={{ scale: 0.9 }}
-                                            onClick={() => setExpandedPanel(null)}
-                                            className="p-1.5 bg-gray-200/60 hover:bg-gray-200 text-gray-600 rounded-full cursor-pointer transition-colors"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </motion.button>
-                                    </div>
-                                )}
-
-                                {/* Deep Modular Expanded Views */}
-                                <motion.div 
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.15, duration: 0.3 }}
-                                    className="p-6 flex-1 flex flex-col gap-5"
-                                >
-                                    
-                                    {/* 1. Wallet Morph Screen */}
-                                    {expandedPanel === 'wallet' && (
-                                        <>
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <Coins className="w-6 h-6 text-yellow-500" />
-                                                    <h3 className="text-lg font-black text-gray-800">Cüzdan Analizi</h3>
-                                                </div>
-                                                <span className="text-[10px] font-black text-yellow-600 bg-yellow-50 px-2.5 py-0.5 rounded-full border border-yellow-200">
-                                                    {pet.wallet.currency}
-                                                </span>
-                                            </div>
-
-                                            {/* Bank Card Graphic */}
-                                            <div className="bg-gradient-to-tr from-gray-950 to-gray-850 text-white p-5 rounded-[26px] border border-gray-800/80 shadow-md relative overflow-hidden">
-                                                <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-green-500/10 rounded-full blur-2xl" />
-                                                <span className="text-[8px] font-black tracking-widest text-gray-500 dark:text-gray-400 block">CARDMEMBERSHIP</span>
-                                                <h4 className="text-2xl font-black mt-4 tracking-tight flex items-baseline gap-1">
-                                                    {totalPatiPuan.toLocaleString('tr-TR')} <span className="text-xs text-yellow-400 font-bold">{pet.wallet.currency}</span>
-                                                </h4>
-                                                <div className="flex justify-between items-end mt-6">
-                                                    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-mono tracking-wider">{pet.wallet.cardNumber}</span>
-                                                    <span className="text-[9px] font-black bg-black/10 dark:bg-white/10 px-2 py-0.5 rounded uppercase tracking-wider">{pet.name} Pass</span>
-                                                </div>
-                                            </div>
-
-                                            {/* Advanced Action Panel */}
-                                            <div className="grid grid-cols-2 gap-3 mt-3">
-                                                <button 
-                                                    disabled
-                                                    className="flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-100 p-3.5 rounded-2xl text-[11px] font-black text-gray-500 dark:text-gray-400 transition-all cursor-not-allowed shadow-sm relative overflow-hidden"
-                                                >
-                                                    <div className="absolute inset-0 bg-white/50 z-10" />
-                                                    <Plus className="w-3.5 h-3.5" />
-                                                    <span>Bakiye Yükle</span>
-                                                    <span className="absolute top-0 right-0 bg-orange-100 text-orange-600 text-[7px] px-1.5 py-0.5 rounded-bl-lg font-black z-20">YAKINDA</span>
-                                                </button>
-                                                <button 
-                                                    disabled
-                                                    className="flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-100 p-3.5 rounded-2xl text-[11px] font-black text-gray-500 dark:text-gray-400 transition-all cursor-not-allowed shadow-sm relative overflow-hidden"
-                                                >
-                                                    <div className="absolute inset-0 bg-white/50 z-10" />
-                                                    <ArrowUpRight className="w-3.5 h-3.5" />
-                                                    <span>Puan Transferi</span>
-                                                    <span className="absolute top-0 right-0 bg-orange-100 text-orange-600 text-[7px] px-1.5 py-0.5 rounded-bl-lg font-black z-20">YAKINDA</span>
-                                                </button>
-                                            </div>
-
-                                            <button 
-                                                onClick={() => setIsPolicyModalOpen(true)}
-                                                className="w-full mt-3 p-3.5 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-between group hover:bg-gray-100 transition-colors cursor-pointer"
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-xl bg-white border border-gray-100 shadow-sm flex items-center justify-center">
-                                                        <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                                                    </div>
-                                                    <div className="text-left">
-                                                        <span className="text-[11px] font-black text-gray-800 block">Pati-Kart KVKK & Kurallar</span>
-                                                        <span className="text-[9px] text-gray-500 font-medium">Adil kullanım politikalarını inceleyin</span>
-                                                    </div>
-                                                </div>
-                                                <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-emerald-500 transition-colors" />
-                                            </button>
-
-                                            {/* Transaction Feed */}
-                                            <div>
-                                                <h4 className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2.5">Son Hesap Hareketleri</h4>
-                                                <div className="flex flex-col gap-2">
-                                                    {pet.wallet.transactions.map((tx) => (
-                                                        <div key={tx.id} className="flex justify-between items-center p-3 rounded-xl bg-gray-50 border border-gray-100/50">
-                                                            <div className="flex items-center gap-2">
-                                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                                                                    tx.type === 'gider' ? 'bg-orange-50 text-orange-600' : 'bg-green-50 text-green-600'
-                                                                }`}>
-                                                                    {tx.type === 'gider' ? <CartIcon className="w-3.5 h-3.5" /> : <TrendingUp className="w-3.5 h-3.5" />}
-                                                                </div>
-                                                                <div>
-                                                                    <h5 className="text-[10.5px] font-bold text-gray-800">{tx.title}</h5>
-                                                                    <span className="text-[8.5px] text-gray-500 dark:text-gray-400 font-semibold">{tx.date}</span>
-                                                                </div>
-                                                            </div>
-                                                            <span className={`text-[11px] font-black ${
-                                                                tx.type === 'gider' ? 'text-orange-600' : 'text-green-600'
-                                                            }`}>{tx.amount}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </>
-                                    )}
-
-                                    {/* 2. Passport Morph Screen */}
-                                    {expandedPanel === 'passport' && (
-                                        <>
-                                            <div className="flex items-center gap-2">
-                                                <QrCode className="w-6 h-6 text-orange-600" />
-                                                <h3 className="text-lg font-black text-gray-800">{pet.name}'in Sağlık Pasaportu</h3>
-                                            </div>
-
-                                            {/* NFC Interactive Tag Card */}
-                                            <div className="bg-[#FAF5EF] border border-orange-200/55 p-5 rounded-[26px] flex flex-col items-center gap-4 text-center">
-                                                <motion.div 
-                                                    animate={{ rotateY: 360 }}
-                                                    transition={{ repeat: Infinity, duration: 8, ease: 'linear' }}
-                                                    className="w-24 h-24 bg-white rounded-2xl p-2.5 shadow-sm border border-orange-100 flex items-center justify-center"
-                                                >
-                                                    <img src={pet.passport.qrcode} className="w-full h-full object-contain" alt="QR" />
-                                                </motion.div>
-                                                <div>
-                                                    <span className="text-[8px] font-black text-orange-800 tracking-widest uppercase">NFC AKILLI ÇİP AKTİF</span>
-                                                    <h4 className="text-lg font-black text-gray-800 mt-1">{pet.passport.idCode}</h4>
-                                                </div>
-                                            </div>
-
-                                            {/* Vaccine Checkboxes */}
-                                            <div>
-                                                <h4 className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2.5">Aşılama Kayıtları</h4>
-                                                <div className="flex flex-col gap-2">
-                                                    {pet.passport.vaccines.map((v, i) => (
-                                                        <div key={i} className="flex justify-between items-center p-3 rounded-xl bg-gray-50 border border-gray-100/50">
-                                                            <div>
-                                                                <h5 className="text-[11px] font-bold text-gray-850">{v.name}</h5>
-                                                                <span className="text-[8.5px] text-gray-500 dark:text-gray-400 font-semibold">Tarih: {v.date}</span>
-                                                            </div>
-                                                            <span className={`text-[10px] font-black uppercase tracking-wider ${v.color}`}>{v.status}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-
-                                            <div className="flex flex-col gap-2 mt-4">
-                                                <button className="w-full bg-gray-900 hover:bg-gray-800 text-white text-[11px] font-black py-3.5 rounded-2xl cursor-pointer transition-colors shadow-md shadow-gray-900/10">
-                                                    Çip Bilgilerini Paylaş
-                                                </button>
-                                                <button 
-                                                    onClick={() => router.push(`/profile/${authUser?.id}?view=passport`)}
-                                                    className="w-full bg-orange-100 hover:bg-orange-200 text-orange-800 text-[11px] font-black py-3.5 rounded-2xl cursor-pointer transition-colors shadow-sm"
-                                                >
-                                                    Tüm Detayları Düzenle / PDF İndir
-                                                </button>
-                                            </div>
-                                        </>
-                                    )}
-
-                                    {/* 3. Smart Collar Morph Screen */}
-                                    {expandedPanel === 'collar' && (
-                                        <>
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <Radio className="w-6 h-6 text-green-600" />
-                                                    <h3 className="text-lg font-black text-gray-800">Tasma Kontrolü</h3>
-                                                </div>
-                                                <span className="text-[9px] font-black text-green-700 bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
-                                                    {pet.collar.signal}
-                                                </span>
-                                            </div>
-
-                                            {/* Real-time battery status */}
-                                            <div className="p-4 bg-gray-50 border border-gray-100 rounded-2xl flex justify-between items-center">
-                                                <div className="flex items-center gap-3">
-                                                    <Battery className="w-8 h-8 text-green-600" />
-                                                    <div>
-                                                        <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 block">KALAN BATARYA</span>
-                                                        <h4 className="text-base font-black text-gray-800 mt-0.5">%{pet.collar.battery}</h4>
-                                                    </div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 block">SON SENKRONİZASYON</span>
-                                                    <span className="text-[10.5px] font-bold text-gray-700 mt-0.5 block">{pet.collar.lastSync}</span>
-                                                </div>
-                                            </div>
-
-                                            {/* Hardware Signal Waves Simulation */}
-                                            <div className="h-24 bg-gray-950 rounded-2xl flex flex-col items-center justify-center p-4 text-center font-mono text-[9px] text-green-400 relative overflow-hidden">
-                                                <div className="absolute inset-0 bg-green-500/[0.02] flex items-center justify-center">
-                                                    <span className="w-16 h-16 rounded-full border border-green-50/20 animate-ping absolute" />
-                                                    <span className="w-8 h-8 rounded-full border border-green-50/35 animate-ping absolute" />
-                                                </div>
-                                                <span className="text-[8px] text-gray-500 uppercase tracking-widest mb-1.5 block">Live Bluetooth RSSI</span>
-                                                <span className="text-xs font-black">{pet.collar.rssi}</span>
-                                                <span className="text-[8px] text-gray-500 mt-2 block">Firmware: {pet.collar.firmware}</span>
-                                            </div>
-
-                                            {/* Alarm buzzer buttons */}
-                                            <h4 className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2.5">Uzaktan Akustik Komutlar</h4>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <button className="flex items-center justify-center gap-1.5 p-3.5 bg-gray-50 hover:bg-gray-100 border border-gray-150 rounded-xl transition-all cursor-pointer text-xs font-bold text-gray-700">
-                                                    <Volume2 className="w-4 h-4 text-gray-600" />
-                                                    <span>Ses Sinyali Gönder</span>
-                                                </button>
-                                                <button className="flex items-center justify-center gap-1.5 p-3.5 bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl transition-all cursor-pointer text-xs font-bold text-red-700">
-                                                    <AlertTriangle className="w-4 h-4" />
-                                                    <span>Tasmayı Çaldır</span>
-                                                </button>
-                                            </div>
-                                        </>
-                                    )}
-
-                                    {/* 4. AI Dressing Morph Screen (Talking Tom Interactive Dressing Studio) */}
-                                    {expandedPanel === 'dressing' && (
-                                        <div className="relative w-full h-[650px] bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-gray-150 dark:border-white/5 shadow-2xl overflow-hidden flex flex-col">
-                                            {/* Header bar with Back button */}
-                                            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-zinc-950">
-                                                <span className="text-xs font-black text-foreground dark:text-white flex items-center gap-1.5 uppercase tracking-wider">
-                                                    👕 Moffi Kombinle
-                                                </span>
-                                                <button 
-                                                    onClick={() => setExpandedPanel(null)}
-                                                    className="px-4 py-1.5 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-gray-300 text-xs font-bold rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors"
-                                                >
-                                                    Geri Dön
-                                                </button>
-                                            </div>
-                                            {/* Kombinle Iframe */}
-                                            <div className="flex-1 w-full h-full relative">
-                                                <iframe 
-                                                    src="http://localhost:5173" 
-                                                    className="absolute inset-0 w-full h-full border-0"
-                                                    title="Moffi Kombinle"
-                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                    sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
-                                    
-                                    {/* 4.5. About / Ecosystem Morph Screen */}
-                                    {expandedPanel === 'about' && (
-                                        <div className="w-full bg-white dark:bg-zinc-950 rounded-[2.5rem] overflow-hidden shadow-2xl border border-gray-100 dark:border-white/5 relative flex flex-col h-[85vh]">
-                                            {/* Header Image / Pattern */}
-                                            <div className="h-44 shrink-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-fuchsia-600 relative overflow-hidden flex flex-col items-center justify-center">
-                                                <div className="absolute top-0 right-0 w-64 h-64 bg-black/10 dark:bg-white/10 rounded-full blur-3xl pointer-events-none" />
-                                                <div className="relative z-10 text-center px-4 mt-4">
-                                                    <div className="w-14 h-14 mx-auto bg-black/20 dark:bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-black/20 dark:border-white/20 mb-3 shadow-xl">
-                                                        <Sparkles className="w-7 h-7 text-white drop-shadow-md" />
-                                                    </div>
-                                                    <h2 className="text-xl font-black text-white tracking-tight drop-shadow-md leading-none">Moffi Süper Uygulaması</h2>
-                                                    <p className="text-[11px] font-bold text-indigo-100 mt-2">Evcil Hayvan Bakımının Geleceği</p>
-                                                </div>
-                                                
-                                                <button 
-                                                    onClick={() => setExpandedPanel(null)}
-                                                    className="absolute top-4 right-4 w-9 h-9 bg-black/20 hover:bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-colors cursor-pointer"
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                </button>
-                                            </div>
-
-                                            {/* Content */}
-                                            <div className="p-5 md:p-6 overflow-y-auto no-scrollbar flex-1 pb-24">
-                                                <div className="text-[13.5px] text-gray-700 dark:text-gray-300">
-                                                    <p className="first-letter:text-5xl first-letter:font-black first-letter:text-indigo-600 dark:first-letter:text-indigo-400 first-letter:mr-3 first-letter:float-left mb-6 leading-relaxed">
-                                                        Moffi, evcil dostunuzun hayatındaki tüm karmaşayı tek bir merkezde çözen devasa bir ekosistemdir. Biz, evcil hayvan bakımının birbirinden kopuk, düzensiz ve karmaşık uygulamalar yığını olmaktan çıkması gerektiğine inanıyoruz. Parçalanmış sistemler yerine, her şeyin birbiriyle akıcı bir şekilde konuştuğu akıllı bir gelecek inşa ediyoruz.
-                                                    </p>
-                                                    
-                                                    <p className="mb-6 leading-relaxed">
-                                                        Hayal edin; <strong>Moffi AI Veteriner</strong> sayesinde 7/24 kesintisiz, anlık ve yapay zeka destekli sağlık analizleri alabiliyorsunuz. Semptomları saniyeler içinde yorumlayıp beslenme tavsiyelerine ulaşıyorsunuz. Diğer tarafta <strong>Moffi Cüzdan</strong> teknolojimizle, anlaşmalı pet-friendly mekanlarda veya marketlerde saniyeler içinde ödeme yapıp PatiPuan kazanıyorsunuz.
-                                                    </p>
-                                                    
-                                                    <p className="mb-6 leading-relaxed">
-                                                        Üstelik sadece sağlıkla da yetinmiyoruz. <strong>Özelleştirilmiş Moffi Market</strong>, dostunuzun yaşına, ırkına ve o güne kadarki sağlık geçmişine bakarak sadece ona en uygun, en kaliteli ürünleri vitrine çıkarıyor. Kafa karıştıran binlerce ürün yerine, nokta atışı ve akıllı bir alışveriş deneyimi sunuyor.
-                                                    </p>
-
-                                                    <p className="leading-relaxed font-bold text-gray-900 dark:text-white bg-indigo-50 dark:bg-indigo-900/20 p-5 rounded-2xl border border-indigo-100 dark:border-indigo-500/20 shadow-sm">
-                                                        Sonuç olarak Moffi; yalnızca bir uygulama değil, sizin ve en iyi arkadaşınızın hayatını kusursuzlaştırmak için tasarlanmış, yaşayan, öğrenen ve sürekli büyüyen dev bir <strong>Pati Ekosistemidir</strong>.
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            
-                                            {/* Footer Button - Fixed at bottom */}
-                                            <div className="absolute bottom-0 inset-x-0 p-5 bg-gradient-to-t from-white via-white to-transparent dark:from-zinc-950 dark:via-zinc-950 pt-10 flex justify-center border-t border-gray-100/50 dark:border-white/5">
-                                                <button 
-                                                    onClick={() => setExpandedPanel(null)}
-                                                    className="w-full py-3.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-black rounded-xl shadow-lg hover:scale-[1.02] transition-all cursor-pointer"
-                                                >
-                                                    Moffi'ye Geri Dön
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                    
-                                    {/* 5. Quests Morph Screen */}
-                                    {expandedPanel === 'quests' && (
-                                        <>
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <Coins className="w-6 h-6 text-yellow-500" />
-                                                    <h3 className="text-lg font-black text-gray-800">Ödül Avı</h3>
-                                                </div>
-                                                <span className="text-[9px] font-black text-yellow-700 bg-yellow-50 px-2 py-0.5 rounded-full border border-yellow-200">
-                                                    2 / 3 Bitti
-                                                </span>
-                                            </div>
-
-                                            {/* Detailed quest progress card */}
-                                            <div className="p-4 bg-gradient-to-tr from-yellow-500/10 to-yellow-600/5 border border-yellow-200/40 rounded-2xl mb-1 text-center">
-                                                <span className="text-[9px] font-black text-yellow-700 tracking-wider uppercase block">BU HAFTAKİ HEDEF</span>
-                                                <h4 className="text-base font-black text-gray-800 mt-0.5">+150 PATIPUAN Sandığı</h4>
-                                                <div className="w-full h-2.5 bg-gray-150 rounded-full overflow-hidden mt-3 relative">
-                                                    <div className="h-full bg-gradient-to-r from-yellow-500 to-amber-500 rounded-full" style={{ width: '66%' }} />
-                                                </div>
-                                                <span className="text-[9.5px] font-semibold text-gray-500 mt-2 block">1000 Patipuana son 150 P kaldı!</span>
-                                                <p className="text-[7.5px] font-medium text-amber-600/70 mt-1.5 leading-snug">
-                                                    *PatiPuan'lar dijital kozmetiklerde ve anlaşmalı markalarda (max %10) indirim için kullanılır.
-                                                </p>
-                                            </div>
-
-                                            {/* Quests status lists */}
-                                            
-                                            <h4 className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2.5">Günlük Görev Çizelgesi</h4>
-                                            <div className="flex flex-col gap-2.5">
-                                                {pet.quests.map((q) => (
-                                                    <div key={q.id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100/50">
-                                                        <div className="flex items-center gap-2">
-                                                            <CheckCircle2 className={`w-4 h-4 ${q.done ? 'text-green-600' : 'text-gray-300'}`} fill={q.done ? 'currentColor' : 'none'} />
-                                                            <span className={`text-[10.5px] font-bold ${q.done ? 'text-gray-550 line-through' : 'text-gray-700'}`}>{q.text}</span>
-                                                        </div>
-                                                        <span className="text-[9px] font-black text-yellow-600 bg-yellow-50/50 px-1.5 py-0.5 rounded border border-yellow-100">+50 P</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </>
-                                    )}
-
-                                    {/* 6. Shop Morph Screen */}
-                                    {expandedPanel === 'shop' && (
-                                        <>
-                                            <div className="flex items-center gap-2">
-                                                <ShoppingBag className="w-6 h-6 text-orange-600" />
-                                                <h3 className="text-lg font-black text-gray-800">Kişiselleştirilmiş Fırsat</h3>
-                                            </div>
- 
-                                            {/* Special card */}
-                                            <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-5 rounded-[26px] border border-orange-100/60 shadow-sm flex flex-col gap-4 text-center">
-                                                <div className="w-16 h-16 rounded-2xl bg-white border border-orange-100 p-2 flex items-center justify-center shadow-sm mx-auto">
-                                                    <ShoppingBag className="w-8 h-8 text-orange-600" />
-                                                </div>
-                                                <div>
-                                                    <span className="text-[9px] font-black text-orange-700 tracking-wider block uppercase">{pet.specialOffer.discount}</span>
-                                                    <h4 className="text-base font-black text-gray-800 mt-1">{pet.name}'in {pet.specialOffer.title}</h4>
-                                                    <p className="text-xs text-gray-550 font-semibold mt-1 leading-snug">{pet.specialOffer.desc}</p>
-                                                </div>
-                                            </div>
- 
-                                            {/* Buy buttons */}
-                                            <div className="flex justify-between items-center p-4 bg-gray-50 border border-gray-150 rounded-2xl">
-                                                <div className="flex flex-col">
-                                                    <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase">Toplam Fiyat</span>
-                                                    <span className="text-lg font-black text-orange-600">{pet.specialOffer.newPrice} <span className="text-[10px] text-gray-500 dark:text-gray-400 line-through font-bold">{pet.specialOffer.oldPrice}</span></span>
-                                                </div>
-                                                
-                                                <button 
-                                                    onClick={() => setExpandedPanel(null)}
-                                                    className="px-5 py-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-black tracking-wider uppercase cursor-pointer transition-colors"
-                                                >
-                                                    Hemen Sipariş Ver
-                                                </button>
-                                            </div>
-                                        </>
-                                    )}
-
-
-
-                                    {/* 8. Etkinlikler (Events) Panel */}
-                                    {expandedPanel === 'events' && (
-                                        <>
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <CalendarDays className="w-6 h-6 text-indigo-500" />
-                                                    <h3 className="text-lg font-black text-gray-800">Etkinlik Biletlerim</h3>
-                                                </div>
-                                                <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">
-                                                    1 Bilet Aktif
-                                                </span>
-                                            </div>
-
-                                            {/* Barcode Ticket */}
-                                            <div className="bg-gradient-to-tr from-indigo-950 via-indigo-900 to-indigo-850 text-white p-5 rounded-[28px] border border-indigo-800/80 shadow-[0_12px_25px_rgba(0,0,0,0.1)] relative overflow-hidden flex flex-col gap-4">
-                                                <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
-                                                
-                                                <div className="flex justify-between items-start">
-                                                    <div>
-                                                        <span className="text-[8px] font-black tracking-widest text-indigo-300 block">MOFFI KULÜP BİLETİ</span>
-                                                        <h4 className="text-sm font-black mt-1 leading-snug">Kadıköy Patimaratonu</h4>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <span className="text-[9px] font-black bg-indigo-500/30 text-indigo-350 border border-indigo-500/30 px-2 py-0.5 rounded">
-                                                            STANDART
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                <div className="grid grid-cols-2 gap-4 border-t border-b border-black/10 dark:border-white/10 py-3 text-[10px] font-mono">
-                                                    <div>
-                                                        <span className="text-indigo-300 block text-[8px] font-sans font-bold">TARİH & SAAT</span>
-                                                        <span className="font-bold text-white block mt-0.5">24 Mayıs 2026, 14:00</span>
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-indigo-300 block text-[8px] font-sans font-bold">KONUM</span>
-                                                        <span className="font-bold text-white block mt-0.5">Caddebostan Sahil Parkı</span>
-                                                    </div>
-                                                </div>
-
-                                                {/* Barcode */}
-                                                <div className="bg-white p-3 rounded-2xl flex flex-col items-center justify-center gap-1.5 shadow-inner">
-                                                    {/* Barcode lines */}
-                                                    <div className="flex w-full justify-between h-9 items-stretch px-2">
-                                                        {[2, 4, 1, 3, 2, 4, 1, 2, 3, 1, 4, 2, 1, 3, 2, 4, 1, 3, 2, 1].map((w, i) => (
-                                                            <div 
-                                                                key={i} 
-                                                                className="bg-gray-905 rounded-sm"
-                                                                style={{ width: `${w}px` }}
-                                                            />
-                                                        ))}
-                                                    </div>
-                                                    <span className="text-[9px] font-mono text-gray-500 tracking-[0.3em] font-semibold leading-none">MF-2026-9901A</span>
-                                                </div>
-                                            </div>
-
-                                            {/* Nearby Events List */}
-                                            <div className="flex flex-col gap-2.5">
-                                                <h4 className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest px-1">Yakındaki Diğer Etkinlikler</h4>
-                                                
-                                                <div className="flex flex-col gap-2">
-                                                    <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100/50">
-                                                        <div>
-                                                            <h5 className="text-[11px] font-black text-gray-800">☕ Patili Yoga & Kahve</h5>
-                                                            <p className="text-[9px] text-gray-500 dark:text-gray-400 font-semibold mt-0.5">Moda Parkı • 28 Mayıs Cumartesi</p>
-                                                        </div>
-                                                        <button 
-                                                            onClick={() => setToastMsg("🎟️ Patili Yoga bilet talebi alındı!")}
-                                                            className="text-[9.5px] font-black text-indigo-650 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 px-2.5 py-1.5 rounded-xl cursor-pointer"
-                                                        >
-                                                            Kayıt Ol
-                                                        </button>
-                                                    </div>
-
-                                                    <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100/50">
-                                                        <div>
-                                                            <h5 className="text-[11px] font-black text-gray-800">🌭 Sosis Arama Yarışması</h5>
-                                                            <p className="text-[9px] text-gray-500 dark:text-gray-400 font-semibold mt-0.5">Göztepe Parkı • 30 Mayıs Pazar</p>
-                                                        </div>
-                                                        <button 
-                                                            onClick={() => setToastMsg("🎟️ Sosis Arama Yarışması bilet talebi alındı!")}
-                                                            className="text-[9.5px] font-black text-indigo-650 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 px-2.5 py-1.5 rounded-xl cursor-pointer"
-                                                        >
-                                                            Kayıt Ol
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </>
-                                    )}
-
-                                    {expandedPanel === 'profile' && (
-                                        <div className="flex flex-col gap-6 pb-24">
-                                            {/* 1. Header: User Greeting & VIP Status */}
-                                            <div className="flex items-center gap-4 p-4.5 bg-gradient-to-tr from-gray-900 to-gray-800 rounded-3xl border border-gray-700/30 text-white shadow-lg relative overflow-hidden shrink-0">
-                                                <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-green-500/10 rounded-full blur-2xl" />
-                                                <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-green-400 shadow-md shrink-0 relative group cursor-pointer"
-                                                    onClick={() => {
-                                                        const input = document.createElement('input');
-                                                        input.type = 'file';
-                                                        input.accept = 'image/*';
-                                                        input.onchange = async (e: any) => {
-                                                            const file = e.target.files?.[0];
-                                                            if (!file) return;
-                                                            try {
-                                                                const { apiService: api } = await import('@/services/apiService');
-                                                                const url = await api.uploadMedia(file, 'avatars');
-                                                                await updateProfile({ avatar: url });
-                                                                setToastMsg('✅ Profil fotoğrafı güncellendi!');
-                                                            } catch {
-                                                                setToastMsg('❌ Fotoğraf yüklenemedi.');
-                                                            }
-                                                        };
-                                                        input.click();
-                                                    }}
-                                                >
-                                                    <UserAvatar
-                                                        avatar={authUser?.avatar}
-                                                        name={authUser?.name}
-                                                        username={authUser?.username}
-                                                        email={authUser?.email}
-                                                        size="lg"
-                                                    />
-                                                    {/* Hover overlay — fotoğraf yükle */}
-                                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-full">
-                                                        <span className="text-white text-[9px] font-black text-center leading-tight px-1">Değiştir</span>
-                                                    </div>
-                                                    <div className="absolute bottom-0 right-0 bg-green-500 w-3.5 h-3.5 rounded-full border-2 border-white flex items-center justify-center">
-                                                        <div className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
-                                                    </div>
-                                                </div>
-                                                <div className="flex-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <h3 className="text-base font-black tracking-tight leading-tight">
-                                                            Merhaba, {authUser?.username || authUser?.name || authUser?.email?.split('@')[0] || 'Moffi Kullanıcısı'}! 👋
-                                                        </h3>
-                                                        <span className="text-[8px] font-black text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded border border-yellow-400/20 uppercase tracking-widest flex items-center gap-0.5">
-                                                            <Award className="w-2.5 h-2.5" /> {authUser?.is_prime ? 'PRIME' : authUser?.subscription_status || 'FREE'}
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-[10px] text-gray-300 font-semibold mt-1">
-                                                        {authUser?.email ? authUser.email.replace(/(.{2}).*(@.*)/, '$1***$2') : ''} • {authUser?.is_prime ? 'Prime Üye' : authUser?.subscription_status === 'premium' ? 'Premium' : 'Üye'}
-                                                    </p>
-                                                    {!hasNoPets && (
-                                                        <div className="mt-2 text-[9px] text-green-300 font-bold bg-green-500/15 border border-green-500/25 px-2 py-0.5 rounded-md inline-block">
-                                                            🐾 {pet.name} • {pet.breed || 'Kayıtlı Pet'}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Profil Fotoğrafı Yönetimi */}
-                                            <div className="flex items-center gap-2 px-1">
-                                                <button
-                                                    onClick={() => {
-                                                        const input = document.createElement('input');
-                                                        input.type = 'file';
-                                                        input.accept = 'image/*';
-                                                        input.onchange = async (e: any) => {
-                                                            const file = e.target.files?.[0];
-                                                            if (!file) return;
-                                                            try {
-                                                                const { apiService: api } = await import('@/services/apiService');
-                                                                const url = await api.uploadMedia(file, 'avatars');
-                                                                await updateProfile({ avatar: url });
-                                                                setToastMsg('✅ Profil fotoğrafı güncellendi!');
-                                                            } catch {
-                                                                setToastMsg('❌ Fotoğraf yüklenemedi.');
-                                                            }
-                                                        };
-                                                        input.click();
-                                                    }}
-                                                    className="text-[9px] text-gray-500 dark:text-gray-400 font-bold bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 px-2.5 py-1 rounded-lg hover:bg-black/10 dark:bg-white/10 transition-colors cursor-pointer flex items-center gap-1"
-                                                >
-                                                    📷 Fotoğraf Değiştir
-                                                </button>
-                                                {authUser?.avatar && (
-                                                    <button
-                                                        onClick={async () => {
-                                                            try {
-                                                                await updateProfile({ avatar: undefined });
-                                                                setToastMsg('✅ Fotoğraf kaldırıldı.');
-                                                            } catch {
-                                                                setToastMsg('❌ İşlem başarısız.');
-                                                            }
-                                                        }}
-                                                        className="text-[9px] text-red-400 font-bold bg-red-500/5 border border-red-500/20 px-2.5 py-1 rounded-lg hover:bg-red-500/10 transition-colors cursor-pointer"
-                                                    >
-                                                        🗑 Kaldır
-                                                    </button>
-                                                )}
-                                            </div>
-
-
-                                            {hasNoPets ? (
-                                                <div className="p-6 bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent border border-green-500/10 rounded-[2rem] text-center flex flex-col items-center gap-4 my-2 shadow-[0_12px_40px_rgba(0,0,0,0.02)]">
-                                                    <div className="w-16 h-16 rounded-[1.8rem] bg-gradient-to-tr from-emerald-450 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 text-white text-3xl">
-                                                        🐾
-                                                    </div>
-                                                    <h4 className="text-base font-black text-gray-805 tracking-tight leading-tight">Henüz Evcil Hayvanınız Yok</h4>
-                                                    <p className="text-xs font-semibold text-gray-450 leading-relaxed max-w-[280px]">
-                                                        Moffi'nin akıllı tasma, pasaport, dijital kimlik ve cüzdan özelliklerini kullanabilmek için ilk dostunuzu kaydetmeniz gerekir.
-                                                    </p>
-                                                    <button 
-                                                        onClick={() => {
-                                                            setExpandedPanel(null);
-                                                            setIsAddPetOpen(true);
-                                                        }}
-                                                        className="w-full py-4.5 bg-[#527958] hover:bg-[#436448] text-white rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all shadow-md shadow-green-900/10 cursor-pointer"
-                                                    >
-                                                        Evcil Hayvan Ekle
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <>
-                                            {/* 2. Moffi Pay & Contactless Collar Card (Pati-Kart) */}
-                                            <div className="flex flex-col gap-3">
-                                                <span className="text-[10px] font-black tracking-widest text-gray-500 dark:text-gray-400 uppercase px-1">FINANSAL PORTFÖY & TEMASSIZ PATİ-KART</span>
-                                                
-                                                {/* The Interactive Black/Gold Card */}
-                                                <div className="bg-gradient-to-tr from-gray-950 via-gray-900 to-gray-850 text-white p-5 rounded-[28px] border border-gray-800/80 shadow-[0_12px_30px_rgba(0,0,0,0.12)] relative overflow-hidden group">
-                                                    <div className="absolute right-[-20px] top-[-20px] w-36 h-36 bg-green-500/5 rounded-full blur-3xl pointer-events-none" />
-                                                    <div className="flex justify-between items-start">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <CreditCard className="w-5 h-5 text-yellow-450" />
-                                                            <span className="text-[9px] font-black text-gray-300 tracking-widest">MOFFI PATİ-KART (NFC)</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-1 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 px-2 py-0.5 rounded-lg">
-                                                            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                                                            <span className="text-[8px] font-black text-green-400 uppercase tracking-widest">Aktif</span>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="mt-8 flex justify-between items-end">
-                                                        <div>
-                                                            <span className="text-[9px] font-bold text-gray-455 uppercase block">Cüzdan Bakiyesi</span>
-                                                            <h3 className="text-2xl font-black tracking-tight mt-0.5 flex items-baseline gap-1">
-                                                                {totalPatiPuan.toLocaleString('tr-TR')} <span className="text-xs font-black text-yellow-400">{pet.wallet.currency}</span>
-                                                            </h3>
-                                                        </div>
-                                                        <div className="text-right font-mono">
-                                                            <span className="text-[9px] font-bold text-gray-455 block">{pet.name} Smartcollar Pay</span>
-                                                            <span className="text-[9px] font-semibold text-gray-500 tracking-wider mt-0.5 block">{pet.wallet.cardNumber}</span>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/5 flex items-center gap-2">
-                                                        <span className="text-[12px] shrink-0">📶</span>
-                                                        <p className="text-[9px] text-gray-500 dark:text-gray-400 font-semibold leading-normal">
-                                                            **Temassız Ödeme (NFC)** aktif! {pet.name} anlaşmalı pet-friendly kafe ve marketlerde ödemeyi tasmasındaki akıllı çiple patisini dokundurarak saniyeler içinde tamamlasın!
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <button 
-                                                        disabled
-                                                        className="flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-100 p-3.5 rounded-2xl text-[11px] font-black text-gray-500 dark:text-gray-400 transition-all cursor-not-allowed shadow-sm relative overflow-hidden"
-                                                    >
-                                                        <div className="absolute inset-0 bg-white/50 z-10" />
-                                                        <Plus className="w-3.5 h-3.5" />
-                                                        <span>Bakiye Yükle</span>
-                                                        <span className="absolute top-0 right-0 bg-orange-100 text-orange-600 text-[7px] px-1.5 py-0.5 rounded-bl-lg font-black z-20">YAKINDA</span>
-                                                    </button>
-                                                    <button 
-                                                        disabled
-                                                        className="flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-100 p-3.5 rounded-2xl text-[11px] font-black text-gray-500 dark:text-gray-400 transition-all cursor-not-allowed shadow-sm relative overflow-hidden"
-                                                    >
-                                                        <div className="absolute inset-0 bg-white/50 z-10" />
-                                                        <ArrowUpRight className="w-3.5 h-3.5" />
-                                                        <span>Puan Transferi</span>
-                                                        <span className="absolute top-0 right-0 bg-orange-100 text-orange-600 text-[7px] px-1.5 py-0.5 rounded-bl-lg font-black z-20">YAKINDA</span>
-                                                    </button>
-                                                </div>
-
-                                                <button 
-                                                    onClick={() => setIsPolicyModalOpen(true)}
-                                                    className="w-full p-3.5 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-between group hover:bg-gray-100 transition-colors cursor-pointer mt-3"
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-xl bg-white border border-gray-100 shadow-sm flex items-center justify-center">
-                                                            <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                                                        </div>
-                                                        <div className="text-left">
-                                                            <span className="text-[11px] font-black text-gray-800 block">Pati-Kart KVKK & Kurallar</span>
-                                                            <span className="text-[9px] text-gray-500 font-medium">Adil kullanım politikalarını inceleyin</span>
-                                                        </div>
-                                                    </div>
-                                                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-emerald-500 transition-colors" />
-                                                </button>
-
-                                                {/* Pati-Kart Security Settings */}
-                                                <div className="bg-white border border-gray-100 rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-4">
-                                                    <div className="flex justify-between items-center">
-                                                        <div className="flex items-center gap-2.5">
-                                                            <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center text-red-650 shrink-0">
-                                                                <Lock className="w-4.5 h-4.5" />
-                                                            </div>
-                                                            <div>
-                                                                <h4 className="text-[11.5px] font-black text-gray-800">Pati-Kart Güvenlik Kilidi</h4>
-                                                                <p className="text-[9.5px] text-gray-500 dark:text-gray-400 font-semibold mt-0.5">Tasmanın NFC ödemelerini geçici olarak kilitle</p>
-                                                            </div>
-                                                        </div>
-                                                        <button 
-                                                            onClick={() => {
-                                                                setNfcPaymentLocked(!nfcPaymentLocked);
-                                                                setToastMsg(nfcPaymentLocked ? "🔓 Pati-Kart ödeme kilidi kaldırıldı!" : "🔒 Pati-Kart geçici olarak kilitlendi!");
-                                                            }}
-                                                            className={`w-11 h-6 rounded-full transition-colors flex items-center px-0.5 duration-300 ${nfcPaymentLocked ? 'bg-red-500' : 'bg-gray-200'}`}
-                                                        >
-                                                            <motion.div 
-                                                                layout 
-                                                                className="w-5 h-5 bg-white rounded-full shadow-sm" 
-                                                                animate={{ x: nfcPaymentLocked ? 20 : 0 }}
-                                                            />
-                                                        </button>
-                                                    </div>
-
-                                                    <div className="border-t border-gray-100 pt-3">
-                                                        <div className="flex justify-between items-center mb-2.5">
-                                                            <span className="text-[10.5px] font-black text-gray-700">Günlük Limit</span>
-                                                            <span className="text-xs font-black text-green-700 bg-green-50 px-2 py-0.5 rounded-lg border border-green-100">{dailySpendLimit} PATI</span>
-                                                        </div>
-                                                        <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200/40 gap-1">
-                                                            {[100, 250, 500, 1000].map((limit) => (
-                                                                <button 
-                                                                    key={limit}
-                                                                    onClick={() => {
-                                                                        setDailySpendLimit(limit);
-                                                                        setToastMsg(`💸 Günlük limit ${limit} PATI olarak güncellendi.`);
-                                                                    }}
-                                                                    className={`flex-1 text-[9.5px] font-black py-2 rounded-xl transition-all cursor-pointer text-center relative ${
-                                                                        dailySpendLimit === limit 
-                                                                            ? 'bg-white text-gray-900 shadow-sm' 
-                                                                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-650'
-                                                                    }`}
-                                                                >
-                                                                    {limit} P
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* [V2_FEATURE_TASMA] - Akıllı Tasma OS & AI Çevirmen Gizlendi
-                                            <div className="flex flex-col gap-3">
-                                                <span className="text-[10px] font-black tracking-widest text-gray-500 dark:text-gray-400 uppercase px-1">AKILLI TASMA (IoT) OS & AI SES ANALİZİ</span>
-                                                
-                                                <div className="bg-white border border-gray-100 rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-4">
-                                                    <div className="flex justify-between items-center">
-                                                        <div className="flex items-center gap-2.5">
-                                                            <div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center text-green-600 shrink-0">
-                                                                <Radio className="w-5 h-5" />
-                                                            </div>
-                                                            <div>
-                                                                <h4 className="text-[11.5px] font-black text-gray-800">Moffi Link™ Akıllı Tasma</h4>
-                                                                <p className="text-[9.5px] text-gray-500 dark:text-gray-400 font-semibold mt-0.5">Sinyal Gücü: {pet.collar.signal} • GSM %88</p>
-                                                            </div>
-                                                        </div>
-                                                        <span className="text-[9px] font-black text-green-700 bg-green-50 border border-green-200/60 px-2 py-0.5 rounded-full uppercase">
-                                                            BAĞLI
-                                                        </span>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-2 gap-3.5 bg-gray-55 border border-gray-100/50 p-3 rounded-2xl text-center">
-                                                        <div>
-                                                            <span className="text-[8px] font-bold text-gray-500 dark:text-gray-400 block uppercase">TASMA İÇİ SICAKLIK</span>
-                                                            <span className="text-[12px] font-black text-gray-750 mt-1 block">🌡️ 24.2°C • İdeal</span>
-                                                        </div>
-                                                        <div className="border-l border-gray-200/70">
-                                                            <span className="text-[8px] font-bold text-gray-500 dark:text-gray-400 block uppercase">GÜVENLİK ÇİTİ (GPS)</span>
-                                                            <span className="text-[12px] font-black text-green-600 mt-1 block">📍 Güvenli Çember</span>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="p-3.5 bg-purple-50/50 border border-purple-100/80 rounded-2xl flex flex-col gap-2">
-                                                        <div className="flex justify-between items-center">
-                                                            <div className="flex items-center gap-1.5">
-                                                                <Sparkles className="w-4 h-4 text-purple-600" />
-                                                                <span className="text-[9px] font-black text-purple-700 uppercase tracking-widest">AI SES TERCÜMANI (HAV-GÜNLÜĞÜ)</span>
-                                                            </div>
-                                                            <span className="text-[8px] font-black text-purple-600 bg-purple-100/40 px-1.5 py-0.5 rounded">4 Kayıt</span>
-                                                        </div>
-                                                        <p className="text-[10px] font-bold text-gray-700 mt-1 leading-normal">
-                                                            📢 **{pet.name} en son 11:20'de havladı.** AI Ses Teşhisi: **"Açlık veya İlgi Arayışı" (%85 güvenilirlik)**. Son 24 saat stres skoru stabil.
-                                                        </p>
-                                                    </div>
-
-                                                    <div className={`p-3.5 border rounded-2xl flex flex-col gap-2 transition-all ${
-                                                        lostPetMode 
-                                                            ? 'bg-red-50 border-red-200 text-red-700 shadow-sm animate-pulse' 
-                                                            : 'bg-gray-50 border-gray-100 text-gray-550'
-                                                    }`}>
-                                                        <div className="flex justify-between items-center">
-                                                            <div className="flex items-center gap-1.5 font-black text-[9.5px]">
-                                                                <span>🚨</span>
-                                                                <span className={lostPetMode ? 'text-red-700' : 'text-gray-600'}>ACİL SOS / KAYIP MODU</span>
-                                                            </div>
-                                                            <button 
-                                                                onClick={async () => {
-                                                                    if (lostPetMode) {
-                                                                        updatePet(pet.id, { is_lost: false });
-                                                                        try {
-                                                                            await apiService.togglePetSosStatus(pet.id, 'safe');
-                                                                        } catch (e) {
-                                                                            console.error(e);
-                                                                        }
-                                                                        setToastMsg(`🔕 Kayıp Modu Kapatıldı. ${pet.name} güvende.`);
-                                                                    } else {
-                                                                        window.dispatchEvent(new CustomEvent('open-sos-center', { detail: pet }));
-                                                                    }
-                                                                }}
-                                                                className={`text-[9px] font-black px-2.5 py-1.5 rounded-xl cursor-pointer transition-all border ${
-                                                                    lostPetMode 
-                                                                        ? 'bg-red-600 text-white border-red-700 shadow-sm' 
-                                                                        : 'bg-white text-red-600 border-red-200 hover:bg-red-50'
-                                                                }`}
-                                                            >
-                                                                {lostPetMode ? "Kayıp Modunu Kapat" : "Kayıp Modunu Aç"}
-                                                            </button>
-                                                        </div>
-                                                        <p className="text-[9.5px] font-semibold leading-normal text-gray-500">
-                                                            {lostPetMode 
-                                                                ? `⚠️ KAYIP MODU AKTİF! ${pet.name} için GPS konum güncellemeleri saniyelik sıklığa çıkartıldı, tasmadaki kırmızı SOS led ışığı yanıp sönüyor ve çevredeki tüm Moffi üyelerine bildirim gönderildi.` 
-                                                                : `${pet.name} kaybolursa bu modu aktif edin. GPS güncelleme hızı artar, tasmanın kırmızı SOS ledi yanar ve çevredeki kullanıcılara kayıp ihbarı iletilir.`
-                                                            }
-                                                        </p>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-3 gap-2.5 pt-1">
-                                                        <button 
-                                                            onClick={() => setToastMsg("🔊 Tasmaya ses sinyali gönderildi.")}
-                                                            className="flex flex-col items-center justify-center p-2.5 bg-gray-55 hover:bg-gray-100 border border-gray-150 rounded-xl transition-all cursor-pointer text-center gap-1"
-                                                        >
-                                                            <Volume2 className="w-4 h-4 text-gray-600" />
-                                                            <span className="text-[8.5px] font-black text-gray-700">Ses Sinyali</span>
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => setToastMsg("📳 Tasmaya hafif titreşim gönderildi.")}
-                                                            className="flex flex-col items-center justify-center p-2.5 bg-gray-55 hover:bg-gray-100 border border-gray-150 rounded-xl transition-all cursor-pointer text-center gap-1"
-                                                        >
-                                                            <Zap className="w-4 h-4 text-gray-600" />
-                                                            <span className="text-[8.5px] font-black text-gray-700">Hafif Titreşim</span>
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => setToastMsg("🚨 Acil Durum Sinyali: Tasma çaldırılıyor!")}
-                                                            className="flex flex-col items-center justify-center p-2.5 bg-red-50 hover:bg-red-100/85 border border-red-100 rounded-xl transition-all cursor-pointer text-center gap-1"
-                                                        >
-                                                            <AlertTriangle className="w-4 h-4 text-red-600" />
-                                                            <span className="text-[8.5px] font-black text-red-600">Tasmayı Çaldır</span>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            */}
-
-                                            {/* 4. Smart Food & Service Subscriptions (Abonelikler) */}
-                                            <div className="flex flex-col gap-3">
-                                                <span className="text-[10px] font-black tracking-widest text-gray-500 dark:text-gray-400 uppercase px-1">MAMA & HİZMET ABONELİKLERİM</span>
-                                                
-                                                <div className="bg-white border border-gray-100 rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3">
-                                                    {subscriptions.length > 0 ? subscriptions.map((sub: any, idx: number) => (
-                                                        <div key={sub.id || idx} className={`flex justify-between items-center ${idx !== subscriptions.length - 1 ? 'pb-3 border-b border-gray-50' : ''}`}>
-                                                            <div className="flex items-center gap-2.5">
-                                                                <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center text-orange-655 shrink-0">
-                                                                    <ShoppingBag className="w-5 h-5" />
-                                                                </div>
-                                                                <div>
-                                                                    <h4 className="text-[11.5px] font-black text-gray-800">{sub.name}</h4>
-                                                                    <p className="text-[9.5px] text-gray-500 dark:text-gray-400 font-semibold mt-0.5">Aylık Düzenli Teslimat • %10 İndirimli</p>
-                                                                </div>
-                                                            </div>
-                                                            <div className="text-right">
-                                                                <span className="text-[11.5px] font-black text-orange-600 block">{(sub.price * 0.9).toLocaleString('tr-TR')} TL</span>
-                                                                <span className="text-[8px] font-bold text-gray-500 dark:text-gray-400 block uppercase font-sans">Abonelik</span>
-                                                            </div>
-                                                        </div>
-                                                    )) : (
-                                                        <div className="text-center py-4 flex flex-col items-center">
-                                                            <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-2.5">Henüz aktif bir aboneliğiniz bulunmuyor.</p>
-                                                            <button 
-                                                                onClick={() => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'petshop' }))}
-                                                                className="text-[10px] font-black text-indigo-650 bg-indigo-50 border border-indigo-100/50 hover:bg-indigo-100 px-4 py-2 rounded-xl transition-colors"
-                                                            >
-                                                                Marketi Keşfet
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* 5. Health & Vaccine Passport Center */}
-                                            <div className="flex flex-col gap-3">
-                                                <span className="text-[10px] font-black tracking-widest text-gray-500 dark:text-gray-400 uppercase px-1">MEDİKAL SAĞLIK & DİJİTAL PASAPORT</span>
-                                                
-                                                <div className="bg-white border border-gray-100 rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-4">
-                                                    
-                                                    {/* Glowing Telehealth Consultation Banner */}
-                                                    <div className="flex justify-between items-center p-3.5 bg-gradient-to-r from-emerald-500/10 to-teal-500/5 border border-emerald-100 rounded-2xl relative overflow-hidden group">
-                                                        <div className="absolute right-[-10px] top-[-10px] w-20 h-20 bg-emerald-500/5 rounded-full blur-xl animate-pulse" />
-                                                        <div className="flex items-center gap-2.5 relative z-10">
-                                                            <div className="w-9 h-9 rounded-xl bg-emerald-500/15 flex items-center justify-center text-emerald-600 shrink-0">
-                                                                <Stethoscope className="w-5 h-5" />
-                                                            </div>
-                                                            <div>
-                                                                <h4 className="text-[11.5px] font-black text-emerald-800 leading-tight">7/24 Canlı Veteriner Destek</h4>
-                                                                <p className="text-[9.5px] text-emerald-600 font-semibold mt-0.5">Gold Üye Ayrıcalıklı Canlı Konsültasyon</p>
-                                                            </div>
-                                                        </div>
-                                                        <button 
-                                                            onClick={() => alert('Çok Yakında!')}
-                                                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9.5px] font-black px-3.5 py-2 rounded-xl shadow-sm cursor-pointer transition-colors relative z-10"
-                                                        >
-                                                            Bağlan
-                                                        </button>
-                                                    </div>
-
-                                                    {/* Passport Detail Ring and upcoming vaccines */}
-                                                    <div className="flex justify-between items-center p-3.5 bg-gray-50 border border-gray-100 rounded-2xl">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="relative w-10 h-10 flex items-center justify-center">
-                                                                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                                                                    <circle cx="18" cy="18" r="15.915" fill="none" stroke="#E5E7EB" strokeWidth="3" />
-                                                                    <circle cx="18" cy="18" r="15.915" fill="none" stroke="#10B981" strokeWidth="3" strokeDasharray="80, 100" />
-                                                                </svg>
-                                                                <span className="absolute text-[8.5px] font-black text-emerald-700">80%</span>
-                                                            </div>
-                                                            <div>
-                                                                <span className="text-[8.5px] font-black text-gray-500 dark:text-gray-400 block uppercase">AŞILAMA TAMAMLIK ORANI</span>
-                                                                <h5 className="text-[11.5px] font-black text-gray-805 mt-0.5">Karma ve Kuduz Aşısı Aktif</h5>
-                                                            </div>
-                                                        </div>
-                                                        <button 
-                                                            onClick={() => router.push(`/profile/${authUser?.id || 'me'}?view=passport`)}
-                                                            className="text-[9.5px] font-black text-emerald-650 bg-emerald-50 hover:bg-emerald-100/70 border border-emerald-100/50 px-2.5 py-1.5 rounded-xl cursor-pointer shrink-0"
-                                                        >
-                                                            Pasaportu Aç
-                                                        </button>
-                                                    </div>
-
-                                                    {/* Allergy & Diet Information */}
-                                                    <div className="p-3.5 bg-amber-50/40 border border-amber-100 rounded-2xl flex flex-col gap-2">
-                                                        <div className="flex justify-between items-center">
-                                                            <div className="flex items-center gap-1">
-                                                                <span className="text-[9px] font-black text-amber-700 uppercase tracking-widest">ALERJİ & BESLENME PROFİLİ</span>
-                                                            </div>
-                                                            <span className="text-[8px] font-black text-amber-600 bg-amber-100/60 px-2 py-0.5 rounded">Hassas Diyet</span>
-                                                        </div>
-                                                        <p className="text-[9.5px] font-semibold text-gray-700 leading-relaxed">
-                                                            ❌ **Yasaklı Besinler:** Çikolata 🍫, Sarımsak 🧄, Üzüm 🍇. Tahılsız ve yüksek somon proteini diyeti aktif. Günlük kalori hedefi: **1,200 kcal**.
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-
-
-                                            {/* 7. Trendyol-Style Interactive Orders & Cart System */}
-                                            <div className="flex flex-col gap-3">
-                                                <div className="flex justify-between items-center px-1">
-                                                    <span className="text-[10px] font-black tracking-widest text-gray-500 dark:text-gray-400 uppercase">SİPARİŞLERİM & SEPETİM</span>
-                                                    <span className="text-[9.5px] font-black text-green-700 bg-green-50 border border-green-200/50 px-2 py-0.5 rounded-full">
-                                                        {cartCount > 0 ? `${cartCount} Ürün` : 'Sepet Boş'}
-                                                    </span>
-                                                </div>
-                                                
-                                                {/* Tab Selector Bar */}
-                                                <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200/40">
-                                                    <button 
-                                                        onClick={() => setProfileOrdersTab('active')}
-                                                        className={`flex-1 text-[9.5px] font-black py-2 rounded-xl transition-all cursor-pointer text-center ${
-                                                            profileOrdersTab === 'active' 
-                                                                ? 'bg-white text-gray-900 shadow-sm' 
-                                                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-600'
-                                                        }`}
-                                                    >
-                                                        Aktif Takip
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => setProfileOrdersTab('past')}
-                                                        className={`flex-1 text-[9.5px] font-black py-2 rounded-xl transition-all cursor-pointer text-center ${
-                                                            profileOrdersTab === 'past' 
-                                                                ? 'bg-white text-gray-900 shadow-sm' 
-                                                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-600'
-                                                        }`}
-                                                    >
-                                                        Geçmiş
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => setProfileOrdersTab('cart')}
-                                                        className={`flex-1 text-[9.5px] font-black py-2 rounded-xl transition-all cursor-pointer text-center relative ${
-                                                            profileOrdersTab === 'cart' 
-                                                                ? 'bg-white text-gray-900 shadow-sm' 
-                                                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-600'
-                                                        }`}
-                                                    >
-                                                        Sepetim
-                                                        {cartCount > 0 && (
-                                                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-orange-600 text-white text-[8px] font-black rounded-full flex items-center justify-center border border-white">
-                                                                {cartCount}
-                                                            </span>
-                                                        )}
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => setProfileOrdersTab('settings')}
-                                                        className={`flex-1 text-[9.5px] font-black py-2 rounded-xl transition-all cursor-pointer text-center ${
-                                                            profileOrdersTab === 'settings' 
-                                                                ? 'bg-white text-gray-900 shadow-sm' 
-                                                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-600'
-                                                        }`}
-                                                    >
-                                                        Ayarlar
-                                                    </button>
-                                                </div>
-
-                                                {/* TAB 1: AKTİF SİPARİŞLER */}
-                                                {profileOrdersTab === 'active' && (
-                                                    <div className="flex flex-col gap-3">
-                                                        {/* Simulated Live Map */}
-                                                        {showLiveMap && (
-                                                            <div className="p-4 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.02)] flex flex-col gap-3 relative overflow-hidden">
-                                                                <div className="flex justify-between items-center">
-                                                                    <span className="text-[10px] font-black tracking-widest text-[#527958] uppercase">CANLI KURYE HARİTASI</span>
-                                                                    <button 
-                                                                        onClick={() => setShowLiveMap(false)}
-                                                                        className="text-[9.5px] font-black text-gray-500 dark:text-gray-400 hover:text-gray-650 cursor-pointer animate-none"
-                                                                    >
-                                                                        Gizle ×
-                                                                    </button>
-                                                                </div>
-                                                                
-                                                                {/* Map container */}
-                                                                <div className="relative h-40 bg-green-50/10 rounded-2xl overflow-hidden border border-gray-100 flex items-center justify-center">
-                                                                    <div className="absolute inset-0 opacity-[0.06] bg-[radial-gradient(#000_1.5px,transparent_1.5px)] [background-size:16px_16px]" />
-                                                                    <svg className="absolute inset-0 w-full h-full" viewBox="0 0 300 160">
-                                                                        {/* Streets */}
-                                                                        <path d="M 0 30 L 300 30" fill="none" stroke="#E5E7EB" strokeWidth="6" />
-                                                                        <path d="M 0 110 L 300 110" fill="none" stroke="#E5E7EB" strokeWidth="6" />
-                                                                        <path d="M 80 0 L 80 160" fill="none" stroke="#E5E7EB" strokeWidth="6" />
-                                                                        <path d="M 200 0 L 200 160" fill="none" stroke="#E5E7EB" strokeWidth="6" />
-                                                                        
-                                                                        {/* Active path */}
-                                                                        <path d="M 80 30 L 200 30 L 200 110" fill="none" stroke="#527958" strokeWidth="3" strokeDasharray="6 6" />
-                                                                        
-                                                                        {/* Address marker */}
-                                                                        <circle cx="200" cy="110" r="10" fill="#EAF5EC" stroke="#22C55E" strokeWidth="2" />
-                                                                        
-                                                                        {/* Courier */}
-                                                                        <motion.circle 
-                                                                            cx="80" 
-                                                                            cy="30" 
-                                                                            r="7" 
-                                                                            fill="#F97316" 
-                                                                            stroke="white" 
-                                                                            strokeWidth="2"
-                                                                            animate={{
-                                                                                cx: [80, 200, 200],
-                                                                                cy: [30, 30, 110]
-                                                                            }}
-                                                                            transition={{
-                                                                                duration: 6,
-                                                                                repeat: Infinity,
-                                                                                ease: "linear"
-                                                                            }}
-                                                                        />
-                                                                    </svg>
-                                                                    <div className="absolute top-2.5 left-2.5 bg-white/95 border border-gray-100 px-2 py-0.5 rounded-lg shadow-sm text-[8px] font-black text-gray-600">
-                                                                        📍 Caferağa Mah. Moda
-                                                                    </div>
-                                                                    <div className="absolute bottom-2.5 right-2.5 bg-[#527958] text-white px-2 py-0.5 rounded-lg shadow-sm text-[8px] font-black">
-                                                                        🛵 Kurye Can yolda
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        )}
-
-                                                        {/* Shipping tracker list */}
-                                                        {activeOrders.length === 0 ? (
-                                                            <div className="p-8 bg-white border border-gray-100 rounded-3xl text-center flex flex-col items-center justify-center gap-2">
-                                                                <span className="text-2xl">📦</span>
-                                                                <h5 className="text-xs font-black text-gray-800">Aktif Sipariş Yok</h5>
-                                                                <p className="text-[9.5px] text-gray-500 dark:text-gray-400 font-semibold">Şu an aktif takipte olan bir siparişiniz bulunmuyor.</p>
-                                                            </div>
-                                                        ) : (
-                                                            activeOrders.map((ord) => (
-                                                                <div key={ord.id} className="p-4 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3.5">
-                                                                    <div className="flex justify-between items-center">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-ping shrink-0" />
-                                                                            <h4 className="text-[10px] font-black text-gray-800 uppercase tracking-wider ml-1">Kurye Yolda • Sipariş Takibi</h4>
-                                                                        </div>
-                                                                        <span className="text-[8.5px] font-black text-green-700 bg-green-55 border border-green-200/50 px-2 py-0.5 rounded-full">{ord.status}</span>
-                                                                    </div>
-                                                                    
-                                                                    <div className="flex justify-between items-start">
-                                                                        <div>
-                                                                            <h5 className="text-[12px] font-black text-gray-805 leading-tight">{ord.name}</h5>
-                                                                            <p className="text-[9.5px] text-gray-500 dark:text-gray-400 font-semibold mt-0.5">{ord.desc}</p>
-                                                                        </div>
-                                                                        <span className="text-[12px] font-black text-green-700 shrink-0">{ord.timeRemaining}</span>
-                                                                    </div>
-
-                                                                    {/* Process progress steps */}
-                                                                    <div className="flex justify-between items-center gap-2 mt-1 px-1">
-                                                                        <div className="flex-1 flex flex-col gap-1 items-center">
-                                                                            <div className={`w-full h-1.5 rounded-full ${ord.progress >= 30 ? 'bg-green-600' : 'bg-gray-200'}`} />
-                                                                            <span className="text-[7.5px] font-black text-green-700 uppercase">Hazırlık</span>
-                                                                        </div>
-                                                                        <div className="flex-1 flex flex-col gap-1 items-center">
-                                                                            <div className={`w-full h-1.5 rounded-full ${ord.progress >= 65 ? 'bg-green-600' : 'bg-gray-200'}`} />
-                                                                            <span className="text-[7.5px] font-black text-green-700 uppercase">Dağıtımda</span>
-                                                                        </div>
-                                                                        <div className="flex-1 flex flex-col gap-1 items-center">
-                                                                            <div className={`w-full h-1.5 rounded-full ${ord.progress >= 100 ? 'bg-green-600' : 'bg-gray-200'}`} />
-                                                                            <span className="text-[7.5px] font-black text-gray-500 dark:text-gray-400 uppercase">Teslimat</span>
-                                                                        </div>
-                                                                    </div>
-
-                                                                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
-                                                                        <button 
-                                                                            onClick={() => setShowLiveMap(true)}
-                                                                            className="py-2.5 rounded-xl bg-[#527958] hover:bg-[#436448] text-white text-[10px] font-black cursor-pointer text-center transition-colors shadow-sm"
-                                                                        >
-                                                                            Haritada Göster 📍
-                                                                        </button>
-                                                                        <button 
-                                                                            onClick={() => setToastMsg("📞 Kurye Can ile bağlantı kuruluyor...")}
-                                                                            className="py-2.5 rounded-xl bg-gray-50 border border-gray-150 hover:bg-gray-100 text-[10px] font-black text-gray-700 cursor-pointer text-center transition-colors"
-                                                                        >
-                                                                            Kuryeyi Ara
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-                                                            ))
-                                                        )}
-
-                                                    </div>
-                                                )}
-
-                                                {/* TAB 2: GEÇMİŞ SİPARİŞLER */}
-                                                {profileOrdersTab === 'past' && (
-                                                    <div className="flex flex-col gap-3">
-                                                        <div className="p-4 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3">
-                                                            <div className="flex justify-between items-center pb-2 border-b border-gray-100">
-                                                                <div>
-                                                                    <span className="text-[9px] font-black text-gray-500 dark:text-gray-400">SİPARİŞ #928374</span>
-                                                                    <span className="text-[9.5px] text-gray-500 font-bold block mt-0.5">12 Mayıs 2026</span>
-                                                                </div>
-                                                                <span className="text-[9px] font-black text-green-700 bg-green-50 border border-green-200/55 px-2.5 py-0.5 rounded-full">
-                                                                    Teslim Edildi ✓
-                                                                </span>
-                                                            </div>
-                                                            <div className="flex gap-3 my-1">
-                                                                <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600 shrink-0 border border-orange-100/40">
-                                                                    <ShoppingBag className="w-5 h-5" />
-                                                                </div>
-                                                                <div className="flex-1">
-                                                                    <h5 className="text-[11.5px] font-bold text-gray-800 leading-tight">Tahılsız Somonlu Kuru Köpek Maması (15kg)</h5>
-                                                                    <p className="text-[9.5px] text-gray-500 dark:text-gray-400 font-semibold mt-0.5">Moffi Premium Satıcı • 1,450 TL</p>
-                                                                </div>
-                                                            </div>
-                                                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
-                                                                <button className="py-2 bg-gray-50 hover:bg-gray-100 border border-gray-150 rounded-xl text-[9.5px] font-black text-gray-700 cursor-pointer text-center transition-colors">
-                                                                    Değerlendir (5 ⭐)
-                                                                </button>
-                                                                <button className="py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-[9.5px] font-black cursor-pointer text-center transition-colors">
-                                                                    Tekrar Satın Al
-                                                                </button>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="p-4 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3">
-                                                            <div className="flex justify-between items-center pb-2 border-b border-gray-100">
-                                                                <div>
-                                                                    <span className="text-[9px] font-black text-gray-450">SİPARİŞ #837261</span>
-                                                                    <span className="text-[9.5px] text-gray-500 font-bold block mt-0.5">28 Nisan 2026</span>
-                                                                </div>
-                                                                <span className="text-[9px] font-black text-green-700 bg-green-50 border border-green-200/55 px-2.5 py-0.5 rounded-full">
-                                                                    Teslim Edildi ✓
-                                                                </span>
-                                                            </div>
-                                                            <div className="flex gap-3 my-1">
-                                                                <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center text-green-600 shrink-0 border border-green-100/40">
-                                                                    <Radio className="w-5 h-5" />
-                                                                </div>
-                                                                <div className="flex-1">
-                                                                    <h5 className="text-[11.5px] font-bold text-gray-800 leading-tight">Moffi Link™ Akıllı Tasma v2 - Orman Yeşili</h5>
-                                                                    <p className="text-[9.5px] text-gray-500 dark:text-gray-400 font-semibold mt-0.5">Moffi Donanım A.Ş. • 2,490 TL</p>
-                                                                </div>
-                                                            </div>
-                                                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
-                                                                <button className="py-2 bg-gray-50 hover:bg-gray-100 border border-gray-150 rounded-xl text-[9.5px] font-black text-gray-700 cursor-pointer text-center transition-colors">
-                                                                    Fatura İndir (PDF)
-                                                                </button>
-                                                                <button className="py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-[9.5px] font-black cursor-pointer text-center transition-colors">
-                                                                    Destek Talebi Aç
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* TAB 3: SEPETİM */}
-                                                {profileOrdersTab === 'cart' && (
-                                                    <div className="flex flex-col gap-3">
-                                                        {cartCount === 0 ? (
-                                                            <div className="p-8 bg-white border border-gray-100 rounded-3xl text-center flex flex-col items-center justify-center gap-2">
-                                                                <span className="text-3xl">🛒</span>
-                                                                <h5 className="text-xs font-black text-gray-800">Sepetiniz Boş</h5>
-                                                                <p className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold max-w-[200px]">{pet.name || 'Petiniz'} için eklediğiniz ürünler burada görünür.</p>
-                                                                <button 
-                                                                    onClick={() => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'petshop' }))}
-                                                                    className="mt-2 bg-[#527958] text-white text-[10px] font-black px-4 py-2 rounded-xl"
-                                                                >
-                                                                    Alışverişe Başla
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="flex flex-col gap-3">
-                                                                {/* Cart items list */}
-                                                                <div className="p-4 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3.5">
-                                                                    {cart.map((item: any, idx: number) => {
-                                                                        const product = products.find((p: any) => p.id === item.productId);
-                                                                        if (!product) return null;
-                                                                        const isSubscribed = subscriptions.some((s: any) => s.id === product.id);
-                                                                        const price = isSubscribed ? product.price * 0.9 : product.price;
-
-                                                                        return (
-                                                                            <div key={item.id} className={`flex justify-between items-center ${idx !== 0 ? 'pt-3 border-t border-gray-100' : ''}`}>
-                                                                                <div className="flex gap-2.5 items-center">
-                                                                                    <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-100/35 flex items-center justify-center text-orange-600 shrink-0 overflow-hidden">
-                                                                                        {product.image ? (
-                                                                                            <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                                                                                        ) : (
-                                                                                            <ShoppingBag className="w-5 h-5" />
-                                                                                        )}
-                                                                                    </div>
-                                                                                    <div className="max-w-[120px]">
-                                                                                        <h5 className="text-[11px] font-black text-gray-800 truncate">{product.name}</h5>
-                                                                                        <span className="text-[9.5px] font-black text-orange-600 block mt-0.5">
-                                                                                            {(price * item.quantity).toLocaleString('tr-TR')} TL 
-                                                                                            {isSubscribed && <span className="text-[8px] text-gray-500 dark:text-gray-400 line-through ml-1">{(product.price * item.quantity).toLocaleString('tr-TR')} TL</span>}
-                                                                                        </span>
-                                                                                    </div>
-                                                                                </div>
-                                                                                {/* Quantity Controls */}
-                                                                                <div className="flex items-center gap-2 bg-gray-55 border border-gray-150 px-2 py-1 rounded-xl">
-                                                                                    <button 
-                                                                                        onClick={() => updateCartItem(item.id, item.quantity - 1)}
-                                                                                        className="text-[12px] font-black text-gray-650 w-4 text-center cursor-pointer"
-                                                                                    >
-                                                                                        -
-                                                                                    </button>
-                                                                                    <span className="text-[11px] font-black text-gray-800 w-3 text-center">{item.quantity}</span>
-                                                                                    <button 
-                                                                                        onClick={() => updateCartItem(item.id, item.quantity + 1)}
-                                                                                        className="text-[12px] font-black text-gray-650 w-4 text-center cursor-pointer"
-                                                                                    >
-                                                                                        +
-                                                                                    </button>
-                                                                                </div>
-                                                                            </div>
-                                                                        );
-                                                                    })}
-                                                                </div>
-
-                                                                {/* Checkout calculation */}
-                                                                <div className="p-4 bg-[#FBFBFB] border border-gray-100 rounded-3xl flex flex-col gap-2">
-                                                                    <div className="flex justify-between text-[10px] font-bold text-gray-500">
-                                                                        <span>Sepet Toplamı</span>
-                                                                        <span>{cartTotal.toLocaleString('tr-TR')} TL</span>
-                                                                    </div>
-                                                                    <div className="flex justify-between text-[10px] font-bold text-gray-500">
-                                                                        <span>Kargo Ücreti</span>
-                                                                        <span className="text-green-600 font-black">Bedava</span>
-                                                                    </div>
-                                                                    <div className="flex justify-between text-[11px] font-black text-gray-800 pt-2 border-t border-gray-200">
-                                                                        <span>Ödenecek Tutar</span>
-                                                                        <span className="text-orange-600 text-sm font-black">{cartTotal.toLocaleString('tr-TR')} TL</span>
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* Complete order button */}
-                                                                <button 
-                                                                    onClick={() => {
-                                                                        if (nfcPaymentLocked) {
-                                                                            setToastMsg("❌ Ödeme Başarısız: Pati-Kartınız güvenlik nedeniyle kilitli! (Kilidi profilden açabilirsiniz)");
-                                                                            return;
-                                                                        }
-                                                                        if (cartTotal > dailySpendLimit) {
-                                                                            setToastMsg(`❌ Ödeme Başarısız: Günlük harcama limitinizi (${dailySpendLimit} PATI) aştınız!`);
-                                                                            return;
-                                                                        }
-                                                                        if (totalPatiPuan < cartTotal) {
-                                                                            setToastMsg("❌ Yetersiz Bakiye! Daha fazla görev yaparak PatiPuan kazanın.");
-                                                                            return;
-                                                                        }
-                                                                        
-                                                                        const success = spendPatiPuan(cartTotal);
-                                                                        if (!success) return;
-                                                                        
-                                                                        const newOrder = {
-                                                                            id: `order-${Date.now()}`,
-                                                                            name: cart.map((c: any) => `${products.find((p: any) => p.id === c.productId)?.name} (${c.quantity} ad.)`).join(' + '),
-                                                                            desc: "Moda Dağıtım Noktası • Kurye: Walky Can",
-                                                                            timeRemaining: "12 dk kaldı",
-                                                                            status: "Hazırlanıyor",
-                                                                            progress: 30
-                                                                        };
-                                                                        
-                                                                        setActiveOrders(prev => [newOrder, ...prev]);
-                                                                        clearCart();
-                                                                        setToastMsg(`🎉 Sipariş alındı! Kurye Can yola çıkıyor. -${cartTotal} PatiPuan`);
-                                                                        setProfileOrdersTab('active');
-                                                                    }}
-                                                                    className="w-full py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs font-black uppercase tracking-wider rounded-2xl cursor-pointer shadow-md shadow-orange-500/10 hover:opacity-95 transition-opacity text-center"
-                                                                >
-                                                                    Pati-Kart ile Öde ve Siparişi Tamamla
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                                {/* TAB 4: SİPARİŞ AYARLARI */}
-                                                {profileOrdersTab === 'settings' && (
-                                                    <div className="flex flex-col gap-3">
-                                                        <div className="p-4 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-4">
-                                                            
-                                                            {/* Address section */}
-                                                            <div>
-                                                                <h5 className="text-[9.5px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 px-1">KAYITLI ADRESLERİM</h5>
-                                                                <div className="flex flex-col gap-2">
-                                                                    <div className="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex justify-between items-start">
-                                                                        <div>
-                                                                            <span className="text-[10px] font-black text-gray-800 block">🏠 Ev (Birincil)</span>
-                                                                            <span className="text-[9.5px] text-gray-450 font-semibold mt-1 block leading-snug">Moda Cd. No: 12, D: 4, Caferağa Mah. Kadıköy / İstanbul</span>
-                                                                        </div>
-                                                                        <span className="text-[8px] font-black text-green-705 bg-green-50 px-1.5 py-0.5 rounded border border-green-150">Varsayılan</span>
-                                                                    </div>
-                                                                    <div className="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex justify-between items-start">
-                                                                        <div>
-                                                                            <span className="text-[10px] font-black text-gray-800 block">💼 İş Adresi</span>
-                                                                            <span className="text-[9.5px] text-gray-450 font-semibold mt-1 block leading-snug">Levent Plaza Kat: 8, Büyükdere Cd. Şişli / İstanbul</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                                <button className="mt-2 text-[9.5px] font-black text-[#527958] flex items-center gap-1 cursor-pointer">
-                                                                    <Plus className="w-3.5 h-3.5" /> Yeni Adres Ekle
-                                                                </button>
-                                                            </div>
-
-                                                            {/* Payment section */}
-                                                            <div className="pt-3 border-t border-gray-100">
-                                                                <h5 className="text-[9.5px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 px-1">KAYITLI KARTLARIM</h5>
-                                                                <div className="flex flex-col gap-2">
-                                                                    <div className="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex justify-between items-center">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <CreditCard className="w-4.5 h-4.5 text-gray-600" />
-                                                                            <div>
-                                                                                <span className="text-[10px] font-black text-gray-800 block">Moffi Pati-Kart (NFC)</span>
-                                                                                <span className="text-[8.5px] text-gray-500 dark:text-gray-400 font-semibold">Bakiye: {totalPatiPuan.toLocaleString()} Patipuan</span>
-                                                                            </div>
-                                                                        </div>
-                                                                        <span className="w-2 h-2 rounded-full bg-green-500" />
-                                                                    </div>
-                                                                    <div className="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex justify-between items-center">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <CreditCard className="w-4.5 h-4.5 text-gray-500 dark:text-gray-400" />
-                                                                            <div>
-                                                                                <span className="text-[10px] font-bold text-gray-700 block">Yapı Kredi Play Card</span>
-                                                                                <span className="text-[8.5px] text-gray-450 font-mono">•••• 4820</span>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                                <button className="mt-2 text-[9.5px] font-black text-[#527958] flex items-center gap-1 cursor-pointer">
-                                                                    <Plus className="w-3.5 h-3.5" /> Yeni Ödeme Yöntemi Ekle
-                                                                </button>
-                                                                
-                                                                <button 
-                                                                    onClick={() => setIsPolicyModalOpen(true)}
-                                                                    className="mt-4 w-full p-3 rounded-2xl bg-gray-50 border border-gray-100/60 flex items-center justify-between group hover:bg-gray-100 transition-colors"
-                                                                >
-                                                                    <div className="flex items-center gap-2">
-                                                                        <div className="w-6 h-6 rounded-lg bg-gray-200/50 flex items-center justify-center">
-                                                                            <ShieldCheck className="w-3.5 h-3.5 text-gray-500 group-hover:text-emerald-500 transition-colors" />
-                                                                        </div>
-                                                                        <div className="text-left">
-                                                                            <span className="text-[10px] font-bold text-gray-700 block">Pati-Kart & KVKK Aydınlatması</span>
-                                                                            <span className="text-[8px] text-gray-500">Adil kullanım koşullarını incele</span>
-                                                                        </div>
-                                                                    </div>
-                                                                    <ChevronRight className="w-4 h-4 text-gray-500 dark:text-gray-400 group-hover:text-emerald-500 transition-colors" />
-                                                                </button>
-                                                            </div>
-
-                                                            <div className="pt-3 border-t border-gray-100">
-                                                                <h5 className="text-[9.5px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 px-1">SİPARİŞ & BİLDİRİM AYARLARI</h5>
-                                                                <div className="flex flex-col gap-2 text-[9.5px] font-bold text-gray-750">
-                                                                    {/* [V2_FEATURE_TASMA] - Tasma & Anomali bildirim ayarları gizlendi
-                                                                    <label className="flex justify-between items-center p-2.5 rounded-2xl bg-gray-50/70 cursor-pointer">
-                                                                        <div className="flex flex-col gap-0.5">
-                                                                            <span>Akıllı Tasma Geofence (Güvenli Çember)</span>
-                                                                            <span className="text-[8px] text-gray-500 dark:text-gray-400 font-medium">{pet.name} çember dışına çıkarsa anında bildirim gönder.</span>
-                                                                        </div>
-                                                                        <input 
-                                                                            type="checkbox" 
-                                                                            checked={geofenceAlerts} 
-                                                                            onChange={(e) => {
-                                                                                setGeofenceAlerts(e.target.checked);
-                                                                                setToastMsg(e.target.checked ? "🔔 Geofence (Güvenli Çember) bildirimi aktif edildi!" : "🔕 Geofence bildirimi devredışı bırakıldı.");
-                                                                            }}
-                                                                            className="rounded border-gray-300 text-[#527958] focus:ring-[#527958] w-4 h-4 cursor-pointer animate-none" 
-                                                                        />
-                                                                    </label>
-                                                                    <label className="flex justify-between items-center p-2.5 rounded-2xl bg-gray-50/70 cursor-pointer">
-                                                                        <div className="flex flex-col gap-0.5">
-                                                                            <span>Düşük Pil Uyarısı</span>
-                                                                            <span className="text-[8px] text-gray-500 dark:text-gray-400 font-medium">Tasma şarjı %15 altına inerse bildirim gönder.</span>
-                                                                        </div>
-                                                                        <input 
-                                                                            type="checkbox" 
-                                                                            checked={collarLowBattery} 
-                                                                            onChange={(e) => {
-                                                                                setCollarLowBattery(e.target.checked);
-                                                                                setToastMsg(e.target.checked ? "🔋 Düşük pil uyarısı aktif edildi!" : "🔕 Düşük pil uyarısı devredışı bırakıldı.");
-                                                                            }}
-                                                                            className="rounded border-gray-300 text-[#527958] focus:ring-[#527958] w-4 h-4 cursor-pointer animate-none" 
-                                                                        />
-                                                                    </label>
-                                                                    <label className="flex justify-between items-center p-2.5 rounded-2xl bg-gray-50/70 cursor-pointer">
-                                                                        <div className="flex flex-col gap-0.5">
-                                                                            <span>Sağlık Anomalisi SMS Uyarısı</span>
-                                                                            <span className="text-[8px] text-gray-500 dark:text-gray-400 font-medium">Stres, kalp ritmi veya anormal havlama durumunda SMS gönder.</span>
-                                                                        </div>
-                                                                        <input 
-                                                                            type="checkbox" 
-                                                                            checked={anomaliesSms} 
-                                                                            onChange={(e) => {
-                                                                                setAnomaliesSms(e.target.checked);
-                                                                                setToastMsg(e.target.checked ? "📲 Sağlık anomalisi SMS bildirimi aktif!" : "🔕 Sağlık anomalisi SMS uyarısı devredışı.");
-                                                                            }}
-                                                                            className="rounded border-gray-300 text-[#527958] focus:ring-[#527958] w-4 h-4 cursor-pointer animate-none" 
-                                                                        />
-                                                                    </label>
-                                                                    */}
-                                                                    <label className="flex justify-between items-center p-2.5 rounded-2xl bg-gray-50/70 cursor-pointer">
-                                                                        <span>Anlık Kurye ve Sipariş Takip Bildirimleri</span>
-                                                                        <input type="checkbox" defaultChecked className="rounded border-gray-300 text-[#527958] focus:ring-[#527958] w-4 h-4 cursor-pointer animate-none" />
-                                                                    </label>
-                                                                    <label className="flex justify-between items-center p-2.5 rounded-2xl bg-gray-50/70 cursor-pointer">
-                                                                        <span>Fatura ve Kampanya E-Postaları</span>
-                                                                        <input type="checkbox" defaultChecked className="rounded border-gray-300 text-[#527958] focus:ring-[#527958] w-4 h-4 cursor-pointer animate-none" />
-                                                                    </label>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                                </>
-                                            )}
-
-                                            {/* 8. Menu: Account Safety, OTP, and Support */}
-                                            <div className="flex flex-col gap-3">
-                                                <span className="text-[10px] font-black tracking-widest text-gray-500 dark:text-gray-400 uppercase px-1">HESAP GÜVENLİĞİ & DESTEK</span>
-                                                
-                                                <div className="flex flex-col gap-2">
-                                                    <button onClick={() => setToastMsg("🔒 Güvenlik ve E-Posta ayarları çok yakında Moffi'de!")} className="flex items-center justify-between p-4.5 rounded-3xl bg-white border border-gray-100 hover:bg-gray-50/80 transition-all text-left group cursor-pointer shadow-[0_2px_8px_rgba(0,0,0,0.005)]">
-                                                        <div className="flex items-center gap-3">
-                                                            <Shield className="w-5 h-5 text-gray-500" />
-                                                            <div>
-                                                                <div className="text-[11.5px] font-black text-gray-800">OTP Güvenlik ve E-Posta Ayarları</div>
-                                                                <div className="text-[9px] text-gray-450 font-semibold mt-0.5">OTP şifresiz doğrulama durumu ve iki adımlı güvenlik</div>
-                                                            </div>
-                                                        </div>
-                                                        <ChevronRight className="w-4 h-4 text-gray-500 dark:text-gray-400 group-hover:translate-x-0.5 transition-transform" />
-                                                    </button>
-
-                                                    <button onClick={handleNfcScan} className="flex items-center justify-between p-4.5 rounded-3xl bg-white border border-gray-100 hover:bg-gray-50/80 transition-all text-left group cursor-pointer shadow-[0_2px_8px_rgba(0,0,0,0.005)]">
-                                                        <div className="flex items-center gap-3">
-                                                            <Fingerprint className="w-5 h-5 text-gray-500" />
-                                                            <div>
-                                                                <div className="text-[11.5px] font-black text-gray-800">Biometrik Giriş ve Akıllı Pasaport Eşleme</div>
-                                                                <div className="text-[9px] text-gray-450 font-semibold mt-0.5">FaceID/TouchID ile hızlı erişim ve NFC çip entegrasyonu</div>
-                                                            </div>
-                                                        </div>
-                                                        <ChevronRight className="w-4 h-4 text-gray-500 dark:text-gray-400 group-hover:translate-x-0.5 transition-transform" />
-                                                    </button>
-
-                                                    <button className="flex items-center justify-between p-4.5 rounded-3xl bg-white border border-gray-100 hover:bg-gray-50/80 transition-all text-left group cursor-pointer shadow-[0_2px_8px_rgba(0,0,0,0.005)]">
-                                                        <div className="flex items-center gap-3">
-                                                            <Info className="w-5 h-5 text-gray-500" />
-                                                            <div>
-                                                                <div className="text-[11.5px] font-black text-gray-800">Moffi Club™ Yardım & Destek Hattı</div>
-                                                                <div className="text-[9px] text-gray-450 font-semibold mt-0.5">Kullanım rehberleri, tasmamı bul desteği ve destek talepleri</div>
-                                                            </div>
-                                                        </div>
-                                                        <ChevronRight className="w-4 h-4 text-gray-500 dark:text-gray-400 group-hover:translate-x-0.5 transition-transform" />
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                        </div>
-                                    )}
-
-                                </motion.div>
-
-                            </motion.div>
-                        </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* FULLSCREEN STORY VIEWER OVERLAY */}
-            <AnimatePresence>
-                {viewerStoryGroupIndex !== null && activeGroup && activeStory && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-0 md:p-4 backdrop-blur-lg"
-                    >
-                        {/* Background Blur Image */}
-                        <div className="absolute inset-0 bg-cover bg-center filter blur-2xl opacity-30 select-none pointer-events-none" style={{ backgroundImage: `url(${activeStory.media_url})` }} />
-
-                        {/* Modal Container */}
-                        <motion.div
-                            initial={{ scale: 0.9, y: 20 }}
-                            animate={{ scale: 1, y: 0 }}
-                            exit={{ scale: 0.9, y: 20 }}
-                            className="relative w-full h-full md:max-w-md md:h-[800px] md:rounded-[32px] bg-gray-950 overflow-hidden shadow-2xl flex flex-col justify-between"
-                        >
-                            {/* Left/Right click/hold handlers for navigation & pausing (restricted to middle height to keep header close button and footer CTA clickable) */}
-                            <div className="absolute inset-x-0 top-[80px] bottom-[120px] z-10 flex select-none touch-none">
-                                <div 
-                                    className="w-1/2 h-full cursor-w-resize" 
-                                    onMouseDown={() => {
-                                        storyPressStartTime.current = Date.now();
-                                        setIsStoryPaused(true);
-                                    }}
-                                    onMouseUp={() => {
-                                        setIsStoryPaused(false);
-                                        const duration = Date.now() - storyPressStartTime.current;
-                                        if (duration < 250) prevStory();
-                                    }}
-                                    onMouseLeave={() => {
-                                        setIsStoryPaused(false);
-                                    }}
-                                    onTouchStart={() => {
-                                        storyPressStartTime.current = Date.now();
-                                        setIsStoryPaused(true);
-                                    }}
-                                    onTouchEnd={() => {
-                                        setIsStoryPaused(false);
-                                        const duration = Date.now() - storyPressStartTime.current;
-                                        if (duration < 250) prevStory();
-                                    }}
-                                    onTouchCancel={() => {
-                                        setIsStoryPaused(false);
-                                    }}
+                        {/* Input Area */}
+                        <div className="p-4 pb-10 bg-black/80 backdrop-blur-xl border-t border-[var(--card-border)]">
+                            <div className="flex items-center gap-2 bg-card dark:bg-[#1C1C1E] rounded-full p-2 pl-4 border border-[var(--card-border)]">
+                                <input
+                                    type="text"
+                                    placeholder="Bir mesaj yazın..."
+                                    value={adoptionNewMsg}
+                                    onChange={(e) => setAdoptionNewMsg(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSendAdoptionMsg()}
+                                    className="flex-1 bg-transparent border-none outline-none text-[var(--foreground)] text-[15px] placeholder:text-[var(--secondary-text)]"
                                 />
-                                <div 
-                                    className="w-1/2 h-full cursor-e-resize" 
-                                    onMouseDown={() => {
-                                        storyPressStartTime.current = Date.now();
-                                        setIsStoryPaused(true);
-                                    }}
-                                    onMouseUp={() => {
-                                        setIsStoryPaused(false);
-                                        const duration = Date.now() - storyPressStartTime.current;
-                                        if (duration < 250) nextStory();
-                                    }}
-                                    onMouseLeave={() => {
-                                        setIsStoryPaused(false);
-                                    }}
-                                    onTouchStart={() => {
-                                        storyPressStartTime.current = Date.now();
-                                        setIsStoryPaused(true);
-                                    }}
-                                    onTouchEnd={() => {
-                                        setIsStoryPaused(false);
-                                        const duration = Date.now() - storyPressStartTime.current;
-                                        if (duration < 250) nextStory();
-                                    }}
-                                    onTouchCancel={() => {
-                                        setIsStoryPaused(false);
-                                    }}
-                                />
-                            </div>
-
-                            {/* Top Story Header & Bars */}
-                            <div className="absolute top-0 inset-x-0 p-4 bg-gradient-to-b from-black/80 to-transparent z-20 flex flex-col gap-3">
-                                {/* Progress Bars */}
-                                <div className="flex gap-1.5 w-full">
-                                    {activeGroup.stories.map((s, idx) => {
-                                        let pct = 0;
-                                        if (idx < viewerStoryIndex) pct = 100;
-                                        else if (idx === viewerStoryIndex) pct = storyProgress;
-                                        return (
-                                            <div key={s.id} className="flex-1 h-1 bg-white/30 rounded-full overflow-hidden">
-                                                <div 
-                                                    className="h-full bg-white rounded-full"
-                                                    style={{ 
-                                                        width: `${pct}%`,
-                                                        transition: idx === viewerStoryIndex && !isStoryPaused ? 'width 50ms linear' : 'none'
-                                                    }}
-                                                />
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-
-                                {/* Author Profile info */}
-                                <div className="flex justify-between items-center">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white/80 shadow-md">
-                                            <img src={activeGroup.author_avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200"} className="w-full h-full object-cover" alt="Author" />
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-[12px] font-black text-white leading-tight tracking-tight drop-shadow-sm">{activeGroup.author_name}</span>
-                                            <span className="text-[9px] font-semibold text-black/70 dark:text-white/70 leading-none drop-shadow-sm">Duyuru Kanalı</span>
-                                        </div>
-                                    </div>
-                                    <button 
-                                        onClick={closeStoryViewer}
-                                        className="p-1.5 bg-black/10 dark:bg-white/10 hover:bg-black/20 dark:bg-white/20 text-white rounded-full cursor-pointer z-30 transition-colors"
-                                    >
-                                        <X className="w-4.5 h-4.5" />
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Main Story Image */}
-                            <div className="flex-1 w-full h-full flex items-center justify-center bg-gray-900 select-none">
-                                <img src={activeStory.media_url} className="w-full h-full object-cover" alt="Story Media" />
-                            </div>
-
-                            {/* Bottom Story Content */}
-                            <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-black/90 via-black/60 to-transparent z-25 flex flex-col gap-4">
-                                <div className="flex flex-col gap-1.5 text-white">
-                                    <div className="flex gap-2">
-                                        {activeStory.badge && (
-                                            <span className="self-start text-[8px] font-black tracking-widest text-yellow-400 bg-yellow-400/10 border border-yellow-450/20 px-2 py-0.5 rounded-md uppercase">
-                                                {activeStory.badge}
-                                            </span>
-                                        )}
-                                        {activeStory.expires_at && (
-                                            <span className="self-start text-[8px] font-black tracking-widest text-red-400 bg-red-400/10 border border-red-450/20 px-2 py-0.5 rounded-md uppercase flex items-center gap-1">
-                                                <Clock className="w-2.5 h-2.5" /> 
-                                                {(() => {
-                                                    const diff = new Date(activeStory.expires_at).getTime() - Date.now();
-                                                    if (diff <= 0) return 'SÜRESİ DOLDU';
-                                                    const h = Math.floor(diff / 3600000);
-                                                    const m = Math.floor((diff % 3600000) / 60000);
-                                                    return `SON ${h} SAAT ${m} DK`;
-                                                })()}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <h3 className="text-base font-black tracking-tight drop-shadow-sm leading-snug">{activeStory.title}</h3>
-                                    <p className="text-[11px] text-black/80 dark:text-white/80 font-medium leading-relaxed drop-shadow-sm">{activeStory.description}</p>
-                                </div>
-
-                                {activeStory.ctaText && (
-                                    <button
-                                        onClick={handleCtaClick}
-                                        className="w-full py-3.5 bg-white hover:bg-gray-100 text-gray-950 text-xs font-black uppercase tracking-wider rounded-2xl cursor-pointer shadow-md transition-colors z-30 text-center"
-                                    >
-                                        {activeStory.ctaText}
-                                    </button>
-                                )}
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            <PetSettingsModal 
-                isOpen={isPetSettingsOpen}
-                onClose={() => setIsPetSettingsOpen(false)}
-                pet={activePetObj}
-                onSave={handleSavePetSettings}
-                onDelete={deletePet}
-            />
-
-            {/* ANNOUNCEMENT DETAIL MODAL */}
-            <AnimatePresence>
-                {selectedAnn && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[250] bg-black/60 backdrop-blur-md flex items-center justify-center p-4"
-                        onClick={() => setSelectedAnn(null)}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.95, y: 20 }}
-                            animate={{ scale: 1, y: 0 }}
-                            exit={{ scale: 0.95, y: 20 }}
-                            className="bg-white/95 backdrop-blur-2xl border border-black/20 dark:border-white/20 rounded-[2.5rem] max-w-md w-full overflow-hidden shadow-2xl p-6 flex flex-col gap-4 text-zinc-800"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            {/* Header image/banner */}
-                            <div className="w-full h-48 rounded-3xl overflow-hidden relative shadow-inner">
-                                <img src={selectedAnn.media_url} className="w-full h-full object-cover" alt="Announcement" />
-                                <span className="absolute top-4 left-4 text-[9px] font-black tracking-widest text-purple-700 bg-purple-100/90 border border-purple-200 px-2.5 py-1 rounded-md uppercase shadow-sm">
-                                    {selectedAnn.badge || 'Duyuru'}
-                                </span>
-                            </div>
-
-                            {/* Content */}
-                            <div className="flex flex-col gap-2">
-                                <h3 className="text-xl font-black text-zinc-900 tracking-tight leading-snug">
-                                    {selectedAnn.title}
-                                </h3>
-                                <p className="text-sm text-zinc-600 font-medium leading-relaxed max-h-60 overflow-y-auto pr-1">
-                                    {selectedAnn.description}
-                                </p>
-                            </div>
-
-                            {/* Footer */}
-                            <div className="flex flex-col gap-2 mt-2">
-                                {selectedAnn.ctaValue && selectedAnn.ctaValue !== "Moffi'ye hoş geldiniz!" && (
-                                    <div className="text-[10px] font-bold text-purple-600 bg-purple-50 rounded-xl p-3 text-center border border-purple-100/50">
-                                        ✨ {selectedAnn.ctaValue}
-                                    </div>
-                                )}
                                 <button
-                                    onClick={() => setSelectedAnn(null)}
-                                    className="w-full py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-black uppercase tracking-wider rounded-2xl shadow-[0_10px_25px_-5px_rgba(124,58,237,0.3)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300"
+                                    onClick={handleSendAdoptionMsg}
+                                    className="w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center text-[var(--foreground)] active:scale-95 transition-transform"
                                 >
-                                    Kapat
+                                    <Send className="w-4 h-4 ml-0.5" />
                                 </button>
                             </div>
-                        </motion.div>
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            <AddPetModal 
-                isOpen={isAddPetOpen}
-                onClose={() => setIsAddPetOpen(false)}
-                step={addPetStep}
-                setStep={setAddPetStep}
-                newPetName={newPetName}
-                setNewPetName={setNewPetName}
-                newPetType={newPetType}
-                setNewPetType={setNewPetType}
-                newPetBreed={newPetBreed}
-                setNewPetBreed={setNewPetBreed}
-                newPetAge={newPetAge}
-                setNewPetAge={setNewPetAge}
-                newPetGender={newPetGender}
-                setNewPetGender={setNewPetGender}
-                newPetNeutered={newPetNeutered}
-                setNewPetNeutered={setNewPetNeutered}
-                newPetSize={newPetSize}
-                setNewPetSize={setNewPetSize}
-                newPetFeatures={newPetFeatures}
-                setNewPetFeatures={setNewPetFeatures}
-                newPetHealth={newPetHealth}
-                setNewPetHealth={setNewPetHealth}
-                newPetCharacter={newPetCharacter}
-                setNewPetCharacter={setNewPetCharacter}
-                newPetMicrochip={newPetMicrochip}
-                setNewPetMicrochip={setNewPetMicrochip}
-                newPetShowPhone={newPetShowPhone}
-                setNewPetShowPhone={setNewPetShowPhone}
-                newPetPhotos={newPetPhotos}
-                setNewPetPhotos={setNewPetPhotos}
-                isSaving={isSavingPet}
-                onSave={handleAddPetSave}
-                newPetWeight={newPetWeight}
-                setNewPetWeight={setNewPetWeight}
-                newPetHealthStatus={newPetHealthStatus}
-                setNewPetHealthStatus={setNewPetHealthStatus}
-                newPetActivityTarget={newPetActivityTarget}
-                setNewPetActivityTarget={setNewPetActivityTarget}
-                newPetWaterTarget={newPetWaterTarget}
-                setNewPetWaterTarget={setNewPetWaterTarget}
-                newPetFoodTarget={newPetFoodTarget}
-                setNewPetFoodTarget={setNewPetFoodTarget}
-            />
-
-
-
-            <PatiKartPolicyModal 
-                isOpen={isPolicyModalOpen}
-                onClose={() => setIsPolicyModalOpen(false)}
-            />
-
-            {/* NFC Smart Chip Reading / Data Sync Premium Animation Overlay */}
+            {/* INSTAGRAM STYLE STORY VIEWER */}
             <AnimatePresence>
-                {isNfcScanning && (
-                    <motion.div 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[8000] bg-black/90 backdrop-blur-2xl flex flex-col items-center justify-center text-white"
-                    >
-                        <div className="relative w-56 h-56 flex flex-col items-center justify-center bg-gray-900/50 rounded-[3rem] border border-gray-800 shadow-2xl p-6 overflow-hidden animate-none">
-                            {/* Scanning Laser Line */}
-                            <motion.div 
-                                animate={{ y: [-70, 70, -70] }}
-                                transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
-                                className="absolute left-4 right-4 h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_12px_#0EA5E9] animate-none"
-                            />
-
-                            {/* Concentric Expanding NFC Waves */}
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                <motion.div 
-                                    animate={{ scale: [1, 1.8], opacity: [0.6, 0] }}
-                                    transition={{ repeat: Infinity, duration: 2, ease: 'easeOut' }}
-                                    className="absolute w-24 h-24 rounded-full border border-cyan-500/25 animate-none"
-                                />
-                                <motion.div 
-                                    animate={{ scale: [1, 1.8], opacity: [0.6, 0] }}
-                                    transition={{ repeat: Infinity, duration: 2, ease: 'easeOut', delay: 0.6 }}
-                                    className="absolute w-24 h-24 rounded-full border border-cyan-500/20 animate-none"
-                                />
-                                <motion.div 
-                                    animate={{ scale: [1, 1.8], opacity: [0.6, 0] }}
-                                    transition={{ repeat: Infinity, duration: 2, ease: 'easeOut', delay: 1.2 }}
-                                    className="absolute w-24 h-24 rounded-full border border-cyan-500/15 animate-none"
-                                />
+                {
+                    viewerStoryGroupIndex !== null && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            transition={{ duration: 0.2 }}
+                            className="fixed inset-0 z-[200] bg-white dark:bg-black flex flex-col justify-center items-center"
+                        >
+                            {/* Progress Bars Placeholder */}
+                            <div className="absolute top-4 left-4 right-4 z-10 flex gap-1 h-0.5">
+                                {storyGroups[viewerStoryGroupIndex].stories.map((_, idx) => (
+                                    <div key={idx} className="flex-1 bg-black/20 dark:bg-white/20 overflow-hidden rounded-full relative">
+                                                                                <StoryProgressBar 
+                                            isActive={idx === viewerStoryIndex} 
+                                            isCompleted={idx < viewerStoryIndex}
+                                            isPaused={isStoryPaused} 
+                                            onComplete={() => nextStory()} 
+                                            duration={6000} 
+                                        />
+                                    </div>
+                                ))}
                             </div>
 
-                            {/* Center Icon: QrCode / NFC Chip */}
-                            <motion.div 
-                                animate={{ scale: [1, 1.05, 1] }}
-                                transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
-                                className="z-10 w-20 h-20 rounded-3xl bg-gradient-to-tr from-cyan-500/20 to-teal-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-lg shadow-cyan-500/10 animate-none"
-                            >
-                                <Fingerprint size={38} className="animate-pulse" />
-                            </motion.div>
-                        </div>
-                        
-                        <h3 className="mt-8 text-base font-black tracking-wider uppercase italic text-cyan-400 animate-pulse">NFC Akıllı Çip Okunuyor</h3>
-                        <p className="text-[9px] font-bold text-gray-500 tracking-[0.25em] uppercase mt-2">Moffi Cloud Akıllı Eşleşme</p>
+                            {/* Top Header */}
+                            <div className="absolute top-8 left-4 right-4 z-30 flex justify-between items-center text-[var(--foreground)] drop-shadow-md">
+                                <div className="flex items-center gap-3">
+                                    <img src={(storyGroups[viewerStoryGroupIndex].user_id === user?.id ? (user?.avatar || storyGroups[viewerStoryGroupIndex].author_avatar) : storyGroups[viewerStoryGroupIndex].author_avatar) || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200"} className="w-8 h-8 rounded-full border border-white/40 object-cover" />
+                                    <span className="font-bold text-sm tracking-wide">{storyGroups[viewerStoryGroupIndex].author_name}</span>
+                                    <span className="text-[var(--foreground)]/60 text-xs mt-0.5">· {formatTimeAgo(storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].created_at)}</span>
+                                </div>
+                                <button onClick={closeStoryViewer} className="w-8 h-8 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center border border-black/20 dark:border-white/20 active:scale-90 transition-transform"><X className="w-5 h-5" /></button>
+                            </div>
 
-                        {/* Progress Bar */}
-                        <div className="w-48 h-1 bg-gray-800 rounded-full mt-6 overflow-hidden">
-                            <motion.div 
-                                initial={{ width: 0 }}
-                                animate={{ width: "100%" }}
-                                transition={{ duration: 1.5, ease: "easeInOut" }}
-                                className="h-full bg-gradient-to-r from-cyan-500 to-teal-400 shadow-[0_0_8px_#0EA5E9]"
-                            />
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                            {/* Media Display */}
+                            <div className="relative w-full h-full md:max-w-md md:aspect-[9/16] md:h-auto md:max-h-[90vh] md:rounded-3xl overflow-hidden bg-[#1c1c1e] md:border md:border-black/10 dark:border-white/10 shadow-2xl">
+                                <img
+                                    key={storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].id}
+                                    src={storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].media_url}
+                                    className="w-full h-full object-cover"
+                                />
 
-            <style>{`
-                .no-scrollbar::-webkit-scrollbar { display: none; }
-                .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-            `}</style>
+                                {/* Gradients */}
+                                <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
+                                <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+
+                                {/* Tap & Hold Zones */}
+                                <div className="absolute inset-y-0 left-0 w-1/3 z-20 flex select-none touch-none">
+                                    <div 
+                                        className="w-full h-full cursor-pointer"
+                                        onMouseDown={() => {
+                                            storyPressStartTime.current = Date.now();
+                                            setIsStoryPaused(true);
+                                        }}
+                                        onMouseUp={() => {
+                                            setIsStoryPaused(false);
+                                            const duration = Date.now() - storyPressStartTime.current;
+                                            if (duration < 250) prevStory();
+                                        }}
+                                        onMouseLeave={() => {
+                                            setIsStoryPaused(false);
+                                        }}
+                                        onTouchStart={() => {
+                                            storyPressStartTime.current = Date.now();
+                                            setIsStoryPaused(true);
+                                        }}
+                                        onTouchEnd={() => {
+                                            setIsStoryPaused(false);
+                                            const duration = Date.now() - storyPressStartTime.current;
+                                            if (duration < 250) prevStory();
+                                        }}
+                                        onTouchCancel={() => {
+                                            setIsStoryPaused(false);
+                                        }}
+                                    />
+                                </div>
+                                <div className="absolute inset-y-0 right-0 w-2/3 z-20 flex select-none touch-none">
+                                    <div 
+                                        className="w-full h-full cursor-pointer"
+                                        onMouseDown={() => {
+                                            storyPressStartTime.current = Date.now();
+                                            setIsStoryPaused(true);
+                                        }}
+                                        onMouseUp={() => {
+                                            setIsStoryPaused(false);
+                                            const duration = Date.now() - storyPressStartTime.current;
+                                            if (duration < 250) nextStory();
+                                        }}
+                                        onMouseLeave={() => {
+                                            setIsStoryPaused(false);
+                                        }}
+                                        onTouchStart={() => {
+                                            storyPressStartTime.current = Date.now();
+                                            setIsStoryPaused(true);
+                                        }}
+                                        onTouchEnd={() => {
+                                            setIsStoryPaused(false);
+                                            const duration = Date.now() - storyPressStartTime.current;
+                                            if (duration < 250) nextStory();
+                                        }}
+                                        onTouchCancel={() => {
+                                            setIsStoryPaused(false);
+                                        }}
+                                    />
+                                </div>
+
+                                {/* Bottom Actions 📸 */}
+                                <div className="absolute inset-x-0 bottom-0 p-4 z-30 flex items-center gap-3">
+                                    {storyGroups[viewerStoryGroupIndex].user_id === user?.id ? (
+                                        <div className="flex items-center justify-between w-full text-[var(--foreground)]">
+                                            <button className="flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); showToast("İstatistikler", "Luna, Felix ve 12 diğer kişi gördü.", "info"); }}>
+                                                <div className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center border border-black/10 dark:border-white/10">
+                                                    <Activity className="w-4 h-4 text-white" />
+                                                </div>
+                                                <span className="text-[8px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest">Görüntüleme</span>
+                                            </button>
+                                            <div className="flex gap-4">
+                                                <button className="flex flex-col items-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); showToast("Öne Çıkarılıyor", "Hikayeniz vitrine taşınıyor...", "success"); }}>
+                                                    <div className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center border border-black/10 dark:border-white/10">
+                                                        <Heart className="w-4 h-4 text-white" />
+                                                    </div>
+                                                    <span className="text-[8px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest">Öne Çıkar</span>
+                                                </button>
+                                                <button className="flex flex-col items-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); showToast("Seçenekler", "İşlem menüsü açılıyor...", "info"); }}>
+                                                    <div className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center border border-black/10 dark:border-white/10">
+                                                        <MoreHorizontal className="w-4 h-4 text-white" />
+                                                    </div>
+                                                    <span className="text-[8px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest">Daha Fazla</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex gap-8 pointer-events-auto">
+                                            <button className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-[var(--foreground)] active:scale-90 transition-transform pointer-events-auto" onClick={(e) => { e.stopPropagation(); }}>
+                                                <Heart className="w-7 h-7 text-white" />
+                                            </button>
+                                            <button className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-[var(--foreground)] active:scale-90 transition-transform pointer-events-auto" onClick={(e) => { e.stopPropagation(); }}>
+                                                <Share2 className="w-7 h-7 text-white" />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </motion.div>
+                    )
+                }
+            </AnimatePresence >
+
+            {/* MODULAR OVERLAY SYSTEM (LIFTED) */}
+            <OverlaySystem 
+                user={user}
+                userPets={userPets}
+                activePet={activePet}
+                switchPet={switchPet}
+                updatePet={updatePet}
+                isProfileMenuOpen={isProfileMenuOpen}
+                setIsProfileMenuOpen={setIsProfileMenuOpen}
+                profileViewMode={profileViewMode}
+                setProfileViewMode={setProfileViewMode}
+                qrModalPet={qrModalPet}
+                setQrModalPet={setQrModalPet}
+                isFullScreenQR={isFullScreenQR}
+                setIsFullScreenQR={setIsFullScreenQR}
+                selectedSharePost={selectedSharePost}
+                setSelectedSharePost={setSelectedSharePost}
+                isNotificationsOpen={isNotificationsOpen}
+                setIsNotificationsOpen={setIsNotificationsOpen}
+                notificationsList={notifications}
+                setNotificationsList={() => {}}
+                isPetSettingsOpen={isPetSettingsOpen}
+                setIsPetSettingsOpen={setIsPetSettingsOpen}
+                settingsPet={settingsPet}
+                isVetQuickSheetOpen={isVetQuickSheetOpen}
+                setIsVetQuickSheetOpen={setIsVetQuickSheetOpen}
+                isWalkQuickSheetOpen={isWalkQuickSheetOpen}
+                setIsWalkQuickSheetOpen={setIsWalkQuickSheetOpen}
+                isMarketQuickSheetOpen={isMarketQuickSheetOpen}
+                setIsMarketQuickSheetOpen={setIsMarketQuickSheetOpen}
+                isStudioQuickSheetOpen={isStudioQuickSheetOpen}
+                setIsStudioQuickSheetOpen={setIsStudioQuickSheetOpen}
+                isGameQuickSheetOpen={isGameQuickSheetOpen}
+                setIsGameQuickSheetOpen={setIsGameQuickSheetOpen}
+                isEcosystemPortalOpen={isEcosystemPortalOpen}
+                setIsEcosystemPortalOpen={setIsEcosystemPortalOpen}
+                isSpotlightOpen={isSpotlightOpen}
+                setIsSpotlightOpen={setIsSpotlightOpen}
+                isDiaryOpen={isDiaryOpen}
+                setIsDiaryOpen={setIsDiaryOpen}
+                setActiveTab={setActiveTab}
+            />
+
+            {/* QUICK SHEETS & DETAILED MODALS */}
+            {isVetQuickSheetOpen && (
+                <VetQuickSheet 
+                    isOpen={isVetQuickSheetOpen} 
+                    onClose={() => setIsVetQuickSheetOpen(false)} 
+                    petId={activePet?.id} 
+                />
+            )}
+            {isWalkQuickSheetOpen && (
+                <WalkQuickSheet 
+                    isOpen={isWalkQuickSheetOpen} 
+                    onClose={() => setIsWalkQuickSheetOpen(false)} 
+                />
+            )}
+            {isMarketQuickSheetOpen && (
+                <MarketQuickSheet 
+                    isOpen={isMarketQuickSheetOpen} 
+                    onClose={() => setIsMarketQuickSheetOpen(false)} 
+                />
+            )}
+            {isStudioQuickSheetOpen && (
+                <StudioQuickSheet 
+                    isOpen={isStudioQuickSheetOpen} 
+                    onClose={() => setIsStudioQuickSheetOpen(false)} 
+                />
+            )}
+            {isGameQuickSheetOpen && (
+                <GameQuickSheet 
+                    isOpen={isGameQuickSheetOpen} 
+                    onClose={() => setIsGameQuickSheetOpen(false)} 
+                />
+            )}
         </div>
     );
 }
+
+// -- SETTINGS ROW COMPONENT --
+function SettingsRow({ icon: Icon, label, danger, onClick }: { icon: any, label: string, danger?: boolean, onClick: () => void }) {
+    return (
+        <button onClick={onClick} className={cn("w-full flex items-center justify-between p-4 rounded-2xl hover:bg-[var(--card-bg)] transition-colors group", danger && "hover:bg-red-500/10")}>
+            <div className="flex items-center gap-4">
+                <div className={cn("p-2 rounded-full", danger ? "bg-red-500/20 text-red-500" : "bg-black/10 dark:bg-white/10 text-[var(--foreground)]")}>
+                    <Icon className="w-5 h-5" />
+                </div>
+                <span className={cn("font-bold", danger ? "text-red-500" : "text-[var(--foreground)]/90")}>{label}</span>
+            </div>
+            <ChevronRight className={cn("w-5 h-5 opacity-50 group-hover:opacity-100 transition-opacity", danger ? "text-red-500" : "text-[var(--secondary-text)]")} />
+        </button>
+    );
+}
+
+// -- NAV BUTTON --
+function NavBtn({ icon: Icon, active, onClick }: { icon: any, active: boolean, onClick: () => void }) {
+    return (
+        <button onClick={onClick} className="relative p-2 transition-colors">
+            <Icon className={cn("w-6 h-6 transition-colors", active ? "text-[var(--foreground)]" : "text-[var(--secondary-text)] hover:text-gray-300")} strokeWidth={active ? 2.5 : 2} />
+            {active && (
+                <motion.div layoutId="nav-pill" className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
+            )}
+        </button>
+    );
+}
+
+
+// --- HELPER COMPONENTS ---
+const TimeWheel = ({ value, onChange, max, label }: { value: number, onChange: (v: number) => void, max: number, label: string }) => {
+    const numbers = Array.from({ length: max + 1 }, (_, i) => i);
+    return (
+        <div className="flex flex-col items-center gap-2">
+            <span className="text-[10px] font-black text-secondary uppercase tracking-widest">{label}</span>
+            <div className="h-40 overflow-y-auto no-scrollbar snap-y snap-mandatory bg-black/20 rounded-2xl border border-black/5 dark:border-white/5 w-16">
+                {numbers.map(n => (
+                    <button 
+                        key={n} 
+                        onClick={() => onChange(n)} 
+                        className={cn(
+                            "h-10 w-full flex items-center justify-center snap-start transition-all", 
+                            value === n ? "text-cyan-400 font-black text-lg bg-cyan-400/10" : "text-black/30 dark:text-white/20 text-sm"
+                        )}
+                    >
+                        {n.toString().padStart(2, '0')}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+};
+

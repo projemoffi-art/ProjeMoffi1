@@ -45,7 +45,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
                         </p>
                     </div>
                     <button 
-                        onClick={() => window.location.href = '/community'} 
+                        onClick={() => { if (typeof window !== 'undefined' && window.history.length > 2) { window.history.back(); } else { window.location.href = '/home'; } }} 
                         style={{ padding: '10px 24px', background: '#fff', color: '#000', borderRadius: '12px', fontSize: '13px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}
                     >
                         Ana Ekrana Dön

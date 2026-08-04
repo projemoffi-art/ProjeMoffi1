@@ -18,7 +18,7 @@ export default function Home() {
     if (isLoading) return;
 
     if (user) {
-      router.replace('/community');
+      router.replace('/home');
     } else if (step === 'loading') {
       // Giriş yapmamış kullanıcıyı direkt Giriş (login) ekranına gönder
       setTimeout(() => setStep('login'), 0);
@@ -26,8 +26,8 @@ export default function Home() {
 
   }, [user, isLoading, router, step]);
 
-  const handleLoginComplete = () => router.replace('/community');
-  const handleSignupComplete = () => router.replace('/community');
+  const handleLoginComplete = () => router.replace('/home');
+  const handleSignupComplete = () => router.replace('/home');
 
   if (step === 'loading') {
     return (

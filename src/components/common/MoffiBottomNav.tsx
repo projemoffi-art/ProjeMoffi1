@@ -27,16 +27,16 @@ export function MoffiBottomNav({ activeTab: propActiveTab, onTabChange, isVisibl
     const [isHubLongPressing, setIsHubLongPressing] = useState(false);
     const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
-    const activeTab = propActiveTab || (pathname === '/community' ? 'home' : pathname?.startsWith('/profile') ? 'profile' : 'feed');
+    const activeTab = propActiveTab || (pathname === '/home' ? 'home' : pathname?.startsWith('/profile') ? 'profile' : 'feed');
 
     const handleTabClick = (tab: string) => {
         if (onTabChange) {
             onTabChange(tab);
         } else {
             if (tab === 'home') {
-                router.push('/community');
+                router.push('/home');
             } else if (tab === 'feed') {
-                router.push('/topluluk?tab=feed');
+                router.push('/community?tab=feed');
             }
         }
     };

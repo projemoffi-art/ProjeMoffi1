@@ -538,7 +538,7 @@ export default function App() {
       window.location.href = document.referrer;
     } else {
       const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-      window.location.href = isLocal ? "http://localhost:3000/community" : "/community";
+      window.location.href = isLocal ? "http://localhost:3000/home" : "/home";
     }
   };
   

@@ -137,7 +137,7 @@ export const TodayForYouEngine = () => {
             badgeText: 'ACİL',
             title: 'Çevrede Kayıp İlanı',
             subtitle: '1.2 KM Yakınında',
-            action: () => router.push('/topluluk?tab=radar&mode=lost'),
+            action: () => router.push('/community?tab=radar&mode=lost'),
             priority: 7
         });
 

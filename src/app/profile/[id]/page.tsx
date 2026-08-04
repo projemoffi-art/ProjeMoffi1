@@ -402,7 +402,7 @@ export default function ProfilePage() {
                         <AlertCircle className="w-10 h-10 text-red-400" />
                     </div>
                     <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">Profil Bulunamadı</h2>
-                    <button onClick={() => router.push('/community')} className="px-6 py-3 bg-white text-black rounded-2xl font-black text-xs uppercase tracking-widest">
+                    <button onClick={() => { if (typeof window !== 'undefined' && window.history.length > 2) { router.back(); } else { router.push('/home'); } }} className="px-6 py-3 bg-white text-black rounded-2xl font-black text-xs uppercase tracking-widest">
                         Ana Sayfaya Dön
                     </button>
                 </motion.div>
@@ -619,7 +619,7 @@ export default function ProfilePage() {
 
                 <motion.button
                     whileTap={{ scale: 0.9 }}
-                    onClick={() => router.push('/community')}
+                    onClick={() => { if (typeof window !== 'undefined' && window.history.length > 2) { router.back(); } else { router.push('/home'); } }}
                     className="absolute top-4 left-4 w-10 h-10 bg-black/40 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-black/10 dark:border-white/10 z-10"
                 >
                     <ArrowLeft className="w-5 h-5" />

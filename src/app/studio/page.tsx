@@ -239,7 +239,7 @@ export default function ProductionStudio() {
             <header className="relative z-50 px-8 py-6 flex items-center justify-between border-b border-card-border backdrop-blur-xl">
                 <div className="flex items-center gap-6">
                     <button 
-                        onClick={() => router.push('/community')}
+                        onClick={() => { if (typeof window !== 'undefined' && window.history.length > 2) { router.back(); } else { router.push('/home'); } }}
                         className="w-12 h-12 rounded-2xl bg-black/5 dark:bg-white/5 border border-card-border flex items-center justify-center hover:bg-black/10 dark:bg-white/10 transition-all active:scale-95"
                     >
                         <ChevronLeft className="w-6 h-6" />

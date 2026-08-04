@@ -557,7 +557,7 @@ export function PanelQuestCard({ quest, index, onManualComplete }: {
                                 if (quest.category === 'activity' || quest.category === 'explore') {
                                     window.dispatchEvent(new CustomEvent('open-walk-panel'));
                                 } else if (quest.category === 'social') {
-                                    router.push('/topluluk');
+                                    router.push('/community');
                                 } else {
                                     window.dispatchEvent(new CustomEvent('open-walk-panel'));
                                 }
@@ -781,7 +781,7 @@ export function QuestCarousel({ quests, onManualComplete }: QuestCarouselProps) 
                                             if (currentQuest.category === 'activity' || currentQuest.category === 'explore') {
                                                 window.dispatchEvent(new CustomEvent('open-walk-panel'));
                                             } else if (currentQuest.category === 'social') {
-                                                router.push('/topluluk');
+                                                router.push('/community');
                                             } else {
                                                 window.dispatchEvent(new CustomEvent('open-walk-panel'));
                                             }

@@ -52,7 +52,7 @@ export default function ResetPasswordPage() {
             setError(error.message);
         } else {
             setSuccess(true);
-            setTimeout(() => router.replace('/community'), 2000);
+            setTimeout(() => router.replace('/home'), 2000);
         }
     };
 

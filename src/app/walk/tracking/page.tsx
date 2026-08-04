@@ -202,7 +202,7 @@ function TrackingContent() {
                                 key={tab}
                                 onClick={() => {
                                     if (tab === 'controls') {
-                                        router.push('/community?openWalk=true');
+                                        router.push('/home?openWalk=true');
                                     } else if (tab === 'stats') {
                                         router.push('/walk');
                                     }

@@ -80,7 +80,7 @@ export function FloatingControls() {
         </AnimatePresence>
     );
 
-    // Tema butonunu SADECE /community dışındaki sayfalarda göster - Kaldırıldı (sadece topluluk sayfasında var)
+    // Tema butonunu SADECE /home dışındaki sayfalarda göster - Kaldırıldı (sadece topluluk sayfasında var)
     return (
         <div className={`fixed bottom-32 right-6 z-[100] flex flex-col items-center gap-3 transition-all duration-300`}>
 

@@ -373,7 +373,7 @@ export default function PetShopPage() {
                     <button 
                         onClick={() => {
                             if (window.history.length > 2) router.back();
-                            else router.push('/community');
+                            else router.push('/home');
                         }} 
                         className="w-10 h-10 flex items-center justify-center hover:bg-black/5 dark:hover:bg-black/10 dark:bg-white/10 rounded-full transition-all active:scale-95"
                     >

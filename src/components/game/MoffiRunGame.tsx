@@ -30,7 +30,7 @@ const GRACE_WINDOW_MS = 150;    // 150ms grace before real collision
 // =====================================================
 // TYPES
 // =====================================================
-type GamePhase = 'menu' | 'playing' | 'gameover';
+type GamePhase = 'menu' | 'playing' | 'second_chance' | 'gameover';
 
 type PowerUpState = {
     type: 'MAGNET' | 'SHIELD' | 'MULTIPLIER' | 'ROCKET' | 'SNAIL' | null;
@@ -55,6 +55,18 @@ const DAILY_MISSIONS: DailyMission[] = [
 // =====================================================
 // MAIN COMPONENT
 // =====================================================
+
+// =====================================================
+// STAGE THEMES (Cyberpunk Progression)
+// =====================================================
+const STAGE_THEMES: Record<number, { bg: string, fogDist: number, dlColor: string, plColor: string }> = {
+    1: { bg: '#0f172a', fogDist: 120, dlColor: '#ffffff', plColor: '#06b6d4' }, // Cyber City
+    2: { bg: '#1e1b4b', fogDist: 100, dlColor: '#ff00aa', plColor: '#ff00aa' }, // Neon Tunnels
+    3: { bg: '#022c22', fogDist: 80, dlColor: '#00f6ff', plColor: '#00f6ff' },  // Data Stream
+    4: { bg: '#4c0519', fogDist: 50, dlColor: '#ffea00', plColor: '#ff0000' },  // Plasma Storm
+    5: { bg: '#000000', fogDist: 60, dlColor: '#a855f7', plColor: '#ffffff' }   // Quantum Void
+};
+
 export default function MoffiRunGame({
     onClose,
     onGameEnd
@@ -70,6 +82,7 @@ export default function MoffiRunGame({
     const [isClient, setIsClient] = useState(false);
     const scoreRef = useRef(0);
     const coinsRef = useRef(0);
+    const [stage, setStage] = useState(1);
 
     // Single source of truth — directly accessible inside useFrame
     const gs = useRef({
@@ -149,6 +162,7 @@ export default function MoffiRunGame({
             slowActive: false,
             missionsProgress: { coin: 0, slide: 0, powerup: 0, distance: 0 },
         };
+        startTime.current = 0;
         scoreRef.current = 0;
         coinsRef.current = 0;
         setScore(0);
@@ -156,6 +170,7 @@ export default function MoffiRunGame({
         setPowerUp({ type: null, expiresAt: 0 });
         setMissions(DAILY_MISSIONS.map(m => ({ ...m, progress: 0, done: false })));
         setPhase('playing');
+        setStage(1);
     };
 
     const handleCrash = () => {
@@ -209,12 +224,12 @@ export default function MoffiRunGame({
                 dpr={[1, 2]}
                 camera={{ fov: 60, position: [0, 5, 10], near: 0.1, far: 500 }}
             >
-                <color attach="background" args={['#12231a']} />
-                <ambientLight intensity={1.0} />
-                <directionalLight position={[5, 15, 8]} intensity={1.8} castShadow shadow-mapSize={[1024, 1024]} />
-                <pointLight position={[-5, 8, 5]} intensity={1.2} color="#88ffaa" />
-                <fog attach="fog" args={['#12231a', 22, 100]} />
-                <Stars radius={150} count={2500} factor={3} />
+                <color attach="background" args={[STAGE_THEMES[stage]?.bg || '#0f172a']} />
+                <ambientLight intensity={1.2} />
+                <directionalLight position={[5, 15, 8]} intensity={1.8} color={STAGE_THEMES[stage]?.dlColor || '#ffffff'} castShadow shadow-mapSize={[1024, 1024]} />
+                <pointLight position={[-5, 8, 5]} intensity={1.5} color={STAGE_THEMES[stage]?.plColor || '#06b6d4'} />
+                <fog attach="fog" args={[STAGE_THEMES[stage]?.bg || '#0f172a', 20, STAGE_THEMES[stage]?.fogDist || 100]} />
+                <Stars radius={150} count={stage === 5 ? 5000 : 2500} factor={stage >= 4 ? 6 : 3} fade />
 
                 <GameScene
                     gs={gs}
@@ -314,6 +329,41 @@ export default function MoffiRunGame({
                 )}
             </AnimatePresence>
 
+            
+            {/* SECOND CHANCE (MOFFI COIN) */}
+            <AnimatePresence>
+                {phase === 'second_chance' && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 backdrop-blur-3xl z-[210] p-8"
+                    >
+                        <div className="w-24 h-24 bg-cyan-500/20 rounded-full flex items-center justify-center border-4 border-cyan-400 mb-6 shadow-[0_0_50px_rgba(34,211,238,0.5)]">
+                            <Zap className="w-12 h-12 text-cyan-400 animate-pulse" />
+                        </div>
+                        <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 italic mb-4 text-center">SİNYAL<br/>KAYBEDİLDİ!</h2>
+                        <p className="text-gray-300 text-center mb-10 max-w-xs text-sm font-medium">Moffi kaza yaptı! <strong className="text-cyan-400">50 Moffi Coin</strong> karşılığında kurtarma dronu çağırıp kaldığın hızdan devam etmek ister misin?</p>
+                        
+                        <div className="flex flex-col gap-4 w-full max-w-xs">
+                            <button
+                                onClick={handleRevive}
+                                className="w-full bg-cyan-500 text-black py-5 rounded-2xl font-black text-xl shadow-[0_0_20px_rgba(34,211,238,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
+                            >
+                                <Coins className="w-6 h-6 fill-black" /> 50 COİN ÖDE
+                            </button>
+                            <button
+                                onClick={finalizeGameOver}
+                                className="w-full bg-white/10 text-white py-5 rounded-2xl font-bold text-lg hover:bg-white/20 active:scale-95 transition-all"
+                            >
+                                PES ET
+                            </button>
+                        </div>
+                        <div className="mt-8 text-cyan-500/60 font-bold text-sm">Mevcut Bakiye: {userCoins} Coin</div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* GAME OVER */}
             <AnimatePresence>
                 {phase === 'gameover' && (
@@ -367,7 +417,7 @@ export default function MoffiRunGame({
 // =====================================================
 // GAME SCENE (Three.js Canvas Inner)
 // =====================================================
-function GameScene({ gs, phase, onCrash, onCoin, onPowerUp, onScore }: any) {
+function GameScene({ gs, phase, onCrash, onCoin, onPowerUp, onScore, onStageChange, stage }: any) {
     const { camera } = useThree();
     const playerRef = useRef<THREE.Group>(null!);
     const [chunks, setChunks] = useState<LevelObject[]>([]);
@@ -413,10 +463,17 @@ function GameScene({ gs, phase, onCrash, onCoin, onPowerUp, onScore }: any) {
         if (startTime.current === 0) startTime.current = now;
         const elapsed = (now - startTime.current) / 1000;
 
-        // --- SPEED CURVE (GDD spec: non-linear) ---
+        // --- STAGE-BASED SPEED (Matematiksel Pacing) ---
         const slow = d.slowActive ? SLOW_MOTION_FACTOR : 1;
-        const targetSpeed = SPEED_INITIAL + Math.pow(elapsed, 1.3) * 0.35;
-        d.speed = Math.min(SPEED_MAX * slow, Math.max(d.speed, targetSpeed));
+        
+        // Hız, ZAMANLA değil, AŞAMA İLE (Stage) belirlenir.
+        const stageTargetSpeed = SPEED_INITIAL + ((currentStage - 1) * 9); 
+        
+        // Yumuşak geçiş (Lerp) ile hedefe ulaştırırız.
+        d.speed = THREE.MathUtils.lerp(d.speed, stageTargetSpeed * slow, 0.5 * delta);
+        
+        // Güvenlik sınırı
+        d.speed = Math.min(SPEED_MAX * slow, d.speed);
         levelGen.currentSpeed = d.speed;
 
         const effectiveDelta = delta * slow;
@@ -435,7 +492,7 @@ function GameScene({ gs, phase, onCrash, onCoin, onPowerUp, onScore }: any) {
         playerRef.current.position.x = THREE.MathUtils.lerp(
             playerRef.current.position.x,
             d.lane * LANE_WIDTH,
-            18 * effectiveDelta
+            25 * effectiveDelta
         );
         playerRef.current.position.y = d.y;
 
@@ -527,7 +584,7 @@ function GameScene({ gs, phase, onCrash, onCoin, onPowerUp, onScore }: any) {
     return (
         <group>
             {/* World */}
-            <RoadSegment length={4000} zPos={-2000} />
+            <RoadSegment length={8000} zPos={-4000} level={stage} />
             {trees}
 
             {/* Player — real Mixamo skeletal character */}
