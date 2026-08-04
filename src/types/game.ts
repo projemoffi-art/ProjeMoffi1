@@ -19,3 +19,16 @@ export interface GameStats {
     rewardsClaimed: number;
     topPlayer: string;
 }
+
+export interface GameModule {
+    id: string;
+    game_key: 'food-catch' | 'memory' | 'jump' | 'moffi-run';
+    title: string;
+    description: string;
+    icon_name: string;
+    color_gradient: string;
+    difficulty: number;
+    is_active: boolean;
+    reward_multiplier: number;
+    created_at?: string;
+}

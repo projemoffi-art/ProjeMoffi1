@@ -286,7 +286,6 @@ export function LiveEventsHUD() {
                     />
                 )}
             </AnimatePresence>
-
             {/* ── Event Toast Cards ── */}
             <div className="fixed top-16 right-3 z-[8800] flex flex-col gap-2 pointer-events-none">
                 <AnimatePresence mode="popLayout">

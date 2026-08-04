@@ -81,30 +81,9 @@ export function FeedTab({
             {/* Header and Stories Combined Snap Block */}
             <div className="w-full flex flex-col snap-start shrink-0">
                 {headerElement}
-                {/* STORIES & GREETING BAR WITH PHOTO BACKGROUND */}
-                <div className="w-full relative px-4 pt-6 pb-6 overflow-hidden rounded-b-3xl shadow-sm mb-4">
-                    {/* Background Image & Overlay */}
-                    <div className="absolute inset-0 z-0">
-                        <img 
-                            src="https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=800" 
-                            alt="Background" 
-                            className="w-full h-full object-cover opacity-20 dark:opacity-10"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/80 to-background z-10" />
-                    </div>
-
-                    {/* Greeting Header */}
-                    <div className="relative z-20 mb-5">
-                        <h2 className="text-xl font-black text-foreground tracking-tight">
-                            İyi ki bizimlesin, {user?.name?.split(' ')[0] || 'Dostum'}! 🐾
-                        </h2>
-                        <p className="text-xs font-medium text-muted-foreground mt-1 bg-white/50 dark:bg-black/50 p-2 rounded-xl backdrop-blur-md border border-white/20 dark:border-white/5 inline-block">
-                            <span className="font-bold text-accent mr-1">Günün Sözü:</span> 
-                            "Her pati izi, kalpte silinmez bir iz bırakır."
-                        </p>
-                    </div>
-
-                    <div className="w-full flex gap-4 overflow-x-auto no-scrollbar relative z-20">
+                {/* STORIES BAR */}
+                <div className="w-full px-4 pt-4 pb-4 overflow-hidden mb-2">
+                    <div className="w-full flex gap-4 overflow-x-auto no-scrollbar">
                         {/* Current User Add Story */}
                         <div className="flex flex-col items-center gap-1.5 shrink-0 group">
                             <div 

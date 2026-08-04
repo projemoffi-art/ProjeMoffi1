@@ -234,14 +234,7 @@ export function QuestRewardEngine() {
         prevLevelRef.current = level;
     }, [level, levelTitle]);
 
-    // ── Sabah hatırlatması: bugün hiç görev tamamlanmadıysa üzgün pet ────────
-    useEffect(() => {
-        const hour = new Date().getHours();
-        if (hour >= 19 && completedCount === 0 && totalCount > 0) {
-            showEmotion('sad', 3000);
-        }
-    }, []); // eslint-disable-line
-
+    // Sabah hatırlatması iptal edildi
     // ── Quest event bus listener ──────────────────────────────────────────────
     useEffect(() => {
         const handleBadge = (e: any) => {

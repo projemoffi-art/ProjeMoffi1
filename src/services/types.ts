@@ -359,9 +359,12 @@ export interface IApiService {
     addAdminAdvice(content: string, badge: string, mediaUrl?: string): Promise<any>;
     deleteAdvice(id: string): Promise<void>;
 
-    // Global Arena (Leaderboard)
+    // Global Arena (Leaderboard) & Games
     getLeaderboard(role: 'user' | 'business', limit?: number): Promise<any[]>;
     getUserRank(userId: string): Promise<number>;
+    addPetScore(petId: string, xpEarned: number, coinsEarned: number): Promise<boolean>;
+    getGameModules(): Promise<any[]>;
+    getPetLeaderboard(limit?: number): Promise<any[]>;
 
     // Feedbacks
     getFeedbacks(): Promise<SystemFeedback[]>;

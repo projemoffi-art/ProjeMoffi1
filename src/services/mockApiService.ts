@@ -1558,8 +1558,18 @@ export class MockApiService implements IApiService {
         const filtered = list.filter(item => item.id !== id);
         await this.saveData('vet_advices', filtered);
     }
+    // --- LEADERBOARD & GAMES ---
+    async addPetScore(petId: string, xpEarned: number, coinsEarned: number): Promise<boolean> {
+        return true;
+    }
 
-    // --- LEADERBOARD ---
+    async getGameModules(): Promise<any[]> {
+        return [];
+    }
+
+    async getPetLeaderboard(limit?: number): Promise<any[]> {
+        return [];
+    }
     async getLeaderboard(role: 'user' | 'business', limit: number = 50): Promise<any[]> {
         const MOCK_USERS = [
             { id: '1', name: "Atlas & Mochi", avatar: "https://images.unsplash.com/photo-1552053831-71594a27632d?w=150&h=150&fit=crop", score: 62450, country: "TR", pet: "Golden Ret.", change: 2 },

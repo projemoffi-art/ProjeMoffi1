@@ -34,6 +34,8 @@ export interface Pet {
   microchip_id?: string;
   avatar_url?: string;
   is_lost: boolean;
+  xp?: number;
+  level?: number;
   created_at?: string;
 }
 

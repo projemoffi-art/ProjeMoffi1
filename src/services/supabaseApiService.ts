@@ -3606,6 +3606,80 @@ export class SupabaseApiService implements IApiService {
         }
     }
 
+    // --- LEADERBOARD & GAME INTEGRATION ---
+    async getPetLeaderboard(limit: number = 50): Promise<any[]> {
+        try {
+            // Fetch top pets ordered by xp
+            const { data, error } = await supabase
+                .from('pets')
+                .select(`
+                    id, 
+                    name, 
+                    avatar_url, 
+                    xp, 
+                    level,
+                    owner:profiles!inner(full_name, username)
+                `)
+                .order('xp', { ascending: false, nullsFirst: false })
+                .limit(limit);
+
+            if (error) throw error;
+
+            return (data || []).map((p: any) => ({
+                id: p.id,
+                name: p.name || 'Gizli Pet',
+                ownerName: p.owner?.full_name || p.owner?.username || 'Gizli Kullanıcı',
+                avatar: p.avatar_url,
+                score: p.xp || 0,
+                level: p.level || 1,
+                country: 'TR',
+            }));
+        } catch (err) {
+            console.error("Supabase getPetLeaderboard failed:", err);
+            return [];
+        }
+    }
+
+    async addPetScore(petId: string, xpEarned: number, coinsEarned: number): Promise<boolean> {
+        try {
+            // Call the secure RPC function
+            const { data, error } = await supabase.rpc('add_game_reward', {
+                p_pet_id: petId,
+                p_xp_earned: xpEarned,
+                p_coins_earned: coinsEarned
+            });
+
+            if (error) throw error;
+            return true;
+        } catch (err) {
+            console.error("Supabase addPetScore failed:", err);
+            return false;
+        }
+    }
+
+    async getGameModules(): Promise<any[]> {
+        const fallbackModules = [
+            { id: '1', game_key: 'food-catch', title: 'Mama Yakala', description: 'Zehirli mantarlardan kaç, mamaları kap!', icon_name: 'Utensils', color_gradient: 'from-orange-500 to-red-600', difficulty: 1, is_active: true },
+            { id: '2', game_key: 'memory', title: 'Pet Memory', description: 'Kartları eşleştir, hafızanı test et.', icon_name: 'Brain', color_gradient: 'from-blue-500 to-indigo-600', difficulty: 2, is_active: true },
+            { id: '3', game_key: 'jump', title: 'Moffi Jump', description: 'Sonsuzlukta en yükseğe zıpla!', icon_name: 'Zap', color_gradient: 'from-fuchsia-500 to-pink-600', difficulty: 3, is_active: true },
+            { id: '4', game_key: 'moffi-run', title: 'Moffi Run', description: 'Engelleri aş, paraları topla.', icon_name: 'Gamepad2', color_gradient: 'from-amber-400 to-orange-500', difficulty: 2, is_active: true }
+        ];
+        
+        try {
+            const { data, error } = await supabase
+                .from('game_modules')
+                .select('*')
+                .eq('is_active', true)
+                .order('created_at', { ascending: true });
+                
+            if (error) throw error;
+            return (data && data.length > 0) ? data : fallbackModules;
+        } catch (err) {
+            console.error("Supabase getGameModules failed:", err);
+            return fallbackModules;
+        }
+    }
+
     // --- LEADERBOARD ---
     async getLeaderboard(role: 'user' | 'business', limit: number = 50): Promise<any[]> {
         try {

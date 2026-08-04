@@ -13,6 +13,8 @@ import FoodCatchGame from "@/components/game/FoodCatchGame";
 import MoffiJumpGame from "@/components/game/MoffiJumpGame";
 import PetMemoryGame from "@/components/game/PetMemoryGame";
 import MoffiRunGame from "@/components/game/MoffiRunGame";
+import { apiService as api } from "@/services/apiService";
+import { GameModule } from "@/types/game";
 
 // --- TYPES ---
 interface PetStats {
@@ -36,18 +38,42 @@ export default function GamePage() {
     const [activeMiniGame, setActiveMiniGame] = useState<'food-catch' | 'memory' | 'jump' | 'moffi-run' | null>(null);
     const { pets, activePet, switchPet } = usePet();
     const [showPetSelector, setShowPetSelector] = useState(false);
+    const [leaderboard, setLeaderboard] = useState<any[]>([]);
+    const [gameModules, setGameModules] = useState<GameModule[]>([]);
 
     // Sync totalPatiPuan initially
     useEffect(() => {
         setLocalCoins(totalPatiPuan);
     }, [totalPatiPuan]);
 
+    // Fetch dynamic data
+    useEffect(() => {
+        const loadGameData = async () => {
+            const modules = await api.getGameModules();
+            setGameModules(modules);
+
+            const lb = await api.getPetLeaderboard(10);
+            setLeaderboard(lb);
+        };
+        loadGameData();
+    }, []);
+
+    // Sync active pet stats
+    useEffect(() => {
+        if (activePet) {
+            setStats({
+                xp: activePet.xp || 0,
+                level: activePet.level || 1
+            });
+        }
+    }, [activePet]);
+
     const showFeedback = (text: string, emoji: string) => {
         setFeedback({ type: text, value: emoji });
         setTimeout(() => setFeedback(null), 2000);
     };
 
-    const handleGameOver = (score: number) => {
+    const handleGameOver = async (score: number) => {
         const earnedPoints = Math.floor(score / 10);
         const remainingCap = DAILY_POINT_CAP - gameState.dailyPoints;
         const actualPoints = Math.min(earnedPoints, remainingCap);
@@ -55,8 +81,14 @@ export default function GamePage() {
         if (actualPoints > 0) {
             setGameState(prev => ({ ...prev, dailyPoints: prev.dailyPoints + actualPoints }));
             setLocalCoins(prev => prev + actualPoints);
-            setStats(prev => ({ ...prev, xp: prev.xp + (actualPoints * 5) }));
-            showFeedback(`+ ${actualPoints} PT & +${actualPoints * 5} XP!`, '🏆');
+            const xpEarned = actualPoints * 5;
+            setStats(prev => ({ ...prev, xp: prev.xp + xpEarned }));
+            showFeedback(`+ ${actualPoints} PT & +${xpEarned} XP!`, '🏆');
+
+            // Send to real Supabase API
+            if (activePet?.id) {
+                await api.addPetScore(activePet.id, xpEarned, actualPoints);
+            }
         } else {
             showFeedback(`Günlük Puan Limiti Doldu`, '🔒');
         }
@@ -157,7 +189,7 @@ export default function GamePage() {
                                     Kalan Puan: <span className="text-white">{DAILY_POINT_CAP - gameState.dailyPoints}</span>
                                 </span>
                             </div>
-                            <span className="text-xs font-black text-gray-500">{stats.xp} / {(stats.level)*1000} XP</span>
+                            <span className="text-xs font-black text-gray-500">{stats.xp} / {stats.level * 1000} XP</span>
                         </div>
                         {/* Futuristic Progress Bar */}
                         <div className="w-full h-3 bg-black/50 border border-white/5 rounded-full overflow-hidden flex gap-1 p-[1px]">
@@ -258,10 +290,14 @@ export default function GamePage() {
                         {activeMiniGame === 'moffi-run' && (
                             <MoffiRunGame
                                 onClose={() => setActiveMiniGame(null)}
-                                onGameEnd={(result) => {
+                                onGameEnd={async (result) => {
                                     setLocalCoins(prev => prev + result.coins);
                                     setStats(prev => ({ ...prev, xp: prev.xp + result.score, level: prev.level }));
                                     showFeedback(`+${result.coins} Altın`, "🏆");
+                                    
+                                    if (activePet?.id) {
+                                        await api.addPetScore(activePet.id, result.score, result.coins);
+                                    }
                                 }}
                             />
                         )}
@@ -290,47 +326,37 @@ export default function GamePage() {
                     
                     <ArcadeHeader />
 
-                    {/* Games Grid */}
                     <div className="mb-6 flex items-center justify-between">
                         <h2 className="text-xl font-black text-white flex items-center gap-2">
                             <Crosshair className="w-5 h-5 text-cyan-400" /> Aktif Modüller
                         </h2>
-                        <span className="text-[10px] font-bold text-gray-500 uppercase">Tümünü Gör</span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 mb-10">
-                        <GamePoster
-                            onClick={() => setActiveMiniGame('food-catch')}
-                            title="Mama Yakala"
-                            desc="Zehrili mantarlardan kaç, mamaları kap!"
-                            icon={Utensils}
-                            color="from-orange-500 to-red-600"
-                            difficulty={1}
-                        />
-                        <GamePoster
-                            onClick={() => setActiveMiniGame('memory')}
-                            title="Pet Memory"
-                            desc="Kartları eşleştir, hafızanı test et."
-                            icon={Brain}
-                            color="from-blue-500 to-indigo-600"
-                            difficulty={2}
-                        />
-                        <GamePoster
-                            onClick={() => setActiveMiniGame('jump')}
-                            title="Moffi Jump"
-                            desc="Sonsuzlukta en yükseğe zıpla!"
-                            icon={Zap}
-                            color="from-fuchsia-500 to-pink-600"
-                            difficulty={3}
-                        />
-                        <GamePoster
-                            onClick={() => setActiveMiniGame('moffi-run')}
-                            title="Moffi Run"
-                            desc="Engelleri aş, paraları topla."
-                            icon={Gamepad2}
-                            color="from-amber-400 to-orange-500"
-                            difficulty={2}
-                        />
+                        {gameModules.length > 0 ? (
+                            gameModules.map(mod => {
+                                // Map icon string to component dynamically or fallback
+                                const IconComp = mod.icon_name === 'Brain' ? Brain : 
+                                                 mod.icon_name === 'Zap' ? Zap : 
+                                                 mod.icon_name === 'Gamepad2' ? Gamepad2 : Utensils;
+                                                 
+                                return (
+                                    <GamePoster
+                                        key={mod.id}
+                                        onClick={() => setActiveMiniGame(mod.game_key as any)}
+                                        title={mod.title}
+                                        desc={mod.description}
+                                        icon={IconComp}
+                                        color={mod.color_gradient || "from-fuchsia-500 to-indigo-600"}
+                                        difficulty={mod.difficulty}
+                                    />
+                                );
+                            })
+                        ) : (
+                            <div className="col-span-2 text-center text-sm text-gray-500 py-10">
+                                Yükleniyor... Veya hiç modül bulunamadı.
+                            </div>
+                        )}
                     </div>
 
                     {/* LEADERBOARD */}
@@ -341,35 +367,37 @@ export default function GamePage() {
                         <div className="flex justify-between items-center mb-6 relative z-10">
                             <h3 className="font-black text-xl text-white flex items-center gap-2 drop-shadow-md">
                                 <Trophy className="w-6 h-6 text-amber-400" />
-                                High Scores
+                                Top Petler
                             </h3>
                             <button className="text-[10px] uppercase font-bold text-amber-500 bg-amber-500/10 px-3 py-1.5 rounded-full">Bu Hafta</button>
                         </div>
                         
                         <div className="space-y-3 relative z-10">
-                            {[
-                                { name: 'MoffiOfficial', score: 2450, img: '🤖', rank: 1, color: 'text-amber-400', bg: 'bg-amber-400/10 border-amber-400/20' },
-                                { name: 'ZeytinTheCat', score: 2100, img: '🐱', rank: 2, color: 'text-gray-300', bg: 'bg-gray-400/10 border-gray-400/20' },
-                                { name: 'Boncuk123', score: 1850, img: '🦜', rank: 3, color: 'text-orange-400', bg: 'bg-orange-400/10 border-orange-400/20' },
-                                { name: 'Mars', score: 1640, img: '🐕', rank: 4, color: 'text-gray-500', bg: 'border-transparent' },
-                                { name: 'Luna', score: 1420, img: '🐈', rank: 5, color: 'text-gray-500', bg: 'border-transparent' },
-                            ].map((user) => (
-                                <div key={user.rank} className={cn("flex items-center gap-4 p-3 rounded-2xl border transition-colors", user.bg)}>
-                                    <div className={cn("font-black text-lg w-5 text-center", user.color)}>
-                                        {user.rank}
+                            {leaderboard.length > 0 ? (
+                                leaderboard.map((user, idx) => (
+                                    <div key={user.id} className={cn("flex items-center gap-4 p-3 rounded-2xl border transition-colors", idx === 0 ? 'bg-amber-400/10 border-amber-400/20' : 'border-transparent hover:bg-white/5')}>
+                                        <div className={cn("font-black text-lg w-5 text-center", idx === 0 ? 'text-amber-400' : idx === 1 ? 'text-gray-300' : idx === 2 ? 'text-orange-400' : 'text-gray-500')}>
+                                            {idx + 1}
+                                        </div>
+                                        <div className="w-12 h-12 rounded-xl bg-black/50 overflow-hidden flex items-center justify-center text-2xl border border-white/5 shadow-inner relative">
+                                            {user.avatar ? (
+                                                <img src={user.avatar} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <span>🐾</span>
+                                            )}
+                                        </div>
+                                        <div className="flex-1">
+                                            <h4 className="font-black text-sm text-white tracking-wide">{user.name}</h4>
+                                            <span className="text-[10px] text-gray-400 font-bold tracking-widest flex items-center mt-0.5">Sahibi: {user.ownerName}</span>
+                                        </div>
+                                        <div className="font-black text-lg text-white font-mono tracking-tighter">
+                                            {user.score.toLocaleString()}
+                                        </div>
                                     </div>
-                                    <div className="w-12 h-12 rounded-xl bg-black/50 flex items-center justify-center text-2xl border border-white/5 shadow-inner">
-                                        {user.img}
-                                    </div>
-                                    <div className="flex-1">
-                                        <h4 className="font-black text-sm text-white tracking-wide">{user.name}</h4>
-                                        {user.rank === 1 && <span className="text-[9px] text-amber-400 font-bold uppercase tracking-widest flex items-center gap-1 mt-0.5"><Crown className="w-3 h-3" /> Şampiyon</span>}
-                                    </div>
-                                    <div className="font-black text-lg text-white font-mono tracking-tighter">
-                                        {user.score.toLocaleString()}
-                                    </div>
-                                </div>
-                            ))}
+                                ))
+                            ) : (
+                                <div className="text-center text-sm text-gray-500 py-4">Liderlik tablosu yükleniyor...</div>
+                            )}
                         </div>
                     </div>
 
