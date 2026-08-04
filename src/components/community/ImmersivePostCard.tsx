@@ -55,6 +55,7 @@ export function ImmersivePostCard({
     const [showComments, setShowComments] = useState(false);
     const [commentInput, setCommentInput] = useState('');
     const [isMoreOpen, setIsMoreOpen] = useState(false);
+    const [isShareOpen, setIsShareOpen] = useState(false);
     const [localAllowComments, setLocalAllowComments] = useState(post?.allow_comments ?? true);
     const [localCommentPrivacy, setLocalCommentPrivacy] = useState(post?.comment_privacy || 'everyone');
     const [showCommentSettings, setShowCommentSettings] = useState(false);
@@ -398,12 +399,17 @@ export function ImmersivePostCard({
                         <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                     <div className="flex flex-col">
-                        <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-[15px] tracking-tight text-gray-900 dark:text-gray-100 leading-none group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
-                                {post.author || post.user?.username || "kullanici"}
-                            </span>
-                            {post.verified && <BadgeCheck className="w-4 h-4 text-cyan-500" />}
-                        </div>
+                        <div className="flex items-center gap-2">
+                        <button onClick={handleDoubleTap} className="p-2 -ml-2 text-gray-600 dark:text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-all group">
+                            <Heart strokeWidth={1.25} className={cn("w-6 h-6 transition-transform group-hover:scale-105 group-active:scale-95", post.isLiked ? "fill-red-500 text-red-500" : "")} />
+                        </button>
+                        <button onClick={() => allowComments ? setShowComments(true) : null} className={cn("p-2 text-gray-600 dark:text-gray-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-full transition-all group", !allowComments && "opacity-50")}>
+                            <MessageCircle strokeWidth={1.25} className="w-6 h-6 transition-transform group-hover:scale-105 group-active:scale-95" />
+                        </button>
+                        <button onClick={() => setIsShareOpen(true)} className="p-2 text-gray-600 dark:text-gray-300 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 rounded-full transition-all group">
+                            <Send strokeWidth={1.25} className="w-6 h-6 transition-transform group-hover:scale-105 group-active:scale-95 -mt-0.5 ml-0.5" />
+                        </button>
+                    </div>
                         {post.location && (
                             <span className="text-[11px] font-medium text-gray-500 mt-1 tracking-wide uppercase">{post.location}</span>
                         )}
@@ -415,8 +421,9 @@ export function ImmersivePostCard({
             </div>
 
             {/* MEDIA */}
-            <div 
-                className="relative w-full aspect-square sm:aspect-[4/5] bg-gray-100 dark:bg-[#0a0a0a] overflow-hidden flex items-center justify-center cursor-pointer group/media sm:mx-0 sm:w-full"
+            <div className="px-3 sm:px-4">
+                <div 
+                    className="relative w-full aspect-square sm:aspect-[4/5] bg-gray-100 dark:bg-[#0a0a0a] overflow-hidden rounded-[1.5rem] flex items-center justify-center cursor-pointer group/media"
                 onClick={() => {
                     const isVideo = post?.is_video || (post?.media && (/.(mp4|webm|ogg|mov|avi|m4v|mkv|flv|wmv)$/i.test(post.media)));
                     if (isVideo) {
@@ -463,6 +470,7 @@ export function ImmersivePostCard({
                         </motion.div>
                     )}
                 </AnimatePresence>
+            </div>
             </div>
 
             {/* ACTIONS */}
@@ -584,6 +592,49 @@ export function ImmersivePostCard({
                 )}
             </AnimatePresence>
             
+            
+            {/* SHARE DRAWER */}
+            <AnimatePresence>
+                {isShareOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/40 z-[440] backdrop-blur-sm pointer-events-auto"
+                            onClick={() => setIsShareOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="fixed bottom-0 left-0 right-0 z-[450] bg-white dark:bg-[#111] rounded-t-[2.5rem] shadow-2xl p-6 pb-safe pointer-events-auto sm:max-w-[400px] sm:mx-auto"
+                        >
+                            <div className="w-12 h-1.5 bg-gray-200 dark:bg-white/20 rounded-full mx-auto mb-6" />
+                            
+                            <h3 className="text-center font-bold text-[17px] mb-6 dark:text-white">Paylaş</h3>
+                            
+                            <div className="grid grid-cols-5 gap-2">
+                                {[
+                                    { icon: <Copy strokeWidth={1.5} className="w-[22px] h-[22px]" />, label: 'Kopyala', bg: 'bg-gray-100 dark:bg-white/10', color: 'text-gray-800 dark:text-white' },
+                                    { icon: <svg className="w-[22px] h-[22px] fill-current" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>, label: 'WhatsApp', bg: 'bg-[#25D366]/10', color: 'text-[#25D366]' },
+                                    { icon: <Instagram strokeWidth={1.5} className="w-[22px] h-[22px]" />, label: 'Hikaye', bg: 'bg-[#E1306C]/10', color: 'text-[#E1306C]' },
+                                    { icon: <svg className="w-[20px] h-[20px] fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>, label: 'Twitter', bg: 'bg-black/5 dark:bg-white/10', color: 'text-black dark:text-white' },
+                                    { icon: <MessageSquare strokeWidth={1.5} className="w-[22px] h-[22px]" />, label: 'Mesaj', bg: 'bg-blue-500/10', color: 'text-blue-500' },
+                                ].map((item, i) => (
+                                    <div key={i} className="flex flex-col items-center gap-2 cursor-pointer group" onClick={() => setIsShareOpen(false)}>
+                                        <div className={cn("w-[50px] h-[50px] rounded-full flex items-center justify-center transition-transform group-hover:scale-105 active:scale-95", item.bg, item.color)}>
+                                            {item.icon}
+                                        </div>
+                                        <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">{item.label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+
             {/* MORE DRAWER */}
             <AnimatePresence>
                 {isMoreOpen && (
