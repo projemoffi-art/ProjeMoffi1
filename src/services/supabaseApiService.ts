@@ -2490,6 +2490,7 @@ export class SupabaseApiService implements IApiService {
                 caption: s.caption,
                 viewCount: s.view_count,
                 expiresAt: s.expires_at,
+                created_at: s.created_at,
                 isLiked: myViewsMap.get(s.id) || false
             };
         });
