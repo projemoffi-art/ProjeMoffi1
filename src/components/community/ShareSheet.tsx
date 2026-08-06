@@ -3,11 +3,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-    X, Instagram, MessageCircle, Send, Twitter, 
-    Facebook, Mail, Copy, PlusCircle, Bookmark,
-    QrCode, Download, Sparkles, ChevronRight, Zap,
-    Plus, MessageSquare, Share2, Smartphone, Link2, CheckCircle2,
-    MoreHorizontal
+    X, Instagram, MessageSquare, Send, Copy,
+    QrCode, Download, Sparkles, CheckCircle2, Share2
 } from 'lucide-react';
 import { cn, showToast } from '@/lib/utils';
 import { useStories } from '@/hooks/useStories';
@@ -42,7 +39,6 @@ export function ShareSheet({
     const postText = `Moffi'de harika bir paylaşım gördüm! 🐾 ${selectedPost.author}: "${selectedPost.desc || ''}"`;
 
     const handlePlatformShare = (platform: string) => {
-        // Haptic
         if (typeof window !== 'undefined' && window.navigator.vibrate) window.navigator.vibrate(10);
 
         const url = getShareUrl(platform, postUrl, postText);
@@ -51,7 +47,6 @@ export function ShareSheet({
             onSocialShare?.(platform);
             onClose();
         } else if (platform === PLATFORMS.INSTAGRAM) {
-            // Instagram web doesn't support direct share well, copy link instead
             copyToClipboard(postUrl);
             showToast("Bağlantı Kopyalandı", "Bell", "cyan");
             showToast("Instagram'da paylaşmak için yapıştırın!", "Instagram", "purple");
@@ -70,13 +65,9 @@ export function ShareSheet({
 
     const handleQuickShare = (userName: string) => {
         if (sendingTo) return;
-        
-        // Haptic Feedback
         if (typeof window !== 'undefined' && window.navigator.vibrate) window.navigator.vibrate(15);
         
         setSendingTo(userName);
-        
-        // Simulation of sending
         setTimeout(() => {
             setSendingTo(null);
             showToast(`${userName} kullanıcısına gönderildi! 🚀`, "Zap", "cyan");
@@ -97,221 +88,169 @@ export function ShareSheet({
         }, 1500);
     };
 
-    const handleNativeShare = async () => {
-        const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        if (isMobile && navigator.share) {
-            try {
-                await navigator.share({
-                    title: 'Moffi Paylaşım',
-                    text: postText,
-                    url: postUrl
-                });
-                onClose();
-            } catch (err) {
-                console.log('Native share canceled or failed', err);
-            }
-        } else {
-            handleCopy();
-        }
-    };
-
     return (
         <AnimatePresence>
             {isOpen && (
                 <>
-                    <motion.div
+                    {/* BACKDROP */}
+                    <motion.div 
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm z-[1100]"
                         onClick={onClose}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1100] pointer-events-auto"
                     />
-                    <motion.div
+
+                    {/* BOTTOM SHEET */}
+                    <motion.div 
                         initial={{ y: "100%" }}
                         animate={{ y: 0 }}
                         exit={{ y: "100%" }}
-                        transition={{ type: "spring", damping: 30, stiffness: 350, mass: 0.8 }}
-                        drag="y"
-                        dragConstraints={{ top: 0 }}
-                        dragElastic={0.2}
-                        onDragEnd={(e, { offset, velocity }) => {
-                            if (offset.y > 100 || velocity.y > 500) {
-                                onClose();
-                            }
-                        }}
-                        className="fixed bottom-0 left-0 right-0 z-[1200] bg-[#000000]/60 backdrop-blur-[50px] border-t border-card-border rounded-t-[48px] shadow-[0_-20px_80px_rgba(0,0,0,0.8)] flex flex-col pointer-events-auto overflow-hidden max-h-[92%] w-full max-w-lg mx-auto"
+                        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                        className="fixed bottom-0 left-0 right-0 z-[1200] max-h-[85vh] flex flex-col bg-white/90 dark:bg-[#111]/90 backdrop-blur-2xl rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/20 dark:border-white/10"
                     >
-                        {/* HANDLEBAR */}
-                        <div 
-                            onClick={onClose}
-                            className="w-full flex flex-col items-center pt-5 pb-2 shrink-0 cursor-pointer group/handle"
-                        >
-                            <div className="w-12 h-1.5 bg-black/20 dark:bg-white/20 rounded-full mb-4 group-hover/handle:bg-white/40 transition-colors" />
-                            <span className="text-[14px] font-black text-black/50 dark:text-white/40 mt-2 uppercase tracking-widest">Paylaş</span>
+                        {/* DRAG HANDLE */}
+                        <div className="w-full flex justify-center pt-4 pb-2" onClick={onClose}>
+                            <div className="w-12 h-1.5 bg-gray-300 dark:bg-white/20 rounded-full" />
                         </div>
 
-                        <div className="flex-1 overflow-y-auto no-scrollbar pb-32 overscroll-contain">
-                            {/* POST PREVIEW (Subtle) */}
-                            {selectedPost && (
-                                <div className="px-6 py-4">
-                                    <div className="flex items-center gap-4 bg-black/5 dark:bg-white/5 p-4 rounded-[32px] border border-card-border">
-                                        <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black/5 dark:bg-white/5 shrink-0 border border-card-border relative">
-                                            <img src={selectedPost.media || selectedPost.image} className="w-full h-full object-cover" />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="text-[17px] font-bold text-white truncate">{selectedPost.author}</p>
-                                            <p className="text-[13px] text-black/50 dark:text-white/40 line-clamp-1 italic">"{selectedPost.desc || 'Harika bir Moffi anısı!'}"</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                        {/* CONTENT AREA */}
+                        <div className="flex-1 overflow-y-auto px-6 pb-safe">
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="font-bold text-[18px] text-gray-900 dark:text-white">Paylaş</h3>
+                                <button onClick={onClose} className="p-2 bg-gray-100 dark:bg-white/10 rounded-full text-gray-600 dark:text-white/60 active:scale-95 transition-transform">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
 
-                            {/* RECENT FRIENDS (HORIZONTAL) */}
-                            <div className="px-6 py-4">
-                                <span className="text-[12px] font-bold text-black/40 dark:text-white/30 uppercase tracking-widest mb-4 block">Hızlı Paylaş</span>
-                                <div className="flex gap-4 overflow-x-auto no-scrollbar py-2 overscroll-x-contain">
-                                    {(stories || []).slice(0, 8).map((group: any, idx: number) => (
+                            {/* QUICK SHARE - HORIZONTAL */}
+                            <div className="mb-6">
+                                <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 px-1">
+                                    <button 
+                                        onClick={() => handlePlatformShare(PLATFORMS.STORY)}
+                                        className="flex flex-col items-center gap-2 shrink-0 group relative"
+                                    >
+                                        <div className="w-[56px] h-[56px] rounded-[20px] bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/30 group-active:scale-95 transition-transform">
+                                            <Sparkles className="w-6 h-6 text-white" />
+                                        </div>
+                                        <span className="text-[11px] font-semibold text-gray-600 dark:text-white/70">Hikayem</span>
+                                    </button>
+
+                                    {stories?.map((group) => (
                                         <button 
-                                            key={idx}
+                                            key={group.id} 
                                             onClick={() => handleQuickShare(group.author_name)}
-                                            className="flex flex-col items-center gap-2 shrink-0 group active:scale-95 transition-transform relative"
+                                            className="flex flex-col items-center gap-2 shrink-0 group relative"
                                         >
-                                            <div className="w-16 h-16 rounded-3xl p-0.5 bg-gradient-to-tr from-cyan-500/20 to-purple-500/20 relative">
-                                                <div className="w-full h-full rounded-[20px] bg-white dark:bg-black p-0.5">
-                                                    <img src={group.author_avatar} className={cn(
-                                                        "w-full h-full rounded-[18px] object-cover border border-card-border transition-all duration-500",
-                                                        sendingTo === group.author_name ? "blur-md scale-90 opacity-50" : ""
-                                                    )} />
+                                            <div className="relative w-[56px] h-[56px]">
+                                                <div className="absolute inset-0 rounded-[20px] bg-gradient-to-tr from-cyan-400 to-blue-500 p-[2px]">
+                                                    <div className="w-full h-full rounded-[18px] bg-white dark:bg-black p-[2px]">
+                                                        <img 
+                                                            src={group.author_avatar || 'https://via.placeholder.com/150'} 
+                                                            alt={group.author_name} 
+                                                            className={cn(
+                                                                "w-full h-full rounded-[14px] object-cover transition-all duration-300",
+                                                                sendingTo === group.author_name ? "blur-sm scale-95 opacity-70" : ""
+                                                            )} 
+                                                        />
+                                                    </div>
                                                 </div>
-
+                                                
                                                 <AnimatePresence>
                                                     {sendingTo === group.author_name && (
                                                         <motion.div 
                                                             initial={{ scale: 0, opacity: 0 }}
                                                             animate={{ scale: 1, opacity: 1 }}
                                                             exit={{ scale: 0.5, opacity: 0 }}
-                                                            className="absolute inset-x-2 inset-y-2 bg-cyan-500 rounded-2xl flex items-center justify-center shadow-lg shadow-cyan-500/50 z-10"
+                                                            className="absolute inset-0 bg-cyan-500 rounded-[20px] flex items-center justify-center shadow-lg shadow-cyan-500/50 z-10"
                                                         >
-                                                            <Send className="w-8 h-8 text-white fill-white" />
+                                                            <Send className="w-6 h-6 text-white fill-white" />
                                                         </motion.div>
                                                     )}
                                                 </AnimatePresence>
                                             </div>
-                                            <span className="text-[11px] font-medium text-black/60 dark:text-white/60 truncate w-16 text-center">
-                                                {sendingTo === group.author_name ? "Gönderildi!" : group.author_name.split(' ')[0]}
+                                            <span className="text-[11px] font-semibold text-gray-600 dark:text-white/70 truncate w-16 text-center">
+                                                {sendingTo === group.author_name ? "İletildi" : group.author_name.split(' ')[0]}
                                             </span>
                                         </button>
                                     ))}
-                                    <button className="flex flex-col items-center gap-2 shrink-0 group active:scale-95 transition-transform">
-                                        <div className="w-16 h-16 rounded-3xl bg-black/5 dark:bg-white/5 border border-card-border flex items-center justify-center text-black/50 dark:text-white/40 group-hover:bg-black/10 dark:bg-white/10 transition-colors">
-                                            <MoreHorizontal className="w-6 h-6" />
-                                        </div>
-                                        <span className="text-[11px] font-medium text-black/40 dark:text-white/30 uppercase">Tümü</span>
-                                    </button>
                                 </div>
                             </div>
 
-                            {/* SOCIAL GRID */}
-                            <div className="px-6 py-4 grid grid-cols-4 gap-4">
-                                <button onClick={() => handlePlatformShare(PLATFORMS.WHATSAPP)} className="flex flex-col items-center gap-2 group">
-                                    <div className="w-14 h-14 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-500 active:scale-90 transition-transform shadow-lg shadow-green-500/5">
-                                        <Zap className="w-6 h-6 fill-current" />
+                            {/* MAIN SOCIAL ACTIONS */}
+                            <div className="grid grid-cols-3 gap-3 mb-6">
+                                <button onClick={() => handlePlatformShare(PLATFORMS.WHATSAPP)} className="flex flex-col items-center justify-center py-4 rounded-3xl bg-[#25D366]/10 border border-[#25D366]/20 group active:scale-95 transition-all">
+                                    <div className="w-12 h-12 bg-white dark:bg-black rounded-2xl flex items-center justify-center mb-2 shadow-sm">
+                                        <svg className="w-6 h-6 fill-[#25D366]" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
                                     </div>
-                                    <span className="text-[11px] font-medium text-black/60 dark:text-white/60">WhatsApp</span>
+                                    <span className="text-[12px] font-bold text-[#25D366]">WhatsApp</span>
                                 </button>
-                                <button onClick={() => handlePlatformShare(PLATFORMS.INSTAGRAM)} className="flex flex-col items-center gap-2 group">
-                                    <div className="w-14 h-14 rounded-2xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-500 active:scale-90 transition-transform shadow-lg shadow-pink-500/5">
-                                        <Instagram className="w-6 h-6" />
+                                
+                                <button onClick={() => handlePlatformShare(PLATFORMS.INSTAGRAM)} className="flex flex-col items-center justify-center py-4 rounded-3xl bg-[#E1306C]/10 border border-[#E1306C]/20 group active:scale-95 transition-all">
+                                    <div className="w-12 h-12 bg-white dark:bg-black rounded-2xl flex items-center justify-center mb-2 shadow-sm">
+                                        <Instagram strokeWidth={1.5} className="w-6 h-6 text-[#E1306C]" />
                                     </div>
-                                    <span className="text-[11px] font-medium text-black/60 dark:text-white/60">Instagram</span>
+                                    <span className="text-[12px] font-bold text-[#E1306C]">Instagram</span>
                                 </button>
-                                <button onClick={() => handlePlatformShare(PLATFORMS.STORY)} className="flex flex-col items-center gap-2 group">
-                                    <div className="w-14 h-14 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-500 active:scale-90 transition-transform shadow-lg shadow-purple-500/5">
-                                        <Sparkles className="w-6 h-6" />
+
+                                <button onClick={() => handlePlatformShare(PLATFORMS.MESSAGES)} className="flex flex-col items-center justify-center py-4 rounded-3xl bg-blue-500/10 border border-blue-500/20 group active:scale-95 transition-all">
+                                    <div className="w-12 h-12 bg-white dark:bg-black rounded-2xl flex items-center justify-center mb-2 shadow-sm">
+                                        <MessageSquare strokeWidth={1.5} className="w-6 h-6 text-blue-500" />
                                     </div>
-                                    <span className="text-[11px] font-medium text-black/60 dark:text-white/60">Hikayem</span>
-                                </button>
-                                <button onClick={() => handlePlatformShare(PLATFORMS.MESSAGES)} className="flex flex-col items-center gap-2 group">
-                                    <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500 active:scale-90 transition-transform shadow-lg shadow-blue-500/5">
-                                        <MessageSquare className="w-6 h-6" />
-                                    </div>
-                                    <span className="text-[11px] font-medium text-black/60 dark:text-white/60">Mesajlar</span>
+                                    <span className="text-[12px] font-bold text-blue-500">Mesajlar</span>
                                 </button>
                             </div>
 
-                            {/* UTILITY ACTIONS */}
-                            <div className="px-6 py-4 space-y-3">
-                                <div className="flex flex-col bg-white/[0.03] rounded-[32px] border border-white/[0.08] divide-y divide-white/[0.05] overflow-hidden">
-                                    <button 
-                                        onClick={handleCopy}
-                                        className="w-full px-6 py-5 flex items-center justify-between active:bg-white/[0.07] transition-all group"
-                                    >
-                                        <div className="flex items-center gap-5">
-                                            <div className="p-3 bg-black/5 dark:bg-white/5 rounded-2xl border border-card-border text-black/60 dark:text-white/60">
-                                                {isCopying ? <CheckCircle2 className="w-6 h-6 text-emerald-400" /> : <Copy className="w-6 h-6" />}
-                                            </div>
-                                            <span className="text-white font-bold text-[17px]">{isCopying ? 'Kopyalandı!' : 'Bağlantıyı Kopyala'}</span>
+                            {/* SECONDARY ACTIONS */}
+                            <div className="space-y-3 mb-6">
+                                <button 
+                                    onClick={handleCopy}
+                                    className="w-full p-4 bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-2xl flex items-center justify-between transition-colors"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="p-2.5 bg-white dark:bg-white/10 rounded-xl shadow-sm">
+                                            {isCopying ? <CheckCircle2 className="w-5 h-5 text-emerald-500" /> : <Copy className="w-5 h-5 text-gray-700 dark:text-white" />}
                                         </div>
-                                        <ChevronRight className="w-5 h-5 text-white/10 group-active:translate-x-1 transition-transform" />
-                                    </button>
-                                    
-                                    <button 
-                                        onClick={() => setShowQR(true)}
-                                        className="w-full px-6 py-5 flex items-center gap-5 active:bg-white/[0.07] transition-all group"
-                                    >
-                                        <div className="p-3 bg-cyan-500/10 rounded-2xl border border-cyan-400/20 text-cyan-400">
-                                            <QrCode className="w-6 h-6" />
-                                        </div>
-                                        <div className="flex flex-col items-start text-left">
-                                            <span className="text-white font-bold text-[17px]">QR-ID Görüntüle</span>
-                                            <span className="text-black/40 dark:text-white/30 text-[11px]">Yüz yüze hızlı paylaşım yap</span>
-                                        </div>
-                                        <ChevronRight className="w-5 h-5 text-white/10 ml-auto group-active:translate-x-1 transition-transform" />
-                                    </button>
+                                        <span className="font-semibold text-gray-800 dark:text-white/90">{isCopying ? 'Kopyalandı!' : 'Bağlantıyı Kopyala'}</span>
+                                    </div>
+                                </button>
 
-                                    <button 
-                                        onClick={handleNativeShare}
-                                        className="w-full px-6 py-5 flex items-center gap-5 active:bg-white/[0.07] transition-all"
-                                    >
-                                        <div className="p-3 bg-black/5 dark:bg-white/5 rounded-2xl border border-card-border text-black/60 dark:text-white/60">
-                                            <Share2 className="w-6 h-6" />
+                                <button 
+                                    onClick={() => setShowQR(true)}
+                                    className="w-full p-4 bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-2xl flex items-center justify-between transition-colors"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="p-2.5 bg-white dark:bg-white/10 rounded-xl shadow-sm">
+                                            <QrCode className="w-5 h-5 text-gray-700 dark:text-white" />
                                         </div>
-                                        <span className="text-black/90 dark:text-white/90 font-semibold text-[17px]">Diğer Paylaşım Seçenekleri</span>
-                                    </button>
+                                        <span className="font-semibold text-gray-800 dark:text-white/90">QR-ID ile Paylaş</span>
+                                    </div>
+                                </button>
 
+                                {selectedPost.media || selectedPost.image ? (
                                     <button 
                                         onClick={() => { 
                                             const mediaUrl = selectedPost.media || selectedPost.image;
-                                            if (mediaUrl) {
-                                                const link = document.createElement('a');
-                                                link.href = mediaUrl;
-                                                link.download = `moffi-post-${selectedPost.id}.jpg`;
-                                                document.body.appendChild(link);
-                                                link.click();
-                                                document.body.removeChild(link);
-                                                showToast("Medya Galeriye Kaydedildi 💾", "Zap", "cyan");
-                                            }
+                                            const link = document.createElement('a');
+                                            link.href = mediaUrl;
+                                            link.download = `moffi-post-${selectedPost.id}.jpg`;
+                                            document.body.appendChild(link);
+                                            link.click();
+                                            document.body.removeChild(link);
+                                            showToast("Medya Galeriye Kaydedildi 📸", "Zap", "cyan");
                                             onClose(); 
                                         }}
-                                        className="w-full px-6 py-5 flex items-center gap-5 active:bg-white/[0.07] transition-all"
+                                        className="w-full p-4 bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-2xl flex items-center justify-between transition-colors"
                                     >
-                                        <div className="p-3 bg-black/5 dark:bg-white/5 rounded-2xl border border-card-border text-black/60 dark:text-white/60">
-                                            <Download className="w-6 h-6" />
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-2.5 bg-white dark:bg-white/10 rounded-xl shadow-sm">
+                                                <Download className="w-5 h-5 text-gray-700 dark:text-white" />
+                                            </div>
+                                            <span className="font-semibold text-gray-800 dark:text-white/90">Medyayı İndir</span>
                                         </div>
-                                        <span className="text-black/90 dark:text-white/90 font-semibold text-[17px]">Medyayı Kaydet</span>
                                     </button>
-                                </div>
+                                ) : null}
                             </div>
-                        </div>
-
-                        {/* CLOSE BUTTON AT BOTTOM */}
-                        <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black via-black/95 to-transparent pt-12 shrink-0">
-                            <button 
-                                onClick={onClose}
-                                className="w-full py-5 bg-card text-black rounded-[28px] font-black text-[18px] active:scale-[0.97] transition-all shadow-xl"
-                            >
-                                Kapat
-                            </button>
                         </div>
                     </motion.div>
 
@@ -319,31 +258,31 @@ export function ShareSheet({
                     <AnimatePresence>
                         {showQR && (
                             <motion.div 
-                                initial={{ opacity: 0, scale: 0.9 }}
+                                initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.9 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
                                 className="fixed inset-0 z-[1300] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md"
                                 onClick={() => setShowQR(false)}
                             >
                                 <motion.div 
-                                    className="bg-card dark:bg-[#1C1C1E] p-8 rounded-[40px] border border-card-border flex flex-col items-center gap-6 max-w-sm w-full shadow-2xl relative"
+                                    className="bg-white dark:bg-[#1C1C1E] p-8 rounded-[2rem] flex flex-col items-center gap-6 max-w-[300px] w-full shadow-2xl"
                                     onClick={(e) => e.stopPropagation()}
                                 >
-                                    <div className="bg-card p-4 rounded-[2rem] shadow-inner flex items-center justify-center">
+                                    <div className="bg-gray-50 dark:bg-black/20 p-4 rounded-3xl flex items-center justify-center border border-gray-100 dark:border-white/5">
                                         <QRCodeSVG 
                                             value={postUrl}
-                                            size={200}
-                                            level="H"
+                                            size={180}
+                                            level="Q"
                                             includeMargin={false}
                                         />
                                     </div>
-                                    <div className="text-center px-4">
-                                        <h3 className="text-xl font-bold text-white mb-2">Moffi QR-ID</h3>
-                                        <p className="text-sm text-black/50 dark:text-white/40">Bu kodu okutarak ilanı anında paylaşabilirsin.</p>
+                                    <div className="text-center">
+                                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Moffi QR-ID</h3>
+                                        <p className="text-sm text-gray-500 dark:text-white/50">Kamerayla okutarak anında paylaş.</p>
                                     </div>
                                     <button 
                                         onClick={() => setShowQR(false)}
-                                        className="w-full py-4 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:bg-white/10 rounded-[24px] text-white font-bold transition-colors"
+                                        className="w-full py-3.5 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 rounded-2xl text-gray-900 dark:text-white font-bold transition-colors"
                                     >
                                         Kapat
                                     </button>
