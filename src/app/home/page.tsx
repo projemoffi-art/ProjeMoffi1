@@ -1433,12 +1433,12 @@ export default function LegendaryLightDashboard() {
     const formatTimeAgo = (dateStr?: string) => {
         if (!dateStr) return "şimdi";
         const diffInSeconds = Math.floor((new Date().getTime() - new Date(dateStr).getTime()) / 1000);
-        if (diffInSeconds < 60) return `${Math.max(0, diffInSeconds)}s`;
+        if (diffInSeconds < 60) return `${Math.max(0, diffInSeconds)} sn`;
         const diffInMinutes = Math.floor(diffInSeconds / 60);
-        if (diffInMinutes < 60) return `${diffInMinutes}d`;
+        if (diffInMinutes < 60) return `${diffInMinutes} dk`;
         const diffInHours = Math.floor(diffInMinutes / 60);
-        if (diffInHours < 24) return `${diffInHours}sa`;
-        return `${Math.floor(diffInHours / 24)}g`;
+        if (diffInHours < 24) return `${diffInHours} saat`;
+        return `${Math.floor(diffInHours / 24)} gün`;
     };
 
 

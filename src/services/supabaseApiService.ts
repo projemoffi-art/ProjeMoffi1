@@ -3273,9 +3273,9 @@ export class SupabaseApiService implements IApiService {
         const now = new Date();
         const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
         if (diff < 60) return 'Şimdi';
-        if (diff < 3600) return `${Math.floor(diff / 60)}dk`;
-        if (diff < 86400) return `${Math.floor(diff / 3600)}sa`;
-        return `${Math.floor(diff / 86400)}g`;
+        if (diff < 3600) return `${Math.floor(diff / 60)} dk`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)} saat`;
+        return `${Math.floor(diff / 86400)} gün`;
     }
 
     async getAnnouncements(): Promise<SystemAnnouncement[]> {
