@@ -9,7 +9,7 @@ import { useNotifications } from '@/context/NotificationContext';
 
 
 // Components
-import { ShareSheet } from './ShareSheet';
+import { StorySystem } from './StorySystem';
 import { NotificationsDrawer } from './NotificationsDrawer';
 import { PetSettingsModal } from '../profile/PetSettingsModal';
 import { EcosystemPortal } from './EcosystemPortal';
@@ -271,24 +271,6 @@ export const OverlaySystem: React.FC<OverlaySystemProps> = ({
             </AnimatePresence>
 
             {/* SYSTEM OVERLAYS */}
-            {selectedSharePost && (
-                <ShareSheet 
-                    isOpen={true}
-                    selectedPost={selectedSharePost} 
-                    onClose={() => setSelectedSharePost(null)}
-                    onSocialShare={(platform) => { 
-                        showToast(`${platform} Paylaşımı Başlatıldı`, "Sparkles", "cyan"); 
-                        setSelectedSharePost(null); 
-                    }}
-                    onAddToStory={() => { 
-                        showToast("Hikayenize Eklendi", "Heart", "purple"); 
-                        setSelectedSharePost(null); 
-                    }}
-                    onCopyLink={() => { 
-                        setSelectedSharePost(null); 
-                    }}
-                />
-            )}
 
             <NotificationsDrawer
                 isOpen={isNotificationsOpen}

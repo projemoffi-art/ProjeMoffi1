@@ -3,6 +3,7 @@
 import { Heart, MessageCircle, Share2, MoreHorizontal, Sparkles, MapPin } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
+import { useShare } from "@/context/ShareContext";
 
 interface PostProps {
     user: {
@@ -26,6 +27,7 @@ interface PostProps {
 }
 
 export function SocialPostCard({ user, content, isSponsored, context }: PostProps) {
+    const { openShare } = useShare();
     const [liked, setLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(content.likes);
 
@@ -98,7 +100,18 @@ export function SocialPostCard({ user, content, isSponsored, context }: PostProp
                         <MessageCircle className="w-7 h-7 text-foreground group-hover:text-accent transition-colors" />
                         <span className="text-[10px] font-bold text-foreground">{content.comments}</span>
                     </button>
-                    <button className="flex flex-col items-center gap-0.5 group">
+                    <button 
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openShare({
+                                title: `${user.name} kullanıcısının Gönderisi`,
+                                text: content.caption,
+                                url: typeof window !== 'undefined' ? window.location.href : ''
+                            });
+                        }}
+                        className="flex flex-col items-center gap-0.5 group"
+                    >
                         <Share2 className="w-7 h-7 text-foreground group-hover:text-emerald-500 transition-colors" />
                         <span className="text-[10px] font-bold text-foreground">Share</span>
                     </button>

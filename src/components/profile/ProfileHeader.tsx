@@ -11,6 +11,7 @@ import {
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
+import { useShare } from "@/context/ShareContext";
 import { ModerationService } from "@/services/ai/ModerationService";
 
 interface ProfileHeaderProps {
@@ -41,6 +42,7 @@ export default function ProfileHeader({ user, isFollowingInitial, userId, onMess
     const [isJoined, setIsJoined] = useState(isFollowingInitial);
     const [loading, setLoading] = useState(false);
     const { user: currentUser } = useAuth();
+    const { openShare } = useShare();
     const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
 
     const frameStyle = user.isOwnProfile 
@@ -223,9 +225,14 @@ export default function ProfileHeader({ user, isFollowingInitial, userId, onMess
                                     <div className="space-y-4">
                                         <button 
                                             onClick={() => {
-                                                navigator.clipboard.writeText(window.location.href);
-                                                alert("Profil linki kopyalandı! 🚀");
                                                 setIsActionSheetOpen(false);
+                                                setTimeout(() => {
+                                                    openShare({
+                                                        title: user.full_name || user.username,
+                                                        text: user.bio || 'Moffi Profilini incele',
+                                                        url: typeof window !== 'undefined' ? window.location.href : '',
+                                                    });
+                                                }, 100);
                                             }}
                                             className="w-full flex items-center gap-5 p-6 bg-foreground/5 hover:bg-foreground/10 border border-card-border rounded-[2.2rem] group transition-all"
                                         >

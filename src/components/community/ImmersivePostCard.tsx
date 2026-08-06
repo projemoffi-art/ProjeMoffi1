@@ -254,9 +254,7 @@ export function ImmersivePostCard({
         setTimeout(() => setTapHeart(false), 800);
     };
 
-    const handleShareClick = () => {
-        onShare();
-    };
+    
 
     const copyLink = () => {
         navigator.clipboard.writeText(window.location.href);
@@ -505,7 +503,7 @@ export function ImmersivePostCard({
                         <button onClick={() => allowComments ? setShowComments(true) : null} className={cn("p-2 text-gray-600 dark:text-gray-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-full transition-all group", !allowComments && "opacity-50")}>
                             <MessageCircle strokeWidth={1.25} className="w-[22px] h-[22px] transition-transform group-hover:scale-105 group-active:scale-95" />
                         </button>
-                        <button onClick={handleShareClick} className="p-2 text-gray-600 dark:text-gray-300 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 rounded-full transition-all group">
+                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onShare?.(); }} className="p-2 text-gray-600 dark:text-gray-300 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 rounded-full transition-all group">
                             <Send strokeWidth={1.25} className="w-[22px] h-[22px] transition-transform group-hover:scale-105 group-active:scale-95 -mt-0.5 ml-0.5" />
                         </button>
                     </div>

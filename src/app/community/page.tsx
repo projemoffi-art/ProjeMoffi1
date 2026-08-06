@@ -37,6 +37,7 @@ const SightingMapSelector = dynamic(() => import('@/components/community/Sightin
 
 import AuthModal from '../../components/auth/AuthModal';
 import { useAuth } from '../../context/AuthContext';
+import { useShare } from '../../context/ShareContext';
 import { useUserStories } from '../../hooks/useUserStories';
 import { useTheme } from '../../context/ThemeContext';
 import { PetSettingsModal } from '../../components/profile/PetSettingsModal';
@@ -138,6 +139,7 @@ const StoryProgressBar = ({ isActive, isCompleted, isPaused, onComplete, duratio
 
 export default function MoffiSocialMasterpiece() {
     const { user, logout, updateProfile, updateSettings } = useAuth();
+    const { openShare } = useShare();
     const { 
         isInboxOpen, setIsInboxOpen, 
         inboxTab, setInboxTab, 
@@ -2150,7 +2152,19 @@ export default function MoffiSocialMasterpiece() {
                             isLoading={isLoadingPosts}
                             viewMode={viewMode}
                             onLike={toggleLike}
-                            onShare={(post) => setSelectedSharePost(post)}
+                            onShare={(post) => {
+                                try {
+                                    if (!openShare) throw new Error("openShare is undefined");
+                                    if (!post) throw new Error("post is undefined");
+                                    openShare({ 
+                                        title: post.title || 'Moffi Gönderisi', 
+                                        text: post.content || 'Bu gönderiye göz at!', 
+                                        url: typeof window !== 'undefined' ? `${window.location.origin}/post/${post.id}` : '' 
+                                    });
+                                } catch (err: any) {
+                                    alert("page.tsx FeedTab onShare Hatası: " + err.message);
+                                }
+                            }}
                             onAddComment={addComment}
                             onToggleCommentLike={toggleCommentLike}
                             onReplyComment={addCommentReply}
@@ -3849,20 +3863,14 @@ export default function MoffiSocialMasterpiece() {
                                     {/* Floating Actions (Close & Share) on top of image */}
                                     <div className="absolute top-6 right-6 flex items-center gap-2 z-20">
                                         <button 
-                                            onClick={async () => {
-                                                try {
-                                                    if (navigator.share) {
-                                                        await navigator.share({
-                                                            title: 'Kayıp İlanı: ' + selectedLostPet.pet_name,
-                                                            text: 'Lütfen bu kayıp dostumuzu bulmamıza yardım edin!',
-                                                            url: window.location.href,
-                                                        });
-                                                    } else {
-                                                        showToast("Bağlantı Kopyalandı", "İlan linki panoya kopyalandı", "success");
-                                                    }
-                                                } catch (err) {
-                                                    console.error("Share failed:", err);
-                                                }
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                openShare({
+                                                    title: 'Kayıp İlanı: ' + selectedLostPet.pet_name,
+                                                    text: 'Lütfen bu kayıp dostumuzu bulmamıza yardım edin!',
+                                                    url: typeof window !== 'undefined' ? window.location.href : ''
+                                                });
                                             }}
                                             className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-black/10 dark:border-white/10 flex items-center justify-center text-black/80 dark:text-white/80 hover:bg-black/60 hover:text-white transition-all active:scale-95"
                                         >
@@ -3881,20 +3889,14 @@ export default function MoffiSocialMasterpiece() {
                                     {/* Floating Actions (Close & Share) for No Image version */}
                                     <div className="absolute top-6 right-6 flex items-center gap-2 z-20">
                                         <button 
-                                            onClick={async () => {
-                                                try {
-                                                    if (navigator.share) {
-                                                        await navigator.share({
-                                                            title: 'Kayıp İlanı: ' + selectedLostPet.pet_name,
-                                                            text: 'Lütfen bu kayıp dostumuzu bulmamıza yardım edin!',
-                                                            url: window.location.href,
-                                                        });
-                                                    } else {
-                                                        showToast("Bağlantı Kopyalandı", "İlan linki panoya kopyalandı", "success");
-                                                    }
-                                                } catch (err) {
-                                                    console.error("Share failed:", err);
-                                                }
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                openShare({
+                                                    title: 'Kayıp İlanı: ' + selectedLostPet.pet_name,
+                                                    text: 'Lütfen bu kayıp dostumuzu bulmamıza yardım edin!',
+                                                    url: typeof window !== 'undefined' ? window.location.href : ''
+                                                });
                                             }}
                                             className="w-10 h-10 rounded-full bg-[var(--card-bg)] border border-[var(--card-border)] flex items-center justify-center text-[var(--foreground)] hover:bg-black/5 dark:bg-white/5 transition-all active:scale-95 shadow-sm"
                                         >
@@ -4423,20 +4425,14 @@ export default function MoffiSocialMasterpiece() {
                                     {/* Floating Actions (Close & Share) on top of image */}
                                     <div className="absolute top-12 sm:top-6 right-6 flex items-center gap-2 z-20">
                                         <button 
-                                            onClick={async () => {
-                                                try {
-                                                    if (navigator.share) {
-                                                        await navigator.share({
-                                                            title: 'Sahiplenme İlanı: ' + selectedAdoptionPet.name,
-                                                            text: 'Bu tatlı dosta yuva olmak ister misin?',
-                                                            url: window.location.href,
-                                                        });
-                                                    } else {
-                                                        showToast("Bağlantı Kopyalandı", "İlan linki panoya kopyalandı", "success");
-                                                    }
-                                                } catch (err) {
-                                                    console.error("Share failed:", err);
-                                                }
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                openShare({
+                                                    title: 'Sahiplenme İlanı: ' + selectedAdoptionPet.name,
+                                                    text: 'Bu tatlı dosta yuva olmak ister misin?',
+                                                    url: typeof window !== 'undefined' ? window.location.href : ''
+                                                });
                                             }}
                                             className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-md border border-black/10 dark:border-white/10 flex items-center justify-center text-black/80 dark:text-white/80 hover:bg-black/60 hover:text-white transition-all active:scale-95"
                                         >

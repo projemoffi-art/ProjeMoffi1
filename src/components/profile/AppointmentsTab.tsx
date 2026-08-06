@@ -6,6 +6,7 @@ import {
     Plus, ShieldCheck, Clock, Edit3, Camera, X, Award, FileText, Share2, AlertCircle, Syringe 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useShare } from "@/context/ShareContext";
 import { QRCodeSVG } from "qrcode.react";
 
 export function AppointmentsTab({ 
@@ -19,6 +20,7 @@ export function AppointmentsTab({
     onDeleteDocument,
     currentAppointments 
 }: any) {
+    const { openShare } = useShare();
     const [isGenerating, setIsGenerating] = useState(false);
     const [generationStep, setGenerationStep] = useState(0);
     const [showPreview, setShowPreview] = useState(false);
@@ -341,7 +343,15 @@ export function AppointmentsTab({
                                         <FileText className="w-4 h-4" /> PDF İndir
                                     </button>
                                     <button 
-                                        onClick={() => alert("Paylaşım menüsü açılıyor... 📲")}
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            openShare({
+                                                title: 'Sağlık Raporu - Moffi',
+                                                text: 'Moffi sağlık raporumu görüntüle!',
+                                                url: typeof window !== 'undefined' ? window.location.href : ''
+                                            });
+                                        }}
                                         className="w-14 h-14 bg-gray-100 text-black rounded-3xl flex items-center justify-center hover:bg-gray-200 transition-colors active:scale-95 shadow-inner"
                                     >
                                         <Share2 className="w-4 h-4" />

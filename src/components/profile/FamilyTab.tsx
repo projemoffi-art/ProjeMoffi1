@@ -8,6 +8,7 @@ import {
     ShieldCheck, ChevronRight, MoreHorizontal
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useShare } from "@/context/ShareContext";
 import { useFamily } from "@/hooks/useFamily";
 import { FamilyLog } from "@/types/domain";
 import { QRCodeSVG } from "qrcode.react";
@@ -25,6 +26,7 @@ const getIcon = (type: FamilyLog['iconType']) => {
 
 export function FamilyTab() {
     const { members, logs, notification, isLoading } = useFamily();
+    const { openShare } = useShare();
     const [isInviteSheetOpen, setIsInviteSheetOpen] = useState(false);
 
     if (isLoading) return (
@@ -214,7 +216,13 @@ export function FamilyTab() {
                             </div>
 
                             <div className="space-y-3">
-                                <button className="w-full py-4 rounded-full bg-blue-500 text-white font-black text-sm shadow-[0_10px_30px_rgba(59,130,246,0.3)] flex items-center justify-center gap-3 active:scale-95 transition-transform">
+                                <button onClick={() => {
+                                    openShare({
+                                        title: 'Moffi Aile Daveti',
+                                        text: 'Moffi aileme katıl ve dostumuzu birlikte büyütelim!',
+                                        url: typeof window !== 'undefined' ? `${window.location.origin}/invite` : ''
+                                    });
+                                }} className="w-full py-4 rounded-full bg-blue-500 text-white font-black text-sm shadow-[0_10px_30px_rgba(59,130,246,0.3)] flex items-center justify-center gap-3 active:scale-95 transition-transform">
                                     <Share2 className="w-5 h-5" /> Davet Linki Paylaş
                                 </button>
                                 <button className="w-full py-4 rounded-full bg-black/5 dark:bg-white/5 text-gray-500 dark:text-gray-400 font-bold text-sm border border-card-border flex items-center justify-center gap-3 active:scale-95 transition-transform">

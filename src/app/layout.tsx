@@ -23,6 +23,8 @@ import { Phase2Loader } from "@/components/quests/Phase2Loader";
 import { GlobalToast } from "@/components/common/GlobalToast";
 import { RootOnboardingWrapper } from "@/components/drafts/RootOnboardingWrapper";
 import CookieBanner from "@/components/common/CookieBanner";
+import { ShareProvider } from "@/context/ShareContext";
+import { GlobalShareSheet } from "@/components/common/GlobalShareSheet";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -78,7 +80,8 @@ export default function RootLayout({
                         <WellbeingProvider>
                           <ThemeProvider>
                             <SocialProvider>
-                              <ShopProvider>
+                              <ShareProvider>
+                                <ShopProvider>
                                 <ClientAuthWrapper>
                                   <GlobalIdentitySync />
                                   <GlobalAuraBackground />
@@ -100,7 +103,9 @@ export default function RootLayout({
                                   <CookieBanner />
                                   <GlobalToast />
                                 </ClientAuthWrapper>
-                              </ShopProvider>
+                                  <GlobalShareSheet />
+                                </ShopProvider>
+                              </ShareProvider>
                             </SocialProvider>
                           </ThemeProvider>
                         </WellbeingProvider>

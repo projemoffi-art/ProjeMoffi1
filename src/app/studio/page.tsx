@@ -8,11 +8,14 @@ import {
     Zap, MousePointer2, Share2, HelpCircle,
     Maximize2, RefreshCcw, Save, Type, Sliders, Wand2, ArrowLeftRight, ArrowUpDown, Upload, Globe, Smartphone, X 
 } from 'lucide-react';
+import { useShare } from '@/context/ShareContext';
 import { useRouter } from 'next/navigation';
 import { cn, showToast } from '@/lib/utils';
 import { generateImageAction } from '@/app/actions/ai';
+
 export default function ProductionStudio() {
     const router = useRouter();
+    const { openShare } = useShare();
     const [isGenerating, setIsGenerating] = useState(false);
     const [activePrompt, setActivePrompt] = useState('');
     const [printDesign, setPrintDesign] = useState<string | null>(null);
@@ -174,15 +177,11 @@ export default function ProductionStudio() {
 
     const handleShareToDevice = () => {
         if (!printDesign) return showToast("Önce tasarımı hazırlayın!", "Sparkles", "text-amber-500");
-        if (navigator.share) {
-            navigator.share({
-                title: 'Moffi Stüdyo Tasarımım',
-                text: `Moffi Stüdyo'da kendi kıyafetimi tasarladım. Göz atsana! 👕✨`,
-                url: window.location.href,
-            }).catch(console.error);
-        } else {
-            showToast("Cihazınız paylaşımı desteklemiyor.", "Share2", "text-red-500");
-        }
+        openShare({
+            title: 'Moffi Stüdyo Tasarımım',
+            text: `Moffi Stüdyo'da kendi kıyafetimi tasarladım. Göz atsana! 👕✨`,
+            url: typeof window !== 'undefined' ? window.location.href : '',
+        });
         setIsShareMenuOpen(false);
     };
 

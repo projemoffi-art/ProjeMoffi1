@@ -2870,7 +2870,14 @@ export function AuraFeedTab({ posts: externalPosts, user, onLike, onAddComment, 
                                             </button>
 
                                             {/* Share Button */}
-                                            <button className="flex flex-col items-center gap-1 group active:scale-90 transition">
+                                            <button 
+                                                onClick={() => openShare({
+                                                    title: post.title || 'Moffi Gönderisi',
+                                                    text: post.content || 'Bu gönderiye göz at!',
+                                                    url: typeof window !== 'undefined' ? `${window.location.origin}/post/${post.id}` : ''
+                                                })}
+                                                className="flex flex-col items-center gap-1 group active:scale-90 transition"
+                                            >
                                                 <div className="w-10 h-10 flex items-center justify-center drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
                                                     <Share2 className="w-7 h-7 fill-slate-200/30 text-slate-200" strokeWidth={1.5} />
                                                 </div>

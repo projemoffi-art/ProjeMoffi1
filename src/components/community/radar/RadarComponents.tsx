@@ -6,6 +6,7 @@ import {
     X, ChevronLeft, MapPin, Camera, Plus, Activity, 
     Share2, Phone, MessageCircle, AlertCircle, Clock
 } from 'lucide-react';
+import { useShare } from '@/context/ShareContext';
 import { cn } from '@/lib/utils';
 import dynamic from 'next/dynamic';
 
@@ -162,10 +163,10 @@ interface LostPetDetailModalProps {
 export function LostPetDetailModal({
     pet,
     onClose,
-    onShare,
     onReportLocation,
     isAdmin
-}: LostPetDetailModalProps) {
+}: Omit<LostPetDetailModalProps, 'onShare'>) {
+    const { openShare } = useShare();
     if (!pet) return null;
 
     return (
@@ -183,7 +184,16 @@ export function LostPetDetailModal({
                     
                     <div className="absolute top-0 inset-x-0 p-6 flex justify-between items-center z-10 bg-gradient-to-b from-black/80 to-transparent pt-12">
                         <button onClick={onClose} className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-card-border flex items-center justify-center"><ChevronLeft className="w-6 h-6" /></button>
-                        <button onClick={onShare} className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-card-border flex items-center justify-center"><Share2 className="w-5 h-5" /></button>
+                        <button 
+                            onClick={() => openShare({
+                                title: pet.name ? 'Kayıp İlanı: ' + pet.name : 'Kayıp İlanı',
+                                text: pet.description,
+                                url: typeof window !== 'undefined' ? `${window.location.origin}/radar/${pet.id}` : ''
+                            })} 
+                            className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-card-border flex items-center justify-center"
+                        >
+                            <Share2 className="w-5 h-5" />
+                        </button>
                     </div>
 
                     <div className="absolute bottom-6 left-6 right-6 z-10">

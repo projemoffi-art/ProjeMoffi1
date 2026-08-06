@@ -3,6 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { X, Download, Share2, ShieldCheck, Sparkles, Fingerprint } from 'lucide-react';
+import { useShare } from '@/context/ShareContext';
 import { QRCodeSVG } from 'qrcode.react';
 import { cn } from '@/lib/utils';
 
@@ -12,6 +13,7 @@ interface PETIDModalProps {
 }
 
 export function PETIDModal({ pet, onClose }: PETIDModalProps) {
+    const { openShare } = useShare();
     const cardRef = useRef<HTMLDivElement>(null);
     const mouseX = useMotionValue(0);
     const mouseY = useMotionValue(0);
@@ -133,7 +135,14 @@ export function PETIDModal({ pet, onClose }: PETIDModalProps) {
                                     <button className="flex-1 h-14 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:bg-white/10 rounded-2xl flex items-center justify-center gap-2 text-white font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 border border-card-border">
                                         <Download className="w-4 h-4" /> Save
                                     </button>
-                                    <button className="flex-1 h-14 bg-card text-black rounded-2xl flex items-center justify-center gap-2 font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-xl shadow-white/10">
+                                    <button 
+                                        onClick={() => openShare({
+                                            title: pet.name + ' - Moffi Dijital Pet Kimliği',
+                                            text: `${pet.name} adlı dostumuzun dijital pasaportu.`,
+                                            url: typeof window !== 'undefined' ? `${window.location.origin}/id/${pet.id}` : `https://moffi.com/id/${pet.id}`
+                                        })}
+                                        className="flex-1 h-14 bg-card text-black rounded-2xl flex items-center justify-center gap-2 font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-xl shadow-white/10"
+                                    >
                                         <Share2 className="w-4 h-4" /> Share
                                     </button>
                                 </div>

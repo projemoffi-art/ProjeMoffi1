@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useShare } from '@/context/ShareContext';
 import { 
   X, Package, Truck, MapPin, CheckCircle2, 
   Clock, Navigation2, ChevronRight, Share2 
@@ -156,7 +157,13 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({ isOpen, 
 
             {/* Actions */}
             <div className="mt-8 pt-8 border-t border-card-border flex gap-3">
-              <button className="flex-1 h-12 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:bg-white/10 rounded-2xl text-white text-sm font-bold transition-all flex items-center justify-center gap-2">
+              <button onClick={() => {
+                openShare({
+                  title: 'Moffi Siparişim',
+                  text: 'Moffi siparişimin durumunu takip et!',
+                  url: typeof window !== 'undefined' ? window.location.href : ''
+                });
+              }} className="flex-1 h-12 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:bg-white/10 rounded-2xl text-white text-sm font-bold transition-all flex items-center justify-center gap-2">
                 <Share2 size={16} />
                 SİPARİŞİ PAYLAŞ
               </button>

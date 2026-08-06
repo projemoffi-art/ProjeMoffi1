@@ -16,6 +16,8 @@ import { cn, showToast } from "@/lib/utils";
 import { QRCodeSVG } from "qrcode.react";
 import { useVaccineSchedule } from "@/hooks/useVaccineSchedule";
 import { TagPairingModal } from "@/components/community/modals/TagPairingModal";
+import html2canvas from 'html2canvas';
+import { useShare } from '@/context/ShareContext';
 import { usePet } from "@/context/PetContext";
 import { PetSwitcher } from "../common/PetSwitcher";
 import { PetSettingsModal } from "./PetSettingsModal";
@@ -52,6 +54,7 @@ function MicrochipBarcode({ value }: { value: string }) {
 
 export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }: PassportTabProps) {
     const { activePet, isLoading: isPetLoading, updatePet, deletePet } = usePet();
+    const { openShare } = useShare();
     const currentPet = propPet || activePet;
     const { schedule, isLoading } = useVaccineSchedule(currentPet?.id || 'pet-1');
     const [isHovered, setIsHovered] = useState(false);
@@ -110,12 +113,14 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
 
     const handleShareProfile = () => {
         try {
-            const shareUrl = `${window.location.origin}/share/pet/${petData.id}`;
-            navigator.clipboard.writeText(shareUrl);
-            showToast("Paylaşım Linki Kopyalandı! 🔗", "Sparkles", "text-emerald-400 font-bold");
+            openShare({
+                title: 'Moffi Pasaportu',
+                text: `${petData.name} adlı dostumuzun pasaportunu incele!`,
+                url: typeof window !== 'undefined' ? `${window.location.origin}/share/pet/${petData.id}` : ''
+            });
         } catch (error) {
-            console.error("Link copy error:", error);
-            alert("Paylaşım linki kopyalanamadı.");
+            console.error("Share error:", error);
+            alert("Paylaşım menüsü açılamadı.");
         }
     };
 
