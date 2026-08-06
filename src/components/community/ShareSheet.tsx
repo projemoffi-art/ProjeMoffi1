@@ -98,7 +98,8 @@ export function ShareSheet({
     };
 
     const handleNativeShare = async () => {
-        if (navigator.share) {
+        const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile && navigator.share) {
             try {
                 await navigator.share({
                     title: 'Moffi Paylaşım',
