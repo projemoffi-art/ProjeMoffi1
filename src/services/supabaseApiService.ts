@@ -447,20 +447,12 @@ export class SupabaseApiService implements IApiService {
 
                     if (existings && existings.length > 0) {
                         const { error: deleteError } = await supabase.from('likes').delete().eq('post_id', postId).eq('user_id', user.id);
-                        if (!deleteError) {
-                            const { data: pData } = await supabase.from('posts').select('likes_count').eq('id', postId).maybeSingle();
-                            if (pData) {
-                                await supabase.from('posts').update({ likes_count: Math.max(0, (pData.likes_count || 0) - existings.length) }).eq('id', postId);
-                            }
+                        if (deleteError) {
+                            console.error("Supabase likes delete error:", deleteError);
                         }
                     } else {
                         const { error: insertError } = await supabase.from('likes').insert({ post_id: postId, user_id: user.id });
-                        if (!insertError) {
-                            const { data: pData } = await supabase.from('posts').select('likes_count').eq('id', postId).maybeSingle();
-                            if (pData) {
-                                await supabase.from('posts').update({ likes_count: (pData.likes_count || 0) + 1 }).eq('id', postId);
-                            }
-                        } else {
+                        if (insertError) {
                             console.error("Supabase likes insert error:", insertError);
                         }
                     }
@@ -669,16 +661,12 @@ export class SupabaseApiService implements IApiService {
 
                     if (existings && existings.length > 0) {
                         const { error: deleteError } = await supabase.from('comment_likes').delete().eq('comment_id', commentId).eq('user_id', user.id);
-                        if (!deleteError) {
-                            const { data } = await supabase.from('comments').select('likes_count').eq('id', commentId).maybeSingle();
-                            await supabase.from('comments').update({ likes_count: Math.max(0, (data?.likes_count || 0) - existings.length) }).eq('id', commentId);
+                        if (deleteError) {
+                            console.error("Supabase comment_likes delete error:", deleteError);
                         }
                     } else {
                         const { error: insertError } = await supabase.from('comment_likes').insert({ comment_id: commentId, user_id: user.id });
-                        if (!insertError) {
-                            const { data } = await supabase.from('comments').select('likes_count').eq('id', commentId).maybeSingle();
-                            await supabase.from('comments').update({ likes_count: (data?.likes_count || 0) + 1 }).eq('id', commentId);
-                        } else {
+                        if (insertError) {
                             console.error("Supabase comment_likes insert error:", insertError);
                         }
                     }
