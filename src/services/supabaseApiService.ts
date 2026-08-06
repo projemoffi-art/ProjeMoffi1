@@ -2610,7 +2610,7 @@ export class SupabaseApiService implements IApiService {
         const { data, error } = await supabase
             .from('story_views')
             .select('story_id')
-            .eq('user_id', user.id);
+            .eq('viewer_id', user.id);
             
         if (error) {
             console.error("Error fetching viewed stories:", error);
