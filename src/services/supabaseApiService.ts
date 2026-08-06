@@ -538,7 +538,7 @@ export class SupabaseApiService implements IApiService {
                         .eq('user_id', user.id);
                         
                     if (likesData) {
-                        likesData.forEach(l => likedCommentIds.add(l.comment_id));
+                        likesData.forEach(l => likedCommentIds.add(String(l.comment_id)));
                     }
                 }
 
@@ -551,7 +551,7 @@ export class SupabaseApiService implements IApiService {
                     user_id: c.user_id,
                     likes: c.likes_count || 0,
                     status: c.status || 'approved',
-                    isLiked: likedCommentIds.has(c.id),
+                    isLiked: likedCommentIds.has(String(c.id)),
                     parent_id: null
                 }));
             }
