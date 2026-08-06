@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { PassportTab } from "@/components/profile/PassportTab";
 import { cn } from '@/lib/utils';
-import { PET_PERSONALITIES } from '@/lib/mockData';
 import Image from 'next/image';
 import { QRCodeSVG } from "qrcode.react";
 import { FamilyTab } from '../profile/FamilyTab';

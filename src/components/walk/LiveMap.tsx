@@ -6,11 +6,35 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { PLACES, Place } from "@/data/mockPlaces";
 import { MOCK_MARKS, MapMark } from "@/data/mockMarks";
-import { Star, Gift, Coins, Search, Coffee, Stethoscope, Trees, ShoppingBag, AlertCircle, Navigation, MapPin, Plus, Heart } from "lucide-react";
+import { Star, Gift, Coins, Search, Coffee, Stethoscope, Trees, ShoppingBag, AlertCircle, Navigation, MapPin, Plus, Heart, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MarkCreationModal } from "./MarkCreationModal";
 import { GuardianStatusOverlay } from "@/components/guardian/GuardianStatusOverlay";
 import { useTheme } from "@/context/ThemeContext";
+
+// Inject minimal popup CSS globally since Leaflet popups are rendered outside React DOM tree sometimes
+if (typeof document !== 'undefined') {
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .minimal-glass-popup .leaflet-popup-content-wrapper {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+            padding: 4px;
+        }
+        .minimal-glass-popup .leaflet-popup-tip {
+            background: rgba(255, 255, 255, 0.85);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+        }
+        .minimal-glass-popup .leaflet-popup-content {
+            margin: 8px;
+        }
+    `;
+    document.head.appendChild(style);
+}
 
 // --- TYPES ---
 interface LiveMapProps {
@@ -43,21 +67,19 @@ interface LiveMapProps {
 }
 
 // --- CUSTOM ICON ---
-const createCustomIcon = (type: string, isPremium: boolean, isVisited: boolean) => {
-    let colorClass = isVisited ? "bg-gray-400" : "bg-blue-500";
-    let iconEmoji = "📍";
+const createCustomIcon = (type: string, isPremium: boolean, isVisited: boolean, isSelected: boolean = false, anySelected: boolean = false) => {
+    const config: any = {
+        'vet': { color: '#ef4444', icon: '🏥' },
+        'cafe': { color: '#f97316', icon: '☕' },
+        'park': { color: '#22c55e', icon: '🌳' },
+        'shop': { color: '#a855f7', icon: '🛍️' },
+        'food': { color: '#f59e0b', icon: '🍖' },
+        'toy': { color: '#38bdf8', icon: '🎾' },
+        'care': { color: '#10b981', icon: '💊' },
+        'default': { color: '#3b82f6', icon: '📍' }
+    }[type] || { color: '#3b82f6', icon: '📍' };
+
     let glow = "";
-
-    switch (type) {
-        case 'vet': colorClass = isVisited ? "bg-gray-400" : "bg-red-500"; iconEmoji = "🏥"; break;
-        case 'cafe': colorClass = isVisited ? "bg-gray-400" : "bg-orange-500"; iconEmoji = "☕"; break;
-        case 'park': colorClass = isVisited ? "bg-gray-400" : "bg-green-500"; iconEmoji = "🌳"; break;
-        case 'shop': colorClass = isVisited ? "bg-gray-400" : "bg-purple-500"; iconEmoji = "🛍️"; break;
-        case 'food': colorClass = isVisited ? "bg-gray-400" : "bg-amber-500"; iconEmoji = "🍖"; break;
-        case 'toy': colorClass = isVisited ? "bg-gray-400" : "bg-blue-400"; iconEmoji = "🎾"; break;
-        case 'care': colorClass = isVisited ? "bg-gray-400" : "bg-emerald-500"; iconEmoji = "💊"; break;
-    }
-
     if (isPremium && !isVisited) {
         glow = "box-shadow: 0 0 15px 2px rgba(255, 215, 0, 0.6); border: 2px solid gold;";
     }
@@ -66,22 +88,38 @@ const createCustomIcon = (type: string, isPremium: boolean, isVisited: boolean) 
         className: "custom-marker-icon",
         html: `
             <div style="
-                width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; 
-                border-radius: 50%; background-color: ${isVisited ? '#e5e7eb' : 'white'}; 
-                position: relative; ${glow} box-shadow: 0 4px 10px rgba(0,0,0,0.3); opacity: ${isVisited ? 0.8 : 1};
+                width: ${isSelected ? '44px' : '32px'}; 
+                height: ${isSelected ? '44px' : '32px'}; 
+                background: ${isPremium ? 'linear-gradient(135deg, #f59e0b, #fbbf24)' : '#ffffff'}; 
+                border-radius: 50%; 
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+                box-shadow: ${isSelected ? '0 0 0 6px rgba(99, 102, 241, 0.3), 0 10px 25px rgba(0,0,0,0.3)' : '0 4px 12px rgba(0,0,0,0.15)'}; 
+                border: ${isSelected ? '3px' : '2px'} solid ${isPremium ? '#ffffff' : (config.color || '#CBD5E1')};
+                position: relative;
+                transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                transform: ${isSelected ? 'scale(1.1) translateY(-10px)' : 'scale(1)'};
+                z-index: ${isSelected ? 1000 : 1};
+                opacity: ${!isSelected && anySelected ? '0.3' : '1'};
+                filter: ${!isSelected && anySelected ? 'grayscale(0.5)' : 'none'};
             ">
-                <div class="${colorClass}" style="
-                    width: 30px; height: 30px; border-radius: 50%; display: flex; 
-                    align-items: center; justify-content: center; color: white; font-size: 16px;
+                <div style="
+                    width: ${isSelected ? '28px' : '20px'}; 
+                    height: ${isSelected ? '28px' : '20px'}; 
+                    border-radius: 50%; display: flex; 
+                    align-items: center; justify-content: center; color: white; 
+                    font-size: ${isSelected ? '14px' : '10px'};
+                    background-color: ${isVisited ? '#e5e7eb' : config.color};
                 ">
-                    ${isVisited ? '✅' : iconEmoji}
+                    ${isVisited ? '✅' : config.icon}
                 </div>
                 ${isPremium && !isVisited ? `<div style="position: absolute; top: -5px; right: -5px; font-size: 12px;">🌟</div>` : ''}
             </div>
         `,
-        iconSize: [36, 36],
-        iconAnchor: [18, 18],
-        popupAnchor: [0, -20]
+        iconSize: [isSelected ? 44 : 32, isSelected ? 44 : 32],
+        iconAnchor: [isSelected ? 22 : 16, isSelected ? 44 : 32],
+        popupAnchor: [0, -32]
     });
 };
 
@@ -119,25 +157,21 @@ const createMarkIcon = (mark: MapMark) => {
 };
 
 // --- MAP CONTROLS ENGINE (The Brain) ---
-function MapEngine({ center, searchQuery, filterType, setRouteTo, userPos }: { center: [number, number], searchQuery: string, filterType: string | null, setRouteTo: (p: [number, number] | null) => void, userPos: [number, number] }) {
+function MapEngine({ center, searchQuery, filterType, setRouteTo, userPos, routeTo }: { center: [number, number], searchQuery: string, filterType: string | null, setRouteTo: (p: [number, number] | null) => void, userPos: [number, number], routeTo: [number, number] | null }) {
     const map = useMap();
 
-    // Auto-center on route or search
     useEffect(() => {
-        // If searching, find place and fly to it
-        if (searchQuery) {
-            const place = PLACES.find(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
-            if (place) {
-                map.flyTo([place.lat, place.lng], 16);
-                setRouteTo([place.lat, place.lng]); // Auto route
-            }
+        if (!routeTo) {
+            map.flyTo(userPos, 12); // Zoom level 12 shows roughly a 9km radius nicely
         }
-    }, [searchQuery, map]);
-
-    // Initial center on user or when userPos changes significantly
-    useEffect(() => {
-        map.flyTo(userPos, 15);
     }, [userPos]);
+
+    // Fly to selected place when clicked
+    useEffect(() => {
+        if (routeTo) {
+            map.flyTo(routeTo, 15, { duration: 1.2, easeLinearity: 0.25 });
+        }
+    }, [routeTo]);
 
     return null;
 }
@@ -168,6 +202,7 @@ export default function LiveMap({
     const [searchQuery, setSearchQuery] = useState(externalSearchQuery || "");
     const [searchResults, setSearchResults] = useState<any[]>([]); // Real Address Results
     const [isSearchFocused, setIsSearchFocused] = useState(false);
+    const [isSearchExpanded, setIsSearchExpanded] = useState(false);
     const [filterType, setFilterType] = useState<string | null>(externalFilterType || null);
     const [routeTo, setRouteTo] = useState<[number, number] | null>(null);
     const [routePath, setRoutePath] = useState<[number, number][]>([]);
@@ -181,9 +216,19 @@ export default function LiveMap({
         
         const fetchRealPlaces = async () => {
             try {
-                // Query Overpass API for veterinary, park, cafe, pet_shop within 5000m (5km) of userPos
-                const query = `[out:json][timeout:25];(node["amenity"="veterinary"](around:5000,${userPos[0]},${userPos[1]});node["leisure"="park"](around:5000,${userPos[0]},${userPos[1]});node["amenity"="cafe"](around:5000,${userPos[0]},${userPos[1]});node["shop"="pet"](around:5000,${userPos[0]},${userPos[1]}););out body;`;
-                const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
+                // Query Overpass API for veterinary, park, cafe, pet_shop within 9000m (9km) of userPos
+                // Using 'nwr' (node/way/relation) and 'out center' ensures we don't miss places mapped as buildings/areas!
+                const query = `[out:json][timeout:5];(nwr["amenity"="veterinary"](around:9000,${userPos[0]},${userPos[1]});nwr["leisure"="park"](around:9000,${userPos[0]},${userPos[1]});nwr["amenity"="cafe"](around:9000,${userPos[0]},${userPos[1]});nwr["shop"="pet"](around:9000,${userPos[0]},${userPos[1]}););out center;`;
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 seconds MAX wait
+                
+                const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`, {
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
                 if (!response.ok) throw new Error("Overpass query failed");
                 const data = await response.json();
                 
@@ -194,21 +239,41 @@ export default function LiveMap({
                         else if (el.tags.leisure === 'park') type = 'park';
                         else if (el.tags.shop === 'pet' || el.tags.amenity === 'pet_shop') type = 'shop';
                         
+                        const lat = el.lat || el.center?.lat;
+                        const lng = el.lon || el.center?.lon;
+
                         return {
                             id: String(el.id),
                             name: el.tags.name || (type === 'vet' ? 'Veteriner' : type === 'park' ? 'Park' : type === 'shop' ? 'Pet Shop' : 'Kafe'),
-                            lat: el.lat,
-                            lng: el.lon,
+                            lat: lat,
+                            lng: lng,
                             type: type as any,
                             isPremium: Math.random() > 0.85,
                             coinReward: Math.floor(Math.random() * 20) + 10
                         };
-                    });
+                    }).filter((el: any) => el.lat && el.lng); // Ensure we have valid coordinates
                     setPlacesList(mapped);
+                } else if (isMounted) {
+                    // Fallback to shifting mock PLACES to userPos if no real places found nearby
+                    const shiftedMock = PLACES.map((p, idx) => ({
+                        ...p,
+                        lat: userPos[0] + (Math.random() - 0.5) * 0.03, // Randomly spread within ~1.5km
+                        lng: userPos[1] + (Math.random() - 0.5) * 0.03,
+                        type: p.type === 'veteriner' ? 'vet' : p.type // Fix mock data type mapping if any
+                    }));
+                    setPlacesList(shiftedMock as any);
                 }
             } catch (err) {
                 console.error("OSM Places fetch error, falling back to mock:", err);
-                if (isMounted) setPlacesList(PLACES);
+                if (isMounted) {
+                    const shiftedMock = PLACES.map((p, idx) => ({
+                        ...p,
+                        lat: userPos[0] + (Math.random() - 0.5) * 0.03,
+                        lng: userPos[1] + (Math.random() - 0.5) * 0.03,
+                        type: p.type === 'veteriner' ? 'vet' : p.type
+                    }));
+                    setPlacesList(shiftedMock as any);
+                }
             }
         };
 
@@ -228,31 +293,16 @@ export default function LiveMap({
         if (externalFilterType !== undefined) setFilterType(externalFilterType);
     }, [externalFilterType]);
 
-    // REAL STREET ROUTING (OSRM)
+    // REAL STREET ROUTING (OSRM) - REMOVED (External Google Maps used instead for directions)
     useEffect(() => {
         if (!routeTo) {
             setRoutePath([]);
             return;
         }
-
-        const fetchRoute = async () => {
-            try {
-                // OSRM coordinates are [lng, lat]
-                const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${userPos[1]},${userPos[0]};${routeTo[1]},${routeTo[0]}?overview=full&geometries=geojson`);
-                const data = await res.json();
-                if (data.routes && data.routes[0]) {
-                    const coords = data.routes[0].geometry.coordinates.map((c: any) => [c[1], c[0]]);
-                    setRoutePath(coords);
-                }
-            } catch (e) {
-                console.error("Routing Error", e);
-                // Fallback to straight line
-                setRoutePath([userPos, routeTo]);
-            }
-        };
-
-        fetchRoute();
+        // Removed internal OSRM routing to reduce bloat as per Option 1
+        setRoutePath([userPos, routeTo]);
     }, [routeTo, userPos]);
+
 
     // Moffi World State
     const [marks, setMarks] = useState<MapMark[]>(MOCK_MARKS);
@@ -310,13 +360,18 @@ export default function LiveMap({
     }, [searchQuery]);
 
     // Handle Address Select
-    const handleSelectAddress = (lat: string, lon: string, name: string) => {
-        const latitude = parseFloat(lat);
-        const longitude = parseFloat(lon);
-        setRouteTo([latitude, longitude]);
-        setSearchResults([]);
-        setSearchQuery(name); // Update input to full name
+    const mapInstance = useRef<L.Map | null>(null);
+
+    const handleSelectAddress = (lat: string, lon: string, displayName: string) => {
+        const l = parseFloat(lat);
+        const lg = parseFloat(lon);
+        setRouteTo([l, lg]);
+        setSearchQuery(displayName);
         setIsSearchFocused(false);
+        // Explicitly fly to selected real address
+        if (mapInstance.current) {
+            mapInstance.current.flyTo([l, lg], 16);
+        }
     };
 
     // Filters
@@ -324,7 +379,7 @@ export default function LiveMap({
         { id: 'vet', label: 'Veteriner', icon: Stethoscope, color: 'text-red-500 bg-red-50' },
         { id: 'cafe', label: 'Kafe', icon: Coffee, color: 'text-orange-500 bg-orange-50' },
         { id: 'park', label: 'Park', icon: Trees, color: 'text-green-500 bg-green-50' },
-        { id: 'shop', label: 'Market', icon: ShoppingBag, color: 'text-purple-500 bg-purple-50' },
+        { id: 'shop', label: 'Pet Shop', icon: ShoppingBag, color: 'text-purple-500 bg-purple-50' },
     ];
 
     // Filtered Places (Real OSM Data with local mock fallback)
@@ -361,97 +416,135 @@ export default function LiveMap({
 
             {/* --- GOOGLE STYLE FLOATING UI --- */}
             {!hideInternalUI && (
-                <div className={cn("absolute top-24 left-4 right-4 z-[5000] flex flex-col gap-3 pointer-events-none transition-all duration-500", isTracking ? "translate-y-12" : "translate-y-0")}>
+                <div className="absolute top-[76px] left-6 right-6 z-[5000] flex items-center gap-4 pointer-events-none transition-all duration-500">
+                    
+                    {/* 1. SEARCH BAR (Expandable) */}
+                    <div className="relative z-[5001] pointer-events-auto flex justify-start">
+                        <div 
+                            className={cn(
+                                "bg-white/90 dark:bg-[#121215]/90 backdrop-blur-xl flex items-center transition-all duration-500 overflow-hidden shadow-lg",
+                                isSearchExpanded 
+                                    ? "w-[260px] md:w-[320px] rounded-2xl p-2.5" 
+                                    : "w-11 h-11 rounded-full justify-center cursor-pointer hover:bg-zinc-100 dark:hover:bg-[#18181b]"
+                            )}
+                            onClick={() => !isSearchExpanded && setIsSearchExpanded(true)}
+                        >
+                            <Search 
+                                className={cn(
+                                    "text-zinc-500 dark:text-zinc-400 shrink-0 transition-all", 
+                                    isSearchExpanded ? "w-4 h-4 mr-3 cursor-default" : "w-5 h-5 cursor-pointer"
+                                )} 
+                            />
+                            
+                            {isSearchExpanded && (
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    placeholder="Mekan veya adres ara..."
+                                    className="bg-transparent flex-1 outline-none text-xs font-bold text-zinc-850 dark:text-[#fafafa] placeholder-zinc-400 min-w-0"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onFocus={() => setIsSearchFocused(true)}
+                                    onBlur={() => {
+                                        setTimeout(() => {
+                                            setIsSearchFocused(false);
+                                            // Auto-collapse if empty and clicked outside
+                                            if (!searchQuery) setIsSearchExpanded(false);
+                                        }, 200);
+                                    }}
+                                />
+                            )}
+                            
+                            {isSearchExpanded && searchQuery && (
+                                <button onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    setSearchQuery(""); 
+                                    setRouteTo(null); 
+                                    setSearchResults([]); 
+                                }} className="p-1 hover:bg-zinc-100 dark:hover:bg-[#27272a] rounded-full shrink-0 ml-1 transition-colors">
+                                    <X className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                                </button>
+                            )}
 
-                {/* 1. SEARCH BAR */}
-                <div className="shadow-xl relative z-[5001] pointer-events-auto">
-                    <div className={cn("bg-card dark:bg-[#1A1A1A] rounded-2xl flex items-center p-3 transition-all border border-transparent", isSearchFocused ? "ring-2 ring-[#5B4D9D] border-[#5B4D9D]" : "border-card-border dark:border-card-border")}>
-                        <Search className="w-5 h-5 text-gray-500 dark:text-gray-400 mr-3" />
-                        <input
-                            type="text"
-                            placeholder="Mekan veya adres ara..."
-                            className="bg-transparent flex-1 outline-none text-sm font-medium text-foreground dark:text-white placeholder-gray-400"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            onFocus={() => setIsSearchFocused(true)}
-                            // Delay blur to allow click on results
-                            onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
-                        />
-                        {/* Current Location Quick Button (re-center) */}
-                        {searchQuery && <button onClick={() => { setSearchQuery(""); setRouteTo(null); setSearchResults([]); }} className="p-1 bg-gray-100 rounded-full"><div className="w-3 h-3 text-gray-500 px-1">✕</div></button>}
+                            {isSearchExpanded && !searchQuery && (
+                                <button onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsSearchExpanded(false);
+                                    setIsSearchFocused(false);
+                                }} className="p-1 hover:bg-zinc-100 dark:hover:bg-[#27272a] rounded-full shrink-0 ml-1 transition-colors">
+                                    <X className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* SEARCH RESULTS DROPDOWN */}
+                        {isSearchFocused && searchResults.length > 0 && isSearchExpanded && (
+                            <div className="absolute top-[calc(100%+8px)] left-0 w-[260px] md:w-[320px] bg-white dark:bg-[#121215] rounded-2xl shadow-2xl border border-zinc-200 dark:border-[#27272a] overflow-hidden">
+                                {searchResults.map((result: any, i) => (
+                                    <button
+                                        key={i}
+                                        onClick={() => handleSelectAddress(result.lat, result.lon, result.display_name)}
+                                        className="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-zinc-50 dark:hover:bg-[#18181b] border-b last:border-0 border-zinc-100 dark:border-[#27272a] transition-colors"
+                                    >
+                                        <div className="mt-0.5 min-w-[16px]"><MapPin className="w-3.5 h-3.5 text-zinc-400" /></div>
+                                        <div className="text-xs font-bold text-zinc-800 dark:text-[#fafafa] line-clamp-2">
+                                            {result.display_name}
+                                        </div>
+                                    </button>
+                                ))}
+                                <div className="bg-zinc-50 dark:bg-[#0b0c0f] px-4 py-2 text-[9px] text-center text-zinc-400 font-black uppercase tracking-widest">
+                                    Nominatim ile sonuçlar
+                                </div>
+                            </div>
+                        )}
                     </div>
 
-                    {/* SEARCH RESULTS DROPDOWN */}
-                    {isSearchFocused && searchResults.length > 0 && (
-                        <div className="absolute top-full left-0 right-0 mt-2 bg-card dark:bg-[#1A1A1A] rounded-2xl shadow-2xl border border-card-border dark:border-card-border overflow-hidden">
-                            {searchResults.map((result: any, i) => (
+                    {/* 2. FILTER CHIPS (Text-only minimalist) */}
+                    {!isSearchExpanded && isTracking && (
+                        <div className="flex gap-5 overflow-x-auto no-scrollbar pointer-events-auto items-center pl-2">
+                            <button
+                                onClick={() => setFilterType(null)}
+                                className={cn("text-[10px] font-black uppercase tracking-wider transition-all drop-shadow-md hover:text-indigo-500 flex flex-col items-center gap-1", 
+                                    !filterType ? "text-indigo-600 dark:text-indigo-400 scale-105" : "text-zinc-700 dark:text-zinc-100"
+                                )}
+                            >
+                                <span>Tümü</span>
+                                {!filterType && <div className="w-1 h-1 rounded-full bg-indigo-600 dark:bg-indigo-400" />}
+                            </button>
+                            
+                            {filters.map(f => (
                                 <button
-                                    key={i}
-                                    onClick={() => handleSelectAddress(result.lat, result.lon, result.display_name)}
-                                    className="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-black/5 dark:bg-white/5 border-b last:border-0 border-card-border dark:border-card-border transition-colors"
+                                    key={f.id}
+                                    onClick={() => setFilterType(filterType === f.id ? null : f.id)}
+                                    className={cn("text-[10px] font-black uppercase tracking-wider transition-all drop-shadow-md hover:text-indigo-500 flex flex-col items-center gap-1",
+                                        filterType === f.id ? "text-indigo-600 dark:text-indigo-400 scale-105" : "text-zinc-700 dark:text-zinc-100"
+                                    )}
                                 >
-                                    <div className="mt-1 min-w-[16px]"><MapPin className="w-4 h-4 text-gray-500 dark:text-gray-400" /></div>
-                                    <div className="text-sm text-foreground dark:text-gray-200 line-clamp-2">
-                                        {result.display_name}
+                                    <div className="flex items-center gap-1.5">
+                                        <f.icon className="w-3.5 h-3.5" />
+                                        <span>{f.label}</span>
                                     </div>
+                                    {filterType === f.id && <div className="w-1 h-1 rounded-full bg-indigo-600 dark:bg-indigo-400" />}
                                 </button>
                             ))}
-                            <div className="bg-gray-50 dark:bg-black/50 px-4 py-2 text-[10px] text-center text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">
-                                Nominatim ile sonuçlar
-                            </div>
                         </div>
                     )}
                 </div>
-
-                {/* 2. FILTER CHIPS (Only in Tracking Mode) */}
-                {isTracking && (
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar pointer-events-auto pb-2 pl-1">
-                        <button
-                            onClick={() => setFilterType(null)}
-                            className={cn("px-4 py-2 rounded-full text-xs font-bold shadow-sm border whitespace-nowrap transition-colors", !filterType ? "bg-[#5B4D9D] text-white border-transparent" : "bg-card text-gray-600 border-card-border")}
-                        >
-                            Tümü
-                        </button>
-                        {filters.map(f => (
-                            <button
-                                key={f.id}
-                                onClick={() => setFilterType(filterType === f.id ? null : f.id)}
-                                className={cn("px-3 py-2 rounded-full text-xs font-bold shadow-sm border flex items-center gap-1.5 whitespace-nowrap transition-colors bg-card",
-                                    filterType === f.id ? "ring-2 ring-[#5B4D9D] border-[#5B4D9D]" : "border-card-border"
-                                )}
-                            >
-                                <f.icon className={cn("w-3.5 h-3.5", f.color.split(' ')[0])} />
-                                {f.label}
-                            </button>
-                        ))}
-                    </div>
-                )}
-                </div>
             )}
 
-            {/* 3. SOS & LOCATION BUTTONS (Bottom Right) */}
+            {/* 3. LOCATION BUTTONS (Bottom Right) - SOS Button removed for simplicity */}
             <div className="absolute bottom-24 right-4 z-[500] flex flex-col gap-3 pointer-events-auto">
-                {/* SOS: Find nearest Vet */}
-                <button
-                    onClick={() => {
-                        setFilterType('vet');
-                        setSearchQuery("Vet"); // Hack to trigger search/fly logic for nearest
-                        // In real app: calculate nearest and route
-                    }}
-                    className="w-12 h-12 bg-red-500 rounded-full text-white shadow-xl shadow-red-500/30 flex items-center justify-center animate-pulse-slow"
-                >
-                    <AlertCircle className="w-6 h-6" />
-                </button>
+                {/* Future location control buttons can go here */}
             </div>
 
 
             <MapContainer
                 center={userPos}
                 zoom={15}
-                style={{ width: "100%", height: "100%" }}
                 zoomControl={false}
+                ref={mapInstance}
                 doubleClickZoom={false}
-                className={cn("bg-gray-100 dark:bg-[#111] transition-all duration-1000", guardianMode && "grayscale brightness-50 contrast-125 sepia-[.3]")}
+                className={cn("w-full h-full z-0 bg-gray-100 dark:bg-[#111] transition-all duration-1000", guardianMode && "grayscale brightness-50 contrast-125 sepia-[.3]")}
             >
                 {guardianMode && <GuardianStatusOverlay />}
                 <TileLayer
@@ -482,16 +575,7 @@ export default function LiveMap({
                             iconSize: [40, 40],
                             iconAnchor: [20, 20]
                         })}
-                    >
-                        <Popup className="custom-popup">
-                            <div className="p-1 min-w-[120px]">
-                                <h3 className="font-bold text-xs text-foreground">Hedef Konum</h3>
-                                <p className="text-[9px] text-gray-500 font-semibold mt-0.5">
-                                    {customTargetClaimed ? 'Ödül Kazanıldı! 🎉' : 'Ödülü almak için buraya ulaş! 🐾'}
-                                </p>
-                            </div>
-                        </Popup>
-                    </Marker>
+                    />
                 )}
 
                 {/* Guideline to custom target */}
@@ -502,18 +586,12 @@ export default function LiveMap({
                     />
                 )}
 
-                {/* ROUTES (Navigation Line) */}
-                {routePath.length > 0 && (
-                    <>
-                        <Polyline
-                            positions={routePath}
-                            pathOptions={{ color: '#60a5fa', weight: 12, opacity: 0.25, lineCap: 'round' }}
-                        />
-                        <Polyline
-                            positions={routePath}
-                            pathOptions={{ color: '#3B82F6', weight: 6, opacity: 0.9, lineCap: 'round' }}
-                        />
-                    </>
+                {/* ROUTES (Navigation Line - Dashed Guideline) */}
+                {routeTo && (
+                    <Polyline
+                        positions={[userPos, routeTo]}
+                        pathOptions={{ color: '#6366f1', weight: 4, opacity: 0.8, dashArray: '8, 12', lineCap: 'round' }}
+                    />
                 )}
 
                 {/* Tracking Path */}
@@ -533,11 +611,13 @@ export default function LiveMap({
                 {/* VISIBLE PLACES */}
                 {displayedPlaces.map((place) => {
                     const isVisited = visitedPlaceIds.includes(place.id);
+                    const isSelected = routeTo?.[0] === place.lat && routeTo?.[1] === place.lng;
+                    const anySelected = routeTo !== null;
                     return (
                         <Marker
                             key={place.id}
                             position={[place.lat, place.lng]}
-                            icon={createCustomIcon(place.type, place.isPremium, isVisited)}
+                            icon={createCustomIcon(place.type, place.isPremium, isVisited, isSelected, anySelected)}
                             eventHandlers={{
                                 click: () => {
                                     setRouteTo([place.lat, place.lng]);
@@ -545,12 +625,21 @@ export default function LiveMap({
                                 }
                             }}
                         >
-                            <Popup className="custom-popup">
-                                <div className="p-1 min-w-[180px]">
-                                    <h3 className="font-bold text-sm text-foreground">{place.name}</h3>
-                                    <div className="text-blue-500 text-xs font-bold mt-1 flex items-center gap-1 cursor-pointer" onClick={() => setRouteTo([place.lat, place.lng])}>
-                                        <Navigation className="w-3 h-3" /> Yol Tarifi
+                            <Popup className="minimal-glass-popup" closeButton={false} offset={[0, -20]}>
+                                <div className="flex flex-col gap-2 min-w-[140px] items-center p-1">
+                                    <div className="font-black text-xs text-zinc-800 text-center leading-tight">
+                                        {place.name}
                                     </div>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            window.open(`https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`, '_blank');
+                                        }}
+                                        className="w-full bg-indigo-500 hover:bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest py-2 rounded-lg shadow-md transition-colors flex items-center justify-center gap-1.5"
+                                    >
+                                        <Navigation className="w-3 h-3" />
+                                        Yol Tarifi
+                                    </button>
                                 </div>
                             </Popup>
                         </Marker>
@@ -563,28 +652,13 @@ export default function LiveMap({
                         key={marker.id}
                         position={[marker.lat, marker.lng]}
                         icon={createCustomIcon(marker.type === 'lost' ? 'vet' : marker.type === 'friend' ? 'social' : marker.type, false, false)}
-                    >
-                        <Popup className="custom-popup">
-                            <div className="p-2 min-w-[150px]">
-                                <div className="flex items-center gap-2 mb-2">
-                                    {marker.img && <img src={marker.img} className="w-8 h-8 rounded-full object-cover border border-card-border" />}
-                                    <div>
-                                        <h3 className="font-bold text-sm text-foreground">{marker.title}</h3>
-                                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
-                                            {marker.type === 'lost' ? '⚠️ KAYIP ALARMI' : '👤 MOFFI DOSTU'}
-                                        </p>
-                                    </div>
-                                </div>
-                                {marker.desc && <p className="text-xs text-gray-600 mb-2">{marker.desc}</p>}
-                                <button 
-                                    onClick={() => setRouteTo([marker.lat, marker.lng])}
-                                    className="w-full py-1.5 bg-blue-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-1"
-                                >
-                                    <Navigation className="w-3 h-3" /> Yol Tarifi
-                                </button>
-                            </div>
-                        </Popup>
-                    </Marker>
+                        eventHandlers={{
+                            click: () => {
+                                setRouteTo([marker.lat, marker.lng]);
+                                if (onPlaceClick) onPlaceClick(marker);
+                            }
+                        }}
+                    />
                 ))}
 
                 {/* USER POSITION */}

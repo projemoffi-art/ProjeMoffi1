@@ -217,7 +217,7 @@ export class SupabaseApiService implements IApiService {
             const { data: likes } = await supabase
                 .from('likes')
                 .select('post_id')
-                .eq('user_id', user.id);
+                .eq('viewer_id', user.id);
             userLikes = likes || [];
         }
 
@@ -427,7 +427,7 @@ export class SupabaseApiService implements IApiService {
                         .from('likes')
                         .select('id')
                         .eq('post_id', postId)
-                        .eq('user_id', user.id);
+                        .eq('viewer_id', user.id);
 
                     if (selectError) {
                         console.error("Supabase likes select error:", selectError);
@@ -436,7 +436,7 @@ export class SupabaseApiService implements IApiService {
                     }
 
                     if (existings && existings.length > 0) {
-                        const { error: deleteError } = await supabase.from('likes').delete().eq('post_id', postId).eq('user_id', user.id);
+                        const { error: deleteError } = await supabase.from('likes').delete().eq('post_id', postId).eq('viewer_id', user.id);
                         if (!deleteError) {
                             const { data: pData } = await supabase.from('posts').select('likes_count').eq('id', postId).maybeSingle();
                             if (pData) {
@@ -533,7 +533,7 @@ export class SupabaseApiService implements IApiService {
                         .from('comment_likes')
                         .select('comment_id')
                         .in('comment_id', commentIds)
-                        .eq('user_id', user.id);
+                        .eq('viewer_id', user.id);
                         
                     if (likesData) {
                         likesData.forEach(l => likedCommentIds.add(l.comment_id));
@@ -695,7 +695,7 @@ export class SupabaseApiService implements IApiService {
                         .from('comment_likes')
                         .select('id')
                         .eq('comment_id', commentId)
-                        .eq('user_id', user.id);
+                        .eq('viewer_id', user.id);
 
                     if (selectError) {
                         console.error("Supabase comment_likes select error:", selectError);
@@ -703,7 +703,7 @@ export class SupabaseApiService implements IApiService {
                     }
 
                     if (existings && existings.length > 0) {
-                        const { error: deleteError } = await supabase.from('comment_likes').delete().eq('comment_id', commentId).eq('user_id', user.id);
+                        const { error: deleteError } = await supabase.from('comment_likes').delete().eq('comment_id', commentId).eq('viewer_id', user.id);
                         if (!deleteError) {
                             const { data } = await supabase.from('comments').select('likes_count').eq('id', commentId).maybeSingle();
                             await supabase.from('comments').update({ likes_count: Math.max(0, (data?.likes_count || 0) - existings.length) }).eq('id', commentId);
@@ -957,7 +957,7 @@ export class SupabaseApiService implements IApiService {
             .from('lost_pets')
             .delete()
             .eq('id', id)
-            .eq('user_id', user.id);
+            .eq('viewer_id', user.id);
             
         if (error) throw error;
     }
@@ -1046,7 +1046,7 @@ export class SupabaseApiService implements IApiService {
             .from('adoption_pets')
             .delete()
             .eq('id', id)
-            .eq('user_id', user.id);
+            .eq('viewer_id', user.id);
             
         if (error) throw error;
     }
@@ -1359,7 +1359,7 @@ export class SupabaseApiService implements IApiService {
         const user = await this.getSessionUser();
         if (user) {
             try {
-                await supabase.from('posts').delete().eq('id', postId).eq('user_id', user.id);
+                await supabase.from('posts').delete().eq('id', postId).eq('viewer_id', user.id);
             } catch {}
         }
 
@@ -1379,7 +1379,7 @@ export class SupabaseApiService implements IApiService {
         const user = await this.getSessionUser();
         if (user) {
             try {
-                await supabase.from('posts').update(updates).eq('id', postId).eq('user_id', user.id);
+                await supabase.from('posts').update(updates).eq('id', postId).eq('viewer_id', user.id);
             } catch {}
         }
 
@@ -1435,7 +1435,7 @@ export class SupabaseApiService implements IApiService {
         const { data, error } = await supabase
             .from('cart_items')
             .select('*')
-            .eq('user_id', user.id);
+            .eq('viewer_id', user.id);
 
         if (error) return [];
 
@@ -1497,7 +1497,7 @@ export class SupabaseApiService implements IApiService {
         await supabase
             .from('cart_items')
             .delete()
-            .eq('user_id', user.id);
+            .eq('viewer_id', user.id);
     }
 
     async getOrders(): Promise<ShopOrder[]> {
@@ -1570,7 +1570,7 @@ export class SupabaseApiService implements IApiService {
                 *,
                 product:products(*)
             `)
-            .eq('user_id', user.id);
+            .eq('viewer_id', user.id);
 
         if (error) return [];
         
@@ -2111,7 +2111,7 @@ export class SupabaseApiService implements IApiService {
             .from('appointments')
             .update({ status: 'cancelled' })
             .eq('id', appointmentId)
-            .eq('user_id', user.id);
+            .eq('viewer_id', user.id);
 
         if (error) throw error;
     }
@@ -2503,6 +2503,21 @@ export class SupabaseApiService implements IApiService {
             profilesData.forEach(p => profilesMap.set(p.id, p));
         }
 
+        const sessionUser = await this.getSessionUser();
+        const myViewsMap = new Map();
+        if (sessionUser && data.length > 0) {
+            const storyIds = data.map(s => s.id);
+            const { data: views } = await supabase
+                .from('story_views')
+                .select('story_id, is_liked')
+                .eq('viewer_id', sessionUser.id)
+                .in('story_id', storyIds);
+            
+            if (views) {
+                views.forEach(v => myViewsMap.set(v.story_id, v.is_liked));
+            }
+        }
+
         return data.map(s => {
             const user = profilesMap.get(s.user_id);
             return {
@@ -2513,9 +2528,63 @@ export class SupabaseApiService implements IApiService {
                 imageUrl: s.image_url,
                 caption: s.caption,
                 viewCount: s.view_count,
-                expiresAt: s.expires_at
+                expiresAt: s.expires_at,
+                isLiked: myViewsMap.get(s.id) || false
             };
         });
+    }
+
+    async toggleStoryLike(storyId: string): Promise<boolean> {
+        const user = await this.getSessionUser();
+        if (!user) return false;
+        
+        try {
+            await supabase.from('story_views').upsert({ story_id: storyId, viewer_id: user.id }, { onConflict: 'story_id,viewer_id', ignoreDuplicates: true });
+            const { data } = await supabase.from('story_views').select('is_liked').eq('story_id', storyId).eq('viewer_id', user.id).single();
+            const newLiked = !(data?.is_liked);
+            await supabase.from('story_views').update({ is_liked: newLiked }).eq('story_id', storyId).eq('viewer_id', user.id);
+            return newLiked;
+        } catch(e) {
+            console.error("Error toggling story like:", e);
+            return false;
+        }
+    }
+
+    async getStoryViewers(storyId: string): Promise<any[]> {
+        const { data: viewsData, error: viewsError } = await supabase
+            .from('story_views')
+            .select('viewer_id, is_liked, viewed_at')
+            .eq('story_id', storyId)
+            .order('viewed_at', { ascending: false });
+
+        if (viewsError) {
+            console.error("getStoryViewers error:", viewsError);
+            return [];
+        }
+        if (!viewsData || viewsData.length === 0) return [];
+
+        const viewerIds = [...new Set(viewsData.map(v => v.viewer_id))];
+        const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('id, full_name, username, avatar_url')
+            .in('id', viewerIds);
+        
+        const profilesMap = new Map();
+        if (profilesData) {
+            profilesData.forEach(p => profilesMap.set(p.id, p));
+        }
+
+        return viewsData.map(row => {
+            const profile = profilesMap.get(row.viewer_id);
+            if (!profile) return null;
+            return {
+                id: profile.id,
+                name: profile.full_name || profile.username || 'Kullanıcı',
+                username: profile.username || '',
+                avatar: profile.avatar_url || '',
+                is_liked: row.is_liked
+            };
+        }).filter(Boolean);
     }
 
     async addStory(storyData: any): Promise<void> {
@@ -2534,7 +2603,66 @@ export class SupabaseApiService implements IApiService {
         if (error) throw error;
     }
 
+    async deleteStory(storyId: string): Promise<void> {
+        const user = await this.getSessionUser();
+        if (!user) throw new Error('Giriş gerekli');
+
+        const { error } = await supabase
+            .from('stories')
+            .delete()
+            .eq('id', storyId)
+            .eq('viewer_id', user.id);
+
+        if (error) throw error;
+    }
+
+    async markStoryAsViewed(storyId: string): Promise<void> {
+        const user = await this.getSessionUser();
+        if (!user) return; 
+
+        const { error } = await supabase
+            .from('story_views')
+            .upsert({ viewer_id: user.id, story_id: storyId }, { onConflict: 'viewer_id,story_id' });
+        
+        if (error) console.error("Error marking story as viewed:", error);
+    }
+
+    async getViewedStoryIds(): Promise<string[]> {
+        const user = await this.getSessionUser();
+        if (!user) return [];
+
+        const { data, error } = await supabase
+            .from('story_views')
+            .select('story_id')
+            .eq('viewer_id', user.id);
+            
+        if (error) {
+            console.error("Error fetching viewed stories:", error);
+            return [];
+        }
+        
+        return data.map(v => v.story_id);
+    }
+
     getPostReactions = (id: any) => this.mockApi.getPostReactions(id);
+
+    async getPostLikers(postId: number): Promise<any[]> {
+        const { data, error } = await supabase
+            .from('post_likes')
+            .select(`
+                user_id,
+                profiles:user_id(id, full_name, username, avatar_url)
+            `)
+            .eq('post_id', postId)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error("getPostLikers error:", error);
+            return [];
+        }
+        
+        return (data || []).map(row => Array.isArray(row.profiles) ? row.profiles[0] : row.profiles).filter(Boolean);
+    }
 
     // --- SOSYAL AKSİYONLAR ---
     async followUser(targetId: string): Promise<void> {

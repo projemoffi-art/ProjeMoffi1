@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { SupabaseApiService } from '@/services/supabaseApiService';
 const supabaseService = new SupabaseApiService();
 import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 export interface Story {
     id: string;
@@ -29,6 +30,8 @@ export function useUserStories() {
         setIsLoading(true);
         try {
             const rawStories = await supabaseService.getStories();
+            const viewedIds = await supabaseService.getViewedStoryIds();
+            const viewedSet = new Set(viewedIds);
             
             // Group stories by userId
             const groupsMap = new Map<string, UserStoryGroup>();
@@ -40,7 +43,7 @@ export function useUserStories() {
                         author_name: s.userName,
                         author_avatar: s.userAvatar,
                         stories: [],
-                        hasUnseen: true // Simplified logic, usually checked against viewed status
+                        hasUnseen: false
                     });
                 }
                 
@@ -50,8 +53,16 @@ export function useUserStories() {
                     created_at: s.created_at || new Date().toISOString(),
                     title: '',
                     description: s.caption || '',
-                    badge: 'Hikaye'
+                    badge: 'Hikaye',
+                    isLiked: s.isLiked || false,
+                    viewCount: s.viewCount || 0,
+                    isViewed: viewedSet.has(s.id)
                 });
+            });
+
+            // Evaluate hasUnseen for each group
+            groupsMap.forEach(group => {
+                group.hasUnseen = group.stories.some(st => !st.isViewed);
             });
 
             // Sort so current user is first if they have stories
@@ -74,6 +85,20 @@ export function useUserStories() {
 
     useEffect(() => {
         fetchStories();
+
+        const channel = supabase.channel('public:stories')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'stories' },
+                () => {
+                    fetchStories();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [fetchStories]);
 
     const uploadStory = async (file: File) => {
@@ -96,10 +121,69 @@ export function useUserStories() {
         }
     };
 
+    const deleteStory = async (storyId: string) => {
+        try {
+            await supabaseService.deleteStory(storyId);
+            await fetchStories();
+            return { success: true };
+        } catch (error: any) {
+            console.error('Error deleting story:', error);
+            return { success: false, error: error.message };
+        }
+    };
+
+    const markStoryAsViewed = async (storyId: string) => {
+        try {
+            await supabaseService.markStoryAsViewed(storyId);
+            setStoryGroups(prev => prev.map(g => {
+                let changed = false;
+                const newStories = g.stories.map(s => {
+                    if (s.id === storyId && !s.isViewed) {
+                        changed = true;
+                        return { ...s, isViewed: true };
+                    }
+                    return s;
+                });
+                if (changed) {
+                    const hasUnseen = newStories.some(s => !s.isViewed);
+                    return { ...g, stories: newStories, hasUnseen };
+                }
+                return g;
+            }));
+        } catch (error) {
+            console.error('Error marking story as viewed:', error);
+        }
+    };
+
+    const toggleStoryLike = async (storyId: string) => {
+        try {
+            const newLikedState = await supabaseService.toggleStoryLike(storyId);
+            
+            // Optimistically update the UI
+            setStoryGroups(prev => prev.map(group => ({
+                ...group,
+                stories: group.stories.map(story => {
+                    if (story.id === storyId) {
+                        return { ...story, isLiked: newLikedState };
+                    }
+                    return story;
+                })
+            })));
+            
+            return { success: true, newLikedState };
+        } catch (error: any) {
+            console.error('Error toggling story like:', error);
+            return { success: false, error: error.message };
+        }
+    };
+
     return {
         storyGroups,
         isLoading,
         uploadStory,
-        refreshStories: fetchStories
+        refreshStories: fetchStories,
+        deleteStory,
+        markStoryAsViewed,
+        toggleStoryLike
     };
 }

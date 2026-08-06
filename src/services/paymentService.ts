@@ -13,13 +13,29 @@ export const paymentService = {
    * Initializes a subscription checkout session (Iyzico / RevenueCat prep).
    */
   async createSubscriptionCheckout(planId: string, userId: string) {
-    console.log(`[Iyzico/RevenueCat] Initializing checkout for plan ${planId}, user ${userId}`);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    return {
-      success: true,
-      token: "sub_tok_" + Math.random().toString(36).substring(7),
-      checkoutUrl: "https://pay.moffi.com/checkout/simulate"
-    };
+    console.log(`[PayTR Subscription] Initializing checkout for plan ${planId}`);
+    try {
+      const response = await fetch("/api/paytr/subscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Abonelik ödemesi başlatılamadı.");
+      }
+
+      return {
+        success: true,
+        token: data.token,
+        orderId: data.orderId
+      };
+    } catch (error: any) {
+      console.error("Subscription checkout error:", error);
+      return { success: false, error: error.message };
+    }
   },
 
   /**
@@ -27,21 +43,13 @@ export const paymentService = {
    */
   async completeSubscription(userId: string, planId: string): Promise<PaymentResult> {
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ 
-          is_prime: true, 
-          subscription_tier: planId,
-          prime_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          cancel_at_period_end: false
-        })
-        .eq('id', userId);
-
-      if (profileError) throw profileError;
-
-      return { success: true, orderId: "SUB-" + Math.random().toString(36).substring(7).toUpperCase() };
+      // SECURITY FIX: Client-side subscription completion is disabled to prevent spoofing.
+      // Do NOT set is_prime = true directly from the browser.
+      // This MUST be handled exclusively via the PayTR Server-Side Webhook.
+      
+      console.error("CRITICAL: Attempted to call completeSubscription from client. This is disabled for security.");
+      throw new Error("Client-side subscription completion is strictly prohibited. Please wait for the server webhook to process your payment.");
+      
     } catch (error: any) {
       console.error("Subscription completion error:", error);
       return { success: false, error: error.message };

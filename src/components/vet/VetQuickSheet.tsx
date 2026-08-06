@@ -121,7 +121,7 @@ export function VetQuickSheet({ isOpen, onClose, petId = "pet-1" }: VetQuickShee
                                                 <Phone className="w-4 h-4 fill-current" /> Ara
                                             </button>
                                             <button 
-                                                onClick={(e) => { e.stopPropagation(); window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(nearestClinic.name)}`, '_blank'); }}
+                                                onClick={(e) => { e.stopPropagation(); window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(nearestClinic.name)}`, '_blank'); }}
                                                 className="flex-1 bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-card-border text-zinc-700 dark:text-white h-12 rounded-xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-zinc-200 dark:hover:bg-black/10 dark:bg-white/10 active:scale-95 transition-all"
                                             >
                                                 <Navigation className="w-4 h-4" /> Yol Tarifi

@@ -75,6 +75,21 @@ export function ImmersivePostCard({
     const [isVideoLoading, setIsVideoLoading] = useState(true);
     const [videoProgress, setVideoProgress] = useState(0);
     const [activeBadgeInfo, setActiveBadgeInfo] = useState<'verified' | 'premium' | 'walker' | 'sos' | null>(null);
+    const [likers, setLikers] = useState<any[]>([]);
+    const [showLikersModal, setShowLikersModal] = useState(false);
+    const [isLoadingLikers, setIsLoadingLikers] = useState(false);
+
+    useEffect(() => {
+        if (post?.id && post.likes > 0) {
+            setIsLoadingLikers(true);
+            apiService.getPostLikers(post.id).then(data => {
+                setLikers(data || []);
+                setIsLoadingLikers(false);
+            }).catch(() => setIsLoadingLikers(false));
+        } else {
+            setLikers([]);
+        }
+    }, [post?.id, post?.likes]);
     const videoRef = React.useRef<HTMLVideoElement>(null);
     const containerRef = React.useRef<HTMLDivElement>(null);
     const { stories } = useSocial();
@@ -483,7 +498,7 @@ export function ImmersivePostCard({
             <div className="p-4 px-5">
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                        <button onClick={handleDoubleTap} className="p-2 -ml-2 text-gray-600 dark:text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-all group">
+                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onLike?.(); }} className="p-2 -ml-2 text-gray-600 dark:text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-all group">
                             <Heart strokeWidth={1.25} className={cn("w-[22px] h-[22px] transition-transform group-hover:scale-105 group-active:scale-95", post.isLiked ? "fill-red-500 text-red-500" : "")} />
                         </button>
                         <button onClick={() => allowComments ? setShowComments(true) : null} className={cn("p-2 text-gray-600 dark:text-gray-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-full transition-all group", !allowComments && "opacity-50")}>
@@ -503,14 +518,19 @@ export function ImmersivePostCard({
                 <div className="text-[14px] flex flex-col gap-1.5">
                     {post.likes > 0 && (
                         <div className="flex items-center gap-2 cursor-pointer group">
-                            <div className="flex flex-row -space-x-1.5">
-                                {[...Array(Math.min(3, post.likes))].map((_, i) => (
+                            <div className="flex flex-row -space-x-1.5" onClick={() => setShowLikersModal(true)}>
+                                {likers.slice(0, 3).map((liker, i) => (
                                     <div key={i} className="w-[18px] h-[18px] rounded-full ring-2 ring-white dark:ring-[#121212] overflow-hidden relative z-[3] group-hover:-space-x-1 transition-all duration-300">
-                                        <img src={`https://i.pravatar.cc/100?img=${(post.id?.toString().charCodeAt(0) || 0) + i + 10}`} className="w-full h-full object-cover" />
+                                        <img src={liker?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100"} className="w-full h-full object-cover" />
+                                    </div>
+                                ))}
+                                {likers.length === 0 && post.likes > 0 && [...Array(Math.min(3, post.likes))].map((_, i) => (
+                                    <div key={i} className="w-[18px] h-[18px] rounded-full ring-2 ring-white dark:ring-[#121212] overflow-hidden relative z-[3] group-hover:-space-x-1 transition-all duration-300">
+                                        <div className="w-full h-full bg-gray-200 dark:bg-gray-800 animate-pulse" />
                                     </div>
                                 ))}
                             </div>
-                            <span className="font-bold text-[13px] tracking-tight text-gray-900 dark:text-gray-100">
+                            <span className="font-bold text-[13px] tracking-tight text-gray-900 dark:text-gray-100" onClick={() => setShowLikersModal(true)}>
                                 {post.likes.toLocaleString()} beğenme
                             </span>
                         </div>
@@ -566,18 +586,32 @@ export function ImmersivePostCard({
                                     </div>
                                 ) : (
                                     comments.map((c: any) => (
-                                        <div key={c.id} className="flex gap-3 group/comment">
-                                            <img src={c.user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100"} className="w-10 h-10 rounded-full shrink-0 border-2 border-gray-100 dark:border-white/10 shadow-sm" />
+                                        <div key={c.id} className="flex gap-3 group/comment relative">
+                                            <img src={c.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100"} className="w-10 h-10 rounded-full shrink-0 border-2 border-gray-100 dark:border-white/10 shadow-sm" />
                                             <div className="flex-1">
                                                 <div className="flex items-baseline gap-2">
-                                                    <span className="font-bold text-[14px] tracking-tight text-gray-900 dark:text-gray-100">{c.user?.username || "kullanici"}</span>
-                                                    <span className="text-[11px] font-medium text-gray-400">1s</span>
+                                                    <span className="font-bold text-[14px] tracking-tight text-gray-900 dark:text-gray-100">{typeof c.user === 'string' ? c.user : (c.user?.username || c.user?.full_name || "Kullanıcı")}</span>
+                                                    <span className="text-[11px] font-medium text-gray-400">{c.time || 'Şimdi'}</span>
                                                 </div>
                                                 <p className="text-[14px] text-gray-700 dark:text-gray-300 leading-relaxed mt-0.5">{filterContent(c.text)}</p>
+                                                <div className="flex items-center gap-4 mt-2">
+                                                    <button 
+                                                        onClick={() => onToggleCommentLike && onToggleCommentLike(c.id)}
+                                                        className={`flex items-center gap-1 text-[12px] font-medium transition-colors ${c.isLiked ? 'text-green-500' : 'text-gray-400 hover:text-green-600 dark:hover:text-green-400'}`}
+                                                    >
+                                                        <Heart className={`w-3.5 h-3.5 ${c.isLiked ? 'fill-current' : ''}`} />
+                                                        <span>{c.likes || 0}</span>
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <button className="text-gray-400 hover:text-red-500 opacity-0 group-hover/comment:opacity-100 transition-all p-2 active:scale-95">
-                                                <Heart className="w-4 h-4" />
-                                            </button>
+                                            {(c.user_id === currentUser?.id || c.userId === currentUser?.id) && (
+                                                <button 
+                                                    onClick={() => onDeleteComment && onDeleteComment(c.id)}
+                                                    className="absolute top-0 right-0 text-gray-400 hover:text-red-500 opacity-0 group-hover/comment:opacity-100 transition-all p-2 active:scale-95"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            )}
                                         </div>
                                     ))
                                 )}
@@ -707,6 +741,68 @@ export function ImmersivePostCard({
                                     </>
                                 )}
                                 <button onClick={() => setIsMoreOpen(false)} className="w-full p-4 font-bold text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors text-[15px] tracking-tight mt-2 active:scale-95">İptal</button>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+            {/* LIKERS MODAL */}
+            <AnimatePresence>
+                {showLikersModal && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[250] bg-black/60 backdrop-blur-sm"
+                            onClick={() => setShowLikersModal(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, y: "100%" }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: "100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                            className="fixed bottom-0 left-0 right-0 z-[260] bg-[var(--background)] rounded-t-3xl border-t border-black/10 dark:border-white/10 shadow-2xl max-h-[80vh] flex flex-col"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex justify-center p-3 shrink-0">
+                                <div className="w-12 h-1.5 bg-black/10 dark:bg-white/20 rounded-full" />
+                            </div>
+                            <div className="px-5 pb-3 border-b border-black/10 dark:border-white/10 shrink-0 flex items-center justify-between">
+                                <h3 className="font-black text-lg text-[var(--foreground)] tracking-tight">Beğenenler</h3>
+                                <button onClick={() => setShowLikersModal(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-black/5 dark:bg-white/5 active:scale-95 transition-transform text-[var(--foreground)]">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 pb-10">
+                                {isLoadingLikers ? (
+                                    <div className="flex flex-col items-center justify-center py-10 gap-3 text-[var(--secondary-text)]">
+                                        <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+                                        <p className="text-sm font-medium">Yükleniyor...</p>
+                                    </div>
+                                ) : likers.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-10 gap-3 text-[var(--secondary-text)]">
+                                        <Heart className="w-10 h-10 opacity-20" />
+                                        <p className="text-sm font-medium">Henüz kimse beğenmemiş.</p>
+                                    </div>
+                                ) : (
+                                    likers.map((liker: any) => (
+                                        <div key={liker.id} className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <img src={liker.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100"} className="w-12 h-12 rounded-full object-cover border border-black/5 dark:border-white/5" />
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-sm text-[var(--foreground)]">{liker.username || liker.full_name || 'Kullanıcı'}</span>
+                                                    {liker.full_name && liker.username && <span className="text-xs text-[var(--secondary-text)]">{liker.full_name}</span>}
+                                                </div>
+                                            </div>
+                                            {liker.id !== currentUser?.id && (
+                                                <button className="px-4 py-1.5 bg-[var(--primary)] text-white font-bold text-[13px] rounded-full active:scale-95 transition-transform hover:opacity-90">
+                                                    Takip Et
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         </motion.div>
                     </>

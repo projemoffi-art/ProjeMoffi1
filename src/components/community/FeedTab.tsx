@@ -24,11 +24,11 @@ interface FeedTabProps {
     onLike: (id: any) => void;
     onShare: (post: any) => void;
     onAddComment: (postId: any, text: string) => void;
-    onToggleCommentLike: (postId: any, commentId: number) => void;
-    onReplyComment: (postId: any, commentId: number, text: string) => void;
-    onDeleteComment: (postId: any, commentId: number) => void;
-    onEditComment: (postId: any, commentId: number, text: string) => void;
-    onReportComment: (postId: any, commentId: number) => void;
+    onToggleCommentLike: (postId: any, commentId: any) => void;
+    onReplyComment: (postId: any, commentId: any, text: string) => void;
+    onDeleteComment: (postId: any, commentId: any) => void;
+    onEditComment: (postId: any, commentId: any, text: string) => void;
+    onReportComment: (postId: any, commentId: any) => void;
     onDeletePost: (postId: any) => void;
     onEditPost: (post: any) => void;
     
@@ -88,50 +88,93 @@ export function FeedTab({
                 {/* STORIES BAR */}
                 <div className="w-full px-4 pt-4 pb-4 overflow-hidden mb-2">
                     <div className="w-full flex gap-4 overflow-x-auto no-scrollbar">
-                        {/* Current User Add Story */}
-                        <div className="flex flex-col items-center gap-1.5 shrink-0 group">
-                            <div 
-                                onClick={onAddStoryClick}
-                                className="relative w-16 h-16 rounded-full bg-white/80 dark:bg-black/50 backdrop-blur-sm border-2 border-dashed border-accent/50 flex items-center justify-center cursor-pointer transition-transform group-hover:scale-105 shadow-sm"
-                            >
-                                <img 
-                                    src={user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200"} 
-                                    className="w-[90%] h-[90%] rounded-full object-cover opacity-50"
-                                    alt="Hikayen"
-                                />
-                                <div className="absolute inset-0 m-auto w-7 h-7 bg-accent rounded-full border-2 border-background flex items-center justify-center shadow-lg">
-                                    <Plus className="w-4 h-4 text-white" strokeWidth={3} />
+                        {/* Current User Story or Add Story */}
+                        {(() => {
+                            const myGroupIndex = storyGroups.findIndex(g => g.user_id === user?.id);
+                            const myGroup = myGroupIndex !== -1 ? storyGroups[myGroupIndex] : null;
+
+                            if (myGroup) {
+                                return (
+                                    <div className="flex flex-col items-center gap-1.5 shrink-0 group relative">
+                                        <div 
+                                            onClick={() => onStoryClick(myGroupIndex)}
+                                            className={cn(
+                                                "w-16 h-16 rounded-full p-[2.5px] transition-transform group-hover:scale-105 cursor-pointer relative",
+                                                myGroup.hasUnseen ? "bg-gradient-to-tr from-cyan-400 via-blue-500 to-purple-600" : "bg-black/10 dark:bg-white/10"
+                                            )}
+                                        >
+                                            <div className="w-full h-full bg-[var(--background)] rounded-full border-2 border-[var(--background)] overflow-hidden relative">
+                                                <img 
+                                                    src={user?.avatar || myGroup.author_avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200"} 
+                                                    className="w-full h-full object-cover transition-opacity duration-500"
+                                                    onLoad={(e) => (e.target as HTMLImageElement).style.opacity = '1'}
+                                                    style={{ opacity: 0 }}
+                                                    alt="Sen"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div 
+                                            onClick={(e) => { e.stopPropagation(); onAddStoryClick(); }}
+                                            className="absolute bottom-4 right-0 w-6 h-6 bg-accent rounded-full border-2 border-background flex items-center justify-center shadow-lg cursor-pointer hover:scale-110 transition-transform z-10"
+                                        >
+                                            <Plus className="w-4 h-4 text-white" strokeWidth={3} />
+                                        </div>
+                                        <span className={cn("text-[10px] tracking-wide", myGroup.hasUnseen ? "font-bold text-[var(--foreground)]" : "font-medium text-[var(--secondary-text)] truncate w-16 text-center")}>
+                                            Sen
+                                        </span>
+                                    </div>
+                                );
+                            } else {
+                                return (
+                                    <div className="flex flex-col items-center gap-1.5 shrink-0 group">
+                                        <div 
+                                            onClick={onAddStoryClick}
+                                            className="relative w-16 h-16 rounded-full bg-white/80 dark:bg-black/50 backdrop-blur-sm border-2 border-dashed border-accent/50 flex items-center justify-center cursor-pointer transition-transform group-hover:scale-105 shadow-sm"
+                                        >
+                                            <img 
+                                                src={user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200"} 
+                                                className="w-[90%] h-[90%] rounded-full object-cover opacity-50"
+                                                alt="Hikayen"
+                                            />
+                                            <div className="absolute inset-0 m-auto w-7 h-7 bg-accent rounded-full border-2 border-background flex items-center justify-center shadow-lg">
+                                                <Plus className="w-4 h-4 text-white" strokeWidth={3} />
+                                            </div>
+                                        </div>
+                                        <span className="text-[10px] text-foreground font-semibold tracking-wide">Ekle</span>
+                                    </div>
+                                );
+                            }
+                        })()}
+
+                        {/* Real Database Stories (excluding current user) */}
+                {storyGroups.filter(g => g.user_id !== user?.id).map((group) => {
+                    const originalIndex = storyGroups.findIndex(g => g.user_id === group.user_id);
+                    return (
+                        <div 
+                            key={group.user_id} 
+                            className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group" 
+                            onClick={() => onStoryClick(originalIndex)}
+                        >
+                            <div className={cn(
+                                "w-16 h-16 rounded-full p-[2.5px] transition-transform group-hover:scale-105",
+                                group.hasUnseen ? "bg-gradient-to-tr from-cyan-400 via-blue-500 to-purple-600" : "bg-black/10 dark:bg-white/10"
+                            )}>
+                                <div className="w-full h-full bg-[var(--background)] rounded-full border-2 border-[var(--background)] overflow-hidden relative">
+                                    <img 
+                                        src={group.author_avatar || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200"} 
+                                        className="w-full h-full object-cover transition-opacity duration-500"
+                                        onLoad={(e) => (e.target as HTMLImageElement).style.opacity = '1'}
+                                        style={{ opacity: 0 }}
+                                        alt={group.author_name}
+                                    />
                                 </div>
                             </div>
-                            <span className="text-[10px] text-foreground font-semibold tracking-wide">Ekle</span>
+                            <span className={cn("text-[10px] tracking-wide", group.hasUnseen ? "font-bold text-[var(--foreground)]" : "font-medium text-[var(--secondary-text)] truncate w-16 text-center")}>
+                                {group.author_name}
+                            </span>
                         </div>
-
-                        {/* Real Database Stories */}
-                {storyGroups.map((group, index) => (
-                    <div 
-                        key={group.user_id} 
-                        className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group" 
-                        onClick={() => onStoryClick(index)}
-                    >
-                        <div className={cn(
-                            "w-16 h-16 rounded-full p-[2.5px] transition-transform group-hover:scale-105",
-                            group.hasUnseen ? "bg-gradient-to-tr from-cyan-400 via-blue-500 to-purple-600" : "bg-black/10 dark:bg-white/10"
-                        )}>
-                            <div className="w-full h-full bg-[var(--background)] rounded-full border-2 border-[var(--background)] overflow-hidden relative">
-                                <img 
-                                    src={(group.user_id === user?.id ? (user?.avatar || group.author_avatar) : group.author_avatar) || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200"} 
-                                    className="w-full h-full object-cover transition-opacity duration-500"
-                                    onLoad={(e) => (e.target as HTMLImageElement).style.opacity = '1'}
-                                    style={{ opacity: 0 }}
-                                    alt={group.author_name}
-                                />
-                            </div>
-                        </div>
-                        <span className={cn("text-[10px] tracking-wide", group.hasUnseen ? "font-bold text-[var(--foreground)]" : "font-medium text-[var(--secondary-text)] truncate w-16 text-center")}>
-                            {user?.id === group.user_id ? "Sen" : group.author_name}
-                        </span>
-                    </div>
-                ))}
+                    );
+                })}
                 </div>
             </div>
             </div>
@@ -242,11 +285,11 @@ export function FeedTab({
                             onLike={() => onLike(post.id)}
                             onShare={() => onShare(post)}
                             onAddComment={(text) => onAddComment(post.id, text)}
-                            onToggleCommentLike={(commentId) => onToggleCommentLike(post.id, Number(commentId))}
-                            onReplyComment={(commentId, text) => onReplyComment(post.id, Number(commentId), text)}
-                            onDeleteComment={(commentId) => onDeleteComment(post.id, Number(commentId))}
-                            onEditComment={(commentId, text) => onEditComment(post.id, Number(commentId), text)}
-                            onReportComment={(commentId) => onReportComment(post.id, Number(commentId))}
+                            onToggleCommentLike={(commentId) => onToggleCommentLike(post.id, commentId)}
+                            onReplyComment={(commentId, text) => onReplyComment(post.id, commentId, text)}
+                            onDeleteComment={(commentId) => onDeleteComment(post.id, commentId)}
+                            onEditComment={(commentId, text) => onEditComment(post.id, commentId, text)}
+                            onReportComment={(commentId) => onReportComment(post.id, commentId)}
                             onDeletePost={() => onDeletePost(post.id)}
                             onEditPost={() => onEditPost(post)}
                             priority={feedIdx === 0}

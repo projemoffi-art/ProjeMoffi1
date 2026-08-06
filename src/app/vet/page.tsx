@@ -91,6 +91,7 @@ function VetPageContent() {
     const [isOtpProcessing, setIsOtpProcessing] = useState(false);
     const [selectedClinic, setSelectedClinic] = useState<VetClinic | null>(null);
     const [detailClinicId, setDetailClinicId] = useState<string | null>(null);
+    const [detailClinicData, setDetailClinicData] = useState<any>(null);
     const [isExplorerOpen, setIsExplorerOpen] = useState(false);
     const [successMessage, setSuccessMessage] = useState("Randevu Oluşturuldu ✨");
     const [userRating, setUserRating] = useState(0);
@@ -805,6 +806,10 @@ function VetPageContent() {
                             visitedPlaceIds={allClinics.map(c => c.id)}
                             path={[]}
                             isTracking={false}
+                            onPlaceClick={(place: any) => {
+                                setDetailClinicId(place.id);
+                                setDetailClinicData(place);
+                            }}
                         />
                     ) : (
                         <div className="w-full h-full bg-white dark:bg-[#121215] flex items-center justify-center text-zinc-400 dark:text-[#a1a1aa] text-[10px] font-black uppercase tracking-widest">Harita Hazırlanıyor...</div>
@@ -860,7 +865,7 @@ function VetPageContent() {
 
                                 <div className="flex gap-4">
                                     {/* Small cover image for clinical listing */}
-                                    <div className="w-24 h-24 rounded-xl overflow-hidden border border-zinc-200 dark:border-[#27272a]/60 shrink-0 cursor-pointer relative group-hover:border-indigo-500/30 transition-all duration-300" onClick={() => setDetailClinicId(clinic.id)}>
+                                    <div className="w-24 h-24 rounded-xl overflow-hidden border border-zinc-200 dark:border-[#27272a]/60 shrink-0 cursor-pointer relative group-hover:border-indigo-500/30 transition-all duration-300" onClick={() => { setDetailClinicId(clinic.id); setDetailClinicData(clinic); }}>
                                         <img src={clinic.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                         <div className="absolute inset-0 bg-black/10 dark:bg-black/15 group-hover:bg-black/5 transition-colors" />
                                     </div>
@@ -1405,7 +1410,7 @@ function VetPageContent() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[200] bg-zinc-50 dark:bg-black"
+                        className="fixed inset-0 z-[8000] bg-zinc-50 dark:bg-black"
                     >
                         <div className="absolute inset-0">
                             {userLocation && (
@@ -1414,23 +1419,25 @@ function VetPageContent() {
                                     visitedPlaceIds={[]}
                                     path={[]}
                                     isTracking={true}
-                                    onPlaceClick={(place: any) => setDetailClinicId(place.id)}
+                                    onPlaceClick={(place: any) => {
+                                        setDetailClinicId(place.id);
+                                        setDetailClinicData(place);
+                                    }}
                                 />
                             )}
                         </div>
                         
-                        <div className="absolute top-6 left-6 right-6 z-[201] flex justify-between items-center pointer-events-none">
-                            <h3 className="bg-white/90 dark:bg-[#121215]/90 backdrop-blur-md px-5 py-3.5 rounded-xl border border-zinc-200 dark:border-[#27272a] text-zinc-850 dark:text-[#fafafa] font-black text-sm uppercase tracking-wider pointer-events-auto shadow-md dark:shadow-none">Klinik Keşfi</h3>
+                        <div className="absolute top-6 left-6 z-[8001] flex justify-start pointer-events-none">
                             <button 
                                 onClick={() => setIsExplorerOpen(false)}
-                                className="w-12 h-12 bg-indigo-500 text-black rounded-full flex items-center justify-center shadow-2xl pointer-events-auto hover:bg-indigo-400 transition-all active:scale-90"
+                                className="w-10 h-10 bg-white/90 dark:bg-[#121215]/90 backdrop-blur-md text-zinc-850 dark:text-white rounded-full flex items-center justify-center shadow-lg pointer-events-auto hover:bg-zinc-100 dark:hover:bg-[#27272a] transition-all active:scale-95"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
-                        <div className="absolute bottom-10 inset-x-6 z-[201] pointer-events-none flex justify-center">
-                            <div className="bg-white/90 dark:bg-[#121215]/90 backdrop-blur-md px-6 py-4 rounded-xl border border-zinc-200 dark:border-[#27272a] text-zinc-850 dark:text-[#fafafa] text-[9px] font-black uppercase tracking-widest pointer-events-auto shadow-2xl">
+                        <div className="absolute bottom-6 inset-x-0 z-[8001] pointer-events-none flex justify-center">
+                            <div className="bg-white/80 dark:bg-[#121215]/80 backdrop-blur-md px-4 py-2 rounded-full border border-zinc-200 dark:border-[#27272a] text-zinc-600 dark:text-[#a1a1aa] text-[9px] font-bold tracking-widest pointer-events-auto shadow-sm">
                                 Haritadaki pinlere dokunarak detayları gör
                             </div>
                         </div>
@@ -1485,9 +1492,9 @@ function VetPageContent() {
 
             {/* 5. SIDE DRAWER (Clinic Details) */}
                 <ClinicDetailDrawer 
-                    key="clinic-detail-drawer"
-                    clinicId={detailClinicId} 
-                    onClose={() => setDetailClinicId(null)}
+                    clinicId={detailClinicId}
+                    clinicData={detailClinicData}
+                    onClose={() => { setDetailClinicId(null); setDetailClinicData(null); }}
                     onBookAppointment={(clinic) => {
                         openAppointment(clinic);
                     }}

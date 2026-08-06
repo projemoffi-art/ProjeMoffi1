@@ -200,11 +200,3 @@ export const MOCK_ADOPTIONS = [
     { id: '2', pet_name: "Duman", breed: "Russian Blue", age: "1 Yaşında", description: "Çok sakin.", photos: ["https://images.unsplash.com/photo-1592194996308-7b43878e84a6?q=80&w=400"], type: "cat" }
 ];
 
-export const PET_PERSONALITIES: Record<string, any> = {
-    'Milo': {
-        mood: 'Enerjik ⚡'
-    },
-    'default': {
-        mood: 'Mutlu ✨'
-    }
-};

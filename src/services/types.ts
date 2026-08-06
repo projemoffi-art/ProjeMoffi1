@@ -36,6 +36,17 @@ export interface Pet {
     };
 }
 
+export interface WalletTransaction {
+    id: string | number;
+    user_id?: string;
+    type: 'earned' | 'spent' | 'system' | 'gift';
+    amount: number;
+    description: string;
+    reference_id?: string; // Optional reference to game/order/etc
+    created_at: string;
+    icon?: string; // Client side mapped
+}
+
 export interface Post {
     id: number | string;
     user: {
@@ -225,6 +236,9 @@ export interface IApiService {
     deletePet(id: string): Promise<void>;
     
     // Community
+    fetchMarketPlaces(): Promise<any[]>;
+    fetchVets(): Promise<any[]>;
+    submitAdoptionApplication(listingId: string | number, ownerId: string, note: string): Promise<void>;
     getFeedContent(): Promise<Post[]>;
     getLostPets(): Promise<LostPet[]>;
     addLostPet(data: Partial<LostPet>): Promise<LostPet>;
@@ -293,9 +307,16 @@ export interface IApiService {
     getWalkStats(userId: string): Promise<any>;
     getWalkById(id: string): Promise<any>;
 
-    // Social Media (New)
+    // --- HİKAYELER (Stories) ---
     getStories(): Promise<any[]>;
-    addStory(story: any): Promise<any>;
+    addStory(storyData: any): Promise<void>;
+    deleteStory(storyId: string): Promise<void>;
+    markStoryAsViewed(storyId: string): Promise<void>;
+    getViewedStoryIds(): Promise<string[]>;
+    toggleStoryLike(storyId: string): Promise<boolean>;
+    getStoryViewers(storyId: string): Promise<any[]>;
+
+    // --- SOSYAL AKSİYONLAR ---
     reactToPost(postId: string, reactionType: string): Promise<void>;
     getPostReactions(postId: string): Promise<any[]>;
     addComment(postId: string | number, content: string, parentCommentId?: string | number): Promise<any>;

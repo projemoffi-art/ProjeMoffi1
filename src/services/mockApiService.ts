@@ -652,6 +652,15 @@ export class MockApiService implements IApiService {
         }
     }
 
+    // Market & Vet Placeholders
+    async fetchMarketPlaces(): Promise<any[]> { return []; }
+    async fetchVets(): Promise<any[]> { return []; }
+
+    async submitAdoptionApplication(listingId: string | number, ownerId: string, note: string): Promise<void> {
+        console.log(`[Mock] Sahiplendirme başvurusu iletildi. İlan: ${listingId}, Sahibi: ${ownerId}, Not: ${note}`);
+        return new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
     // Health & Veterinary
     async getVaccineDefinitions(): Promise<any[]> { return []; }
     async getPetVaccines(petId: string): Promise<any[]> { return []; }
@@ -1596,6 +1605,14 @@ export class MockApiService implements IApiService {
             { id: 'f2', user_id: 'u2', username: 'Ayşe Yılmaz', content: 'Harika bir sistem, teşekkürler.', severity: 'low', status: 'reviewed', created_at: new Date().toISOString() },
             { id: 'f3', user_id: 'u3', username: 'Moffi Kliniği', content: 'KYB onayım hala bekliyor, yardım edin.', severity: 'high', status: 'new', created_at: new Date().toISOString() }
         ];
+    }
+    
+    async submitFeedback(feedback: Partial<SystemFeedback>): Promise<void> {}
+    async updateFeedbackStatus(id: string, status: 'new' | 'reviewed' | 'implemented' | 'rejected', adminNotes?: string): Promise<void> {}
+
+    // Wallet
+    async getWalletTransactions(userId: string): Promise<WalletTransaction[]> {
+        return WALLET_TRANSACTIONS;
     }
 }
 // Singleton instance for components that haven't migrated to the central services/apiService.ts yet

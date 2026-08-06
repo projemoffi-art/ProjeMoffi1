@@ -72,6 +72,12 @@ export function DynamicNavigation() {
     allowedByExternalRef.current = isNavAllowedByExternalOverlays;
 
     useEffect(() => {
+        // Always restore nav visibility when navigating to a new page
+        setIsNavAllowedByExternalOverlays(true);
+        setIsNavVisible(true);
+    }, [pathname]);
+
+    useEffect(() => {
         if (isAnyLocalOverlayOpen) {
             setIsNavVisible(false);
         } else if (isNavAllowedByExternalOverlays) {

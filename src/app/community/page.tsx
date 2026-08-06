@@ -10,7 +10,7 @@ import {
     LogOut, ChevronRight, ChevronLeft, User, Bell, Lock, HelpCircle, Check, HeartHandshake, CheckCheck, ShieldAlert, ChevronDown,
     AlertTriangle, PhoneCall, BadgeCheck, Radar, Palette, ShoppingBag, Gamepad2, Globe, Filter,
     Coins, Package, Calendar, Plane, ShieldCheck, Route, TrendingUp, Timer, Footprints, Play, Download, Clock, Syringe, Moon, Flame,
-    Sun, Contrast, Droplet, Info
+    Sun, Contrast, Droplet, Info, AlertCircle
 } from 'lucide-react';
 import { compressImageToFile } from '@/lib/imageUtils';
 import { cn } from '@/lib/utils';
@@ -58,6 +58,7 @@ import { StudioQuickSheet } from '@/components/studio/StudioQuickSheet';
 import { GameQuickSheet } from '@/components/game/GameQuickSheet';
 import { PetSwitcher } from '@/components/common/PetSwitcher';
 import { usePet } from '@/context/PetContext';
+import { useRealtimeFeed } from '@/hooks/useRealtimeFeed';
 import { useWellbeing } from '@/context/WellbeingContext';
 import { EcosystemPortal } from '@/components/community/EcosystemPortal';
 import { SpotlightSearch } from '@/components/community/SpotlightSearch';
@@ -70,27 +71,25 @@ import { OverlaySystem } from '@/components/community/OverlaySystem';
 import { FeedTab } from '@/components/community/FeedTab';
 import { RadarTab } from '@/components/community/RadarTab';
 import { AdoptionTab } from '@/components/community/AdoptionTab';
-
-
 import { MOCK_ADOPTIONS } from '@/lib/mockData';
 import Image from 'next/image';
-
 import { useChat } from '@/context/ChatContext';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 
-
 const StoryProgressBar = ({ isActive, isCompleted, isPaused, onComplete, duration = 6000 }: { isActive: boolean, isCompleted: boolean, isPaused: boolean, onComplete: () => void, duration?: number }) => {
-    const [progress, setProgress] = useState(0);
-    const progressRef = useRef(progress);
-    progressRef.current = progress;
-    
-    const onCompleteRef = useRef(onComplete);
+    const barRef = React.useRef<HTMLDivElement>(null);
+    const progressRef = React.useRef(0);
+    const onCompleteRef = React.useRef(onComplete);
     onCompleteRef.current = onComplete;
 
-    useEffect(() => {
-        if (isCompleted) return;
+    React.useEffect(() => {
+        if (isCompleted) {
+            if (barRef.current) barRef.current.style.transform = 'scaleX(1)';
+            return;
+        }
         if (!isActive) {
-            setProgress(0);
+            progressRef.current = 0;
+            if (barRef.current) barRef.current.style.transform = 'scaleX(0)';
             return;
         }
         if (isPaused) return;
@@ -104,10 +103,12 @@ const StoryProgressBar = ({ isActive, isCompleted, isPaused, onComplete, duratio
             const p = (elapsed / duration) * 100;
 
             if (p >= 100) {
-                setProgress(100);
+                progressRef.current = 100;
+                if (barRef.current) barRef.current.style.transform = 'scaleX(1)';
                 onCompleteRef.current();
             } else {
-                setProgress(p);
+                progressRef.current = p;
+                if (barRef.current) barRef.current.style.transform = `scaleX(${p / 100})`;
                 animationFrameId = requestAnimationFrame(animate);
             }
         };
@@ -119,13 +120,18 @@ const StoryProgressBar = ({ isActive, isCompleted, isPaused, onComplete, duratio
         };
     }, [isActive, isPaused, duration, isCompleted]);
 
+    let initialScale = 0;
+    if (isCompleted) initialScale = 1;
+    else if (isActive && isPaused) initialScale = progressRef.current / 100;
+
     return (
         <div
+            ref={barRef}
             className={cn(
-                "absolute top-0 left-0 bottom-0 bg-white",
+                "absolute top-0 left-0 bottom-0 bg-white w-full origin-left will-change-transform",
                 isActive && "shadow-[0_0_10px_white]"
             )}
-            style={{ width: isCompleted ? '100%' : `${isActive ? progress : 0}%` }}
+            style={{ transform: `scaleX(${initialScale})` }}
         />
     );
 };
@@ -143,10 +149,11 @@ export default function MoffiSocialMasterpiece() {
         sosAlerts, setSosAlerts, inboxMessages,
         refreshInbox
     } = useChat();
-    const { theme, setTheme } = useTheme(); // Restored
-    const { storyGroups, uploadStory } = useUserStories(); // Restored
+    const { theme, setTheme } = useTheme();
+    const { storyGroups, uploadStory, markStoryAsViewed, toggleStoryLike, refreshStories, deleteStory } = useUserStories();
     const { pets: userPets, activePet, switchPet, updatePet } = usePet();
     const { isQuietModeActive } = useWellbeing();
+    const [likeError, setLikeError] = useState<string | null>(null);
 
     // Real-time synchronization for user's own lost pet changes in Radar
     const userLostPetIdsString = useMemo(() => {
@@ -160,10 +167,12 @@ export default function MoffiSocialMasterpiece() {
     const searchParams = useSearchParams();
     const [activeTab, setActiveTab] = useState('feed'); 
     const [radarTabMode, setRadarTabMode] = useState<'lost' | 'adopt'>('lost');
-    const [posts, setPosts] = useState<any[]>([]);
+    
+    // REALTIME FEED ENTEGRASYONU
+    const { posts, setPosts, isLoading: isLoadingPosts, refetchPosts: fetchPosts } = useRealtimeFeed(true);
+    
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isPublishing, setIsPublishing] = useState(false);
-    const [isLoadingPosts, setIsLoadingPosts] = useState(false);
     const [isLoadingLost, setIsLoadingLost] = useState(false);
     const [isLoadingAdoptions, setIsLoadingAdoptions] = useState(false);
     const [profileSubView, setProfileSubView] = useState<'main' | 'family' | 'passport' | 'orders' | 'wallet' | 'appointments' | 'routes' | 'impact' | 'bookmarks'>('main');
@@ -182,7 +191,10 @@ export default function MoffiSocialMasterpiece() {
     const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
     const [editCoverPreview, setEditCoverPreview] = useState<string | null>(null);
     const [isSavingProfile, setIsSavingProfile] = useState(false);
-    const [isAddPetOpen, setIsAddPetOpen] = useState(false);
+        const [isAddPetOpen, setIsAddPetOpen] = useState(false);
+    const [isStoryViewsDrawerOpen, setIsStoryViewsDrawerOpen] = useState(false);
+    const [storyViewers, setStoryViewers] = useState<any[]>([]);
+    const [isLoadingStoryViewers, setIsLoadingStoryViewers] = useState(false);
     const [storyPreview, setStoryPreview] = useState<string | null>(null);
     const [pendingStoryFile, setPendingStoryFile] = useState<File | null>(null);
     const [isUploadingStory, setIsUploadingStory] = useState(false);
@@ -291,11 +303,6 @@ export default function MoffiSocialMasterpiece() {
     const [appHomeType, setAppHomeType] = useState('Apartman');
     const [appNote, setAppNote] = useState('');
     const [isSubmittingApp, setIsSubmittingApp] = useState(false);
-    const [isAdoptionChatOpen, setIsAdoptionChatOpen] = useState(false);
-    const [adoptionChatPet, setAdoptionChatPet] = useState<any | null>(null);
-    const [adoptionMessages, setAdoptionMessages] = useState<any[]>([]);
-    const [adoptionNewMsg, setAdoptionNewMsg] = useState("");
-    const [isSendingAdoptionMsg, setIsSendingAdoptionMsg] = useState(false);
     const [anonModalType, setAnonModalType] = useState<'report' | 'message' | null>(null);
     const [isHubOpen, setIsHubOpen] = useState(false);
     const [anonMessage, setAnonMessage] = useState("");
@@ -416,6 +423,20 @@ export default function MoffiSocialMasterpiece() {
         loadSightings();
     }, [selectedLostPet]);
 
+    const handleOpenStoryViews = async (storyId: string) => {
+        setIsStoryPaused(true);
+        setIsStoryViewsDrawerOpen(true);
+        setIsLoadingStoryViewers(true);
+        try {
+            const viewers = await apiService.getStoryViewers(storyId);
+            setStoryViewers(viewers);
+        } catch (error) {
+            console.error("Failed to load story viewers", error);
+        } finally {
+            setIsLoadingStoryViewers(false);
+        }
+    };
+
     const handleSwipeFilter = (direction: 'left' | 'right') => {
         let newIndex = activeFilterIndex;
         if (direction === 'left') {
@@ -450,6 +471,7 @@ export default function MoffiSocialMasterpiece() {
     const [isStoryPaused, setIsStoryPaused] = useState(false);
     const storyPressStartTime = useRef<number>(0);
     const [postToDelete, setPostToDelete] = useState<number | null>(null);
+    const [storyToDelete, setStoryToDelete] = useState<string | null>(null);
     const [editingPost, setEditingPost] = useState<{ id: number, desc: string, mood: string | null, media: string } | null>(null);
     const [isReportAdModalOpen, setIsReportAdModalOpen] = useState(false);
     const [reportingAdId, setReportingAdId] = useState<string | null>(null);
@@ -692,9 +714,10 @@ export default function MoffiSocialMasterpiece() {
         return new Promise((resolve) => {
             const reader = new FileReader();
             reader.readAsDataURL(file);
+            reader.onerror = () => resolve(file);
             reader.onload = (event) => {
-                                 const img = new window.Image();
-                img.src = event.target?.result as string;
+                const img = new window.Image();
+                img.onerror = () => resolve(file);
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
                     const MAX_WIDTH = 1200;
@@ -731,6 +754,7 @@ export default function MoffiSocialMasterpiece() {
                         }
                     }, 'image/jpeg', 0.8);
                 };
+                img.src = event.target?.result as string;
             };
         });
     };
@@ -1009,36 +1033,7 @@ export default function MoffiSocialMasterpiece() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-
-    const fetchPosts = async (isBackground = false) => {
-        if (!isBackground) {
-            setIsLoadingPosts(true);
-        }
-        try {
-            const data = await apiService.getFeedContent();
-            
-            // 1. Filter out Blocked Users
-            const blockedIds = (user?.settings?.moderation?.blockedUsers || []).map((u: any) => u.id);
-            const filteredData = data.filter((post: any) => {
-                const authorId = post.user_id || post.userId || post.authorId || post.owner_id || post.user?.id;
-                return !blockedIds.includes(authorId);
-            });
-
-            // 2. Apply initial sorting
-            const sortType = user?.settings?.feed?.defaultSort || 'new';
-            const sortedData = sortPostsLocally(filteredData, sortType);
-            
-            setPosts(sortedData);
-        } catch (err) {
-            console.error("Posts fetch error:", err);
-            // DO NOT fall back to MOCK_POSTS — show empty feed if Supabase fails
-            // This prevents hardcoded dog photos from appearing
-        } finally {
-            if (!isBackground) {
-                setIsLoadingPosts(false);
-            }
-        }
-    };
+    // fetchPosts and sortPostsLocally have been moved to useRealtimeFeed hook
 
     const filteredPosts = useMemo(() => {
         if (!searchQuery) return posts;
@@ -1048,22 +1043,6 @@ export default function MoffiSocialMasterpiece() {
             post.category?.toLowerCase().includes(searchQuery.toLowerCase())
         );
     }, [posts, searchQuery]);
-
-
-    const sortPostsLocally = (data: any[], sortType: string) => {
-        const sorted = [...data];
-        if (sortType === 'popular') {
-            return sorted.sort((a, b) => (b.likes || 0) - (a.likes || 0));
-        } else {
-            // Newest first: Sort by ID descending (Date.now proxy) or index
-            return sorted.sort((a, b) => {
-                const idA = typeof a.id === 'string' ? (parseInt(a.id.split('-').pop() || '0') || 0) : a.id;
-                const idB = typeof b.id === 'string' ? (parseInt(b.id.split('-').pop() || '0') || 0) : b.id;
-                return idB - idA;
-            });
-        }
-    };
-
     // Reactive Re-sorting when preference changes
     useEffect(() => {
         if (posts.length > 0) {
@@ -1183,9 +1162,6 @@ export default function MoffiSocialMasterpiece() {
         const group = storyGroups[viewerStoryGroupIndex];
         if (viewerStoryIndex < group.stories.length - 1) {
             setViewerStoryIndex(prev => prev + 1);
-        } else if (viewerStoryGroupIndex < storyGroups.length - 1) {
-            setViewerStoryGroupIndex(prev => prev! + 1);
-            setViewerStoryIndex(0);
         } else {
             closeStoryViewer();
         }
@@ -1204,10 +1180,22 @@ export default function MoffiSocialMasterpiece() {
         }
     };
 
+    // Keep track of stories viewed in this session to prevent infinite loops
+    const sessionViewedStories = useRef<Set<string>>(new Set());
+
     useEffect(() => {
         if (viewerStoryGroupIndex === null) return;
         // Preload next story image for seamless transition
         const group = storyGroups[viewerStoryGroupIndex];
+        if (group && group.stories[viewerStoryIndex]) {
+            const storyId = group.stories[viewerStoryIndex].id;
+            // Mark current story as viewed only if we haven't done it this session
+            if (!sessionViewedStories.current.has(storyId)) {
+                sessionViewedStories.current.add(storyId);
+                markStoryAsViewed(storyId);
+            }
+        }
+
         if (group && viewerStoryIndex + 1 < group.stories.length) {
             const img = new window.Image();
             img.src = group.stories[viewerStoryIndex + 1].media_url;
@@ -1218,7 +1206,7 @@ export default function MoffiSocialMasterpiece() {
                 img.src = nextGroup.stories[0].media_url;
             }
         }
-    }, [viewerStoryGroupIndex, viewerStoryIndex, storyGroups]);
+    }, [viewerStoryGroupIndex, viewerStoryIndex, storyGroups, markStoryAsViewed]);
 
     const formatTimeAgo = (dateStr?: string) => {
         if (!dateStr) return "Şimdi";
@@ -1235,23 +1223,16 @@ export default function MoffiSocialMasterpiece() {
     const cameraInputRef = useRef<HTMLInputElement>(null);
 
     const toggleLike = async (id: string) => {
-        setPosts(prev => prev.map(post => {
-            if (post.id === id) {
-                const newIsLiked = !post.isLiked;
-                return {
-                    ...post,
-                    isLiked: newIsLiked,
-                    likes: newIsLiked ? (post.likes + 1) : Math.max(0, post.likes - 1)
-                };
-            }
-            return post;
-        }));
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('moffi_optimistic_post_like', { detail: { postId: id } }));
+        }
 
         try {
             await apiService.reactToPost(id, '❤️');
             window.dispatchEvent(new Event('moffi_posts_changed'));
-        } catch (err) {
+        } catch (err: any) {
             console.error("Beğeni hatası:", err);
+            alert("Beğeni Hatası: " + (err?.message || JSON.stringify(err)));
             fetchPosts(); 
         }
     };
@@ -1268,31 +1249,21 @@ export default function MoffiSocialMasterpiece() {
         }));
     };
 
-    const toggleCommentLike = (postId: number, commentId: number) => {
-        setPosts(prev => prev.map(p => {
-            if (p.id !== postId) return p;
+    const toggleCommentLike = async (postId: number, commentId: any) => {
+        // OPTIMISTIC UPDATE: Hemen dispatch atalım ki arayüz anında değişsin.
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('moffi_optimistic_comment_like', { detail: { commentId } }));
+        }
 
-            const updateCommentLikes = (comments: any[]): any[] => {
-                return comments.map(c => {
-                    if (c.id === commentId) {
-                        return {
-                            ...c,
-                            isLiked: !c.isLiked,
-                            likes: c.isLiked ? c.likes - 1 : c.likes + 1
-                        };
-                    }
-                    if (c.replies && c.replies.length > 0) {
-                        return { ...c, replies: updateCommentLikes(c.replies) };
-                    }
-                    return c;
-                });
-            };
-
-            return { ...p, commentsList: updateCommentLikes(p.commentsList || []) };
-        }));
+        try {
+            await apiService.toggleCommentLike(commentId);
+        } catch (err: any) {
+            showToast("Hata", "Beğeni işlemi başarısız oldu: " + (err?.message || JSON.stringify(err)), "error");
+            alert("Yorum Beğeni Hatası: " + (err?.message || JSON.stringify(err)));
+        }
     };
 
-    const addCommentReply = (postId: number, parentCommentId: number, text: string) => {
+    const addCommentReply = (postId: number, parentCommentId: any, text: string) => {
         if (!text.trim()) return;
         setPosts(prev => prev.map(p => {
             if (p.id !== postId) return p;
@@ -1327,29 +1298,35 @@ export default function MoffiSocialMasterpiece() {
         }));
     };
 
-    const deleteComment = (postId: number, commentId: number) => {
-        setPosts(prev => prev.map(p => {
-            if (p.id !== postId) return p;
+    const deleteComment = async (postId: number, commentId: any) => {
+        try {
+            await apiService.deleteComment(commentId);
+            showToast("Yorum Silindi", "Yorum ve yanıtları kaldırıldı.", "info");
+            setPosts(prev => prev.map(p => {
+                if (p.id !== postId) return p;
 
-            const removeComment = (comments: any[]): any[] => {
-                return comments
-                    .filter(c => c.id !== commentId)
-                    .map(c => ({
-                        ...c,
-                        replies: c.replies ? removeComment(c.replies) : []
-                    }));
-            };
+                const removeComment = (comments: any[]): any[] => {
+                    return comments
+                        .filter(c => c.id !== commentId)
+                        .map(c => ({
+                            ...c,
+                            replies: c.replies ? removeComment(c.replies) : []
+                        }));
+                };
 
-            return { 
-                ...p, 
-                comments: p.comments - 1,
-                commentsList: removeComment(p.commentsList || []) 
-            };
-        }));
-        showToast("Yorum Silindi", "Yorum ve yanıtları kaldırıldı.", "info");
+                return { 
+                    ...p, 
+                    comments: Math.max(0, p.comments - 1),
+                    commentsList: removeComment(p.commentsList || []) 
+                };
+            }));
+        } catch (err: any) {
+            showToast("Hata", "Yorum silinemedi: " + (err.message || ""), "error");
+        }
     };
 
-    const editComment = (postId: number, commentId: number, text: string) => {
+
+    const editComment = (postId: number, commentId: any, text: string) => {
         setPosts(prev => prev.map(p => {
             if (p.id !== postId) return p;
 
@@ -1370,7 +1347,7 @@ export default function MoffiSocialMasterpiece() {
         showToast("Yorum Güncellendi", "Değişiklikler kaydedildi.", "success");
     };
 
-    const reportComment = (postId: number, commentId: number) => {
+    const reportComment = (postId: number, commentId: any) => {
         showToast("Bildirim Alındı", "Yorum incelemeye alındı. Teşekkürler!", "info");
     };
 
@@ -1863,54 +1840,23 @@ export default function MoffiSocialMasterpiece() {
         }
     };
 
-    const handleStartAdoptionChat = (pet: any) => {
-        setAdoptionChatPet(pet);
-        setIsAdoptionChatOpen(true);
-        // Mock initial system message
-        setAdoptionMessages([
-            { id: 'sys-1', text: `Merhaba! ${pet.name} için sahiplenme süreci başlatıldı. 👋`, sender: 'system', time: 'Şimdi' },
-            { id: 'sys-2', text: 'Moffi Güvenli Mesajlaşma üzerinden ilan sahibiyle iletişime geçiyorsunuz. Lütfen kişisel bilgilerinizi paylaşırken dikkatli olun.', sender: 'system', time: 'Şimdi' }
-        ]);
-    };
-
     const submitAdoptionApplication = async () => {
-        if (!user || !selectedAdoptionPet) return;
+        if (!user || !selectedAdoptionPet || !selectedAdoptionPet.user_id) {
+            showToast("Hata", "İlan sahibi bilgisi bulunamadı.", "error");
+            return;
+        }
         setIsSubmittingApp(true);
         try {
-            // Mock submission
+            await apiService.submitAdoptionApplication(selectedAdoptionPet.id, selectedAdoptionPet.user_id, appNote);
             showToast("Başvuru İletildi! ❤️", "İlan sahibi başvurunuzu inceledikten sonra size dönecek.", "success");
             setIsApplicationFormOpen(false);
             setAppNote("");
             setSelectedAdoptionPet(null);
         } catch (err: any) {
-            showToast("Hata", "Başvuru yapılamadı.", "error");
+            showToast("Hata", err.message || "Başvuru yapılamadı.", "error");
         } finally {
             setIsSubmittingApp(false);
         }
-    };
-
-    const handleSendAdoptionMsg = () => {
-        if (!adoptionNewMsg.trim()) return;
-        const newMsg = {
-            id: Date.now().toString(),
-            text: adoptionNewMsg,
-            sender: 'me',
-            time: 'Şimdi'
-        };
-        setAdoptionMessages(prev => [...prev, newMsg]);
-        setAdoptionNewMsg("");
-
-        // Mock a response after 1s
-        setIsSendingAdoptionMsg(true);
-        setTimeout(() => {
-            setIsSendingAdoptionMsg(false);
-            setAdoptionMessages(prev => [...prev, {
-                id: (Date.now() + 1).toString(),
-                text: "İlginiz için teşekkürler! Birazdan size detaylı bilgi vereceğim. 😊",
-                sender: 'them',
-                time: 'Şimdi'
-            }]);
-        }, 1500);
     };
 
     const handleReportLocation = () => {
@@ -2149,12 +2095,12 @@ export default function MoffiSocialMasterpiece() {
                                 >
                                     <div className="flex justify-between items-center w-full pointer-events-auto">
                                         <div className="flex items-center gap-2">
-                                            <div className="relative w-9 h-9">
+                                            <div className="relative w-10 h-10">
                                                 <motion.button
                                                     style={{ scale: iconScale }}
-                                                    className="w-full h-full flex items-center justify-center hover:bg-black/10 dark:bg-white/10 rounded-full transition-all active:scale-90 bg-black/20 backdrop-blur-md border border-black/10 dark:border-white/10 shadow-lg"
+                                                    className="w-full h-full flex items-center justify-center rounded-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:bg-black/10 dark:hover:bg-white/10 transition-all active:scale-90 shadow-sm"
                                                 >
-                                                    <Camera className="w-4 h-4 text-black/90 dark:text-white/90" />
+                                                    <Plus className="w-5 h-5 text-[var(--foreground)]" strokeWidth={2.5} />
                                                 </motion.button>
                                                 <input 
                                                     type="file" 
@@ -2734,13 +2680,13 @@ export default function MoffiSocialMasterpiece() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[9999] bg-[#0a0a0b]/95 backdrop-blur-3xl flex flex-col"
+                        className="fixed inset-0 z-[9999] bg-white/95 dark:bg-[#0a0a0b]/95 backdrop-blur-3xl flex flex-col"
                     >
                         {/* Header */}
                         <div className="flex justify-between items-center px-6 pt-12 pb-4 shrink-0 border-b border-[var(--card-border)]">
                             <button
                                 onClick={() => { setIsUploadModalOpen(false); setUploadImageURL(null); setUploadCaption(''); setUploadMood(null); }}
-                                className="w-10 h-10 rounded-full bg-black/10 dark:bg-white/10 flex items-center justify-center -ml-2"
+                                className="w-10 h-10 rounded-full bg-black/10 dark:bg-white/10 flex items-center justify-center -ml-2 text-[var(--foreground)]"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -2750,6 +2696,38 @@ export default function MoffiSocialMasterpiece() {
 
                         {/* Content */}
                         <div className="flex-1 overflow-y-auto w-full max-w-lg mx-auto p-4 pb-32 flex flex-col gap-6">
+
+                            {/* COMMUNITY WARNING & ROUTING CARDS */}
+                            <div className="flex flex-col gap-3">
+                                <div className="bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-100 dark:border-cyan-500/20 rounded-2xl p-4 flex items-center gap-3">
+                                    <Info className="w-6 h-6 text-cyan-500 shrink-0" strokeWidth={1.5} />
+                                    <p className="text-xs text-cyan-800 dark:text-cyan-300 font-medium">
+                                        Topluluk paylaşımları <strong>sadece eğlence ve sosyalleşme</strong> içindir. Özel durumlar için aşağıdaki ilgili bölümleri kullanabilirsiniz:
+                                    </p>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button onClick={() => { setIsUploadModalOpen(false); setActiveTab('radar'); setRadarTabMode('lost'); }} className="bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-orange-100 dark:hover:bg-orange-500/20 transition-all text-center group active:scale-95 shadow-sm">
+                                        <div className="p-3 bg-orange-100 dark:bg-orange-500/20 rounded-full group-hover:scale-110 transition-transform">
+                                            <Radar className="w-6 h-6 text-orange-500" strokeWidth={1.5} />
+                                        </div>
+                                        <div className="flex flex-col mt-1">
+                                            <span className="font-bold text-orange-700 dark:text-orange-400 text-sm">Kayıp İlanı</span>
+                                            <span className="text-[10px] text-orange-600/70 dark:text-orange-400/70 mt-0.5">Radar modülüne git</span>
+                                        </div>
+                                    </button>
+                                    
+                                    <button onClick={() => { setIsUploadModalOpen(false); setActiveTab('radar'); setRadarTabMode('adopt'); }} className="bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-green-100 dark:hover:bg-green-500/20 transition-all text-center group active:scale-95 shadow-sm">
+                                        <div className="p-3 bg-green-100 dark:bg-green-500/20 rounded-full group-hover:scale-110 transition-transform">
+                                            <HeartHandshake className="w-6 h-6 text-green-500" strokeWidth={1.5} />
+                                        </div>
+                                        <div className="flex flex-col mt-1">
+                                            <span className="font-bold text-green-700 dark:text-green-400 text-sm">Sahiplendirme</span>
+                                            <span className="text-[10px] text-green-600/70 dark:text-green-400/70 mt-0.5">Pati sahiplendir</span>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
 
                             {/* MEDIA PICKER / PREVIEW (Apple Native Style) */}
                             {uploadImageURL ? (
@@ -3355,6 +3333,26 @@ export default function MoffiSocialMasterpiece() {
                                     </motion.div>
                                 )}
                         </div>
+
+                        {/* SUBMIT BUTTON - STICKY FOOTER */}
+                        {uploadImageURL && (
+                            <div className="p-4 sm:p-5 bg-transparent shrink-0 sticky bottom-4 z-50 flex justify-center pointer-events-none">
+                                <button
+                                    onClick={publishPost}
+                                    disabled={isPublishing}
+                                    className={cn(
+                                        "pointer-events-auto px-10 py-3.5 rounded-full font-bold text-white dark:text-black text-[13px] tracking-wide flex items-center justify-center gap-2 transition-all shadow-[0_8px_30px_rgb(0,0,0,0.2)] dark:shadow-[0_8px_30px_rgba(255,255,255,0.15)]",
+                                        isPublishing ? "bg-gray-600 dark:bg-gray-400 opacity-50 cursor-not-allowed" : "bg-[#111] dark:bg-white hover:scale-[1.02] active:scale-95 hover:shadow-[0_10px_40px_rgba(0,0,0,0.3)]"
+                                    )}
+                                >
+                                    {isPublishing ? (
+                                        <><div className="w-4 h-4 border-[2px] border-white/30 dark:border-black/30 border-t-white dark:border-t-black rounded-full animate-spin" /> Bekleyin</>
+                                    ) : (
+                                        <><Sparkles className="w-4 h-4" /> Paylaş</>
+                                    )}
+                                </button>
+                            </div>
+                        )}
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -3508,6 +3506,61 @@ export default function MoffiSocialMasterpiece() {
                             </button>
                         </div>
                     </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* APPLE STYLE DELETE CONFIRMATION ALERT FOR STORY */}
+            <AnimatePresence>
+                {storyToDelete !== null && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm"
+                            onClick={() => { setStoryToDelete(null); setIsStoryPaused(false); }}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="fixed inset-0 z-[310] flex items-center justify-center p-4 pointer-events-none"
+                        >
+                            <div className="bg-[#f0f0f0] dark:bg-[#1c1c1e] w-[270px] rounded-3xl overflow-hidden shadow-2xl flex flex-col pointer-events-auto items-center border border-black/10 dark:border-white/10">
+                                <div className="p-5 flex flex-col items-center gap-1 w-full text-center">
+                                    <h3 className="font-bold text-[17px] tracking-tight text-black dark:text-white leading-tight">
+                                        Hikayeyi Sil
+                                    </h3>
+                                    <p className="text-[13px] text-black/60 dark:text-white/60 leading-tight px-2">
+                                        Bu hikayeyi kalıcı olarak silmek istediğinize emin misiniz?
+                                    </p>
+                                </div>
+                                <div className="flex flex-col w-full border-t border-black/10 dark:border-white/10">
+                                    <button
+                                        onClick={async () => {
+                                            const res = await deleteStory(storyToDelete);
+                                            if (res && res.success) {
+                                                closeStoryViewer();
+                                            } else {
+                                                setLikeError(res?.error || "Hikaye silinemedi");
+                                            }
+                                            setStoryToDelete(null);
+                                            setIsStoryPaused(false);
+                                        }}
+                                        className="w-full py-3.5 text-red-500 font-bold text-[15px] border-b border-black/10 dark:border-white/10 hover:bg-[var(--card-bg)] transition-colors active:bg-black/10 dark:bg-white/10"
+                                    >
+                                        Sil
+                                    </button>
+                                    <button
+                                        onClick={() => { setStoryToDelete(null); setIsStoryPaused(false); }}
+                                        className="w-full py-3.5 text-cyan-500 font-normal text-[15px] hover:bg-[var(--card-bg)] transition-colors active:bg-black/10 dark:bg-white/10"
+                                    >
+                                        Vazgeç
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
                 )}
             </AnimatePresence>
 
@@ -4468,7 +4521,19 @@ export default function MoffiSocialMasterpiece() {
                             <div className="w-full p-4 sm:px-5 pt-2 pb-5 bg-gradient-to-t from-[var(--background)] via-[var(--background)] to-transparent relative z-20 shrink-0">
                                 <div className="flex gap-2.5">
                                     <button
-                                        onClick={() => handleStartAdoptionChat(selectedAdoptionPet)}
+                                        onClick={() => {
+                                            if (!selectedAdoptionPet?.user_id) {
+                                                showToast("Hata", "İlan sahibi bilgisi bulunamadı.", "error");
+                                                return;
+                                            }
+                                            if (!user) {
+                                                showToast("Giriş Gerekli", "Mesaj göndermek için giriş yapmalısınız.", "error");
+                                                window.dispatchEvent(new CustomEvent('open-auth-modal'));
+                                                return;
+                                            }
+                                            setSelectedAdoptionPet(null);
+                                            openChat(selectedAdoptionPet.user_id);
+                                        }}
                                         className="flex-1 py-3 rounded-xl bg-black/10 dark:bg-white/10 border border-black/10 dark:border-white/10 text-[var(--foreground)] font-bold text-xs active:scale-95 transition-transform flex items-center justify-center gap-1.5"
                                     >
                                         <MessageCircle className="w-4 h-4" /> Mesaj
@@ -4703,82 +4768,7 @@ export default function MoffiSocialMasterpiece() {
 
             {/* DEDICATED ADOPTION CHAT (Apple iMessage Style) */}
             <AnimatePresence>
-                {isAdoptionChatOpen && adoptionChatPet && (
-                    <motion.div
-                        initial={{ x: "100%" }}
-                        animate={{ x: 0 }}
-                        exit={{ x: "100%" }}
-                        transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                        className="fixed inset-0 z-[500] bg-white dark:bg-black flex flex-col"
-                    >
-                        {/* Header */}
-                        <div className="pt-12 pb-4 px-4 bg-black/80 backdrop-blur-xl border-b border-[var(--card-border)] flex items-center gap-3">
-                            <button onClick={() => setIsAdoptionChatOpen(false)} className="w-10 h-10 rounded-full flex items-center justify-center text-[var(--secondary-text)] hover:text-[var(--foreground)] transition-colors">
-                                <ChevronLeft className="w-6 h-6" />
-                            </button>
-                            <div className="flex items-center gap-3">
-                                <img src={adoptionChatPet.img} className="w-10 h-10 rounded-full object-cover border border-black/10 dark:border-white/10" />
-                                <div>
-                                    <h3 className="text-[var(--foreground)] font-bold text-sm leading-tight">{adoptionChatPet.name} İlanı</h3>
-                                    <p className="text-green-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
-                                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" /> Sahiplendirme Süreci Aktif
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
 
-                        {/* Messages Area */}
-                        <div className="flex-1 overflow-y-auto no-scrollbar p-4 sm:p-6 space-y-4">
-                            {adoptionMessages.map((msg) => (
-                                <motion.div
-                                    key={msg.id}
-                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    className={cn(
-                                        "max-w-[80%] flex flex-col",
-                                        msg.sender === 'me' ? "ml-auto items-end" : msg.sender === 'system' ? "mx-auto items-center" : "mr-auto items-start"
-                                    )}
-                                >
-                                    {msg.sender === 'system' ? (
-                                        <div className="bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl px-4 py-2 text-[11px] text-[var(--secondary-text)] text-center leading-relaxed">
-                                            {msg.text}
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div className={cn(
-                                                "px-4 py-2.5 rounded-2xl text-[14px] font-medium leading-[1.4]",
-                                                msg.sender === 'me' ? "bg-cyan-500 text-[var(--foreground)] rounded-tr-sm" : "bg-card dark:bg-[#1C1C1E] text-[var(--foreground)] rounded-tl-sm border border-[var(--card-border)]"
-                                            )}>
-                                                {msg.text}
-                                            </div>
-                                            <span className="text-[9px] text-[var(--secondary-text)] font-bold mt-1 uppercase tracking-tight">{msg.time}</span>
-                                        </>
-                                    )}
-                                </motion.div>
-                            ))}
-                        </div>
-
-                        {/* Input Area */}
-                        <div className="p-4 pb-10 bg-black/80 backdrop-blur-xl border-t border-[var(--card-border)]">
-                            <div className="flex items-center gap-2 bg-card dark:bg-[#1C1C1E] rounded-full p-2 pl-4 border border-[var(--card-border)]">
-                                <input
-                                    type="text"
-                                    placeholder="Bir mesaj yazın..."
-                                    value={adoptionNewMsg}
-                                    onChange={(e) => setAdoptionNewMsg(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleSendAdoptionMsg()}
-                                    className="flex-1 bg-transparent border-none outline-none text-[var(--foreground)] text-[15px] placeholder:text-[var(--secondary-text)]"
-                                />
-                                <button
-                                    onClick={handleSendAdoptionMsg}
-                                    className="w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center text-[var(--foreground)] active:scale-95 transition-transform"
-                                >
-                                    <Send className="w-4 h-4 ml-0.5" />
-                                </button>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
             </AnimatePresence>
 
             {/* INSTAGRAM STYLE STORY VIEWER */}
@@ -4814,7 +4804,16 @@ export default function MoffiSocialMasterpiece() {
                                     <span className="font-bold text-sm tracking-wide">{storyGroups[viewerStoryGroupIndex].author_name}</span>
                                     <span className="text-[var(--foreground)]/60 text-xs mt-0.5">· {formatTimeAgo(storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].created_at)}</span>
                                 </div>
-                                <button onClick={closeStoryViewer} className="w-8 h-8 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center border border-black/20 dark:border-white/20 active:scale-90 transition-transform"><X className="w-5 h-5" /></button>
+                                <div className="flex items-center gap-2">
+                                    {storyGroups[viewerStoryGroupIndex].user_id === user?.id && (
+                                        <button onClick={async (e) => {
+                                            e.stopPropagation();
+                                            setIsStoryPaused(true);
+                                            setStoryToDelete(storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].id);
+                                        }} className="w-8 h-8 rounded-full bg-red-500/80 text-white backdrop-blur-md flex items-center justify-center border border-red-500 active:scale-90 transition-transform shadow-lg"><Trash2 className="w-4 h-4" /></button>
+                                    )}
+                                    <button onClick={closeStoryViewer} className="w-8 h-8 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center border border-black/20 dark:border-white/20 active:scale-90 transition-transform"><X className="w-5 h-5" /></button>
+                                </div>
                             </div>
 
                             {/* Media Display */}
@@ -4892,35 +4891,41 @@ export default function MoffiSocialMasterpiece() {
                                 {/* Bottom Actions 📸 */}
                                 <div className="absolute inset-x-0 bottom-0 p-4 z-30 flex items-center gap-3">
                                     {storyGroups[viewerStoryGroupIndex].user_id === user?.id ? (
-                                        <div className="flex items-center justify-between w-full text-[var(--foreground)]">
-                                            <button className="flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); showToast("İstatistikler", "Luna, Felix ve 12 diğer kişi gördü.", "info"); }}>
-                                                <div className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center border border-black/10 dark:border-white/10">
+                                        <div className="flex items-center justify-start w-full text-[var(--foreground)]">
+                                            <button className="flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); handleOpenStoryViews(storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].id); }}>
+                                                <div className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center border border-black/10 dark:border-white/10 backdrop-blur-md">
                                                     <Activity className="w-4 h-4 text-white" />
                                                 </div>
                                                 <span className="text-[8px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest">Görüntüleme</span>
                                             </button>
-                                            <div className="flex gap-4">
-                                                <button className="flex flex-col items-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); showToast("Öne Çıkarılıyor", "Hikayeniz vitrine taşınıyor...", "success"); }}>
-                                                    <div className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center border border-black/10 dark:border-white/10">
-                                                        <Heart className="w-4 h-4 text-white" />
-                                                    </div>
-                                                    <span className="text-[8px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest">Öne Çıkar</span>
-                                                </button>
-                                                <button className="flex flex-col items-center gap-1 active:scale-95 transition-transform" onClick={(e) => { e.stopPropagation(); showToast("Seçenekler", "İşlem menüsü açılıyor...", "info"); }}>
-                                                    <div className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center border border-black/10 dark:border-white/10">
-                                                        <MoreHorizontal className="w-4 h-4 text-white" />
-                                                    </div>
-                                                    <span className="text-[8px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest">Daha Fazla</span>
-                                                </button>
-                                            </div>
                                         </div>
                                     ) : (
-                                        <div className="flex gap-8 pointer-events-auto">
-                                            <button className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-[var(--foreground)] active:scale-90 transition-transform pointer-events-auto" onClick={(e) => { e.stopPropagation(); }}>
-                                                <Heart className="w-7 h-7 text-white" />
-                                            </button>
-                                            <button className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-[var(--foreground)] active:scale-90 transition-transform pointer-events-auto" onClick={(e) => { e.stopPropagation(); }}>
-                                                <Share2 className="w-7 h-7 text-white" />
+                                        <div className="flex items-center justify-end w-full text-[var(--foreground)]">
+                                            <button 
+                                                className="flex flex-col items-center gap-1 active:scale-95 transition-transform group" 
+                                                onClick={async (e) => { 
+                                                    e.stopPropagation(); 
+                                                    const story = storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex];
+                                                    
+                                                    // Animasyonlu geri bildirim
+                                                    const iconContainer = e.currentTarget.querySelector('.heart-container');
+                                                    if (iconContainer) {
+                                                        iconContainer.classList.add('scale-125');
+                                                        setTimeout(() => iconContainer.classList.remove('scale-125'), 150);
+                                                    }
+                                                    
+                                                    const res = await toggleStoryLike(story.id);
+                                                    if (res && !res.success) {
+                                                        setLikeError(res.error || "Bilinmeyen bir hata");
+                                                    }
+                                                }}
+                                            >
+                                                <div className="heart-container w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center border border-black/10 dark:border-white/10 backdrop-blur-md transition-transform duration-200">
+                                                    <Heart className={`w-4 h-4 ${storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].isLiked ? 'text-red-500 fill-red-500' : 'text-white'}`} />
+                                                </div>
+                                                <span className={`text-[8px] font-black ${storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].isLiked ? 'text-red-500' : 'text-black/50 dark:text-white/40'} uppercase tracking-widest`}>
+                                                    {storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].isLiked ? 'Beğenildi' : 'Beğen'}
+                                                </span>
                                             </button>
                                         </div>
                                     )}
@@ -4930,6 +4935,30 @@ export default function MoffiSocialMasterpiece() {
                     )
                 }
             </AnimatePresence >
+
+            {/* DEBUG ERROR CARD FOR STORY LIKES */}
+            {likeError && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-red-500/30">
+                        <div className="flex flex-col items-center text-center gap-4">
+                            <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                                <AlertCircle className="w-8 h-8 text-red-500" />
+                            </div>
+                            <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-100">Beğeni Hatası</h3>
+                            <p className="text-sm text-zinc-600 dark:text-zinc-400 p-3 bg-zinc-100 dark:bg-zinc-800 rounded-xl font-mono break-words w-full select-all">
+                                {likeError}
+                            </p>
+                            <p className="text-xs text-zinc-500">Lütfen bu hatayı kopyalayıp asistana gönderin.</p>
+                            <button 
+                                onClick={() => setLikeError(null)}
+                                className="mt-2 w-full py-3 bg-black dark:bg-white text-white dark:text-black rounded-xl font-bold active:scale-95 transition-transform"
+                            >
+                                Kapat
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* MODULAR OVERLAY SYSTEM (LIFTED) */}
             <OverlaySystem 
@@ -4973,6 +5002,85 @@ export default function MoffiSocialMasterpiece() {
                 setIsDiaryOpen={setIsDiaryOpen}
                 setActiveTab={setActiveTab}
             />
+
+            {/* STORY VIEWS DRAWER */}
+            <AnimatePresence>
+                {isStoryViewsDrawerOpen && (
+                    <motion.div
+                        initial={{ y: "120%" }}
+                        animate={{ y: 0 }}
+                        exit={{ y: "120%" }}
+                        transition={{ type: "spring", damping: 28, stiffness: 250 }}
+                        className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-[340px] z-[250] bg-white/95 dark:bg-[#121212]/95 backdrop-blur-3xl rounded-[2.5rem] shadow-[0_0_50px_-12px_rgba(0,0,0,0.25)] dark:shadow-[0_0_50px_-12px_rgba(0,0,0,0.6)] border border-black/5 dark:border-white/10 flex flex-col max-h-[75vh]"
+                    >
+                        {/* Elegant Drag Handle */}
+                        <div className="w-full flex justify-center pt-4 pb-2 shrink-0">
+                            <div className="w-10 h-1 bg-black/20 dark:bg-white/20 rounded-full" />
+                        </div>
+                        
+                        <div className="px-6 pb-4 pt-2 shrink-0 flex flex-col items-center justify-center relative border-b border-black/5 dark:border-white/5">
+                            <h2 className="text-[var(--foreground)] font-extrabold text-[17px] tracking-tight">Görüntüleyenler</h2>
+                            <p className="text-[var(--secondary-text)] text-[12px] font-medium mt-0.5">{storyViewers.length} Kişi</p>
+                            
+                            <button
+                                onClick={() => {
+                                    setIsStoryViewsDrawerOpen(false);
+                                    setIsStoryPaused(false);
+                                }}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-[var(--foreground)] active:scale-90 transition-transform"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto px-4 py-2 space-y-1 pb-10">
+                            {isLoadingStoryViewers ? (
+                                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                                    <div className="w-6 h-6 border-2 border-black/20 dark:border-white/20 border-t-black dark:border-t-white rounded-full animate-spin" />
+                                </div>
+                            ) : storyViewers.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-12 gap-2">
+                                    <span className="text-[var(--secondary-text)] font-medium text-sm">Hikayenizi henüz kimse görmedi.</span>
+                                </div>
+                            ) : (
+                                storyViewers.map((viewer, index) => (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: index * 0.04 }}
+                                        key={viewer.id}
+                                        onClick={() => {
+                                            setIsStoryViewsDrawerOpen(false);
+                                            setIsStoryPaused(false);
+                                            router.push(`/profile/${viewer.id}`);
+                                        }}
+                                        className="w-full flex items-center gap-4 py-3 px-2 rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer active:scale-[0.98]"
+                                    >
+                                        <div className="w-14 h-14 rounded-full overflow-hidden border border-black/5 dark:border-white/5 bg-gray-100 dark:bg-zinc-800 shrink-0">
+                                            {viewer.avatar ? (
+                                                <img src={viewer.avatar} alt={viewer.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <User className="w-full h-full p-3.5 text-[var(--secondary-text)]" />
+                                            )}
+                                        </div>
+                                        <div className="flex-1 flex items-center justify-between min-w-0">
+                                            <div className="flex flex-col text-left justify-center">
+                                                <span className="text-[var(--foreground)] font-bold text-[15px] leading-tight truncate">{viewer.name}</span>
+                                                <span className="text-[var(--secondary-text)] font-medium text-[13px] mt-0.5">@{viewer.username}</span>
+                                            </div>
+                                            {viewer.is_liked && (
+                                                <div className="shrink-0 pl-2 pr-1">
+                                                    <Heart className="w-5 h-5 text-red-500 fill-red-500" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                ))
+                            )}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* QUICK SHEETS & DETAILED MODALS */}
             {isVetQuickSheetOpen && (

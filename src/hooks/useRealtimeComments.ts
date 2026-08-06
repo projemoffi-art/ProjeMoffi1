@@ -83,10 +83,27 @@ export function useRealtimeComments(postId: string | number | null, enabled: boo
                 .catch(err => console.error('[Realtime] Custom sync failed:', err));
         };
 
+        const handleOptimisticLike = (e: any) => {
+            const commentId = e.detail?.commentId;
+            if (!commentId) return;
+            setComments(prev => prev.map(c => {
+                if (c.id === commentId) {
+                    return {
+                        ...c,
+                        isLiked: !c.isLiked,
+                        likes: c.isLiked ? Math.max(0, c.likes - 1) : c.likes + 1
+                    };
+                }
+                return c;
+            }));
+        };
+
         window.addEventListener('moffi_comments_changed', handleCustomSync);
+        window.addEventListener('moffi_optimistic_comment_like', handleOptimisticLike);
 
         return () => {
             window.removeEventListener('moffi_comments_changed', handleCustomSync);
+            window.removeEventListener('moffi_optimistic_comment_like', handleOptimisticLike);
             if (channelRef.current) {
                 supabase.removeChannel(channelRef.current);
                 channelRef.current = null;
