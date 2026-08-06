@@ -2612,21 +2612,44 @@ export class SupabaseApiService implements IApiService {
     getPostReactions = (id: any) => this.mockApi.getPostReactions(id);
 
     async getPostLikers(postId: number): Promise<any[]> {
-        const { data, error } = await supabase
-            .from('post_likes')
-            .select(`
-                user_id,
-                profiles:user_id(id, full_name, username, avatar_url)
-            `)
-            .eq('post_id', postId)
-            .order('created_at', { ascending: false });
+        try {
+            const { data: likesData, error: likesError } = await supabase
+                .from('likes')
+                .select('user_id, created_at')
+                .eq('post_id', postId)
+                .order('created_at', { ascending: false });
 
-        if (error) {
-            console.error("getPostLikers error:", error);
+            if (likesError) {
+                console.error("getPostLikers error:", likesError);
+                return [];
+            }
+            
+            if (!likesData || likesData.length === 0) return [];
+            
+            const userIds = likesData.map(l => l.user_id);
+            
+            const { data: profilesData, error: profilesError } = await supabase
+                .from('profiles')
+                .select('id, full_name, username, avatar_url')
+                .in('id', userIds);
+                
+            if (profilesError) {
+                console.error("getPostLikers profiles error:", profilesError);
+                return [];
+            }
+            
+            const profileMap: Record<string, any> = {};
+            (profilesData || []).forEach(p => {
+                profileMap[p.id] = p;
+            });
+            
+            return likesData
+                .map(l => profileMap[l.user_id])
+                .filter(Boolean);
+        } catch (e) {
+            console.error("Exception in getPostLikers:", e);
             return [];
         }
-        
-        return (data || []).map(row => Array.isArray(row.profiles) ? row.profiles[0] : row.profiles).filter(Boolean);
     }
 
 
