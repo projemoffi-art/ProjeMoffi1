@@ -217,7 +217,7 @@ export class SupabaseApiService implements IApiService {
             const { data: likes } = await supabase
                 .from('likes')
                 .select('post_id')
-                .eq('viewer_id', user.id);
+                .eq('user_id', user.id);
             userLikes = likes || [];
         }
 
@@ -411,32 +411,30 @@ export class SupabaseApiService implements IApiService {
         };
     }
 
+    private likeQueues: Record<string, Promise<void>> = {};
 
     async reactToPost(postId: string | number, reaction: string): Promise<void> {
-        const lockKey = `like-post-${postId}`;
-        if (this.pendingActionLocks.has(lockKey)) return;
-        this.pendingActionLocks.add(lockKey);
+        const key = `like-post-${postId}`;
 
-        try {
-            const user = await this.getSessionUser();
-            const currentUserIdOrName = user?.id || user?.user_metadata?.full_name || user?.user_metadata?.username || 'local-user';
+        const executeToggle = async () => {
+            try {
+                const user = await this.getSessionUser();
+                const currentUserIdOrName = user?.id || user?.user_metadata?.full_name || user?.user_metadata?.username || 'local-user';
 
-            if (user) {
-                try {
+                if (user) {
                     const { data: existings, error: selectError } = await supabase
                         .from('likes')
                         .select('id')
                         .eq('post_id', postId)
-                        .eq('viewer_id', user.id);
+                        .eq('user_id', user.id);
 
                     if (selectError) {
                         console.error("Supabase likes select error:", selectError);
-                        // RLS or schema issue prevents reading. We cannot safely toggle.
                         return;
                     }
 
                     if (existings && existings.length > 0) {
-                        const { error: deleteError } = await supabase.from('likes').delete().eq('post_id', postId).eq('viewer_id', user.id);
+                        const { error: deleteError } = await supabase.from('likes').delete().eq('post_id', postId).eq('user_id', user.id);
                         if (!deleteError) {
                             const { data: pData } = await supabase.from('posts').select('likes_count').eq('id', postId).maybeSingle();
                             if (pData) {
@@ -454,17 +452,25 @@ export class SupabaseApiService implements IApiService {
                             console.error("Supabase likes insert error:", insertError);
                         }
                     }
-                } catch (err) {
-                    console.warn("Supabase live like interaction skipped for offline/mock ID:", err);
+                } else {
+                    const { data: pData } = await supabase.from('posts').select('likes_count, reactions').eq('id', postId).maybeSingle();
+                    if (pData) {
+                        const currentCount = pData.likes_count || 0;
+                        await supabase.from('posts').update({ likes_count: currentCount + 1 }).eq('id', postId);
+                    }
                 }
+            } catch (err) {
+                console.error("reactToPost Error:", err);
             }
+        };
 
-            if (typeof window !== 'undefined') {
-                window.dispatchEvent(new Event('moffi_posts_changed'));
-            }
-        } finally {
-            setTimeout(() => this.pendingActionLocks.delete(lockKey), 1000);
+        if (this.likeQueues[key]) {
+            this.likeQueues[key] = this.likeQueues[key].then(executeToggle).catch(executeToggle);
+        } else {
+            this.likeQueues[key] = executeToggle().catch(() => {});
         }
+        
+        await this.likeQueues[key];
     }
 
     async addComment(postId: string | number, text: string, parentCommentId?: string | number): Promise<void> {
@@ -483,31 +489,15 @@ export class SupabaseApiService implements IApiService {
                         content: text
                     });
                 } catch (err) {
-                    console.warn("Supabase comment insert failed, using fallback persistent cache:", err);
+                    console.warn("Supabase comment insert failed:", err);
                 }
             }
 
             if (typeof window !== 'undefined') {
-                const cacheKey = `moffi_local_comments_${postId}`;
-                const cached = JSON.parse(localStorage.getItem(cacheKey) || '[]');
-                const newComment = {
-                    id: `loc-${Date.now()}`,
-                    post_id: postId,
-                    user: user?.user_metadata?.full_name || user?.user_metadata?.username || 'Sen (Canlı)',
-                    avatar: user?.user_metadata?.avatar_url || "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300",
-                    text: text,
-                    time: 'Şimdi',
-                    user_id: user?.id || 'local-user',
-                    likes: 0,
-                    status: 'approved',
-                    isLiked: false,
-                    parent_id: parentCommentId
-                };
-                localStorage.setItem(cacheKey, JSON.stringify([...cached, newComment]));
                 window.dispatchEvent(new Event('moffi_comments_changed'));
             }
         } finally {
-            setTimeout(() => this.pendingActionLocks.delete(lockKey), 2000);
+            this.pendingActionLocks.delete(lockKey);
         }
     }
 
@@ -533,7 +523,7 @@ export class SupabaseApiService implements IApiService {
                         .from('comment_likes')
                         .select('comment_id')
                         .in('comment_id', commentIds)
-                        .eq('viewer_id', user.id);
+                        .eq('user_id', user.id);
                         
                     if (likesData) {
                         likesData.forEach(l => likedCommentIds.add(l.comment_id));
@@ -557,53 +547,16 @@ export class SupabaseApiService implements IApiService {
             console.warn("Supabase fetch comments error:", err);
         }
 
-        let localComments: any[] = [];
-        if (typeof window !== 'undefined') {
-            const cacheKey = `moffi_local_comments_${postId}`;
-            localComments = JSON.parse(localStorage.getItem(cacheKey) || '[]');
-        }
-
-        const combinedMap = new Map<string | number, any>();
-        
-        dbComments.forEach(c => combinedMap.set(String(c.id), { ...c, replies: [] }));
-        
-        localComments.forEach(c => {
-            if (!combinedMap.has(String(c.id))) {
-                combinedMap.set(String(c.id), { ...c, replies: [] });
-            }
-        });
-
-        const allComments = Array.from(combinedMap.values());
-
-        if (allComments.length === 0) {
-            const initialMock = {
-                id: `init-${postId}`,
-                user: 'Milo & Luna',
-                avatar: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=400',
-                text: 'Harika bir paylaşım! 🐾 İlk yorumu biz bırakalım.',
-                time: '2 saat önce',
-                user_id: 'user-milo',
-                likes: 5,
-                status: 'approved',
-                isLiked: false,
-                replies: []
-            };
-            allComments.push(initialMock);
-            if (typeof window !== 'undefined') {
-                localStorage.setItem(`moffi_local_comments_${postId}`, JSON.stringify([initialMock]));
-            }
-        }
-
-        const finalComments = allComments.map(c => ({
+        const allComments = dbComments.map(c => ({
             ...c,
             replies: []
         }));
 
         const treeMap = new Map<string, any>();
-        finalComments.forEach(c => treeMap.set(String(c.id), c));
+        allComments.forEach(c => treeMap.set(String(c.id), c));
 
         const topLevel: any[] = [];
-        finalComments.forEach(c => {
+        allComments.forEach(c => {
             const node = treeMap.get(String(c.id));
             if (c.parent_id && treeMap.has(String(c.parent_id))) {
                 treeMap.get(String(c.parent_id)).replies.push(node);
@@ -682,20 +635,20 @@ export class SupabaseApiService implements IApiService {
         }
     }
 
-    async toggleCommentLike(commentId: string | number): Promise<void> {
-        const lockKey = `like-comment-${commentId}`;
-        if (this.pendingActionLocks.has(lockKey)) return;
-        this.pendingActionLocks.add(lockKey);
+    private commentLikeQueues: Record<string, Promise<void>> = {};
 
-        try {
-            const user = await this.getSessionUser();
-            if (user) {
-                try {
+    async toggleCommentLike(commentId: string | number): Promise<void> {
+        const key = `like-comment-${commentId}`;
+
+        const executeToggle = async () => {
+            try {
+                const user = await this.getSessionUser();
+                if (user) {
                     const { data: existings, error: selectError } = await supabase
                         .from('comment_likes')
                         .select('id')
                         .eq('comment_id', commentId)
-                        .eq('viewer_id', user.id);
+                        .eq('user_id', user.id);
 
                     if (selectError) {
                         console.error("Supabase comment_likes select error:", selectError);
@@ -703,7 +656,7 @@ export class SupabaseApiService implements IApiService {
                     }
 
                     if (existings && existings.length > 0) {
-                        const { error: deleteError } = await supabase.from('comment_likes').delete().eq('comment_id', commentId).eq('viewer_id', user.id);
+                        const { error: deleteError } = await supabase.from('comment_likes').delete().eq('comment_id', commentId).eq('user_id', user.id);
                         if (!deleteError) {
                             const { data } = await supabase.from('comments').select('likes_count').eq('id', commentId).maybeSingle();
                             await supabase.from('comments').update({ likes_count: Math.max(0, (data?.likes_count || 0) - existings.length) }).eq('id', commentId);
@@ -717,15 +670,23 @@ export class SupabaseApiService implements IApiService {
                             console.error("Supabase comment_likes insert error:", insertError);
                         }
                     }
-                } catch {}
+                }
+            } catch (e) {
+                console.error("Error toggling comment like:", e);
             }
 
             if (typeof window !== 'undefined') {
                 window.dispatchEvent(new Event('moffi_comments_changed'));
             }
-        } finally {
-            setTimeout(() => this.pendingActionLocks.delete(lockKey), 1000);
+        };
+
+        if (this.commentLikeQueues[key]) {
+            this.commentLikeQueues[key] = this.commentLikeQueues[key].then(executeToggle).catch(executeToggle);
+        } else {
+            this.commentLikeQueues[key] = executeToggle().catch(() => {});
         }
+
+        await this.commentLikeQueues[key];
     }
 
     // --- MAP & RADAR (Community) ---
@@ -957,7 +918,7 @@ export class SupabaseApiService implements IApiService {
             .from('lost_pets')
             .delete()
             .eq('id', id)
-            .eq('viewer_id', user.id);
+            .eq('user_id', user.id);
             
         if (error) throw error;
     }
@@ -1046,7 +1007,7 @@ export class SupabaseApiService implements IApiService {
             .from('adoption_pets')
             .delete()
             .eq('id', id)
-            .eq('viewer_id', user.id);
+            .eq('user_id', user.id);
             
         if (error) throw error;
     }
@@ -1359,7 +1320,7 @@ export class SupabaseApiService implements IApiService {
         const user = await this.getSessionUser();
         if (user) {
             try {
-                await supabase.from('posts').delete().eq('id', postId).eq('viewer_id', user.id);
+                await supabase.from('posts').delete().eq('id', postId).eq('user_id', user.id);
             } catch {}
         }
 
@@ -1379,7 +1340,7 @@ export class SupabaseApiService implements IApiService {
         const user = await this.getSessionUser();
         if (user) {
             try {
-                await supabase.from('posts').update(updates).eq('id', postId).eq('viewer_id', user.id);
+                await supabase.from('posts').update(updates).eq('id', postId).eq('user_id', user.id);
             } catch {}
         }
 
@@ -1435,7 +1396,7 @@ export class SupabaseApiService implements IApiService {
         const { data, error } = await supabase
             .from('cart_items')
             .select('*')
-            .eq('viewer_id', user.id);
+            .eq('user_id', user.id);
 
         if (error) return [];
 
@@ -1497,7 +1458,7 @@ export class SupabaseApiService implements IApiService {
         await supabase
             .from('cart_items')
             .delete()
-            .eq('viewer_id', user.id);
+            .eq('user_id', user.id);
     }
 
     async getOrders(): Promise<ShopOrder[]> {
@@ -1570,7 +1531,7 @@ export class SupabaseApiService implements IApiService {
                 *,
                 product:products(*)
             `)
-            .eq('viewer_id', user.id);
+            .eq('user_id', user.id);
 
         if (error) return [];
         
@@ -2111,7 +2072,7 @@ export class SupabaseApiService implements IApiService {
             .from('appointments')
             .update({ status: 'cancelled' })
             .eq('id', appointmentId)
-            .eq('viewer_id', user.id);
+            .eq('user_id', user.id);
 
         if (error) throw error;
     }
@@ -2600,6 +2561,21 @@ export class SupabaseApiService implements IApiService {
                 expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24h default
             });
 
+    }
+
+    async addStory(storyData: any): Promise<void> {
+        const user = await this.getSessionUser();
+        if (!user) throw new Error('Giriş gerekli');
+
+        const { error } = await supabase
+            .from('stories')
+            .insert({
+                user_id: user.id,
+                image_url: storyData.mediaUrl || storyData.imageUrl || storyData.image_url,
+                caption: storyData.caption || '',
+                expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24h default
+            });
+
         if (error) throw error;
     }
 
@@ -2611,13 +2587,13 @@ export class SupabaseApiService implements IApiService {
             .from('stories')
             .delete()
             .eq('id', storyId)
-            .eq('viewer_id', user.id);
+            .eq('user_id', user.id);
 
         if (error) throw error;
     }
 
     async markStoryAsViewed(storyId: string): Promise<void> {
-        const user = await this.getSessionUser();
+        const { data: { user } } = await supabase.auth.getUser();
         if (!user) return; 
 
         const { error } = await supabase
@@ -2634,7 +2610,7 @@ export class SupabaseApiService implements IApiService {
         const { data, error } = await supabase
             .from('story_views')
             .select('story_id')
-            .eq('viewer_id', user.id);
+            .eq('user_id', user.id);
             
         if (error) {
             console.error("Error fetching viewed stories:", error);

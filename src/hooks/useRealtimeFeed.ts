@@ -72,22 +72,27 @@ export function useRealtimeFeed(enabled: boolean = true) {
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'posts' },
-                () => fetchPosts(true)
-            )
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'likes' },
-                () => fetchPosts(true)
-            )
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'comments' },
-                () => fetchPosts(true)
+                () => {
+                    // Debounce fetch for 1.5 seconds to allow optimistic UI and DB to settle
+                    if ((window as any)._moffi_feed_fetch_timer) {
+                        clearTimeout((window as any)._moffi_feed_fetch_timer);
+                    }
+                    (window as any)._moffi_feed_fetch_timer = setTimeout(() => {
+                        fetchPosts(true);
+                    }, 1500);
+                }
             )
             .subscribe();
 
         // Custom manual sync event
-        const handleCustomSync = () => fetchPosts(true);
+        const handleCustomSync = () => {
+            if ((window as any)._moffi_feed_fetch_timer) {
+                clearTimeout((window as any)._moffi_feed_fetch_timer);
+            }
+            (window as any)._moffi_feed_fetch_timer = setTimeout(() => {
+                fetchPosts(true);
+            }, 1500);
+        };
 
         // Optimistic UI for Post Likes
         const handleOptimisticPostLike = (e: any) => {

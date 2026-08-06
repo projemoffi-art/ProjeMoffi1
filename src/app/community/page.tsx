@@ -1228,8 +1228,11 @@ export default function MoffiSocialMasterpiece() {
         }
 
         try {
-            await apiService.reactToPost(id, '❤️');
-            window.dispatchEvent(new Event('moffi_posts_changed'));
+            await apiService.reactToPost(id, '💖');
+            // We intentionally DO NOT dispatch 'moffi_posts_changed' here.
+            // The optimistic UI has already updated the like status locally instantly.
+            // Dispatching a manual fetch here creates a race condition that causes the heart to flicker.
+            // The Realtime subscription will eventually sync the feed silently if needed.
         } catch (err: any) {
             console.error("Beğeni hatası:", err);
             alert("Beğeni Hatası: " + (err?.message || JSON.stringify(err)));
