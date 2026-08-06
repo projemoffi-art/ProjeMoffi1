@@ -71,10 +71,11 @@ export function FeedTab({
 }: FeedTabProps) {
     return (
         <motion.div
+            id="feed-tab-container"
+            className="w-full h-full relative overflow-y-auto overflow-x-hidden bg-[var(--background)] flex flex-col gap-0"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="w-full h-full relative overflow-y-auto overflow-x-hidden bg-[var(--background)] flex flex-col gap-0 pb-24"
         >
             {/* Soft Ambient Background for the Feed */}
             <div className="fixed inset-0 pointer-events-none z-0 opacity-50 dark:opacity-30">
@@ -277,30 +278,31 @@ export function FeedTab({
                     isLoading={isLoading} 
                 />
             ) : (
-                posts.map((post, feedIdx) => (
-                    <section key={post.id} id={`post-${post.id}`} className="w-full flex flex-col items-center px-2 sm:px-4">
-                        <ImmersivePostCard
-                            post={post}
-                            currentUser={user}
-                            onLike={() => onLike(post.id)}
-                            onShare={() => onShare(post)}
-                            onAddComment={(text) => onAddComment(post.id, text)}
-                            onToggleCommentLike={(commentId) => onToggleCommentLike(post.id, commentId)}
-                            onReplyComment={(commentId, text) => onReplyComment(post.id, commentId, text)}
-                            onDeleteComment={(commentId) => onDeleteComment(post.id, commentId)}
-                            onEditComment={(commentId, text) => onEditComment(post.id, commentId, text)}
-                            onReportComment={(commentId) => onReportComment(post.id, commentId)}
-                            onDeletePost={() => onDeletePost(post.id)}
-                            onEditPost={() => onEditPost(post)}
-                            priority={feedIdx === 0}
-                            isCommentsDisabled={isCommentsDisabled}
-                        />
-                    </section>
-                ))
+                <div className="w-full px-2 sm:px-4 pb-4">
+                    <div className="w-full max-w-[495px] mx-auto bg-white/90 dark:bg-[#121212]/90 backdrop-blur-3xl rounded-[2rem] border border-black/[0.02] dark:border-white/[0.02] shadow-[0_12px_40px_rgb(0,0,0,0.03)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] flex flex-col overflow-hidden">
+                        {posts.map((post, feedIdx) => (
+                            <section key={post.id} id={`post-${post.id}`} className="w-full flex flex-col items-center">
+                                <ImmersivePostCard
+                                    post={post}
+                                    currentUser={user}
+                                    onLike={() => onLike(post.id)}
+                                    onShare={() => onShare(post)}
+                                    onAddComment={(text) => onAddComment(post.id, text)}
+                                    onToggleCommentLike={(commentId) => onToggleCommentLike(post.id, commentId)}
+                                    onReplyComment={(commentId, text) => onReplyComment(post.id, commentId, text)}
+                                    onDeleteComment={(commentId) => onDeleteComment(post.id, commentId)}
+                                    onEditComment={(commentId, text) => onEditComment(post.id, commentId, text)}
+                                    onReportComment={(commentId) => onReportComment(post.id, commentId)}
+                                    onDeletePost={() => onDeletePost(post.id)}
+                                    onEditPost={() => onEditPost(post)}
+                                    priority={feedIdx === 0}
+                                    isCommentsDisabled={isCommentsDisabled}
+                                />
+                            </section>
+                        ))}
+                    </div>
+                </div>
             )}
-
-            {/* Space for bottom nav */}
-            <div className="h-12 w-full shrink-0" />
         </motion.div>
     );
 }

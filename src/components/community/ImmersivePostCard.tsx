@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
 import { 
@@ -401,7 +402,7 @@ export function ImmersivePostCard({
     };
 
     return (
-        <div ref={containerRef} className="w-full max-w-[495px] mx-auto bg-white/90 dark:bg-[#121212]/90 backdrop-blur-3xl rounded-[2rem] border border-black/[0.02] dark:border-white/[0.02] mb-6 sm:mb-8 flex flex-col shadow-[0_12px_40px_rgb(0,0,0,0.03)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] transition-all hover:shadow-[0_12px_50px_rgb(0,0,0,0.06)] dark:hover:shadow-[0_12px_50px_rgba(255,255,255,0.02)] overflow-hidden">
+        <div ref={containerRef} className="w-full max-w-[495px] mx-auto flex flex-col overflow-hidden">
             {/* HEADER */}
             <div className="flex items-center justify-between p-4 px-5">
                 <div className="flex items-center gap-3 cursor-pointer group" onClick={handleProfileNavigation}>
@@ -550,129 +551,125 @@ export function ImmersivePostCard({
                 </div>
             </div>
 
-                        {/* COMMENT DRAWER */}
-            <AnimatePresence>
-                {showComments && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm z-[1100]"
-                            onClick={() => setShowComments(false)}
-                        />
-                        <motion.div
-                            initial={{ y: "100%" }}
-                            animate={{ y: 0 }}
-                            exit={{ y: "100%" }}
-                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            className="fixed bottom-0 left-0 right-0 sm:max-w-[440px] sm:mx-auto z-[1200] bg-white/90 dark:bg-[#111]/90 backdrop-blur-2xl rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/20 dark:border-white/10 flex flex-col max-h-[85vh] overflow-hidden"
-                        >
-                            {/* DRAG HANDLE */}
-                            <div className="w-full flex justify-center pt-4 pb-2 shrink-0 cursor-pointer" onClick={() => setShowComments(false)}>
-                                <div className="w-12 h-1.5 bg-gray-300 dark:bg-white/20 rounded-full" />
-                            </div>
-
-                            <div className="flex items-center justify-between px-6 pb-4 shrink-0">
-                                <h3 className="font-bold text-[18px] text-gray-900 dark:text-white tracking-tight">Yorumlar</h3>
-                                <button onClick={() => setShowComments(false)} className="p-2 bg-gray-100 dark:bg-white/10 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-white/20 transition-all active:scale-95">
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-
-                            <div className="flex-1 overflow-y-auto px-5 py-2 space-y-4">
-                                {isLoadingComments ? (
-                                    <div className="flex justify-center p-8"><span className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></span></div>
-                                ) : comments.length === 0 ? (
-                                    <div className="text-center text-gray-400 py-12 flex flex-col items-center gap-3">
-                                        <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center mb-2">
-                                            <MessageCircle className="w-8 h-8 opacity-40 text-gray-500" />
-                                        </div>
-                                        <p className="font-bold text-[15px] text-gray-900 dark:text-gray-100 tracking-tight">Henüz yorum yok</p>
-                                        <p className="text-[13px] font-medium">İlk yorumu sen yaparak tartışmayı başlat!</p>
-                                    </div>
-                                ) : (
-                                    comments.map((c: any) => (
-                                        <div key={c.id} className="flex gap-3 group/comment relative">
-                                            <img src={c.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100"} className="w-10 h-10 rounded-full shrink-0 border border-black/5 dark:border-white/10 shadow-sm object-cover" />
-                                            <div className="flex-1 bg-gray-50 dark:bg-white/5 p-3.5 rounded-2xl rounded-tl-sm border border-black/5 dark:border-white/10 shadow-sm relative">
-                                                <div className="flex items-center justify-between mb-1.5">
-                                                    <span className="font-bold text-[13px] tracking-tight text-gray-900 dark:text-gray-100">
-                                                        {typeof c.user === 'string' ? c.user : (c.user?.username || c.user?.full_name || "Kullanıcı")}
-                                                    </span>
-                                                    <span className="text-[10px] font-semibold text-gray-400">{c.time || 'Şimdi'}</span>
-                                                </div>
-                                                <p className="text-[14px] text-gray-700 dark:text-gray-200 leading-snug break-words">{filterContent(c.text)}</p>
-                                                
-                                                <div className="flex items-center justify-between mt-2 pt-2 border-t border-black/5 dark:border-white/5">
-                                                    <button 
-                                                        onClick={() => onToggleCommentLike && onToggleCommentLike(c.id)}
-                                                        className={`flex items-center gap-1.5 text-[11px] font-bold tracking-wide transition-colors ${c.isLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
-                                                    >
-                                                        <Heart className={`w-3.5 h-3.5 ${c.isLiked ? 'fill-current' : ''}`} strokeWidth={c.isLiked ? 0 : 2} />
-                                                        <span>{c.likes || 0}</span>
-                                                    </button>
-                                                    
-                                                    {(c.user_id === currentUser?.id || c.userId === currentUser?.id) && (
-                                                        <button 
-                                                            onClick={() => onDeleteComment && onDeleteComment(c.id)}
-                                                            className="text-gray-400 hover:text-red-500 opacity-0 group-hover/comment:opacity-100 transition-all active:scale-95 flex items-center gap-1 text-[11px] font-bold"
-                                                        >
-                                                            <Trash2 className="w-3.5 h-3.5" />
-                                                            Sil
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-
-                            {/* EMOJI PICKER & INPUT AREA */}
-                            <div className="p-4 pb-safe border-t border-black/5 dark:border-white/5 bg-white/90 dark:bg-[#111]/90 backdrop-blur-xl shrink-0">
-                                <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-3 px-1 mask-linear-fade">
-                                    {['😂','😍','🥺','🔥','🐾','🦴','❤️', '👏', '✨'].map((emoji, i) => (
-                                        <button 
-                                            key={i}
-                                            onClick={() => setCommentInput(prev => prev + emoji)}
-                                            className="w-10 h-10 shrink-0 bg-gray-100 dark:bg-white/10 rounded-full flex items-center justify-center text-[18px] hover:scale-110 active:scale-95 transition-transform border border-transparent hover:border-cyan-500/30 shadow-sm"
-                                        >
-                                            {emoji}
-                                        </button>
-                                    ))}
+            {/* COMMENT DRAWER */}
+            {typeof document !== 'undefined' && createPortal(
+                <AnimatePresence>
+                    {showComments && (
+                        <>
+                            <motion.div
+                                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm z-[1100]"
+                                onClick={() => setShowComments(false)}
+                            />
+                            <motion.div
+                                initial={{ y: "100%" }}
+                                animate={{ y: 0 }}
+                                exit={{ y: "100%" }}
+                                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                                className="fixed bottom-0 left-0 right-0 sm:max-w-[440px] sm:mx-auto z-[1200] bg-white/90 dark:bg-[#111]/90 backdrop-blur-2xl rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/20 dark:border-white/10 flex flex-col max-h-[85vh] overflow-hidden"
+                            >
+                                {/* DRAG HANDLE */}
+                                <div className="w-full flex justify-center pt-4 pb-2 shrink-0 cursor-pointer" onClick={() => setShowComments(false)}>
+                                    <div className="w-12 h-1.5 bg-gray-300 dark:bg-white/20 rounded-full" />
                                 </div>
-                                
-                                <div className="flex items-center gap-2 bg-gray-100 dark:bg-white/5 rounded-2xl p-1.5 border border-black/5 dark:border-white/10 focus-within:border-cyan-500/50 focus-within:ring-4 focus-within:ring-cyan-500/10 transition-all shadow-inner">
-                                    <input 
-                                        type="text" 
-                                        value={commentInput}
-                                        onChange={(e) => setCommentInput(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && handleSendComment()}
-                                        placeholder="Yorum ekle..." 
-                                        className="flex-1 bg-transparent px-4 py-2 text-[14px] font-medium focus:outline-none dark:text-white placeholder:text-gray-400"
-                                    />
-                                    <button 
-                                        onClick={handleSendComment} 
-                                        disabled={!commentInput.trim() || isSendingComment} 
-                                        className="bg-cyan-500 hover:bg-cyan-600 text-white rounded-xl px-4 py-2 flex items-center justify-center font-bold text-[13px] disabled:opacity-40 transition-all active:scale-95 shadow-md shadow-cyan-500/20 shrink-0"
-                                    >
-                                        Gönder
+
+                                <div className="flex items-center justify-between px-6 pb-4 shrink-0">
+                                    <h3 className="font-bold text-[18px] text-gray-900 dark:text-white tracking-tight">Yorumlar</h3>
+                                    <button onClick={() => setShowComments(false)} className="p-2 bg-gray-100 dark:bg-white/10 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-white/20 transition-all active:scale-95">
+                                        <X className="w-5 h-5" />
                                     </button>
                                 </div>
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
-            
-            
-            
 
+                                <div className="flex-1 overflow-y-auto px-5 py-2 space-y-4">
+                                    {isLoadingComments ? (
+                                        <div className="flex justify-center p-8"><span className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></span></div>
+                                    ) : comments.length === 0 ? (
+                                        <div className="text-center text-gray-400 py-12 flex flex-col items-center gap-3">
+                                            <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center mb-2">
+                                                <MessageCircle className="w-8 h-8 opacity-40 text-gray-500" />
+                                            </div>
+                                            <p className="font-bold text-[15px] text-gray-900 dark:text-gray-100 tracking-tight">Henüz yorum yok</p>
+                                            <p className="text-[13px] font-medium">İlk yorumu sen yaparak tartışmayı başlat!</p>
+                                        </div>
+                                    ) : (
+                                        comments.map((c: any) => (
+                                            <div key={c.id} className="flex gap-3 group/comment relative">
+                                                <img src={c.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100"} className="w-10 h-10 rounded-full shrink-0 border border-black/5 dark:border-white/10 shadow-sm object-cover" />
+                                                <div className="flex-1 bg-gray-50 dark:bg-white/5 p-3.5 rounded-2xl rounded-tl-sm border border-black/5 dark:border-white/10 shadow-sm relative">
+                                                    <div className="flex items-center justify-between mb-1.5">
+                                                        <span className="font-bold text-[13px] tracking-tight text-gray-900 dark:text-gray-100">
+                                                            {typeof c.user === 'string' ? c.user : (c.user?.username || c.user?.full_name || "Kullanıcı")}
+                                                        </span>
+                                                        <span className="text-[11px] font-medium text-gray-400">{c.time_ago}</span>
+                                                    </div>
+                                                    <p className="text-[14px] text-gray-800 dark:text-gray-200 leading-snug">{c.text || c.content}</p>
+                                                    <div className="flex items-center gap-4 mt-2">
+                                                        <button 
+                                                            onClick={() => onToggleCommentLike && onToggleCommentLike(c.id)}
+                                                            className={cn("flex items-center gap-1.5 text-[12px] font-bold transition-colors", (c.isLiked || c.is_liked) ? "text-red-500" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300")}
+                                                        >
+                                                            <Heart className={cn("w-3.5 h-3.5", (c.isLiked || c.is_liked) && "fill-current")} />
+                                                            <span>{c.likes}</span>
+                                                        </button>
+                                                        {currentUser?.id === (c.user?.id || c.user_id) && (
+                                                            <button 
+                                                                onClick={() => onDeleteComment && onDeleteComment(c.id)}
+                                                                className="text-[12px] font-bold text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover/comment:opacity-100"
+                                                            >
+                                                                Sil
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
 
+                                <div className="p-4 border-t border-black/5 dark:border-white/10 bg-white/50 dark:bg-[#111]/50 backdrop-blur-xl shrink-0">
+                                    <div className="flex gap-2">
+                                        <div className="flex gap-1 py-2 overflow-x-auto no-scrollbar">
+                                            {['❤️', '🙌', '🔥', '👏', '😢', '😍', '😮', '😂'].map(emoji => (
+                                                <button 
+                                                    key={emoji} 
+                                                    onClick={() => setCommentInput(prev => prev + emoji)}
+                                                    className="w-10 h-10 flex items-center justify-center text-xl hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors shrink-0 active:scale-95"
+                                                >
+                                                    {emoji}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2 items-center bg-gray-100 dark:bg-white/5 rounded-2xl p-1.5 pr-2 mt-2 border border-black/5 dark:border-white/5 shadow-inner">
+                                        <input 
+                                            type="text" 
+                                            value={commentInput}
+                                            onChange={(e) => setCommentInput(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleSendComment()}
+                                            placeholder="Yorum ekle..." 
+                                            className="flex-1 bg-transparent px-4 py-2 text-[14px] font-medium focus:outline-none dark:text-white placeholder:text-gray-400"
+                                        />
+                                        <button 
+                                            onClick={handleSendComment} 
+                                            disabled={!commentInput.trim() || isSendingComment} 
+                                            className="bg-cyan-500 hover:bg-cyan-600 text-white rounded-xl px-4 py-2 flex items-center justify-center font-bold text-[13px] disabled:opacity-40 transition-all active:scale-95 shadow-md shadow-cyan-500/20 shrink-0"
+                                        >
+                                            Gönder
+                                        </button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
             {/* MORE DRAWER */}
-            <AnimatePresence>
-                {isMoreOpen && (
-                    <>
-                        <motion.div
+            {typeof document !== 'undefined' && createPortal(
+                <AnimatePresence>
+                    {isMoreOpen && (
+                        <>
+                            <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/60 z-[440] backdrop-blur-md pointer-events-auto"
                             onClick={() => setIsMoreOpen(false)}
@@ -727,14 +724,17 @@ export function ImmersivePostCard({
                                 <button onClick={() => setIsMoreOpen(false)} className="w-full p-4 font-bold text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors text-[15px] tracking-tight mt-2 active:scale-95">İptal</button>
                             </div>
                         </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
-            {/* LIKERS MODAL */}
-            <AnimatePresence>
-                {showLikersModal && (
-                    <>
-                        <motion.div
+                        </>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
+            {/* LIKERS MODAL */}
+            {typeof document !== 'undefined' && createPortal(
+                <AnimatePresence>
+                    {showLikersModal && (
+                        <>
+                            <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -789,10 +789,11 @@ export function ImmersivePostCard({
                                 )}
                             </div>
                         </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
-
+                        </>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
         </div>
     );
 }

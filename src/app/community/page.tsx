@@ -1995,7 +1995,7 @@ export default function MoffiSocialMasterpiece() {
 
 
     return (
-        <div className="fixed inset-0 bg-[var(--background)] text-[var(--foreground)] overflow-hidden flex flex-col font-sans pb-[72px] md:pb-0">
+        <div className="fixed inset-0 bg-[var(--background)] text-[var(--foreground)] overflow-hidden flex flex-col font-sans pb-0">
 
             {/* iOS STYLE TOAST NOTIFICATION */}
             <AnimatePresence>

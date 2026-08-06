@@ -385,7 +385,7 @@ export function DynamicNavigation() {
                 onSOSClick={() => window.dispatchEvent(new CustomEvent('open-sos-center'))}
             />
 
-            <SOSCommandCenter
+<SOSCommandCenter
                 isOpen={isSOSOpen}
                 onClose={() => setIsSOSOpen(false)}
                 pet={sosActivePet}
@@ -441,7 +441,7 @@ export function DynamicNavigation() {
             <PremiumUpgradeModal />
 
             {/* GLOBAL BOTTOM NAVIGATION */}
-            <div className={`fixed bottom-0 inset-x-0 z-[2900] transition-transform duration-300 ${isNavVisible ? 'translate-y-0' : 'translate-y-full'}`}>
+            <div className={`fixed bottom-0 inset-x-0 z-[2900] transition-transform duration-300 md:hidden ${isNavVisible ? 'translate-y-0' : 'translate-y-full'}`}>
                 <MoffiBottomNav
                     activeTab={
                         pathname === '/home' ? 'home' :
