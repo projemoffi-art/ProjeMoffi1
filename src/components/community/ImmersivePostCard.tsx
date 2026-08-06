@@ -401,7 +401,7 @@ export function ImmersivePostCard({
     };
 
     return (
-        <div ref={containerRef} className="w-full max-w-[470px] mx-auto bg-white/90 dark:bg-[#121212]/90 backdrop-blur-3xl rounded-[2rem] border border-black/[0.02] dark:border-white/[0.02] mb-6 sm:mb-8 flex flex-col shadow-[0_12px_40px_rgb(0,0,0,0.03)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] transition-all hover:shadow-[0_12px_50px_rgb(0,0,0,0.06)] dark:hover:shadow-[0_12px_50px_rgba(255,255,255,0.02)] overflow-hidden">
+        <div ref={containerRef} className="w-full max-w-[495px] mx-auto bg-white/90 dark:bg-[#121212]/90 backdrop-blur-3xl rounded-[2rem] border border-black/[0.02] dark:border-white/[0.02] mb-6 sm:mb-8 flex flex-col shadow-[0_12px_40px_rgb(0,0,0,0.03)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] transition-all hover:shadow-[0_12px_50px_rgb(0,0,0,0.06)] dark:hover:shadow-[0_12px_50px_rgba(255,255,255,0.02)] overflow-hidden">
             {/* HEADER */}
             <div className="flex items-center justify-between p-4 px-5">
                 <div className="flex items-center gap-3 cursor-pointer group" onClick={handleProfileNavigation}>
@@ -444,7 +444,7 @@ export function ImmersivePostCard({
             {/* MEDIA */}
             <div className="px-3 sm:px-4">
                 <div 
-                    className="relative w-full aspect-square sm:aspect-[4/5] bg-gray-100 dark:bg-[#0a0a0a] overflow-hidden rounded-[1.5rem] flex items-center justify-center cursor-pointer group/media"
+                    className="relative w-full aspect-[4/5] sm:aspect-[2/3] bg-gray-100 dark:bg-[#0a0a0a] overflow-hidden rounded-[1.5rem] flex items-center justify-center cursor-pointer group/media"
                 onClick={() => {
                     const isVideo = post?.is_video || (post?.media && (/.(mp4|webm|ogg|mov|avi|m4v|mkv|flv|wmv)$/i.test(post.media)));
                     if (isVideo) {
@@ -508,10 +508,6 @@ export function ImmersivePostCard({
                             <Send strokeWidth={1.25} className="w-[22px] h-[22px] transition-transform group-hover:scale-105 group-active:scale-95 -mt-0.5 ml-0.5" />
                         </button>
                     </div>
-                    {/* Add Save icon placeholder for aesthetic */}
-                    <button className="p-2 -mr-2 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-all active:scale-95">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
-                    </button>
                 </div>
                 
                 {/* LIKES & CAPTION */}
@@ -582,81 +578,85 @@ export function ImmersivePostCard({
                                 </button>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto px-6 py-2 space-y-5">
+                            <div className="flex-1 overflow-y-auto px-5 py-2 space-y-4">
                                 {isLoadingComments ? (
                                     <div className="flex justify-center p-8"><span className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></span></div>
                                 ) : comments.length === 0 ? (
                                     <div className="text-center text-gray-400 py-12 flex flex-col items-center gap-3">
-                                        <MessageCircle className="w-14 h-14 opacity-20" />
-                                        <p className="font-medium text-[15px]">Henüz yorum yok. İlk yorumu sen yap!</p>
+                                        <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center mb-2">
+                                            <MessageCircle className="w-8 h-8 opacity-40 text-gray-500" />
+                                        </div>
+                                        <p className="font-bold text-[15px] text-gray-900 dark:text-gray-100 tracking-tight">Henüz yorum yok</p>
+                                        <p className="text-[13px] font-medium">İlk yorumu sen yaparak tartışmayı başlat!</p>
                                     </div>
                                 ) : (
                                     comments.map((c: any) => (
                                         <div key={c.id} className="flex gap-3 group/comment relative">
-                                            <img src={c.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100"} className="w-9 h-9 rounded-full shrink-0 border border-gray-100 dark:border-white/10 shadow-sm object-cover" />
-                                            <div className="flex-1">
-                                                <div className="flex items-baseline gap-2">
-                                                    <span className="font-bold text-[14px] tracking-tight text-gray-900 dark:text-gray-100">{typeof c.user === 'string' ? c.user : (c.user?.username || c.user?.full_name || "Kullanıcı")}</span>
-                                                    <span className="text-[11px] font-medium text-gray-400">{c.time || 'Şimdi'}</span>
+                                            <img src={c.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100"} className="w-10 h-10 rounded-full shrink-0 border border-black/5 dark:border-white/10 shadow-sm object-cover" />
+                                            <div className="flex-1 bg-gray-50 dark:bg-white/5 p-3.5 rounded-2xl rounded-tl-sm border border-black/5 dark:border-white/10 shadow-sm relative">
+                                                <div className="flex items-center justify-between mb-1.5">
+                                                    <span className="font-bold text-[13px] tracking-tight text-gray-900 dark:text-gray-100">
+                                                        {typeof c.user === 'string' ? c.user : (c.user?.username || c.user?.full_name || "Kullanıcı")}
+                                                    </span>
+                                                    <span className="text-[10px] font-semibold text-gray-400">{c.time || 'Şimdi'}</span>
                                                 </div>
-                                                <p className="text-[14px] text-gray-700 dark:text-gray-300 leading-relaxed mt-0.5">{filterContent(c.text)}</p>
-                                                <div className="flex items-center gap-4 mt-2">
+                                                <p className="text-[14px] text-gray-700 dark:text-gray-200 leading-snug break-words">{filterContent(c.text)}</p>
+                                                
+                                                <div className="flex items-center justify-between mt-2 pt-2 border-t border-black/5 dark:border-white/5">
                                                     <button 
                                                         onClick={() => onToggleCommentLike && onToggleCommentLike(c.id)}
-                                                        className={`flex items-center gap-1 text-[12px] font-medium transition-colors ${c.isLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
+                                                        className={`flex items-center gap-1.5 text-[11px] font-bold tracking-wide transition-colors ${c.isLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
                                                     >
-                                                        <Heart className={`w-3.5 h-3.5 ${c.isLiked ? 'fill-current' : ''}`} />
+                                                        <Heart className={`w-3.5 h-3.5 ${c.isLiked ? 'fill-current' : ''}`} strokeWidth={c.isLiked ? 0 : 2} />
                                                         <span>{c.likes || 0}</span>
                                                     </button>
+                                                    
+                                                    {(c.user_id === currentUser?.id || c.userId === currentUser?.id) && (
+                                                        <button 
+                                                            onClick={() => onDeleteComment && onDeleteComment(c.id)}
+                                                            className="text-gray-400 hover:text-red-500 opacity-0 group-hover/comment:opacity-100 transition-all active:scale-95 flex items-center gap-1 text-[11px] font-bold"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                            Sil
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
-                                            {(c.user_id === currentUser?.id || c.userId === currentUser?.id) && (
-                                                <button 
-                                                    onClick={() => onDeleteComment && onDeleteComment(c.id)}
-                                                    className="absolute top-0 right-0 text-gray-400 hover:text-red-500 opacity-0 group-hover/comment:opacity-100 transition-all p-2 active:scale-95"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            )}
                                         </div>
                                     ))
                                 )}
                             </div>
 
                             {/* EMOJI PICKER & INPUT AREA */}
-                            <div className="pb-safe border-t border-gray-100 dark:border-white/5 bg-white/50 dark:bg-black/50 backdrop-blur-xl shrink-0">
-                                {/* EMOJIS */}
-                                <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 py-3">
-                                    {['😂','😍','👏','😭','🔥','🐶','🐱','🐾','🦴','🍖','🐟','🦜','❤️','✨','🥺'].map((emoji, i) => (
+                            <div className="p-4 pb-safe border-t border-black/5 dark:border-white/5 bg-white/90 dark:bg-[#111]/90 backdrop-blur-xl shrink-0">
+                                <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-3 px-1 mask-linear-fade">
+                                    {['😂','😍','🥺','🔥','🐾','🦴','❤️', '👏', '✨'].map((emoji, i) => (
                                         <button 
                                             key={i}
                                             onClick={() => setCommentInput(prev => prev + emoji)}
-                                            className="text-2xl hover:scale-110 active:scale-95 transition-transform shrink-0"
+                                            className="w-10 h-10 shrink-0 bg-gray-100 dark:bg-white/10 rounded-full flex items-center justify-center text-[18px] hover:scale-110 active:scale-95 transition-transform border border-transparent hover:border-cyan-500/30 shadow-sm"
                                         >
                                             {emoji}
                                         </button>
                                     ))}
                                 </div>
                                 
-                                {/* INPUT */}
-                                <div className="px-4 pb-4">
-                                    <div className="flex items-center gap-2 bg-gray-100 dark:bg-white/10 rounded-full p-1.5 pl-5 border border-transparent focus-within:border-cyan-500/30 focus-within:ring-2 focus-within:ring-cyan-500/20 transition-all">
-                                        <input 
-                                            type="text" 
-                                            value={commentInput}
-                                            onChange={(e) => setCommentInput(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && handleSendComment()}
-                                            placeholder="Güzel bir şey yaz..." 
-                                            className="flex-1 bg-transparent text-[14px] font-medium focus:outline-none dark:text-white placeholder:text-gray-400"
-                                        />
-                                        <button 
-                                            onClick={handleSendComment} 
-                                            disabled={!commentInput.trim() || isSendingComment} 
-                                            className="bg-cyan-500 hover:bg-cyan-600 text-white rounded-full w-9 h-9 flex items-center justify-center disabled:opacity-40 transition-all active:scale-95 shadow-md shadow-cyan-500/20 shrink-0"
-                                        >
-                                            <Send className="w-4 h-4 ml-0.5" />
-                                        </button>
-                                    </div>
+                                <div className="flex items-center gap-2 bg-gray-100 dark:bg-white/5 rounded-2xl p-1.5 border border-black/5 dark:border-white/10 focus-within:border-cyan-500/50 focus-within:ring-4 focus-within:ring-cyan-500/10 transition-all shadow-inner">
+                                    <input 
+                                        type="text" 
+                                        value={commentInput}
+                                        onChange={(e) => setCommentInput(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleSendComment()}
+                                        placeholder="Yorum ekle..." 
+                                        className="flex-1 bg-transparent px-4 py-2 text-[14px] font-medium focus:outline-none dark:text-white placeholder:text-gray-400"
+                                    />
+                                    <button 
+                                        onClick={handleSendComment} 
+                                        disabled={!commentInput.trim() || isSendingComment} 
+                                        className="bg-cyan-500 hover:bg-cyan-600 text-white rounded-xl px-4 py-2 flex items-center justify-center font-bold text-[13px] disabled:opacity-40 transition-all active:scale-95 shadow-md shadow-cyan-500/20 shrink-0"
+                                    >
+                                        Gönder
+                                    </button>
                                 </div>
                             </div>
                         </motion.div>

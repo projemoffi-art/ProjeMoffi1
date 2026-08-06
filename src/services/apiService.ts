@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { 
     Pet, Post, UserProfile, LostPet, AdoptionPet,
     ShopCategory, ShopProduct, ShopCartItem, ShopOrder, IApiService

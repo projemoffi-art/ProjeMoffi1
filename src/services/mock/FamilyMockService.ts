@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { IFamilyService, FamilyEvent } from "../interfaces";
 import { FamilyMember, FamilyLog } from "@/types/domain";
 

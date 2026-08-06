@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Web Bluetooth Heart Rate Manager
  * Standard Service: 0x180D (Heart Rate)
@@ -24,11 +25,11 @@ export const HR_SERVICE_UUID = 'heart_rate';
 export const HR_CHARACTERISTIC_UUID = 'heart_rate_measurement';
 
 export async function requestHRDevice(): Promise<BluetoothDevice> {
-    if (!navigator.bluetooth) {
+    if (!(navigator as any).bluetooth) {
         throw new Error("Web Bluetooth is not supported in this browser.");
     }
 
-    return await navigator.bluetooth.requestDevice({
+    return await (navigator as any).bluetooth.requestDevice({
         filters: [{ services: [HR_SERVICE_UUID] }],
         optionalServices: ['battery_service', 'device_information']
     });

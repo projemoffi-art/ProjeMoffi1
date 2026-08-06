@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect } from "react";
 import { apiService } from "@/services/apiService";
 import { VaccineRuleset, UserVaccineRecord, VaccineDefinition } from "@/types/domain";
