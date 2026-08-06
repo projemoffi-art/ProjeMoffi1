@@ -772,10 +772,16 @@ export function ImmersivePostCard({
                                 ) : (
                                     likers.map((liker: any) => (
                                         <div key={liker.id} className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <img src={liker.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100"} className="w-12 h-12 rounded-full object-cover border border-black/5 dark:border-white/5" />
+                                            <div 
+                                                className="flex items-center gap-3 cursor-pointer group"
+                                                onClick={() => {
+                                                    setShowLikersModal(false);
+                                                    router.push(`/profile/${liker.id}`);
+                                                }}
+                                            >
+                                                <img src={liker.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100"} className="w-12 h-12 rounded-full object-cover border border-black/5 dark:border-white/5 group-hover:opacity-80 transition-opacity" />
                                                 <div className="flex flex-col">
-                                                    <span className="font-bold text-sm text-[var(--foreground)]">{liker.username || liker.full_name || 'Kullanıcı'}</span>
+                                                    <span className="font-bold text-sm text-[var(--foreground)] group-hover:underline">{liker.username || liker.full_name || 'Kullanıcı'}</span>
                                                     {liker.full_name && liker.username && <span className="text-xs text-[var(--secondary-text)]">{liker.full_name}</span>}
                                                 </div>
                                             </div>
