@@ -253,26 +253,8 @@ export function ImmersivePostCard({
         setTimeout(() => setTapHeart(false), 800);
     };
 
-    const handleShareClick = async () => {
-        const postUrl = typeof window !== 'undefined' ? `${window.location.origin}/community?post=${post.id}` : '';
-        const postText = `Moffi'de harika bir paylaşım gördüm! 🐾 ${post.author || post.user || 'Kullanıcı'}: "${post.desc || ''}"`;
-        const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-        if (isMobile && navigator.share) {
-            try {
-                await navigator.share({
-                    title: 'Moffi Gönderisi',
-                    text: postText,
-                    url: postUrl
-                });
-            } catch (err: any) {
-                if (err.name !== 'AbortError') {
-                    onShare();
-                }
-            }
-        } else {
-            onShare();
-        }
+    const handleShareClick = () => {
+        onShare();
     };
 
     const copyLink = () => {
