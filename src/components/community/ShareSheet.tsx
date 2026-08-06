@@ -47,7 +47,7 @@ export function ShareSheet({
 
         const url = getShareUrl(platform, postUrl, postText);
         if (url) {
-            window.open(url, '_blank');
+            window.location.href = url;
             onSocialShare?.(platform);
             onClose();
         } else if (platform === PLATFORMS.INSTAGRAM) {
