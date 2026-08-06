@@ -19,7 +19,7 @@ export function getShareUrl(platform: string, postUrl: string, postText: string)
 
     switch (platform) {
         case PLATFORMS.WHATSAPP:
-            return `https://api.whatsapp.com/send?text=${encodedText}%20${encodedUrl}`;
+            return `https://wa.me/?text=${encodedText}%20${encodedUrl}`;
         case PLATFORMS.TWITTER:
             return `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`;
         case PLATFORMS.FACEBOOK:
