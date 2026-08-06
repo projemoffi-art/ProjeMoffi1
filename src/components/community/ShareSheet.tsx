@@ -52,9 +52,6 @@ export function ShareSheet({
             showToast("Instagram'da paylaşmak için yapıştırın!", "Instagram", "purple");
             onSocialShare?.(platform);
             onClose();
-        } else if (platform === PLATFORMS.STORY) {
-            onAddToStory?.();
-            onClose();
         } else if (platform === PLATFORMS.MESSAGES) {
              const smsUrl = getShareUrl(PLATFORMS.MESSAGES, postUrl, postText);
              if (smsUrl) window.location.href = smsUrl;
@@ -126,15 +123,7 @@ export function ShareSheet({
                             {/* QUICK SHARE - HORIZONTAL */}
                             <div className="mb-6">
                                 <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 px-1">
-                                    <button 
-                                        onClick={() => handlePlatformShare(PLATFORMS.STORY)}
-                                        className="flex flex-col items-center gap-2 shrink-0 group relative"
-                                    >
-                                        <div className="w-[56px] h-[56px] rounded-[20px] bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/30 group-active:scale-95 transition-transform">
-                                            <Sparkles className="w-6 h-6 text-white" />
-                                        </div>
-                                        <span className="text-[11px] font-semibold text-gray-600 dark:text-white/70">Hikayem</span>
-                                    </button>
+                                    
 
                                     {stories?.map((group) => (
                                         <button 

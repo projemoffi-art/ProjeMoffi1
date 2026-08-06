@@ -554,29 +554,35 @@ export function ImmersivePostCard({
                 </div>
             </div>
 
-            {/* COMMENT DRAWER */}
+                        {/* COMMENT DRAWER */}
             <AnimatePresence>
                 {showComments && (
                     <>
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/60 z-[440] backdrop-blur-md"
+                            className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm z-[1100]"
                             onClick={() => setShowComments(false)}
                         />
                         <motion.div
-                            initial={{ y: "100%", opacity: 0, scale: 0.95 }}
-                            animate={{ y: 0, opacity: 1, scale: 1 }}
-                            exit={{ y: "100%", opacity: 0, scale: 0.95 }}
-                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                            className="fixed bottom-4 left-4 right-4 sm:max-w-[440px] sm:mx-auto z-[450] bg-white/90 dark:bg-[#121212]/90 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl flex flex-col max-h-[85vh] border border-white/20 dark:border-white/10 overflow-hidden"
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="fixed bottom-0 left-0 right-0 sm:max-w-[440px] sm:mx-auto z-[1200] bg-white/90 dark:bg-[#111]/90 backdrop-blur-2xl rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/20 dark:border-white/10 flex flex-col max-h-[85vh] overflow-hidden"
                         >
-                            <div className="flex items-center justify-between px-6 py-4 bg-white/50 dark:bg-white/5 backdrop-blur-md border-b border-gray-100 dark:border-white/5 shrink-0">
-                                <h3 className="font-bold text-lg text-gray-900 dark:text-white tracking-tight">Yorumlar</h3>
+                            {/* DRAG HANDLE */}
+                            <div className="w-full flex justify-center pt-4 pb-2 shrink-0 cursor-pointer" onClick={() => setShowComments(false)}>
+                                <div className="w-12 h-1.5 bg-gray-300 dark:bg-white/20 rounded-full" />
+                            </div>
+
+                            <div className="flex items-center justify-between px-6 pb-4 shrink-0">
+                                <h3 className="font-bold text-[18px] text-gray-900 dark:text-white tracking-tight">Yorumlar</h3>
                                 <button onClick={() => setShowComments(false)} className="p-2 bg-gray-100 dark:bg-white/10 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-white/20 transition-all active:scale-95">
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
-                            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+
+                            <div className="flex-1 overflow-y-auto px-6 py-2 space-y-5">
                                 {isLoadingComments ? (
                                     <div className="flex justify-center p-8"><span className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></span></div>
                                 ) : comments.length === 0 ? (
@@ -587,7 +593,7 @@ export function ImmersivePostCard({
                                 ) : (
                                     comments.map((c: any) => (
                                         <div key={c.id} className="flex gap-3 group/comment relative">
-                                            <img src={c.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100"} className="w-10 h-10 rounded-full shrink-0 border-2 border-gray-100 dark:border-white/10 shadow-sm" />
+                                            <img src={c.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100"} className="w-9 h-9 rounded-full shrink-0 border border-gray-100 dark:border-white/10 shadow-sm object-cover" />
                                             <div className="flex-1">
                                                 <div className="flex items-baseline gap-2">
                                                     <span className="font-bold text-[14px] tracking-tight text-gray-900 dark:text-gray-100">{typeof c.user === 'string' ? c.user : (c.user?.username || c.user?.full_name || "Kullanıcı")}</span>
@@ -597,7 +603,7 @@ export function ImmersivePostCard({
                                                 <div className="flex items-center gap-4 mt-2">
                                                     <button 
                                                         onClick={() => onToggleCommentLike && onToggleCommentLike(c.id)}
-                                                        className={`flex items-center gap-1 text-[12px] font-medium transition-colors ${c.isLiked ? 'text-green-500' : 'text-gray-400 hover:text-green-600 dark:hover:text-green-400'}`}
+                                                        className={`flex items-center gap-1 text-[12px] font-medium transition-colors ${c.isLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
                                                     >
                                                         <Heart className={`w-3.5 h-3.5 ${c.isLiked ? 'fill-current' : ''}`} />
                                                         <span>{c.likes || 0}</span>
@@ -616,24 +622,41 @@ export function ImmersivePostCard({
                                     ))
                                 )}
                             </div>
-                            {/* Modern Pill Input */}
-                            <div className="p-4 px-4 border-t border-gray-100 dark:border-white/5 bg-gray-50/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl shrink-0">
-                                <div className="flex items-center gap-2 bg-white dark:bg-white/5 rounded-[2rem] p-1.5 pl-5 border border-gray-200 dark:border-white/10 shadow-sm focus-within:ring-2 focus-within:ring-cyan-500/30 transition-all">
-                                    <input 
-                                        type="text" 
-                                        value={commentInput}
-                                        onChange={(e) => setCommentInput(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && handleSendComment()}
-                                        placeholder="Güzel bir şey yaz..." 
-                                        className="flex-1 bg-transparent text-[14px] font-medium focus:outline-none dark:text-white placeholder:text-gray-400"
-                                    />
-                                    <button 
-                                        onClick={handleSendComment} 
-                                        disabled={!commentInput.trim() || isSendingComment} 
-                                        className="bg-cyan-500 hover:bg-cyan-600 text-white rounded-[1.5rem] p-2.5 px-4 font-bold text-sm disabled:opacity-40 transition-all active:scale-95 shadow-md shadow-cyan-500/20 flex items-center justify-center shrink-0"
-                                    >
-                                        <Send className="w-4 h-4 -ml-0.5 mt-0.5" />
-                                    </button>
+
+                            {/* EMOJI PICKER & INPUT AREA */}
+                            <div className="pb-safe border-t border-gray-100 dark:border-white/5 bg-white/50 dark:bg-black/50 backdrop-blur-xl shrink-0">
+                                {/* EMOJIS */}
+                                <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 py-3">
+                                    {['😂','😍','👏','😭','🔥','🐶','🐱','🐾','🦴','🍖','🐟','🦜','❤️','✨','🥺'].map((emoji, i) => (
+                                        <button 
+                                            key={i}
+                                            onClick={() => setCommentInput(prev => prev + emoji)}
+                                            className="text-2xl hover:scale-110 active:scale-95 transition-transform shrink-0"
+                                        >
+                                            {emoji}
+                                        </button>
+                                    ))}
+                                </div>
+                                
+                                {/* INPUT */}
+                                <div className="px-4 pb-4">
+                                    <div className="flex items-center gap-2 bg-gray-100 dark:bg-white/10 rounded-full p-1.5 pl-5 border border-transparent focus-within:border-cyan-500/30 focus-within:ring-2 focus-within:ring-cyan-500/20 transition-all">
+                                        <input 
+                                            type="text" 
+                                            value={commentInput}
+                                            onChange={(e) => setCommentInput(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleSendComment()}
+                                            placeholder="Güzel bir şey yaz..." 
+                                            className="flex-1 bg-transparent text-[14px] font-medium focus:outline-none dark:text-white placeholder:text-gray-400"
+                                        />
+                                        <button 
+                                            onClick={handleSendComment} 
+                                            disabled={!commentInput.trim() || isSendingComment} 
+                                            className="bg-cyan-500 hover:bg-cyan-600 text-white rounded-full w-9 h-9 flex items-center justify-center disabled:opacity-40 transition-all active:scale-95 shadow-md shadow-cyan-500/20 shrink-0"
+                                        >
+                                            <Send className="w-4 h-4 ml-0.5" />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>
