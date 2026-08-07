@@ -152,7 +152,7 @@ export function SocialPostCard({ user, content, isSponsored, context }: PostProp
             <div className="p-4 pb-2 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <button onClick={handleLike} className="flex flex-col items-center gap-0.5 group">
-                        <Heart className={`w-7 h-7 transition-colors ${liked ? 'fill-red-500 text-red-500' : 'text-foreground group-hover:text-red-400'}`} />
+                        <Heart className={`w-7 h-7 transition-colors ${isLiked ? 'fill-red-500 text-red-500' : 'text-foreground group-hover:text-red-400'}`} />
                         <span className="text-[10px] font-bold text-foreground">{likeCount}</span>
                     </button>
                     <button className="flex flex-col items-center gap-0.5 group">
