@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, HeartBreak } from 'lucide-react';
+import { ArrowLeft, Loader2, HeartCrack } from 'lucide-react';
 import { apiService } from '@/services/apiService';
 import { Post } from '@/services/types';
 import { ImmersivePostCard } from '@/components/community/ImmersivePostCard';
@@ -44,7 +44,7 @@ export default function PostDetailPage() {
         return (
             <div className="min-h-screen bg-gray-50 dark:bg-[#0A0A0A] flex flex-col items-center justify-center gap-4 px-4 text-center">
                 <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-500/10 flex items-center justify-center">
-                    <HeartBreak className="w-8 h-8 text-red-500" />
+                    <HeartCrack className="w-8 h-8 text-red-500" />
                 </div>
                 <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Gönderi Bulunamadı</h2>
                 <p className="text-gray-500 dark:text-gray-400 text-sm max-w-sm">Bu gönderi silinmiş veya mevcut değil. Lütfen başka bir gönderiye bak.</p>
