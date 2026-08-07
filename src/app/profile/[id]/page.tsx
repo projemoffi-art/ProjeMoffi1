@@ -598,8 +598,8 @@ export default function ProfilePage() {
 
                 {/* Pets section */}
                 {pets.length > 0 && (
-                    <div className="mt-6">
-                        <div className="flex items-center justify-between mb-3">
+                    <div className="mt-4 bg-black/5 dark:bg-white/5 rounded-[2rem] p-4 border border-black/5 dark:border-white/5">
+                        <div className="flex items-center justify-between mb-3 px-1">
                             <h3 className="text-black/60 dark:text-white/60 text-[10px] font-black uppercase tracking-widest">Patilerim</h3>
                             {isOwnProfile && (
                                 <button onClick={() => setIsAddPetOpen(true)} className="text-[9px] text-emerald-400 font-black uppercase tracking-widest border border-emerald-500/20 px-2 py-1 rounded-lg hover:bg-emerald-500/10 transition-colors">
@@ -607,7 +607,7 @@ export default function ProfilePage() {
                                 </button>
                             )}
                         </div>
-                        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+                        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                             {pets.map(pet => (
                                 <motion.button
                                     key={pet.id}
@@ -661,7 +661,7 @@ export default function ProfilePage() {
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id as any)}
-                                className={`flex-none min-w-[80px] sm:flex-1 px-4 flex flex-col items-center justify-center gap-1.5 py-3 text-[10px] sm:text-[11px] font-black uppercase tracking-widest transition-colors relative ${
+                                className={`flex-none sm:flex-1 px-3 flex flex-col items-center justify-center gap-1.5 py-3 text-[9px] sm:text-[11px] font-black uppercase tracking-widest transition-colors relative ${
                                     activeTab === tab.id ? 'text-white' : 'text-black/40 dark:text-white/30 hover:text-black/60 dark:text-white/60'
                                 }`}
                             >
