@@ -46,7 +46,7 @@ export function MarketQuickSheet({ isOpen, onClose, petName = "Dostun" }: Market
                         className="fixed bottom-0 inset-x-0 z-[3001] bg-[#0A0A0A] rounded-t-[3rem] border-t border-card-border shadow-[0_-20px_50px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col max-h-[92vh]"
                     >
                         {/* Grab Handle */}
-                        <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-black/10 dark:bg-white/10 rounded-full" />
+                        <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/10 rounded-full" />
 
                         <div className="px-4 sm:px-8 pt-8 sm:pt-10 pb-4 sm:pb-6 flex items-center justify-between">
                             <div>
@@ -55,9 +55,9 @@ export function MarketQuickSheet({ isOpen, onClose, petName = "Dostun" }: Market
                             </div>
                             <button 
                                 onClick={onClose}
-                                className="w-8 h-8 sm:w-10 sm:h-10 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center border border-card-border hover:bg-black/10 dark:hover:bg-white/10 transition-all"
+                                className="w-8 h-8 sm:w-10 sm:h-10 bg-white/5 rounded-full flex items-center justify-center border border-card-border hover:bg-white/10 transition-all"
                             >
-                                <X className="w-4 h-4 sm:w-5 sm:h-5 text-black/50 dark:text-white/50" />
+                                <X className="w-4 h-4 sm:w-5 sm:h-5 text-white/50" />
                             </button>
                         </div>
 
@@ -66,19 +66,20 @@ export function MarketQuickSheet({ isOpen, onClose, petName = "Dostun" }: Market
                             {/* MOFFI COINS BALANCES */}
                             <section className="bg-gradient-to-r from-orange-500/20 to-amber-500/10 border border-orange-500/20 rounded-[2.2rem] p-6 relative overflow-hidden group">
                                 <div className="absolute -right-8 -top-8 w-32 h-32 bg-orange-500/10 blur-3xl rounded-full" />
-                                <div className="flex items-center justify-between relative z-10">
-                                    <div className="flex-1 bg-black/5 dark:bg-white/5 border border-card-border rounded-xl sm:rounded-2xl flex items-center px-3 sm:px-4 py-3 sm:py-4 focus-within:border-orange-500/50 transition-colors">
-                                        <Search className="w-4 h-4 sm:w-5 sm:h-5 text-black/40 dark:text-white/40 mr-2 sm:mr-3 shrink-0" />
+                                {/* SEARCH & FILTER */}
+                                <section className="flex gap-2 sm:gap-3">
+                                    <div className="flex-1 bg-white/5 border border-card-border rounded-xl sm:rounded-2xl flex items-center px-3 sm:px-4 py-3 sm:py-4 focus-within:border-orange-500/50 transition-colors">
+                                        <Search className="w-4 h-4 sm:w-5 sm:h-5 text-white/40 mr-2 sm:mr-3 shrink-0" />
                                         <input 
                                             type="text" 
                                             placeholder={`${petName} için arama yap...`}
-                                            className="bg-transparent border-none outline-none text-white text-xs sm:text-sm font-bold w-full placeholder:text-black/30 dark:placeholder:text-white/30"
+                                            className="bg-transparent border-none outline-none text-white text-xs sm:text-sm font-bold w-full placeholder:text-white/30"
                                         />
                                     </div>
-                                    <button className="ml-2 w-10 h-10 sm:w-14 sm:h-14 shrink-0 bg-black/5 dark:bg-white/5 border border-card-border rounded-xl sm:rounded-2xl flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/10 active:scale-95 transition-all">
+                                    <button className="ml-2 w-10 h-10 sm:w-14 sm:h-14 shrink-0 bg-white/5 border border-card-border rounded-xl sm:rounded-2xl flex items-center justify-center hover:bg-white/10 active:scale-95 transition-all">
                                         <SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                                     </button>
-                                </div>
+                                </section>
                             </section>
 
                             {/* FLASH DEALS SECTION */}
@@ -108,12 +109,12 @@ export function MarketQuickSheet({ isOpen, onClose, petName = "Dostun" }: Market
                                             <div className="flex items-center gap-2 mb-2 sm:mb-3">
                                                 <div className="flex items-center gap-1">
                                                     <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-yellow-500 fill-current" />
-                                                    <span className="text-[9px] sm:text-[10px] text-black/60 dark:text-white/60 font-black">{product.rating}</span>
+                                                    <span className="text-[9px] sm:text-[10px] text-white/60 font-black">{product.rating}</span>
                                                 </div>
                                             </div>
                                             <div className="flex items-center justify-between mt-auto pt-2">
                                                 <div className="flex flex-col">
-                                                    {product.oldPrice && <span className="text-[9px] sm:text-[10px] text-black/40 dark:text-white/30 line-through font-bold">{product.oldPrice} TL</span>}
+                                                    {product.oldPrice && <span className="text-[9px] sm:text-[10px] text-white/30 line-through font-bold">{product.oldPrice} TL</span>}
                                                     <span className="text-xs sm:text-sm font-black text-white tracking-tight">{product.price} TL</span>
                                                 </div>
                                                 <button 
@@ -130,14 +131,14 @@ export function MarketQuickSheet({ isOpen, onClose, petName = "Dostun" }: Market
 
                             {/* RECENT / QUICK ORDER */}
                             <section>
-                                <h4 className="text-[9px] sm:text-[11px] font-black text-black/30 dark:text-white/20 uppercase tracking-[0.2em] mb-3 sm:mb-4 px-1 flex items-center gap-2">
+                                <h4 className="text-[9px] sm:text-[11px] font-black text-white/20 uppercase tracking-[0.2em] mb-3 sm:mb-4 px-1 flex items-center gap-2">
                                     <RefreshCw className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Hızlı Tekrar Sipariş
                                 </h4>
                                 
-                                <div className="bg-black/5 dark:bg-white/5 border border-card-border rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-5 flex items-center justify-between hover:bg-white/[0.08] transition-all group cursor-pointer">
+                                <div className="bg-white/5 border border-card-border rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-5 flex items-center justify-between hover:bg-white/[0.08] transition-all group cursor-pointer">
                                     <div className="flex items-center gap-3 sm:gap-4">
-                                        <div className="w-10 h-10 sm:w-14 sm:h-14 bg-black/10 dark:bg-white/10 rounded-xl sm:rounded-2xl flex items-center justify-center p-2">
-                                            <img src="https://images.unsplash.com/photo-1589924691995-400dc9ecc119?q=80&w=200" className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal" />
+                                        <div className="w-10 h-10 sm:w-14 sm:h-14 bg-white/10 rounded-xl sm:rounded-2xl flex items-center justify-center p-2">
+                                            <img src="https://images.unsplash.com/photo-1589924691995-400dc9ecc119?q=80&w=200" className="w-full h-full object-contain" />
                                         </div>
                                         <div>
                                             <h6 className="text-white font-black text-xs sm:text-sm leading-tight line-clamp-1">Pro Plan Somonlu Yetişkin Köpek Maması 14KG</h6>
@@ -146,7 +147,7 @@ export function MarketQuickSheet({ isOpen, onClose, petName = "Dostun" }: Market
                                     </div>
                                     <button 
                                         onClick={() => addToCart(3, 1)}
-                                        className="shrink-0 w-8 h-8 sm:w-10 sm:h-10 bg-white dark:bg-white/10 border border-card-border rounded-lg sm:rounded-xl flex items-center justify-center group-hover:bg-orange-500 group-hover:border-orange-500 group-hover:text-white transition-all text-black dark:text-white active:scale-90"
+                                        className="shrink-0 w-8 h-8 sm:w-10 sm:h-10 bg-white/10 border border-card-border rounded-lg sm:rounded-xl flex items-center justify-center group-hover:bg-orange-500 group-hover:border-orange-500 group-hover:text-white transition-all text-white active:scale-90"
                                     >
                                         <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                     </button>
@@ -155,13 +156,13 @@ export function MarketQuickSheet({ isOpen, onClose, petName = "Dostun" }: Market
 
                             {/* CATEGORY QUICK LINKS */}
                             <div className="grid grid-cols-2 gap-4">
-                                <button className="bg-black/5 dark:bg-white/5 border border-card-border rounded-[1.8rem] p-5 flex flex-col justify-between h-32 hover:bg-black/10 dark:bg-white/10 transition-all group">
+                                <button className="bg-white/5 border border-card-border rounded-[1.8rem] p-5 flex flex-col justify-between h-32 hover:bg-white/10 transition-all group">
                                     <div className="w-10 h-10 bg-cyan-500/10 text-cyan-400 rounded-xl flex items-center justify-center border border-cyan-500/20">
                                         <Tag className="w-5 h-5 transition-transform group-hover:rotate-12" />
                                     </div>
                                     <span className="text-sm font-black text-white uppercase italic leading-none">Kuponlarım</span>
                                 </button>
-                                <button className="bg-black/5 dark:bg-white/5 border border-card-border rounded-[1.8rem] p-5 flex flex-col justify-between h-32 hover:bg-black/10 dark:bg-white/10 transition-all group">
+                                <button className="bg-white/5 border border-card-border rounded-[1.8rem] p-5 flex flex-col justify-between h-32 hover:bg-white/10 transition-all group">
                                     <div className="w-10 h-10 bg-pink-500/10 text-pink-400 rounded-xl flex items-center justify-center border border-pink-500/20">
                                         <Heart className="w-5 h-5 transition-transform group-hover:scale-125" />
                                     </div>

@@ -54,7 +54,7 @@ export function StudioQuickSheet({ isOpen, onClose, petName = "Dostun" }: Studio
                         className="fixed bottom-0 inset-x-0 z-[3001] bg-[#0A0A0A] rounded-t-[3rem] border-t border-card-border shadow-[0_-20px_50px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col max-h-[92vh]"
                     >
                         {/* Grab Handle */}
-                        <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-black/10 dark:bg-white/10 rounded-full" />
+                        <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/10 rounded-full" />
 
                         <div className="px-4 sm:px-8 pt-8 sm:pt-10 pb-4 sm:pb-6 flex items-center justify-between">
                             <div>
@@ -63,9 +63,9 @@ export function StudioQuickSheet({ isOpen, onClose, petName = "Dostun" }: Studio
                             </div>
                             <button 
                                 onClick={onClose}
-                                className="w-8 h-8 sm:w-10 sm:h-10 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center border border-card-border hover:bg-black/10 dark:hover:bg-white/10 transition-all"
+                                className="w-8 h-8 sm:w-10 sm:h-10 bg-white/5 rounded-full flex items-center justify-center border border-card-border hover:bg-white/10 transition-all"
                             >
-                                <X className="w-4 h-4 sm:w-5 sm:h-5 text-black/50 dark:text-white/50" />
+                                <X className="w-4 h-4 sm:w-5 sm:h-5 text-white/50" />
                             </button>
                         </div>
 
@@ -76,7 +76,7 @@ export function StudioQuickSheet({ isOpen, onClose, petName = "Dostun" }: Studio
                                 <div className="absolute -right-8 -top-8 w-32 h-32 bg-purple-500/10 blur-3xl rounded-full" />
                                 <div className="flex items-center justify-between relative z-10 mb-4">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-black/10 dark:bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-card-border">
+                                        <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-card-border">
                                             <Palette className="w-6 h-6 text-purple-400" />
                                         </div>
                                         <div>
@@ -89,14 +89,14 @@ export function StudioQuickSheet({ isOpen, onClose, petName = "Dostun" }: Studio
                                         <Star className="w-4 h-4 text-yellow-500 fill-yellow-500 inline-block ml-1 mb-1" />
                                     </div>
                                 </div>
-                                <div className="h-1.5 w-full bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
+                                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                                     <motion.div 
                                         initial={{ width: 0 }}
                                         animate={{ width: "75%" }}
                                         className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.5)]"
                                     />
                                 </div>
-                                <p className="text-[9px] text-black/40 dark:text-white/30 font-black uppercase tracking-widest mt-3 text-right">Sonraki Rozet: Stüdyo Lideri • 250 XP Kaldı</p>
+                                <p className="text-[9px] text-white/30 font-black uppercase tracking-widest mt-3 text-right">Sonraki Rozet: Stüdyo Lideri • 250 XP Kaldı</p>
                             </section>
 
                             {/* 2. RECENT DRAFTS */}
@@ -105,12 +105,12 @@ export function StudioQuickSheet({ isOpen, onClose, petName = "Dostun" }: Studio
                                     <h4 className="text-[10px] sm:text-[11px] font-black text-white uppercase tracking-[0.2em] flex items-center gap-2">
                                         <Layers className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-purple-400" /> Son Taslaklar
                                     </h4>
-                                    <span className="text-[8px] sm:text-[9px] font-black text-black/40 dark:text-white/30 uppercase tracking-widest cursor-pointer hover:text-white transition-colors">Tümünü Gör</span>
+                                    <span className="text-[8px] sm:text-[9px] font-black text-white/30 uppercase tracking-widest cursor-pointer hover:text-white transition-colors">Tümünü Gör</span>
                                 </div>
 
                                 <div className="flex gap-3 sm:gap-4 overflow-x-auto no-scrollbar pb-3 -mx-2 px-2">
                                     {RECENT_DRAFTS.map((draft) => (
-                                        <div key={draft.id} className="min-w-[140px] sm:min-w-[160px] bg-black/5 dark:bg-white/5 border border-card-border rounded-[1.5rem] sm:rounded-[2rem] p-3 flex flex-col group active:scale-[0.98] transition-all">
+                                        <div key={draft.id} className="min-w-[140px] sm:min-w-[160px] bg-white/5 border border-card-border rounded-[1.5rem] sm:rounded-[2rem] p-3 flex flex-col group active:scale-[0.98] transition-all">
                                             <div className="relative aspect-square rounded-xl sm:rounded-2xl overflow-hidden mb-3 border border-card-border">
                                                 <img src={draft.image} alt={draft.title} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
                                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -118,15 +118,15 @@ export function StudioQuickSheet({ isOpen, onClose, petName = "Dostun" }: Studio
                                                 </div>
                                             </div>
                                             <h5 className="text-white font-bold text-xs truncate mb-1">{draft.title}</h5>
-                                            <span className="text-[9px] text-black/40 dark:text-white/30 font-bold uppercase tracking-tighter">{draft.date}</span>
+                                            <span className="text-[9px] text-white/30 font-bold uppercase tracking-tighter">{draft.date}</span>
                                         </div>
                                     ))}
                                     
                                     <button 
                                         onClick={() => { router.push('/studio'); onClose(); }}
-                                        className="min-w-[160px] border-2 border-dashed border-card-border rounded-[2rem] flex flex-col items-center justify-center gap-3 hover:border-purple-500/50 hover:bg-purple-500/5 transition-all text-black/30 dark:text-white/20 hover:text-purple-400 group"
+                                        className="min-w-[160px] border-2 border-dashed border-card-border rounded-[2rem] flex flex-col items-center justify-center gap-3 hover:border-purple-500/50 hover:bg-purple-500/5 transition-all text-white/20 hover:text-purple-400 group"
                                     >
-                                        <div className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center border border-card-border group-hover:scale-110 transition-transform">
+                                        <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-card-border group-hover:scale-110 transition-transform">
                                             <Palette className="w-5 h-5" />
                                         </div>
                                         <span className="text-[10px] font-black uppercase tracking-widest">Yeni Taslak</span>
@@ -137,26 +137,26 @@ export function StudioQuickSheet({ isOpen, onClose, petName = "Dostun" }: Studio
                             <div className="grid grid-cols-2 gap-3 sm:gap-4">
                                 <button
                                     onClick={() => { router.push('/studio'); onClose(); }}
-                                    className="bg-black/5 dark:bg-white/5 border border-card-border rounded-[1.2rem] sm:rounded-[2rem] p-3 sm:p-5 text-left flex flex-col justify-between h-32 sm:h-40 hover:bg-black/10 dark:hover:bg-white/10 transition-all group"
+                                    className="bg-white/5 border border-card-border rounded-[1.2rem] sm:rounded-[2rem] p-3 sm:p-5 text-left flex flex-col justify-between h-32 sm:h-40 hover:bg-white/10 transition-all group"
                                 >
                                     <div className="w-10 h-10 sm:w-12 sm:h-12 bg-cyan-500/10 text-cyan-400 rounded-xl sm:rounded-2xl flex items-center justify-center border border-cyan-500/20 group-hover:scale-110 transition-transform">
                                         <Box className="w-5 h-5 sm:w-6 sm:h-6" />
                                     </div>
                                     <div>
                                         <h6 className="text-xs sm:text-sm font-black text-white uppercase italic leading-none mb-1">Moffi Stüdyo</h6>
-                                        <p className="text-[8px] sm:text-[9px] text-black/50 dark:text-white/40 font-black uppercase tracking-tight">AI Tasarım Laboratuvarı</p>
+                                        <p className="text-[8px] sm:text-[9px] text-white/40 font-black uppercase tracking-tight">AI Tasarım Laboratuvarı</p>
                                     </div>
                                 </button>
                                 <button
                                     onClick={() => { alert("Klasik koleksiyon çok yakında yeni arayüzle geri dönecek!"); onClose(); }}
-                                    className="bg-black/5 dark:bg-white/5 border border-card-border rounded-[1.2rem] sm:rounded-[2rem] p-3 sm:p-5 text-left flex flex-col justify-between h-32 sm:h-40 hover:bg-black/10 dark:hover:bg-white/10 opacity-50 cursor-not-allowed group"
+                                    className="bg-white/5 border border-card-border rounded-[1.2rem] sm:rounded-[2rem] p-3 sm:p-5 text-left flex flex-col justify-between h-32 sm:h-40 hover:bg-white/10 opacity-50 cursor-not-allowed group"
                                 >
                                     <div className="w-10 h-10 sm:w-12 sm:h-12 bg-pink-500/10 text-pink-400 rounded-xl sm:rounded-2xl flex items-center justify-center border border-pink-500/20">
                                         <Shirt className="w-5 h-5 sm:w-6 sm:h-6" />
                                     </div>
                                     <div>
                                         <h6 className="text-xs sm:text-sm font-black text-white uppercase italic leading-none mb-1">Moffi Klasik</h6>
-                                        <p className="text-[8px] sm:text-[9px] text-black/50 dark:text-white/40 font-black uppercase tracking-tight">Hazır Koleksiyon (Yakında)</p>
+                                        <p className="text-[8px] sm:text-[9px] text-white/40 font-black uppercase tracking-tight">Hazır Koleksiyon (Yakında)</p>
                                     </div>
                                 </button>
                             </div>
