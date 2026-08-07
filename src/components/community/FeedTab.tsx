@@ -278,8 +278,9 @@ export function FeedTab({
                     isLoading={isLoading} 
                 />
             ) : (
-                <div className="w-full px-2 sm:px-4 pb-4">
-                    <div className="w-full max-w-[495px] mx-auto bg-white/90 dark:bg-[#121212]/90 backdrop-blur-3xl rounded-[2rem] border border-black/[0.02] dark:border-white/[0.02] shadow-[0_12px_40px_rgb(0,0,0,0.03)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] flex flex-col overflow-hidden">
+            ) : (
+                <div className="w-full sm:px-4 pb-4">
+                    <div className="w-full max-w-[495px] mx-auto bg-white/90 dark:bg-[#121212]/90 backdrop-blur-3xl sm:rounded-[2rem] border-y sm:border border-black/[0.02] dark:border-white/[0.02] sm:shadow-[0_12px_40px_rgb(0,0,0,0.03)] sm:dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] flex flex-col overflow-hidden">
                         {posts.map((post, feedIdx) => (
                             <section key={post.id} id={`post-${post.id}`} className="w-full flex flex-col items-center">
                                 <ImmersivePostCard

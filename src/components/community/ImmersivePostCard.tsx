@@ -492,9 +492,9 @@ export function ImmersivePostCard({
             </div>
 
             {/* MEDIA */}
-            <div className="px-3 sm:px-4">
+            <div className="px-0 sm:px-4">
                 <div 
-                    className="relative w-full aspect-[4/5] sm:aspect-[2/3] bg-gray-100 dark:bg-[#0a0a0a] overflow-hidden rounded-[1.5rem] flex items-center justify-center cursor-pointer group/media"
+                    className="relative w-full aspect-[4/5] sm:aspect-[2/3] bg-gray-100 dark:bg-[#0a0a0a] overflow-hidden rounded-none sm:rounded-[1.5rem] flex items-center justify-center cursor-pointer group/media"
                 onClick={() => {
                     const isVideo = post?.is_video || (post?.media && (/.(mp4|webm|ogg|mov|avi|m4v|mkv|flv|wmv)$/i.test(post.media)));
                     if (isVideo) {
