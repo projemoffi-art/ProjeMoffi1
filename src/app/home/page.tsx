@@ -169,19 +169,19 @@ const QuickAccessBtn = ({
                 whileHover={{ scale: 1.03, y: -2 }}
                 whileTap={{ scale: 0.96 }}
                 onClick={onClick}
-                className={`relative flex flex-col items-start p-5 bg-gradient-to-br ${gradient} transition-all duration-300 cursor-pointer overflow-hidden w-full rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] ${className}`}
+                className={`relative flex flex-col items-start p-3.5 sm:p-5 bg-gradient-to-br ${gradient} transition-all duration-300 cursor-pointer overflow-hidden w-full rounded-[1.5rem] sm:rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] ${className}`}
             >
                 {/* Huge Background Icon */}
-                <Icon className="absolute -right-4 -bottom-4 w-32 h-32 text-white/20 -rotate-12 pointer-events-none drop-shadow-sm" />
+                <Icon className="absolute -right-4 -bottom-4 w-24 h-24 sm:w-32 sm:h-32 text-white/20 -rotate-12 pointer-events-none drop-shadow-sm" />
                 
                 {/* Small Top-Left Icon */}
-                <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mb-8 shadow-sm border border-white/20">
-                    <Icon className="w-5 h-5 text-white" strokeWidth={2.5} />
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mb-2.5 sm:mb-8 shadow-sm border border-white/20">
+                    <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-white" strokeWidth={2.5} />
                 </div>
                 
                 <div className="flex flex-col relative z-10 overflow-hidden w-full text-left">
-                    <span className="text-[17px] font-black text-white tracking-tight leading-tight">{title}</span>
-                    <span className="text-[11.5px] text-white/90 font-bold mt-1.5 leading-none">{subtitle}</span>
+                    <span className="text-[13px] sm:text-[17px] font-black text-white tracking-tight leading-tight">{title}</span>
+                    <span className="text-[9.5px] sm:text-[11.5px] text-white/90 font-bold mt-1 sm:mt-1.5 leading-none">{subtitle}</span>
                 </div>
             </motion.button>
         );
@@ -195,15 +195,15 @@ const QuickAccessBtn = ({
             whileHover={{ scale: 1.03, y: -2 }}
             whileTap={{ scale: 0.96 }}
             onClick={onClick}
-            className={`relative flex items-center px-4 py-4 gap-3.5 bg-white dark:bg-[#1a1b1e] border border-gray-100 dark:border-white/5 transition-all duration-300 cursor-pointer overflow-hidden w-full rounded-[1.5rem] shadow-sm hover:shadow-md ${className}`}
+            className={`relative flex items-center px-2.5 sm:px-4 py-3 sm:py-4 gap-2 sm:gap-3.5 bg-white dark:bg-[#1a1b1e] border border-gray-100 dark:border-white/5 transition-all duration-300 cursor-pointer overflow-hidden w-full rounded-[1.2rem] sm:rounded-[1.5rem] shadow-sm hover:shadow-md ${className}`}
         >
-            <div className={`w-11 h-11 rounded-[1.1rem] bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0 shadow-sm border border-white/10`}>
-                <Icon className="w-[22px] h-[22px] text-white drop-shadow-sm" strokeWidth={2.2} />
+            <div className={`w-8 h-8 sm:w-11 sm:h-11 rounded-[0.8rem] sm:rounded-[1.1rem] bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0 shadow-sm border border-white/10`}>
+                <Icon className="w-4 h-4 sm:w-[22px] sm:h-[22px] text-white drop-shadow-sm" strokeWidth={2.2} />
             </div>
             
-            <div className="flex flex-col relative z-10 overflow-hidden w-full text-left">
-                <span className="text-[14px] font-black text-foreground tracking-tight leading-tight truncate">{title}</span>
-                <span className="text-[10.5px] text-muted-foreground font-bold mt-1 leading-none truncate">{subtitle}</span>
+            <div className="flex flex-col relative z-10 overflow-hidden w-full text-left justify-center">
+                <span className="text-[10.5px] sm:text-[14px] font-black text-foreground tracking-tighter sm:tracking-tight leading-[1.1] sm:leading-tight">{title}</span>
+                <span className="text-[8.5px] sm:text-[10.5px] text-muted-foreground font-bold mt-0.5 sm:mt-1 leading-tight">{subtitle}</span>
             </div>
         </motion.button>
     );
