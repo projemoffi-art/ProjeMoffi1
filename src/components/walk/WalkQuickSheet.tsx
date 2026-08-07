@@ -706,32 +706,32 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                             className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden"
                         >
                             {/* Header Area */}
-                            <div className="px-6 pt-6 flex items-center justify-between pb-2 z-20 relative shrink-0">
+                            <div className="px-4 sm:px-6 pt-4 sm:pt-6 flex items-center justify-between pb-2 z-20 relative shrink-0">
                                 <div>
-                                    <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight leading-none mb-1">Moffi ile Yürüyüş</h2>
+                                    <h2 className="text-lg sm:text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight leading-none mb-1">Moffi ile Yürüyüş</h2>
                                     <span className={cn(
-                                        "text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest",
+                                        "text-[8px] sm:text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest",
                                         walkData.isActive ? "text-emerald-700 bg-emerald-100" : "text-indigo-700 bg-indigo-100"
                                     )}>
                                         {walkData.isActive ? "Aktif Yürüyüş" : "Hazırlık Paneli"}
                                     </span>
                                     {todayEarned.pp > 0 && (
-                                        <span className="text-[8px] font-black text-orange-600 bg-orange-50 border border-orange-100 px-2 py-0.5 rounded-full leading-none">
+                                        <span className="text-[7.5px] sm:text-[8px] font-black text-orange-600 bg-orange-50 border border-orange-100 px-2 py-0.5 rounded-full leading-none ml-1.5 sm:ml-2">
                                             +{todayEarned.pp} PP Bugün
                                         </span>
                                     )}
                                 </div>
                                 <button
                                     onClick={onClose}
-                                    className="w-9 h-9 bg-card rounded-full flex items-center justify-center shadow-moffi-card hover:bg-slate-50 dark:bg-white/5 transition-all cursor-pointer border-0"
+                                    className="w-8 h-8 sm:w-9 sm:h-9 bg-card rounded-full flex items-center justify-center shadow-moffi-card hover:bg-slate-50 dark:bg-white/5 transition-all cursor-pointer border-0"
                                 >
-                                    <X className="w-5 h-5 text-slate-450" />
+                                    <X className="w-4 h-4 sm:w-5 sm:h-5 text-slate-450" />
                                 </button>
                             </div>
 
                             {/* Segmented Tab Switcher */}
-                            <div className="px-6 pb-2.5 shrink-0 z-20">
-                                <div className="bg-slate-200 dark:bg-white/10/50 dark:bg-white/5 p-1 rounded-2xl flex gap-1 relative overflow-hidden">
+                            <div className="px-4 sm:px-6 pb-2.5 shrink-0 z-20">
+                                <div className="bg-slate-200 dark:bg-white/10/50 dark:bg-white/5 p-1 rounded-[1rem] sm:rounded-2xl flex gap-1 relative overflow-hidden">
                                     {(['controls', 'stats', 'map'] as const).map((tab) => {
                                         const label = {
                                             controls: 'Yürüyüş',
@@ -754,14 +754,14 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                                                     }
                                                 }}
                                                 className={cn(
-                                                    "flex-1 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all relative cursor-pointer border-0 z-10",
+                                                    "flex-1 py-1.5 sm:py-2 text-[9px] sm:text-[10px] font-black uppercase tracking-wider rounded-xl transition-all relative cursor-pointer border-0 z-10",
                                                     isActive ? "text-slate-800 dark:text-slate-100" : "text-slate-400 hover:text-slate-700 dark:text-slate-200 bg-transparent"
                                                 )}
                                             >
                                                 {isActive && (
                                                     <motion.div
                                                         layoutId="activeTabIndicator"
-                                                        className="absolute inset-0 bg-white rounded-xl shadow-sm -z-10"
+                                                        className="absolute inset-0 bg-white rounded-[0.8rem] sm:rounded-xl shadow-sm -z-10"
                                                         transition={{ type: "spring", stiffness: 380, damping: 30 }}
                                                     />
                                                 )}
@@ -773,7 +773,7 @@ export function WalkQuickSheet({ isOpen, onClose }: WalkQuickSheetProps) {
                             </div>
 
                             {/* ── SCROLLABLE CONTENT ── */}
-                            <div className="px-6 pb-8 pt-4 space-y-5.5 overflow-y-auto no-scrollbar flex-1 z-20">
+                            <div className="px-4 sm:px-6 pb-8 pt-4 space-y-4 sm:space-y-5.5 overflow-y-auto no-scrollbar flex-1 z-20">
 
                                 {/* APPLE FITNESS STYLE METRICS */}
                                 <div className="flex flex-col items-center justify-center py-6 animate-in fade-in zoom-in-95 duration-500">

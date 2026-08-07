@@ -54,20 +54,20 @@ export function GameQuickSheet({
                         {/* Grab Handle */}
                         <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-black/10 dark:bg-white/10 rounded-full" />
 
-                        <div className="px-8 pt-10 pb-6 flex items-center justify-between">
+                        <div className="px-4 sm:px-8 pt-8 sm:pt-10 pb-4 sm:pb-6 flex items-center justify-between">
                             <div>
-                                <h3 className="text-2xl font-black text-white tracking-tighter uppercase italic leading-none">Moffi Arena</h3>
-                                <p className="text-[10px] text-indigo-400 font-black uppercase tracking-[0.3em] mt-2">Eğlence & Rekabet Merkezi</p>
+                                <h3 className="text-xl sm:text-2xl font-black text-white tracking-tighter uppercase italic leading-none">Moffi Oyun Merkezi</h3>
+                                <p className="text-[9px] sm:text-[10px] text-indigo-400 font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] mt-1.5 sm:mt-2">Mini Oyunlar & Ödüller</p>
                             </div>
                             <button 
                                 onClick={onClose}
-                                className="w-10 h-10 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center border border-card-border hover:bg-black/10 dark:bg-white/10 transition-all"
+                                className="w-8 h-8 sm:w-10 sm:h-10 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center border border-card-border hover:bg-black/10 dark:hover:bg-white/10 transition-all"
                             >
-                                <X className="w-5 h-5 text-black/50 dark:text-white/50" />
+                                <X className="w-4 h-4 sm:w-5 sm:h-5 text-black/50 dark:text-white/50" />
                             </button>
                         </div>
 
-                        <div className="px-8 pb-12 space-y-8 overflow-y-auto no-scrollbar">
+                        <div className="px-4 sm:px-8 pb-8 sm:pb-12 space-y-6 sm:space-y-8 overflow-y-auto no-scrollbar">
                             
                             {/* 1. DAILY PROGRESS */}
                             <section className="bg-gradient-to-br from-indigo-500/20 to-blue-500/10 border border-indigo-500/20 rounded-[2.2rem] p-6 relative overflow-hidden group">
@@ -97,51 +97,51 @@ export function GameQuickSheet({
                             </section>
 
                             {/* 2. PET STATUS BENTO */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-black/5 dark:bg-white/5 border border-card-border rounded-[2rem] p-5 flex flex-col items-center justify-center gap-2 group hover:bg-black/10 dark:bg-white/10 transition-all">
-                                    <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-400 border border-green-500/20">
-                                        <Star className="w-5 h-5" />
+                            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                                <div className="bg-black/5 dark:bg-white/5 border border-card-border rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-5 flex flex-col items-center justify-center gap-2 group hover:bg-black/10 dark:bg-white/10 transition-all">
+                                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-400 border border-green-500/20">
+                                        <Star className="w-4 h-4 sm:w-5 sm:h-5" />
                                     </div>
                                     <div className="text-center">
-                                        <span className="block text-lg font-black text-white leading-none">Lv. {level}</span>
-                                        <span className="text-[9px] font-black text-black/40 dark:text-white/30 uppercase tracking-widest">Seviye</span>
+                                        <span className="block text-base sm:text-lg font-black text-white leading-none">Lv. {level}</span>
+                                        <span className="text-[8px] sm:text-[9px] font-black text-black/40 dark:text-white/30 uppercase tracking-widest mt-1">Seviye</span>
                                     </div>
                                 </div>
-                                <div className="bg-black/5 dark:bg-white/5 border border-card-border rounded-[2rem] p-5 flex flex-col items-center justify-center gap-2 group hover:bg-black/10 dark:bg-white/10 transition-all">
-                                    <div className="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center text-pink-400 border border-pink-500/20">
-                                        <Heart className="w-5 h-5" />
+                                <div className="bg-black/5 dark:bg-white/5 border border-card-border rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-5 flex flex-col items-center justify-center gap-2 group hover:bg-black/10 dark:bg-white/10 transition-all">
+                                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-pink-500/10 flex items-center justify-center text-pink-400 border border-pink-500/20">
+                                        <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
                                     </div>
                                     <div className="text-center">
-                                        <span className="block text-lg font-black text-white leading-none">%95</span>
-                                        <span className="text-[9px] font-black text-black/40 dark:text-white/30 uppercase tracking-widest">Mutluluk</span>
+                                        <span className="block text-base sm:text-lg font-black text-white leading-none">%95</span>
+                                        <span className="text-[8px] sm:text-[9px] font-black text-black/40 dark:text-white/30 uppercase tracking-widest mt-1">Mutluluk</span>
                                     </div>
                                 </div>
                             </div>
 
                             {/* 3. AREADERBOARD PREVIEW */}
                             <section>
-                                <div className="flex items-center justify-between mb-4 px-1">
-                                    <h4 className="text-[11px] font-black text-white uppercase tracking-[0.2em] flex items-center gap-2">
-                                        <Trophy className="w-3.5 h-3.5 text-yellow-500" /> Arena Sıralaması
+                                <div className="flex items-center justify-between mb-3 sm:mb-4 px-1">
+                                    <h4 className="text-[10px] sm:text-[11px] font-black text-white uppercase tracking-[0.2em] flex items-center gap-2">
+                                        <Trophy className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-yellow-500" /> Arena Sıralaması
                                     </h4>
-                                    <span className="text-[9px] font-black text-black/40 dark:text-white/30 uppercase tracking-widest cursor-pointer hover:text-white transition-colors">Tümünü Gör</span>
+                                    <span className="text-[8px] sm:text-[9px] font-black text-black/40 dark:text-white/30 uppercase tracking-widest cursor-pointer hover:text-white transition-colors">Tümünü Gör</span>
                                 </div>
 
-                                <div className="bg-gradient-to-br from-[#1A1A1A] to-transparent border border-card-border rounded-[2.2rem] p-5 flex items-center justify-between group cursor-pointer hover:bg-black/5 dark:bg-white/5 transition-all">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-14 h-14 bg-black/5 dark:bg-white/5 rounded-2xl flex items-center justify-center border border-card-border relative overflow-hidden">
-                                            <Trophy className="w-7 h-7 text-yellow-500 relative z-10" />
+                                <div className="bg-gradient-to-br from-[#1A1A1A] to-transparent border border-card-border rounded-[1.5rem] sm:rounded-[2.2rem] p-4 sm:p-5 flex items-center justify-between group cursor-pointer hover:bg-black/5 dark:bg-white/5 transition-all">
+                                    <div className="flex items-center gap-3 sm:gap-4">
+                                        <div className="w-10 h-10 sm:w-14 sm:h-14 bg-black/5 dark:bg-white/5 rounded-xl sm:rounded-2xl flex items-center justify-center border border-card-border relative overflow-hidden">
+                                            <Trophy className="w-5 h-5 sm:w-7 sm:h-7 text-yellow-500 relative z-10" />
                                             <div className="absolute inset-0 bg-yellow-500/10 animate-pulse" />
                                         </div>
                                         <div>
-                                            <h6 className="text-white font-black text-base italic uppercase tracking-tighter leading-none">Global Resident</h6>
-                                            <p className="text-yellow-500/80 text-[10px] font-black uppercase tracking-widest mt-1.5 flex items-center gap-2">
-                                                <Target className="w-3 h-3" /> Sıralaman: #6
+                                            <h6 className="text-white font-black text-sm sm:text-base italic uppercase tracking-tighter leading-none">Global Resident</h6>
+                                            <p className="text-yellow-500/80 text-[9px] sm:text-[10px] font-black uppercase tracking-widest mt-1 sm:mt-1.5 flex items-center gap-1.5 sm:gap-2">
+                                                <Target className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> Sıralaman: #6
                                             </p>
                                         </div>
                                     </div>
                                     <div className="bg-black/10 dark:bg-white/10 p-2 rounded-lg">
-                                        <ChevronRight className="w-4 h-4 text-black/40 dark:text-white/30" />
+                                        <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-black/40 dark:text-white/30" />
                                     </div>
                                 </div>
                             </section>
@@ -167,10 +167,10 @@ export function GameQuickSheet({
                             {/* FOOTER: PLAY GAMES */}
                             <button
                                 onClick={() => { router.push('/game'); onClose(); }}
-                                className="w-full bg-indigo-600 py-6 rounded-[2.2rem] flex items-center justify-center gap-4 group active:scale-[0.98] transition-all shadow-2xl shadow-indigo-600/20"
+                                className="w-full bg-indigo-600 py-4 sm:py-6 rounded-[1.5rem] sm:rounded-[2.2rem] flex items-center justify-center gap-3 sm:gap-4 group active:scale-[0.98] transition-all shadow-xl sm:shadow-2xl shadow-indigo-600/20"
                             >
-                                <span className="text-white text-sm font-black uppercase tracking-[0.3em]">Hemen Oyna</span>
-                                <Play className="w-5 h-5 text-white fill-white group-hover:scale-110 transition-transform" />
+                                <span className="text-white text-[11px] sm:text-sm font-black uppercase tracking-[0.2em] sm:tracking-[0.3em]">Hemen Oyna</span>
+                                <Play className="w-4 h-4 sm:w-5 sm:h-5 text-white fill-white group-hover:scale-110 transition-transform" />
                             </button>
                         </div>
                     </motion.div>

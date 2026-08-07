@@ -44,15 +44,15 @@ export function EcosystemPortal({ isOpen, onClose }: EcosystemPortalProps) {
                     </div>
 
                     {/* HEADER */}
-                    <div className="px-8 py-10 flex items-center justify-between sticky top-0 z-20">
-                        <div className="flex items-center gap-6">
+                    <div className="px-4 sm:px-8 py-6 sm:py-10 flex items-center justify-between sticky top-0 z-20">
+                        <div className="flex items-center gap-4 sm:gap-6">
                             <a 
                                 href="https://moffi.net" 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="w-16 h-16 rounded-[2rem] bg-cyan-400/10 border border-cyan-400/20 flex items-center justify-center text-cyan-400 shadow-[0_0_30px_rgba(34,211,238,0.2)] hover:scale-105 active:scale-95 transition-all"
+                                className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl sm:rounded-[2rem] bg-cyan-400/10 border border-cyan-400/20 flex items-center justify-center text-cyan-400 shadow-[0_0_30px_rgba(34,211,238,0.2)] hover:scale-105 active:scale-95 transition-all"
                             >
-                                <Globe className="w-8 h-8 animate-pulse" />
+                                <Globe className="w-6 h-6 sm:w-8 sm:h-8 animate-pulse" />
                             </a>
                             <div>
                                 <a 
@@ -61,13 +61,13 @@ export function EcosystemPortal({ isOpen, onClose }: EcosystemPortalProps) {
                                     rel="noopener noreferrer"
                                     className="block group/title"
                                 >
-                                    <h2 className="text-3xl font-black text-foreground italic tracking-tighter uppercase leading-none group-hover/title:text-accent transition-colors">Moffi.net</h2>
+                                    <h2 className="text-2xl sm:text-3xl font-black text-foreground italic tracking-tighter uppercase leading-none group-hover/title:text-accent transition-colors">Moffi.net</h2>
                                 </a>
                                 <a 
                                     href="https://moffi.net" 
                                     target="_blank" 
                                     rel="noopener noreferrer"
-                                    className="text-[10px] font-bold text-cyan-400 uppercase tracking-[0.4em] mt-1.5 underline decoration-cyan-500/30 hover:text-white transition-colors"
+                                    className="text-[9px] sm:text-[10px] font-bold text-cyan-400 uppercase tracking-[0.2em] sm:tracking-[0.4em] mt-1.5 underline decoration-cyan-500/30 hover:text-white transition-colors"
                                 >
                                     Ecosystem Control ↗
                                 </a>
@@ -75,60 +75,63 @@ export function EcosystemPortal({ isOpen, onClose }: EcosystemPortalProps) {
                         </div>
                         <button 
                             onClick={onClose}
-                            className="w-14 h-14 rounded-full bg-foreground/5 border border-card-border flex items-center justify-center text-foreground active:scale-95 transition-all outline-none"
+                            className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-foreground/5 border border-card-border flex items-center justify-center text-foreground active:scale-95 transition-all outline-none"
                         >
-                            <X className="w-8 h-8" />
+                            <X className="w-6 h-6 sm:w-8 sm:h-8" />
                         </button>
                     </div>
 
-                    <div className="px-6 pb-40 space-y-12 relative z-10">
+                    <div className="px-4 sm:px-6 pb-32 sm:pb-40 space-y-8 sm:space-y-12 relative z-10">
                         
                         {/* 1. GLOBAL STATS GRID */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6">
                             {stats.map((stat, i) => (
                                 <motion.div
                                     key={i}
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: i * 0.1 }}
-                                    className="bg-card border border-card-border p-8 rounded-[3rem] flex flex-col gap-4 relative overflow-hidden group"
+                                    className={cn(
+                                        "bg-card border border-card-border p-4 sm:p-8 rounded-[1.5rem] sm:rounded-[3rem] flex flex-col gap-3 sm:gap-4 relative overflow-hidden group",
+                                        i === 2 ? "col-span-2 md:col-span-1" : ""
+                                    )}
                                 >
                                     <div className="absolute inset-0 bg-gradient-to-br from-foreground/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    <div className={cn("w-12 h-12 rounded-2xl bg-foreground/5 flex items-center justify-center", stat.color)}>
+                                    <div className={cn("w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-foreground/5 flex items-center justify-center", stat.color)}>
                                         {stat.icon}
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-black text-secondary uppercase tracking-[0.3em]">{stat.label}</p>
-                                        <p className="text-4xl font-black text-foreground tracking-tighter italic mt-1">{stat.value}</p>
+                                        <p className="text-[9px] sm:text-[10px] font-black text-secondary uppercase tracking-[0.2em] sm:tracking-[0.3em]">{stat.label}</p>
+                                        <p className="text-2xl sm:text-4xl font-black text-foreground tracking-tighter italic mt-0.5 sm:mt-1">{stat.value}</p>
                                     </div>
                                 </motion.div>
                             ))}
                         </div>
 
                         {/* 2. COMMUNITY GOVERNANCE (NEW) */}
-                        <div className="space-y-6">
+                        <div className="space-y-4 sm:space-y-6">
                             <div className="flex items-center justify-between px-2">
-                                <h3 className="text-xl font-black text-foreground italic uppercase tracking-tighter">Topluluk Oylamaları</h3>
-                                <Vote className="w-5 h-5 text-purple-400 animate-bounce" />
+                                <h3 className="text-lg sm:text-xl font-black text-foreground italic uppercase tracking-tighter">Topluluk Oylamaları</h3>
+                                <Vote className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400 animate-bounce" />
                             </div>
-                            <div className="grid grid-cols-1 gap-4">
+                            <div className="grid grid-cols-1 gap-3 sm:gap-4">
                                 {proposals.map((prop) => (
-                                    <div key={prop.id} className="bg-card border border-card-border p-8 rounded-[3rem] space-y-6 group hover:border-accent/30 transition-all">
-                                        <div className="flex justify-between items-start">
+                                    <div key={prop.id} className="bg-card border border-card-border p-5 sm:p-8 rounded-[1.5rem] sm:rounded-[3rem] space-y-4 sm:space-y-6 group hover:border-accent/30 transition-all">
+                                        <div className="flex justify-between items-start gap-4">
                                             <div>
-                                                <h4 className="text-lg font-black text-foreground uppercase tracking-tight">{prop.title}</h4>
-                                                <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mt-1">Aktif Oylama: {prop.votes} Katılım</p>
+                                                <h4 className="text-sm sm:text-lg font-black text-foreground uppercase tracking-tight">{prop.title}</h4>
+                                                <p className="text-[9px] sm:text-[10px] font-bold text-secondary uppercase tracking-widest mt-1">Aktif Oylama: {prop.votes} Katılım</p>
                                             </div>
-                                            <div className="px-4 py-1.5 bg-accent/10 border border-accent/20 rounded-full text-[9px] font-black text-accent uppercase tracking-widest">
+                                            <div className="shrink-0 px-3 py-1 sm:px-4 sm:py-1.5 bg-accent/10 border border-accent/20 rounded-full text-[8px] sm:text-[9px] font-black text-accent uppercase tracking-widest">
                                                 {prop.status}
                                             </div>
                                         </div>
                                         <div className="space-y-2">
-                                            <div className="flex justify-between text-[10px] font-black text-foreground/40 uppercase tracking-widest">
+                                            <div className="flex justify-between text-[9px] sm:text-[10px] font-black text-foreground/40 uppercase tracking-widest">
                                                 <span>Hedef</span>
                                                 <span>%{prop.progress}</span>
                                             </div>
-                                            <div className="w-full h-2 bg-foreground/5 rounded-full overflow-hidden">
+                                            <div className="w-full h-1.5 sm:h-2 bg-foreground/5 rounded-full overflow-hidden">
                                                 <motion.div 
                                                     initial={{ width: 0 }}
                                                     animate={{ width: `${prop.progress}%` }}
@@ -136,7 +139,7 @@ export function EcosystemPortal({ isOpen, onClose }: EcosystemPortalProps) {
                                                 />
                                             </div>
                                         </div>
-                                        <button className="w-full py-4 bg-foreground/5 border border-card-border rounded-2xl font-black text-[11px] uppercase tracking-widest text-foreground hover:bg-foreground/10 transition-all">
+                                        <button className="w-full py-3 sm:py-4 bg-foreground/5 border border-card-border rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-[11px] uppercase tracking-widest text-foreground hover:bg-foreground/10 transition-all">
                                             Oyunu Kullan
                                         </button>
                                     </div>

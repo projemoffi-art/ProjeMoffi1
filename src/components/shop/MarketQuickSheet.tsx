@@ -48,80 +48,79 @@ export function MarketQuickSheet({ isOpen, onClose, petName = "Dostun" }: Market
                         {/* Grab Handle */}
                         <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-black/10 dark:bg-white/10 rounded-full" />
 
-                        <div className="px-8 pt-10 pb-6 flex items-center justify-between">
+                        <div className="px-4 sm:px-8 pt-8 sm:pt-10 pb-4 sm:pb-6 flex items-center justify-between">
                             <div>
-                                <h3 className="text-2xl font-black text-white tracking-tighter uppercase italic leading-none">Moffi Market</h3>
-                                <p className="text-[10px] text-orange-400 font-black uppercase tracking-[0.3em] mt-2">Premium PetShop Deneyimi</p>
+                                <h3 className="text-xl sm:text-2xl font-black text-white tracking-tighter uppercase italic leading-none">Moffi Petshop</h3>
+                                <p className="text-[9px] sm:text-[10px] text-orange-400 font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] mt-1.5 sm:mt-2">Hızlı Sipariş Paneli</p>
                             </div>
                             <button 
                                 onClick={onClose}
-                                className="w-10 h-10 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center border border-card-border hover:bg-black/10 dark:bg-white/10 transition-all"
+                                className="w-8 h-8 sm:w-10 sm:h-10 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center border border-card-border hover:bg-black/10 dark:hover:bg-white/10 transition-all"
                             >
-                                <X className="w-5 h-5 text-black/50 dark:text-white/50" />
+                                <X className="w-4 h-4 sm:w-5 sm:h-5 text-black/50 dark:text-white/50" />
                             </button>
                         </div>
 
-                        <div className="px-8 pb-12 space-y-8 overflow-y-auto no-scrollbar">
+                        <div className="px-4 sm:px-8 pb-8 sm:pb-12 space-y-6 sm:space-y-8 overflow-y-auto no-scrollbar">
                             
                             {/* MOFFI COINS BALANCES */}
                             <section className="bg-gradient-to-r from-orange-500/20 to-amber-500/10 border border-orange-500/20 rounded-[2.2rem] p-6 relative overflow-hidden group">
                                 <div className="absolute -right-8 -top-8 w-32 h-32 bg-orange-500/10 blur-3xl rounded-full" />
                                 <div className="flex items-center justify-between relative z-10">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-black/10 dark:bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-card-border">
-                                            <Wallet className="w-6 h-6 text-orange-400" />
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] text-orange-400/60 font-black uppercase tracking-widest leading-none mb-1">Bakiyen</p>
-                                            <h4 className="text-2xl font-black text-white tracking-tight">1,250 <span className="text-xs text-black/50 dark:text-white/40 uppercase font-black">PC</span></h4>
-                                        </div>
+                                    <div className="flex-1 bg-black/5 dark:bg-white/5 border border-card-border rounded-xl sm:rounded-2xl flex items-center px-3 sm:px-4 py-3 sm:py-4 focus-within:border-orange-500/50 transition-colors">
+                                        <Search className="w-4 h-4 sm:w-5 sm:h-5 text-black/40 dark:text-white/40 mr-2 sm:mr-3 shrink-0" />
+                                        <input 
+                                            type="text" 
+                                            placeholder={`${petName} için arama yap...`}
+                                            className="bg-transparent border-none outline-none text-white text-xs sm:text-sm font-bold w-full placeholder:text-black/30 dark:placeholder:text-white/30"
+                                        />
                                     </div>
-                                    <button className="bg-black/10 dark:bg-white/10 hover:bg-black/20 dark:bg-white/20 p-3 rounded-xl transition-all active:scale-95 border border-card-border">
-                                        <ArrowRight className="w-4 h-4 text-white" />
+                                    <button className="ml-2 w-10 h-10 sm:w-14 sm:h-14 shrink-0 bg-black/5 dark:bg-white/5 border border-card-border rounded-xl sm:rounded-2xl flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/10 active:scale-95 transition-all">
+                                        <SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                                     </button>
                                 </div>
                             </section>
 
                             {/* FLASH DEALS SECTION */}
                             <section>
-                                <div className="flex items-center justify-between mb-4 px-1">
-                                    <h4 className="text-[11px] font-black text-white uppercase tracking-[0.2em] flex items-center gap-2">
-                                        <Zap className="w-3.5 h-3.5 text-yellow-400 fill-current" /> {petName} için Fırsatlar
+                                <div className="flex items-center justify-between mb-3 sm:mb-4 px-1">
+                                    <h4 className="text-[10px] sm:text-[11px] font-black text-white uppercase tracking-[0.2em] flex items-center gap-2">
+                                        <Zap className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-yellow-400 fill-current" /> {petName} için Fırsatlar
                                     </h4>
-                                    <span className="text-[9px] font-black text-black/40 dark:text-white/30 uppercase tracking-widest cursor-pointer hover:text-white transition-colors">Yenile</span>
+                                    <span className="text-[8px] sm:text-[9px] font-black text-black/40 dark:text-white/30 uppercase tracking-widest cursor-pointer hover:text-white transition-colors">Yenile</span>
                                 </div>
 
-                                <div className="flex gap-4 overflow-x-auto no-scrollbar pb-3 -mx-2 px-2">
+                                <div className="flex gap-3 sm:gap-4 overflow-x-auto no-scrollbar pb-3 -mx-2 px-2">
                                     {deals.map((product) => (
-                                        <div key={product.id} className="min-w-[200px] bg-black/5 dark:bg-white/5 border border-card-border rounded-[2rem] p-4 flex flex-col group active:scale-[0.98] transition-all">
-                                            <div className="relative aspect-square rounded-2xl overflow-hidden mb-4 border border-card-border">
+                                        <div key={product.id} className="min-w-[160px] sm:min-w-[200px] bg-black/5 dark:bg-white/5 border border-card-border rounded-[1.5rem] sm:rounded-[2rem] p-3 sm:p-4 flex flex-col group active:scale-[0.98] transition-all">
+                                            <div className="relative aspect-square rounded-xl sm:rounded-2xl overflow-hidden mb-3 sm:mb-4 border border-card-border">
                                                 <img src={product.image} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
                                                 {product.tag && (
-                                                    <div className="absolute top-2 left-2 bg-orange-500 text-white text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-tighter">
+                                                    <div className="absolute top-2 left-2 bg-orange-500 text-white text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md sm:rounded-lg uppercase tracking-tighter">
                                                         {product.tag}
                                                     </div>
                                                 )}
-                                                <button className="absolute top-2 right-2 w-7 h-7 bg-black/40 backdrop-blur-md rounded-lg flex items-center justify-center border border-card-border text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Heart className="w-3.5 h-3.5" />
+                                                <button className="absolute top-2 right-2 w-6 h-6 sm:w-7 sm:h-7 bg-black/40 backdrop-blur-md rounded-md sm:rounded-lg flex items-center justify-center border border-card-border text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <Heart className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                                                 </button>
                                             </div>
-                                            <h5 className="text-white font-bold text-sm mb-1 truncate">{product.name}</h5>
-                                            <div className="flex items-center gap-2 mb-3">
+                                            <h5 className="text-white font-bold text-xs sm:text-sm mb-1 leading-tight line-clamp-2 sm:truncate">{product.name}</h5>
+                                            <div className="flex items-center gap-2 mb-2 sm:mb-3">
                                                 <div className="flex items-center gap-1">
-                                                    <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                                                    <span className="text-[10px] text-black/60 dark:text-white/60 font-black">{product.rating}</span>
+                                                    <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-yellow-500 fill-current" />
+                                                    <span className="text-[9px] sm:text-[10px] text-black/60 dark:text-white/60 font-black">{product.rating}</span>
                                                 </div>
                                             </div>
                                             <div className="flex items-center justify-between mt-auto pt-2">
                                                 <div className="flex flex-col">
-                                                    {product.oldPrice && <span className="text-[10px] text-black/40 dark:text-white/30 line-through font-bold">{product.oldPrice} TL</span>}
-                                                    <span className="text-sm font-black text-white tracking-tight">{product.price} TL</span>
+                                                    {product.oldPrice && <span className="text-[9px] sm:text-[10px] text-black/40 dark:text-white/30 line-through font-bold">{product.oldPrice} TL</span>}
+                                                    <span className="text-xs sm:text-sm font-black text-white tracking-tight">{product.price} TL</span>
                                                 </div>
                                                 <button 
                                                     onClick={() => addToCart(product.id, 1)}
-                                                    className="w-9 h-9 bg-orange-500 text-white rounded-xl flex items-center justify-center active:scale-90 transition-all shadow-lg shadow-orange-500/20"
+                                                    className="w-8 h-8 sm:w-9 sm:h-9 bg-orange-500 text-white rounded-lg sm:rounded-xl flex items-center justify-center active:scale-90 transition-all shadow-lg shadow-orange-500/20"
                                                 >
-                                                    <ShoppingBag className="w-4 h-4" />
+                                                    <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                                 </button>
                                             </div>
                                         </div>
@@ -131,25 +130,26 @@ export function MarketQuickSheet({ isOpen, onClose, petName = "Dostun" }: Market
 
                             {/* RECENT / QUICK ORDER */}
                             <section>
-                                <h4 className="text-[11px] font-black text-black/30 dark:text-white/20 uppercase tracking-[0.2em] mb-4 px-1 flex items-center gap-2">
-                                    <RefreshCw className="w-3.5 h-3.5" /> Hızlı Tekrar Sipariş
+                                <h4 className="text-[9px] sm:text-[11px] font-black text-black/30 dark:text-white/20 uppercase tracking-[0.2em] mb-3 sm:mb-4 px-1 flex items-center gap-2">
+                                    <RefreshCw className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Hızlı Tekrar Sipariş
                                 </h4>
                                 
-                                <div className="bg-black/5 dark:bg-white/5 border border-card-border rounded-[2rem] p-5 flex items-center justify-between hover:bg-white/[0.08] transition-all group cursor-pointer">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-14 h-14 bg-black/10 dark:bg-white/10 rounded-2xl flex items-center justify-center p-2">
-                                            <img src="https://images.unsplash.com/photo-1548676632-4467d1656e6d?q=80&w=150" className="w-full h-full object-contain" />
+                                <div className="bg-black/5 dark:bg-white/5 border border-card-border rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-5 flex items-center justify-between hover:bg-white/[0.08] transition-all group cursor-pointer">
+                                    <div className="flex items-center gap-3 sm:gap-4">
+                                        <div className="w-10 h-10 sm:w-14 sm:h-14 bg-black/10 dark:bg-white/10 rounded-xl sm:rounded-2xl flex items-center justify-center p-2">
+                                            <img src="https://images.unsplash.com/photo-1589924691995-400dc9ecc119?q=80&w=200" className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal" />
                                         </div>
                                         <div>
-                                            <h6 className="text-white font-black text-base italic uppercase tracking-tighter leading-none">Nature's Best Kuzu Etli</h6>
-                                            <p className="text-black/50 dark:text-white/40 text-[10px] font-black uppercase tracking-widest mt-1.5 flex items-center gap-2">
-                                                <Package className="w-3 h-3" /> Son Alınan: 12 Mart
-                                            </p>
+                                            <h6 className="text-white font-black text-xs sm:text-sm leading-tight line-clamp-1">Pro Plan Somonlu Yetişkin Köpek Maması 14KG</h6>
+                                            <p className="text-[9px] sm:text-[10px] text-orange-400 font-bold uppercase tracking-widest mt-0.5 sm:mt-1">Son Sipariş: 12 Gün Önce</p>
                                         </div>
                                     </div>
-                                    <div className="bg-card text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl group-hover:scale-105 transition-transform">
-                                        Tekrarla
-                                    </div>
+                                    <button 
+                                        onClick={() => addToCart(3, 1)}
+                                        className="shrink-0 w-8 h-8 sm:w-10 sm:h-10 bg-white dark:bg-white/10 border border-card-border rounded-lg sm:rounded-xl flex items-center justify-center group-hover:bg-orange-500 group-hover:border-orange-500 group-hover:text-white transition-all text-black dark:text-white active:scale-90"
+                                    >
+                                        <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                    </button>
                                 </div>
                             </section>
 
@@ -172,10 +172,10 @@ export function MarketQuickSheet({ isOpen, onClose, petName = "Dostun" }: Market
                             {/* FOOTER: VIEW FULL STORE */}
                             <button
                                 onClick={() => { router.push('/petshop'); onClose(); }}
-                                className="w-full bg-orange-500 py-6 rounded-[2.2rem] flex items-center justify-center gap-4 group active:scale-[0.98] transition-all shadow-2xl shadow-orange-500/20"
+                                className="w-full bg-orange-500 py-4 sm:py-5 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center gap-2 sm:gap-3 group hover:bg-orange-600 transition-all shadow-[0_10px_30px_rgba(249,115,22,0.3)]"
                             >
-                                <span className="text-black text-sm font-black uppercase tracking-[0.3em]">Tüm Mağazayı Keşfet</span>
-                                <ChevronRight className="w-5 h-5 text-black group-hover:translate-x-1 transition-transform" />
+                                <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-white">Petshop'a Git</span>
+                                <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform text-white" />
                             </button>
                         </div>
                     </motion.div>
