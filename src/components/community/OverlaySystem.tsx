@@ -6,6 +6,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { X, Download, Grid3X3, List, Users, Coins, Globe, Package, Heart } from 'lucide-react';
 import { cn, showToast } from '@/lib/utils';
 import { useNotifications } from '@/context/NotificationContext';
+import { useRouter } from 'next/navigation';
 
 
 // Components
@@ -70,25 +71,62 @@ interface OverlaySystemProps {
     setIsGameQuickSheetOpen?: (open: boolean) => void;
 }
 
-export const OverlaySystem: React.FC<OverlaySystemProps> = ({
-    user, userPets, activePet, switchPet, updatePet, deletePet,
-    isProfileMenuOpen, setIsProfileMenuOpen, profileViewMode, setProfileViewMode,
-    qrModalPet, setQrModalPet, isFullScreenQR, setIsFullScreenQR,
-    selectedSharePost, setSelectedSharePost,
-    isNotificationsOpen, setIsNotificationsOpen, notificationsList, setNotificationsList,
-    isPetSettingsOpen, setIsPetSettingsOpen, settingsPet,
-    isEcosystemPortalOpen, setIsEcosystemPortalOpen,
-    isSpotlightOpen, setIsSpotlightOpen,
-    isDiaryOpen, setIsDiaryOpen,
-    setActiveTab,
-    isVetQuickSheetOpen, setIsVetQuickSheetOpen,
-    isWalkQuickSheetOpen, setIsWalkQuickSheetOpen,
-    isMarketQuickSheetOpen, setIsMarketQuickSheetOpen,
-    isStudioQuickSheetOpen, setIsStudioQuickSheetOpen,
-    isGameQuickSheetOpen, setIsGameQuickSheetOpen
-}) => {
+export function OverlaySystem({
+    user,
+    userPets,
+    activePet,
+    switchPet,
+    updatePet,
+    deletePet,
+    
+    // UI States
+    isProfileMenuOpen,
+    setIsProfileMenuOpen,
+    profileViewMode,
+    setProfileViewMode,
+    
+    qrModalPet,
+    setQrModalPet,
+    isFullScreenQR,
+    setIsFullScreenQR,
+    
+    selectedSharePost,
+    setSelectedSharePost,
+    
+    isNotificationsOpen,
+    setIsNotificationsOpen,
+    notificationsList,
+    setNotificationsList,
+    
+    isPetSettingsOpen,
+    setIsPetSettingsOpen,
+    settingsPet,
+    
+    isVetQuickSheetOpen,
+    setIsVetQuickSheetOpen,
+    isWalkQuickSheetOpen,
+    setIsWalkQuickSheetOpen,
+    isMarketQuickSheetOpen,
+    setIsMarketQuickSheetOpen,
+    isStudioQuickSheetOpen,
+    setIsStudioQuickSheetOpen,
+    isGameQuickSheetOpen,
+    setIsGameQuickSheetOpen,
+    
+    isEcosystemPortalOpen,
+    setIsEcosystemPortalOpen,
+    
+    isSpotlightOpen,
+    setIsSpotlightOpen,
+    
+    isDiaryOpen,
+    setIsDiaryOpen,
+    
+    setActiveTab
+}: OverlaySystemProps) {
     // Use centralized NotificationContext — single channel for the whole app
     const { notifications, unreadCount, markAllAsRead: markAllRead, markAsRead: markRead } = useNotifications();
+    const router = useRouter();
 
 
     return (
@@ -308,15 +346,14 @@ export const OverlaySystem: React.FC<OverlaySystemProps> = ({
                     isOpen={isSpotlightOpen}
                     onClose={() => setIsSpotlightOpen(false)}
                     onNavigate={(type, id) => {
-                        if (type === 'pet') { 
-                            switchPet(id); 
-                            setActiveTab('profile'); 
-                            setProfileViewMode('grid');
-                        }
                         if (type === 'user') {
-                            setActiveTab('profile');
-                            setProfileViewMode('grid');
+                            router.push(`/profile/${id}`);
+                        } else if (type === 'pet') { 
+                            router.push(`/id/${id}`);
+                        } else if (type === 'post') {
+                            router.push(`/post/${id}`);
                         }
+                        
                         if (id === 'vax') { 
                             setActiveTab('profile');
                             setProfileViewMode('appointments'); 

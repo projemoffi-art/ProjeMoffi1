@@ -20,9 +20,9 @@ const STAT_COLORS = {
 };
 
 const STATUS_BADGE: Record<string, { label: string; className: string; icon: any }> = {
-    active: { label: "ACTIVE", className: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20", icon: ShieldCheck },
-    pending: { label: "PENDING", className: "bg-amber-500/10 text-amber-400 border border-amber-500/20", icon: Clock },
-    removed: { label: "REMOVED", className: "bg-red-500/10 text-red-500 border border-red-500/20", icon: ShieldX },
+    active: { label: "AKTİF", className: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20", icon: ShieldCheck },
+    pending: { label: "BEKLİYOR", className: "bg-amber-500/10 text-amber-400 border border-amber-500/20", icon: Clock },
+    removed: { label: "KALDIRILDI", className: "bg-red-500/10 text-red-500 border border-red-500/20", icon: ShieldX },
 };
 
 export default function ModerationMatrix() {
@@ -57,7 +57,14 @@ export default function ModerationMatrix() {
                 .select('*, adoption_pets(name, breed)')
                 .order('created_at', { ascending: false });
 
-            if (reportsError) throw reportsError;
+            if (reportsError) console.error("Could not fetch adoption_reports:", reportsError);
+
+            const { data: globalReportsData, error: globalReportsError } = await supabase
+                .from('reports')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (globalReportsError) console.error("Could not fetch general reports:", globalReportsError);
 
             // Map data to UI expectations if necessary
             const realAds = (adsData || []).map(ad => ({
@@ -73,6 +80,7 @@ export default function ModerationMatrix() {
 
             const realReports = (reportsData || []).map(r => ({
                 id: r.id,
+                sourceTable: 'adoption_reports',
                 targetType: 'post',
                 targetId: r.ad_id,
                 content: `İlan: ${(r as any).adoption_pets?.name || 'Bilinmiyor'} (${(r as any).adoption_pets?.breed || 'Bilinmiyor'})`,
@@ -84,14 +92,53 @@ export default function ModerationMatrix() {
                 created_at: r.created_at
             }));
 
+            const mappedGlobalReports = await Promise.all((globalReportsData || []).map(async r => {
+                let actualContent = `${r.target_type?.toUpperCase() || 'BİLİNMİYOR'} - ID: ${r.target_id?.slice(0, 8)}...`;
+                let mediaUrl = null;
+                
+                try {
+                    if (r.target_type === 'post') {
+                        const { data: post } = await supabase.from('posts').select('content, media_url').eq('id', r.target_id).single();
+                        if (post) {
+                            actualContent = post.content || 'Medya İçeriği (Yazı yok)';
+                            mediaUrl = post.media_url;
+                        }
+                    } else if (r.target_type === 'comment') {
+                        const { data: comment } = await supabase.from('comments').select('content').eq('id', r.target_id).single();
+                        if (comment) {
+                            actualContent = comment.content;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Content fetch error:", e);
+                }
+
+                return {
+                    id: r.id,
+                    sourceTable: 'reports',
+                    targetType: r.target_type,
+                    targetId: r.target_id,
+                    content: actualContent,
+                    mediaUrl: mediaUrl,
+                    authorName: 'Bilinmiyor',
+                    reportedBy: r.reporter_id || 'Anonim',
+                    reason: r.reason,
+                    details: r.details,
+                    status: r.status || 'pending',
+                    created_at: r.created_at
+                };
+            }));
+
+            const allReports = [...realReports, ...mappedGlobalReports].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
             setAds(realAds);
-            setReports(realReports);
+            setReports(allReports);
             
             // Recalculate stats
             const pendingAdsCount = realAds.filter(a => a.status === 'pending').length;
             const activeAdsCount = realAds.filter(a => a.status === 'active').length;
             const removedAdsCount = realAds.filter(a => a.status === 'removed').length;
-            const pendingReportsCount = realReports.filter(r => r.status === 'pending').length;
+            const pendingReportsCount = allReports.filter(r => r.status === 'pending').length;
             
             setStats({
                 pending: pendingAdsCount,
@@ -133,7 +180,19 @@ export default function ModerationMatrix() {
         if (!reportToProcess) return;
 
         try {
-            await supabase.from('adoption_reports').update({ status: action }).eq('id', reportId);
+            // Raporun kendi durumunu güncelle
+            await supabase.from(reportToProcess.sourceTable || 'adoption_reports').update({ status: action }).eq('id', reportId);
+
+            // Eğer eylem "kaldır" ise ve hedef belli ise, hedefi asıl tablodan tamamen sil!
+            if (action === 'removed' && reportToProcess.targetType && reportToProcess.targetId) {
+                if (reportToProcess.targetType === 'post') {
+                    const { error: deleteError } = await supabase.from('posts').delete().eq('id', reportToProcess.targetId);
+                    if (deleteError) throw deleteError;
+                } else if (reportToProcess.targetType === 'comment') {
+                    const { error: deleteError } = await supabase.from('comments').delete().eq('id', reportToProcess.targetId);
+                    if (deleteError) throw deleteError;
+                }
+            }
 
             // Update the report status
             const updatedReports = reports.map(r => r.id === reportId ? { ...r, status: action } : r);
@@ -168,10 +227,10 @@ export default function ModerationMatrix() {
                 <div className="space-y-1">
                     <div className="flex items-center gap-2 mb-2">
                         <div className="w-2 h-2 rounded-full bg-cyan-400 animate-[pulse_2s_infinite]" />
-                        <span className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-[0.3em]">Operational Node: Moderation</span>
+                        <span className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-[0.3em]">Operasyon Merkezi: Moderasyon</span>
                     </div>
                     <h1 className="text-5xl font-black text-white tracking-tighter uppercase leading-none">
-                        Content <span className="text-black/50 dark:text-white/40">Matrix</span>
+                        İçerik <span className="text-black/50 dark:text-white/40">Matrisi</span>
                     </h1>
                 </div>
                 <button 
@@ -179,17 +238,17 @@ export default function ModerationMatrix() {
                     className="flex items-center gap-3 px-6 py-3 bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl text-xs font-black text-black/60 dark:text-white/60 hover:text-white hover:bg-black/10 dark:bg-white/10 transition-all active:scale-95 group"
                 >
                     <RefreshCw className={cn("w-4 h-4 transition-transform group-hover:rotate-180 duration-500", isLoading && "animate-spin")} /> 
-                    Synchronize
+                    Senkronize Et
                 </button>
             </div>
 
             {/* --- STAT UNITS --- */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                    { key: "pending", label: "Pending", icon: Clock, value: stats.pending, color: STAT_COLORS.pending },
-                    { key: "active", label: "Active Nodes", icon: ShieldCheck, value: stats.active, color: STAT_COLORS.active },
-                    { key: "removed", label: "Decommissioned", icon: ShieldX, value: stats.removed, color: STAT_COLORS.removed },
-                    { key: "reports", label: "Priority Reports", icon: Flag, value: stats.reports, color: STAT_COLORS.reports },
+                    { key: "pending", label: "Bekliyor", icon: Clock, value: stats.pending, color: STAT_COLORS.pending },
+                    { key: "active", label: "Aktif İlanlar", icon: ShieldCheck, value: stats.active, color: STAT_COLORS.active },
+                    { key: "removed", label: "Kaldırılanlar", icon: ShieldX, value: stats.removed, color: STAT_COLORS.removed },
+                    { key: "reports", label: "Öncelikli Şikayetler", icon: Flag, value: stats.reports, color: STAT_COLORS.reports },
                 ].map((stat, i) => (
                     <motion.div 
                         key={stat.key}
@@ -221,7 +280,7 @@ export default function ModerationMatrix() {
                             activeTab === "ads" ? "text-white" : "text-black/30 dark:text-white/20 hover:text-black/50 dark:text-white/40"
                         )}
                     >
-                        Ad Nodes
+                        Sahiplendirme İlanları
                         {activeTab === "ads" && <motion.div layoutId="tab-underline" className="absolute bottom-0 inset-x-0 h-1 bg-cyan-500" />}
                     </button>
                     <button 
@@ -231,7 +290,7 @@ export default function ModerationMatrix() {
                             activeTab === "reports" ? "text-white" : "text-black/30 dark:text-white/20 hover:text-black/50 dark:text-white/40"
                         )}
                     >
-                        Signals/Reports
+                        Şikayetler / Raporlar
                         {activeTab === "reports" && <motion.div layoutId="tab-underline" className="absolute bottom-0 inset-x-0 h-1 bg-cyan-500" />}
                     </button>
                 </div>
@@ -242,7 +301,7 @@ export default function ModerationMatrix() {
                         <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/30 dark:text-white/20 group-focus-within:text-cyan-400 transition-colors" />
                         <input
                             type="text"
-                            placeholder="Node Search (Name, Author)..."
+                            placeholder="Sahiplendirme ilanı ara..."
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
                             className="w-full pl-14 pr-6 py-4 bg-black/5 dark:bg-white/5 border border-card-border rounded-2xl text-xs font-bold text-white placeholder:text-white/10 focus:outline-none focus:border-cyan-500/50 transition-all"
@@ -260,7 +319,7 @@ export default function ModerationMatrix() {
                                         : "bg-black/5 dark:bg-white/5 border-card-border text-black/50 dark:text-white/40 hover:text-white hover:bg-black/10 dark:bg-white/10"
                                 )}
                             >
-                                {s}
+                                {s === "all" ? "Hepsi" : s === "pending" ? "Bekliyor" : "Aktif"}
                             </button>
                         ))}
                     </div>
@@ -272,7 +331,7 @@ export default function ModerationMatrix() {
                         {isLoading ? (
                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-20 flex flex-col items-center justify-center gap-4 text-black/30 dark:text-white/20">
                                 <RefreshCw className="w-10 h-10 animate-spin" />
-                                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Syncing Matrix...</span>
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Veriler Eşitleniyor...</span>
                             </motion.div>
                         ) : activeTab === "ads" ? (
                             <div className="divide-y divide-white/5">
@@ -306,7 +365,7 @@ export default function ModerationMatrix() {
                                         
                                         <div className="flex items-center gap-8">
                                             <div className="hidden md:flex flex-col items-end">
-                                                <span className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-widest">Node Location</span>
+                                                <span className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-widest">Konum</span>
                                                 <span className="text-[11px] font-bold text-black/60 dark:text-white/60">{ad.location}</span>
                                             </div>
                                             <ChevronRight className="w-5 h-5 text-white/10 group-hover:text-white transition-colors group-hover:translate-x-1" />
@@ -319,7 +378,7 @@ export default function ModerationMatrix() {
                                 {reports.length === 0 ? (
                                     <div className="p-20 text-center space-y-4">
                                         <Flag className="w-12 h-12 text-white/10 mx-auto" />
-                                        <p className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-[0.2em]">No High-Priority Signals Detected</p>
+                                        <p className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-[0.2em]">Öncelikli Şikayet Bulunmuyor</p>
                                     </div>
                                 ) : (
                                     reports.map((report, i) => (
@@ -416,17 +475,17 @@ export default function ModerationMatrix() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <div className="space-y-6">
                                         <div>
-                                            <h4 className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-[0.3em] mb-3">Author Intelligence</h4>
+                                            <h4 className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-[0.3em] mb-3">Yazar Bilgisi</h4>
                                             <div className="flex items-center gap-4 p-5 bg-black/5 dark:bg-white/5 rounded-3xl border border-card-border">
                                                 <div className="w-10 h-10 rounded-full bg-cyan-500/20 border border-cyan-500/20" />
                                                 <div>
                                                     <p className="font-bold text-white uppercase text-sm">{selectedAd.author_name}</p>
-                                                    <p className="text-[10px] text-black/30 dark:text-white/20 font-black uppercase tracking-widest">Verified Agent</p>
+                                                    <p className="text-[10px] text-black/30 dark:text-white/20 font-black uppercase tracking-widest">Doğrulanmış Kullanıcı</p>
                                                 </div>
                                             </div>
                                         </div>
                                         <div>
-                                            <h4 className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-[0.3em] mb-3">Narrative Data</h4>
+                                            <h4 className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-[0.3em] mb-3">İlan Detayı</h4>
                                             <div className="p-6 bg-white/[0.02] border border-card-border rounded-3xl leading-relaxed text-black/60 dark:text-white/60 text-sm font-medium">
                                                 {selectedAd.desc || "Veri girişi bulunmamaktadır."}
                                             </div>
@@ -439,14 +498,14 @@ export default function ModerationMatrix() {
                                             className="w-full py-6 bg-cyan-500 text-black rounded-3xl font-black text-sm uppercase tracking-[0.2em] shadow-[0_20px_40px_rgba(6,182,212,0.2)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
                                         >
                                             <CheckCircle className="w-5 h-5" />
-                                            Authorize Node
+                                            İlanı Onayla (Yayına Al)
                                         </button>
                                         <button 
                                             onClick={() => handleAction(selectedAd.id, "removed")}
                                             className="w-full py-6 bg-black/5 dark:bg-white/5 border border-red-500/20 text-red-500 rounded-3xl font-black text-sm uppercase tracking-[0.2em] hover:bg-red-500/10 transition-all flex items-center justify-center gap-3"
                                         >
                                             <Trash2 className="w-5 h-5" />
-                                            Decommission Node
+                                            İlanı Reddet (Sil)
                                         </button>
                                     </div>
                                 </div>
@@ -504,9 +563,14 @@ export default function ModerationMatrix() {
                                     <div className="space-y-6">
                                         <div>
                                             <h4 className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-[0.3em] mb-3">Raporlanan İçerik</h4>
-                                            <div className="p-6 bg-white/[0.02] border border-card-border rounded-3xl leading-relaxed text-black/80 dark:text-white/80 text-sm font-medium italic">
+                                            <div className="p-6 bg-white/[0.02] border border-card-border rounded-3xl leading-relaxed text-black/80 dark:text-white/80 text-sm font-medium italic mb-4">
                                                 &quot;{selectedReport.content}&quot;
                                             </div>
+                                            {selectedReport.mediaUrl && (
+                                                <div className="w-full h-48 rounded-2xl overflow-hidden mb-4 border border-card-border">
+                                                    <img src={selectedReport.mediaUrl} alt="Reported Media" className="w-full h-full object-cover" />
+                                                </div>
+                                            )}
                                         </div>
                                         <div>
                                             <h4 className="text-[10px] font-black text-black/30 dark:text-white/20 uppercase tracking-[0.3em] mb-3">Rapor Detayı & Gerekçe</h4>
@@ -524,7 +588,18 @@ export default function ModerationMatrix() {
                                         </div>
                                     </div>
 
-                                    {selectedReport.status === 'pending' ? (
+                                    <div className="flex flex-col justify-end gap-4 pb-4">
+                                        <a
+                                            href={`/community?post=${selectedReport.targetId}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="w-full py-4 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-3xl font-black text-sm uppercase tracking-[0.2em] hover:bg-indigo-500/20 transition-all flex items-center justify-center gap-3 mb-2"
+                                        >
+                                            <Search className="w-5 h-5" />
+                                            Gönderiyi Platformda İncele (Yeni Sekme)
+                                        </a>
+
+                                        {selectedReport.status === 'pending' ? (
                                         <div className="flex flex-col justify-end gap-4 pb-4">
                                             <button 
                                                 onClick={() => handleReportAction(selectedReport.id, "removed")}
@@ -548,6 +623,7 @@ export default function ModerationMatrix() {
                                             </div>
                                         </div>
                                     )}
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>

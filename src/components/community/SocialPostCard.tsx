@@ -1,9 +1,11 @@
 "use client";
 
-import { Heart, MessageCircle, Share2, MoreHorizontal, Sparkles, MapPin } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, Sparkles, MapPin, AlertTriangle, EyeOff, UserMinus } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useShare } from "@/context/ShareContext";
+import { useReport } from "@/context/ReportContext";
 
 interface PostProps {
     user: {
@@ -28,7 +30,10 @@ interface PostProps {
 
 export function SocialPostCard({ user, content, isSponsored, context }: PostProps) {
     const { openShare } = useShare();
-    const [liked, setLiked] = useState(false);
+    const [isLiked, setIsLiked] = useState(false);
+    const [showHeart, setShowHeart] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const { openReportModal } = useReport();
     const [likeCount, setLikeCount] = useState(content.likes);
 
     const handleLike = () => {
@@ -66,9 +71,63 @@ export function SocialPostCard({ user, content, isSponsored, context }: PostProp
                         )}
                     </div>
                 </div>
-                <button className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors">
-                    <MoreHorizontal className="w-5 h-5" />
-                </button>
+                <div className="relative">
+                    <button 
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setIsMenuOpen(!isMenuOpen);
+                        }}
+                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors p-2"
+                    >
+                        <MoreHorizontal className="w-5 h-5" />
+                    </button>
+                    
+                    <AnimatePresence>
+                        {isMenuOpen && (
+                            <>
+                                <div 
+                                    className="fixed inset-0 z-30" 
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setIsMenuOpen(false);
+                                    }} 
+                                />
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.95, y: 5 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95, y: 5 }}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                    }}
+                                    className="absolute right-0 mt-2 w-56 bg-card border border-card-border rounded-2xl shadow-xl z-40 overflow-hidden"
+                                >
+                                    <button onClick={() => setIsMenuOpen(false)} className="w-full text-left px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-3 text-sm font-medium transition-colors">
+                                        <EyeOff className="w-4 h-4 text-gray-500" />
+                                        İlgilenmiyorum
+                                    </button>
+                                    <button onClick={() => setIsMenuOpen(false)} className="w-full text-left px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-3 text-sm font-medium transition-colors border-t border-card-border/50">
+                                        <UserMinus className="w-4 h-4 text-gray-500" />
+                                        Takipten Çık
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setIsMenuOpen(false);
+                                            alert('Bu işlem için lütfen giriş yapın veya kayıt olun.');
+                                            window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'login' }));
+                                        }} 
+                                        className="w-full text-left px-4 py-3 hover:bg-red-500/10 text-red-500 flex items-center gap-3 text-sm font-bold transition-colors border-t border-card-border/50"
+                                    >
+                                        <AlertTriangle className="w-4 h-4" />
+                                        Şikayet Et
+                                    </button>
+                                </motion.div>
+                            </>
+                        )}
+                    </AnimatePresence>
+                </div>
             </div>
 
             {/* Media */}

@@ -140,14 +140,14 @@ export default function MoffiCoreDashboard() {
                         <div className="flex items-center gap-4 flex-wrap">
                             <div className="flex items-center gap-2 px-3 py-1.5 bg-cyan-500/10 border border-cyan-500/20 rounded-full">
                                 <Radio className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-                                <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">Core Active</span>
+                                <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">Çekirdek Aktif</span>
                             </div>
                             <div className="flex items-center gap-2 px-3 py-1.5 bg-black/5 dark:bg-white/5 border border-card-border rounded-full">
                                 <Fingerprint className="w-3.5 h-3.5 text-black/50 dark:text-white/40" />
-                                <span className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest">Admin Authorization: Valid</span>
+                                <span className="text-[10px] font-black text-black/50 dark:text-white/40 uppercase tracking-widest">Yönetici Yetkisi: Geçerli</span>
                             </div>
                             <div className="text-[10px] font-mono text-black/30 dark:text-white/20 uppercase tracking-widest">
-                                {currentTime ? `${currentTime.toLocaleTimeString()} • ${currentTime.toLocaleDateString()}` : "SYNCING TIMESTREAM..."}
+                                {currentTime ? `${currentTime.toLocaleTimeString()} • ${currentTime.toLocaleDateString()}` : "ZAMAN AKIŞI EŞİTLENİYOR..."}
                             </div>
                         </div>
 
@@ -159,11 +159,11 @@ export default function MoffiCoreDashboard() {
                             >
                                 <span className="opacity-40">Moffi</span>
                                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white/80 to-white/40 italic drop-shadow-[0_0_30px_rgba(255,255,255,0.2)]">
-                                    Core Center
+                                    Kontrol Merkezi
                                 </span>
                             </motion.h1>
                             <p className="text-black/50 dark:text-white/40 font-medium text-lg mt-4 max-w-xl">
-                                Ecosystem synchronization and planetary synchronization protocol active. All systems within nominal parameters.
+                                Ekosistem senkronizasyonu ve gezegensel eşitleme protokolü aktif. Tüm sistemler normal değerlerde çalışıyor.
                             </p>
                         </div>
                     </div>
@@ -175,7 +175,7 @@ export default function MoffiCoreDashboard() {
                             className="px-8 py-5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-[2rem] font-black text-sm shadow-[0_20px_60px_rgba(99,102,241,0.2)] flex items-center gap-3 transition-all hover:pr-10 group"
                         >
                             <Megaphone className="w-5 h-5 transition-transform group-hover:-rotate-12" />
-                            System Broadcast
+                            Sistem Duyurusu
                         </motion.button>
                         <div className="w-16 h-16 rounded-[1.5rem] bg-black/5 dark:bg-white/5 border border-card-border flex items-center justify-center backdrop-blur-xl relative group cursor-help">
                             <Activity className="w-6 h-6 text-black/50 dark:text-white/40" />
@@ -188,7 +188,7 @@ export default function MoffiCoreDashboard() {
             {/* --- SYNCHRONIZED STATS GRID --- */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatPulse
-                    label="Active Guardians"
+                    label="Aktif Kullanıcılar"
                     value={stats.users.toLocaleString()}
                     icon={Users}
                     color="bg-cyan-500/10 text-cyan-400"
@@ -196,7 +196,7 @@ export default function MoffiCoreDashboard() {
                     delay={0.1}
                 />
                 <StatPulse
-                    label="Planetary Stories"
+                    label="Tüm İlanlar"
                     value={stats.posts.toLocaleString()}
                     icon={Database}
                     color="bg-purple-500/10 text-purple-400"
@@ -204,14 +204,14 @@ export default function MoffiCoreDashboard() {
                     delay={0.2}
                 />
                 <StatPulse
-                    label="Neural Feedback"
+                    label="Gelen Şikayetler"
                     value={stats.feedbacks.toLocaleString()}
                     icon={Cpu}
                     color="bg-emerald-500/10 text-emerald-400"
                     delay={0.3}
                 />
                 <StatPulse
-                    label="SOS Priority"
+                    label="Acil SOS Bildirimleri"
                     value={stats.sos}
                     icon={Rocket}
                     color="bg-red-500/10 text-red-500"
@@ -227,8 +227,8 @@ export default function MoffiCoreDashboard() {
                     <div className="px-10 pb-10">
                         <div className="flex items-center justify-between mb-12">
                             <div className="space-y-2">
-                                <h2 className="text-3xl font-black text-white tracking-tighter uppercase">Moderation Matrix</h2>
-                                <p className="text-black/40 dark:text-white/30 text-xs font-bold uppercase tracking-[0.2em]">Synchronization Level: 99.8%</p>
+                                <h2 className="text-3xl font-black text-white tracking-tighter uppercase">Moderasyon Matrisi</h2>
+                                <p className="text-black/40 dark:text-white/30 text-xs font-bold uppercase tracking-[0.2em]">Senkronizasyon Seviyesi: 99.8%</p>
                             </div>
                             <div className="flex gap-1">
                                 {[1,2,3,4].map(i => <motion.div key={i} animate={{ height: [4, 12, 4] }} transition={{ duration: 1, repeat: Infinity, delay: i * 0.1 }} className="w-1 bg-cyan-500/30 rounded-full" />)}
@@ -237,10 +237,10 @@ export default function MoffiCoreDashboard() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {[
-                                { title: "Content Moderation", desc: "Review reported data nodes and social echoes.", icon: Shield, action: "Launch", href: "/admin/moderation" },
-                                { title: "Guardian Control", desc: "Authorize or suspend planetary agents.", icon: Fingerprint, action: "Access", href: "/admin/users" },
-                                { title: "Ecosystem Alerts", desc: "Manage priority broadcasts and SOS signals.", icon: Radio, action: "Sync", href: "/admin/alerts" },
-                                { title: "Nexus Metrics", desc: "Deep dive into behavioral trend analysis.", icon: TrendingUp, action: "Analyze", href: "/admin/analytics" }
+                                { title: "İçerik Moderasyonu", desc: "Şikayet edilen verileri ve sosyal etkileşimleri inceleyin.", icon: Shield, action: "Başlat", href: "/admin/moderation" },
+                                { title: "Kullanıcı Kontrolü", desc: "Kullanıcıları yetkilendirin veya askıya alın.", icon: Fingerprint, action: "Eriş", href: "/admin/users" },
+                                { title: "Sistem Uyarıları", desc: "Öncelikli duyuruları ve SOS bildirimlerini yönetin.", icon: Radio, action: "Senkronize Et", href: "/admin/alerts" },
+                                { title: "Platform Metrikleri", desc: "Davranışsal eğilim analizini derinlemesine inceleyin.", icon: TrendingUp, action: "Analiz Et", href: "/admin/analytics" }
                             ].map((item, i) => (
                                 <Link href={item.href || '#'} key={i} className="group/item">
                                     <div className="bg-white/[0.03] border border-card-border p-4 sm:p-6 rounded-[2rem] hover:bg-white/[0.08] hover:border-card-border transition-all active:scale-[0.97]">
@@ -250,12 +250,12 @@ export default function MoffiCoreDashboard() {
                                             </div>
                                             <div className="flex flex-col">
                                                 <h4 className="font-black text-white text-[15px] uppercase tracking-wide">{item.title}</h4>
-                                                <span className="text-[10px] text-black/30 dark:text-white/20 font-bold uppercase tracking-widest">Sub-Module 0{i+1}</span>
+                                                <span className="text-[10px] text-black/30 dark:text-white/20 font-bold uppercase tracking-widest">Alt-Modül 0{i+1}</span>
                                             </div>
                                         </div>
                                         <p className="text-xs text-black/40 dark:text-white/30 mb-8 leading-relaxed font-medium">{item.desc}</p>
                                         <div className="flex items-center justify-between">
-                                            <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">{item.action} Matrix</span>
+                                            <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">{item.action}</span>
                                             <Plus className="w-4 h-4 text-black/30 dark:text-white/20 group-hover/item:rotate-90 group-hover/item:text-white transition-all" />
                                         </div>
                                     </div>
@@ -273,9 +273,9 @@ export default function MoffiCoreDashboard() {
                                 <div className="w-16 h-16 bg-black/5 dark:bg-white/5 backdrop-blur-xl rounded-[1.5rem] flex items-center justify-center mb-10 border border-card-border group-hover:scale-110 group-hover:rotate-3 transition-transform">
                                     <Sparkles className="w-8 h-8 text-white" />
                                 </div>
-                                <h3 className="text-4xl font-black text-white tracking-tighter leading-none mb-4 uppercase">Care Protocol</h3>
+                                <h3 className="text-4xl font-black text-white tracking-tighter leading-none mb-4 uppercase">Bakım Protokolü</h3>
                                 <p className="text-black/50 dark:text-white/40 text-sm leading-relaxed font-medium">
-                                    Manage veterinary verifications, health credentials, and priority medical signals.
+                                    Veteriner onaylarını, sağlık belgelerini ve acil durum sinyallerini yönetin.
                                 </p>
                             </div>
 
@@ -284,13 +284,13 @@ export default function MoffiCoreDashboard() {
                                     whileHover={{ y: -5 }}
                                     className="w-full py-5 bg-black/10 dark:bg-white/10 hover:bg-black/20 dark:bg-white/20 border border-black/10 dark:border-white/10 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest shadow-2xl transition-all"
                                 >
-                                    Live SOS Interface
+                                    Canlı SOS Paneli
                                 </motion.button>
                                 <motion.button 
                                     whileHover={{ y: -5 }}
                                     className="w-full py-5 bg-black/5 dark:bg-white/5 border border-card-border rounded-[1.5rem] font-black text-xs text-black/60 dark:text-white/60 uppercase tracking-widest hover:bg-black/10 dark:bg-white/10 transition-all"
                                 >
-                                    Vet Credentials (8)
+                                    Veteriner Onayları (8)
                                 </motion.button>
                             </div>
                         </div>

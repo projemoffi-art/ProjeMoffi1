@@ -8,6 +8,7 @@ import {
     Heart, MessageCircle, Share2, MoreHorizontal, User, 
     ChevronRight, Info, QrCode, Star, Copy, Bell, 
     Edit2, Trash2, VolumeX, Volume2, EyeOff, ShieldAlert, 
+
     BadgeCheck, Plus, X, Sparkles, Send, Check,
     Download, Instagram, MessageSquare, Zap, Compass
 } from 'lucide-react';
@@ -17,6 +18,9 @@ import { ShieldCheck, Crown, Footprints, Zap as SOSZap } from 'lucide-react';
 import Image from 'next/image';
 import { apiService } from '@/services/apiService';
 import { useRealtimeComments } from '@/hooks/useRealtimeComments';
+import { useAuth } from '@/context/AuthContext';
+import { useShare } from '@/context/ShareContext';
+import { useReport } from '@/context/ReportContext';
 
 interface ImmersivePostCardProps {
     post: any;
@@ -51,11 +55,14 @@ export function ImmersivePostCard({
     priority = false,
     isCommentsDisabled = false
 }: ImmersivePostCardProps) {
-    const router = useRouter();
     const [tapHeart, setTapHeart] = useState(false);
     const [showComments, setShowComments] = useState(false);
     const [commentInput, setCommentInput] = useState('');
     const [isMoreOpen, setIsMoreOpen] = useState(false);
+    const [isHidden, setIsHidden] = useState(false);
+    const { openReportModal } = useReport();
+    const router = useRouter();
+    const { openShare } = useShare();
     
     const [localAllowComments, setLocalAllowComments] = useState(post?.allow_comments ?? true);
     const [localCommentPrivacy, setLocalCommentPrivacy] = useState(post?.comment_privacy || 'everyone');
@@ -79,12 +86,46 @@ export function ImmersivePostCard({
     const [likers, setLikers] = useState<any[]>([]);
     const [showLikersModal, setShowLikersModal] = useState(false);
     const [isLoadingLikers, setIsLoadingLikers] = useState(false);
+    const [followedLikers, setFollowedLikers] = useState<Record<string, boolean>>({});
+
+    const handleFollowLiker = async (likerId: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!currentUser) {
+            window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'login' }));
+            return;
+        }
+        
+        const isCurrentlyFollowing = followedLikers[likerId];
+        const newState = !isCurrentlyFollowing;
+        setFollowedLikers(prev => ({ ...prev, [likerId]: newState }));
+        
+        try {
+            if (newState) {
+                await apiService.followUser(likerId);
+            } else {
+                await apiService.unfollowUser(likerId);
+            }
+            window.dispatchEvent(new CustomEvent('moffi-follow-change', {
+                detail: { userId: likerId, isFollowing: newState }
+            }));
+        } catch (err) {
+            console.error("Takip işlemi hatası:", err);
+            setFollowedLikers(prev => ({ ...prev, [likerId]: isCurrentlyFollowing }));
+        }
+    };
 
     useEffect(() => {
         if (post?.id && post.likes > 0) {
             setIsLoadingLikers(true);
-            apiService.getPostLikers(post.id).then(data => {
+            (apiService as any).getPostLikers(post.id).then((data: any) => {
                 setLikers(data || []);
+                const initialFollows: Record<string, boolean> = {};
+                (data || []).forEach((liker: any) => {
+                    if (liker.is_following) {
+                        initialFollows[liker.id] = true;
+                    }
+                });
+                setFollowedLikers(initialFollows);
                 setIsLoadingLikers(false);
             }).catch(() => setIsLoadingLikers(false));
         } else {
@@ -237,8 +278,10 @@ export function ImmersivePostCard({
             // Navigate to other user's profile
             if (targetId) {
                 router.push(`/profile/${targetId}`);
+            } else if (post.author) {
+                router.push(`/profile/${post.author.replace('@', '')}`);
             } else {
-                console.warn('Profile navigation failed: no user_id on post', post);
+                alert("Bu gönderinin sahibi bulunamadı.");
             }
         }
     };
@@ -382,22 +425,30 @@ export function ImmersivePostCard({
 
     const handleFollow = async (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (isFollowingAuthor) return;
         
         const authorId = post.user_id || post.userId || post.authorId;
         if (!authorId) return;
 
-        setIsFollowingAuthor(true);
+        const previousState = isFollowingAuthor;
+        const newState = !isFollowingAuthor;
+        setIsFollowingAuthor(newState);
+
         try {
-            await apiService.followUser(authorId);
+            if (newState) {
+                await apiService.followUser(authorId);
+            } else {
+                await apiService.unfollowUser(authorId);
+            }
             window.dispatchEvent(new CustomEvent('moffi-follow-change', {
-                detail: { userId: authorId, isFollowing: true }
+                detail: { userId: authorId, isFollowing: newState }
             }));
         } catch (err) {
-            console.error("Takip hatası:", err);
-            setIsFollowingAuthor(false);
+            console.error("Takip işlemi hatası:", err);
+            setIsFollowingAuthor(previousState);
         }
     };
+
+    if (isHidden) return null;
 
     return (
         <div ref={containerRef} className="w-full max-w-[495px] mx-auto flex flex-col overflow-hidden">
@@ -422,7 +473,7 @@ export function ImmersivePostCard({
                                 <>
                                     <span className="text-gray-300 dark:text-gray-600 mx-1">•</span>
                                     <button 
-                                        onClick={(e) => { e.stopPropagation(); setIsFollowingAuthor(!isFollowingAuthor); }}
+                                        onClick={handleFollow}
                                         className={cn("text-[13px] font-bold transition-colors", isFollowingAuthor ? "text-gray-400" : "text-cyan-500 hover:text-cyan-600")}
                                     >
                                         {isFollowingAuthor ? 'Takip Ediliyor' : 'Takip Et'}
@@ -461,6 +512,14 @@ export function ImmersivePostCard({
                             loop
                             playsInline
                             className="w-full h-full object-cover transition-transform duration-700 group-hover/media:scale-[1.01]"
+                            onTimeUpdate={(e) => {
+                                const video = e.currentTarget;
+                                const start = post?.trim_start || 0;
+                                const end = post?.trim_end || video.duration || 10;
+                                if (video.currentTime < start || video.currentTime >= end) {
+                                    video.currentTime = start;
+                                }
+                            }}
                         />
                         <div className="absolute bottom-4 right-4 p-2 bg-black/30 backdrop-blur-md rounded-full text-white/90 border border-white/10">
                             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
@@ -503,7 +562,7 @@ export function ImmersivePostCard({
                         <button onClick={() => allowComments ? setShowComments(true) : null} className={cn("p-2 text-gray-600 dark:text-gray-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-full transition-all group", !allowComments && "opacity-50")}>
                             <MessageCircle strokeWidth={1.25} className="w-[22px] h-[22px] transition-transform group-hover:scale-105 group-active:scale-95" />
                         </button>
-                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onShare?.(); }} className="p-2 text-gray-600 dark:text-gray-300 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 rounded-full transition-all group">
+                        <button onClick={() => openShare({ url: typeof window !== 'undefined' ? `${window.location.origin}/community/post/${post.id}` : '', text: post.content, title: 'Moffi Gönderisi' })} className="p-2 text-gray-600 dark:text-gray-300 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 rounded-full transition-all group">
                             <Send strokeWidth={1.25} className="w-[22px] h-[22px] transition-transform group-hover:scale-105 group-active:scale-95 -mt-0.5 ml-0.5" />
                         </button>
                     </div>
@@ -564,7 +623,7 @@ export function ImmersivePostCard({
                                 animate={{ y: 0 }}
                                 exit={{ y: "100%" }}
                                 transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                                className="fixed bottom-0 left-0 right-0 sm:max-w-[440px] sm:mx-auto z-[1200] bg-white/90 dark:bg-[#111]/90 backdrop-blur-2xl rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/20 dark:border-white/10 flex flex-col max-h-[85vh] overflow-hidden"
+                                className="fixed bottom-0 left-0 right-0 sm:max-w-[440px] sm:mx-auto z-[1200] bg-white/90 dark:bg-[#111]/90 backdrop-blur-2xl rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/20 dark:border-white/10 flex flex-col max-h-[85vh] overflow-hidden pointer-events-auto"
                             >
                                 {/* DRAG HANDLE */}
                                 <div className="w-full flex justify-center pt-4 pb-2 shrink-0 cursor-pointer" onClick={() => setShowComments(false)}>
@@ -660,7 +719,7 @@ export function ImmersivePostCard({
                         </>
                     )}
                 </AnimatePresence>,
-                document.body
+                document.getElementById('modal-root') || document.body
             )}
             {/* MORE DRAWER */}
             {typeof document !== 'undefined' && createPortal(
@@ -677,7 +736,7 @@ export function ImmersivePostCard({
                             animate={{ y: 0, opacity: 1, scale: 1 }}
                             exit={{ y: "100%", opacity: 0, scale: 0.95 }}
                             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                            className="fixed bottom-4 left-4 right-4 sm:max-w-[400px] sm:mx-auto z-[450] bg-white/90 dark:bg-[#121212]/90 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl flex flex-col p-6 border border-white/20 dark:border-white/10"
+                            className="fixed bottom-4 left-4 right-4 sm:max-w-[400px] sm:mx-auto z-[450] bg-white/90 dark:bg-[#121212]/90 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl flex flex-col p-6 border border-white/20 dark:border-white/10 pointer-events-auto"
                         >
                             <div className="w-12 h-1.5 bg-gray-300 dark:bg-white/20 rounded-full mx-auto mb-6" />
                             <div className="flex flex-col gap-2.5">
@@ -689,13 +748,13 @@ export function ImmersivePostCard({
                                 </button>
                                 {!isOwner && (
                                     <>
-                                        <button onClick={() => { setIsMoreOpen(false); }} className="w-full flex items-center gap-3 p-4 bg-white dark:bg-white/5 rounded-2xl font-bold text-gray-900 dark:text-gray-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)] border border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/10 transition-all active:scale-95 text-[15px] tracking-tight group">
+                                        <button onClick={() => { setIsMoreOpen(false); setIsHidden(true); }} className="w-full flex items-center gap-3 p-4 bg-white dark:bg-white/5 rounded-2xl font-bold text-gray-900 dark:text-gray-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)] border border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/10 transition-all active:scale-95 text-[15px] tracking-tight group">
                                             <div className="p-2 bg-gray-100 dark:bg-white/10 rounded-xl group-hover:bg-gray-200 dark:group-hover:bg-white/20 transition-colors">
                                                 <EyeOff strokeWidth={1.5} className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                                             </div>
                                             İlgilenmiyorum
                                         </button>
-                                        <button onClick={() => { setIsMoreOpen(false); }} className="w-full flex items-center gap-3 p-4 bg-red-50/50 dark:bg-red-500/5 rounded-2xl font-bold text-red-500 shadow-[0_2px_10px_rgb(0,0,0,0.02)] border border-red-100 dark:border-red-500/10 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all active:scale-95 text-[15px] tracking-tight group">
+                                        <button onClick={() => { setIsMoreOpen(false); const isValidUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id); if (!currentUser || !isValidUUID(String(currentUser.id))) { window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'login' })); return; } if (!post || !post.id) { alert("Bu gönderi şikayet edilemiyor çünkü ID eksik."); } else { openReportModal('post', post.id); } }} className="w-full flex items-center gap-3 p-4 bg-red-50/50 dark:bg-red-500/5 rounded-2xl font-bold text-red-500 shadow-[0_2px_10px_rgb(0,0,0,0.02)] border border-red-100 dark:border-red-500/10 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all active:scale-95 text-[15px] tracking-tight group">
                                             <div className="p-2 bg-red-100 dark:bg-red-500/20 rounded-xl group-hover:bg-red-200 dark:group-hover:bg-red-500/30 transition-colors">
                                                 <ShieldAlert strokeWidth={1.5} className="w-5 h-5 text-red-500" />
                                             </div>
@@ -725,36 +784,47 @@ export function ImmersivePostCard({
                         </>
                     )}
                 </AnimatePresence>,
-                document.body
+                document.getElementById('modal-root') || document.body
             )}
             {/* LIKERS MODAL */}
             {typeof document !== 'undefined' && createPortal(
                 <AnimatePresence>
                     {showLikersModal && (
-                        <>
-                            <motion.div
+                        <motion.div
+                            key="likers-backdrop"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-[250] bg-black/60 backdrop-blur-sm"
+                            className="fixed inset-0 z-[250] bg-black/60 backdrop-blur-sm pointer-events-auto"
                             onClick={() => setShowLikersModal(false)}
                         />
+                    )}
+                    {showLikersModal && (
                         <motion.div
+                            key="likers-modal"
                             initial={{ opacity: 0, y: "100%" }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: "100%" }}
                             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                            className="fixed bottom-0 left-0 right-0 z-[260] bg-[var(--background)] rounded-t-3xl border-t border-black/10 dark:border-white/10 shadow-2xl max-h-[80vh] flex flex-col"
+                            drag="y"
+                            dragConstraints={{ top: 0 }}
+                            dragElastic={0.2}
+                            onDragEnd={(e, info) => {
+                                if (info.offset.y > 100) {
+                                    setShowLikersModal(false);
+                                }
+                            }}
+                            className="fixed bottom-0 left-0 right-0 z-[260] bg-[var(--background)] rounded-t-3xl border-t border-black/10 dark:border-white/10 shadow-2xl max-h-[80vh] flex flex-col pointer-events-auto"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <div className="flex justify-center p-3 shrink-0">
+                            <div 
+                                className="flex justify-center p-3 shrink-0 cursor-pointer"
+                                onClick={() => setShowLikersModal(false)}
+                            >
                                 <div className="w-12 h-1.5 bg-black/10 dark:bg-white/20 rounded-full" />
                             </div>
-                            <div className="px-5 pb-3 border-b border-black/10 dark:border-white/10 shrink-0 flex items-center justify-between">
+                            <div className="px-5 pb-3 border-b border-black/10 dark:border-white/10 shrink-0 flex items-center justify-center">
                                 <h3 className="font-black text-lg text-[var(--foreground)] tracking-tight">Beğenenler</h3>
-                                <button onClick={() => setShowLikersModal(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-black/5 dark:bg-white/5 active:scale-95 transition-transform text-[var(--foreground)]">
-                                    <X className="w-5 h-5" />
-                                </button>
                             </div>
                             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 pb-10">
                                 {isLoadingLikers ? (
@@ -772,6 +842,7 @@ export function ImmersivePostCard({
                                         <div key={liker.id} className="flex items-center justify-between">
                                             <div 
                                                 className="flex items-center gap-3 cursor-pointer group"
+                                                onPointerDown={(e) => e.stopPropagation()}
                                                 onClick={() => {
                                                     setShowLikersModal(false);
                                                     router.push(`/profile/${liker.id}`);
@@ -784,8 +855,16 @@ export function ImmersivePostCard({
                                                 </div>
                                             </div>
                                             {liker.id !== currentUser?.id && (
-                                                <button className="px-4 py-1.5 bg-[var(--primary)] text-white font-bold text-[13px] rounded-full active:scale-95 transition-transform hover:opacity-90">
-                                                    Takip Et
+                                                <button 
+                                                    onClick={(e) => handleFollowLiker(liker.id, e)}
+                                                    className={cn(
+                                                        "px-4 py-1.5 font-bold text-[13px] rounded-full active:scale-95 transition-all",
+                                                        followedLikers[liker.id] 
+                                                            ? "bg-black/5 dark:bg-white/10 text-[var(--foreground)]" 
+                                                            : "bg-[var(--primary)] text-white hover:opacity-90"
+                                                    )}
+                                                >
+                                                    {followedLikers[liker.id] ? "Takip Ediliyor" : "Takip Et"}
                                                 </button>
                                             )}
                                         </div>
@@ -793,10 +872,9 @@ export function ImmersivePostCard({
                                 )}
                             </div>
                         </motion.div>
-                        </>
                     )}
                 </AnimatePresence>,
-                document.body
+                document.getElementById('modal-root') || document.body
             )}
         </div>
     );

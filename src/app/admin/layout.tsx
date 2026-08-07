@@ -25,7 +25,7 @@ const MENU_GROUPS = [
         ]
     },
     {
-        group: "ECOSYSTEM",
+        group: "EKOSİSTEM",
         items: [
             { title: "Topluluk & Keşfet", icon: Search, path: "/admin/moderation" },
             { title: "Sağlık & SOS", icon: HeartPulse, path: "/admin/health" },
@@ -33,14 +33,14 @@ const MENU_GROUPS = [
         ]
     },
     {
-        group: "COMMERCE",
+        group: "TİCARET",
         items: [
             { title: "Market & Mağaza", icon: Store, path: "/admin/market" },
             { title: "Moffi Studio", icon: Palette, path: "/admin/studio" },
         ]
     },
     {
-        group: "ADMINISTRATION",
+        group: "YÖNETİM",
         items: [
             { title: "İşletme Yönetimi", icon: Building2, path: "/admin/businesses" },
             { title: "Kullanıcılar", icon: Users, path: "/admin/users" },

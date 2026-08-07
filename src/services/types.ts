@@ -240,6 +240,7 @@ export interface IApiService {
     fetchVets(): Promise<any[]>;
     submitAdoptionApplication(listingId: string | number, ownerId: string, note: string): Promise<void>;
     getFeedContent(): Promise<Post[]>;
+    getPostById(id: string | number): Promise<Post | null>;
     getLostPets(): Promise<LostPet[]>;
     addLostPet(data: Partial<LostPet>): Promise<LostPet>;
     deleteLostPet(id: string | number): Promise<void>;

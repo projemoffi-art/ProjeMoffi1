@@ -55,7 +55,7 @@ export function SpotlightSearch({ isOpen, onClose, onNavigate }: SpotlightSearch
 
     const dynamicCategories = [
         { category: 'Kullanıcılar', items: results.profiles.map(p => ({ id: p.id, label: `@${p.username}`, icon: <User className="w-4 h-4" />, type: 'user' })) },
-        { category: 'Patiler', items: results.pets.map(p => ({ id: p.id, label: `${p.name}`, icon: <PawPrint className="w-4 h-4" />, type: 'pet' })) },
+        { category: 'Patiler', items: results.pets.map(p => ({ id: p.pet_id || p.id, label: `${p.name}`, icon: <PawPrint className="w-4 h-4" />, type: 'pet' })) },
         { category: 'Gönderiler', items: results.posts.map(p => ({ id: p.id, label: p.desc?.substring(0, 30) + '...', icon: <ArrowRight className="w-4 h-4" />, type: 'post' })) }
     ].filter(cat => cat.items.length > 0);
 

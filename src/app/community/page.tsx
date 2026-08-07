@@ -536,7 +536,7 @@ export default function MoffiSocialMasterpiece() {
     
     // VIDEO TRIMMER STATES
     const [videoDuration, setVideoDuration] = useState(0);
-    const [videoTrimRange, setVideoTrimRange] = useState<[number, number]>([0, 10]);
+    const [videoTrimRange, setVideoTrimRange] = useState<[number, number]>([0, 5]);
     const [videoCurrentTime, setVideoCurrentTime] = useState(0);
     const [draggingHandle, setDraggingHandle] = useState<'start' | 'end' | 'window' | null>(null);
     const [uploadProgress, setUploadProgress] = useState(0);
@@ -601,6 +601,7 @@ export default function MoffiSocialMasterpiece() {
             video.crossOrigin = "anonymous";
             
             let isResolvedOrRejected = false;
+            let hasAttemptedPlay = false;
             
             const cleanup = () => {
                 if (!video.paused) video.pause();
@@ -620,15 +621,25 @@ export default function MoffiSocialMasterpiece() {
                 safeReject(new Error("Video işleme zaman aşımına uğradı. Orijinal dosya kullanılacak."));
             }, 10000); 
 
-            video.onloadedmetadata = () => {
-                video.currentTime = startTime;
-            };
-            
-            video.onseeked = () => {
+            const attemptPlay = () => {
+                if (hasAttemptedPlay) return;
+                hasAttemptedPlay = true;
                 video.play().catch(err => {
                     clearTimeout(timeoutId);
                     safeReject(err);
                 });
+            };
+
+            video.onloadedmetadata = () => {
+                if (startTime > 0) {
+                    video.currentTime = startTime;
+                } else {
+                    attemptPlay();
+                }
+            };
+            
+            video.onseeked = () => {
+                attemptPlay();
             };
 
             video.onplaying = () => {
@@ -1435,8 +1446,8 @@ export default function MoffiSocialMasterpiece() {
                 
                 if (handle === 'start') {
                     const newStart = Math.max(0, Math.min(start + deltaSeconds, end - 0.5));
-                    if (end - newStart > 10) {
-                        latestStart = end - 10;
+                    if (end - newStart > 5) {
+                        latestStart = end - 5;
                         if (uploadVideoRef.current) uploadVideoRef.current.currentTime = latestStart;
                         return [latestStart, end];
                     }
@@ -1445,10 +1456,10 @@ export default function MoffiSocialMasterpiece() {
                     return [newStart, end];
                 } else if (handle === 'end') {
                     const newEnd = Math.max(start + 0.5, Math.min(end + deltaSeconds, videoDuration));
-                    if (newEnd - start > 10) {
+                    if (newEnd - start > 5) {
                         latestStart = start;
-                        if (uploadVideoRef.current) uploadVideoRef.current.currentTime = start + 10;
-                        return [start, start + 10];
+                        if (uploadVideoRef.current) uploadVideoRef.current.currentTime = start + 5;
+                        return [start, start + 5];
                     }
                     latestStart = start;
                     if (uploadVideoRef.current) uploadVideoRef.current.currentTime = newEnd;
@@ -1520,7 +1531,7 @@ export default function MoffiSocialMasterpiece() {
 
         // --- GLOBAL STANDARDS CHECK ---
         const MAX_FILE_SIZE = 40 * 1024 * 1024; // 40MB
-        const MAX_VIDEO_DURATION = 10; // 10 Seconds Standard
+        const MAX_VIDEO_DURATION = 5; // 5 Seconds Standard
 
         if (file.size > MAX_FILE_SIZE) {
             showToast("Dosya Çok Büyük", "Lütfen 40MB'dan daha küçük bir video/resim seçin. 📏", "error");
@@ -1537,8 +1548,8 @@ export default function MoffiSocialMasterpiece() {
                 
                 if (video.duration > MAX_VIDEO_DURATION) {
                     // Long video: Don't block, just set initial trim
-                    setVideoTrimRange([0, 10]);
-                    showToast("Video Ayarlama", "Videonuz 10 saniyeden uzun. En iyi kısmını seçebilirsiniz. ✨", "info");
+                    setVideoTrimRange([0, 5]);
+                    showToast("Video Ayarlama", "Videonuz 5 saniyeden uzun. En iyi kısmını seçebilirsiniz. ✨", "info");
                 } else {
                     setVideoTrimRange([0, video.duration]);
                 }
@@ -1559,6 +1570,7 @@ export default function MoffiSocialMasterpiece() {
 
     const publishPost = async () => {
         if (!uploadImageURL || !selectedFile) return;
+        
         if (!user) {
             showToast("Giriş Gerekli", "Paylaşım yapmak için giriş yapmalısınız.", "error");
             window.dispatchEvent(new CustomEvent('open-auth-modal'));
@@ -1587,13 +1599,13 @@ export default function MoffiSocialMasterpiece() {
                 fileToUpload = await compressImage(selectedFile);
             } else if (selectedFile.type.startsWith('video/')) {
                 // Show "Processing" state
-                showToast("Video Hazırlanıyor...", "Seçtiğiniz 10 saniyelik kısım işleniyor ve optimize ediliyor. ✨", "info");
+                showToast("Video Hazırlanıyor...", "Seçtiğiniz 5 saniyelik kısım işleniyor ve optimize ediliyor. ✨", "info");
                 
                 try {
                     const trimmedVideoBlob = await processVideo(
                         selectedFile, 
                         videoTrimRange[0], 
-                        Math.min(10, videoTrimRange[1] - videoTrimRange[0])
+                        Math.min(5, videoTrimRange[1] - videoTrimRange[0])
                     );
                     
                     fileToUpload = new File([trimmedVideoBlob], "trimmed_video.webm", { type: 'video/webm' });
@@ -1999,35 +2011,29 @@ export default function MoffiSocialMasterpiece() {
     return (
         <div className="fixed inset-0 bg-[var(--background)] text-[var(--foreground)] overflow-hidden flex flex-col font-sans pb-0">
 
-            {/* iOS STYLE TOAST NOTIFICATION */}
+            {/* MINIMAL PILL TOAST NOTIFICATION */}
             <AnimatePresence>
                 {toastMessage && (
                     <motion.div
-                        initial={{ opacity: 0, y: -50, scale: 0.95 }}
+                        initial={{ opacity: 0, y: -20, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -50, scale: 0.95 }}
-                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                        className="fixed top-20 left-1/2 -translate-x-1/2 z-[9999] w-[90%] max-w-sm pointer-events-none"
+                        exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                        transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                        className="fixed top-12 left-1/2 -translate-x-1/2 z-[99999] pointer-events-none flex justify-center w-full max-w-sm px-4"
                     >
                         <div className={cn(
-                            "backdrop-blur-xl border rounded-[1.5rem] p-4 shadow-2xl flex items-start gap-4 pointer-events-auto",
-                            toastMessage.type === 'success' ? "bg-cyan-500/20 border-cyan-500/30 text-cyan-100" :
-                                toastMessage.type === 'error' ? "bg-red-500/20 border-red-500/30 text-red-100" :
-                                    "bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 text-[var(--foreground)]"
+                            "backdrop-blur-xl border rounded-full px-5 py-2.5 shadow-2xl flex items-center gap-3 pointer-events-auto",
+                            toastMessage.type === 'success' ? "bg-cyan-500/10 border-cyan-500/30 text-cyan-400" :
+                                toastMessage.type === 'error' ? "bg-red-500/10 border-red-500/30 text-red-400" :
+                                    "bg-black/60 dark:bg-white/10 border-black/10 dark:border-white/20 text-white"
                         )}>
-                            <div className={cn(
-                                "flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center shadow-lg",
-                                toastMessage.type === 'success' ? "bg-cyan-500" :
-                                    toastMessage.type === 'error' ? "bg-red-500" :
-                                        "bg-blue-500"
-                            )}>
-                                {toastMessage.type === 'success' ? <Check className="w-5 h-5 text-black" strokeWidth={3} /> :
-                                    toastMessage.type === 'error' ? <X className="w-5 h-5 text-[var(--foreground)]" strokeWidth={3} /> :
-                                        <Activity className="w-5 h-5 text-[var(--foreground)]" strokeWidth={3} />}
-                            </div>
-                            <div className="flex flex-col gap-0.5 justify-center mt-0.5">
-                                <h4 className="font-black text-[15px] leading-tight text-[var(--foreground)]">{toastMessage.title}</h4>
-                                {toastMessage.desc && <p className="text-xs font-medium text-[var(--foreground)]/80 leading-snug">{toastMessage.desc}</p>}
+                            {toastMessage.type === 'success' ? <Check className="w-4 h-4 shrink-0" strokeWidth={3} /> :
+                                toastMessage.type === 'error' ? <X className="w-4 h-4 shrink-0" strokeWidth={3} /> :
+                                    <Activity className="w-4 h-4 shrink-0" strokeWidth={3} />}
+                            
+                            <div className="flex flex-col justify-center">
+                                <span className="font-bold text-[13px] leading-tight">{toastMessage.title}</span>
+                                {toastMessage.desc && <span className="text-[10px] font-medium opacity-70 leading-tight">{toastMessage.desc}</span>}
                             </div>
                         </div>
                     </motion.div>
@@ -2714,34 +2720,22 @@ export default function MoffiSocialMasterpiece() {
                         {/* Content */}
                         <div className="flex-1 overflow-y-auto w-full max-w-lg mx-auto p-4 pb-32 flex flex-col gap-6">
 
-                            {/* COMMUNITY WARNING & ROUTING CARDS */}
-                            <div className="flex flex-col gap-3">
-                                <div className="bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-100 dark:border-cyan-500/20 rounded-2xl p-4 flex items-center gap-3">
-                                    <Info className="w-6 h-6 text-cyan-500 shrink-0" strokeWidth={1.5} />
-                                    <p className="text-xs text-cyan-800 dark:text-cyan-300 font-medium">
-                                        Topluluk paylaşımları <strong>sadece eğlence ve sosyalleşme</strong> içindir. Özel durumlar için aşağıdaki ilgili bölümleri kullanabilirsiniz:
+                            {/* COMMUNITY WARNING & ROUTING CARDS (Ultra Compact) */}
+                            <div className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl p-2.5 flex flex-col gap-2.5 shrink-0">
+                                <div className="flex items-center gap-2 px-1">
+                                    <Info className="w-3.5 h-3.5 text-[var(--foreground)]/60 shrink-0" strokeWidth={2} />
+                                    <p className="text-[10px] text-[var(--foreground)]/70 font-semibold leading-tight">
+                                        Topluluk sadece eğlence içindir. Özel durumlar için alt bölümleri kullanın:
                                     </p>
                                 </div>
-                                
-                                <div className="grid grid-cols-2 gap-3">
-                                    <button onClick={() => { setIsUploadModalOpen(false); setActiveTab('radar'); setRadarTabMode('lost'); }} className="bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-orange-100 dark:hover:bg-orange-500/20 transition-all text-center group active:scale-95 shadow-sm">
-                                        <div className="p-3 bg-orange-100 dark:bg-orange-500/20 rounded-full group-hover:scale-110 transition-transform">
-                                            <Radar className="w-6 h-6 text-orange-500" strokeWidth={1.5} />
-                                        </div>
-                                        <div className="flex flex-col mt-1">
-                                            <span className="font-bold text-orange-700 dark:text-orange-400 text-sm">Kayıp İlanı</span>
-                                            <span className="text-[10px] text-orange-600/70 dark:text-orange-400/70 mt-0.5">Radar modülüne git</span>
-                                        </div>
+                                <div className="flex gap-2">
+                                    <button onClick={() => { setIsUploadModalOpen(false); setActiveTab('radar'); setRadarTabMode('lost'); }} className="flex-1 bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 rounded-xl py-3 flex items-center justify-center gap-2 transition-all active:scale-95">
+                                        <Radar className="w-4 h-4" strokeWidth={2.5} />
+                                        <span className="font-bold text-[11px]">Kayıp İlanı</span>
                                     </button>
-                                    
-                                    <button onClick={() => { setIsUploadModalOpen(false); setActiveTab('radar'); setRadarTabMode('adopt'); }} className="bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-green-100 dark:hover:bg-green-500/20 transition-all text-center group active:scale-95 shadow-sm">
-                                        <div className="p-3 bg-green-100 dark:bg-green-500/20 rounded-full group-hover:scale-110 transition-transform">
-                                            <HeartHandshake className="w-6 h-6 text-green-500" strokeWidth={1.5} />
-                                        </div>
-                                        <div className="flex flex-col mt-1">
-                                            <span className="font-bold text-green-700 dark:text-green-400 text-sm">Sahiplendirme</span>
-                                            <span className="text-[10px] text-green-600/70 dark:text-green-400/70 mt-0.5">Pati sahiplendir</span>
-                                        </div>
+                                    <button onClick={() => { setIsUploadModalOpen(false); setActiveTab('radar'); setRadarTabMode('adopt'); }} className="flex-1 bg-green-500/10 hover:bg-green-500/20 text-green-600 dark:text-green-400 rounded-xl py-3 flex items-center justify-center gap-2 transition-all active:scale-95">
+                                        <HeartHandshake className="w-4 h-4" strokeWidth={2.5} />
+                                        <span className="font-bold text-[11px]">Sahiplendirme</span>
                                     </button>
                                 </div>
                             </div>
@@ -2754,8 +2748,8 @@ export default function MoffiSocialMasterpiece() {
                                         className={cn(
                                             "w-full rounded-[2.5rem] overflow-hidden bg-white dark:bg-black border border-black/10 dark:border-white/10 relative shadow-2xl group transition-all duration-500 ease-in-out shrink-0",
                                             activeTool 
-                                                ? "h-[30vh] min-h-[220px]" 
-                                                : "h-[50vh] min-h-[380px] max-h-[500px]"
+                                                ? "h-[35vh] min-h-[260px]" 
+                                                : "h-[65vh] min-h-[480px] max-h-[650px]"
                                         )}
                                     >
                                     {selectedFile?.type.startsWith('video/') ? (
@@ -2843,85 +2837,17 @@ export default function MoffiSocialMasterpiece() {
                                     )}
                                     
                                     {/* Glassmorphism Overlays */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent pointer-events-none z-10" />
                                     
-                                    {/* Streamlined Action Sidebar */}
-                                    <div className="absolute top-6 right-6 flex flex-col gap-5 opacity-0 group-hover:opacity-100 transition-all duration-300 z-30">
-                                        <div className="relative w-5 h-5">
-                                            <button 
-                                                type="button"
-                                                className="text-black/60 dark:text-white/60 hover:text-white transition-all active:scale-90"
-                                                title="Medyayı Değiştir"
-                                            >
-                                                <Camera className="w-5 h-5" />
-                                            </button>
-                                            <input 
-                                                type="file" 
-                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50" 
-                                                accept="image/*,video/*" 
-                                                onChange={handleCameraUpload} 
-                                            />
-                                        </div>
-                                        
-                                        <button 
-                                            type="button"
-                                            onClick={() => audioInputRef.current?.click()}
-                                            className={cn(
-                                                "transition-all active:scale-90",
-                                                audioURL ? "text-cyan-400" : "text-black/60 dark:text-white/60 hover:text-white"
-                                            )}
-                                            title="Müzik/Ses Ekle"
-                                        >
-                                            <Mic className="w-5 h-5" />
-                                        </button>
-                                        <input 
-                                            type="file" 
-                                            ref={audioInputRef}
-                                            className="hidden" 
-                                            accept="audio/*" 
-                                            onChange={handleAudioUpload} 
-                                        />
-                                        {audioURL && (
-                                            <audio 
-                                                ref={uploadAudioRef}
-                                                src={audioURL}
-                                                loop
-                                            />
-                                        )}
-                                        <input 
-                                            type="file" 
-                                            ref={audioInputRef}
-                                            className="hidden" 
-                                            accept="audio/*" 
-                                            onChange={handleAudioUpload} 
-                                        />
-                                        {audioURL && (
-                                            <audio 
-                                                ref={uploadAudioRef}
-                                                src={audioURL}
-                                                loop
-                                            />
-                                        )}
-
-                                        <button 
-                                            type="button"
-                                            onClick={() => { setUploadImageURL(null); setSelectedFile(null); setAudioFile(null); setAudioURL(null); }}
-                                            className="text-red-500/60 hover:text-red-500 transition-all active:scale-90"
-                                            title="Sil"
-                                        >
-                                            <Trash2 className="w-5 h-5" />
-                                        </button>
-                                    </div>
-
                                     {/* Bottom Info Pill */}
-                                    <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between translate-y-4 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-500">
+                                    <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between z-30">
                                         <div className="flex gap-2">
                                             {uploadMood ? (
                                                 <div className="bg-cyan-500 text-black px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-[0_0_20px_rgba(6,182,212,0.5)]">
                                                     {uploadMood}
                                                 </div>
                                             ) : (
-                                                <div className="bg-black/10 dark:bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black text-black/60 dark:text-white/60 uppercase tracking-widest border border-black/10 dark:border-white/10">
+                                                <div className="bg-black/20 dark:bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black text-white/90 dark:text-white/80 uppercase tracking-widest border border-white/10">
                                                     Duygu Durumu Yok
                                                 </div>
                                             )}
@@ -3097,6 +3023,73 @@ export default function MoffiSocialMasterpiece() {
                                 </p>
                             )}
 
+                            {/* STYLISH EXTERNAL ACTION BAR */}
+                            {uploadImageURL && (
+                                <div className="flex items-center justify-center gap-3 mt-1 mb-2">
+                                    <div className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-full px-2 py-1.5 flex items-center gap-2 shadow-sm">
+                                        <div className="relative">
+                                            <button 
+                                                type="button"
+                                                className="flex items-center gap-2 px-3 py-2 rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-[var(--foreground)] transition-all active:scale-95"
+                                                title="Medyayı Değiştir"
+                                            >
+                                                <Camera className="w-4 h-4 text-cyan-500" />
+                                                <span className="text-[11px] font-bold">Değiştir</span>
+                                            </button>
+                                            <input 
+                                                type="file" 
+                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50" 
+                                                accept="image/*,video/*" 
+                                                onChange={handleCameraUpload} 
+                                            />
+                                        </div>
+                                        
+                                        <div className="w-[1px] h-4 bg-black/10 dark:bg-white/10" />
+
+                                        <button 
+                                            type="button"
+                                            onClick={() => audioInputRef.current?.click()}
+                                            className={cn(
+                                                "flex items-center gap-2 px-3 py-2 rounded-full transition-all active:scale-95",
+                                                audioURL 
+                                                    ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400" 
+                                                    : "bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-[var(--foreground)]"
+                                            )}
+                                            title="Müzik/Ses Ekle"
+                                        >
+                                            <Mic className={cn("w-4 h-4", audioURL ? "text-cyan-500" : "text-purple-500")} />
+                                            <span className="text-[11px] font-bold">Ses Ekle</span>
+                                        </button>
+                                        
+                                        <input 
+                                            type="file" 
+                                            ref={audioInputRef}
+                                            className="hidden" 
+                                            accept="audio/*" 
+                                            onChange={handleAudioUpload} 
+                                        />
+                                        {audioURL && (
+                                            <audio 
+                                                ref={uploadAudioRef}
+                                                src={audioURL}
+                                                loop
+                                            />
+                                        )}
+
+                                        <div className="w-[1px] h-4 bg-black/10 dark:bg-white/10" />
+
+                                        <button 
+                                            type="button"
+                                            onClick={() => { setUploadImageURL(null); setSelectedFile(null); setAudioFile(null); setAudioURL(null); }}
+                                            className="flex items-center justify-center w-8 h-8 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all active:scale-95 shrink-0"
+                                            title="Sil"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* MINIMAL CAPTION BOX */}
                             <div className="px-2 pt-2 shrink-0">
                                 <textarea
@@ -3120,40 +3113,44 @@ export default function MoffiSocialMasterpiece() {
 
 
 
-                                                                                     {/* SMART TOOLBAR */}
-                            <div className="flex items-center justify-between px-2 py-4 border-y border-black/5 dark:border-white/5 mt-2 shrink-0">
-                                 <div className="flex items-center gap-6">
+                            {/* SMART TOOLBAR */}
+                            <div className="flex items-center justify-between px-2 py-4 mt-2 shrink-0">
+                                 <div className="flex flex-wrap items-center gap-2">
                                      <button 
                                          type="button"
                                          onClick={() => { console.log("Adjust clicked. Current activeTool:", activeTool); setActiveTool(activeTool === 'adjust' ? null : 'adjust'); }}
-                                         className={cn("transition-all active:scale-90", activeTool === 'adjust' ? "text-cyan-400" : "text-black/50 dark:text-white/40 hover:text-white")}
+                                         className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all active:scale-95 border", activeTool === 'adjust' ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/20" : "bg-black/5 dark:bg-white/5 text-[var(--secondary-text)] border-transparent hover:bg-black/10 dark:hover:bg-white/10 hover:text-[var(--foreground)]")}
                                          title="İnce Ayar"
                                      >
-                                         <Palette className="w-5 h-5" />
+                                         <Palette className="w-4 h-4" />
+                                         <span className="text-[10px] font-bold tracking-wide">Ayar</span>
                                      </button>
                                      <button 
                                          type="button"
                                          onClick={() => { console.log("Tag clicked. Current activeTool:", activeTool); setActiveTool(activeTool === 'tag' ? null : 'tag'); }}
-                                         className={cn("transition-all active:scale-90", activeTool === 'tag' ? "text-cyan-400" : "text-black/50 dark:text-white/40 hover:text-white")}
+                                         className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all active:scale-95 border", activeTool === 'tag' ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/20" : "bg-black/5 dark:bg-white/5 text-[var(--secondary-text)] border-transparent hover:bg-black/10 dark:hover:bg-white/10 hover:text-[var(--foreground)]")}
                                          title="Etiketle"
                                      >
-                                         <PawPrint className="w-5 h-5" />
+                                         <PawPrint className="w-4 h-4" />
+                                         <span className="text-[10px] font-bold tracking-wide">Etiket</span>
                                      </button>
                                      <button 
                                          type="button"
                                          onClick={() => { console.log("Schedule clicked. Current activeTool:", activeTool); setActiveTool(activeTool === 'schedule' ? null : 'schedule'); }}
-                                         className={cn("transition-all active:scale-90", activeTool === 'schedule' ? "text-cyan-400" : "text-black/50 dark:text-white/40 hover:text-white")}
+                                         className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all active:scale-95 border", activeTool === 'schedule' ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/20" : "bg-black/5 dark:bg-white/5 text-[var(--secondary-text)] border-transparent hover:bg-black/10 dark:hover:bg-white/10 hover:text-[var(--foreground)]")}
                                          title="Zamanla"
                                      >
-                                         <Clock className="w-5 h-5" />
+                                         <Clock className="w-4 h-4" />
+                                         <span className="text-[10px] font-bold tracking-wide">Zaman</span>
                                      </button>
                                      <button 
                                          type="button"
                                          onClick={() => { console.log("Mood clicked. Current activeTool:", activeTool); setActiveTool(activeTool === 'mood' ? null : 'mood'); }}
-                                         className={cn("transition-all active:scale-90", activeTool === 'mood' ? "text-cyan-400" : "text-black/50 dark:text-white/40 hover:text-white")}
+                                         className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all active:scale-95 border", activeTool === 'mood' ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/20" : "bg-black/5 dark:bg-white/5 text-[var(--secondary-text)] border-transparent hover:bg-black/10 dark:hover:bg-white/10 hover:text-[var(--foreground)]")}
                                          title="Ruh Hali"
                                      >
-                                         <Heart className="w-5 h-5" />
+                                         <Heart className="w-4 h-4" />
+                                         <span className="text-[10px] font-bold tracking-wide">His</span>
                                      </button>
                                  </div>
                                 
@@ -3162,12 +3159,12 @@ export default function MoffiSocialMasterpiece() {
                                     onClick={generateAICaption}
                                     disabled={isGeneratingAI}
                                     className={cn(
-                                        "flex items-center gap-2 px-4 py-2 rounded-full transition-all active:scale-95",
-                                        isGeneratingAI ? "bg-black/5 dark:bg-white/5 opacity-50" : "bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20"
+                                        "flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all active:scale-95 border ml-2",
+                                        isGeneratingAI ? "bg-black/5 dark:bg-white/5 opacity-50 border-transparent" : "bg-gradient-to-r from-cyan-500/10 to-blue-500/10 text-cyan-500 border-cyan-500/20 hover:from-cyan-500/20 hover:to-blue-500/20"
                                     )}
                                 >
-                                    {isGeneratingAI ? <div className="w-3 h-3 border-2 border-cyan-400/20 border-t-cyan-400 rounded-full animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                                    <span className="text-[10px] font-black uppercase tracking-widest">AI Öner</span>
+                                    {isGeneratingAI ? <div className="w-3.5 h-3.5 border-2 border-cyan-400/20 border-t-cyan-400 rounded-full animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                                    <span className="text-[10px] font-black uppercase tracking-widest">AI</span>
                                 </button>
                             </div>
 

@@ -57,6 +57,7 @@ import { ActivityProvider } from "@/context/ActivityContext";
 import { LanguageProvider } from "@/context/LanguageContext";
 
 import { NotificationProvider } from "@/context/NotificationContext";
+import { ReportProvider } from "@/context/ReportContext";
 
 export default function RootLayout({
   children,
@@ -82,28 +83,31 @@ export default function RootLayout({
                             <SocialProvider>
                               <ShareProvider>
                                 <ShopProvider>
-                                <ClientAuthWrapper>
-                                  <GlobalIdentitySync />
-                                  <GlobalAuraBackground />
-                                  <div className="min-h-screen relative">
-                                    <ErrorBoundary>
-                                      <RootOnboardingWrapper>
-                                        {children}
-                                      </RootOnboardingWrapper>
-                                    </ErrorBoundary>
-                                  </div>
+                                  <ReportProvider>
+                                    <ClientAuthWrapper>
+                                      <GlobalIdentitySync />
+                                      <GlobalAuraBackground />
+                                      <div id="modal-root" className="pointer-events-none fixed inset-0 z-[99999]"></div>
+                                      <div className="min-h-screen relative">
+                                        <ErrorBoundary>
+                                          <RootOnboardingWrapper>
+                                            {children}
+                                          </RootOnboardingWrapper>
+                                        </ErrorBoundary>
+                                      </div>
 
-                                  <Suspense fallback={null}>
-                                    <DynamicNavigation />
-                                  </Suspense>
-                                  <GlobalCareModals />
-                                  <QuestRewardEngineLoader />
-                                  <Phase2Loader />
-                                  <AIWidgetLoader />
-                                  <CookieBanner />
-                                  <GlobalToast />
-                                </ClientAuthWrapper>
-                                  <GlobalShareSheet />
+                                      <Suspense fallback={null}>
+                                        <DynamicNavigation />
+                                      </Suspense>
+                                      <GlobalCareModals />
+                                      <QuestRewardEngineLoader />
+                                      <Phase2Loader />
+                                      <AIWidgetLoader />
+                                      <CookieBanner />
+                                      <GlobalToast />
+                                    </ClientAuthWrapper>
+                                    <GlobalShareSheet />
+                                  </ReportProvider>
                                 </ShopProvider>
                               </ShareProvider>
                             </SocialProvider>

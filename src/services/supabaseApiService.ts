@@ -287,6 +287,7 @@ export class SupabaseApiService implements IApiService {
                 likes: likesCount,
                 comments: item.comments_count || commentCountMap[String(item.id)] || 0,
                 time: this.formatTimeAgo(item.created_at),
+                created_at: item.created_at,
                 isLiked: isLiked,
                 isSaved: false,
                 mood: item.mood,
@@ -369,21 +370,24 @@ export class SupabaseApiService implements IApiService {
             .eq('id', user.id)
             .single();
 
-        // Build insert payload including scheduled_at and status
+        // Build insert payload
         const payload: any = {
             user_id: user.id,
             content: post.caption || post.desc || '',
             media_url: post.media || post.image || null,
-            audio_url: post.audio_url || post.audioUrl || null,
             allow_comments: post.allow_comments !== undefined ? post.allow_comments : (profile?.default_allow_comments ?? true),
-            comment_privacy: post.comment_privacy || profile?.default_comment_privacy || 'everyone',
-            trim_start: post.trim_start,
-            trim_end: post.trim_end,
-            is_video: post.is_video,
-            mood: post.mood || null,
-            scheduled_at: post.scheduled_at || null,
-            status: post.status || 'published'
+            comment_privacy: post.comment_privacy || profile?.default_comment_privacy || 'everyone'
         };
+
+        // Yeni özellikleri sadece değerleri varsa (null değilse) payload'a ekleyelim.
+        // Böylece lokal veritabanında henüz bu sütunlar yoksa (migration yapılmamışsa) sistem çökmez.
+        if (post.audio_url) payload.audio_url = post.audio_url;
+        if (post.trim_start !== undefined) payload.trim_start = post.trim_start;
+        if (post.trim_end !== undefined) payload.trim_end = post.trim_end;
+        if (post.is_video !== undefined) payload.is_video = post.is_video;
+        if (post.mood) payload.mood = post.mood;
+        if (post.scheduled_at) payload.scheduled_at = post.scheduled_at;
+        if (post.status && post.status !== 'published') payload.status = post.status;
 
         const { data, error } = await supabase
             .from('posts')
@@ -409,6 +413,7 @@ export class SupabaseApiService implements IApiService {
             likes: 0,
             comments: 0,
             time: 'Şimdi',
+            created_at: data.created_at,
             isLiked: false,
             isSaved: false,
             allow_comments: data.allow_comments ?? true,
@@ -2643,8 +2648,31 @@ export class SupabaseApiService implements IApiService {
                 profileMap[p.id] = p;
             });
             
+            // Check following status if user is logged in
+            let followingSet = new Set<string>();
+            const currentUser = await this.getSessionUser();
+            
+            if (currentUser) {
+                const { data: follows } = await supabase
+                    .from('follows')
+                    .select('following_id')
+                    .eq('follower_id', currentUser.id)
+                    .in('following_id', userIds);
+                    
+                if (follows) {
+                    follows.forEach(f => followingSet.add(f.following_id));
+                }
+            }
+            
             return likesData
-                .map(l => profileMap[l.user_id])
+                .map(l => {
+                    const profile = profileMap[l.user_id];
+                    if (!profile) return null;
+                    return {
+                        ...profile,
+                        is_following: followingSet.has(profile.id)
+                    };
+                })
                 .filter(Boolean);
         } catch (e) {
             console.error("Exception in getPostLikers:", e);

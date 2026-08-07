@@ -535,6 +535,16 @@ export default function BusinessAppointmentsPage() {
             return;
         }
 
+        const targetPetId = selectedApt.petId;
+        
+        // Remove mock ID fallback completely as instructed.
+        // Use regex to strictly enforce UUID to block all mock IDs (e.g. 'pet-milo' or '349b...')
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!targetPetId || !uuidRegex.test(targetPetId)) {
+            showToast("Gerçek bir evcil hayvan ID'si bulunamadı (Mock Veri). Sadece gerçek hastalara tanı girilebilir.", "AlertTriangle", "text-amber-500 font-bold");
+            return;
+        }
+
         const updatedApt = {
             ...selectedApt,
             status: 'completed',
@@ -546,31 +556,57 @@ export default function BusinessAppointmentsPage() {
             }
         };
 
-        const updatedList = appointments.map(apt => apt.id === selectedApt.id ? updatedApt : apt);
-        saveAppointments(updatedList);
-
-        // Double-sided Sync: Save to client pet databases (multiple IDs to cover mock variables)
-        const targetPetId = selectedApt.petId || 'pet-milo';
-        const idsToSync = [targetPetId];
-        if (targetPetId === 'pet-milo' || targetPetId === 'pet-1' || targetPetId === '349b89f8-c5e5-46e8-abf7-b2e41b29d39a') {
-            idsToSync.push('pet-milo', 'pet-1', '349b89f8-c5e5-46e8-abf7-b2e41b29d39a');
-        }
-
-        // Live Supabase Integration (Item 4)
-        if (isSupabaseEnabled()) {
+        // Live Supabase Integration (Atomik Sıralama)
+        if (isSupabaseEnabled) {
             try {
-                // 1. Save vaccines
+                // 0.0 Authorization & RLS Check - Kliniğin bu randevuya erişimi var mı?
+                const { data: authCheck, error: authErr } = await supabase
+                    .from('appointments')
+                    .select('id')
+                    .eq('id', selectedApt.id)
+                    .single();
+                
+                if (authErr || !authCheck) {
+                    throw new Error("Yetkisiz işlem: Bu randevuya müdahale etme izniniz yok (RLS Engeli).");
+                }
+
+                // 0. Idempotency check — bu randevu için zaten bir EMR kaydı var mı?
+                const { data: existingRecord } = await supabase
+                    .from('medical_records')
+                    .select('id')
+                    .eq('appointment_id', selectedApt.id)
+                    .maybeSingle();
+
+                if (existingRecord) {
+                    showToast("Bu randevu için muayene kaydı zaten oluşturulmuş.", "AlertTriangle", "text-amber-500 font-bold");
+                    return;
+                }
+
+                // 1. ÖNCE EN KRİTİK VERİYİ YAZ (Teşhis / EMR)
+                const { error: emrError } = await supabase.from('medical_records').insert({
+                    pet_id: targetPetId,
+                    appointment_id: selectedApt.id,
+                    clinic_id: user?.id,
+                    vet_name: user?.user_metadata?.business_name || user?.email || 'Moffi Kliniği',
+                    diagnosis: diagnosis,
+                    critical_notes: criticalNotes,
+                    medications: addedMeds,
+                });
+                
+                if (emrError) throw emrError; // Teşhis yazılamazsa hemen çık!
+
+                // 2. Aşıları kaydet
                 for (const v of addedVaccines) {
                     await apiService.addPetVaccine(targetPetId, {
                         name: v.name,
                         status: 'completed',
                         dueDate: v.nextDate || new Date().toISOString(),
                         dateAdministered: v.date || new Date().toISOString(),
-                        vetName: 'Dr. Moffi (VetLife Clinic)'
+                        vetName: user?.user_metadata?.business_name || user?.email || 'Moffi Kliniği'
                     });
                 }
                 
-                // 2. Save medications
+                // 3. İlaçları kaydet
                 for (const m of addedMeds) {
                     await apiService.addPetMedication(targetPetId, {
                         name: m.name,
@@ -580,62 +616,20 @@ export default function BusinessAppointmentsPage() {
                     });
                 }
 
-                // 3. Update appointment status in Supabase database
+                // 4. EN SON Randevuyu 'completed' yap
                 await apiService.updateAppointmentStatus(selectedApt.id.toString(), 'completed');
-            } catch (e) {
+                
+            } catch (e: any) {
                 console.error("Failed to sync consultation details with Supabase:", e);
+                // Do NOT swallow the error
+                showToast("Veritabanı senkronizasyonu başarısız: " + (e.message || "Bilinmeyen Hata"), "AlertTriangle", "text-red-500 font-bold");
+                return; // Stop execution, don't show success message and don't commit local state!
             }
         }
 
-        if (typeof window !== 'undefined') {
-            idsToSync.forEach(pid => {
-                // 1. Sync Vaccines to local storage
-                try {
-                    const saved = localStorage.getItem(`moffi_vaccines_${pid}`);
-                    const existingVaccines = saved ? JSON.parse(saved) : [];
-                    const newRecords = addedVaccines.map(v => ({
-                        id: `custom-${Date.now()}-${Math.random()}`,
-                        name: v.name,
-                        dateAdministered: v.date,
-                        dueDate: v.nextDate,
-                        vetName: "Dr. Moffi (VetLife Clinic)",
-                        batchNumber: v.batch,
-                        status: "completed",
-                        createdAt: new Date().toISOString()
-                    }));
-                    localStorage.setItem(`moffi_vaccines_${pid}`, JSON.stringify([...existingVaccines, ...newRecords]));
-                } catch (e) {
-                    console.error(`Failed to sync vaccines for ${pid}:`, e);
-                }
-
-                // 2. Sync Custom Medical Records to PetContext
-                try {
-                    const currentRecords = customRecords[pid] || [];
-                    const medRecord = {
-                        id: `medical-${Date.now()}-${Math.random()}`,
-                        name: `Tanı: ${diagnosis}`,
-                        dateAdministered: new Date().toISOString().split('T')[0],
-                        vetName: "Dr. Moffi (VetLife Clinic)",
-                        status: "completed",
-                        medications: addedMeds,
-                        notes: criticalNotes,
-                        createdAt: new Date().toISOString()
-                    };
-                    setCustomRecords(pid, [...currentRecords, medRecord]);
-                } catch (e) {
-                    console.error(`Failed to sync custom records for ${pid}:`, e);
-                }
-
-                // 3. Update general health notes
-                if (criticalNotes) {
-                    try {
-                        updatePet(pid, { health_notes: criticalNotes });
-                    } catch (e) {
-                        console.error(`Failed to update health notes for ${pid}:`, e);
-                    }
-                }
-            });
-        }
+        // Supabase yazımı hatasız bittikten SONRA (veya mock moddaysak) local state'i güncelle
+        const updatedList = appointments.map(apt => apt.id === selectedApt.id ? updatedApt : apt);
+        saveAppointments(updatedList);
 
         // Show premium toast
         showToast("Muayene başarıyla tamamlandı ve evcil hayvan pasaportuna işlendi! 💉🩺", "Sparkles", "text-emerald-400 font-bold");

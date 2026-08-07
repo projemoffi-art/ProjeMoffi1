@@ -47,9 +47,13 @@ export function useRealtimeFeed(enabled: boolean = true) {
             return sorted.sort((a, b) => (b.likes || 0) - (a.likes || 0));
         } else {
             return sorted.sort((a, b) => {
-                const idA = typeof a.id === 'string' ? (parseInt(a.id.split('-').pop() || '0') || 0) : a.id;
-                const idB = typeof b.id === 'string' ? (parseInt(b.id.split('-').pop() || '0') || 0) : b.id;
-                return idB - idA;
+                const timeA = new Date(a.created_at || a.time || 0).getTime();
+                const timeB = new Date(b.created_at || b.time || 0).getTime();
+                // Fallback to ID if timestamps are invalid/missing, but handle UUIDs safely
+                if (isNaN(timeA) || isNaN(timeB) || timeA === timeB) {
+                    return String(b.id).localeCompare(String(a.id));
+                }
+                return timeB - timeA;
             });
         }
     };
