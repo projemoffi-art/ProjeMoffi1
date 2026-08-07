@@ -12,13 +12,13 @@ import { QRCodeSVG } from "qrcode.react";
 export function AppointmentsTab({ 
     activePet, 
     isScheduleLoading, 
-    allRecords, 
-    recordDocuments, 
+    allRecords = [], 
+    recordDocuments = [], 
     onAddRecord, 
     onDeleteRecord, 
     onUploadDocument, 
     onDeleteDocument,
-    currentAppointments 
+    currentAppointments = [] 
 }: any) {
     const { openShare } = useShare();
     const [isGenerating, setIsGenerating] = useState(false);

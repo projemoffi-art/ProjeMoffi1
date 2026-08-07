@@ -51,7 +51,6 @@ import { ShareSheet } from '../../components/community/ShareSheet';
 import { NotificationsDrawer } from '../../components/community/NotificationsDrawer';
 
 import { ImmersivePostCard } from '../../components/community/ImmersivePostCard';
-import { ProfileTab } from '@/components/community/ProfileTab';
 import { VetQuickSheet } from '@/components/vet/VetQuickSheet';
 import { WalkQuickSheet } from '@/components/walk/WalkQuickSheet';
 import { MarketQuickSheet } from '@/components/shop/MarketQuickSheet';
@@ -2740,7 +2739,9 @@ export default function MoffiSocialMasterpiece() {
                                 </div>
                             </div>
 
-                            {/* MEDIA PICKER / PREVIEW (Apple Native Style) */}
+                            {/* POST CREATION GROUP */}
+                            <div className="flex flex-col gap-1">
+                                {/* MEDIA PICKER / PREVIEW (Apple Native Style) */}
                             {uploadImageURL ? (
                                                                     <motion.div 
                                         initial={{ scale: 0.9, opacity: 0 }}
@@ -3166,6 +3167,7 @@ export default function MoffiSocialMasterpiece() {
                                     {isGeneratingAI ? <div className="w-3.5 h-3.5 border-2 border-cyan-400/20 border-t-cyan-400 rounded-full animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
                                     <span className="text-[10px] font-black uppercase tracking-widest">AI</span>
                                 </button>
+                            </div>
                             </div>
 
                             {/* DYNAMIC TOOL DRAWER */}

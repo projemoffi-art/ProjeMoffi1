@@ -17,6 +17,16 @@ import { ProfileTab } from "@/components/community/ProfileTab";
 import { AddPetModal } from "@/components/community/modals/AddPetModal";
 import { EditProfileModal } from "@/components/community/modals/EditProfileModal";
 
+// ── Tab Imports ─────────────────────────────────────────────
+import { WalletTab } from "@/components/profile/WalletTab";
+import { OrdersTab } from "@/components/profile/OrdersTab";
+import { AppointmentsTab } from "@/components/profile/AppointmentsTab";
+import { RoutesTab } from "@/components/profile/RoutesTab";
+import { FamilyTab } from "@/components/profile/FamilyTab";
+import { PassportTab } from "@/components/profile/PassportTab";
+
+import { Wallet, Package, Calendar, Map, Users as UsersIcon, Bookmark, FileText } from "lucide-react";
+
 // ─── Başharf Avatar Yardımcısı ─────────────────────────────
 const AVATAR_COLORS = [
     'from-violet-500 to-purple-700',
@@ -62,8 +72,15 @@ export default function ProfilePage() {
     const [profile, setProfile] = useState<any>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    const [activeTab, setActiveTab] = useState<'posts' | 'pets'>('posts');
+    const [activeTab, setActiveTab] = useState<string>('posts');
     const [activeSubView, setActiveSubView] = useState<any>('main');
+
+    useEffect(() => {
+        const view = searchParams.get('view');
+        if (view) {
+            setActiveTab(view);
+        }
+    }, [searchParams]);
 
     // ── Follow / Unfollow States & Handlers ─────────────────
     const [isFollowing, setIsFollowing] = useState(false);
@@ -409,189 +426,8 @@ export default function ProfilePage() {
         );
     }
 
-    // ── Own Profile → ProfileTab ─────────────────────────────
-    if (isOwnProfile) {
-        return (
-            <main className="min-h-screen bg-background pb-32 overflow-x-hidden">
-                <ProfileTab
-                    user={currentUser}
-                    onEditProfile={() => setIsEditing(true)}
-                    onAddPet={() => setIsAddPetOpen(true)}
-                    onSettings={() => window.dispatchEvent(new CustomEvent('open-moffi-settings'))}
-                    onPetQR={(pet) => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: `pet-${pet.id}` }))}
-                    onSOSSettings={(pet) => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: `sos-${pet.id}` }))}
-                    activeSubView={activeSubView}
-                    onSubViewChange={setActiveSubView}
-                    onOpenActionHub={() => window.dispatchEvent(new CustomEvent('open-moffi-hub'))}
-                    onFollowersClick={() => openRelationsModal('followers')}
-                    onFollowingClick={() => openRelationsModal('following')}
-                />
-                <AddPetModal
-                    isOpen={isAddPetOpen} onClose={() => setIsAddPetOpen(false)}
-                    step={addPetStep} setStep={setAddPetStep}
-                    newPetName={newPetName} setNewPetName={setNewPetName}
-                    newPetType={newPetType} setNewPetType={setNewPetType}
-                    newPetBreed={newPetBreed} setNewPetBreed={setNewPetBreed}
-                    newPetAge={newPetAge} setNewPetAge={setNewPetAge}
-                    newPetGender={newPetGender} setNewPetGender={setNewPetGender}
-                    newPetNeutered={newPetNeutered} setNewPetNeutered={setNewPetNeutered}
-                    newPetSize={newPetSize} setNewPetSize={setNewPetSize}
-                    newPetFeatures={newPetFeatures} setNewPetFeatures={setNewPetFeatures}
-                    newPetHealth={newPetHealth} setNewPetHealth={setNewPetHealth}
-                    newPetCharacter={newPetCharacter} setNewPetCharacter={setNewPetCharacter}
-                    newPetMicrochip={newPetMicrochip} setNewPetMicrochip={setNewPetMicrochip}
-                    newPetShowPhone={newPetShowPhone} setNewPetShowPhone={setNewPetShowPhone}
-                    newPetPhotos={newPetPhotos} setNewPetPhotos={setNewPetPhotos}
-                    isSaving={isSavingPet} onSave={handleSavePet}
-                    newPetWeight={newPetWeight} setNewPetWeight={setNewPetWeight}
-                    newPetHealthStatus={newPetHealthStatus} setNewPetHealthStatus={setNewPetHealthStatus}
-                    newPetActivityTarget={newPetActivityTarget} setNewPetActivityTarget={setNewPetActivityTarget}
-                    newPetWaterTarget={newPetWaterTarget} setNewPetWaterTarget={setNewPetWaterTarget}
-                    newPetFoodTarget={newPetFoodTarget} setNewPetFoodTarget={setNewPetFoodTarget}
-                />
-                <EditProfileModal
-                    isOpen={isEditing}
-                    onClose={() => { setIsEditing(false); setEditAvatarFile(null); setEditCoverFile(null); }}
-                    user={currentUser}
-                    editName={editName}
-                    setEditName={setEditName}
-                    editUsername={editUsername}
-                    setEditUsername={setEditUsername}
-                    editBio={editBio}
-                    setEditBio={setEditBio}
-                    editAvatarPreview={editAvatarPreview}
-                    setEditAvatarPreview={setEditAvatarPreview}
-                    editCoverPreview={editCoverPreview}
-                    setEditCoverPreview={setEditCoverPreview}
-                    editAvatarFile={editAvatarFile}
-                    setEditAvatarFile={setEditAvatarFile}
-                    editCoverFile={editCoverFile}
-                    setEditCoverFile={setEditCoverFile}
-                    isSavingProfile={isSaving}
-                    onSave={handleSave}
-                    editAllowComments={editAllowComments}
-                    setEditAllowComments={setEditAllowComments}
-                    editCommentPrivacy={editCommentPrivacy}
-                    setEditCommentPrivacy={setEditCommentPrivacy}
-                    editFilterWords={editFilterWords}
-                    setEditFilterWords={setEditFilterWords}
-                />
+    // Remove separate isOwnProfile return block, so we use the unified layout below.
 
-                {/* ══ RELATIONS MODAL (Followers / Following) ══ */}
-                <AnimatePresence>
-                    {isRelationsModalOpen && (
-                        <div className="fixed inset-0 z-[300] flex items-end justify-center">
-                            {/* Backdrop */}
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                onClick={() => setIsRelationsModalOpen(false)}
-                                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                            />
-                            {/* Drawer */}
-                            <motion.div
-                                initial={{ y: "100%" }}
-                                animate={{ y: 0 }}
-                                exit={{ y: "100%" }}
-                                transition={{ type: "spring", damping: 25, stiffness: 220 }}
-                                className="relative w-full max-w-lg bg-[#0E0E15]/95 backdrop-blur-2xl border-t border-black/10 dark:border-white/10 rounded-t-[3rem] p-6 max-h-[75vh] flex flex-col z-10 overflow-hidden shadow-[0_-15px_40px_rgba(0,0,0,0.6)]"
-                            >
-                                {/* Drag handle */}
-                                <div className="w-12 h-1.5 bg-black/10 dark:bg-white/10 rounded-full mx-auto mb-4 shrink-0" />
-                                
-                                {/* Header / Tabs */}
-                                <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-4 mb-4 shrink-0">
-                                    <div className="flex gap-4">
-                                        <button
-                                            onClick={() => openRelationsModal('followers')}
-                                            className={`text-sm font-black uppercase tracking-wider transition-colors ${
-                                                relationsModalTab === 'followers' ? 'text-emerald-400' : 'text-black/50 dark:text-white/40'
-                                            }`}
-                                        >
-                                            Takipçiler
-                                        </button>
-                                        <button
-                                            onClick={() => openRelationsModal('following')}
-                                            className={`text-sm font-black uppercase tracking-wider transition-colors ${
-                                                relationsModalTab === 'following' ? 'text-emerald-400' : 'text-black/50 dark:text-white/40'
-                                            }`}
-                                        >
-                                            Takip Edilenler
-                                        </button>
-                                    </div>
-                                    <button
-                                        onClick={() => setIsRelationsModalOpen(false)}
-                                        className="w-7 h-7 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-full flex items-center justify-center text-black/60 dark:text-white/60 hover:text-white"
-                                    >
-                                        <X className="w-3.5 h-3.5" />
-                                    </button>
-                                </div>
-
-                                {/* List Content */}
-                                <div className="flex-1 overflow-y-auto no-scrollbar pb-6">
-                                    {relationsLoading ? (
-                                        <div className="flex flex-col items-center justify-center py-12 gap-3">
-                                            <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
-                                            <p className="text-black/50 dark:text-white/40 text-[10px] font-black uppercase tracking-widest">Yükleniyor...</p>
-                                        </div>
-                                    ) : relationsList.length === 0 ? (
-                                        <div className="flex flex-col items-center justify-center py-12 text-center">
-                                            <div className="w-16 h-16 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-2xl flex items-center justify-center text-black/40 dark:text-white/30 mb-4">
-                                                <User className="w-8 h-8" />
-                                            </div>
-                                            <p className="text-black/60 dark:text-white/60 text-sm font-black uppercase tracking-wider">Henüz Kimse Yok</p>
-                                            <p className="text-black/40 dark:text-white/30 text-xs mt-1">Burada listelenecek herhangi bir kullanıcı bulunamadı.</p>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-3">
-                                            {relationsList.map((userItem: any) => {
-                                                const initials = getInitials(userItem.name, userItem.username);
-                                                const gradient = seedColor(userItem.username || userItem.id);
-                                                return (
-                                                    <div
-                                                        key={userItem.id}
-                                                        onClick={() => {
-                                                            setIsRelationsModalOpen(false);
-                                                            router.push(`/profile/${userItem.id}`);
-                                                        }}
-                                                        className="flex items-center justify-between p-3 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 hover:bg-black/10 dark:bg-white/10 transition-all cursor-pointer active:scale-[0.98]"
-                                                    >
-                                                        <div className="flex items-center gap-3">
-                                                            {/* Avatar */}
-                                                            <div className="w-11 h-11 rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 shrink-0 bg-[#222]">
-                                                                {userItem.avatar ? (
-                                                                    <img src={userItem.avatar} className="w-full h-full object-cover" alt="" />
-                                                                ) : (
-                                                                    <div className={`w-full h-full bg-gradient-to-tr ${gradient} flex items-center justify-center text-white text-xs font-black uppercase`}>
-                                                                        {initials}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                            {/* Info */}
-                                                            <div>
-                                                                <p className="text-white font-black text-xs uppercase leading-tight">
-                                                                    {userItem.name || 'Moffi Kullanıcısı'}
-                                                                </p>
-                                                                <p className="text-emerald-400 font-bold text-[10px] mt-0.5">
-                                                                    @{userItem.username || 'moffi_user'}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                        <ChevronRight className="w-4 h-4 text-black/40 dark:text-white/30" />
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </div>
-                            </motion.div>
-                        </div>
-                    )}
-                </AnimatePresence>
-            </main>
-        );
-    }
 
     // ── PREMIUM PROFILE PAGE ────────────────────────────────
     return (
@@ -623,6 +459,16 @@ export default function ProfilePage() {
                 >
                     <ArrowLeft className="w-5 h-5" />
                 </motion.button>
+                {isOwnProfile && (
+                    <motion.button
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => window.dispatchEvent(new CustomEvent('open-moffi-settings'))}
+                        className="absolute top-4 right-4 w-10 h-10 bg-black/40 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-black/10 dark:border-white/10 z-10"
+                    >
+                        <Settings className="w-5 h-5" />
+                    </motion.button>
+                )}
+
 
                 {/* Avatar */}
                 <div className="absolute -bottom-14 left-5 z-20">
@@ -793,25 +639,40 @@ export default function ProfilePage() {
                 )}
 
                 {/* Tab bar */}
-                <div className="flex mt-6 border-b border-white/8">
-                    {[
-                        { id: 'posts', label: 'Gönderiler', icon: <Grid3X3 className="w-4 h-4" /> },
-                        { id: 'pets', label: 'Patiler', icon: <PawPrint className="w-4 h-4" /> },
-                    ].map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id as any)}
-                            className={`flex-1 flex items-center justify-center gap-2 py-3 text-[11px] font-black uppercase tracking-widest transition-colors relative ${
-                                activeTab === tab.id ? 'text-white' : 'text-black/40 dark:text-white/30 hover:text-black/60 dark:text-white/60'
-                            }`}
-                        >
-                            {tab.icon}
-                            {tab.label}
-                            {activeTab === tab.id && (
-                                <motion.div layoutId="tabIndicator" className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-emerald-400 rounded-full" />
-                            )}
-                        </button>
-                    ))}
+                <div className="flex mt-6 border-b border-white/8 overflow-x-auto no-scrollbar">
+                    {(() => {
+                        const baseTabs = [
+                            { id: 'posts', label: 'Gönderiler', icon: <Grid3X3 className="w-4 h-4" /> },
+                            { id: 'pets', label: 'Patiler', icon: <PawPrint className="w-4 h-4" /> },
+                        ];
+                        const ownerTabs = [
+                            ...baseTabs,
+                            { id: 'wallet', label: 'Cüzdan', icon: <Wallet className="w-4 h-4" /> },
+                            { id: 'orders', label: 'Siparişler', icon: <Package className="w-4 h-4" /> },
+                            { id: 'appointments', label: 'Randevular', icon: <Calendar className="w-4 h-4" /> },
+                            { id: 'routes', label: 'Rotalar', icon: <Map className="w-4 h-4" /> },
+                            { id: 'family', label: 'Aile', icon: <UsersIcon className="w-4 h-4" /> },
+                            { id: 'passport', label: 'Pasaport', icon: <FileText className="w-4 h-4" /> },
+                            { id: 'bookmarks', label: 'Kaydedilenler', icon: <Bookmark className="w-4 h-4" /> }
+                        ];
+                        const tabsToDisplay = isOwnProfile ? ownerTabs : baseTabs;
+
+                        return tabsToDisplay.map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id as any)}
+                                className={`flex-none min-w-[80px] sm:flex-1 px-4 flex flex-col items-center justify-center gap-1.5 py-3 text-[10px] sm:text-[11px] font-black uppercase tracking-widest transition-colors relative ${
+                                    activeTab === tab.id ? 'text-white' : 'text-black/40 dark:text-white/30 hover:text-black/60 dark:text-white/60'
+                                }`}
+                            >
+                                {tab.icon}
+                                {tab.label}
+                                {activeTab === tab.id && (
+                                    <motion.div layoutId="tabIndicator" className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-emerald-400 rounded-full" />
+                                )}
+                            </button>
+                        ));
+                    })()}
                 </div>
 
                 {/* Content tabs */}
@@ -820,7 +681,7 @@ export default function ProfilePage() {
                         <motion.div key="posts" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
                             <PostsGrid userId={id} />
                         </motion.div>
-                    ) : (
+                    ) : activeTab === 'pets' ? (
                         <motion.div key="pets" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-6 space-y-3">
                             {pets.length === 0 ? (
                                 <div className="text-center py-16">
@@ -836,7 +697,7 @@ export default function ProfilePage() {
                                 </div>
                             ) : (
                                 pets.map(pet => (
-                                    <motion.div key={pet.id} whileTap={{ scale: 0.99 }} className="flex items-center gap-4 p-4 bg-white/3 border border-white/8 rounded-3xl hover:bg-white/6 transition-colors">
+                                    <motion.div key={pet.id} whileTap={{ scale: 0.99 }} onClick={() => switchPet(pet.id)} className={`flex items-center gap-4 p-4 rounded-3xl transition-colors cursor-pointer ${activePet?.id === pet.id ? 'bg-emerald-500/10 border border-emerald-500/40' : 'bg-white/3 border border-white/8 hover:bg-white/6'}`}>
                                         <div className="w-14 h-14 rounded-2xl overflow-hidden shrink-0">
                                             {pet.image ? (
                                                 <img src={pet.image} className="w-full h-full object-cover" alt={pet.name} />
@@ -847,7 +708,10 @@ export default function ProfilePage() {
                                             )}
                                         </div>
                                         <div className="flex-1">
-                                            <p className="text-white font-black uppercase tracking-tight">{pet.name}</p>
+                                            <p className="text-white font-black uppercase tracking-tight flex items-center gap-2">
+                                                {pet.name}
+                                                {activePet?.id === pet.id && <div className="w-2 h-2 rounded-full bg-emerald-400" />}
+                                            </p>
                                             <p className="text-black/50 dark:text-white/40 text-xs font-bold mt-0.5">{pet.breed || 'Tür bilgisi yok'} • {pet.gender || ''}</p>
                                         </div>
                                         <ChevronRight className="w-5 h-5 text-black/30 dark:text-white/20" />
@@ -855,7 +719,39 @@ export default function ProfilePage() {
                                 ))
                             )}
                         </motion.div>
-                    )}
+                    ) : activeTab === 'wallet' && isOwnProfile ? (
+                        <motion.div key="wallet" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+                            <WalletTab />
+                        </motion.div>
+                    ) : activeTab === 'orders' && isOwnProfile ? (
+                        <motion.div key="orders" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+                            <OrdersTab orders={[]} />
+                        </motion.div>
+                    ) : activeTab === 'appointments' && isOwnProfile ? (
+                        <motion.div key="appointments" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+                            <AppointmentsTab appointments={[]} />
+                        </motion.div>
+                    ) : activeTab === 'routes' && isOwnProfile ? (
+                        <motion.div key="routes" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+                            <RoutesTab routes={[]} activePet={activePet} />
+                        </motion.div>
+                    ) : activeTab === 'family' && isOwnProfile ? (
+                        <motion.div key="family" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+                            <FamilyTab />
+                        </motion.div>
+                    ) : activeTab === 'passport' && isOwnProfile ? (
+                        <motion.div key="passport" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+                            {activePet ? (
+                                <PassportTab pet={activePet} />
+                            ) : (
+                                <div className="text-center py-20 opacity-40 font-black text-white uppercase tracking-[0.2em]">Lütfen bir pati seçin</div>
+                            )}
+                        </motion.div>
+                    ) : activeTab === 'bookmarks' && isOwnProfile ? (
+                        <motion.div key="bookmarks" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+                            <div className="text-center py-20 opacity-20 font-black text-white uppercase italic tracking-[0.5em]">Koleksiyon Boş</div>
+                        </motion.div>
+                    ) : null}
                 </AnimatePresence>
             </div>
 
