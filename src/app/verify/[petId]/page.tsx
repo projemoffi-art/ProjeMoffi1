@@ -8,16 +8,18 @@ const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export default async function VerifyPetPage({ params }: { params: { petId: string } }) {
+export default async function VerifyPetPage({ params }: { params: Promise<{ petId: string }> }) {
+    const { petId } = await params;
+
     const { data, error } = await supabase
-        .rpc('get_pet_verification_info', { p_pet_id: params.petId })
+        .rpc('get_pet_verification_info', { p_pet_id: petId })
         .single();
 
     if (error || !data) {
         return (
             <div style={{padding: 20, fontFamily: 'monospace', fontSize: 12, wordBreak: 'break-all'}}>
                 <h1>DEBUG MODU</h1>
-                <p>petId: {params.petId}</p>
+                <p>petId: {petId}</p>
                 <p>error: {JSON.stringify(error, null, 2)}</p>
                 <p>data: {JSON.stringify(data, null, 2)}</p>
             </div>
