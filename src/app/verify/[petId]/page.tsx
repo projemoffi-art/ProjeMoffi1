@@ -36,6 +36,23 @@ export default async function VerifyPetPage({ params }: { params: Promise<{ petI
                 <h1 className="text-xl font-black">{d.pet_name}</h1>
                 <p className="text-xs text-gray-500 mb-4">{d.species} • {d.breed}</p>
 
+                {d.is_lost && (
+                    <div className="bg-red-500 text-white rounded-2xl p-4 mb-4 text-center animate-pulse shadow-md">
+                        <p className="font-black text-lg">🚨 KAYIP İLANI</p>
+                        <p className="text-xs mt-1">{d.finder_message || 'Bu dostumuzu bulduysanız lütfen sahibiyle iletişime geçin.'}</p>
+                        {d.reward_enabled && d.reward_amount && (
+                            <p className="text-xs mt-2 font-bold">🎁 Ödül: {d.reward_amount} TL</p>
+                        )}
+                        {d.owner_phone ? (
+                            <a href={`tel:${d.owner_phone}`} className="mt-3 inline-block bg-white text-red-600 font-black px-4 py-2 rounded-xl text-sm transition-transform hover:scale-105 active:scale-95">
+                                📞 Sahibini Ara
+                            </a>
+                        ) : (
+                            <p className="text-[10px] mt-2 opacity-80">Sahip telefon numarası paylaşmadı — Moffi uygulaması üzerinden iletişime geçin.</p>
+                        )}
+                    </div>
+                )}
+
                 <div className={`flex items-center justify-center gap-2 py-3 rounded-xl font-black text-sm ${
                     d.is_vaccination_current ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
                 }`}>

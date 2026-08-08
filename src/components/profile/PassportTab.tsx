@@ -517,7 +517,7 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                                 className="bg-card p-2 sm:p-3 rounded-2xl sm:rounded-[2rem] shadow-[0_20px_40px_rgba(255,255,255,0.1)] hover:scale-110 active:scale-95 transition-all cursor-pointer relative overflow-hidden group/qr"
                             >
                                 <div className="absolute inset-0 bg-cyan-500/10 opacity-0 group-hover/qr:opacity-100 transition-opacity" />
-                                <QRCodeSVG value={`moffi://id/${petData.id}`} size={64} fgColor="#000000" bgColor="#FFFFFF" level="H" />
+                                <QRCodeSVG value={`https://app.moffi.net/verify/${petData.id}`} size={64} fgColor="#000000" bgColor="#FFFFFF" level="H" />
                             </div>
                             {!isPublic && (
                                 <button 
@@ -809,7 +809,7 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                             </div>
 
                             <QRCodeSVG 
-                                value={`moffi://id/${petData.id}`} 
+                                value={`https://app.moffi.net/verify/${petData.id}`} 
                                 size={typeof window !== 'undefined' && window.innerWidth < 400 ? 260 : 320} 
                                 fgColor="#000000" 
                                 bgColor="#FFFFFF" 
@@ -952,7 +952,7 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                                         </div>
                                     </div>
                                     <div className="p-2 border-2 border-card-border rounded-2xl scale-90">
-                                        <QRCodeSVG value={`moffi://verify/${petData.id}`} size={48} />
+                                        <QRCodeSVG value={`https://app.moffi.net/verify/${petData.id}`} size={48} />
                                     </div>
                                 </div>
                             {/* Kişisel Takip Bilgilendirme Notu */}
