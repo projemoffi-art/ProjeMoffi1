@@ -218,6 +218,10 @@ export class MockApiService implements IApiService {
     }
 
     // Community
+        async getPetMedicalRecords(petId: string) {
+        return [];
+    }
+
     async getFeedContent(): Promise<Post[]> {
         const saved = await this.loadData<Post[]>('feed_posts');
         

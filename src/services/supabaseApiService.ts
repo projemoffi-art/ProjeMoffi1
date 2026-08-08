@@ -198,6 +198,21 @@ export class SupabaseApiService implements IApiService {
     }
 
     // --- COMMUNITY & FEED ---
+        async getPetMedicalRecords(petId: string) {
+        if (!petId) return [];
+        const { data, error } = await supabase
+            .from('medical_records')
+            .select('id, diagnosis, critical_notes, vet_name, medications, created_at, appointment_id')
+            .eq('pet_id', petId)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching medical records:', error);
+            return [];
+        }
+        return data || [];
+    }
+
     async getFeedContent(): Promise<any[]> {
         // Doğrudan ana posts tablosundan çekiyoruz (view ve eksik sütun bağımlılıklarını kökünden çözer)
         const { data, error } = await supabase
@@ -1760,35 +1775,6 @@ export class SupabaseApiService implements IApiService {
             return [];
         }
 
-        // Auto-generate default schedule if pet has NO vaccines yet (Magic UX)
-        if (data.length === 0) {
-            const defs = await this.getVaccineDefinitions();
-            const defaultRecords = defs.map((d: any, i: number) => {
-                const dueDate = new Date();
-                dueDate.setDate(dueDate.getDate() + (i * 15)); // Stagger due dates
-                return {
-                    pet_id: petId,
-                    name: d.id, // Using id as name to link with definition in UI
-                    status: 'pending',
-                    next_due_date: dueDate.toISOString(),
-                };
-            });
-
-            // Insert defaults into Supabase
-            const { data: inserted, error: insErr } = await supabase.from('vaccines').insert(defaultRecords).select();
-
-            if (!insErr && inserted) {
-                return inserted.map((item: any) => ({
-                    id: item.id,
-                    vaccineId: item.name,
-                    status: item.status,
-                    dueDate: item.next_due_date,
-                    dateAdministered: item.date_administered,
-                    vetName: item.vet_name,
-                    batchNumber: 'TR-' + Math.random().toString(36).substring(2, 8).toUpperCase()
-                }));
-            }
-        }
 
         return data.map(item => ({
             id: item.id,
@@ -1796,8 +1782,7 @@ export class SupabaseApiService implements IApiService {
             status: item.status,
             dueDate: item.next_due_date,
             dateAdministered: item.date_administered,
-            vetName: item.vet_name,
-            batchNumber: 'TR-' + Math.random().toString(36).substring(2, 8).toUpperCase()
+            vetName: item.vet_name
         }));
     }
 

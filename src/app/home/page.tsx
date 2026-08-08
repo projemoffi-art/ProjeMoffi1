@@ -28,6 +28,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { QuestBentoCard } from '@/components/quests/QuestBentoCard';
 import { cn } from '@/lib/utils';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import Mascot3DCanvas from '@/components/dressing/Mascot3DCanvas';
 import { useHubData } from "@/hooks/useHubData";
 import { usePetShop } from "@/hooks/usePetShop";
@@ -369,6 +370,7 @@ export default function LegendaryLightDashboard() {
     const petSwitcherScroll = useDragScroll();
     const searchParams = useSearchParams();
     const { user: authUser, updateProfile } = useAuth();
+    const { permission, isSubscribed, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications(authUser?.id);
     const { pets: userPets, activePet: globalActivePet, switchPet, updatePet, addPet, deletePet, isLoading: isPetLoading, isInitialized } = usePet();
     const { activeSession, history: walkHistory, stats: walkStats, isLoading: isWalkLoading, startWalk, endWalk } = useWalk();
     const { subscriptions, cart, cartCount, cartTotal, updateCartItem, products, clearCart } = usePetShop();
@@ -2995,6 +2997,38 @@ export default function LegendaryLightDashboard() {
                                                         className="text-[9px] text-red-400 font-bold bg-red-500/5 border border-red-500/20 px-2.5 py-1 rounded-lg hover:bg-red-500/10 transition-colors cursor-pointer"
                                                     >
                                                         🗑 Kaldır
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {/* Bildirim İzni Yönetimi */}
+                                            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl my-2">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+                                                        <Bell className="w-4.5 h-4.5 text-emerald-600" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs font-black text-gray-800 dark:text-gray-100">Aşı & Randevu Bildirimleri</p>
+                                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold">
+                                                            {permission === 'denied'
+                                                                ? 'Bildirimler tarayıcı ayarlarından engellenmiş'
+                                                                : isSubscribed
+                                                                ? 'Bildirimler açık'
+                                                                : 'Kaçırma, açman önerilir'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                {permission !== 'denied' && (
+                                                    <button
+                                                        onClick={() => (isSubscribed ? unsubscribe() : subscribe())}
+                                                        disabled={pushLoading}
+                                                        className={`text-[10px] font-black px-3 py-1.5 rounded-lg transition-colors shrink-0 ${
+                                                            isSubscribed
+                                                                ? 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                                                : 'bg-emerald-500 text-white hover:bg-emerald-600'
+                                                        } disabled:opacity-50`}
+                                                    >
+                                                        {pushLoading ? '...' : isSubscribed ? 'Kapat' : 'İzin Ver'}
                                                     </button>
                                                 )}
                                             </div>

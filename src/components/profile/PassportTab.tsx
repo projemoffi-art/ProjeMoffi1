@@ -14,7 +14,9 @@ import {
 } from "lucide-react";
 import { cn, showToast } from "@/lib/utils";
 import { QRCodeSVG } from "qrcode.react";
+import QRCode from "qrcode";
 import { useVaccineSchedule } from "@/hooks/useVaccineSchedule";
+import { useMedicalHistory } from "@/hooks/useMedicalHistory";
 import { TagPairingModal } from "@/components/community/modals/TagPairingModal";
 import html2canvas from 'html2canvas';
 import { useShare } from '@/context/ShareContext';
@@ -56,7 +58,8 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
     const { activePet, isLoading: isPetLoading, updatePet, deletePet } = usePet();
     const { openShare } = useShare();
     const currentPet = propPet || activePet;
-    const { schedule, isLoading } = useVaccineSchedule(currentPet?.id || 'pet-1');
+    const { schedule, isLoading } = useVaccineSchedule(currentPet?.id as string);
+    const { records: medicalHistory, isLoading: medicalLoading } = useMedicalHistory(currentPet?.id);
     const [isHovered, setIsHovered] = useState(false);
     const [isQRExpanded, setIsQRExpanded] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -126,123 +129,297 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
 
     const downloadPDF = async () => {
         try {
+            // Generate deterministic hash for verification
+            const contentToHash = JSON.stringify({
+                petId: petData.id,
+                petName: petData.name,
+                microchip: petData.microchip,
+                ownerName: petData.owner?.name,
+                vaccines: schedule.slice(0, 6).map((v: any) => ({ name: v.definition?.name, date: v.dateAdministered })),
+                generatedAt: new Date().toISOString().slice(0, 10),
+            });
+            const encoder = new TextEncoder();
+            const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(contentToHash));
+            const hashHex = Array.from(new Uint8Array(hashBuffer))
+                .map((b) => b.toString(16).padStart(2, '0'))
+                .join('')
+                .slice(0, 16)
+                .toUpperCase();
+
+            // Helper to clean Turkish chars for jsPDF default fonts
+            const tr = (text: string) => {
+                if (!text) return "";
+                return text.replace(/ı/g, 'i').replace(/I/g, 'I')
+                           .replace(/ğ/g, 'g').replace(/Ğ/g, 'G')
+                           .replace(/ü/g, 'u').replace(/Ü/g, 'U')
+                           .replace(/ş/g, 's').replace(/Ş/g, 'S')
+                           .replace(/ö/g, 'o').replace(/Ö/g, 'O')
+                           .replace(/ç/g, 'c').replace(/Ç/g, 'C');
+            };
+
+            const verificationUrl = window.location.origin + "/verify/" + petData.id;
+
+            // Generate QR Code as DataURL
+            const qrDataUrl = await QRCode.toDataURL(verificationUrl, {
+                margin: 1,
+                width: 64,
+                color: {
+                    dark: '#111827',
+                    light: '#F3F4F6'
+                }
+            });
+
             const { jsPDF } = await import("jspdf");
             const doc = new jsPDF({
                 orientation: "portrait",
                 unit: "mm",
                 format: "a4"
             });
-
-            // Set background color
-            doc.setFillColor(248, 249, 250); // Light gray
+            
+            // PAGE BACKGROUND (Light Gray)
+            doc.setFillColor(248, 249, 250);
             doc.rect(0, 0, 210, 297, "F");
 
-            // Header banner
-            doc.setFillColor(11, 11, 14); // Dark header
-            doc.rect(0, 0, 210, 45, "F");
+            // HEADER (Dark)
+            doc.setFillColor(11, 11, 14);
+            doc.rect(0, 0, 210, 50, "F");
 
-            // Brand
+            // Brand & Title
             doc.setTextColor(16, 185, 129); // Emerald
             doc.setFont("helvetica", "bold");
             doc.setFontSize(10);
-            doc.text("MOFFI DIGITAL PASSPORT SUMMARY (UNOFFICIAL)", 15, 15);
+            doc.text("MOFFI PASSPORT SYSTEM", 15, 18);
 
-            // Title
             doc.setTextColor(255, 255, 255);
-            doc.setFontSize(24);
-            doc.text("PASAPORT OZET BELGESI", 15, 26);
+            doc.setFontSize(22);
+            doc.text("DIJITAL PASAPORT OZETI", 15, 30);
 
-            doc.setTextColor(156, 163, 175);
-            doc.setFontSize(8);
-            doc.text("PERSONAL HEALTH & IDENTIFICATION RECORD", 15, 34);
+            doc.setTextColor(156, 163, 175); // Gray 400
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            doc.text("Kisisel Saglik & Kimlik Takip Karti", 15, 38);
 
-            // Decorative lines
+            // Emerald bottom border of header
             doc.setFillColor(16, 185, 129);
-            doc.rect(0, 45, 210, 2, "F");
+            doc.rect(0, 50, 210, 2, "F");
 
-            // Body
-            // Section 1: Pet Details
-            doc.setTextColor(31, 41, 55);
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.text("1. KIMLIK BILGILERI / PET IDENTIFICATION", 15, 60);
-
-            // Draw line
-            doc.setDrawColor(209, 213, 219);
+            // CONTENT CARD (White container)
+            doc.setFillColor(255, 255, 255);
+            doc.roundedRect(10, 60, 190, 200, 5, 5, "F");
+            // Card border
+            doc.setDrawColor(229, 231, 235);
             doc.setLineWidth(0.5);
-            doc.line(15, 63, 195, 63);
+            doc.roundedRect(10, 60, 190, 200, 5, 5, "S");
 
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(10);
-            doc.setTextColor(75, 85, 99);
+            let y = 75;
 
-            const detailsY = 70;
-            doc.text(`Adi (Name): ${petData.name || "-"}`, 15, detailsY);
-            doc.text(`Turu (Type): ${petData.type || "-"}`, 15, detailsY + 8);
-            doc.text(`Irki (Breed): ${petData.breed || "-"}`, 15, detailsY + 16);
-            doc.text(`Cinsiyet (Gender): ${petData.gender || "-"}`, 15, detailsY + 24);
-            doc.text(`Dogum Tarihi (Birth): ${petData.birthday || "-"}`, 15, detailsY + 32);
-
-            doc.text(`Mikrocip ID (Chip): ${petData.microchip || "Kayitli Degil"}`, 110, detailsY);
-            doc.text(`PETVET Kayit No: ${petData.petvet || "Kayitli Degil"}`, 110, detailsY + 8);
-            doc.text(`Boyut (Size): ${petData.size || "-"}`, 110, detailsY + 16);
-            doc.text(`Kilo (Weight): ${petData.weight || "-"}`, 110, detailsY + 24);
-            doc.text(`Renk (Color): ${petData.color || "-"}`, 110, detailsY + 32);
-            doc.text(`Kisirlastirma (Neutered): ${petData.neutered ? "Evet (Yes)" : "Hayir (No)"}`, 110, detailsY + 40);
-
-            // Section 2: Owner Details
+            // SECTION 1: IDENTITY
+            doc.setTextColor(16, 185, 129);
             doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.setTextColor(31, 41, 55);
-            doc.text("2. VELI / SAHIP BILGILERI (OWNER INFORMATION)", 15, 120);
-            doc.line(15, 123, 195, 123);
-
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(10);
-            doc.setTextColor(75, 85, 99);
-            doc.text(`Sahip (Owner): ${petData.owner?.name || "-"}`, 15, 130);
-            doc.text(`Telefon (Phone): ${petData.owner?.phone || "-"}`, 15, 138);
-            doc.text(`Adres (Address): ${petData.owner?.address || "-"}`, 15, 146);
-
-            // Section 3: Vaccine Records
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.setTextColor(31, 41, 55);
-            doc.text("3. ASI VE TIBBI KAYITLAR (VACCINE RECORDS)", 15, 170);
-            doc.line(15, 173, 195, 173);
-
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(10);
-            doc.setTextColor(75, 85, 99);
+            doc.setFontSize(12);
+            doc.text("KIMLIK BILGILERI / PET IDENTIFICATION", 20, y);
             
-            let vaccineY = 180;
-            if (schedule.length > 0) {
-                schedule.slice(0, 6).forEach((v: any, index: number) => {
-                    const status = v.dateAdministered ? "Uygulandi (Administered)" : "Planlandi (Scheduled)";
-                    const date = v.dateAdministered || v.dateScheduled || "-";
-                    doc.text(`${index + 1}. ${v.definition?.name || "Asi"} (${v.definition?.code || "Code"}) - Tarih: ${date} [${status}]`, 15, vaccineY);
-                    vaccineY += 8;
-                });
-            } else {
-                doc.text("Kayitli tibbi asi gecmisi bulunmamaktadir.", 15, vaccineY);
-            }
-
-            // Blockchain & Verification info
-            doc.setFillColor(229, 231, 235);
-            doc.rect(15, 245, 180, 25, "F");
+            doc.setDrawColor(229, 231, 235);
+            doc.line(20, y+3, 190, y+3);
+            
+            y += 12;
+            doc.setFontSize(9);
+            
+            // Left Column
+            doc.setTextColor(107, 114, 128);
+            doc.setFont("helvetica", "normal");
+            doc.text("Pet Adi:", 20, y);
+            doc.setTextColor(17, 24, 39);
+            doc.setFont("helvetica", "bold");
+            doc.text(tr(petData.name) || "-", 50, y);
 
             doc.setTextColor(107, 114, 128);
-            doc.setFontSize(8);
-            doc.text(`Dijital Muhur Kod (Hash): 0x${Math.random().toString(16).slice(2, 10).toUpperCase()}FD9E3924B`, 20, 253);
-            doc.text(`Dogrulama Linki (URL): https://moffi.co/verify/${petData.id}`, 20, 259);
-            doc.text("Bu belge resmi bir kimlik olmayip sadece kisisel bilgilendirme ve asi takip amaclidir.", 20, 265);
+            doc.setFont("helvetica", "normal");
+            doc.text("Turu:", 20, y+8);
+            doc.setTextColor(17, 24, 39);
+            doc.setFont("helvetica", "bold");
+            doc.text(tr(petData.type) || "-", 50, y+8);
 
-            // Footer
+            doc.setTextColor(107, 114, 128);
+            doc.setFont("helvetica", "normal");
+            doc.text("Irki:", 20, y+16);
+            doc.setTextColor(17, 24, 39);
+            doc.setFont("helvetica", "bold");
+            doc.text(tr(petData.breed) || "-", 50, y+16);
+
+            // Right Column
+            doc.setTextColor(107, 114, 128);
+            doc.setFont("helvetica", "normal");
+            doc.text("Cip (ID):", 110, y);
+            doc.setTextColor(17, 24, 39);
+            doc.setFont("helvetica", "bold");
+            doc.text(tr(petData.microchip) || "Kayitli Degil", 140, y);
+
+            doc.setTextColor(107, 114, 128);
+            doc.setFont("helvetica", "normal");
+            doc.text("Cinsiyet:", 110, y+8);
+            doc.setTextColor(17, 24, 39);
+            doc.setFont("helvetica", "bold");
+            doc.text(tr(petData.gender) || "-", 140, y+8);
+
+            doc.setTextColor(107, 114, 128);
+            doc.setFont("helvetica", "normal");
+            doc.text("Dogum:", 110, y+16);
+            doc.setTextColor(17, 24, 39);
+            doc.setFont("helvetica", "bold");
+            doc.text(petData.birthday || "Bilinmiyor", 140, y+16);
+
+            y += 35;
+
+            // SECTION 2: OWNER
+            doc.setTextColor(16, 185, 129);
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(12);
+            doc.text("SAHIP BILGILERI / OWNER INFORMATION", 20, y);
+            doc.setDrawColor(229, 231, 235);
+            doc.line(20, y+3, 190, y+3);
+
+            y += 12;
+            doc.setFontSize(9);
+            doc.setTextColor(107, 114, 128);
+            doc.setFont("helvetica", "normal");
+            doc.text("Sahip Adi:", 20, y);
+            doc.setTextColor(17, 24, 39);
+            doc.setFont("helvetica", "bold");
+            doc.text(tr(petData.owner?.name) || "Bilinmiyor", 50, y);
+
+            doc.setTextColor(107, 114, 128);
+            doc.setFont("helvetica", "normal");
+            doc.text("Iletisim:", 110, y);
+            doc.setTextColor(17, 24, 39);
+            doc.setFont("helvetica", "bold");
+            const phone = petData.owner?.phone ? petData.owner.phone.substring(0, 4) + " *** ** **" : "Bilinmiyor";
+            doc.text(phone, 140, y);
+
+            y += 25;
+
+            // SECTION 3: VACCINES
+            doc.setTextColor(16, 185, 129);
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(12);
+            doc.text("SON UYGULANAN ASILAR / RECENT VACCINES", 20, y);
+            doc.setDrawColor(229, 231, 235);
+            doc.line(20, y+3, 190, y+3);
+
+            y += 10;
+            if (schedule.length > 0) {
+                schedule.slice(0, 5).forEach((v: any, index: number) => {
+                    y += 8;
+                    const date = v.dateAdministered ? new Date(v.dateAdministered).toLocaleDateString('tr-TR') : (v.dueDate ? new Date(v.dueDate).toLocaleDateString('tr-TR') : "-");
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(9);
+                    doc.setTextColor(31, 41, 55);
+                    doc.text(tr(v.definition?.name) || "Asi", 20, y);
+                    
+                    doc.setFont("helvetica", "normal");
+                    doc.setTextColor(107, 114, 128);
+                    doc.text(date, 170, y);
+                });
+            } else {
+                y += 10;
+                doc.setFont("helvetica", "italic");
+                doc.setFontSize(9);
+                doc.setTextColor(156, 163, 175);
+                doc.text("Sistemde kayitli asi gecmisi bulunmamaktadir.", 20, y);
+            }
+
+            
+            // SECTION 4: MUAYENE GECMISI
+            y += 15;
+            doc.setTextColor(16, 185, 129);
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(12);
+            doc.text("MUAYENE VE TESHIS GECMISI / MEDICAL RECORDS", 20, y);
+            doc.setDrawColor(229, 231, 235);
+            doc.line(20, y+3, 190, y+3);
+
+            y += 10;
+            if (medicalHistory.length > 0) {
+                medicalHistory.slice(0, 4).forEach((rec: any, index: number) => {
+                    // Sayfa sonuna yaklasilirsa yeni sayfa ac
+                    if (y > 270) {
+                        doc.addPage();
+                        y = 20;
+                    }
+                    y += 8;
+                    const date = new Date(rec.created_at).toLocaleDateString('tr-TR');
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(9);
+                    doc.setTextColor(31, 41, 55);
+                    const cleanDiagnosis = tr(rec.diagnosis) || "Muayene";
+                    doc.text(cleanDiagnosis.substring(0, 40), 20, y);
+                    
+                    doc.setFont("helvetica", "normal");
+                    doc.setTextColor(107, 114, 128);
+                    doc.text(date, 170, y);
+                    
+                    if (rec.vet_name) {
+                        y += 4;
+                        doc.setFontSize(8);
+                        doc.text("Vet: " + tr(rec.vet_name), 20, y);
+                    }
+                    if (rec.critical_notes) {
+                        y += 4;
+                        doc.setTextColor(245, 158, 11);
+                        doc.text("! " + tr(rec.critical_notes).substring(0, 60), 20, y);
+                    }
+                    y += 2;
+                });
+            } else {
+                y += 10;
+                doc.setFont("helvetica", "italic");
+                doc.setFontSize(9);
+                doc.setTextColor(156, 163, 175);
+                doc.text("Sistemde kayitli muayene gecmisi bulunmamaktadir.", 20, y);
+            }
+
+            // SECTION 5: DIGITAL SEAL (Hash & QR)
+            y += 15;
+            
+            // Eger 5. bolum sayfa sonuna sigmayacaksa yeni sayfa ac
+            if (y > 240) {
+                doc.addPage();
+                y = 20;
+            } else {
+                // Eger ilk sayfada yer varsa ve eski tasarimla uyumlu olsun istiyorsak, min 230'a sabitleyebiliriz (opsiyonel)
+                // y = Math.max(y, 230); // Kapattim, dogrudan akisi takip etmesi daha saglikli
+            }
+
+            doc.setFillColor(243, 244, 246);
+            doc.roundedRect(20, y, 170, 22, 3, 3, "F");
+
+            doc.setFont("helvetica", "bold");
             doc.setFontSize(8);
+            doc.setTextColor(75, 85, 99);
+            doc.text("DIJITAL MUHUR KODU (HASH):", 25, y + 8);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(16, 185, 129);
+            doc.text("0x" + hashHex, 75, y + 8);
+
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(75, 85, 99);
+            doc.text("DOGRULAMA LINKI:", 25, y + 16);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(59, 130, 246);
+            doc.text(verificationUrl, 75, y + 16);
+
+            // Draw the QR Code image
+            doc.addImage(qrDataUrl, "PNG", 168, y + 2, 18, 18);
+
+            // FOOTER WARNING (Her sayfanin en altina eklemek daha iyi olabilir ama simdilik son sayfaya ekliyoruz)
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(7);
             doc.setTextColor(156, 163, 175);
-            doc.text(`Olusturulma Tarihi: ${new Date().toLocaleDateString('tr-TR')} - Moffi Cloud Digital Registry`, 15, 285);
-
-            doc.save(`${petData.name}_Pasaport_${petData.id}.pdf`);
+            const footerY = Math.max(y + 35, 275);
+            doc.text("Uyari: Bu belge resmi bir kimlik veya pasaport degildir. Sadece kisisel takip ve bilgilendirme amaclidir.", 105, footerY, { align: "center" });
+            doc.text("Resmi seyahatlerde veteriner hekim onayli fiziksel pasaportun gosterilmesi zorunludur.", 105, footerY + 4, { align: "center" });
+            
+            doc.save(`${tr(petData.name).replace(/\s+/g, '')}_Dijital_Pasaport.pdf`);
         } catch (error) {
             console.error("PDF generation error:", error);
             alert("PDF oluşturulurken bir hata oluştu.");
@@ -753,6 +930,7 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                                 initial={{ scale: 0.9, y: 50 }}
                                 animate={{ scale: 1, y: 0 }}
                                 exit={{ scale: 0.9, y: 50 }}
+                                id="passport-card-element"
                                 className="w-full bg-card rounded-[4rem] p-6 flex flex-col shadow-2xl text-black relative cursor-default"
                             >
                                 {/* iOS Style Grab Handle - Visual only now */}
@@ -787,7 +965,7 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                             {/* Preview Content Area */}
                             <div className="flex gap-4 mb-6">
                                 {petData.avatar ? (
-                                    <img src={petData.avatar} className="w-20 h-20 rounded-2xl object-cover grayscale-[0.5] contrast-125 shadow-lg" />
+                                    <img src={petData.avatar} crossOrigin="anonymous" className="w-20 h-20 rounded-2xl object-cover grayscale-[0.5] contrast-125 shadow-lg" />
                                 ) : (
                                     <div className="w-20 h-20 rounded-2xl bg-gray-200 border border-card-border flex items-center justify-center shadow-lg">
                                         <span className="text-gray-500 dark:text-gray-400 text-2xl font-black select-none uppercase font-sans">
@@ -828,11 +1006,39 @@ export function PassportTab({ pet: propPet, onClose, onEdit, isPublic = false }:
                                 ))}
                             </div>
 
+                            
+                            {/* Tıbbi Kayıtlar / Teşhis Geçmişi */}
+                            <div className="bg-gray-50 rounded-2xl p-4 space-y-3 mb-8">
+                                <h4 className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">
+                                    Muayene & Teşhis Geçmişi
+                                </h4>
+                                {medicalLoading ? (
+                                    <p className="text-[11px] text-gray-400">Yükleniyor...</p>
+                                ) : medicalHistory.length === 0 ? (
+                                    <p className="text-[11px] text-gray-400">Henüz kayıtlı muayene bulunmuyor.</p>
+                                ) : (
+                                    medicalHistory.slice(0, 5).map((rec) => (
+                                        <div key={rec.id} className="border-b border-gray-200 last:border-0 pb-2 last:pb-0">
+                                            <div className="flex justify-between items-start">
+                                                <span className="font-bold text-gray-700 text-[11px]">{rec.diagnosis}</span>
+                                                <span className="font-mono text-[10px] text-gray-400">
+                                                    {new Date(rec.created_at).toLocaleDateString('tr-TR')}
+                                                </span>
+                                            </div>
+                                            <p className="text-[10px] text-gray-500">{rec.vet_name}</p>
+                                            {rec.critical_notes && (
+                                                <p className="text-[10px] text-amber-600 font-semibold mt-0.5">⚠ {rec.critical_notes}</p>
+                                            )}
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                            
                             {/* Action Buttons */}
                             <div className="flex gap-3 relative z-10">
                                 <button 
                                     onClick={downloadPDF}
-                                    className="flex-1 bg-white dark:bg-black text-white py-4 rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 hover:bg-gray-900 transition-colors active:scale-95"
+                                    className="flex-1 bg-black text-white dark:bg-white dark:text-black py-4 rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 hover:bg-gray-900 dark:hover:bg-gray-200 transition-colors active:scale-95"
                                 >
                                     <FileText className="w-4 h-4" /> PDF İndir
                                 </button>
