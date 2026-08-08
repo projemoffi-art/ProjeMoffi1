@@ -15,10 +15,11 @@ export default async function VerifyPetPage({ params }: { params: { petId: strin
 
     if (error || !data) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center gap-3 p-6 text-center">
-                <ShieldAlert className="w-12 h-12 text-red-500" />
-                <h1 className="text-lg font-black">Kayıt Bulunamadı</h1>
-                <p className="text-sm text-gray-500">Bu doğrulama linki geçerli değil ya da kayıt silinmiş.</p>
+            <div style={{padding: 20, fontFamily: 'monospace', fontSize: 12, wordBreak: 'break-all'}}>
+                <h1>DEBUG MODU</h1>
+                <p>petId: {params.petId}</p>
+                <p>error: {JSON.stringify(error, null, 2)}</p>
+                <p>data: {JSON.stringify(data, null, 2)}</p>
             </div>
         );
     }
