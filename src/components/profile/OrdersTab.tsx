@@ -36,7 +36,7 @@ export function OrdersTab({ orders: initialOrders }: { orders: any[] }) {
     };
 
     if (loading) {
-        return <div className="py-20 text-center opacity-20 font-black text-white uppercase italic tracking-[0.5em]">Yükleniyor...</div>;
+        return <div className="py-20 text-center opacity-40 font-black text-zinc-900 dark:text-white uppercase italic tracking-[0.5em]">Yükleniyor...</div>;
     }
 
     if (orders.length === 0) {
@@ -50,7 +50,7 @@ export function OrdersTab({ orders: initialOrders }: { orders: any[] }) {
 
     return (
         <div className="space-y-6 pb-10">
-            <h3 className="px-2 text-xl font-black text-white italic uppercase tracking-tighter decoration-emerald-500/50">Siparişlerim</h3>
+            <h3 className="px-2 text-xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter decoration-emerald-500/50">Siparişlerim</h3>
 
             <div className="space-y-4">
                 {Array.isArray(orders) && orders.map(order => {
@@ -60,13 +60,13 @@ export function OrdersTab({ orders: initialOrders }: { orders: any[] }) {
                     const itemCount = order.items.length;
                     
                     return (
-                        <div key={order.id} className="bg-[#12121A] border border-card-border rounded-[2.5rem] overflow-hidden group transition-all">
+                        <div key={order.id} className="bg-white dark:bg-[#12121A] border border-zinc-200 dark:border-card-border rounded-[2.5rem] overflow-hidden group transition-all">
                             <div 
                                 onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
-                                className="p-6 flex items-center justify-between cursor-pointer hover:bg-black/5 dark:bg-white/5"
+                                className="p-6 flex items-center justify-between cursor-pointer hover:bg-zinc-50 dark:hover:bg-white/5"
                             >
                                 <div className="flex items-center gap-5">
-                                    <div className="w-16 h-16 rounded-2xl overflow-hidden border border-card-border bg-gray-900 shrink-0 flex items-center justify-center text-2xl font-black text-white">
+                                    <div className="w-16 h-16 rounded-2xl overflow-hidden border border-zinc-200 dark:border-card-border bg-zinc-100 dark:bg-gray-900 shrink-0 flex items-center justify-center text-2xl font-black text-zinc-900 dark:text-white">
                                         {firstItem?.product.image ? (
                                             <img src={firstItem.product.image} className="w-full h-full object-cover" />
                                         ) : (
@@ -74,13 +74,13 @@ export function OrdersTab({ orders: initialOrders }: { orders: any[] }) {
                                         )}
                                     </div>
                                     <div className="text-left">
-                                        <h4 className="text-white font-black text-sm uppercase tracking-tight leading-tight">
+                                        <h4 className="text-zinc-900 dark:text-white font-black text-sm uppercase tracking-tight leading-tight">
                                             {firstItem?.product.name || "Sipariş"}
-                                            {itemCount > 1 && <span className="text-gray-500 lowercase"> + {itemCount - 1} ürün</span>}
+                                            {itemCount > 1 && <span className="text-zinc-500 dark:text-gray-500 lowercase"> + {itemCount - 1} ürün</span>}
                                         </h4>
                                         <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-[10px] font-black text-white px-2 py-0.5 bg-emerald-500/20 rounded-md border border-emerald-500/10 italic">{order.totalPrice} TL</span>
-                                            <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest">{new Date(order.createdAt).toLocaleDateString('tr-TR')}</span>
+                                            <span className="text-[10px] font-black text-emerald-700 dark:text-emerald-400 px-2 py-0.5 bg-emerald-500/20 rounded-md border border-emerald-500/10 italic">{order.totalPrice} TL</span>
+                                            <span className="text-[9px] font-bold text-zinc-500 dark:text-gray-600 uppercase tracking-widest">{new Date(order.createdAt).toLocaleDateString('tr-TR')}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -97,10 +97,10 @@ export function OrdersTab({ orders: initialOrders }: { orders: any[] }) {
                             </div>
 
                             {isExpanded && (
-                                <div className="px-8 pb-8 pt-2 border-t border-card-border bg-black/20">
+                                <div className="px-8 pb-8 pt-2 border-t border-zinc-200 dark:border-card-border bg-zinc-50 dark:bg-black/20">
                                     {/* Timeline */}
                                     <div className="mb-8 pt-4">
-                                        <div className="relative h-1 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
+                                        <div className="relative h-1 bg-black/10 dark:bg-white/5 rounded-full overflow-hidden">
                                             <motion.div 
                                                 initial={{ width: 0 }}
                                                 animate={{ width: `${sim.progress}%` }}
@@ -108,37 +108,37 @@ export function OrdersTab({ orders: initialOrders }: { orders: any[] }) {
                                             />
                                         </div>
                                         <div className="flex justify-between mt-3 px-1">
-                                            <span className="text-[9px] font-black uppercase text-white">Hazırlanıyor</span>
-                                            <span className={cn("text-[9px] font-black uppercase", sim.progress >= 66 ? "text-white" : "text-gray-600")}>Yolda</span>
-                                            <span className={cn("text-[9px] font-black uppercase", sim.progress === 100 ? "text-white" : "text-gray-600")}>Teslim Edildi</span>
+                                            <span className="text-[9px] font-black uppercase text-zinc-900 dark:text-white">Hazırlanıyor</span>
+                                            <span className={cn("text-[9px] font-black uppercase", sim.progress >= 66 ? "text-zinc-900 dark:text-white" : "text-zinc-400 dark:text-gray-600")}>Yolda</span>
+                                            <span className={cn("text-[9px] font-black uppercase", sim.progress === 100 ? "text-zinc-900 dark:text-white" : "text-zinc-400 dark:text-gray-600")}>Teslim Edildi</span>
                                         </div>
                                     </div>
 
                                     {/* Items List */}
                                     <div className="space-y-4">
-                                        <h5 className="text-[10px] font-black uppercase tracking-widest text-emerald-500/80 mb-4">Sipariş İçeriği</h5>
+                                        <h5 className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-500/80 mb-4">Sipariş İçeriği</h5>
                                         {order.items.map((item, idx) => (
-                                            <div key={idx} className="flex items-center justify-between py-2 border-b border-card-border last:border-0">
+                                            <div key={idx} className="flex items-center justify-between py-2 border-b border-zinc-200 dark:border-card-border last:border-0">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center font-black text-[10px] text-white">
+                                                    <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center font-black text-[10px] text-zinc-900 dark:text-white">
                                                         {item.quantity}x
                                                     </div>
-                                                    <span className="text-xs font-bold text-gray-300">{item.product.name}</span>
+                                                    <span className="text-xs font-bold text-zinc-700 dark:text-gray-300">{item.product.name}</span>
                                                 </div>
-                                                <span className="text-xs font-black text-white">{item.product.price} TL</span>
+                                                <span className="text-xs font-black text-zinc-900 dark:text-white">{item.product.price} TL</span>
                                             </div>
                                         ))}
                                     </div>
 
-                                    <div className="mt-8 p-4 bg-white/[0.02] border border-card-border rounded-2xl flex items-center justify-between">
+                                    <div className="mt-8 p-4 bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-card-border rounded-2xl flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            <Truck className="w-4 h-4 text-emerald-400" />
+                                            <Truck className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                                             <div>
-                                                <p className="text-[9px] font-black text-gray-500 uppercase">Teslimat Adresi</p>
-                                                <p className="text-[10px] font-bold text-white truncate max-w-[200px]">{order.shippingAddress}</p>
+                                                <p className="text-[9px] font-black text-zinc-500 dark:text-gray-500 uppercase">Teslimat Adresi</p>
+                                                <p className="text-[10px] font-bold text-zinc-900 dark:text-white truncate max-w-[200px]">{order.shippingAddress}</p>
                                             </div>
                                         </div>
-                                        <button className="px-4 py-2 bg-black/5 dark:bg-white/5 border border-card-border rounded-xl text-[9px] font-black text-white uppercase hover:bg-black/10 dark:bg-white/10 transition-all">Detaylar</button>
+                                        <button className="px-4 py-2 bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-xl text-[9px] font-black text-zinc-900 dark:text-white uppercase hover:bg-black/10 dark:hover:bg-white/10 transition-all">Detaylar</button>
                                     </div>
                                 </div>
                             )}

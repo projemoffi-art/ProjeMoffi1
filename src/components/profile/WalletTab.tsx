@@ -191,19 +191,19 @@ export function WalletTab() {
                         exit={{ opacity: 0, y: 20 }}
                         className="flex gap-4 px-2"
                     >
-                        <button className="flex-1 bg-white/[0.03] border border-card-border rounded-[2.5rem] py-8 flex flex-col items-center gap-3 group active:scale-95 transition-all relative overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-t from-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <div className="w-14 h-14 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-400 group-hover:scale-110 transition-transform shadow-lg border border-orange-500/20">
+                        <button className="flex-1 bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-card-border rounded-[2.5rem] py-8 flex flex-col items-center gap-3 group active:scale-95 transition-all relative overflow-hidden hover:bg-zinc-100 dark:hover:bg-white/[0.05]">
+                            <div className="absolute inset-0 bg-gradient-to-t from-orange-500/10 dark:from-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="w-14 h-14 rounded-2xl bg-orange-100 dark:bg-orange-500/10 flex items-center justify-center text-orange-500 dark:text-orange-400 group-hover:scale-110 transition-transform shadow-lg border border-orange-200 dark:border-orange-500/20">
                                 <Plus className="w-7 h-7" />
                             </div>
-                            <span className="text-[11px] font-black text-white uppercase tracking-widest italic text-center">Yükleme Yap</span>
+                            <span className="text-[11px] font-black text-zinc-900 dark:text-white uppercase tracking-widest italic text-center">Yükleme Yap</span>
                         </button>
-                        <button className="flex-1 bg-white/[0.03] border border-card-border rounded-[2.5rem] py-8 flex flex-col items-center gap-3 group active:scale-95 transition-all relative overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-t from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 group-hover:scale-110 transition-transform shadow-lg border border-cyan-500/20">
+                        <button className="flex-1 bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-card-border rounded-[2.5rem] py-8 flex flex-col items-center gap-3 group active:scale-95 transition-all relative overflow-hidden hover:bg-zinc-100 dark:hover:bg-white/[0.05]">
+                            <div className="absolute inset-0 bg-gradient-to-t from-cyan-500/10 dark:from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="w-14 h-14 rounded-2xl bg-cyan-100 dark:bg-cyan-500/10 flex items-center justify-center text-cyan-500 dark:text-cyan-400 group-hover:scale-110 transition-transform shadow-lg border border-cyan-200 dark:border-cyan-500/20">
                                 <ArrowUpRight className="w-7 h-7" />
                             </div>
-                            <span className="text-[11px] font-black text-white uppercase tracking-widest italic text-center">Transfer Et</span>
+                            <span className="text-[11px] font-black text-zinc-900 dark:text-white uppercase tracking-widest italic text-center">Transfer Et</span>
                         </button>
                     </motion.div>
                 )}
@@ -214,7 +214,7 @@ export function WalletTab() {
                 <div className="flex items-center justify-between px-6">
                     <div className="flex items-center gap-3">
                         <div className="w-2 h-8 bg-orange-500 rounded-full" />
-                        <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase">Son İşlemler</h3>
+                        <h3 className="text-2xl font-black text-zinc-900 dark:text-white italic tracking-tighter uppercase">Son İşlemler</h3>
                     </div>
                 </div>
 
@@ -224,10 +224,10 @@ export function WalletTab() {
                             <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
                         </div>
                     ) : transactions.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-8 text-center bg-white/[0.02] rounded-[3rem] border border-card-border">
+                        <div className="flex flex-col items-center justify-center p-8 text-center bg-zinc-50 dark:bg-white/[0.02] rounded-[3rem] border border-zinc-200 dark:border-card-border">
                             <Coins className="w-12 h-12 text-zinc-400 dark:text-zinc-600 mb-4" />
-                            <h3 className="font-bold text-white mb-1">Henüz İşlem Yok</h3>
-                            <p className="text-sm text-gray-400">Cüzdan hareketleriniz burada görünecektir.</p>
+                            <h3 className="font-bold text-zinc-900 dark:text-white mb-1">Henüz İşlem Yok</h3>
+                            <p className="text-sm text-zinc-500 dark:text-gray-400">Cüzdan hareketleriniz burada görünecektir.</p>
                         </div>
                     ) : (
                         transactions.map((tx: WalletTransaction, index) => {
@@ -239,33 +239,30 @@ export function WalletTab() {
                             else if (tx.type === 'system') Icon = Coins;
 
                             return (
-                                <div key={tx.id || index} className="bg-white/[0.02] border border-card-border p-4 sm:p-7 rounded-[2rem] sm:rounded-[3rem] flex items-center justify-between group hover:bg-black/5 dark:bg-white/5 transition-all cursor-pointer relative overflow-hidden">
-                                    <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <div key={tx.id || index} className="bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200 dark:border-card-border p-4 sm:p-7 rounded-[2rem] sm:rounded-[3rem] flex items-center justify-between group hover:bg-zinc-100 dark:hover:bg-black/5 transition-all cursor-pointer relative overflow-hidden">
+                                    <div className="absolute inset-0 bg-gradient-to-r from-black/5 dark:from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                     <div className="flex items-center gap-4 sm:gap-6 relative z-10">
-                                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-black/40 rounded-xl sm:rounded-2xl flex items-center justify-center transition-transform group-hover:rotate-12 shadow-2xl border border-card-border">
-                                            <Icon className={cn("w-6 h-6 sm:w-8 sm:h-8", isPositive ? "text-emerald-400" : "text-white")} />
+                                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white dark:bg-black/40 rounded-xl sm:rounded-2xl flex items-center justify-center transition-transform group-hover:rotate-12 shadow-md dark:shadow-2xl border border-zinc-200 dark:border-card-border">
+                                            <Icon className={cn("w-6 h-6 sm:w-8 sm:h-8", isPositive ? "text-emerald-500 dark:text-emerald-400" : "text-zinc-700 dark:text-white")} />
                                         </div>
                                         <div className="text-left">
-                                            <h4 className="text-white font-black text-sm sm:text-base uppercase tracking-tight italic">{tx.description}</h4>
+                                            <h4 className="text-zinc-900 dark:text-white font-black text-sm sm:text-base uppercase tracking-tight italic">{tx.description}</h4>
                                             <div className="flex items-center gap-1.5 mt-1 sm:mt-1.5">
-                                                <div className={cn("w-1 h-1 rounded-full", isPositive ? "bg-emerald-500" : "bg-orange-500")} />
-                                                <p className="text-[9px] sm:text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">
-                                                    {new Date(tx.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                                                </p>
+                                                <span className="text-[10px] sm:text-xs font-black text-zinc-500 dark:text-gray-400 uppercase tracking-widest">{new Date(tx.created_at).toLocaleDateString('tr-TR')}</span>
                                             </div>
                                         </div>
                                     </div>
                                     <div className="text-right relative z-10">
-                                        <div className="flex items-baseline gap-1">
-                                            <p className={cn(
-                                                "text-xl sm:text-2xl font-black italic tracking-tighter",
-                                                isPositive ? "text-emerald-400" : "text-white"
+                                        <div className="flex flex-col items-end gap-1 sm:gap-1.5">
+                                            <span className={cn(
+                                                "text-lg sm:text-2xl font-black italic tracking-tighter drop-shadow-sm dark:drop-shadow-lg flex items-center gap-1",
+                                                isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-900 dark:text-white"
                                             )}>
-                                                {isPositive ? `+${tx.amount.toLocaleString()}` : `-${tx.amount.toLocaleString()}`}
-                                            </p>
-                                            <span className="text-[9px] sm:text-[10px] font-black text-black/40 dark:text-white/30 tracking-tighter uppercase">PC</span>
+                                                {isPositive ? '+' : '-'}{tx.amount.toLocaleString()}
+                                                <Coins className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
+                                            </span>
+                                            <span className="text-[8px] sm:text-[9px] font-black text-zinc-400 dark:text-gray-500 uppercase tracking-widest">{tx.type}</span>
                                         </div>
-                                        <p className="text-[8px] sm:text-[9px] font-black text-white/10 uppercase tracking-[0.3em] mt-1">Tamamlandı</p>
                                     </div>
                                 </div>
                             );

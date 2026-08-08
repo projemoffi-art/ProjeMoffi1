@@ -78,9 +78,9 @@ export default function ProfileTabs({ userId, isOwnProfile, themeColor = 'cyan',
     return (
         <div className="w-full">
             {/* STICKY TAB BAR */}
-            <div className="sticky top-0 bg-background/80 backdrop-blur-xl z-40 border-b border-card-border overflow-x-auto no-scrollbar">
-                <div className="max-w-screen-xl mx-auto px-4">
-                    <div className="flex items-center gap-1 sm:gap-4 min-w-max py-2">
+            <div className="sticky top-0 bg-background/80 backdrop-blur-xl z-40 border-b border-card-border overflow-x-auto no-scrollbar shadow-sm dark:shadow-none">
+                <div className="max-w-screen-xl mx-auto px-2 sm:px-4">
+                    <div className="flex items-center justify-start md:justify-center gap-2 sm:gap-6 min-w-max py-3">
                         {TABS.map((tab) => {
                             const Icon = tab.icon;
                             const isActive = activeTab === tab.id;
