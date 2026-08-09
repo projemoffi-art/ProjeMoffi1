@@ -417,7 +417,7 @@ export default function ProfilePage() {
                     <div className="w-20 h-20 rounded-[2rem] bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto">
                         <AlertCircle className="w-10 h-10 text-red-400" />
                     </div>
-                    <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">Profil Bulunamadı</h2>
+                    <h2 className="text-2xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter">Profil Bulunamadı</h2>
                     <button onClick={() => { if (typeof window !== 'undefined' && window.history.length > 2) { router.back(); } else { router.push('/home'); } }} className="px-6 py-3 bg-white text-black rounded-2xl font-black text-xs uppercase tracking-widest">
                         Ana Sayfaya Dön
                     </button>
@@ -455,7 +455,7 @@ export default function ProfilePage() {
                 <motion.button
                     whileTap={{ scale: 0.9 }}
                     onClick={() => { if (typeof window !== 'undefined' && window.history.length > 2) { router.back(); } else { router.push('/home'); } }}
-                    className="absolute top-4 left-4 w-10 h-10 bg-black/40 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-black/10 dark:border-white/10 z-10"
+                    className="absolute top-4 left-4 w-10 h-10 bg-white/80 dark:bg-black/40 backdrop-blur-md rounded-2xl flex items-center justify-center text-zinc-900 dark:text-white border border-black/10 dark:border-white/10 z-10"
                 >
                     <ArrowLeft className="w-5 h-5" />
                 </motion.button>
@@ -463,7 +463,7 @@ export default function ProfilePage() {
                     <motion.button
                         whileTap={{ scale: 0.9 }}
                         onClick={() => window.dispatchEvent(new CustomEvent('open-moffi-settings'))}
-                        className="absolute top-4 right-4 w-10 h-10 bg-black/40 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-black/10 dark:border-white/10 z-10"
+                        className="absolute top-4 right-4 w-10 h-10 bg-white/80 dark:bg-black/40 backdrop-blur-md rounded-2xl flex items-center justify-center text-zinc-900 dark:text-white border border-black/10 dark:border-white/10 z-10"
                     >
                         <Settings className="w-5 h-5" />
                     </motion.button>
@@ -496,7 +496,7 @@ export default function ProfilePage() {
                     <div className="flex-1">
                         <>
                             <div className="flex items-center gap-2">
-                                <h1 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-tight">
+                                <h1 className="text-2xl font-black text-zinc-900 dark:text-white italic tracking-tighter uppercase leading-tight">
                                     {displayUser?.name || displayUser?.display_name || displayUser?.full_name || displayUser?.username || 'Moffi Kullanıcısı'}
                                 </h1>
                                 {displayUser?.is_prime && <BadgeCheck className="w-5 h-5 text-emerald-400 shrink-0" />}
@@ -524,7 +524,7 @@ export default function ProfilePage() {
                                         setEditCoverPreview(isPlaceholderUrl(currentUser?.cover_photo) ? null : (currentUser?.cover_photo || null));
                                         setIsEditing(true);
                                     }}
-                                    className="flex items-center gap-1.5 px-4 py-2.5 bg-white/8 border border-black/10 dark:border-white/10 rounded-2xl text-white font-black text-[10px] uppercase tracking-widest hover:bg-white/12 transition-colors"
+                                    className="flex items-center gap-1.5 px-4 py-2.5 bg-zinc-100 dark:bg-white/10 border border-black/10 dark:border-white/10 rounded-2xl text-zinc-900 dark:text-white font-black text-[10px] uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-white/20 transition-colors"
                                 >
                                     <Edit3 className="w-3.5 h-3.5" />
                                     Düzenle
@@ -546,7 +546,7 @@ export default function ProfilePage() {
                                     followCheckLoading
                                         ? "bg-emerald-500/50 text-black/50 dark:text-white/50 cursor-not-allowed shadow-none"
                                         : isFollowing
-                                        ? "bg-black/10 dark:bg-white/10 text-white border border-black/10 dark:border-white/10 hover:bg-white/15 hover:border-black/20 dark:border-white/20 shadow-none"
+                                        ? "bg-zinc-100 dark:bg-white/10 text-zinc-900 dark:text-white border border-black/10 dark:border-white/10 hover:bg-zinc-200 dark:hover:bg-white/20 shadow-none"
                                         : "bg-emerald-500 text-white shadow-emerald-500/30 hover:bg-emerald-600 hover:shadow-emerald-500/40"
                                 }`}
                             >
@@ -584,12 +584,12 @@ export default function ProfilePage() {
                                 onClick={() => openRelationsModal(s.type as any)}
                                 className="text-center active:scale-95 transition-transform hover:opacity-85 focus:outline-none"
                             >
-                                <p className="text-white font-black text-xl leading-tight">{s.value}</p>
+                                <p className="text-zinc-900 dark:text-white font-black text-xl leading-tight">{s.value}</p>
                                 <p className="text-black/50 dark:text-white/40 text-[10px] font-black uppercase tracking-widest mt-0.5">{s.label}</p>
                             </button>
                         ) : (
                             <div key={s.label} className="text-center">
-                                <p className="text-white font-black text-xl leading-tight">{s.value}</p>
+                                <p className="text-zinc-900 dark:text-white font-black text-xl leading-tight">{s.value}</p>
                                 <p className="text-black/50 dark:text-white/40 text-[10px] font-black uppercase tracking-widest mt-0.5">{s.label}</p>
                             </div>
                         )
@@ -628,7 +628,7 @@ export default function ProfilePage() {
                                             </div>
                                         )}
                                     </div>
-                                    <span className="text-white text-[9px] font-black uppercase tracking-wide">{pet.name}</span>
+                                    <span className="text-zinc-900 dark:text-white text-[9px] font-black uppercase tracking-wide">{pet.name}</span>
                                     {activePet?.id === pet.id && (
                                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                                     )}
@@ -662,7 +662,7 @@ export default function ProfilePage() {
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id as any)}
                                 className={`flex-none sm:flex-1 px-3 flex flex-col items-center justify-center gap-1.5 py-3 text-[9px] sm:text-[11px] font-black uppercase tracking-widest transition-colors relative ${
-                                    activeTab === tab.id ? 'text-white' : 'text-black/40 dark:text-white/30 hover:text-black/60 dark:text-white/60'
+                                    activeTab === tab.id ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-white/30 hover:text-zinc-700 dark:hover:text-white/60'
                                 }`}
                             >
                                 {tab.icon}
@@ -708,7 +708,7 @@ export default function ProfilePage() {
                                             )}
                                         </div>
                                         <div className="flex-1">
-                                            <p className="text-white font-black uppercase tracking-tight flex items-center gap-2">
+                                            <p className="text-zinc-900 dark:text-white font-black uppercase tracking-tight flex items-center gap-2">
                                                 {pet.name}
                                                 {activePet?.id === pet.id && <div className="w-2 h-2 rounded-full bg-emerald-400" />}
                                             </p>
@@ -744,12 +744,12 @@ export default function ProfilePage() {
                             {activePet ? (
                                 <PassportTab pet={activePet} />
                             ) : (
-                                <div className="text-center py-20 opacity-40 font-black text-white uppercase tracking-[0.2em]">Lütfen bir pati seçin</div>
+                                <div className="text-center py-20 opacity-40 font-black text-zinc-900 dark:text-white uppercase tracking-[0.2em]">Lütfen bir pati seçin</div>
                             )}
                         </motion.div>
                     ) : activeTab === 'bookmarks' && isOwnProfile ? (
                         <motion.div key="bookmarks" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
-                            <div className="text-center py-20 opacity-20 font-black text-white uppercase italic tracking-[0.5em]">Koleksiyon Boş</div>
+                            <div className="text-center py-20 opacity-40 font-black text-zinc-900 dark:text-white uppercase italic tracking-[0.5em]">Koleksiyon Boş</div>
                         </motion.div>
                     ) : null}
                 </AnimatePresence>
@@ -902,7 +902,7 @@ export default function ProfilePage() {
                                                         </div>
                                                         {/* Info */}
                                                         <div>
-                                                            <p className="text-white font-black text-xs uppercase leading-tight">
+                                                            <p className="text-zinc-900 dark:text-white font-black text-xs uppercase leading-tight">
                                                                 {userItem.name || 'Moffi Kullanıcısı'}
                                                             </p>
                                                             <p className="text-emerald-400 font-bold text-[10px] mt-0.5">

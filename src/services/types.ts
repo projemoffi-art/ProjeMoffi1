@@ -390,6 +390,18 @@ export interface IApiService {
 
     // Feedbacks
     getFeedbacks(): Promise<SystemFeedback[]>;
+
+    // Unclaimed Patients Migration
+    insertUnclaimedPatient(data: {
+        rawName: string; rawPhone: string; petName?: string;
+        petSpecies?: string; petBreed?: string; legacyNotes?: string;
+    }): Promise<string>;
+    getMyUnclaimedPatients(): Promise<any[]>;
+
+    // SMS Settings & Sending
+    getMySmsStatus(): Promise<{provider: string, sender_id: string, is_active: boolean} | null>;
+    setClinicSmsSettings(provider: string, apiUsername: string, apiKey: string, senderId: string): Promise<boolean>;
+    sendClaimSms(unclaimedPatientId: string): Promise<{mode: string, sent: boolean}>;
 }
 
 export interface SystemAnnouncement {

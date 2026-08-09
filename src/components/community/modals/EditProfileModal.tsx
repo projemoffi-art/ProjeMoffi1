@@ -62,6 +62,29 @@ export function EditProfileModal({
 }: EditProfileModalProps) {
     const coverInputRef = React.useRef<HTMLInputElement>(null);
     const profileInputRef = React.useRef<HTMLInputElement>(null);
+    const [isDraggingCover, setIsDraggingCover] = React.useState(false);
+    const [isDraggingAvatar, setIsDraggingAvatar] = React.useState(false);
+
+    const handleFile = (file: File | undefined, type: 'cover' | 'avatar') => {
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            alert('Lütfen sadece görsel (resim) dosyası seçin.');
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            alert("Lütfen 5MB'dan küçük bir fotoğraf seçin.");
+            return;
+        }
+        if (type === 'cover') {
+            setEditCoverFile(file);
+            setEditCoverPreview(URL.createObjectURL(file));
+        } else {
+            setEditAvatarFile(file);
+            setEditAvatarPreview(URL.createObjectURL(file));
+        }
+        setIsDraggingCover(false);
+        setIsDraggingAvatar(false);
+    };
 
     return (
         <AnimatePresence>
@@ -102,37 +125,49 @@ export function EditProfileModal({
                         <div 
                             className="relative h-40 sm:h-48 w-full rounded-3xl mb-16 border border-card-border" 
                         >
-                            <div className="absolute inset-0 w-full h-full rounded-3xl overflow-hidden group cursor-pointer block">
+                            <div 
+                                className={`absolute inset-0 w-full h-full rounded-3xl overflow-hidden group cursor-pointer block transition-all duration-300 ${isDraggingCover ? 'ring-4 ring-emerald-500 scale-[0.98]' : ''}`}
+                                onDragOver={(e) => { e.preventDefault(); setIsDraggingCover(true); }}
+                                onDragLeave={(e) => { e.preventDefault(); setIsDraggingCover(false); }}
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    handleFile(e.dataTransfer.files?.[0], 'cover');
+                                }}
+                            >
                                 {editCoverPreview ? (
                                     <img src={editCoverPreview} className="w-full h-full object-cover" alt="Cover Preview" />
                                 ) : (
                                     <div className="w-full h-full bg-gradient-to-tr from-cyan-900/20 to-purple-900/20 opacity-40" />
                                 )}
-                                <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                <div className={`absolute inset-0 bg-black/40 flex flex-col items-center justify-center transition-opacity pointer-events-none ${isDraggingCover ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                                     <Camera className="w-6 h-6 text-white mb-2" />
-                                    <span className="text-[10px] text-white font-black uppercase tracking-widest">Kapağı Değiştir</span>
+                                    <span className="text-[10px] text-white font-black uppercase tracking-widest">
+                                        {isDraggingCover ? 'Buraya Bırak' : 'Kapağı Değiştir'}
+                                    </span>
                                 </div>
                                 <input
                                     type="file"
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"
                                     accept="image/*"
-                                    onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                            setEditCoverFile(file);
-                                            setEditCoverPreview(URL.createObjectURL(file));
-                                        }
-                                    }}
+                                    onChange={(e) => handleFile(e.target.files?.[0], 'cover')}
                                 />
                             </div>
 
                             {/* AVATAR OVERLAP */}
                             <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 flex justify-center z-20">
-                                <div className="w-24 h-24 rounded-full border-4 border-background flex flex-col items-center justify-center cursor-pointer hover:border-accent transition-colors bg-foreground/10 overflow-hidden group shadow-2xl relative">
+                                <div 
+                                    className={`w-24 h-24 rounded-full border-4 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 bg-foreground/10 overflow-hidden group shadow-2xl relative ${isDraggingAvatar ? 'border-emerald-500 scale-105' : 'border-background hover:border-accent'}`}
+                                    onDragOver={(e) => { e.preventDefault(); setIsDraggingAvatar(true); }}
+                                    onDragLeave={(e) => { e.preventDefault(); setIsDraggingAvatar(false); }}
+                                    onDrop={(e) => {
+                                        e.preventDefault();
+                                        handleFile(e.dataTransfer.files?.[0], 'avatar');
+                                    }}
+                                >
                                     {editAvatarPreview ? (
                                         <div className="w-full h-full relative">
                                             <img src={editAvatarPreview} className="w-full h-full object-cover" alt="Avatar Preview" />
-                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                            <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity pointer-events-none ${isDraggingAvatar ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                                                 <Camera className="w-5 h-5 text-white" />
                                             </div>
                                         </div>
@@ -142,17 +177,16 @@ export function EditProfileModal({
                                             <span className="text-[8px] text-secondary font-black uppercase tracking-widest pointer-events-none">Profil</span>
                                         </>
                                     )}
+                                    {isDraggingAvatar && !editAvatarPreview && (
+                                        <div className="absolute inset-0 bg-emerald-500/20 flex flex-col items-center justify-center pointer-events-none">
+                                            <span className="text-[8px] text-white font-black uppercase tracking-widest mt-6">Bırak</span>
+                                        </div>
+                                    )}
                                     <input
                                         type="file"
                                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"
                                         accept="image/*"
-                                        onChange={(e) => {
-                                            const file = e.target.files?.[0];
-                                            if (file) {
-                                                setEditAvatarFile(file);
-                                                setEditAvatarPreview(URL.createObjectURL(file));
-                                            }
-                                        }}
+                                        onChange={(e) => handleFile(e.target.files?.[0], 'avatar')}
                                     />
                                 </div>
                             </div>

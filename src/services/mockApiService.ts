@@ -1628,6 +1628,31 @@ export class MockApiService implements IApiService {
             { id: 'f3', user_id: 'u3', username: 'Moffi Kliniği', content: 'KYB onayım hala bekliyor, yardım edin.', severity: 'high', status: 'new', created_at: new Date().toISOString() }
         ];
     }
+
+    async insertUnclaimedPatient(data: {
+        rawName: string; rawPhone: string; petName?: string;
+        petSpecies?: string; petBreed?: string; legacyNotes?: string;
+    }): Promise<string> {
+        console.log("Mock insertUnclaimedPatient:", data);
+        return "mock-unclaimed-id";
+    }
+
+    async getMyUnclaimedPatients(): Promise<any[]> {
+        return [];
+    }
+
+    async getMySmsStatus(): Promise<{provider: string, sender_id: string, is_active: boolean} | null> {
+        return null;
+    }
+
+    async setClinicSmsSettings(provider: string, apiUsername: string, apiKey: string, senderId: string): Promise<boolean> {
+        return true;
+    }
+
+    async sendClaimSms(unclaimedPatientId: string): Promise<{mode: string, sent: boolean}> {
+        console.log("Mock sendClaimSms:", unclaimedPatientId);
+        return { mode: 'mock', sent: false };
+    }
     
     async submitFeedback(feedback: Partial<SystemFeedback>): Promise<void> {}
     async updateFeedbackStatus(id: string, status: 'new' | 'reviewed' | 'implemented' | 'rejected', adminNotes?: string): Promise<void> {}

@@ -73,7 +73,6 @@ BEGIN
     IF TG_OP = 'INSERT' THEN
       -- Yeni kayıt oluşturulurken dışarıdan ne gönderilirse gönderilsin varsayılanlara zorla
       NEW.role = 'user';
-      NEW.is_premium = false;
       NEW.business_approved = false;
       NEW.kyb_status = 'pending';
       NEW.account_status = 'active';
@@ -81,7 +80,6 @@ BEGIN
     ELSIF TG_OP = 'UPDATE' THEN
       -- Güncelleme yapılırken bu hassas alanların değişmesine izin verme (eski değeri koru)
       NEW.role = OLD.role;
-      NEW.is_premium = OLD.is_premium;
       NEW.business_approved = OLD.business_approved;
       NEW.kyb_status = OLD.kyb_status;
       NEW.account_status = OLD.account_status;

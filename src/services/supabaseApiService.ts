@@ -3823,6 +3823,55 @@ export class SupabaseApiService implements IApiService {
             return [];
         }
     }
+
+    // --- UNCLAIMED PATIENTS MIGRATION ---
+    async insertUnclaimedPatient(data: {
+        rawName: string; rawPhone: string; petName?: string;
+        petSpecies?: string; petBreed?: string; legacyNotes?: string;
+    }): Promise<string> {
+        const { data: id, error } = await supabase.rpc('insert_unclaimed_patient', {
+            p_raw_name: data.rawName,
+            p_raw_phone: data.rawPhone,
+            p_pet_name: data.petName || null,
+            p_pet_species: data.petSpecies || null,
+            p_pet_breed: data.petBreed || null,
+            p_legacy_notes: data.legacyNotes || null,
+        });
+        if (error) throw error;
+        return id;
+    }
+
+    async getMyUnclaimedPatients(): Promise<any[]> {
+        const { data, error } = await supabase.rpc('get_my_unclaimed_patients');
+        if (error) { console.error(error); return []; }
+        return data || [];
+    }
+
+    async getMySmsStatus(): Promise<{provider: string, sender_id: string, is_active: boolean} | null> {
+        const { data, error } = await supabase.rpc('get_my_sms_status');
+        if (error || !data || data.length === 0) return null;
+        return data[0];
+    }
+
+    async setClinicSmsSettings(provider: string, apiUsername: string, apiKey: string, senderId: string): Promise<boolean> {
+        const { error } = await supabase.rpc('set_clinic_sms_settings', {
+            p_provider: provider,
+            p_api_username: apiUsername,
+            p_api_key: apiKey,
+            p_sender_id: senderId
+        });
+        if (error) { console.error(error); throw error; }
+        return true;
+    }
+
+    async sendClaimSms(unclaimedPatientId: string): Promise<{mode: string, sent: boolean}> {
+        const { data, error } = await supabase.functions.invoke('send-claim-sms', {
+            body: { unclaimedPatientId }
+        });
+        if (error) { console.error(error); throw error; }
+        return data;
+    }
+
     // --- CLINIC SPECIFIC BUSINESS METHODS ---
 
     async getClinicProducts(clinicId: string): Promise<ShopProduct[]> {

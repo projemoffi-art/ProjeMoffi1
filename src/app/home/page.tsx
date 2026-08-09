@@ -2959,47 +2959,7 @@ export default function LegendaryLightDashboard() {
                                                 </div>
                                             </div>
 
-                                            {/* Profil Fotoğrafı Yönetimi */}
-                                            <div className="flex items-center gap-2 px-1">
-                                                <button
-                                                    onClick={() => {
-                                                        const input = document.createElement('input');
-                                                        input.type = 'file';
-                                                        input.accept = 'image/*';
-                                                        input.onchange = async (e: any) => {
-                                                            const file = e.target.files?.[0];
-                                                            if (!file) return;
-                                                            try {
-                                                                const { apiService: api } = await import('@/services/apiService');
-                                                                const url = await api.uploadMedia(file, 'avatars');
-                                                                await updateProfile({ avatar: url });
-                                                                setToastMsg('✅ Profil fotoğrafı güncellendi!');
-                                                            } catch {
-                                                                setToastMsg('❌ Fotoğraf yüklenemedi.');
-                                                            }
-                                                        };
-                                                        input.click();
-                                                    }}
-                                                    className="text-[9px] text-gray-500 dark:text-gray-400 font-bold bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 px-2.5 py-1 rounded-lg hover:bg-black/10 dark:bg-white/10 transition-colors cursor-pointer flex items-center gap-1"
-                                                >
-                                                    📷 Fotoğraf Değiştir
-                                                </button>
-                                                {authUser?.avatar && (
-                                                    <button
-                                                        onClick={async () => {
-                                                            try {
-                                                                await updateProfile({ avatar: undefined });
-                                                                setToastMsg('✅ Fotoğraf kaldırıldı.');
-                                                            } catch {
-                                                                setToastMsg('❌ İşlem başarısız.');
-                                                            }
-                                                        }}
-                                                        className="text-[9px] text-red-400 font-bold bg-red-500/5 border border-red-500/20 px-2.5 py-1 rounded-lg hover:bg-red-500/10 transition-colors cursor-pointer"
-                                                    >
-                                                        🗑 Kaldır
-                                                    </button>
-                                                )}
-                                            </div>
+
 
                                             {/* Bildirim İzni Yönetimi */}
                                             <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl my-2">
