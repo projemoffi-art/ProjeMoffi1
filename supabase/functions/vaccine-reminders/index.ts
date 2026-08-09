@@ -4,8 +4,8 @@ import webpush from "npm:web-push";
 
 // VAPID keys for Web Push
 webpush.setVapidDetails(
-    'mailto:test@example.com',
-    Deno.env.get('NEXT_PUBLIC_VAPID_PUBLIC_KEY') || '',
+    'mailto:destek@moffi.net',
+    Deno.env.get('VAPID_PUBLIC_KEY') || '',
     Deno.env.get('VAPID_PRIVATE_KEY') || ''
 );
 
