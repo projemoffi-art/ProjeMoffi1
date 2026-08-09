@@ -25,7 +25,7 @@ import { RoutesTab } from "@/components/profile/RoutesTab";
 import { FamilyTab } from "@/components/profile/FamilyTab";
 import { PassportTab } from "@/components/profile/PassportTab";
 
-import { Wallet, Package, Calendar, Map, Users as UsersIcon, Bookmark, FileText } from "lucide-react";
+import { Wallet, Package, Calendar, Map, Users as UsersIcon, Bookmark, FileText, Activity } from "lucide-react";
 
 // ─── Başharf Avatar Yardımcısı ─────────────────────────────
 const AVATAR_COLORS = [
@@ -529,13 +529,6 @@ export default function ProfilePage() {
                                     <Edit3 className="w-3.5 h-3.5" />
                                     Düzenle
                                 </motion.button>
-                                <motion.button
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={() => window.dispatchEvent(new CustomEvent('open-moffi-hub'))}
-                                    className="w-10 h-10 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-400 hover:bg-emerald-500/20 transition-colors"
-                                >
-                                    <Sparkles className="w-5 h-5" />
-                                </motion.button>
                             </>
                         ) : (
                             <motion.button
@@ -596,47 +589,7 @@ export default function ProfilePage() {
                     ))}
                 </div>
 
-                {/* Pets section */}
-                {pets.length > 0 && (
-                    <div className="mt-4 bg-black/5 dark:bg-white/5 rounded-[2rem] p-4 border border-black/5 dark:border-white/5">
-                        <div className="flex items-center justify-between mb-3 px-1">
-                            <h3 className="text-black/60 dark:text-white/60 text-[10px] font-black uppercase tracking-widest">Patilerim</h3>
-                            {isOwnProfile && (
-                                <button onClick={() => setIsAddPetOpen(true)} className="text-[9px] text-emerald-400 font-black uppercase tracking-widest border border-emerald-500/20 px-2 py-1 rounded-lg hover:bg-emerald-500/10 transition-colors">
-                                    + Ekle
-                                </button>
-                            )}
-                        </div>
-                        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                            {pets.map(pet => (
-                                <motion.button
-                                    key={pet.id}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => switchPet(pet.id)}
-                                    className={`shrink-0 flex flex-col items-center gap-2 p-3 rounded-[1.5rem] border transition-all ${
-                                        activePet?.id === pet.id
-                                            ? 'border-emerald-500/40 bg-emerald-500/10'
-                                            : 'border-white/8 bg-white/3 hover:bg-white/6'
-                                    }`}
-                                >
-                                    <div className="w-14 h-14 rounded-2xl overflow-hidden bg-black/5 dark:bg-white/5 border border-white/8">
-                                        {pet.image ? (
-                                            <img src={pet.image} className="w-full h-full object-cover" alt={pet.name} />
-                                        ) : (
-                                            <div className={`w-full h-full bg-gradient-to-tr ${seedColor(pet.name)} flex items-center justify-center text-white text-xl font-black`}>
-                                                {pet.name[0]?.toUpperCase()}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <span className="text-zinc-900 dark:text-white text-[9px] font-black uppercase tracking-wide">{pet.name}</span>
-                                    {activePet?.id === pet.id && (
-                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                                    )}
-                                </motion.button>
-                            ))}
-                        </div>
-                    </div>
-                )}
+
 
                 {/* Tab bar */}
                 <div className="flex mt-6 border-b border-white/8 overflow-x-auto no-scrollbar">
@@ -647,27 +600,23 @@ export default function ProfilePage() {
                         ];
                         const ownerTabs = [
                             ...baseTabs,
-                            { id: 'wallet', label: 'Cüzdan', icon: <Wallet className="w-4 h-4" /> },
-                            { id: 'orders', label: 'Siparişler', icon: <Package className="w-4 h-4" /> },
-                            { id: 'appointments', label: 'Randevular', icon: <Calendar className="w-4 h-4" /> },
-                            { id: 'routes', label: 'Rotalar', icon: <Map className="w-4 h-4" /> },
-                            { id: 'family', label: 'Aile', icon: <UsersIcon className="w-4 h-4" /> },
-                            { id: 'passport', label: 'Pasaport', icon: <FileText className="w-4 h-4" /> },
-                            { id: 'bookmarks', label: 'Kaydedilenler', icon: <Bookmark className="w-4 h-4" /> }
+                            { id: 'tools', label: 'Araçlarım', icon: <Settings className="w-4 h-4" /> }
                         ];
                         const tabsToDisplay = isOwnProfile ? ownerTabs : baseTabs;
+
+                        const isToolsActive = ['tools', 'wallet', 'orders', 'appointments', 'routes', 'family', 'passport', 'bookmarks'].includes(activeTab);
 
                         return tabsToDisplay.map(tab => (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id as any)}
                                 className={`flex-none sm:flex-1 px-3 flex flex-col items-center justify-center gap-1.5 py-3 text-[9px] sm:text-[11px] font-black uppercase tracking-widest transition-colors relative ${
-                                    activeTab === tab.id ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-white/30 hover:text-zinc-700 dark:hover:text-white/60'
+                                    (tab.id === 'tools' ? isToolsActive : activeTab === tab.id) ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-white/30 hover:text-zinc-700 dark:hover:text-white/60'
                                 }`}
                             >
                                 {tab.icon}
                                 {tab.label}
-                                {activeTab === tab.id && (
+                                {(tab.id === 'tools' ? isToolsActive : activeTab === tab.id) && (
                                     <motion.div layoutId="tabIndicator" className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-emerald-400 rounded-full" />
                                 )}
                             </button>
@@ -682,9 +631,9 @@ export default function ProfilePage() {
                             <PostsGrid userId={id} />
                         </motion.div>
                     ) : activeTab === 'pets' ? (
-                        <motion.div key="pets" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-6 space-y-3">
+                        <motion.div key="pets" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-6">
                             {pets.length === 0 ? (
-                                <div className="text-center py-16">
+                                <div className="text-center py-16 space-y-3">
                                     <div className="w-16 h-16 rounded-[1.5rem] bg-black/5 dark:bg-white/5 border border-white/8 flex items-center justify-center mx-auto mb-4">
                                         <PawPrint className="w-8 h-8 text-black/30 dark:text-white/20" />
                                     </div>
@@ -696,59 +645,194 @@ export default function ProfilePage() {
                                     )}
                                 </div>
                             ) : (
-                                pets.map(pet => (
-                                    <motion.div key={pet.id} whileTap={{ scale: 0.99 }} onClick={() => switchPet(pet.id)} className={`flex items-center gap-4 p-4 rounded-3xl transition-colors cursor-pointer ${activePet?.id === pet.id ? 'bg-emerald-500/10 border border-emerald-500/40' : 'bg-white/3 border border-white/8 hover:bg-white/6'}`}>
-                                        <div className="w-14 h-14 rounded-2xl overflow-hidden shrink-0">
-                                            {pet.image ? (
-                                                <img src={pet.image} className="w-full h-full object-cover" alt={pet.name} />
-                                            ) : (
-                                                <div className={`w-full h-full bg-gradient-to-tr ${seedColor(pet.name)} flex items-center justify-center text-white text-xl font-black`}>
-                                                    {pet.name[0]?.toUpperCase()}
+                                <div>
+                                    {isOwnProfile && (
+                                        <div className="flex justify-end mb-4 px-1">
+                                            <button onClick={() => setIsAddPetOpen(true)} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500/10 text-emerald-500 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-500/20 transition-colors">
+                                                <PawPrint className="w-3.5 h-3.5" />
+                                                Yeni Ekle
+                                            </button>
+                                        </div>
+                                    )}
+                                    <div className="space-y-3">
+                                        {pets.map(pet => (
+                                            <motion.div key={pet.id} whileTap={{ scale: 0.99 }} onClick={() => switchPet(pet.id)} className={`flex items-center gap-4 p-4 rounded-[1.5rem] transition-colors cursor-pointer ${activePet?.id === pet.id ? 'bg-emerald-500/10 border border-emerald-500/40' : 'bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 hover:bg-black/10 dark:hover:bg-white/10'}`}>
+                                                <div className="w-14 h-14 rounded-2xl overflow-hidden shrink-0">
+                                                    {pet.image ? (
+                                                        <img src={pet.image} className="w-full h-full object-cover" alt={pet.name} />
+                                                    ) : (
+                                                        <div className={`w-full h-full bg-gradient-to-tr ${seedColor(pet.name)} flex items-center justify-center text-white text-xl font-black`}>
+                                                            {pet.name[0]?.toUpperCase()}
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="text-zinc-900 dark:text-white font-black uppercase tracking-tight flex items-center gap-2">
-                                                {pet.name}
-                                                {activePet?.id === pet.id && <div className="w-2 h-2 rounded-full bg-emerald-400" />}
-                                            </p>
-                                            <p className="text-black/50 dark:text-white/40 text-xs font-bold mt-0.5">{pet.breed || 'Tür bilgisi yok'} • {pet.gender || ''}</p>
-                                        </div>
-                                        <ChevronRight className="w-5 h-5 text-black/30 dark:text-white/20" />
-                                    </motion.div>
-                                ))
+                                                <div className="flex-1">
+                                                    <p className="text-zinc-900 dark:text-white font-black uppercase tracking-tight flex items-center gap-2">
+                                                        {pet.name}
+                                                        {activePet?.id === pet.id && <div className="w-2 h-2 rounded-full bg-emerald-400" />}
+                                                    </p>
+                                                    <p className="text-black/50 dark:text-white/40 text-xs font-bold mt-0.5">{pet.breed || 'Tür bilgisi yok'} • {pet.gender || ''}</p>
+                                                </div>
+                                                <ChevronRight className="w-5 h-5 text-black/30 dark:text-white/20" />
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                </div>
                             )}
                         </motion.div>
+                    ) : activeTab === 'tools' && isOwnProfile ? (
+                        <motion.div key="tools" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-6">
+                            
+                            {/* Sağlık & Bakım Grubu */}
+                            <div className="mb-6">
+                                <h3 className="text-[10px] font-black text-black/40 dark:text-white/30 uppercase tracking-[0.2em] mb-3 ml-2 flex items-center gap-2">
+                                    <Heart className="w-3 h-3 text-rose-400" /> Sağlık & Bakım
+                                </h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <motion.button whileTap={{ scale: 0.97 }} onClick={() => setActiveTab('appointments')} className="col-span-2 p-5 rounded-[1.5rem] bg-gradient-to-br from-rose-500/10 to-pink-500/5 border border-rose-500/20 hover:border-rose-500/40 transition-colors flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-rose-500/20 flex items-center justify-center text-rose-500">
+                                                <Calendar className="w-5 h-5" />
+                                            </div>
+                                            <div className="text-left">
+                                                <p className="text-sm font-black text-zinc-900 dark:text-white uppercase">Randevular</p>
+                                                <p className="text-[9px] font-bold text-rose-500/80 uppercase mt-0.5">Veteriner & Aşı Takvimi</p>
+                                            </div>
+                                        </div>
+                                        <ChevronRight className="w-5 h-5 text-rose-400/50" />
+                                    </motion.button>
+                                    <motion.button whileTap={{ scale: 0.97 }} onClick={() => setActiveTab('passport')} className="p-4 rounded-[1.5rem] bg-gradient-to-br from-sky-500/10 to-blue-500/5 border border-sky-500/20 hover:border-sky-500/40 transition-colors flex flex-col gap-3">
+                                        <div className="w-9 h-9 rounded-xl bg-sky-500/20 flex items-center justify-center text-sky-500">
+                                            <FileText className="w-4.5 h-4.5" />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-xs font-black text-zinc-900 dark:text-white uppercase">Pasaport</p>
+                                            <p className="text-[8px] font-bold text-sky-500/80 uppercase mt-0.5">Kimlik Bilgileri</p>
+                                        </div>
+                                    </motion.button>
+                                    <motion.button whileTap={{ scale: 0.97 }} onClick={() => setActiveTab('family')} className="p-4 rounded-[1.5rem] bg-gradient-to-br from-purple-500/10 to-indigo-500/5 border border-purple-500/20 hover:border-purple-500/40 transition-colors flex flex-col gap-3">
+                                        <div className="w-9 h-9 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-500">
+                                            <UsersIcon className="w-4.5 h-4.5" />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-xs font-black text-zinc-900 dark:text-white uppercase">Aile</p>
+                                            <p className="text-[8px] font-bold text-purple-500/80 uppercase mt-0.5">Ortak Bakım</p>
+                                        </div>
+                                    </motion.button>
+                                </div>
+                            </div>
+
+                            {/* Finans & Alışveriş Grubu */}
+                            <div className="mb-6">
+                                <h3 className="text-[10px] font-black text-black/40 dark:text-white/30 uppercase tracking-[0.2em] mb-3 ml-2 flex items-center gap-2">
+                                    <Wallet className="w-3 h-3 text-emerald-400" /> Finans & Alışveriş
+                                </h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <motion.button whileTap={{ scale: 0.97 }} onClick={() => setActiveTab('wallet')} className="col-span-2 p-5 rounded-[1.5rem] bg-gradient-to-br from-emerald-500/10 to-teal-500/5 border border-emerald-500/20 hover:border-emerald-500/40 transition-colors flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-500">
+                                                <Wallet className="w-5 h-5" />
+                                            </div>
+                                            <div className="text-left">
+                                                <p className="text-sm font-black text-zinc-900 dark:text-white uppercase">Moffi Pay</p>
+                                                <p className="text-[9px] font-bold text-emerald-500/80 uppercase mt-0.5">Bakiye & Temassız</p>
+                                            </div>
+                                        </div>
+                                        <ChevronRight className="w-5 h-5 text-emerald-400/50" />
+                                    </motion.button>
+                                    <motion.button whileTap={{ scale: 0.97 }} onClick={() => setActiveTab('orders')} className="col-span-2 p-4 rounded-[1.5rem] bg-gradient-to-br from-amber-500/10 to-orange-500/5 border border-amber-500/20 hover:border-amber-500/40 transition-colors flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-500">
+                                                <Package className="w-4.5 h-4.5" />
+                                            </div>
+                                            <div className="text-left">
+                                                <p className="text-xs font-black text-zinc-900 dark:text-white uppercase">Siparişler</p>
+                                                <p className="text-[8px] font-bold text-amber-500/80 uppercase mt-0.5">Kargo Takibi</p>
+                                            </div>
+                                        </div>
+                                        <ChevronRight className="w-4 h-4 text-amber-400/50" />
+                                    </motion.button>
+                                </div>
+                            </div>
+
+                            {/* Sosyal & Aktivite Grubu */}
+                            <div className="mb-6">
+                                <h3 className="text-[10px] font-black text-black/40 dark:text-white/30 uppercase tracking-[0.2em] mb-3 ml-2 flex items-center gap-2">
+                                    <Activity className="w-3 h-3 text-indigo-400" /> Sosyal & Aktivite
+                                </h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <motion.button whileTap={{ scale: 0.97 }} onClick={() => setActiveTab('routes')} className="p-4 rounded-[1.5rem] bg-gradient-to-br from-indigo-500/10 to-blue-500/5 border border-indigo-500/20 hover:border-indigo-500/40 transition-colors flex flex-col gap-3">
+                                        <div className="w-9 h-9 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-500">
+                                            <Map className="w-4.5 h-4.5" />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-xs font-black text-zinc-900 dark:text-white uppercase">Rotalar</p>
+                                            <p className="text-[8px] font-bold text-indigo-500/80 uppercase mt-0.5">Yürüyüşler</p>
+                                        </div>
+                                    </motion.button>
+                                    <motion.button whileTap={{ scale: 0.97 }} onClick={() => setActiveTab('bookmarks')} className="p-4 rounded-[1.5rem] bg-gradient-to-br from-zinc-500/10 to-gray-500/5 border border-zinc-500/20 hover:border-zinc-500/40 transition-colors flex flex-col gap-3">
+                                        <div className="w-9 h-9 rounded-xl bg-zinc-500/20 flex items-center justify-center text-zinc-500">
+                                            <Bookmark className="w-4.5 h-4.5" />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-xs font-black text-zinc-900 dark:text-white uppercase">Kaydedilenler</p>
+                                            <p className="text-[8px] font-bold text-zinc-500/80 uppercase mt-0.5">Koleksiyon</p>
+                                        </div>
+                                    </motion.button>
+                                </div>
+                            </div>
+                        </motion.div>
                     ) : activeTab === 'wallet' && isOwnProfile ? (
-                        <motion.div key="wallet" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+                        <motion.div key="wallet" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="mt-4">
+                            <button onClick={() => setActiveTab('tools')} className="mb-4 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-black/50 dark:text-white/50 hover:text-emerald-500 transition-colors">
+                                <ArrowLeft className="w-3.5 h-3.5" /> Geri Dön
+                            </button>
                             <WalletTab />
                         </motion.div>
                     ) : activeTab === 'orders' && isOwnProfile ? (
-                        <motion.div key="orders" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+                        <motion.div key="orders" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="mt-4">
+                            <button onClick={() => setActiveTab('tools')} className="mb-4 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-black/50 dark:text-white/50 hover:text-emerald-500 transition-colors">
+                                <ArrowLeft className="w-3.5 h-3.5" /> Geri Dön
+                            </button>
                             <OrdersTab orders={[]} />
                         </motion.div>
                     ) : activeTab === 'appointments' && isOwnProfile ? (
-                        <motion.div key="appointments" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+                        <motion.div key="appointments" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="mt-4">
+                            <button onClick={() => setActiveTab('tools')} className="mb-4 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-black/50 dark:text-white/50 hover:text-emerald-500 transition-colors">
+                                <ArrowLeft className="w-3.5 h-3.5" /> Geri Dön
+                            </button>
                             <AppointmentsTab appointments={[]} />
                         </motion.div>
-                    ) : activeTab === 'routes' && isOwnProfile ? (
-                        <motion.div key="routes" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
-                            <RoutesTab routes={[]} activePet={activePet} />
-                        </motion.div>
-                    ) : activeTab === 'family' && isOwnProfile ? (
-                        <motion.div key="family" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
-                            <FamilyTab />
-                        </motion.div>
                     ) : activeTab === 'passport' && isOwnProfile ? (
-                        <motion.div key="passport" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+                        <motion.div key="passport" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="mt-4">
+                            <button onClick={() => setActiveTab('tools')} className="mb-4 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-black/50 dark:text-white/50 hover:text-emerald-500 transition-colors">
+                                <ArrowLeft className="w-3.5 h-3.5" /> Geri Dön
+                            </button>
                             {activePet ? (
                                 <PassportTab pet={activePet} />
                             ) : (
                                 <div className="text-center py-20 opacity-40 font-black text-zinc-900 dark:text-white uppercase tracking-[0.2em]">Lütfen bir pati seçin</div>
                             )}
                         </motion.div>
+                    ) : activeTab === 'routes' && isOwnProfile ? (
+                        <motion.div key="routes" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="mt-4">
+                            <button onClick={() => setActiveTab('tools')} className="mb-4 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-black/50 dark:text-white/50 hover:text-emerald-500 transition-colors">
+                                <ArrowLeft className="w-3.5 h-3.5" /> Geri Dön
+                            </button>
+                            <RoutesTab routes={[]} activePet={activePet} />
+                        </motion.div>
+                    ) : activeTab === 'family' && isOwnProfile ? (
+                        <motion.div key="family" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="mt-4">
+                            <button onClick={() => setActiveTab('tools')} className="mb-4 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-black/50 dark:text-white/50 hover:text-emerald-500 transition-colors">
+                                <ArrowLeft className="w-3.5 h-3.5" /> Geri Dön
+                            </button>
+                            <FamilyTab />
+                        </motion.div>
                     ) : activeTab === 'bookmarks' && isOwnProfile ? (
-                        <motion.div key="bookmarks" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+                        <motion.div key="bookmarks" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="mt-4">
+                            <button onClick={() => setActiveTab('tools')} className="mb-4 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-black/50 dark:text-white/50 hover:text-emerald-500 transition-colors">
+                                <ArrowLeft className="w-3.5 h-3.5" /> Geri Dön
+                            </button>
                             <div className="text-center py-20 opacity-40 font-black text-zinc-900 dark:text-white uppercase italic tracking-[0.5em]">Koleksiyon Boş</div>
                         </motion.div>
                     ) : null}
