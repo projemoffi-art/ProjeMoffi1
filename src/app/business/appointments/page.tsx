@@ -74,14 +74,14 @@ export default function BusinessAppointmentsPage() {
     // Tabs and Shift Settings States
     const [activeTab, setActiveTab] = useState<'appointments' | 'advice' | 'shifts'>('appointments');
     const [isSavingAdvice, setIsSavingAdvice] = useState(false);
-    const [workingDays, setWorkingDays] = useState<{ [key: string]: boolean }>({
-        Monday: true,
-        Tuesday: true,
-        Wednesday: true,
-        Thursday: true,
-        Friday: true,
-        Saturday: false,
-        Sunday: false
+    const [workingHours, setWorkingHours] = useState<{ [key: string]: { open: string, close: string, closed: boolean } }>({
+        monday: { open: "09:00", close: "18:00", closed: false },
+        tuesday: { open: "09:00", close: "18:00", closed: false },
+        wednesday: { open: "09:00", close: "18:00", closed: false },
+        thursday: { open: "09:00", close: "18:00", closed: false },
+        friday: { open: "09:00", close: "18:00", closed: false },
+        saturday: { open: "09:00", close: "18:00", closed: true },
+        sunday: { open: "09:00", close: "18:00", closed: true }
     });
     const [startTime, setStartTime] = useState("09:00");
     const [endTime, setEndTime] = useState("18:00");
@@ -152,9 +152,6 @@ export default function BusinessAppointmentsPage() {
                             phone: item.user?.phone || ""
                         }
                     },
-                    paymentId: item.payment_id,
-                    paymentAmount: item.payment_amount,
-                    paymentStatus: item.payment_status,
                     clinicId: item.clinic_id,
                     clinicName: item.clinic_name
                 };
@@ -181,9 +178,16 @@ export default function BusinessAppointmentsPage() {
             if (isSupabaseEnabled) {
                 try {
                     const clinicId = user.id;
-                    const settings = await apiService.getClinicSettings(clinicId);
+                    const [settings, profile] = await Promise.all([
+                        apiService.getClinicSettings(clinicId),
+                        apiService.getUserProfile(clinicId)
+                    ]);
+                    
+                    if (profile?.working_hours) {
+                        setWorkingHours(profile.working_hours);
+                    }
+                    
                     if (settings) {
-                        if (settings.workingDays) setWorkingDays(settings.workingDays);
                         if (settings.startTime) setStartTime(settings.startTime);
                         if (settings.endTime) setEndTime(settings.endTime);
                         if (settings.lunchStart) setLunchStart(settings.lunchStart);
@@ -200,7 +204,7 @@ export default function BusinessAppointmentsPage() {
                 const saved = localStorage.getItem('moffi_clinic_settings');
                 if (saved) {
                     const parsed = JSON.parse(saved);
-                    if (parsed.workingDays) setWorkingDays(parsed.workingDays);
+                    if (parsed.workingHours) setWorkingHours(parsed.workingHours);
                     if (parsed.startTime) setStartTime(parsed.startTime);
                     if (parsed.endTime) setEndTime(parsed.endTime);
                     if (parsed.lunchStart) setLunchStart(parsed.lunchStart);
@@ -240,8 +244,8 @@ export default function BusinessAppointmentsPage() {
             if (stored) {
                 setAppointments(JSON.parse(stored));
             } else {
-                localStorage.setItem('moffi_confirmed_appointments', JSON.stringify(INITIAL_APPOINTMENTS));
-                setAppointments(INITIAL_APPOINTMENTS);
+                localStorage.setItem('moffi_confirmed_appointments', JSON.stringify([]));
+                setAppointments([]);
             }
         } catch (e) {
             console.error("Storage Load Error:", e);
@@ -307,7 +311,7 @@ export default function BusinessAppointmentsPage() {
                 showToast(
                     action === 'accept' 
                         ? `Randevu Onaylandı! ${target.petName} için bildirim gönderildi. ✨`
-                        : `Randevu Reddedildi! Ücret cüzdana iade edildi. ❌`, 
+                        : `Randevu Reddedildi! ❌`, 
                     action === 'accept' ? "CheckCircle2" : "XCircle", 
                     action === 'accept' ? "text-emerald-400 font-bold" : "text-red-400 font-bold"
                 );
@@ -330,20 +334,6 @@ export default function BusinessAppointmentsPage() {
                     } catch (emailErr) {
                         console.error("Failed to send appointment confirmation email:", emailErr);
                     }
-
-                    // --- B2: Create Transaction Record ---
-                    try {
-                        await apiService.createTransaction({
-                            clinic_id: user?.id || "",
-                            type: 'sale',
-                            amount: target.paymentAmount || 350,
-                            status: 'completed',
-                            description: `${target.petName} - ${target.type || "Veteriner Randevusu"}`,
-                            reference_id: id.toString()
-                        });
-                    } catch (txErr) {
-                        console.error("Failed to record transaction:", txErr);
-                    }
                 }
                 // --- END B1 ---
 
@@ -359,59 +349,10 @@ export default function BusinessAppointmentsPage() {
         if (action === 'accept') {
             const updatedAppt = {
                 ...target,
-                status: 'confirmed',
-                paymentStatus: 'captured'
+                status: 'confirmed'
             };
             const updated = [...appointments, updatedAppt].sort((a, b) => (a.time || "").localeCompare(b.time || ""));
             saveAppointments(updated);
-
-            // Record B2B financial transactions
-            try {
-                const storedTx = localStorage.getItem('moffi_business_transactions');
-                const businessTxs = storedTx ? JSON.parse(storedTx) : [];
-                
-                const cleanAmount = target.paymentAmount || 350;
-                const bizId = target.clinicId || 'biz_vet1';
-                
-                const saleTx = {
-                    id: 'tx_sale_' + Date.now(),
-                    businessId: bizId,
-                    type: 'sale',
-                    amount: cleanAmount,
-                    description: `Randevu Onayı #${target.id} (${target.petName})`,
-                    date: new Date().toISOString(),
-                    status: 'completed'
-                };
-                
-                const commTx = {
-                    id: 'tx_comm_' + Date.now(),
-                    businessId: bizId,
-                    type: 'commission',
-                    amount: -cleanAmount * 0.1,
-                    description: `Sistem komisyon kesintisi (%10)`,
-                    date: new Date().toISOString(),
-                    status: 'completed'
-                };
-                
-                businessTxs.push(saleTx, commTx);
-                localStorage.setItem('moffi_business_transactions', JSON.stringify(businessTxs));
-            } catch (e) {
-                console.error("B2B transaction recording failed:", e);
-            }
-
-            // Update user transaction status in B2C transactions
-            try {
-                const storedTxs = localStorage.getItem('moffi_fiat_transactions');
-                if (storedTxs !== null) {
-                    const list = JSON.parse(storedTxs);
-                    // Find blocked transaction and change status to captured
-                    const matchedTx = list.find((tx: any) => tx.status === 'blocked');
-                    if (matchedTx) {
-                        matchedTx.status = 'captured';
-                    }
-                    localStorage.setItem('moffi_fiat_transactions', JSON.stringify(list));
-                }
-            } catch (e) {}
 
             // Replace alert with premium showToast
             showToast(`Randevu Onaylandı! ${target.petName} için bildirim gönderildi. ✨`, "CheckCircle2", "text-emerald-400 font-bold");
@@ -421,44 +362,8 @@ export default function BusinessAppointmentsPage() {
             channel.postMessage({ type: 'APPOINTMENT_ACTION', appointmentId: id, action: 'accept', petName: target.petName });
             channel.close();
         } else if (action === 'reject') {
-            // Refund B2C User
-            try {
-                const storedBalance = localStorage.getItem('moffi_fiat_balance');
-                const storedTxs = localStorage.getItem('moffi_fiat_transactions');
-                const price = target.paymentAmount || 350;
-                
-                if (storedBalance !== null) {
-                    const balanceVal = parseFloat(storedBalance);
-                    localStorage.setItem('moffi_fiat_balance', (balanceVal + price).toFixed(2));
-                }
-                
-                if (storedTxs !== null) {
-                    const list = JSON.parse(storedTxs);
-                    // Find the blocked transaction for this merchant & amount and mark it refunded
-                    const matchedTx = list.find((tx: any) => tx.status === 'blocked');
-                    if (matchedTx) {
-                        matchedTx.status = 'refunded';
-                    } else {
-                        // Append a new refund transaction if not found
-                        list.unshift({
-                            id: 'tx_refund_' + Date.now(),
-                            title: 'Randevu İade Tutarı',
-                            category: 'health',
-                            amount: price,
-                            date: new Date().toISOString().split('T')[0],
-                            merchant: target.clinicName || 'Moda Veteriner Polikliniği',
-                            status: 'refunded',
-                            icon: '💉'
-                        });
-                    }
-                    localStorage.setItem('moffi_fiat_transactions', JSON.stringify(list));
-                }
-            } catch (e) {
-                console.error("Refund processing failed:", e);
-            }
-            
             // Replace alert with premium showToast
-            showToast(`Randevu Reddedildi! Ücret cüzdana iade edildi. ❌`, "XCircle", "text-red-400 font-bold");
+            showToast(`Randevu Reddedildi! ❌`, "XCircle", "text-red-400 font-bold");
             
             // Broadcast event to pati sahibi
             const channel = new BroadcastChannel('moffi_appointments_channel');
@@ -653,7 +558,7 @@ export default function BusinessAppointmentsPage() {
         }
 
         const settings = {
-            workingDays,
+            workingHours,
             startTime,
             endTime,
             lunchStart,
@@ -664,7 +569,10 @@ export default function BusinessAppointmentsPage() {
         if (isSupabaseEnabled) {
             try {
                 const clinicId = user.id;
-                await apiService.saveClinicSettings(clinicId, settings);
+                await Promise.all([
+                    apiService.saveClinicSettings(clinicId, settings),
+                    apiService.updateProfile({ working_hours: workingHours })
+                ]);
             } catch (e) {
                 console.error("Failed to save clinic settings to Supabase:", e);
                 showToast("Vardiya ayarları veritabanına kaydedilemedi! ❌", "AlertTriangle", "text-red-500 font-bold");
@@ -923,64 +831,65 @@ export default function BusinessAppointmentsPage() {
                             <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Klinik çalışma günlerini ve randevu aralıklarını özelleştirin</p>
                         </div>
 
-                        {/* Working Days Selectors */}
+                        {/* Working Hours Selectors */}
                         <div className="space-y-4">
-                            <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">ÇALIŞMA GÜNLERİ</label>
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">ÇALIŞMA SAATLERİ (GÜN BAZLI)</label>
+                            <div className="space-y-3">
                                 {[
-                                    { key: 'Monday', label: 'Pazartesi' },
-                                    { key: 'Tuesday', label: 'Salı' },
-                                    { key: 'Wednesday', label: 'Çarşamba' },
-                                    { key: 'Thursday', label: 'Perşembe' },
-                                    { key: 'Friday', label: 'Cuma' },
-                                    { key: 'Saturday', label: 'Cumartesi' },
-                                    { key: 'Sunday', label: 'Pazar' }
-                                ].map((day) => (
-                                    <div 
-                                        key={day.key}
-                                        onClick={() => setWorkingDays(prev => ({ ...prev, [day.key]: !prev[day.key] }))}
-                                        className={`flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer select-none transition-all ${
-                                            workingDays[day.key] 
-                                                ? 'bg-[#5B4D9D]/5 border-[#5B4D9D] text-[#5B4D9D] font-bold' 
-                                                : 'bg-[#F8F9FC] dark:bg-white/5 border-zinc-200 dark:border-card-border text-gray-500 dark:text-gray-400 hover:border-zinc-350 dark:hover:border-[#3f3f46]'
-                                        }`}
-                                    >
-                                        <span className="text-xs">{day.label}</span>
-                                        <div className={`w-8 h-4.5 rounded-full p-0.5 transition-colors duration-200 flex items-center ${workingDays[day.key] ? 'bg-[#5B4D9D]' : 'bg-zinc-250 dark:bg-zinc-700'}`}>
-                                            <div className={`bg-white dark:bg-black w-3.5 h-3.5 rounded-full shadow-md transform transition-transform duration-200 ${workingDays[day.key] ? 'translate-x-3.5' : 'translate-x-0'}`} />
+                                    { key: 'monday', label: 'Pazartesi' },
+                                    { key: 'tuesday', label: 'Salı' },
+                                    { key: 'wednesday', label: 'Çarşamba' },
+                                    { key: 'thursday', label: 'Perşembe' },
+                                    { key: 'friday', label: 'Cuma' },
+                                    { key: 'saturday', label: 'Cumartesi' },
+                                    { key: 'sunday', label: 'Pazar' }
+                                ].map((day) => {
+                                    const h = workingHours[day.key] || { open: "09:00", close: "18:00", closed: false };
+                                    return (
+                                        <div key={day.key} className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-2xl border bg-[#F8F9FC] dark:bg-white/5 border-zinc-200 dark:border-card-border gap-3">
+                                            <div className="flex items-center gap-3">
+                                                <div 
+                                                    onClick={() => setWorkingHours(prev => ({ ...prev, [day.key]: { ...(prev[day.key] || { open: "09:00", close: "18:00" }), closed: !(prev[day.key]?.closed) } }))}
+                                                    className={`w-8 h-4.5 rounded-full p-0.5 transition-colors duration-200 flex items-center cursor-pointer ${!h.closed ? 'bg-[#5B4D9D]' : 'bg-zinc-250 dark:bg-zinc-700'}`}
+                                                >
+                                                    <div className={`bg-white dark:bg-black w-3.5 h-3.5 rounded-full shadow-md transform transition-transform duration-200 ${!h.closed ? 'translate-x-3.5' : 'translate-x-0'}`} />
+                                                </div>
+                                                <span className={`text-sm font-bold ${!h.closed ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 line-through'}`}>{day.label}</span>
+                                            </div>
+                                            
+                                            <div className={`flex items-center gap-2 ${h.closed ? 'opacity-50 pointer-events-none' : ''}`}>
+                                                <select
+                                                    value={h.open}
+                                                    onChange={(e) => setWorkingHours(prev => ({ ...prev, [day.key]: { ...(prev[day.key] || { close: "18:00", closed: false }), open: e.target.value } }))}
+                                                    className="bg-white dark:bg-[#1A1A1A] border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-medium focus:outline-none focus:border-[#5B4D9D]"
+                                                >
+                                                    {Array.from({ length: 24 * 2 }).map((_, i) => {
+                                                        const hr = Math.floor(i / 2).toString().padStart(2, '0');
+                                                        const min = i % 2 === 0 ? '00' : '30';
+                                                        return <option key={`${hr}:${min}`} value={`${hr}:${min}`}>{`${hr}:${min}`}</option>;
+                                                    })}
+                                                </select>
+                                                <span className="text-gray-400">-</span>
+                                                <select
+                                                    value={h.close}
+                                                    onChange={(e) => setWorkingHours(prev => ({ ...prev, [day.key]: { ...(prev[day.key] || { open: "09:00", closed: false }), close: e.target.value } }))}
+                                                    className="bg-white dark:bg-[#1A1A1A] border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-medium focus:outline-none focus:border-[#5B4D9D]"
+                                                >
+                                                    {Array.from({ length: 24 * 2 }).map((_, i) => {
+                                                        const hr = Math.floor(i / 2).toString().padStart(2, '0');
+                                                        const min = i % 2 === 0 ? '00' : '30';
+                                                        return <option key={`${hr}:${min}`} value={`${hr}:${min}`}>{`${hr}:${min}`}</option>;
+                                                    })}
+                                                </select>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
 
-                        {/* Hours Inputs */}
+                        {/* Lunch and Duration Inputs */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-zinc-150 dark:border-white/5 text-left">
-                            <div className="space-y-4">
-                                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">ÇALIŞMA SAATLERİ</label>
-                                <div className="flex gap-4">
-                                    <div className="flex-1 space-y-1.5">
-                                        <label className="text-[9px] font-bold text-gray-500">Açılış</label>
-                                        <select 
-                                            value={startTime}
-                                            onChange={e => setStartTime(e.target.value)}
-                                            className="w-full bg-[#F8F9FC] dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-xl px-3 py-2.5 text-xs focus:border-[#5B4D9D] outline-none text-foreground dark:text-white"
-                                        >
-                                            {['08:00', '08:30', '09:00', '09:30', '10:00'].map(t => <option key={t} value={t} className="bg-card dark:bg-[#121212]">{t}</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="flex-1 space-y-1.5">
-                                        <label className="text-[9px] font-bold text-gray-500">Kapanış</label>
-                                        <select 
-                                            value={endTime}
-                                            onChange={e => setEndTime(e.target.value)}
-                                            className="w-full bg-[#F8F9FC] dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-xl px-3 py-2.5 text-xs focus:border-[#5B4D9D] outline-none text-foreground dark:text-white"
-                                        >
-                                            {['17:00', '17:30', '18:00', '18:30', '19:00', '20:00'].map(t => <option key={t} value={t} className="bg-card dark:bg-[#121212]">{t}</option>)}
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
 
                             <div className="space-y-4">
                                 <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">ÖĞLE ARASI TATİLİ</label>
@@ -1007,21 +916,20 @@ export default function BusinessAppointmentsPage() {
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Slot Duration Select */}
-                        <div className="space-y-4 pt-4 border-t border-zinc-150 dark:border-white/5 max-w-xs text-left">
-                            <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">RANDEVU MUAYENE SÜRESI</label>
-                            <select 
-                                value={slotDuration}
-                                onChange={e => setSlotDuration(Number(e.target.value))}
-                                className="w-full bg-[#F8F9FC] dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-xl px-3 py-2.5 text-xs focus:border-[#5B4D9D] outline-none text-foreground dark:text-white"
-                            >
-                                <option value={15} className="bg-card dark:bg-[#121212]">15 Dakika</option>
-                                <option value={30} className="bg-card dark:bg-[#121212]">30 Dakika</option>
-                                <option value={45} className="bg-card dark:bg-[#121212]">45 Dakika</option>
-                                <option value={60} className="bg-card dark:bg-[#121212]">60 Dakika</option>
-                            </select>
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block">RANDEVU MUAYENE SÜRESI</label>
+                                <select 
+                                    value={slotDuration}
+                                    onChange={e => setSlotDuration(Number(e.target.value))}
+                                    className="w-full bg-[#F8F9FC] dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-xl px-3 py-2.5 text-xs focus:border-[#5B4D9D] outline-none text-foreground dark:text-white"
+                                >
+                                    <option value={15} className="bg-card dark:bg-[#121212]">15 Dakika</option>
+                                    <option value={30} className="bg-card dark:bg-[#121212]">30 Dakika</option>
+                                    <option value={45} className="bg-card dark:bg-[#121212]">45 Dakika</option>
+                                    <option value={60} className="bg-card dark:bg-[#121212]">60 Dakika</option>
+                                </select>
+                            </div>
                         </div>
 
                         {/* Save Button */}
