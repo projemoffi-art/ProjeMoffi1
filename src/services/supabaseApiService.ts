@@ -2245,6 +2245,137 @@ export class SupabaseApiService implements IApiService {
         return true;
     }
 
+    // --- FAZ 7: CLINIC REVIEWS ---
+    async getClinicReviews(clinicId: string): Promise<{ reviews: any[], averageRating: number }> {
+        const { data, error } = await supabase
+            .from('clinic_reviews')
+            .select('*')
+            .eq('clinic_id', clinicId)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error("Error fetching clinic reviews:", error);
+            return { reviews: [], averageRating: 0 };
+        }
+
+        const reviews = data || [];
+        
+        // Fetch user profiles manually to avoid PostgREST relationship ambiguity
+        const userIds = [...new Set(reviews.map((r: any) => r.user_id))];
+        let profilesMap: Record<string, any> = {};
+        if (userIds.length > 0) {
+            const { data: profiles } = await supabase.from('profiles').select('id, full_name, username, avatar_url').in('id', userIds);
+            if (profiles) {
+                profiles.forEach((p: any) => { profilesMap[p.id] = p; });
+            }
+        }
+
+        const averageRating = reviews.length > 0 
+            ? reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviews.length 
+            : 0;
+
+        return { 
+            reviews: reviews.map((r: any) => ({
+                id: r.id,
+                clinic_id: r.clinic_id,
+                user_id: r.user_id,
+                appointment_id: r.appointment_id,
+                rating: r.rating,
+                comment: r.comment,
+                clinic_reply: r.clinic_reply,
+                clinic_replied_at: r.clinic_replied_at,
+                created_at: r.created_at,
+                user: {
+                    name: profilesMap[r.user_id]?.full_name || profilesMap[r.user_id]?.username || 'Gizli Kullanıcı',
+                    avatar: profilesMap[r.user_id]?.avatar_url || 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=100'
+                }
+            })), 
+            averageRating 
+        };
+    }
+
+    async submitReview(clinicId: string, appointmentId: string, rating: number, comment?: string): Promise<boolean> {
+        const user = await this.getSessionUser();
+        if (!user) return false;
+
+        const { error } = await supabase
+            .from('clinic_reviews')
+            .insert({
+                clinic_id: clinicId,
+                user_id: user.id,
+                appointment_id: appointmentId,
+                rating,
+                comment
+            });
+
+        if (error) {
+            console.error("Error submitting review:", error);
+            return false;
+        }
+        return true;
+    }
+
+    async getReviewableAppointments(userId: string): Promise<any[]> {
+        // Fetch confirmed appointments in the past
+        const { data: appointments, error: aptError } = await supabase
+            .from('appointments')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('status', 'confirmed')
+            .lt('appointment_date', new Date().toISOString())
+            .order('appointment_date', { ascending: false });
+
+        if (aptError) {
+            console.error("Error fetching reviewable appointments:", aptError);
+            return [];
+        }
+        
+        if (!appointments || appointments.length === 0) return [];
+
+        // Fetch their reviews
+        const aptIds = appointments.map((a: any) => a.id);
+        const { data: reviews } = await supabase.from('clinic_reviews').select('appointment_id').in('appointment_id', aptIds);
+        const reviewedAptIds = new Set((reviews || []).map((r: any) => r.appointment_id));
+
+        // Filter out reviewed ones
+        const reviewable = appointments.filter((a: any) => !reviewedAptIds.has(a.id));
+        
+        if (reviewable.length === 0) return [];
+        
+        // Enrich with clinic info
+        const clinicIds = [...new Set(reviewable.map((a: any) => a.clinic_id))];
+        const { data: clinics } = await supabase.from('profiles').select('id, business_name, full_name, avatar_url').in('id', clinicIds);
+        const clinicMap: Record<string, any> = {};
+        if (clinics) {
+            clinics.forEach((c: any) => { clinicMap[c.id] = c; });
+        }
+        
+        return reviewable.map((a: any) => ({
+            ...a,
+            clinic: clinicMap[a.clinic_id] ? { 
+                name: clinicMap[a.clinic_id].business_name || clinicMap[a.clinic_id].full_name || 'Klinik', 
+                avatar_url: clinicMap[a.clinic_id].avatar_url 
+            } : { name: 'Klinik' }
+        }));
+    }
+
+    async replyToReview(reviewId: string, clinicId: string, replyText: string): Promise<boolean> {
+        const { error } = await supabase
+            .from('clinic_reviews')
+            .update({
+                clinic_reply: replyText,
+                clinic_replied_at: new Date().toISOString()
+            })
+            .eq('id', reviewId)
+            .eq('clinic_id', clinicId);
+
+        if (error) {
+            console.error("Error replying to review:", error);
+            return false;
+        }
+        return true;
+    }
+
 
     async saveClinicSettings(clinicId: string, settings: any): Promise<void> {
         const { error } = await supabase

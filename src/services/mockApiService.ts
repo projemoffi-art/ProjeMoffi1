@@ -1686,14 +1686,22 @@ export class MockApiService implements IApiService {
         return [];
     }
 
-    // Clinic Exceptions (Mock)
-    async getClinicExceptions(clinicId: string, startDate?: string, endDate?: string): Promise<any[]> {
-        return [];
+    // Clinic Exceptions (Faz 6)
+    async getClinicExceptions(clinicId: string, startDate?: string, endDate?: string): Promise<any[]> { return []; }
+    async upsertClinicException(clinicId: string, date: string, isClosed: boolean, openTime?: string | null, closeTime?: string | null, note?: string): Promise<boolean> { return true; }
+    async deleteClinicException(clinicId: string, date: string): Promise<boolean> { return true; }
+
+    // Clinic Reviews (Faz 7)
+    async getClinicReviews(clinicId: string): Promise<{ reviews: any[], averageRating: number }> {
+        return { reviews: [], averageRating: 0 };
     }
-    async upsertClinicException(clinicId: string, date: string, isClosed: boolean, openTime?: string | null, closeTime?: string | null, note?: string): Promise<boolean> {
+    async submitReview(clinicId: string, appointmentId: string, rating: number, comment?: string): Promise<boolean> {
         return true;
     }
-    async deleteClinicException(clinicId: string, date: string): Promise<boolean> {
+    async getReviewableAppointments(userId: string): Promise<any[]> {
+        return [];
+    }
+    async replyToReview(reviewId: string, clinicId: string, replyText: string): Promise<boolean> {
         return true;
     }
 }

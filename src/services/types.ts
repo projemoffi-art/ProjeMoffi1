@@ -417,6 +417,28 @@ export interface IApiService {
     getClinicExceptions(clinicId: string, startDate?: string, endDate?: string): Promise<any[]>;
     upsertClinicException(clinicId: string, date: string, isClosed: boolean, openTime?: string | null, closeTime?: string | null, note?: string): Promise<boolean>;
     deleteClinicException(clinicId: string, date: string): Promise<boolean>;
+
+    // Clinic Reviews (Faz 7)
+    getClinicReviews(clinicId: string): Promise<{ reviews: ClinicReview[], averageRating: number }>;
+    submitReview(clinicId: string, appointmentId: string, rating: number, comment?: string): Promise<boolean>;
+    getReviewableAppointments(userId: string): Promise<any[]>;
+    replyToReview(reviewId: string, clinicId: string, replyText: string): Promise<boolean>;
+}
+
+export interface ClinicReview {
+    id: string;
+    clinic_id: string;
+    user_id: string;
+    appointment_id: string;
+    rating: number;
+    comment?: string;
+    clinic_reply?: string;
+    clinic_replied_at?: string;
+    created_at: string;
+    user?: {
+        name: string;
+        avatar: string;
+    };
 }
 
 export interface SystemAnnouncement {
