@@ -14,6 +14,7 @@ import { showToast } from "@/lib/utils";
 import { apiService, isSupabaseEnabled } from "@/services/apiService";
 import { supabase } from "@/lib/supabase";
 import { sendAppointmentConfirmationEmail } from "@/actions/sendAppointmentEmail";
+import { useDragScroll } from "@/hooks/useDragScroll";
 
 export default function BusinessAppointmentsPage() {
     const { customRecords, setCustomRecords, updatePet } = usePet();
@@ -92,6 +93,77 @@ export default function BusinessAppointmentsPage() {
     // Vet Health Advice States
     const [vetAdviceText, setVetAdviceText] = useState("");
     const [vetAdviceBadge, setVetAdviceBadge] = useState("Genel Sağlık 🩺");
+
+    // Exception States
+    const [exceptions, setExceptions] = useState<any[]>([]);
+    const [selectedExceptionDate, setSelectedExceptionDate] = useState<string | null>(null);
+    const [exceptionForm, setExceptionForm] = useState<{ isClosed: boolean, open: string, close: string }>({ isClosed: false, open: "09:00", close: "18:00" });
+    
+    const exceptionsScrollProps = useDragScroll();
+
+    const fetchExceptions = async () => {
+        if (!user?.id || !isSupabaseEnabled) return;
+        try {
+            const today = new Date();
+            const endDate = new Date(today);
+            endDate.setDate(endDate.getDate() + 14);
+            
+            const todayStr = today.toISOString().split('T')[0];
+            const endStr = endDate.toISOString().split('T')[0];
+            
+            const list = await apiService.getClinicExceptions(user.id, todayStr, endStr);
+            setExceptions(list);
+        } catch (e) {
+            console.error("Error fetching exceptions:", e);
+        }
+    };
+
+    const handleSaveException = async () => {
+        console.log("SAVE TIKLANDI", { user_id: user?.id, selectedExceptionDate, exceptionForm });
+        if (!user?.id || !selectedExceptionDate) return;
+        try {
+            const dateObj = new Date(selectedExceptionDate);
+            const dayKey = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+            const baseHours = workingHours[dayKey] || { open: "09:00", close: "18:00", closed: false };
+
+            const isSameAsDefault = 
+                exceptionForm.isClosed === baseHours.closed && 
+                (exceptionForm.isClosed || (exceptionForm.open === baseHours.open && exceptionForm.close === baseHours.close));
+
+            if (isSameAsDefault) {
+                await apiService.deleteClinicException(user.id, selectedExceptionDate);
+                showToast("Gün varsayılan saatlere döndürüldü! ✨", "CheckCircle2", "text-emerald-500 font-bold");
+            } else {
+                await apiService.upsertClinicException(
+                    user.id,
+                    selectedExceptionDate,
+                    exceptionForm.isClosed,
+                    exceptionForm.isClosed ? null : exceptionForm.open,
+                    exceptionForm.isClosed ? null : exceptionForm.close
+                );
+                showToast("İstisna başarıyla kaydedildi! ✨", "CheckCircle2", "text-emerald-500 font-bold");
+            }
+            
+            setSelectedExceptionDate(null);
+            fetchExceptions();
+        } catch (e) {
+            console.error("Error saving exception:", e);
+            showToast("İşlem başarısız oldu! ❌", "AlertTriangle", "text-red-500 font-bold");
+        }
+    };
+
+    const handleDeleteException = async (date: string) => {
+        if (!user?.id) return;
+        try {
+            await apiService.deleteClinicException(user.id, date);
+            showToast("İstisna kaldırıldı, gün normale döndü! ✨", "CheckCircle2", "text-emerald-500 font-bold");
+            setSelectedExceptionDate(null);
+            fetchExceptions();
+        } catch (e) {
+            console.error("Error deleting exception:", e);
+            showToast("İstisna silinemedi! ❌", "AlertTriangle", "text-red-500 font-bold");
+        }
+    };
 
     const fetchAppointmentsFromDb = async () => {
         console.log(`[RANDEVU-TEST] ${new Date().toISOString()} - Fetch BAŞLADI`);
@@ -230,6 +302,7 @@ export default function BusinessAppointmentsPage() {
         };
 
         loadSettings();
+        fetchExceptions();
     }, [user?.id]);
 
     // Load confirmed appointments
@@ -940,6 +1013,147 @@ export default function BusinessAppointmentsPage() {
                             >
                                 <Save className="w-4 h-4" /> Ayarları Kaydet
                             </button>
+                        </div>
+
+                        {/* Yaklaşan 14 Gün İstisnalar */}
+                        <div className="pt-8 border-t border-zinc-150 dark:border-white/5 space-y-4">
+                            <div>
+                                <h3 className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-2">YAKLAŞAN 14 GÜN (İSTİSNALAR)</h3>
+                                <p className="text-xs text-gray-500 font-medium">Belirli günler için kliniği kapatabilir veya özel mesai saatleri belirleyebilirsiniz.</p>
+                            </div>
+                            
+                            <div 
+                                {...exceptionsScrollProps}
+                                className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide snap-x cursor-grab active:cursor-grabbing"
+                            >
+                                {Array.from({ length: 14 }).map((_, i) => {
+                                    const d = new Date();
+                                    d.setDate(d.getDate() + i);
+                                    const dateStr = d.toISOString().split('T')[0];
+                                    const dayNameShort = d.toLocaleDateString('tr-TR', { weekday: 'short' });
+                                    const dayNum = d.getDate();
+                                    const monthShort = d.toLocaleDateString('tr-TR', { month: 'short' });
+                                    
+                                    const dayKey = d.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+                                    
+                                    const exception = exceptions.find(ex => ex.exception_date === dateStr);
+                                    const baseHours = workingHours[dayKey] || { open: "09:00", close: "18:00", closed: false };
+                                    
+                                    const isClosed = exception ? exception.is_closed : baseHours.closed;
+                                    const isException = !!exception;
+                                    const isSelected = selectedExceptionDate === dateStr;
+
+                                    return (
+                                        <div 
+                                            key={dateStr}
+                                            onClick={() => {
+                                                setSelectedExceptionDate(isSelected ? null : dateStr);
+                                                setExceptionForm({
+                                                    isClosed: isClosed,
+                                                    open: exception?.open_time || baseHours.open,
+                                                    close: exception?.close_time || baseHours.close
+                                                });
+                                            }}
+                                            className={`min-w-[100px] flex-shrink-0 p-3 rounded-2xl border snap-center transition-all ${
+                                                isSelected 
+                                                    ? 'border-[#5B4D9D] bg-[#5B4D9D]/5' 
+                                                    : isException 
+                                                        ? 'border-orange-400 bg-orange-400/5 dark:bg-orange-400/10' 
+                                                        : 'border-zinc-200 dark:border-card-border bg-[#F8F9FC] dark:bg-white/5 hover:border-zinc-350 dark:hover:border-[#3f3f46]'
+                                            }`}
+                                        >
+                                            <div className="text-center space-y-1 select-none">
+                                                <div className={`text-xl font-black ${isException ? 'text-orange-500' : 'text-foreground dark:text-white'}`}>{dayNum}</div>
+                                                <div className="text-[10px] font-bold text-gray-500 uppercase">{monthShort} {dayNameShort}</div>
+                                                <div className={`text-[9px] font-bold mt-2 px-2 py-0.5 rounded-full inline-block ${
+                                                    isClosed 
+                                                        ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'
+                                                        : isException
+                                                            ? 'bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400'
+                                                            : 'bg-[#5B4D9D]/10 text-[#5B4D9D]'
+                                                }`}>
+                                                    {isClosed ? 'Kapalı' : isException ? 'Özel' : 'Açık'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Exception Form Panel */}
+                            <AnimatePresence>
+                                {selectedExceptionDate && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        exit={{ opacity: 0, height: 0 }}
+                                        className="bg-[#F8F9FC] dark:bg-[#1A1A1A] rounded-2xl border border-zinc-200 dark:border-white/5 p-4 sm:p-5 overflow-hidden"
+                                    >
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                            <div className="flex items-center gap-3">
+                                                <div 
+                                                    onClick={(e) => {
+                                                        console.log("TOGGLE TIKLANDI, ONCEKI isClosed:", exceptionForm.isClosed);
+                                                        setExceptionForm(prev => {
+                                                            console.log("TOGGLE ICINDE prev.isClosed:", prev.isClosed, "-> YENI:", !prev.isClosed);
+                                                            return { ...prev, isClosed: !prev.isClosed };
+                                                        });
+                                                    }}
+                                                    className={`w-10 h-5.5 rounded-full p-0.5 transition-colors duration-200 flex items-center cursor-pointer ${exceptionForm.isClosed ? 'bg-red-500' : 'bg-[#5B4D9D]'}`}
+                                                >
+                                                    <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${exceptionForm.isClosed ? 'translate-x-4.5' : 'translate-x-0'}`} />
+                                                </div>
+                                                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Bu günü kapat</span>
+                                            </div>
+
+                                            {!exceptionForm.isClosed && (
+                                                <div className="flex items-center gap-2">
+                                                    <select
+                                                        value={exceptionForm.open}
+                                                        onChange={(e) => setExceptionForm(prev => ({ ...prev, open: e.target.value }))}
+                                                        className="bg-white dark:bg-[#252525] border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-medium focus:outline-none focus:border-[#5B4D9D]"
+                                                    >
+                                                        {Array.from({ length: 24 * 2 }).map((_, i) => {
+                                                            const hr = Math.floor(i / 2).toString().padStart(2, '0');
+                                                            const min = i % 2 === 0 ? '00' : '30';
+                                                            return <option key={`${hr}:${min}`} value={`${hr}:${min}`}>{`${hr}:${min}`}</option>;
+                                                        })}
+                                                    </select>
+                                                    <span className="text-gray-400">-</span>
+                                                    <select
+                                                        value={exceptionForm.close}
+                                                        onChange={(e) => setExceptionForm(prev => ({ ...prev, close: e.target.value }))}
+                                                        className="bg-white dark:bg-[#252525] border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-medium focus:outline-none focus:border-[#5B4D9D]"
+                                                    >
+                                                        {Array.from({ length: 24 * 2 }).map((_, i) => {
+                                                            const hr = Math.floor(i / 2).toString().padStart(2, '0');
+                                                            const min = i % 2 === 0 ? '00' : '30';
+                                                            return <option key={`${hr}:${min}`} value={`${hr}:${min}`}>{`${hr}:${min}`}</option>;
+                                                        })}
+                                                    </select>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="mt-5 flex justify-end gap-3">
+                                            {exceptions.find(ex => ex.exception_date === selectedExceptionDate) && (
+                                                <button
+                                                    onClick={() => handleDeleteException(selectedExceptionDate)}
+                                                    className="px-4 py-2 text-xs font-bold text-gray-500 hover:text-red-500 transition-colors"
+                                                >
+                                                    Varsayılana Döndür
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={handleSaveException}
+                                                className="bg-[#5B4D9D] hover:bg-[#4E3F8F] text-white px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-purple-500/20"
+                                            >
+                                                Kaydet
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
                     </div>
                 )}

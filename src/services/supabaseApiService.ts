@@ -103,6 +103,7 @@ export class SupabaseApiService implements IApiService {
             iban: data.iban,
             address: data.address,
             ownerName: data.owner_name,
+            working_hours: data.working_hours,
             wallet_balance: data.wallet_balance || 0,
             moffi_coins: data.coin_balance || 0,
             settings: data.settings || {
@@ -156,6 +157,7 @@ export class SupabaseApiService implements IApiService {
         if (updates.birth_date !== undefined) upsertPayload.birth_date = updates.birth_date;
         if (updates.gender !== undefined) upsertPayload.gender = updates.gender;
         if (updates.account_status !== undefined) upsertPayload.account_status = updates.account_status;
+        if (updates.working_hours !== undefined) upsertPayload.working_hours = updates.working_hours;
 
         const { data, error } = await supabase
             .from('profiles')
@@ -180,6 +182,7 @@ export class SupabaseApiService implements IApiService {
             phone: data.phone,
             birth_date: data.birth_date,
             gender: data.gender,
+            working_hours: data.working_hours,
             account_status: data.account_status || 'active'
         } as UserProfile;
     }
@@ -1914,25 +1917,48 @@ export class SupabaseApiService implements IApiService {
         if (error) throw error;
     }
 
-    async getNearbyClinics(lat: number, lng: number, radiusKm: number = 10): Promise<any[]> {
+    async getNearbyClinics(province?: string, district?: string, lat?: number | null, lng?: number | null): Promise<any[]> {
         // Since we are no longer using the clinics table, we fetch approved businesses from profiles
-        const { data, error } = await supabase
+        let query = supabase
             .from('profiles')
             .select('*')
             .eq('role', 'business')
             .eq('business_approved', true);
 
-        if (error || !data) return this.mockApi.getNearbyClinics(lat, lng, radiusKm);
+        if (province) {
+            query = query.eq('province', province);
+        }
+        if (district) {
+            query = query.eq('district', district);
+        }
 
-        return data.map(profile => {
-            // Temporary static coordinates or fallback logic since profiles don't have lat/lng yet
-            const pLat = lat + (Math.random() - 0.5) * 0.05; 
-            const pLng = lng + (Math.random() - 0.5) * 0.05;
+        const { data, error } = await query;
+
+        if (error || !data) return this.mockApi.getNearbyClinics(province, district, lat, lng);
+
+        const clinicIds = data.map((d: any) => d.id);
+        const { data: servicesData } = await supabase.from('clinic_services').select('clinic_id, service_name').in('clinic_id', clinicIds);
+        const servicesMap = new Map();
+        if (servicesData) {
+            servicesData.forEach((s: any) => {
+                if (!servicesMap.has(s.clinic_id)) servicesMap.set(s.clinic_id, []);
+                servicesMap.get(s.clinic_id).push(s.service_name);
+            });
+        }
+
+        return data.map((profile: any) => {
+            const cServices = servicesMap.get(profile.id) || [];
+            const pLat = profile.business_lat ? parseFloat(profile.business_lat) : null;
+            const pLng = profile.business_lng ? parseFloat(profile.business_lng) : null;
             
-            const distKm = 6371 * Math.acos(
-                Math.sin(lat * Math.PI / 180) * Math.sin(pLat * Math.PI / 180) +
-                Math.cos(lat * Math.PI / 180) * Math.cos(pLat * Math.PI / 180) * Math.cos((pLng - lng) * Math.PI / 180)
-            );
+            let distKm = 999999;
+            if (pLat !== null && pLng !== null && lat && lng) {
+                distKm = 6371 * Math.acos(
+                    Math.sin(lat * Math.PI / 180) * Math.sin(pLat * Math.PI / 180) +
+                    Math.cos(lat * Math.PI / 180) * Math.cos(pLat * Math.PI / 180) * Math.cos((pLng - lng) * Math.PI / 180)
+                );
+                if (isNaN(distKm)) distKm = 0;
+            }
 
             return {
                 id: profile.id,
@@ -1940,16 +1966,16 @@ export class SupabaseApiService implements IApiService {
                 imageUrl: profile.avatar_url || 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&q=80',
                 rating: 0, // B14 TODO: Fetch real ratings
                 reviewCount: 0,
-                address: profile.business_address || 'Adres bilgisi girilmedi',
-                location: { lat: pLat, lng: pLng },
+                address: profile.address || 'Adres bilgisi girilmedi',
+                location: pLat !== null && pLng !== null ? { lat: pLat, lng: pLng } : null,
                 is_premium: false,
                 isOpenNow: true,
-                features: ['Genel Muayene', 'Aşı'],
+                features: cServices.length > 0 ? cServices : [],
                 phone: profile.phone || '',
-                distance: `${distKm.toFixed(1)} km`,
+                distance: pLat !== null && pLng !== null && lat && lng ? `${distKm.toFixed(1)} km` : 'Konum Belirtilmemiş',
                 calculated_distance: distKm
             };
-        }).filter(c => c.calculated_distance <= radiusKm)
+        })
         .sort((a, b) => a.calculated_distance - b.calculated_distance);
     }
 
@@ -1962,6 +1988,9 @@ export class SupabaseApiService implements IApiService {
 
         if (error || !data) return this.mockApi.getClinicDetails(clinicId);
 
+        const pLat = data.business_lat ? parseFloat(data.business_lat) : null;
+        const pLng = data.business_lng ? parseFloat(data.business_lng) : null;
+
         return {
             id: data.id,
             name: data.business_name || data.full_name || 'Veteriner Kliniği',
@@ -1969,8 +1998,8 @@ export class SupabaseApiService implements IApiService {
             rating: 0,
             reviewCount: 0,
             about: 'Klinik detay bilgisi',
-            address: data.business_address || 'Adres bilgisi girilmedi',
-            location: { lat: 40.985, lng: 29.030 }, // Static fallback
+            address: data.address || 'Adres bilgisi girilmedi',
+            location: pLat !== null && pLng !== null ? { lat: pLat, lng: pLng } : null,
             phone: data.phone || '',
             email: 'iletisim@moffi.com', // Profiles table doesn't have email natively
             website: 'www.moffi.com',
@@ -2041,7 +2070,7 @@ export class SupabaseApiService implements IApiService {
             .from('appointments')
             .select(`
                 *,
-                clinic:clinics(name, image_url, address, phone),
+                clinic:profiles!appointments_clinic_id_profiles_fkey(business_name, avatar_url, address, phone),
                 pet:pets(*)
             `)
             .eq('user_id', user.id)
@@ -2141,16 +2170,17 @@ export class SupabaseApiService implements IApiService {
     }
 
     async getClinicSettings(clinicId: string): Promise<any> {
-        const { data, error } = await supabase
-            .from('clinic_settings')
-            .select('*')
-            .eq('clinic_id', clinicId)
-            .maybeSingle();
+        const [settingsRes, profileRes] = await Promise.all([
+            supabase.from('clinic_settings').select('*').eq('clinic_id', clinicId).maybeSingle(),
+            supabase.from('profiles').select('working_hours').eq('id', clinicId).maybeSingle()
+        ]);
 
-        if (error) {
-            console.error("Error fetching clinic settings:", error);
+        if (settingsRes.error) {
+            console.error("Error fetching clinic settings:", settingsRes.error);
             return null;
         }
+
+        const data = settingsRes.data;
         if (!data) return null;
 
         return {
@@ -2159,9 +2189,62 @@ export class SupabaseApiService implements IApiService {
             endTime: data.end_time,
             lunchStart: data.lunch_start,
             lunchEnd: data.lunch_end,
-            slotDuration: data.slot_duration
+            slotDuration: data.slot_duration,
+            working_hours: profileRes.data?.working_hours
         };
     }
+
+    async getClinicExceptions(clinicId: string, startDate?: string, endDate?: string): Promise<any[]> {
+        let query = supabase.from('clinic_schedule_exceptions').select('*').eq('clinic_id', clinicId);
+        
+        if (startDate) {
+            query = query.gte('exception_date', startDate);
+        }
+        if (endDate) {
+            query = query.lte('exception_date', endDate);
+        }
+        
+        const { data, error } = await query.order('exception_date', { ascending: true });
+        
+        if (error) {
+            console.error("Error fetching clinic exceptions:", error);
+            return [];
+        }
+        return data || [];
+    }
+
+    async upsertClinicException(clinicId: string, date: string, isClosed: boolean, openTime: string | null = null, closeTime: string | null = null, note: string = ""): Promise<boolean> {
+        const { error } = await supabase.from('clinic_schedule_exceptions').upsert({
+            clinic_id: clinicId,
+            exception_date: date,
+            is_closed: isClosed,
+            open_time: openTime,
+            close_time: closeTime,
+            note: note
+        }, {
+            onConflict: 'clinic_id, exception_date'
+        });
+
+        if (error) {
+            console.error("Error upserting clinic exception:", error);
+            return false;
+        }
+        return true;
+    }
+
+    async deleteClinicException(clinicId: string, date: string): Promise<boolean> {
+        const { error } = await supabase.from('clinic_schedule_exceptions')
+            .delete()
+            .eq('clinic_id', clinicId)
+            .eq('exception_date', date);
+
+        if (error) {
+            console.error("Error deleting clinic exception:", error);
+            return false;
+        }
+        return true;
+    }
+
 
     async saveClinicSettings(clinicId: string, settings: any): Promise<void> {
         const { error } = await supabase
@@ -3871,6 +3954,46 @@ export class SupabaseApiService implements IApiService {
         if (error) { console.error(error); throw error; }
         return data;
     }
+
+    async checkUnclaimedMatches(phone: string): Promise<any[]> {
+        const { data, error } = await supabase.rpc('check_unclaimed_matches', {
+            p_phone: phone
+        });
+        if (error) { console.error(error); throw error; }
+        return data || [];
+    }
+
+    async verifyAndClaim(unclaimedId: string, code: string): Promise<string> {
+        const { data, error } = await supabase.rpc('verify_and_claim', {
+            p_unclaimed_id: unclaimedId,
+            p_claim_code: code
+        });
+        if (error) { console.error(error); throw error; }
+        return data;
+    }
+
+    async requestManualClaim(unclaimedId: string): Promise<boolean> {
+        const { error } = await supabase.rpc('request_manual_claim', {
+            p_unclaimed_id: unclaimedId
+        });
+        if (error) { console.error(error); throw error; }
+        return true;
+    }
+
+    async approveManualClaim(unclaimedId: string): Promise<string> {
+        const { data, error } = await supabase.rpc('approve_manual_claim', {
+            p_unclaimed_id: unclaimedId
+        });
+        if (error) { console.error(error); throw error; }
+        return data;
+    }
+
+    async getClinicPatients(): Promise<any[]> {
+        const { data, error } = await supabase.rpc('get_clinic_patients');
+        if (error) { console.error("Error fetching clinic patients:", error); return []; }
+        return data || [];
+    }
+
 
     // --- CLINIC SPECIFIC BUSINESS METHODS ---
 
