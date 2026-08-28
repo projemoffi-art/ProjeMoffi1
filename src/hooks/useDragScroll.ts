@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 
 export function useDragScroll() {
     const ref = useRef<HTMLDivElement>(null);
@@ -28,6 +28,27 @@ export function useDragScroll() {
         const walk = (x - startX) * 1.5; // Scroll speed multiplier
         ref.current.scrollLeft = scrollLeft - walk;
     };
+
+    // Mobilde dokunmatik kaydırma (touch-scrolling) tarayıcıların varsayılan davranışı
+    // olarak 'overflow-x-auto' elementlerinde kusursuz çalışır. 
+    // Sadece React'in onWheel olayı passive olduğu için e.preventDefault() yapılamaz,
+    // bu yüzden tekerlek ile dikey kaydırmayı yataya çevirmeyi useEffect ile native listener ekleyerek çözüyoruz.
+
+    useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        
+        const handleWheel = (e: WheelEvent) => {
+            if (e.shiftKey) return; // Shift'e basılıysa zaten yatay kayar
+            if (e.deltaY !== 0) {
+                e.preventDefault(); // Sayfanın aşağı inmesini engelle
+                el.scrollLeft += e.deltaY;
+            }
+        };
+        
+        el.addEventListener("wheel", handleWheel, { passive: false });
+        return () => el.removeEventListener("wheel", handleWheel);
+    }, []);
 
     return {
         ref,

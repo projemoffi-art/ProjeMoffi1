@@ -85,6 +85,7 @@ export interface UserProfile {
     bio?: string;
     is_verified?: boolean;
     subscription_status?: 'free' | 'pro' | 'elite';
+    working_hours?: any;
     wallet_balance?: number;
     moffi_coins?: number;
     aura_settings?: {
@@ -280,7 +281,7 @@ export interface IApiService {
     getPetVaccines(petId: string): Promise<any[]>;
     markVaccineAsCompleted(recordId: string, date: string, vetName: string): Promise<void>;
     checkHealthNotifications(petId: string): Promise<void>;
-    getNearbyClinics(lat: number, lng: number, radiusKm?: number): Promise<any[]>;
+    getNearbyClinics(province?: string, district?: string, lat?: number | null, lng?: number | null): Promise<any[]>;
     getClinicDetails(clinicId: string): Promise<any>;
     createAppointment(dto: any): Promise<any>;
     getAppointments(userId: string): Promise<any[]>;
@@ -402,6 +403,20 @@ export interface IApiService {
     getMySmsStatus(): Promise<{provider: string, sender_id: string, is_active: boolean} | null>;
     setClinicSmsSettings(provider: string, apiUsername: string, apiKey: string, senderId: string): Promise<boolean>;
     sendClaimSms(unclaimedPatientId: string): Promise<{mode: string, sent: boolean}>;
+
+    // Claiming / Account Merging
+    checkUnclaimedMatches(phone: string): Promise<any[]>;
+    verifyAndClaim(unclaimedId: string, code: string): Promise<string>;
+    requestManualClaim(unclaimedId: string): Promise<boolean>;
+    approveManualClaim(unclaimedId: string): Promise<string>;
+
+    // CRM / Clinic Patients
+    getClinicPatients(): Promise<any[]>;
+
+    // Clinic Exceptions (Faz 6)
+    getClinicExceptions(clinicId: string, startDate?: string, endDate?: string): Promise<any[]>;
+    upsertClinicException(clinicId: string, date: string, isClosed: boolean, openTime?: string | null, closeTime?: string | null, note?: string): Promise<boolean>;
+    deleteClinicException(clinicId: string, date: string): Promise<boolean>;
 }
 
 export interface SystemAnnouncement {

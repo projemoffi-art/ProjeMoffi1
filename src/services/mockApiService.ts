@@ -672,7 +672,7 @@ export class MockApiService implements IApiService {
     async markVaccineAsCompleted(recordId: string, date: string, vetName: string): Promise<void> { }
     async checkHealthNotifications(petId: string): Promise<void> { }
     
-    async getNearbyClinics(lat: number, lng: number, radiusKm: number = 10): Promise<any[]> {
+    async getNearbyClinics(province?: string, district?: string, lat?: number | null, lng?: number | null): Promise<any[]> {
         const clinics = [
             {
                 id: 'vet-1',
@@ -681,23 +681,6 @@ export class MockApiService implements IApiService {
                 rating: 4.9,
                 reviewCount: 128,
                 address: 'Moda, Caferağa Mah. No:12, Kadıköy',
-                location: { lat: lat + 0.005, lng: lng + 0.003 },
-                is_premium: true,
-                isOpenNow: true,
-                features: ['Acil Servis', 'Laboratuvar', 'Cerrahi'],
-                phone: '02163334455'
-            },
-            {
-                id: 'vet-2',
-                name: 'Pati Dostu Hayvan Hastanesi',
-                imageUrl: 'https://images.unsplash.com/photo-1583337130417-13104dec14a4?q=80&w=400',
-                rating: 4.7,
-                reviewCount: 456,
-                address: 'Suadiye, Bağdat Cad. No:156, Kadıköy',
-                location: { lat: lat - 0.012, lng: lng + 0.015 },
-                is_premium: false,
-                isOpenNow: true,
-                features: ['Görüntüleme', 'Pansiyon', 'Bakım'],
                 phone: '02164445566'
             },
             {
@@ -719,7 +702,7 @@ export class MockApiService implements IApiService {
 
     async getClinicDetails(clinicId: string): Promise<any> {
         // Find in our simulated list or return a default specific one
-        const clinics = await this.getNearbyClinics(40.9850, 29.0300);
+        const clinics = await this.getNearbyClinics(undefined, undefined, 40.9850, 29.0300);
         const clinic = clinics.find(c => c.id === clinicId) || clinics[0];
         
         return {
@@ -1653,13 +1636,65 @@ export class MockApiService implements IApiService {
         console.log("Mock sendClaimSms:", unclaimedPatientId);
         return { mode: 'mock', sent: false };
     }
-    
+
+    async checkUnclaimedMatches(phone: string): Promise<any[]> {
+        return [];
+    }
+
+    async verifyAndClaim(unclaimedId: string, code: string): Promise<string> {
+        return "mock-pet-id";
+    }
+
+    async requestManualClaim(unclaimedId: string): Promise<boolean> {
+        return true;
+    }
+
+    async approveManualClaim(unclaimedId: string): Promise<string> {
+        return "mock-pet-id";
+    }
+
+    async getClinicPatients(): Promise<any[]> {
+        return [
+            {
+                pet_id: "mock-pet-1",
+                pet_name: "Mock Karabaş",
+                species: "Köpek",
+                breed: "Kangal",
+                avatar_url: null,
+                owner_id: "mock-owner-1",
+                last_visit: new Date().toISOString(),
+                source: "appointment"
+            },
+            {
+                pet_id: "mock-pet-2",
+                pet_name: "Mock Duman",
+                species: "Kedi",
+                breed: "Tekir",
+                avatar_url: null,
+                owner_id: "mock-owner-2",
+                last_visit: new Date().toISOString(),
+                source: "migrated"
+            }
+        ];
+    }
+
     async submitFeedback(feedback: Partial<SystemFeedback>): Promise<void> {}
     async updateFeedbackStatus(id: string, status: 'new' | 'reviewed' | 'implemented' | 'rejected', adminNotes?: string): Promise<void> {}
 
     // Wallet
     async getanys(userId: string): Promise<any[]> {
         return [];
+    }
+
+    // Clinic Exceptions (Mock)
+    async getClinicExceptions(clinicId: string, startDate?: string, endDate?: string): Promise<any[]> {
+        return [];
+    }
+    async upsertClinicException(clinicId: string, date: string, isClosed: boolean, openTime?: string | null, closeTime?: string | null, note?: string): Promise<boolean> {
+        return true;
+    }
+    async deleteClinicException(clinicId: string, date: string): Promise<boolean> {
+        return true;
     }
 }
 // Singleton instance for components that haven't migrated to the central services/apiService.ts yet
