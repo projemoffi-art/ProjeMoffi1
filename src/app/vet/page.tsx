@@ -134,6 +134,9 @@ function VetPageContent() {
 
     const [dbAppointments, setDbAppointments] = useState<any[]>([]);
     const [clinicSettings, setClinicSettings] = useState<any>(null);
+    const [clinicExceptions, setClinicExceptions] = useState<any[]>([]);
+
+    console.log("Müşteri paneli render - clinicExceptions durumu:", clinicExceptions);
 
     useEffect(() => {
         if (!isSupabaseEnabled || !selectedClinic?.id) return;
@@ -147,11 +150,34 @@ function VetPageContent() {
             }
         };
 
+        const loadClinicExceptions = async () => {
+            try {
+                console.log("İstisna çekilen clinicId:", selectedClinic?.id);
+                const today = new Date();
+                const todayStr = today.toISOString().split('T')[0];
+                const future = new Date();
+                future.setDate(today.getDate() + 14);
+                const futureStr = future.toISOString().split('T')[0];
+                const exceptions = await apiService.getClinicExceptions(selectedClinic.id, todayStr, futureStr);
+                console.log("Müşteri paneli getClinicExceptions SONUCU:", exceptions);
+                setClinicExceptions(exceptions || []);
+            } catch (e) {
+                console.error("Failed to load clinic exceptions:", e);
+            }
+        };
+
         const loadClinicSettings = async () => {
             try {
-                const settings = await apiService.getClinicSettings(selectedClinic.id);
-                if (settings) {
-                    setClinicSettings(settings);
+                const [settings, profile] = await Promise.all([
+                    apiService.getClinicSettings(selectedClinic.id),
+                    apiService.getUserProfile(selectedClinic.id)
+                ]);
+                
+                if (settings || profile) {
+                    setClinicSettings({
+                        ...(settings || {}),
+                        working_hours: profile?.working_hours || settings?.working_hours
+                    });
                 }
             } catch (e) {
                 console.error("Failed to load clinic settings from database:", e);
@@ -160,6 +186,7 @@ function VetPageContent() {
 
         loadDbAppointments();
         loadClinicSettings();
+        loadClinicExceptions();
         
         // Listen for new appointments to refresh slots in real-time
         const channel = new BroadcastChannel('moffi_appointments_channel');
@@ -276,15 +303,46 @@ function VetPageContent() {
     // Appointment Form States
     const [selectedDate, setSelectedDate] = useState<string>("");
     const [selectedTime, setSelectedTime] = useState<string | null>(null);
-    const dateOptions = Array.from({ length: 5 }, (_, i) => {
+    const dateOptions = Array.from({ length: 14 }, (_, i) => {
         const d = new Date();
         d.setDate(d.getDate() + i);
         const dayNames = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+        const daysEng = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
         const monthNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+        
+        let isClosed = false;
+        try {
+            let settings = clinicSettings;
+            if (!settings) {
+                const saved = typeof window !== 'undefined' ? localStorage.getItem('moffi_clinic_settings') : null;
+                settings = saved ? JSON.parse(saved) : null;
+            }
+            
+            const dayNameLower = daysEng[d.getDay()];
+            
+            if (settings?.working_hours && settings.working_hours[dayNameLower]) {
+                isClosed = settings.working_hours[dayNameLower].closed === true;
+            } else {
+                const defaultDays = { Monday: true, Tuesday: true, Wednesday: true, Thursday: true, Friday: true, Saturday: false, Sunday: false };
+                const workingDays = settings?.workingDays || defaultDays;
+                const daysEngTitle = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                isClosed = !workingDays[daysEngTitle[d.getDay()]];
+            }
+        
+        } catch(e) {}
+        
+        // Apply Date-Specific Exceptions
+        const dateStrForEx = d.toISOString().split('T')[0];
+        const exception = clinicExceptions.find(ex => ex.exception_date === dateStrForEx);
+        if (exception) {
+            isClosed = exception.is_closed;
+        }
+
         return {
             key: d.toISOString().split('T')[0],
             label: i === 0 ? 'Bugün' : i === 1 ? 'Yarın' : `${d.getDate()} ${monthNames[d.getMonth()]}`,
             dayName: dayNames[d.getDay()],
+            closed: isClosed
         };
     });
 
@@ -297,21 +355,49 @@ function VetPageContent() {
                 settings = saved ? JSON.parse(saved) : null;
             }
 
-            const defaultDays = { Monday: true, Tuesday: true, Wednesday: true, Thursday: true, Friday: true, Saturday: false, Sunday: false };
-            const workingDays = settings?.workingDays || defaultDays;
-            const startTime = settings?.startTime || "09:00";
-            const endTime = settings?.endTime || "18:00";
-            const lunchStart = settings?.lunchStart || "12:00";
-            const lunchEnd = settings?.lunchEnd || "13:00";
-            const slotDuration = settings?.slotDuration || 30;
-
             const dayOfW = new Date(dateStr);
             const daysEng = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             const dayNameEng = daysEng[dayOfW.getDay()];
+            const dayNameLower = dayNameEng.toLowerCase();
+
+            // Check for date-specific exceptions first
+            const exception = clinicExceptions.find(ex => ex.exception_date === dateStr);
+            let isExceptionOverride = false;
+            let exOpen = "09:00";
+            let exClose = "18:00";
             
-            if (!workingDays[dayNameEng]) {
-                return [];
+            if (exception) {
+                if (exception.is_closed) return []; // Explicitly closed via exception
+                isExceptionOverride = true;
+                exOpen = exception.open_time || "09:00";
+                exClose = exception.close_time || "18:00";
             }
+
+            // Support both old workingDays and new working_hours structure
+            let daySettings: any = null;
+            
+            if (!isExceptionOverride) {
+                if (settings?.working_hours && settings.working_hours[dayNameLower]) {
+                    daySettings = settings.working_hours[dayNameLower];
+                    if (daySettings.closed) return []; // Day is closed
+                } else {
+                    // Fallback to old structure
+                    const defaultDays = { Monday: true, Tuesday: true, Wednesday: true, Thursday: true, Friday: true, Saturday: false, Sunday: false };
+                    const workingDays = settings?.workingDays || defaultDays;
+                    if (!workingDays[dayNameEng]) return [];
+                    
+                    daySettings = {
+                        open: settings?.startTime || "09:00",
+                        close: settings?.endTime || "18:00"
+                    };
+                }
+            }
+
+            const startTime = isExceptionOverride ? exOpen : (daySettings?.open || "09:00");
+            const endTime = isExceptionOverride ? exClose : (daySettings?.close || "18:00");
+            const lunchStart = settings?.lunchStart || "12:00";
+            const lunchEnd = settings?.lunchEnd || "13:00";
+            const slotDuration = settings?.slotDuration || 30;
 
             const slots: string[] = [];
             const [startH, startM] = startTime.split(':').map(Number);
