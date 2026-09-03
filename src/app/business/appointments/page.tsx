@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import {
     CalendarCheck, CheckCircle2,
     User, Bell, X, Syringe, ClipboardList, Pill, AlertTriangle,
-    Clock, Coffee, Save, Calendar, Heart, Send
+    Clock, Coffee, Save, Calendar, Heart, Send, Star, MessageSquare
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BusinessSidebar as Sidebar } from "@/components/business/Sidebar";
@@ -73,8 +73,15 @@ export default function BusinessAppointmentsPage() {
     const [criticalNotes, setCriticalNotes] = useState("");
 
     // Tabs and Shift Settings States
-    const [activeTab, setActiveTab] = useState<'appointments' | 'advice' | 'shifts'>('appointments');
+    const [activeTab, setActiveTab] = useState<'appointments' | 'advice' | 'shifts' | 'reviews'>('appointments');
     const [isSavingAdvice, setIsSavingAdvice] = useState(false);
+
+    // Reviews States
+    const [reviewsData, setReviewsData] = useState<{ reviews: any[], averageRating: number }>({ reviews: [], averageRating: 0 });
+    const [isLoadingReviews, setIsLoadingReviews] = useState(false);
+    const [replyText, setReplyText] = useState<{ [key: string]: string }>({});
+    const [isSubmittingReply, setIsSubmittingReply] = useState<{ [key: string]: boolean }>({});
+    const [editingReplyId, setEditingReplyId] = useState<string | null>(null);
     const [workingHours, setWorkingHours] = useState<{ [key: string]: { open: string, close: string, closed: boolean } }>({
         monday: { open: "09:00", close: "18:00", closed: false },
         tuesday: { open: "09:00", close: "18:00", closed: false },
@@ -304,6 +311,49 @@ export default function BusinessAppointmentsPage() {
         loadSettings();
         fetchExceptions();
     }, [user?.id]);
+
+    const loadReviews = async () => {
+        if (!user?.id || !isSupabaseEnabled) return;
+        setIsLoadingReviews(true);
+        try {
+            const data = await apiService.getClinicReviews(user.id);
+            setReviewsData({
+                reviews: data.reviews || [],
+                averageRating: data.averageRating || 0
+            });
+        } catch (error) {
+            console.error("Yorumlar yüklenirken hata:", error);
+        } finally {
+            setIsLoadingReviews(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === 'reviews') {
+            loadReviews();
+        }
+    }, [activeTab, user?.id]);
+
+    const handleReplySubmit = async (reviewId: string) => {
+        const text = replyText[reviewId];
+        if (!text || !text.trim() || !user?.id) return;
+        
+        setIsSubmittingReply(prev => ({ ...prev, [reviewId]: true }));
+        try {
+            const success = await apiService.replyToReview(reviewId, user.id, text.trim());
+            if (success) {
+                setEditingReplyId(null);
+                await loadReviews();
+            } else {
+                alert("Yanıt gönderilemedi.");
+            }
+        } catch (error) {
+            console.error("Yanıt hatası:", error);
+            alert("Beklenmeyen bir hata oluştu.");
+        } finally {
+            setIsSubmittingReply(prev => ({ ...prev, [reviewId]: false }));
+        }
+    };
 
     // Load confirmed appointments
     useEffect(() => {
@@ -738,6 +788,12 @@ export default function BusinessAppointmentsPage() {
                         className={`pb-4 px-2 font-black text-xs uppercase tracking-wider transition-all border-b-2 -mb-px ${activeTab === 'shifts' ? 'border-[#5B4D9D] text-[#5B4D9D]' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-foreground dark:hover:text-white'}`}
                     >
                         Vardiya & Takvim Ayarları
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('reviews')}
+                        className={`pb-4 px-2 font-black text-xs uppercase tracking-wider transition-all border-b-2 -mb-px flex items-center gap-2 ${activeTab === 'reviews' ? 'border-[#5B4D9D] text-[#5B4D9D]' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-foreground dark:hover:text-white'}`}
+                    >
+                        <Star className="w-3.5 h-3.5 mb-0.5" /> Yorumlar
                     </button>
                 </div>
 
@@ -1266,6 +1322,142 @@ export default function BusinessAppointmentsPage() {
                                 )}
                             </button>
                         </div>
+                    </div>
+                )}
+
+                {activeTab === 'reviews' && (
+                    <div className="bg-card dark:bg-[#121212] rounded-[2.5rem] p-8 border border-card-border dark:border-card-border shadow-moffi-card text-left max-w-4xl space-y-8">
+                        <div>
+                            <h2 className="text-xl font-black text-foreground dark:text-white flex items-center gap-2 mb-2">
+                                <Star className="w-5 h-5 text-yellow-500 fill-current" /> Değerlendirmeler & Yorumlar
+                            </h2>
+                            <p className="text-xs text-gray-500 font-bold uppercase tracking-wider flex items-center gap-2">
+                                Ortalama Puan: <span className="text-foreground dark:text-white text-sm bg-yellow-500/10 px-2 py-0.5 rounded-lg border border-yellow-500/20">{reviewsData.averageRating.toFixed(1)} / 5</span>
+                            </p>
+                        </div>
+
+                        {isLoadingReviews ? (
+                            <div className="py-20 text-center">
+                                <div className="w-8 h-8 border-4 border-[#5B4D9D]/20 border-t-[#5B4D9D] rounded-full animate-spin mx-auto mb-4"></div>
+                                <p className="text-xs text-gray-500 font-bold tracking-widest uppercase">Yorumlar Yükleniyor...</p>
+                            </div>
+                        ) : reviewsData.reviews.length === 0 ? (
+                            <div className="py-20 text-center bg-zinc-50 dark:bg-white/5 rounded-3xl border border-dashed border-zinc-200 dark:border-card-border">
+                                <MessageSquare className="w-12 h-12 text-zinc-300 dark:text-zinc-700 mx-auto mb-4" />
+                                <p className="text-xs text-gray-500 font-black uppercase tracking-widest">Henüz değerlendirme almadınız.</p>
+                                <p className="text-[10px] text-gray-400 mt-2 font-bold max-w-xs mx-auto">Müşterilerinize mükemmel hizmet vererek yakında harika yorumlar kazanabilirsiniz!</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
+                                {reviewsData.reviews.map((review: any) => (
+                                    <div key={review.id} className="bg-white dark:bg-[#1a1a1c] border border-zinc-150 dark:border-white/5 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden flex-shrink-0">
+                                                    {review.user_avatar ? (
+                                                        <img src={review.user_avatar} alt={review.user_name} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <User className="w-5 h-5 text-zinc-400 m-2.5" />
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold text-sm text-foreground dark:text-white">{review.user_name || "İsimsiz Kullanıcı"}</h4>
+                                                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">{new Date(review.created_at).toLocaleDateString()}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-1">
+                                                {[1, 2, 3, 4, 5].map((s) => (
+                                                    <Star key={s} className={`w-4 h-4 ${s <= review.rating ? "text-yellow-500 fill-current" : "text-zinc-200 dark:text-white/10"}`} />
+                                                ))}
+                                            </div>
+                                        </div>
+                                        
+                                        {review.comment && (
+                                            <p className="text-sm text-gray-600 dark:text-gray-300 font-medium leading-relaxed mb-4">
+                                                "{review.comment}"
+                                            </p>
+                                        )}
+
+                                        {/* Business Reply Logic */}
+                                        <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-white/5">
+                                            {review.clinic_reply ? (
+                                                <div className="bg-[#5B4D9D]/5 border border-[#5B4D9D]/10 rounded-2xl p-4">
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <span className="text-[10px] font-black text-[#5B4D9D] uppercase tracking-widest flex items-center gap-1.5">
+                                                            <CheckCircle2 className="w-3.5 h-3.5" /> Yanıtınız
+                                                        </span>
+                                                        <button 
+                                                            onClick={() => {
+                                                                setEditingReplyId(review.id);
+                                                                setReplyText(prev => ({ ...prev, [review.id]: review.clinic_reply }));
+                                                            }}
+                                                            className="text-[10px] text-gray-400 hover:text-[#5B4D9D] font-bold uppercase transition-colors"
+                                                        >
+                                                            Düzenle
+                                                        </button>
+                                                    </div>
+                                                    
+                                                    {editingReplyId === review.id ? (
+                                                        <div className="space-y-3 mt-3">
+                                                            <textarea 
+                                                                value={replyText[review.id] || ""}
+                                                                onChange={(e) => setReplyText(prev => ({ ...prev, [review.id]: e.target.value }))}
+                                                                placeholder="Yanıtınızı güncelleyin..."
+                                                                className="w-full bg-white dark:bg-black/20 border border-[#5B4D9D]/20 rounded-xl p-3 text-xs focus:ring-1 focus:ring-[#5B4D9D] outline-none min-h-[80px]"
+                                                            />
+                                                            <div className="flex justify-end gap-2">
+                                                                <button onClick={() => setEditingReplyId(null)} className="px-4 py-2 text-[10px] font-bold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">İptal</button>
+                                                                <button 
+                                                                    onClick={() => handleReplySubmit(review.id)}
+                                                                    disabled={isSubmittingReply[review.id]}
+                                                                    className="bg-[#5B4D9D] text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#4E3F8F] transition-all disabled:opacity-50"
+                                                                >
+                                                                    {isSubmittingReply[review.id] ? "Kaydediliyor..." : "Güncelle"}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-xs text-foreground dark:text-gray-300 font-medium">
+                                                            {review.clinic_reply}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-3">
+                                                    {editingReplyId === review.id ? (
+                                                        <div className="space-y-3">
+                                                            <textarea 
+                                                                value={replyText[review.id] || ""}
+                                                                onChange={(e) => setReplyText(prev => ({ ...prev, [review.id]: e.target.value }))}
+                                                                placeholder="Müşterinize vereceğiniz yanıt buraya girin (herkese açık olacaktır)..."
+                                                                className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/5 rounded-xl p-3 text-xs focus:border-[#5B4D9D] focus:ring-1 focus:ring-[#5B4D9D] outline-none min-h-[80px]"
+                                                            />
+                                                            <div className="flex justify-end gap-2">
+                                                                <button onClick={() => setEditingReplyId(null)} className="px-4 py-2 text-[10px] font-bold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">İptal</button>
+                                                                <button 
+                                                                    onClick={() => handleReplySubmit(review.id)}
+                                                                    disabled={!replyText[review.id]?.trim() || isSubmittingReply[review.id]}
+                                                                    className="bg-[#5B4D9D] text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#4E3F8F] transition-all disabled:opacity-50"
+                                                                >
+                                                                    {isSubmittingReply[review.id] ? "Gönderiliyor..." : "Yanıtı Gönder"}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <button 
+                                                            onClick={() => setEditingReplyId(review.id)}
+                                                            className="text-[10px] font-black uppercase tracking-widest text-[#5B4D9D] hover:text-[#4E3F8F] flex items-center gap-1.5 transition-colors"
+                                                        >
+                                                            <MessageSquare className="w-3.5 h-3.5" /> Yanıtla
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
             </main>
