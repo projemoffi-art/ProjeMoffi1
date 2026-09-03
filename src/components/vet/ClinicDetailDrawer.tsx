@@ -112,13 +112,26 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
             const appointmentToReview = reviewableAppointments[0];
             const targetId = clinicData ? clinicData.id : clinicId;
             
-            await apiService.submitReview(
+            console.log("Submitting review payload:", {
+                clinicId: targetId,
+                appointmentId: appointmentToReview.id,
+                rating,
+                comment: comment.trim() || undefined
+            });
+
+            const success = await apiService.submitReview(
                 targetId!,
-                currentUser.id,
                 appointmentToReview.id,
                 rating,
                 comment.trim() || undefined
             );
+            
+            console.log("Submit review result:", success);
+
+            if (!success) {
+                alert("Yorum gönderilirken bir hata oluştu (Kayıt başarısız).");
+                return; // Do not close form or refresh if failed
+            }
             
             setIsReviewFormOpen(false);
             setRating(0);
@@ -135,7 +148,7 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
 
         } catch (err) {
             console.error("Yorum gönderilirken hata:", err);
-            alert("Yorum gönderilirken bir hata oluştu.");
+            alert("Yorum gönderilirken beklenmeyen bir hata oluştu.");
         } finally {
             setIsSubmittingReview(false);
         }
