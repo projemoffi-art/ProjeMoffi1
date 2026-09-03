@@ -1963,7 +1963,7 @@ export class SupabaseApiService implements IApiService {
             return {
                 id: profile.id,
                 name: profile.business_name || profile.full_name || 'Veteriner Kliniği',
-                imageUrl: profile.avatar_url || 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&q=80',
+                imageUrl: profile.avatar_url || null,
                 rating: 0, // B14 TODO: Fetch real ratings
                 reviewCount: 0,
                 address: profile.address || 'Adres bilgisi girilmedi',
@@ -2287,7 +2287,7 @@ export class SupabaseApiService implements IApiService {
                 created_at: r.created_at,
                 user: {
                     name: profilesMap[r.user_id]?.full_name || profilesMap[r.user_id]?.username || 'Gizli Kullanıcı',
-                    avatar: profilesMap[r.user_id]?.avatar_url || 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=100'
+                    avatar: profilesMap[r.user_id]?.avatar_url || null
                 }
             })), 
             averageRating 

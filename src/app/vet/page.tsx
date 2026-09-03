@@ -967,7 +967,13 @@ function VetPageContent() {
                                 <div className="flex gap-4">
                                     {/* Small cover image for clinical listing */}
                                     <div className="w-24 h-24 rounded-xl overflow-hidden border border-zinc-200 dark:border-[#27272a]/60 shrink-0 cursor-pointer relative group-hover:border-indigo-500/30 transition-all duration-300" onClick={() => { setDetailClinicId(clinic.id); setDetailClinicData(clinic); }}>
-                                        <img src={clinic.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                        {clinic.imageUrl ? (
+                                            <img src={clinic.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                        ) : (
+                                            <div className="w-full h-full bg-zinc-200 dark:bg-white/10 flex items-center justify-center">
+                                                <span className="text-3xl font-black text-zinc-500 dark:text-white/40 uppercase">{(clinic.name || 'C')[0]}</span>
+                                            </div>
+                                        )}
                                         <div className="absolute inset-0 bg-black/10 dark:bg-black/15 group-hover:bg-black/5 transition-colors" />
                                     </div>
 
@@ -1029,7 +1035,13 @@ function VetPageContent() {
                             {/* SCROLLABLE BODY CONTAINER */}
                             <div className="flex-1 overflow-y-auto pr-1 no-scrollbar space-y-6 text-left momentum-scroll overscroll-contain pb-6">
                                 <div className="flex items-center gap-4 p-4 bg-zinc-50 dark:bg-[#18181b] rounded-2xl border border-zinc-200 dark:border-[#27272a] relative overflow-hidden pl-5 border-l-2 border-l-indigo-500">
-                                    <img src={selectedClinic.imageUrl} className="w-16 h-16 rounded-xl object-cover shrink-0 border border-zinc-200 dark:border-[#27272a]" />
+                                    {selectedClinic.imageUrl ? (
+                                        <img src={selectedClinic.imageUrl} className="w-16 h-16 rounded-xl object-cover shrink-0 border border-zinc-200 dark:border-[#27272a]" />
+                                    ) : (
+                                        <div className="w-16 h-16 rounded-xl bg-zinc-200 dark:bg-white/10 flex items-center justify-center border border-zinc-200 dark:border-[#27272a] shrink-0">
+                                            <span className="text-2xl font-black text-zinc-500 dark:text-white/40 uppercase">{(selectedClinic.name || 'C')[0]}</span>
+                                        </div>
+                                    )}
                                     <div className="text-left">
                                         <div className="font-black text-sm text-zinc-850 dark:text-[#fafafa] leading-snug mb-0.5">{selectedClinic.name}</div>
                                         <div className="text-[9px] text-zinc-400 dark:text-[#a1a1aa] font-bold uppercase tracking-wider flex items-center gap-1">

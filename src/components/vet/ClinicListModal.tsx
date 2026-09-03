@@ -103,7 +103,13 @@ export function ClinicListModal({ isOpen, onClose, clinics, onSelectClinic, isLo
                                     >
                                         <div className="flex items-center gap-5 relative z-10">
                                             <div className="w-20 h-20 rounded-2xl overflow-hidden border border-zinc-200 dark:border-card-border shrink-0">
-                                                <img src={clinic.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                                {clinic.imageUrl ? (
+                                                    <img src={clinic.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                                ) : (
+                                                    <div className="w-full h-full bg-zinc-200 dark:bg-white/10 flex items-center justify-center">
+                                                        <span className="text-3xl font-black text-zinc-500 dark:text-white/40 uppercase">{(clinic.name || 'C')[0]}</span>
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-1">
