@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { apiService } from "@/services/apiService";
 import { VetClinic } from "@/types/domain";
 import { useTheme } from "@/context/ThemeContext";
+import { supabase } from "@/lib/supabase";
 
 interface ClinicDetailDrawerProps {
     clinicId: string | null;
@@ -49,9 +50,21 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
     const [reviews, setReviews] = useState<any[]>([]);
     const [averageRating, setAverageRating] = useState<number>(0);
 
+    const [reviewableAppointments, setReviewableAppointments] = useState<any[]>([]);
+    const [isReviewFormOpen, setIsReviewFormOpen] = useState(false);
+    const [rating, setRating] = useState(0);
+    const [comment, setComment] = useState("");
+    const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+    const [currentUser, setCurrentUser] = useState<any>(null);
+
     const fetchDetails = async () => {
         setLoading(true);
         try {
+            const { data: { user } } = await supabase.auth.getUser();
+            setCurrentUser(user);
+
+            const targetId = clinicData ? clinicData.id : clinicId;
+
             if (clinicData) {
                 // Dynamically build a realistic clinic profile using OpenStreetMap real world data!
                 setClinic({
@@ -60,8 +73,16 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                     distance: 'Yakında',
                     address: clinicData.name + ' Çevresi'
                 });
-                setReviews([]);
-                setAverageRating(0);
+                
+                // Still try to fetch real reviews if available!
+                try {
+                    const reviewsData = await apiService.getClinicReviews(targetId!);
+                    setReviews(reviewsData.reviews || []);
+                    setAverageRating(reviewsData.averageRating || 0);
+                } catch {
+                    setReviews([]);
+                    setAverageRating(0);
+                }
             } else {
                 const [data, reviewsData] = await Promise.all([
                     apiService.getClinicDetails(clinicId!),
@@ -71,10 +92,52 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                 setReviews(reviewsData.reviews || []);
                 setAverageRating(reviewsData.averageRating || 0);
             }
+
+            if (user && targetId) {
+                const apts = await apiService.getReviewableAppointments(user.id);
+                setReviewableAppointments(apts.filter(a => a.clinic_id === targetId));
+            }
+
         } catch (err) {
             console.error("Clinic details fetch error:", err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSubmitReview = async () => {
+        if (rating === 0 || !currentUser || reviewableAppointments.length === 0) return;
+        setIsSubmittingReview(true);
+        try {
+            const appointmentToReview = reviewableAppointments[0];
+            const targetId = clinicData ? clinicData.id : clinicId;
+            
+            await apiService.submitReview(
+                targetId!,
+                currentUser.id,
+                appointmentToReview.id,
+                rating,
+                comment.trim() || undefined
+            );
+            
+            setIsReviewFormOpen(false);
+            setRating(0);
+            setComment("");
+            
+            // Refresh reviews
+            const reviewsData = await apiService.getClinicReviews(targetId!);
+            setReviews(reviewsData.reviews || []);
+            setAverageRating(reviewsData.averageRating || 0);
+            
+            // Refresh reviewable appointments so the button goes away
+            const apts = await apiService.getReviewableAppointments(currentUser.id);
+            setReviewableAppointments(apts.filter(a => a.clinic_id === targetId));
+
+        } catch (err) {
+            console.error("Yorum gönderilirken hata:", err);
+            alert("Yorum gönderilirken bir hata oluştu.");
+        } finally {
+            setIsSubmittingReview(false);
         }
     };
 
@@ -278,6 +341,56 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
 
                                     {activeTab === 'reviews' && (
                                         <div className="p-8 space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                                            {/* Review Form / Button */}
+                                            {reviewableAppointments.length > 0 && (
+                                                <div className="mb-8">
+                                                    {!isReviewFormOpen ? (
+                                                        <button
+                                                            onClick={() => setIsReviewFormOpen(true)}
+                                                            className="w-full bg-[#5B4D9D] text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg hover:bg-[#483c80] transition-all cursor-pointer"
+                                                        >
+                                                            Değerlendirme Yaz
+                                                        </button>
+                                                    ) : (
+                                                        <div className="bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-card-border rounded-[2rem] p-6 space-y-4 shadow-xl">
+                                                            <div className="flex justify-between items-center mb-2">
+                                                                <h4 className="text-xs font-black text-zinc-800 dark:text-white uppercase tracking-widest">Deneyiminizi Puanlayın</h4>
+                                                                <button onClick={() => setIsReviewFormOpen(false)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors cursor-pointer">
+                                                                    <X className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                            <div className="flex justify-center gap-2 pb-2">
+                                                                {[1, 2, 3, 4, 5].map((s) => (
+                                                                    <button
+                                                                        key={s}
+                                                                        type="button"
+                                                                        onClick={() => setRating(s)}
+                                                                        className="p-2 cursor-pointer transition-transform hover:scale-110"
+                                                                    >
+                                                                        <Star className={cn("w-8 h-8 transition-colors", s <= rating ? "text-yellow-500 fill-current" : "text-zinc-200 dark:text-white/10")} />
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                            <textarea
+                                                                value={comment}
+                                                                onChange={(e) => setComment(e.target.value)}
+                                                                placeholder="Deneyiminizi anlatın... (İsteğe bağlı)"
+                                                                className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/5 rounded-xl p-4 text-xs text-zinc-800 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#5B4D9D] transition-all resize-none min-h-[100px]"
+                                                            />
+                                                            <button
+                                                                onClick={handleSubmitReview}
+                                                                disabled={rating === 0 || isSubmittingReview}
+                                                                className="w-full bg-[#5B4D9D] text-white py-4 rounded-xl font-black text-xs uppercase tracking-widest shadow-md hover:bg-[#483c80] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+                                                            >
+                                                                {isSubmittingReview ? (
+                                                                    <span className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                                                                ) : "Gönder"}
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
                                             {reviews.length > 0 ? (
                                                 <>
                                                     {/* Rating Summary */}
