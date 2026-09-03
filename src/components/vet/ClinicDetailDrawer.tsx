@@ -46,6 +46,9 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
         }
     }, [activeTab]);
 
+    const [reviews, setReviews] = useState<any[]>([]);
+    const [averageRating, setAverageRating] = useState<number>(0);
+
     const fetchDetails = async () => {
         setLoading(true);
         try {
@@ -54,20 +57,19 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                 setClinic({
                     ...clinicData,
                     imageUrl: clinicData.isPremium ? 'https://images.unsplash.com/photo-1584132967334-10e028bd69f7?w=800' : 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=800',
-                    rating: (4.0 + Math.random()).toFixed(1),
-                    reviewCount: Math.floor(Math.random() * 50) + 10,
                     distance: 'Yakında',
-                    address: clinicData.name + ' Çevresi',
-                    isOpenNow: true,
-                    phone: '+90 555 123 4567',
-                    doctors: [
-                        { id: 'dr-1', name: 'Nöbetçi Hekim', specialization: 'Genel Cerrahi', workingHours: '7/24', bio: 'Moffi üzerinden randevu alınabilir.', imageUrl: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=200' }
-                    ],
-                    reviews: []
+                    address: clinicData.name + ' Çevresi'
                 });
+                setReviews([]);
+                setAverageRating(0);
             } else {
-                const data = await apiService.getClinicDetails(clinicId!);
+                const [data, reviewsData] = await Promise.all([
+                    apiService.getClinicDetails(clinicId!),
+                    apiService.getClinicReviews(clinicId!)
+                ]);
                 setClinic(data);
+                setReviews(reviewsData.reviews || []);
+                setAverageRating(reviewsData.averageRating || 0);
             }
         } catch (err) {
             console.error("Clinic details fetch error:", err);
@@ -273,28 +275,62 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
 
                                     {activeTab === 'reviews' && (
                                         <div className="p-8 space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                                            {clinic.reviews?.map((review: any) => (
-                                                <div key={review.id} className="bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-card-border rounded-[2rem] p-6 text-left">
-                                                    <div className="flex justify-between items-start mb-4">
-                                                        <div className="flex items-center gap-3">
-                                                            <img src={review.userAvatar} className="w-10 h-10 rounded-full border border-zinc-200 dark:border-card-border" />
-                                                            <div>
-                                                                <p className="text-xs font-black text-zinc-800 dark:text-white uppercase italic">{review.userName}</p>
-                                                                <p className="text-[9px] font-black text-zinc-400 dark:text-white/20 uppercase tracking-widest">{new Date(review.createdAt).toLocaleDateString()}</p>
+                                            {reviews.length > 0 ? (
+                                                <>
+                                                    {/* Rating Summary */}
+                                                    <div className="flex items-center gap-4 mb-6">
+                                                        <div className="text-4xl font-black text-zinc-800 dark:text-white">{averageRating.toFixed(1)}</div>
+                                                        <div>
+                                                            <div className="flex gap-1 mb-1">
+                                                                {[1, 2, 3, 4, 5].map((s) => (
+                                                                    <Star key={s} className={cn("w-4 h-4", s <= Math.round(averageRating) ? "text-yellow-500 fill-current" : "text-zinc-200 dark:text-white/5")} />
+                                                                ))}
                                                             </div>
-                                                        </div>
-                                                        <div className="flex gap-0.5">
-                                                            {[1, 2, 3, 4, 5].map((s) => (
-                                                                <Star key={s} className={cn("w-3 h-3", s <= review.rating ? "text-yellow-500 fill-current" : "text-zinc-200 dark:text-white/5")} />
-                                                            ))}
+                                                            <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{reviews.length} değerlendirme</div>
                                                         </div>
                                                     </div>
-                                                    <p className="text-xs text-zinc-650 dark:text-white/70 leading-relaxed font-bold italic">"{review.comment}"</p>
+
+                                                    {reviews.map((review: any) => (
+                                                        <div key={review.id} className="bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-card-border rounded-[2rem] p-6 text-left">
+                                                            <div className="flex justify-between items-start mb-4">
+                                                                <div className="flex items-center gap-3">
+                                                                    <img src={review.user?.avatar} className="w-10 h-10 rounded-full border border-zinc-200 dark:border-card-border" />
+                                                                    <div>
+                                                                        <p className="text-xs font-black text-zinc-800 dark:text-white uppercase italic">{review.user?.name}</p>
+                                                                        <p className="text-[9px] font-black text-zinc-400 dark:text-white/20 uppercase tracking-widest">{new Date(review.created_at).toLocaleDateString()}</p>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex gap-0.5">
+                                                                    {[1, 2, 3, 4, 5].map((s) => (
+                                                                        <Star key={s} className={cn("w-3 h-3", s <= review.rating ? "text-yellow-500 fill-current" : "text-zinc-200 dark:text-white/5")} />
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                            {review.comment && (
+                                                                <p className="text-xs text-zinc-650 dark:text-white/70 leading-relaxed font-bold italic">"{review.comment}"</p>
+                                                            )}
+                                                            
+                                                            {review.clinic_reply && (
+                                                                <div className="mt-4 p-4 bg-zinc-50 dark:bg-black/20 rounded-xl border border-zinc-200 dark:border-white/5 ml-4">
+                                                                    <div className="flex items-center gap-2 mb-2">
+                                                                        <div className="w-1.5 h-1.5 rounded-full bg-[#5B4D9D]" />
+                                                                        <span className="text-[10px] font-black text-[#5B4D9D] uppercase tracking-widest">Klinik Yanıtı</span>
+                                                                    </div>
+                                                                    <p className="text-xs text-zinc-600 dark:text-white/60 leading-relaxed italic">{review.clinic_reply}</p>
+                                                                    <div className="mt-2 text-[8px] text-zinc-400 uppercase tracking-widest font-black">
+                                                                        {new Date(review.clinic_replied_at).toLocaleDateString()}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </>
+                                            ) : (
+                                                <div className="py-20 text-center opacity-30">
+                                                    <Star className="w-12 h-12 mx-auto mb-4" />
+                                                    <p className="text-[10px] font-black uppercase tracking-widest">Henüz değerlendirme yok</p>
                                                 </div>
-                                            ))}
-                                            <button className="w-full py-4 border border-dashed border-zinc-250 dark:border-card-border rounded-2xl text-[10px] font-black text-zinc-400 dark:text-white/20 uppercase tracking-widest hover:border-[#5B4D9D]/40 hover:text-[#5B4D9D] transition-all cursor-pointer">
-                                                TÜM YORUMLARI GÖR
-                                            </button>
+                                            )}
                                         </div>
                                     )}
                                 </div>
