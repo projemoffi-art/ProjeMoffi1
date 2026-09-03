@@ -204,7 +204,7 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
             setIsSubmittingReview(false);
         }
     };
-    const clinicAvatarUrl = clinic?.avatar_url || clinic?.logo || clinicData?.avatar_url || clinicData?.logo || null;
+    const clinicAvatarUrl = clinic?.avatar_url || clinic?.logo || clinic?.imageUrl || clinicData?.avatar_url || clinicData?.logo || clinicData?.imageUrl || null;
 
     return (
         <AnimatePresence>

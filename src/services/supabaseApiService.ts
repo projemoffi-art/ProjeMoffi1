@@ -1994,7 +1994,7 @@ export class SupabaseApiService implements IApiService {
         return {
             id: data.id,
             name: data.business_name || data.full_name || 'Veteriner Kliniği',
-            imageUrl: data.avatar_url || 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&q=80',
+            imageUrl: data.avatar_url || null,
             rating: 0,
             reviewCount: 0,
             about: 'Klinik detay bilgisi',
