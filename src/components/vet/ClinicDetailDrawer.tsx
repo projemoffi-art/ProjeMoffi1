@@ -32,6 +32,15 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
     const [activeTab, setActiveTab] = useState<'info' | 'doctors' | 'reviews'>('info');
     const drawerRef = useRef<HTMLDivElement>(null);
 
+    const [reviews, setReviews] = useState<any[]>([]);
+    const [averageRating, setAverageRating] = useState<number>(0);
+    const [reviewableAppointments, setReviewableAppointments] = useState<any[]>([]);
+    const [activeReviewAppointmentId, setActiveReviewAppointmentId] = useState<string | null>(null);
+    const [rating, setRating] = useState(0);
+    const [comment, setComment] = useState("");
+    const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+    const [currentUser, setCurrentUser] = useState<any>(null);
+
     useEffect(() => {
         if (clinicId) {
             fetchDetails();
@@ -60,16 +69,6 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
             drawerRef.current.scrollTop = 0;
         }
     }, [activeTab]);
-
-    const [reviews, setReviews] = useState<any[]>([]);
-    const [averageRating, setAverageRating] = useState<number>(0);
-
-    const [reviewableAppointments, setReviewableAppointments] = useState<any[]>([]);
-    const [activeReviewAppointmentId, setActiveReviewAppointmentId] = useState<string | null>(null);
-    const [rating, setRating] = useState(0);
-    const [comment, setComment] = useState("");
-    const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-    const [currentUser, setCurrentUser] = useState<any>(null);
 
     const fetchDetails = async () => {
         setLoading(true);
