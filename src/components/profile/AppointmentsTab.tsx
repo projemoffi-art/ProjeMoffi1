@@ -8,6 +8,8 @@ import {
 import { cn } from '@/lib/utils';
 import { useShare } from "@/context/ShareContext";
 import { QRCodeSVG } from "qrcode.react";
+import { usePet } from "@/context/PetContext";
+import { apiService } from "@/services/apiService";
 
 export function AppointmentsTab({ 
     activePet, 
@@ -25,6 +27,25 @@ export function AppointmentsTab({
     const [generationStep, setGenerationStep] = useState(0);
     const [showPreview, setShowPreview] = useState(false);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+    const { refreshAppointments } = usePet();
+    const [cancelModalId, setCancelModalId] = useState<string | null>(null);
+    const [isCancelling, setIsCancelling] = useState(false);
+
+    const handleCancelAppointment = async () => {
+        if (!cancelModalId) return;
+        setIsCancelling(true);
+        try {
+            await apiService.cancelAppointment(cancelModalId);
+            await refreshAppointments();
+        } catch (error) {
+            console.error("Error cancelling appointment:", error);
+            alert("İptal işlemi sırasında bir hata oluştu.");
+        } finally {
+            setIsCancelling(false);
+            setCancelModalId(null);
+        }
+    };
 
     const handleGenerate = async () => {
         setIsGenerating(true);
@@ -96,9 +117,18 @@ export function AppointmentsTab({
                                     <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{appt.doctor} • {appt.time}</p>
                                 </div>
                             </div>
-                            <div className="text-right">
-                                <p className="text-white font-black text-xl italic tracking-tighter">{appt.date.split(' ')[0]}</p>
-                                <p className="text-[10px] font-extrabold text-emerald-400 uppercase tracking-widest">{appt.status}</p>
+                            <div className="text-right flex flex-col items-end justify-center">
+                                <p className={cn("font-black text-xl italic tracking-tighter", appt.status === 'İptal Edildi' || appt.status === 'cancelled' ? "text-gray-600 line-through" : "text-white")}>{appt.date.split(' ')[0]}</p>
+                                <p className={cn("text-[10px] font-extrabold uppercase tracking-widest", appt.status === 'İptal Edildi' || appt.status === 'cancelled' ? "text-red-500" : "text-emerald-400")}>{appt.status === 'cancelled' ? 'İptal Edildi' : appt.status}</p>
+                                
+                                {appt.status !== 'İptal Edildi' && appt.status !== 'cancelled' && appt.status !== 'Tamamlandı' && appt.status !== 'completed' && (
+                                    <button 
+                                        onClick={() => setCancelModalId(appt.id)}
+                                        className="mt-2 text-[9px] font-black text-red-500/70 hover:text-red-400 uppercase tracking-widest transition-colors"
+                                    >
+                                        İPTAL ET
+                                    </button>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -204,6 +234,40 @@ export function AppointmentsTab({
                     Bu panel, evcil hayvanınızın sağlık bilgilerini düzenli tutabilmeniz için tasarlanmış <strong className="text-amber-500">kişisel bir not defteridir</strong>. Resmi veterinerlik pasaportu yerine geçmez ve resmi kurumlarda yasal/hukuki bir geçerliliği yoktur.
                 </p>
             </div>
+
+            {/* CANCEL CONFIRMATION MODAL */}
+            <AnimatePresence>
+                {cancelModalId && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[6000] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => !isCancelling && setCancelModalId(null)}>
+                        <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} onClick={e => e.stopPropagation()} className="w-full max-w-sm bg-[#12121A] border border-card-border rounded-[2.5rem] p-6 text-center shadow-2xl relative overflow-hidden">
+                            <div className="w-16 h-16 rounded-full bg-red-500/10 border-2 border-red-500/20 flex items-center justify-center mx-auto mb-4">
+                                <AlertCircle className="w-8 h-8 text-red-500" />
+                            </div>
+                            <h3 className="text-xl font-black text-white italic tracking-tighter uppercase mb-2">Emin misiniz?</h3>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-relaxed mb-6 px-4">
+                                Bu randevuyu iptal etmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+                            </p>
+                            
+                            <div className="flex gap-3">
+                                <button 
+                                    onClick={() => setCancelModalId(null)}
+                                    disabled={isCancelling}
+                                    className="flex-1 bg-white/5 hover:bg-white/10 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-colors disabled:opacity-50"
+                                >
+                                    Vazgeç
+                                </button>
+                                <button 
+                                    onClick={handleCancelAppointment}
+                                    disabled={isCancelling}
+                                    className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {isCancelling ? <span className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" /> : "İptal Et"}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* PREVIEW MODAL */}
             <AnimatePresence>
