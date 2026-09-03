@@ -274,10 +274,10 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                                             <p className="text-[10px] font-black uppercase tracking-widest">Henüz mesaj yok</p>
                                         </div>
                                     )}
-                                    {chatMessages.map((msg: any) => {
+                                    {chatMessages.map((msg: any, index: number) => {
                                         const isMine = msg.sender_role === 'user';
                                         return (
-                                            <div key={msg.id} className={cn("flex w-full", isMine ? "justify-end" : "justify-start")}>
+                                            <div key={msg.id || `msg-${index}`} className={cn("flex w-full", isMine ? "justify-end" : "justify-start")}>
                                                 <div className={cn("max-w-[75%] rounded-2xl p-4 text-sm relative", isMine ? "bg-[#5B4D9D] text-white rounded-tr-sm" : "bg-zinc-100 dark:bg-white/5 text-zinc-800 dark:text-white border border-zinc-200 dark:border-white/10 rounded-tl-sm")}>
                                                     {msg.message}
                                                     <span className={cn("block text-[9px] mt-2 opacity-50 uppercase tracking-widest font-black", isMine ? "text-right" : "text-left")}>

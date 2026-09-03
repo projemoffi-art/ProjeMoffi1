@@ -4179,7 +4179,7 @@ export class SupabaseApiService implements IApiService {
     }
     // --- CLINIC MESSAGES (FAZ 8) ---
     async getConversation(clinicId: string, userId: string): Promise<ClinicMessage[]> {
-        if (!isSupabaseEnabled) return [];
+
         const { data, error } = await supabase
             .from('clinic_messages')
             .select('*')
@@ -4195,7 +4195,7 @@ export class SupabaseApiService implements IApiService {
     }
 
     async sendMessage(clinicId: string, userId: string, senderRole: 'user' | 'clinic', message: string): Promise<boolean> {
-        if (!isSupabaseEnabled) return false;
+
         const { error } = await supabase
             .from('clinic_messages')
             .insert({
@@ -4214,7 +4214,7 @@ export class SupabaseApiService implements IApiService {
     }
 
     async markMessagesRead(clinicId: string, userId: string, readerRole: 'user' | 'clinic'): Promise<boolean> {
-        if (!isSupabaseEnabled) return false;
+
         const senderToUpdate = readerRole === 'user' ? 'clinic' : 'user';
         
         const { error } = await supabase
@@ -4233,7 +4233,7 @@ export class SupabaseApiService implements IApiService {
     }
 
     async getUnreadMessageCount(clinicId: string, userId: string, readerRole: 'user' | 'clinic'): Promise<number> {
-        if (!isSupabaseEnabled) return 0;
+
         const senderToCount = readerRole === 'user' ? 'clinic' : 'user';
 
         const { count, error } = await supabase
@@ -4253,7 +4253,7 @@ export class SupabaseApiService implements IApiService {
 
     // --- CAMPAIGNS (FAZ 8) ---
     async getClinicCampaigns(clinicId: string): Promise<ClinicCampaign[]> {
-        if (!isSupabaseEnabled) return [];
+
         // Aktif kampanyalar: ends_at geçmemiş ya da null
         const now = new Date().toISOString();
         const { data, error } = await supabase
@@ -4271,7 +4271,7 @@ export class SupabaseApiService implements IApiService {
     }
 
     async createCampaign(clinicId: string, title: string, description: string, startsAt: string, endsAt: string | null): Promise<boolean> {
-        if (!isSupabaseEnabled) return false;
+
         const { error } = await supabase
             .from('clinic_campaigns')
             .insert({
@@ -4290,7 +4290,7 @@ export class SupabaseApiService implements IApiService {
     }
 
     async deleteCampaign(campaignId: string, clinicId: string): Promise<boolean> {
-        if (!isSupabaseEnabled) return false;
+
         const { error } = await supabase
             .from('clinic_campaigns')
             .delete()
