@@ -75,18 +75,26 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
     const handleSendMessage = async () => {
         if (!chatInput.trim() || !clinicId || !currentUser?.id || isSendingMessage) return;
         setIsSendingMessage(true);
-        console.log("GONDERILIYOR:", clinicId, currentUser?.id, chatInput);
+        
+        const messageToSend = chatInput.trim();
+        console.log("GONDERILIYOR:", clinicId, currentUser?.id, messageToSend);
+        
+        // HEMEN temizle (Optimistic UI)
+        setChatInput("");
+        
         try {
-            const success = await apiService.sendMessage(clinicId, currentUser.id, 'user', chatInput.trim());
+            const success = await apiService.sendMessage(clinicId, currentUser.id, 'user', messageToSend);
             console.log("SONUC:", success);
             if (success) {
-                setChatInput("");
-                await loadConversation();
+                // await ile bekletmiyoruz, arkaplanda yenilensin
+                loadConversation();
             } else {
                 console.error("sendMessage returned false");
+                setChatInput(messageToSend); // Hata olursa geri al
             }
         } catch (err) {
             console.error("Error in handleSendMessage:", err);
+            setChatInput(messageToSend); // Hata olursa geri al
         } finally {
             setIsSendingMessage(false);
         }
@@ -133,7 +141,7 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
             // Fix legacy references, ensure we use avatar_url for image
             const cData = {
                 ...res,
-                logo: res?.avatar_url || res?.logo || 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=100'
+                logo: res?.avatar_url || res?.logo || null
             };
             
             setClinic(cData);
@@ -143,92 +151,60 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                 setClinic({
                     ...clinicData,
                     ...cData,
-                    imageUrl: clinicData.isPremium ? 'https://images.unsplash.com/photo-1584132967334-10e028bd69f7?w=800' : 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=800',
+                    imageUrl: clinicData?.avatar_url || clinicData?.logo || res?.avatar_url || res?.logo || null,
                     distance: 'Yakında',
                     address: clinicData.name + ' Çevresi'
                 });
-                
-                // Still try to fetch real reviews if available!
-                try {
-                    const reviewsData = await apiService.getClinicReviews(targetId!);
-                    setReviews(reviewsData.reviews || []);
-                    setAverageRating(reviewsData.averageRating || 0);
-                } catch {
-                    setReviews([]);
-                    setAverageRating(0);
-                }
-            } else {
-                const [data, reviewsData] = await Promise.all([
-                    apiService.getClinicDetails(clinicId!),
-                    apiService.getClinicReviews(clinicId!)
-                ]);
-                setClinic(data);
-                setReviews(reviewsData.reviews || []);
-                setAverageRating(reviewsData.averageRating || 0);
             }
+            
+            // Fetch Reviews
+            const reviewsRes = await apiService.getClinicReviews(targetId!);
+            setReviews(reviewsRes.reviews);
+            setAverageRating(reviewsRes.averageRating);
 
-            if (user && targetId) {
-                const apts = await apiService.getReviewableAppointments(user.id);
-                setReviewableAppointments(apts.filter(a => a.clinic_id === targetId));
+            // Fetch reviewable appointments
+            if (user) {
+                const rAppts = await apiService.getReviewableAppointments(user.id);
+                // Sadece BU kliniğe ait olan yorumsuz randevuları filtrele
+                const clinicReviewableAppts = rAppts.filter((apt: any) => apt.clinic_id === targetId);
+                setReviewableAppointments(clinicReviewableAppts);
             }
-
         } catch (err) {
-            console.error("Clinic details fetch error:", err);
+            console.error(err);
         } finally {
             setLoading(false);
         }
     };
 
     const handleSubmitReview = async () => {
-        if (rating === 0 || !currentUser || !activeReviewAppointmentId) return;
+        if (!activeReviewAppointmentId || rating === 0) return;
         setIsSubmittingReview(true);
         try {
             const targetId = clinicData ? clinicData.id : clinicId;
-            
-            console.log("Submitting review payload:", {
-                clinicId: targetId,
-                appointmentId: activeReviewAppointmentId,
-                rating,
-                comment: comment.trim() || undefined
-            });
-
-            const success = await apiService.submitReview(
-                targetId!,
-                activeReviewAppointmentId,
-                rating,
-                comment.trim() || undefined
-            );
-            
-            console.log("Submit review result:", success);
-
-            if (!success) {
-                alert("Yorum gönderilirken bir hata oluştu (Kayıt başarısız).");
-                return; // Do not close form or refresh if failed
+            const success = await apiService.submitReview(targetId!, activeReviewAppointmentId, rating, comment);
+            if (success) {
+                setRating(0);
+                setComment("");
+                setActiveReviewAppointmentId(null);
+                
+                // Refresh data
+                const reviewsRes = await apiService.getClinicReviews(targetId!);
+                setReviews(reviewsRes.reviews);
+                setAverageRating(reviewsRes.averageRating);
+                
+                if (currentUser) {
+                    const rAppts = await apiService.getReviewableAppointments(currentUser.id);
+                    const clinicReviewableAppts = rAppts.filter((apt: any) => apt.clinic_id === targetId);
+                    setReviewableAppointments(clinicReviewableAppts);
+                }
             }
-            
-            setActiveReviewAppointmentId(null);
-            setRating(0);
-            setComment("");
-            
-            // Refresh reviews
-            const reviewsData = await apiService.getClinicReviews(targetId!);
-            setReviews(reviewsData.reviews || []);
-            setAverageRating(reviewsData.averageRating || 0);
-            
-            // Refresh reviewable appointments so the button goes away
-            console.log("Before fetching new reviewable appointments, previous count:", reviewableAppointments.length);
-            const apts = await apiService.getReviewableAppointments(currentUser.id);
-            const filteredApts = apts.filter(a => a.clinic_id === targetId);
-            console.log("Newly fetched reviewable appointments for this clinic:", filteredApts);
-            setReviewableAppointments(filteredApts);
-
         } catch (err) {
-            console.error("Yorum gönderilirken hata:", err);
-            alert("Yorum gönderilirken beklenmeyen bir hata oluştu.");
+            console.error(err);
         } finally {
             setIsSubmittingReview(false);
         }
     };
+    const clinicAvatarUrl = clinic?.avatar_url || clinic?.logo || clinicData?.avatar_url || clinicData?.logo || null;
 
     return (
         <AnimatePresence>
@@ -259,7 +235,13 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                                         <ChevronLeft className="w-5 h-5" />
                                     </button>
                                     <div className="flex items-center gap-3">
-                                        <img src={clinic?.logo || clinicData?.logo} className="w-10 h-10 rounded-full object-cover bg-zinc-100" />
+                                        {clinicAvatarUrl ? (
+                                            <img src={clinicAvatarUrl} className="w-10 h-10 rounded-full object-cover bg-zinc-100" />
+                                        ) : (
+                                            <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-white/10 flex items-center justify-center">
+                                                <span className="font-black text-zinc-500 dark:text-white/40 uppercase">{(clinic?.name || clinicData?.name || 'C')[0]}</span>
+                                            </div>
+                                        )}
                                         <div>
                                             <h3 className="font-black text-sm uppercase tracking-widest text-zinc-800 dark:text-white">{clinic?.name || clinicData?.name}</h3>
                                             <p className="text-[10px] text-zinc-500 uppercase tracking-widest">Sohbet</p>
@@ -319,7 +301,13 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                             <>
                                 {/* HEADER IMAGE & CLOSE */}
                                 <div className="relative h-72 shrink-0 group">
-                                    <img src={clinic.imageUrl} className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-1000" />
+                                    {clinicAvatarUrl ? (
+                                        <img src={clinicAvatarUrl} className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-1000" />
+                                    ) : (
+                                        <div className="w-full h-full bg-zinc-200 dark:bg-white/5 flex items-center justify-center">
+                                            <span className="text-6xl font-black text-zinc-400 dark:text-white/20 uppercase">{(clinic?.name || 'C')[0]}</span>
+                                        </div>
+                                    )}
                                     <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-[#111111] via-transparent to-black/40" />
                                     
                                     <button 
@@ -341,8 +329,8 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                                         <div className="flex items-center gap-3 mt-3">
                                             <div className="flex items-center gap-1.5 bg-zinc-150/80 dark:bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-card-border">
                                                 <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                                                <span className="text-xs font-black text-zinc-850 dark:text-white">{clinic.rating || '--'}</span>
-                                                <span className="text-[10px] text-zinc-500 dark:text-white/40 font-bold">({clinic.reviewCount || 0})</span>
+                                                <span className="text-xs font-black text-zinc-850 dark:text-white">{(averageRating === 0 && reviews.length === 0) ? '--' : averageRating.toFixed(1)}</span>
+                                                <span className="text-[10px] text-zinc-500 dark:text-white/40 font-bold">({reviews.length})</span>
                                             </div>
                                             <span className="text-[10px] font-black text-zinc-550 dark:text-white/30 uppercase tracking-widest">{clinic.distance} Uzaklıkta</span>
                                         </div>
@@ -456,7 +444,13 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                                                     
                                                     <div className="flex items-start gap-5 relative z-10">
                                                         <div className="w-24 h-24 rounded-3xl overflow-hidden border-2 border-zinc-200 dark:border-card-border group-hover:border-[#5B4D9D]/30 transition-all shrink-0">
-                                                            <img src={doctor.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                                            {doctor.imageUrl ? (
+                                                                <img src={doctor.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                                            ) : (
+                                                                <div className="w-full h-full bg-zinc-200 dark:bg-white/10 flex items-center justify-center">
+                                                                    <span className="text-3xl font-black text-zinc-500 dark:text-white/40 uppercase">{(doctor.name || 'D')[0]}</span>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                         <div className="flex-1">
                                                             <div className="bg-[#5B4D9D]/20 text-[#5B4D9D] text-[8px] font-black px-2 py-0.5 rounded-md inline-block uppercase tracking-widest mb-2 border border-[#5B4D9D]/20">
@@ -491,8 +485,8 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                                             {/* Review Form / Button */}
                                             {reviewableAppointments.length > 0 && (
                                                 <div className="mb-8 space-y-4">
-                                                    {reviewableAppointments.map((apt: any) => (
-                                                        <div key={apt.id}>
+                                                    {reviewableAppointments.map((apt: any, index: number) => (
+                                                        <div key={apt.id || apt.appointment_id || `apt-${index}`}>
                                                             {activeReviewAppointmentId !== apt.id ? (
                                                                 <button
                                                                     onClick={() => setActiveReviewAppointmentId(apt.id)}
@@ -561,11 +555,17 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                                                         </div>
                                                     </div>
 
-                                                    {reviews.map((review: any) => (
-                                                        <div key={review.id} className="bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-card-border rounded-[2rem] p-6 text-left">
+                                                    {reviews.map((review: any, index: number) => (
+                                                        <div key={review.id || `rev-${index}`} className="bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-card-border rounded-[2rem] p-6 text-left">
                                                             <div className="flex justify-between items-start mb-4">
                                                                 <div className="flex items-center gap-3">
-                                                                    <img src={review.user?.avatar} className="w-10 h-10 rounded-full border border-zinc-200 dark:border-card-border" />
+                                                                    {review.user?.avatar ? (
+                                                                        <img src={review.user.avatar} className="w-10 h-10 rounded-full border border-zinc-200 dark:border-card-border" />
+                                                                    ) : (
+                                                                        <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-white/10 flex items-center justify-center border border-zinc-200 dark:border-card-border">
+                                                                            <span className="text-sm font-black text-zinc-500 dark:text-white/40 uppercase">{(review.user?.name || 'U')[0]}</span>
+                                                                        </div>
+                                                                    )}
                                                                     <div>
                                                                         <p className="text-xs font-black text-zinc-800 dark:text-white uppercase italic">{review.user?.name}</p>
                                                                         <p className="text-[9px] font-black text-zinc-400 dark:text-white/20 uppercase tracking-widest">{new Date(review.created_at).toLocaleDateString()}</p>
