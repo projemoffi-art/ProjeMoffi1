@@ -25,12 +25,6 @@ import { useAuth } from "@/context/AuthContext";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { apiService, isSupabaseEnabled } from "@/services/apiService";
 
-// Dynamic map import
-const MapboxLiveMap = dynamic(() => import('@/components/walk/LiveMap'), { 
-    ssr: false,
-    loading: () => <div className="w-full h-full bg-[#18181b] animate-pulse rounded-3xl" />
-});
-
 function validateLuhn(cardNumber: string): boolean {
     const clean = cardNumber.replace(/\D/g, "");
     // Allow standard test cards bypass
@@ -92,7 +86,7 @@ function VetPageContent() {
     const [selectedClinic, setSelectedClinic] = useState<VetClinic | null>(null);
     const [detailClinicId, setDetailClinicId] = useState<string | null>(null);
     const [detailClinicData, setDetailClinicData] = useState<any>(null);
-    const [isExplorerOpen, setIsExplorerOpen] = useState(false);
+
     const [successMessage, setSuccessMessage] = useState("Randevu Oluşturuldu ✨");
     const [userRating, setUserRating] = useState(0);
     const [userComment, setUserComment] = useState("");
@@ -885,36 +879,29 @@ function VetPageContent() {
 
 
                 {/* Solid Map Box */}
-                <section className="relative w-full h-52 rounded-2xl overflow-hidden border border-zinc-200 dark:border-[#27272a] shadow-xl bg-white dark:bg-[#121215] transition-colors duration-300">
-                    {userLocation ? (
-                        <MapboxLiveMap
-                            userPos={userLocation}
-                            visitedPlaceIds={allClinics.map(c => c.id)}
-                            path={[]}
-                            isTracking={false}
-                            onPlaceClick={(place: any) => {
-                                setDetailClinicId(place.id);
-                                setDetailClinicData(place);
-                            }}
-                        />
-                    ) : (
-                        <div className="w-full h-full bg-white dark:bg-[#121215] flex items-center justify-center text-zinc-400 dark:text-[#a1a1aa] text-[10px] font-black uppercase tracking-widest">Harita Hazırlanıyor...</div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-white/95 dark:from-[#09090b] via-transparent to-transparent pointer-events-none" />
-                    <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between pointer-events-none">
-                        <div>
-                            <div className="font-black text-sm text-zinc-800 dark:text-[#fafafa] flex items-center gap-1.5">
-                                <MapPin className="w-4 h-4 text-indigo-500 dark:text-indigo-400" /> {allClinics.length} Yakın Klinik
-                            </div>
-                            <div className="text-[8px] text-zinc-500 dark:text-[#fafafa]/40 font-bold uppercase tracking-wider mt-0.5">Bulunduğunuz Konum Civarı</div>
-                        </div>
-                        <button 
-                            onClick={() => setIsExplorerOpen(true)}
-                            className="bg-indigo-500 text-black px-4 py-2 rounded-lg text-[9px] font-black pointer-events-auto hover:bg-indigo-400 transition-all shadow-md uppercase tracking-wider"
-                        >
-                            Haritada Keşfet
-                        </button>
+                <section className="relative w-full rounded-2xl p-6 border border-zinc-200 dark:border-[#27272a] shadow-xl bg-white dark:bg-[#121215] flex flex-col items-center justify-center text-center gap-4 transition-colors duration-300">
+                    <div className="w-12 h-12 rounded-full bg-indigo-500/10 flex items-center justify-center">
+                        <MapPin className="w-6 h-6 text-indigo-500" />
                     </div>
+                    <div>
+                        <h3 className="font-black text-sm text-zinc-800 dark:text-white uppercase tracking-wider mb-1">Yakındaki Klinikleri Keşfet</h3>
+                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-bold leading-relaxed">
+                            Moffi üzerinden çevrenizdeki tüm onaylı veteriner kliniklerini ve nöbetçi hekimleri görebilirsiniz.
+                        </p>
+                    </div>
+                    <button 
+                        onClick={() => {
+                            if (userLocation) {
+                                window.open(`https://www.google.com/maps/search/veteriner/@${userLocation.lat},${userLocation.lng},14z`, '_blank');
+                            } else {
+                                window.open(`https://www.google.com/maps/search/veteriner`, '_blank');
+                            }
+                        }}
+                        className="w-full sm:w-auto bg-indigo-500 text-white px-6 py-3 rounded-xl text-xs font-black hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-500/20 uppercase tracking-widest flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                        <MapPin className="w-4 h-4" />
+                        Google Haritalar'da Aç
+                    </button>
                 </section>
 
                 {/* Clinics Section */}
@@ -1489,46 +1476,7 @@ function VetPageContent() {
                     </motion.div>
                 )}
 
-                {/* 4. CLINIC EXPLORER OVERLAY */}
-                {isExplorerOpen && (
-                    <motion.div 
-                        key="explorer-overlay"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[8000] bg-zinc-50 dark:bg-black"
-                    >
-                        <div className="absolute inset-0">
-                            {userLocation && (
-                                <MapboxLiveMap
-                                    userPos={userLocation}
-                                    visitedPlaceIds={[]}
-                                    path={[]}
-                                    isTracking={true}
-                                    onPlaceClick={(place: any) => {
-                                        setDetailClinicId(place.id);
-                                        setDetailClinicData(place);
-                                    }}
-                                />
-                            )}
-                        </div>
-                        
-                        <div className="absolute top-6 left-6 z-[8001] flex justify-start pointer-events-none">
-                            <button 
-                                onClick={() => setIsExplorerOpen(false)}
-                                className="w-10 h-10 bg-white/90 dark:bg-[#121215]/90 backdrop-blur-md text-zinc-850 dark:text-white rounded-full flex items-center justify-center shadow-lg pointer-events-auto hover:bg-zinc-100 dark:hover:bg-[#27272a] transition-all active:scale-95"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
 
-                        <div className="absolute bottom-6 inset-x-0 z-[8001] pointer-events-none flex justify-center">
-                            <div className="bg-white/80 dark:bg-[#121215]/80 backdrop-blur-md px-4 py-2 rounded-full border border-zinc-200 dark:border-[#27272a] text-zinc-600 dark:text-[#a1a1aa] text-[9px] font-bold tracking-widest pointer-events-auto shadow-sm">
-                                Haritadaki pinlere dokunarak detayları gör
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
                 {/* TRANSPARENCY LOGS MODAL */}
                 {isLogModalOpen && (
                     <motion.div key="log-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[250] bg-black/60 dark:bg-black/90 flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm">
