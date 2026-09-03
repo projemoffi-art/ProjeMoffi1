@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
     X, Phone, Navigation, Star, MapPin, 
     Calendar, Clock, ShieldCheck, ChevronRight,
-    Users, MessageSquare, Info
+    Users, MessageSquare, Info, Send, ChevronLeft
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiService } from "@/services/apiService";
@@ -40,6 +40,48 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
     const [comment, setComment] = useState("");
     const [isSubmittingReview, setIsSubmittingReview] = useState(false);
     const [currentUser, setCurrentUser] = useState<any>(null);
+
+    // Chat States
+    const [isChatOpen, setIsChatOpen] = useState(false);
+    const [chatMessages, setChatMessages] = useState<any[]>([]);
+    const [chatInput, setChatInput] = useState("");
+    const [isSendingMessage, setIsSendingMessage] = useState(false);
+    const pollingRef = useRef<NodeJS.Timeout | null>(null);
+
+    const loadConversation = async () => {
+        if (!clinicId || !currentUser?.id) return;
+        const messages = await apiService.getConversation(clinicId, currentUser.id);
+        setChatMessages(messages);
+        
+        // Okunmamışları okundu yap (Klinikten gelenler)
+        await apiService.markMessagesRead(clinicId, currentUser.id, 'user');
+    };
+
+    useEffect(() => {
+        if (isChatOpen) {
+            loadConversation();
+            pollingRef.current = setInterval(() => {
+                loadConversation();
+            }, 4000);
+        } else {
+            if (pollingRef.current) clearInterval(pollingRef.current);
+        }
+
+        return () => {
+            if (pollingRef.current) clearInterval(pollingRef.current);
+        };
+    }, [isChatOpen, clinicId, currentUser]);
+
+    const handleSendMessage = async () => {
+        if (!chatInput.trim() || !clinicId || !currentUser?.id || isSendingMessage) return;
+        setIsSendingMessage(true);
+        const success = await apiService.sendMessage(clinicId, currentUser.id, 'user', chatInput.trim());
+        if (success) {
+            setChatInput("");
+            await loadConversation();
+        }
+        setIsSendingMessage(false);
+    };
 
     useEffect(() => {
         if (clinicId) {
@@ -191,7 +233,65 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                         transition={{ type: "spring", damping: 25, stiffness: 200 }}
                         className="fixed top-0 right-0 z-[120] w-full sm:w-[480px] h-full bg-white dark:bg-[#111111] shadow-[-20px_0_50px_rgba(0,0,0,0.05)] dark:shadow-[-20px_0_50px_rgba(0,0,0,0.5)] border-l border-zinc-200 dark:border-card-border flex flex-col overflow-y-auto no-scrollbar pb-24"
                     >
-                        {loading ? (
+                        {isChatOpen ? (
+                            <div className="flex flex-col h-full bg-white dark:bg-[#111111]">
+                                <div className="flex items-center gap-3 p-4 border-b border-zinc-200 dark:border-card-border sticky top-0 bg-white/80 dark:bg-[#111111]/80 backdrop-blur-md z-10">
+                                    <button onClick={() => setIsChatOpen(false)} className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400">
+                                        <ChevronLeft className="w-5 h-5" />
+                                    </button>
+                                    <div className="flex items-center gap-3">
+                                        <img src={clinic?.logo || clinicData?.logo} className="w-10 h-10 rounded-full object-cover bg-zinc-100" />
+                                        <div>
+                                            <h3 className="font-black text-sm uppercase tracking-widest text-zinc-800 dark:text-white">{clinic?.name || clinicData?.name}</h3>
+                                            <p className="text-[10px] text-zinc-500 uppercase tracking-widest">Sohbet</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col no-scrollbar">
+                                    {chatMessages.length === 0 && (
+                                        <div className="flex-1 flex flex-col items-center justify-center opacity-30 text-center px-8">
+                                            <MessageSquare className="w-12 h-12 mb-4 mx-auto" />
+                                            <p className="text-[10px] font-black uppercase tracking-widest">Henüz mesaj yok</p>
+                                        </div>
+                                    )}
+                                    {chatMessages.map((msg: any) => {
+                                        const isMine = msg.sender_role === 'user';
+                                        return (
+                                            <div key={msg.id} className={cn("flex w-full", isMine ? "justify-end" : "justify-start")}>
+                                                <div className={cn("max-w-[75%] rounded-2xl p-4 text-sm relative", isMine ? "bg-[#5B4D9D] text-white rounded-tr-sm" : "bg-zinc-100 dark:bg-white/5 text-zinc-800 dark:text-white border border-zinc-200 dark:border-white/10 rounded-tl-sm")}>
+                                                    {msg.message}
+                                                    <span className={cn("block text-[9px] mt-2 opacity-50 uppercase tracking-widest font-black", isMine ? "text-right" : "text-left")}>
+                                                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                
+                                <div className="p-4 border-t border-zinc-200 dark:border-card-border bg-white dark:bg-[#111111] sticky bottom-0">
+                                    <div className="flex items-center gap-2 relative">
+                                        <input 
+                                            type="text" 
+                                            value={chatInput} 
+                                            onChange={(e) => setChatInput(e.target.value)}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') handleSendMessage(); }}
+                                            placeholder="Mesajınızı yazın..." 
+                                            className="flex-1 bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-full px-5 py-4 text-sm focus:outline-none focus:border-[#5B4D9D] dark:focus:border-[#5B4D9D] transition-colors text-zinc-800 dark:text-white"
+                                            disabled={isSendingMessage}
+                                        />
+                                        <button 
+                                            onClick={handleSendMessage}
+                                            disabled={!chatInput.trim() || isSendingMessage}
+                                            className="bg-[#5B4D9D] text-white w-12 h-12 rounded-full hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center flex-shrink-0 absolute right-1 top-1"
+                                        >
+                                            <Send className="w-5 h-5 -ml-1" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : loading ? (
                             <div className="flex-1 flex flex-col items-center justify-center gap-4">
                                 <div className="w-12 h-12 border-4 border-[#5B4D9D]/20 border-t-[#5B4D9D] rounded-full animate-spin" />
                                 <p className="text-[10px] font-black text-zinc-400 dark:text-white/20 uppercase tracking-[0.3em]">Bilgiler Getiriliyor...</p>
@@ -250,7 +350,7 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                                         <span className="text-[9px] font-black text-zinc-600 dark:text-white/60 uppercase tracking-widest">Yol Tarifi</span>
                                     </button>
                                     <button 
-                                        onClick={() => { if (clinicId) openChat(clinicId); }}
+                                        onClick={() => setIsChatOpen(true)}
                                         className="flex flex-col items-center justify-center gap-2 py-4 bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-card-border rounded-2xl hover:bg-zinc-200/50 dark:hover:bg-black/10 dark:bg-white/10 transition-all active:scale-95"
                                     >
                                         <MessageSquare className="w-5 h-5 text-blue-500 dark:text-blue-400" />
