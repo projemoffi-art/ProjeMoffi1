@@ -524,10 +524,9 @@ function VetPageContent() {
         return "2.1";
     };
 
-    const handleProceedToPayment = () => {
-        console.log("handleProceedToPayment called. selectedClinic:", selectedClinic?.name, "selectedTime:", selectedTime);
+    const handleCreateAppointment = async () => {
         if (!selectedClinic || !selectedTime) {
-            console.log("handleProceedToPayment aborted: missing clinic or time");
+            console.log("handleCreateAppointment aborted: missing clinic or time");
             return;
         }
 
@@ -569,70 +568,16 @@ function VetPageContent() {
             } : null
         };
 
-        setTempAppointmentData({
-            clinic: selectedClinic,
-            date: selectedDate,
-            time: selectedTime,
-            type: 'general',
-            sharedPassport,
-            petInfo: activePet ? { id: activePet.id, name: activePet.name, image: activePet.avatar_url || activePet.image } : undefined
-        });
-
-        setPaymentError("");
-        setCardNumber("");
-        setCardExpiry("");
-        setCardCvc("");
-        setCardholderName("");
-        setActiveModal('payment');
-    };
-
-    const completeAppointmentBooking = async () => {
-        if (!tempAppointmentData) return;
-        
-        const price = tempAppointmentData.clinic.price || 350;
-        let currentBalance = 12450.00;
-        try {
-            const stored = localStorage.getItem('moffi_fiat_balance');
-            if (stored !== null) currentBalance = parseFloat(stored);
-        } catch (e) {}
-
-        // Deduct B2C Balance
-        const nextBalance = currentBalance - price;
-        localStorage.setItem('moffi_fiat_balance', nextBalance.toFixed(2));
-
-        // Record Blocked Transaction
-        try {
-            const storedTx = localStorage.getItem('moffi_fiat_transactions');
-            const transactionsList = storedTx ? JSON.parse(storedTx) : [];
-            const newTx = {
-                id: 'tx_' + Date.now(),
-                title: `Randevu Bloke Tutarı`,
-                category: 'health',
-                amount: price,
-                date: new Date().toISOString().split('T')[0],
-                merchant: tempAppointmentData.clinic.name,
-                status: 'blocked',
-                icon: '💉'
-            };
-            transactionsList.unshift(newTx);
-            localStorage.setItem('moffi_fiat_transactions', JSON.stringify(transactionsList));
-        } catch (e) {}
-
-        // Book the actual appointment with payment details
-        const paymentDetails = {
-            paymentId: 'pay_' + Date.now(),
-            paymentAmount: price,
-            paymentStatus: 'pre_authorized'
-        };
+        const petInfo = activePet ? { id: activePet.id, name: activePet.name, image: activePet.avatar_url || activePet.image } : undefined;
 
         await bookAppointment(
-            tempAppointmentData.clinic,
-            tempAppointmentData.date,
-            tempAppointmentData.time,
-            tempAppointmentData.type,
-            tempAppointmentData.sharedPassport,
-            tempAppointmentData.petInfo,
-            paymentDetails
+            selectedClinic,
+            selectedDate,
+            selectedTime,
+            'general',
+            sharedPassport,
+            petInfo,
+            undefined // Randevular artık ücretsiz
         );
 
         // Record Transparency Log
@@ -641,7 +586,7 @@ function VetPageContent() {
             const logsList = storedLogs ? JSON.parse(storedLogs) : [];
             const newLog = {
                 id: 'log_' + Date.now(),
-                clinicName: tempAppointmentData.clinic.name,
+                clinicName: selectedClinic.name,
                 petName: activePet ? activePet.name : 'Evcil Hayvan',
                 date: new Date().toLocaleString('tr-TR'),
                 sharedFields: [
@@ -657,147 +602,10 @@ function VetPageContent() {
             console.error("Failed to save transparency log:", e);
         }
 
-        setSuccessMessage("Ödeme Başarılı & Randevu Oluşturuldu ✨");
+        setSuccessMessage("Randevu Talebiniz İletildi ✨");
         setActiveModal('success');
         setDetailClinicId(null);
         setTimeout(() => setActiveModal(null), 3000);
-    };
-
-    const handleOtpSubmit = async (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
-        if (otpCode.length < 6) {
-            setOtpError("Lütfen 6 haneli doğrulama kodunu girin.");
-            return;
-        }
-
-        setIsOtpProcessing(true);
-        setOtpError("");
-
-        // Simulate OTP verification check
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        const isNumeric = /^\d+$/.test(otpCode);
-        if (!isNumeric) {
-            setOtpError("Doğrulama kodu sadece rakamlardan oluşmalıdır.");
-            setIsOtpProcessing(false);
-            return;
-        }
-
-        try {
-            await completeAppointmentBooking();
-            setShowOtpModal(false);
-        } catch (error: any) {
-            setOtpError(error?.message || "Ödeme doğrulanamadı. Lütfen tekrar deneyin.");
-        } finally {
-            setIsOtpProcessing(false);
-        }
-    };
-
-    const confirmAppointment = async () => {
-        if (!tempAppointmentData) return;
-        setIsPaymentProcessing(true);
-        setPaymentError("");
-
-        const cleanCard = cardNumber.replace(/\s+/g, "");
-
-        // PayTR/Stripe validation simulation
-        if (cleanCard.length < 16) {
-            setPaymentError("Lütfen 16 haneli kart numaranızı eksiksiz girin.");
-            setIsPaymentProcessing(false);
-            return;
-        }
-
-        if (!validateLuhn(cleanCard)) {
-            setPaymentError("Ödeme Başarısız: Kart numarası geçersiz (Luhn Kontrolü Başarısız).");
-            setIsPaymentProcessing(false);
-            return;
-        }
-
-        if (!cardholderName.trim()) {
-            setPaymentError("Lütfen kart sahibinin adını girin.");
-            setIsPaymentProcessing(false);
-            return;
-        }
-
-        if (cardExpiry.length < 5) {
-            setPaymentError("Son kullanma tarihi geçersiz (AA/YY).");
-            setIsPaymentProcessing(false);
-            return;
-        }
-
-        if (cardCvc.length < 3) {
-            setPaymentError("CVC kodu geçersiz.");
-            setIsPaymentProcessing(false);
-            return;
-        }
-
-        // Test credit cards handling
-        if (cleanCard.endsWith("9999") || cleanCard === "4312431243124312") {
-            setPaymentError("Ödeme Başarısız: Yetersiz Limit (PayTR Hata Kodu: 104).");
-            setIsPaymentProcessing(false);
-            return;
-        }
-
-        if (cleanCard.endsWith("1111") || cleanCard === "4111111111111111") {
-            setPaymentError("Ödeme Başarısız: Kart Geçersiz / Blokeli (Stripe Hata Kodu: card_declined).");
-            setIsPaymentProcessing(false);
-            return;
-        }
-
-        if (!cleanCard.startsWith("4242") && !cleanCard.startsWith("4")) {
-            setPaymentError("Geçersiz Test Kartı. Lütfen test kartı kullanın (Örn: 4242...).");
-            setIsPaymentProcessing(false);
-            return;
-        }
-
-        // B2C Wallet balance deduction check
-        const price = tempAppointmentData.clinic.price || 350;
-        let currentBalance = 12450.00;
-        try {
-            const stored = localStorage.getItem('moffi_fiat_balance');
-            if (stored !== null) currentBalance = parseFloat(stored);
-        } catch (e) {}
-
-        if (currentBalance < price) {
-            setPaymentError(`Ödeme Başarısız: Cüzdan bakiyeniz yetersiz (Gerekli: ₺${price}, Mevcut: ₺${currentBalance}).`);
-            setIsPaymentProcessing(false);
-            return;
-        }
-
-        // Processing payment simulation delay (connecting to PayTR)
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        // Call the simulated PayTR Token API to establish connection and get mock session
-        try {
-            console.log("Simulating PayTR Token API call...");
-            const response = await fetch('/api/paytr/payment', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    amount: price,
-                    email: user?.email || 'customer@moffipet.com',
-                    address: {
-                        name: cardholderName.split(" ")[0] || "Pati",
-                        surname: cardholderName.split(" ").slice(1).join(" ") || "Sahibi",
-                        phone: "05555555555",
-                        detail: "Moffi Mobil Ödeme"
-                    },
-                    items: [
-                        { productId: tempAppointmentData.clinic.id, quantity: 1, price: price, name: `${tempAppointmentData.clinic.name} Muayene` }
-                    ],
-                    userId: user?.id || 'guest'
-                })
-            });
-            const paytrResult = await response.json();
-            console.log("Simulated PayTR Token Response:", paytrResult);
-        } catch (e) {
-            console.warn("PayTR API call failed or bypassed in simulation:", e);
-        }
-
-        setIsPaymentProcessing(false);
-        setOtpCode("");
-        setOtpError("");
-        setShowOtpModal(true);
     };
 
     return (
@@ -1198,270 +1006,17 @@ function VetPageContent() {
                             {/* FIXED FOOTER CONTROLS */}
                             <div className="pt-4 border-t border-zinc-200 dark:border-[#27272a]/80 mt-auto bg-white dark:bg-[#121318]">
                                 <button
-                                    onClick={handleProceedToPayment}
+                                    onClick={handleCreateAppointment}
                                     disabled={!selectedTime}
                                     className="w-full bg-indigo-500 text-black py-4 rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-indigo-500/10 disabled:opacity-20 transition-all active:scale-95"
                                 >
-                                    Ödeme Aşamasına Geç
+                                    Randevu Talebini İlet
                                 </button>
                             </div>
                         </motion.div>
                     </motion.div>
                 )}
 
-                {/* STRIPE/PAYTR SECURE PAYMENT MODAL */}
-                {activeModal === 'payment' && tempAppointmentData && (
-                    <motion.div key="payment-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[150] bg-black/60 dark:bg-black/90 flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm">
-                        <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 220 }} className="w-full max-w-md bg-gradient-to-b from-white to-zinc-50 dark:from-[#0b0c0f] dark:to-[#121318] rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl overflow-hidden h-[85vh] flex flex-col border border-zinc-200 dark:border-[#27272a] text-zinc-800 dark:text-[#fafafa] relative border-t border-t-indigo-500/20">
-                            <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1 bg-zinc-200 dark:bg-[#27272a] rounded-full sm:hidden" />
-                            
-                            <div className="flex justify-between items-center mb-5 mt-2 sm:mt-0">
-                                <div className="text-left">
-                                    <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest block mb-0.5">PayTR / Stripe Secure</span>
-                                    <h2 className="text-lg font-black tracking-tight uppercase">Güvenli Ödeme</h2>
-                                </div>
-                                <button onClick={() => setActiveModal('appointment')} className="w-8 h-8 bg-zinc-100 dark:bg-[#18181b] rounded-full flex items-center justify-center border border-zinc-200 dark:border-[#27272a] hover:bg-zinc-150 dark:hover:bg-[#27272a] text-zinc-700 dark:text-white transition-all"><ChevronLeft className="w-4 h-4" /></button>
-                            </div>
-
-                            {/* SCROLLABLE BODY CONTAINER */}
-                            <div className="flex-1 overflow-y-auto pr-1 no-scrollbar space-y-6 text-left momentum-scroll overscroll-contain pb-6">
-                                {/* Payment Summary */}
-                                <div className="bg-zinc-50 dark:bg-[#18181b] border border-zinc-200 dark:border-[#27272a] rounded-2xl p-4 text-left">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="text-xs font-bold text-zinc-500 dark:text-[#a1a1aa]">Randevu Hizmeti</span>
-                                        <span className="text-xs font-black">{tempAppointmentData.clinic.name}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="text-xs font-bold text-zinc-500 dark:text-[#a1a1aa]">Tarih / Saat</span>
-                                        <span className="text-xs font-bold">{tempAppointmentData.date} • {tempAppointmentData.time}</span>
-                                    </div>
-                                    <div className="border-t border-zinc-200 dark:border-[#27272a] pt-2 mt-2 flex justify-between items-center">
-                                        <span className="text-xs font-black text-zinc-700 dark:text-[#fafafa]">Ödenecek Tutar</span>
-                                        <span className="text-lg font-black text-indigo-500 dark:text-indigo-400">₺{tempAppointmentData.clinic.price || 350}</span>
-                                    </div>
-                                </div>
-
-                                {/* Credit Card Simulation Preview */}
-                                <div className="w-full h-44 rounded-2xl bg-gradient-to-br from-zinc-800 to-black p-5 text-white flex flex-col justify-between shadow-lg relative overflow-hidden select-none shrink-0">
-                                    <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] mix-blend-overlay" />
-                                    <div className="flex justify-between items-start z-10">
-                                        <div className="font-mono text-xs font-bold tracking-widest">TEST CARD</div>
-                                        <div className="w-12 h-6 flex items-center justify-center bg-black/5 dark:bg-white/5 backdrop-blur-sm rounded border border-black/10 dark:border-white/10 px-1">
-                                            {cardNumber.startsWith("4") ? (
-                                                <svg className="w-8 h-3 text-cyan-400" viewBox="0 0 24 8" fill="currentColor">
-                                                    <path d="M2.38 0h1.59l-2.5 7.96H0L2.38 0zm6.81.02a3.87 3.87 0 00-1.42.27l-.29-1.37a5.53 5.53 0 012.06-.38c1.98 0 3.37.97 3.37 2.65 0 2.27-3.13 2.39-3.13 3.42 0 .31.29.6 1.02.6a3.52 3.52 0 001.6-.37l.29 1.4a5.05 5.05 0 01-2.15.42c-2.02 0-3.41-.98-3.41-2.65 0-2.28 3.16-2.45 3.16-3.45 0-.32-.3-.59-.97-.59zm6.65 5.4l.79-2.19.46 2.19h-1.25zm2.14-5.42h1.49l-1.43 7.96h-1.5l-.26-1.25h-2.1l-.49 1.25h-1.63L17.98.02z" />
-                                                </svg>
-                                            ) : cardNumber.startsWith("5") ? (
-                                                <div className="flex -space-x-1.5 items-center">
-                                                    <div className="w-3.5 h-3.5 rounded-full bg-red-500 opacity-90" />
-                                                    <div className="w-3.5 h-3.5 rounded-full bg-amber-500 opacity-90" />
-                                                </div>
-                                            ) : (
-                                                <span className="font-black text-zinc-400 text-[8px] uppercase tracking-wider">CARD</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="font-mono text-lg font-bold tracking-[0.15em] text-center z-10 py-2">
-                                        {cardNumber ? (
-                                            cardNumber.padEnd(19, "•").replace(/(.{4})/g, "$1 ").trim()
-                                        ) : (
-                                            "•••• •••• •••• ••••"
-                                        )}
-                                    </div>
-                                    <div className="flex justify-between items-end z-10">
-                                        <div>
-                                            <div className="text-[7px] text-zinc-400 font-bold uppercase">Kart Sahibi</div>
-                                            <div className="font-mono text-xs font-bold tracking-wide truncate max-w-[150px]">
-                                                {cardholderName ? cardholderName.toUpperCase() : "AD SOYAD"}
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <div className="text-[7px] text-zinc-400 font-bold uppercase">SKT</div>
-                                            <div className="font-mono text-xs font-bold">{cardExpiry || "AA/YY"}</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Card Input Fields */}
-                                <div className="space-y-3.5 text-left">
-                                    <div>
-                                        <label className="text-[9px] font-black text-zinc-400 dark:text-[#a1a1aa] uppercase tracking-wider mb-1 block">Kart Sahibi</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Ad Soyad"
-                                            className="w-full h-11 px-4 bg-zinc-50 dark:bg-[#18181b] rounded-xl border border-zinc-200 dark:border-[#27272a] outline-none font-bold text-xs text-zinc-800 dark:text-[#fafafa] placeholder:text-zinc-400 dark:placeholder:text-[#fafafa]/10 focus:border-indigo-500 transition-all"
-                                            value={cardholderName}
-                                            onChange={(e) => setCardholderName(e.target.value)}
-                                            disabled={isPaymentProcessing}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="text-[9px] font-black text-zinc-400 dark:text-[#a1a1aa] uppercase tracking-wider mb-1 block">Kart Numarası</label>
-                                        <div className="relative">
-                                            <input
-                                                type="text"
-                                                maxLength={19}
-                                                placeholder="4242 4242 4242 4242"
-                                                className={cn(
-                                                    "w-full h-11 pl-4 pr-12 bg-zinc-50 dark:bg-[#18181b] rounded-xl border outline-none font-mono font-bold text-xs text-zinc-800 dark:text-[#fafafa] placeholder:text-zinc-400 dark:placeholder:text-[#fafafa]/10 transition-all",
-                                                    isLuhnInvalid
-                                                        ? "border-red-500 focus:border-red-500"
-                                                        : "border-zinc-200 dark:border-[#27272a] focus:border-indigo-500"
-                                                )}
-                                                value={cardNumber}
-                                                onChange={(e) => {
-                                                    const val = e.target.value.replace(/\D/g, "");
-                                                    const formatted = val.replace(/(.{4})/g, "$1 ").trim();
-                                                    setCardNumber(formatted);
-                                                }}
-                                                disabled={isPaymentProcessing}
-                                            />
-                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400">
-                                                <CreditCard className="w-4 h-4" />
-                                            </div>
-                                        </div>
-                                        {isLuhnInvalid && (
-                                            <span className="text-[10px] text-red-500 font-bold mt-1 block">
-                                                Geçersiz kart numarası (Luhn kontrolü başarısız).
-                                            </span>
-                                        )}
-                                        <span className="text-[8px] text-zinc-400 mt-1 block">Test: 4242... (Başarılı) | ...9999 (Limit Hatası) | ...1111 (Bloke Hatası)</span>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="text-[9px] font-black text-zinc-400 dark:text-[#a1a1aa] uppercase tracking-wider mb-1 block">Son Kullanma (AA/YY)</label>
-                                            <input
-                                                type="text"
-                                                maxLength={5}
-                                                placeholder="MM/YY"
-                                                className={cn(
-                                                    "w-full h-11 px-4 bg-zinc-50 dark:bg-[#18181b] rounded-xl border outline-none font-mono font-bold text-xs text-zinc-800 dark:text-[#fafafa] placeholder:text-zinc-400 dark:placeholder:text-[#fafafa]/10 transition-all text-center",
-                                                    isExpiryInvalid
-                                                        ? "border-red-500 focus:border-red-500"
-                                                        : "border-zinc-200 dark:border-[#27272a] focus:border-indigo-500"
-                                                )}
-                                                value={cardExpiry}
-                                                onChange={(e) => {
-                                                    let val = e.target.value.replace(/\D/g, "");
-                                                    if (val.length > 2) {
-                                                        val = val.substring(0, 2) + "/" + val.substring(2, 4);
-                                                    }
-                                                    setCardExpiry(val);
-                                                }}
-                                                disabled={isPaymentProcessing}
-                                            />
-                                            {isExpiryInvalid && (
-                                                <span className="text-[9px] text-red-500 font-bold mt-1 block text-center">
-                                                    Geçmiş tarih veya geçersiz format.
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <label className="text-[9px] font-black text-zinc-400 dark:text-[#a1a1aa] uppercase tracking-wider mb-1 block">Güvenlik Kodu (CVC)</label>
-                                            <input
-                                                type="text"
-                                                maxLength={3}
-                                                placeholder="123"
-                                                className="w-full h-11 px-4 bg-zinc-50 dark:bg-[#18181b] rounded-xl border border-zinc-200 dark:border-[#27272a] outline-none font-mono font-bold text-xs text-zinc-800 dark:text-[#fafafa] placeholder:text-zinc-400 dark:placeholder:text-[#fafafa]/10 focus:border-indigo-500 transition-all text-center"
-                                                value={cardCvc}
-                                                onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, ""))}
-                                                disabled={isPaymentProcessing}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {paymentError && (
-                                        <div className="bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl p-3.5 text-[11px] font-bold mt-2 leading-relaxed flex items-start gap-2">
-                                            <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
-                                            <span>{paymentError}</span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* FIXED FOOTER CONTROLS */}
-                            <div className="pt-4 border-t border-zinc-200 dark:border-[#27272a]/80 mt-auto bg-white dark:bg-[#121318]">
-                                <button
-                                    onClick={confirmAppointment}
-                                    disabled={isPaymentProcessing || !cardholderName || !cardNumber || !cardExpiry || !cardCvc || isLuhnInvalid || isExpiryInvalid}
-                                    className="w-full bg-indigo-500 text-black py-4 rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-indigo-500/10 disabled:opacity-20 transition-all active:scale-95 flex items-center justify-center gap-2"
-                                >
-                                    {isPaymentProcessing ? (
-                                        <>
-                                            <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                                            <span>Ödeme İşleniyor...</span>
-                                        </>
-                                    ) : (
-                                        <span>Ödemeyi Tamamla ve Bloke Et</span>
-                                    )}
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-
-                {showOtpModal && tempAppointmentData && (
-                    <motion.div key="otp-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-black/75 dark:bg-black/95 flex items-center justify-center p-4 backdrop-blur-md">
-                        <motion.div initial={{ y: 50, scale: 0.95 }} animate={{ y: 0, scale: 1 }} exit={{ y: 50, scale: 0.95 }} className="w-full max-w-sm bg-gradient-to-b from-white to-zinc-50 dark:from-[#0b0c0f] dark:to-[#121318] rounded-[2rem] p-6 shadow-2xl border border-zinc-200 dark:border-[#27272a] text-zinc-800 dark:text-[#fafafa] relative text-center">
-                            <div className="flex flex-col items-center">
-                                <div className="w-12 h-12 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mb-4">
-                                    <ShieldCheck className="w-6 h-6 animate-pulse" />
-                                </div>
-                                <h3 className="font-black text-base uppercase tracking-tight mb-1">PayTR 3D Secure</h3>
-                                <p className="text-[10px] text-zinc-400 dark:text-[#a1a1aa] uppercase tracking-wider mb-4">Ödeme Doğrulama</p>
-                                
-                                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mb-5 leading-relaxed">
-                                    Moffi Mobil Ödemeler için <b>{tempAppointmentData.clinic.name}</b> işlem tutarı <b>₺{tempAppointmentData.clinic.price || 350}</b> doğrulanacaktır. Lütfen cep telefonunuza gönderilen 6 haneli şifreyi girin.
-                                    <br />
-                                    <span className="text-[9px] text-zinc-400 mt-1 block">(Test Kodu: <b>123456</b>)</span>
-                                </p>
-
-                                <form onSubmit={handleOtpSubmit} className="w-full space-y-4">
-                                    <input
-                                        type="text"
-                                        maxLength={6}
-                                        placeholder="******"
-                                        className="w-full h-12 text-center text-xl font-mono font-black tracking-[0.4em] bg-zinc-50 dark:bg-[#18181b] rounded-xl border border-zinc-200 dark:border-[#27272a] outline-none focus:border-amber-500 transition-all text-zinc-800 dark:text-white"
-                                        value={otpCode}
-                                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
-                                        disabled={isOtpProcessing}
-                                    />
-
-                                    {otpError && (
-                                        <p className="text-[10px] text-red-500 font-bold text-center">{otpError}</p>
-                                    )}
-
-                                    <div className="flex gap-3 pt-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => { setShowOtpModal(false); setIsPaymentProcessing(false); }}
-                                            className="flex-1 py-3.5 bg-zinc-100 dark:bg-[#18181b] hover:bg-zinc-200 dark:hover:bg-[#27272a] rounded-xl font-bold text-xs uppercase tracking-wider transition-all text-zinc-700 dark:text-white"
-                                            disabled={isOtpProcessing}
-                                        >
-                                            İptal
-                                        </button>
-                                        <button
-                                            type="submit"
-                                            className="flex-1 py-3.5 bg-amber-500 text-black rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/10 transition-all flex items-center justify-center gap-1.5"
-                                            disabled={isOtpProcessing || otpCode.length < 6}
-                                        >
-                                            {isOtpProcessing ? (
-                                                <>
-                                                    <span className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                                                    <span>Onaylanıyor...</span>
-                                                </>
-                                            ) : (
-                                                <span>Onayla</span>
-                                            )}
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
 
                 {/* 2. REVIEWS / RATING MODAL */}
                 {activeModal === 'rating' && (

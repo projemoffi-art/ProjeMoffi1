@@ -209,9 +209,10 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
     return (
         <AnimatePresence>
             {clinicId && (
-                <>
+                <div key="drawer-wrapper">
                     {/* BACKDROP */}
                     <motion.div 
+                        key="backdrop"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -221,6 +222,7 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
 
                     {/* DRAWER PANEL (Apple Maps Style) */}
                     <motion.div
+                        key="drawer-panel"
                         ref={drawerRef}
                         initial={{ x: "100%" }}
                         animate={{ x: 0 }}
@@ -620,7 +622,7 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                             </>
                         ) : null}
                     </motion.div>
-                </>
+                </div>
             )}
         </AnimatePresence>
     );
