@@ -86,6 +86,8 @@ function VetPageContent() {
     const [selectedClinic, setSelectedClinic] = useState<VetClinic | null>(null);
     const [detailClinicId, setDetailClinicId] = useState<string | null>(null);
     const [detailClinicData, setDetailClinicData] = useState<any>(null);
+    const [drawerDefaultReview, setDrawerDefaultReview] = useState(false);
+    const [pendingReviewPrompt, setPendingReviewPrompt] = useState<any>(null);
 
     const [successMessage, setSuccessMessage] = useState("Randevu Oluşturuldu ✨");
     const [userRating, setUserRating] = useState(0);
@@ -131,6 +133,32 @@ function VetPageContent() {
     const [clinicExceptions, setClinicExceptions] = useState<any[]>([]);
 
     console.log("Müşteri paneli render - clinicExceptions durumu:", clinicExceptions);
+
+    // Otomatik Yorum Daveti
+    useEffect(() => {
+        if (!user || !isSupabaseEnabled || allClinics.length === 0) return;
+        if (pendingReviewPrompt) return;
+
+        const checkReviewPrompts = async () => {
+            try {
+                const apts = await apiService.getReviewableAppointments(user.id);
+                if (apts.length > 0) {
+                    const latest = apts[0];
+                    const storageKey = `moffi_review_prompt_shown_${latest.id}`;
+                    if (!localStorage.getItem(storageKey)) {
+                        const clinic = allClinics.find(c => c.id === latest.clinic_id);
+                        if (clinic) {
+                            setPendingReviewPrompt({ ...latest, clinicName: clinic.name || clinic.business_name || "Klinik" });
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Error checking review prompts:", err);
+            }
+        };
+
+        checkReviewPrompts();
+    }, [user, allClinics, pendingReviewPrompt]);
 
     useEffect(() => {
         if (!isSupabaseEnabled || !selectedClinic?.id) return;
@@ -1476,6 +1504,50 @@ function VetPageContent() {
                     </motion.div>
                 )}
 
+                {/* REVIEW PROMPT TOAST */}
+                {pendingReviewPrompt && (
+                    <motion.div 
+                        key="review-toast" 
+                        initial={{ y: 50, opacity: 0 }} 
+                        animate={{ y: 0, opacity: 1 }} 
+                        exit={{ y: 50, opacity: 0 }} 
+                        className="fixed bottom-24 inset-x-4 md:inset-x-auto md:right-8 md:bottom-24 flex justify-center md:justify-end z-[250]"
+                    >
+                        <div className="bg-white dark:bg-[#121215] text-zinc-850 dark:text-[#fafafa] p-4 rounded-2xl shadow-2xl border border-zinc-200 dark:border-indigo-500/30 flex items-center justify-between gap-4 w-full md:w-auto max-w-sm">
+                            <div className="flex flex-col gap-1">
+                                <span className="font-black text-xs text-indigo-500 uppercase tracking-widest">DEĞERLENDİRME</span>
+                                <span className="text-xs font-bold leading-snug">
+                                    {pendingReviewPrompt.clinicName} ile randevunuz nasıldı? Yorum bırakın <Star className="inline w-3 h-3 text-yellow-500 fill-current mb-0.5"/>
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={() => {
+                                        localStorage.setItem(`moffi_review_prompt_shown_${pendingReviewPrompt.id}`, "true");
+                                        const clinicData = allClinics.find(c => c.id === pendingReviewPrompt.clinic_id);
+                                        setDetailClinicId(pendingReviewPrompt.clinic_id);
+                                        setDetailClinicData(clinicData);
+                                        setDrawerDefaultReview(true);
+                                        setPendingReviewPrompt(null);
+                                    }}
+                                    className="bg-indigo-500 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap hover:bg-indigo-600 transition-colors cursor-pointer"
+                                >
+                                    Değerlendir
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        localStorage.setItem(`moffi_review_prompt_shown_${pendingReviewPrompt.id}`, "true");
+                                        setPendingReviewPrompt(null);
+                                    }}
+                                    className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors cursor-pointer"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+
 
                 {/* TRANSPARENCY LOGS MODAL */}
                 {isLogModalOpen && (
@@ -1528,7 +1600,12 @@ function VetPageContent() {
                 <ClinicDetailDrawer 
                     clinicId={detailClinicId}
                     clinicData={detailClinicData}
-                    onClose={() => { setDetailClinicId(null); setDetailClinicData(null); }}
+                    defaultOpenReviewForm={drawerDefaultReview}
+                    onClose={() => { 
+                        setDetailClinicId(null); 
+                        setDetailClinicData(null); 
+                        setDrawerDefaultReview(false);
+                    }}
                     onBookAppointment={(clinic) => {
                         openAppointment(clinic);
                     }}

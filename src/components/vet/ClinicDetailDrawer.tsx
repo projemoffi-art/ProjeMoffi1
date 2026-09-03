@@ -18,11 +18,12 @@ interface ClinicDetailDrawerProps {
     clinicData?: any; // The whole Place object from LiveMap
     onClose: () => void;
     onBookAppointment: (clinic: VetClinic) => void;
+    defaultOpenReviewForm?: boolean;
 }
 
 import { useChat } from "@/context/ChatContext";
 
-export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppointment }: ClinicDetailDrawerProps) {
+export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppointment, defaultOpenReviewForm }: ClinicDetailDrawerProps) {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
     const { openChat } = useChat();
@@ -34,12 +35,19 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
     useEffect(() => {
         if (clinicId) {
             fetchDetails();
-            setActiveTab('info');
+            if (defaultOpenReviewForm) {
+                setActiveTab('reviews');
+                setIsReviewFormOpen(true);
+            } else {
+                setActiveTab('info');
+                setIsReviewFormOpen(false);
+            }
         } else {
             setClinic(null);
             setActiveTab('info');
+            setIsReviewFormOpen(false);
         }
-    }, [clinicId, clinicData]);
+    }, [clinicId, clinicData, defaultOpenReviewForm]);
 
     useEffect(() => {
         if (drawerRef.current) {
