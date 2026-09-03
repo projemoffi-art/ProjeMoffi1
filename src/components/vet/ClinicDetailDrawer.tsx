@@ -131,8 +131,8 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                                         <div className="flex items-center gap-3 mt-3">
                                             <div className="flex items-center gap-1.5 bg-zinc-150/80 dark:bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-card-border">
                                                 <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                                                <span className="text-xs font-black text-zinc-850 dark:text-white">{clinic.rating}</span>
-                                                <span className="text-[10px] text-zinc-500 dark:text-white/40 font-bold">({clinic.reviewCount})</span>
+                                                <span className="text-xs font-black text-zinc-850 dark:text-white">{clinic.rating || '--'}</span>
+                                                <span className="text-[10px] text-zinc-500 dark:text-white/40 font-bold">({clinic.reviewCount || 0})</span>
                                             </div>
                                             <span className="text-[10px] font-black text-zinc-550 dark:text-white/30 uppercase tracking-widest">{clinic.distance} Uzaklıkta</span>
                                         </div>
@@ -142,11 +142,14 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                                 {/* QUICK ACTIONS */}
                                 <div className="grid grid-cols-3 gap-3 p-6 shrink-0 bg-zinc-50 dark:bg-white/5 border-b border-zinc-200 dark:border-card-border">
                                     <button 
-                                        onClick={() => window.location.href = `tel:${clinic.phone || '02161234567'}`}
-                                        className="flex flex-col items-center justify-center gap-2 py-4 bg-[#5B4D9D] rounded-2xl shadow-lg shadow-[#5B4D9D]/20 active:scale-95 transition-all group"
+                                        onClick={() => {
+                                            if (clinic.phone) window.location.href = `tel:${clinic.phone}`;
+                                            else alert("Telefon bilgisi girilmedi");
+                                        }}
+                                        className={cn("flex flex-col items-center justify-center gap-2 py-4 rounded-2xl shadow-lg active:scale-95 transition-all group", clinic.phone ? "bg-[#5B4D9D] shadow-[#5B4D9D]/20" : "bg-zinc-200 dark:bg-white/10 opacity-50")}
                                     >
-                                        <Phone className="w-5 h-5 text-white group-hover:rotate-12 transition-transform" />
-                                        <span className="text-[9px] font-black text-white uppercase tracking-widest">Şimdi Ara</span>
+                                        <Phone className={cn("w-5 h-5 transition-transform", clinic.phone ? "text-white group-hover:rotate-12" : "text-zinc-500")} />
+                                        <span className={cn("text-[9px] font-black uppercase tracking-widest", clinic.phone ? "text-white" : "text-zinc-500")}>{clinic.phone ? "Şimdi Ara" : "Tel Yok"}</span>
                                     </button>
                                     <button 
                                         onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(clinic.name + " " + clinic.address)}`, '_blank')}
@@ -267,7 +270,7 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                                             {(!clinic.doctors || clinic.doctors.length === 0) && (
                                                 <div className="py-20 text-center opacity-20">
                                                     <Users className="w-12 h-12 mx-auto mb-4" />
-                                                    <p className="text-[10px] font-black uppercase tracking-widest">Henüz hekim bilgisi eklenmemiş</p>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest">Hekim bilgisi bulunmuyor</p>
                                                 </div>
                                             )}
                                         </div>
