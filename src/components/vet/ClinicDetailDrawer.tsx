@@ -75,8 +75,10 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
     const handleSendMessage = async () => {
         if (!chatInput.trim() || !clinicId || !currentUser?.id || isSendingMessage) return;
         setIsSendingMessage(true);
+        console.log("GONDERILIYOR:", clinicId, currentUser?.id, chatInput);
         try {
             const success = await apiService.sendMessage(clinicId, currentUser.id, 'user', chatInput.trim());
+            console.log("SONUC:", success);
             if (success) {
                 setChatInput("");
                 await loadConversation();
