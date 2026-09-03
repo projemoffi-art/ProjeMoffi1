@@ -37,17 +37,23 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
             fetchDetails();
             if (defaultOpenReviewForm) {
                 setActiveTab('reviews');
-                setIsReviewFormOpen(true);
             } else {
                 setActiveTab('info');
-                setIsReviewFormOpen(false);
+                setActiveReviewAppointmentId(null);
             }
         } else {
             setClinic(null);
             setActiveTab('info');
-            setIsReviewFormOpen(false);
+            setActiveReviewAppointmentId(null);
         }
     }, [clinicId, clinicData, defaultOpenReviewForm]);
+
+    // Handle auto-opening the review form once data is loaded
+    useEffect(() => {
+        if (defaultOpenReviewForm && reviewableAppointments.length > 0 && !activeReviewAppointmentId) {
+            setActiveReviewAppointmentId(reviewableAppointments[0].id);
+        }
+    }, [reviewableAppointments, defaultOpenReviewForm]);
 
     useEffect(() => {
         if (drawerRef.current) {
@@ -59,7 +65,7 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
     const [averageRating, setAverageRating] = useState<number>(0);
 
     const [reviewableAppointments, setReviewableAppointments] = useState<any[]>([]);
-    const [isReviewFormOpen, setIsReviewFormOpen] = useState(false);
+    const [activeReviewAppointmentId, setActiveReviewAppointmentId] = useState<string | null>(null);
     const [rating, setRating] = useState(0);
     const [comment, setComment] = useState("");
     const [isSubmittingReview, setIsSubmittingReview] = useState(false);
@@ -114,22 +120,21 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
     };
 
     const handleSubmitReview = async () => {
-        if (rating === 0 || !currentUser || reviewableAppointments.length === 0) return;
+        if (rating === 0 || !currentUser || !activeReviewAppointmentId) return;
         setIsSubmittingReview(true);
         try {
-            const appointmentToReview = reviewableAppointments[0];
             const targetId = clinicData ? clinicData.id : clinicId;
             
             console.log("Submitting review payload:", {
                 clinicId: targetId,
-                appointmentId: appointmentToReview.id,
+                appointmentId: activeReviewAppointmentId,
                 rating,
                 comment: comment.trim() || undefined
             });
 
             const success = await apiService.submitReview(
                 targetId!,
-                appointmentToReview.id,
+                activeReviewAppointmentId,
                 rating,
                 comment.trim() || undefined
             );
@@ -141,7 +146,7 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                 return; // Do not close form or refresh if failed
             }
             
-            setIsReviewFormOpen(false);
+            setActiveReviewAppointmentId(null);
             setRating(0);
             setComment("");
             
@@ -151,8 +156,11 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
             setAverageRating(reviewsData.averageRating || 0);
             
             // Refresh reviewable appointments so the button goes away
+            console.log("Before fetching new reviewable appointments, previous count:", reviewableAppointments.length);
             const apts = await apiService.getReviewableAppointments(currentUser.id);
-            setReviewableAppointments(apts.filter(a => a.clinic_id === targetId));
+            const filteredApts = apts.filter(a => a.clinic_id === targetId);
+            console.log("Newly fetched reviewable appointments for this clinic:", filteredApts);
+            setReviewableAppointments(filteredApts);
 
         } catch (err) {
             console.error("Yorum gönderilirken hata:", err);
@@ -364,51 +372,59 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                                         <div className="p-8 space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                                             {/* Review Form / Button */}
                                             {reviewableAppointments.length > 0 && (
-                                                <div className="mb-8">
-                                                    {!isReviewFormOpen ? (
-                                                        <button
-                                                            onClick={() => setIsReviewFormOpen(true)}
-                                                            className="w-full bg-[#5B4D9D] text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg hover:bg-[#483c80] transition-all cursor-pointer"
-                                                        >
-                                                            Değerlendirme Yaz
-                                                        </button>
-                                                    ) : (
-                                                        <div className="bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-card-border rounded-[2rem] p-6 space-y-4 shadow-xl">
-                                                            <div className="flex justify-between items-center mb-2">
-                                                                <h4 className="text-xs font-black text-zinc-800 dark:text-white uppercase tracking-widest">Deneyiminizi Puanlayın</h4>
-                                                                <button onClick={() => setIsReviewFormOpen(false)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors cursor-pointer">
-                                                                    <X className="w-4 h-4" />
+                                                <div className="mb-8 space-y-4">
+                                                    {reviewableAppointments.map((apt: any) => (
+                                                        <div key={apt.id}>
+                                                            {activeReviewAppointmentId !== apt.id ? (
+                                                                <button
+                                                                    onClick={() => setActiveReviewAppointmentId(apt.id)}
+                                                                    className="w-full bg-[#5B4D9D]/10 dark:bg-[#5B4D9D]/20 border border-[#5B4D9D]/30 text-[#5B4D9D] dark:text-white py-4 rounded-2xl font-black text-xs tracking-widest shadow-sm hover:bg-[#5B4D9D] hover:text-white transition-all cursor-pointer flex flex-col items-center justify-center gap-1"
+                                                                >
+                                                                    <span className="opacity-80 text-[10px] uppercase">{new Date(apt.appointment_date).toLocaleDateString()} tarihli randevunuz için</span>
+                                                                    <span className="uppercase">Değerlendirme Yaz</span>
                                                                 </button>
-                                                            </div>
-                                                            <div className="flex justify-center gap-2 pb-2">
-                                                                {[1, 2, 3, 4, 5].map((s) => (
+                                                            ) : (
+                                                                <div className="bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-card-border rounded-[2rem] p-6 space-y-4 shadow-xl">
+                                                                    <div className="flex justify-between items-center mb-2">
+                                                                        <div>
+                                                                            <h4 className="text-xs font-black text-zinc-800 dark:text-white uppercase tracking-widest">Deneyiminizi Puanlayın</h4>
+                                                                            <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-1">{new Date(apt.appointment_date).toLocaleDateString()} Randevusu</p>
+                                                                        </div>
+                                                                        <button onClick={() => setActiveReviewAppointmentId(null)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors cursor-pointer self-start">
+                                                                            <X className="w-4 h-4" />
+                                                                        </button>
+                                                                    </div>
+                                                                    <div className="flex justify-center gap-2 pb-2">
+                                                                        {[1, 2, 3, 4, 5].map((s) => (
+                                                                            <button
+                                                                                key={s}
+                                                                                type="button"
+                                                                                onClick={() => setRating(s)}
+                                                                                className="p-2 cursor-pointer transition-transform hover:scale-110"
+                                                                            >
+                                                                                <Star className={cn("w-8 h-8 transition-colors", s <= rating ? "text-yellow-500 fill-current" : "text-zinc-200 dark:text-white/10")} />
+                                                                            </button>
+                                                                        ))}
+                                                                    </div>
+                                                                    <textarea
+                                                                        value={comment}
+                                                                        onChange={(e) => setComment(e.target.value)}
+                                                                        placeholder="Deneyiminizi anlatın... (İsteğe bağlı)"
+                                                                        className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/5 rounded-xl p-4 text-xs text-zinc-800 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#5B4D9D] transition-all resize-none min-h-[100px]"
+                                                                    />
                                                                     <button
-                                                                        key={s}
-                                                                        type="button"
-                                                                        onClick={() => setRating(s)}
-                                                                        className="p-2 cursor-pointer transition-transform hover:scale-110"
+                                                                        onClick={handleSubmitReview}
+                                                                        disabled={rating === 0 || isSubmittingReview}
+                                                                        className="w-full bg-[#5B4D9D] text-white py-4 rounded-xl font-black text-xs uppercase tracking-widest shadow-md hover:bg-[#483c80] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
                                                                     >
-                                                                        <Star className={cn("w-8 h-8 transition-colors", s <= rating ? "text-yellow-500 fill-current" : "text-zinc-200 dark:text-white/10")} />
+                                                                        {isSubmittingReview ? (
+                                                                            <span className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                                                                        ) : "Gönder"}
                                                                     </button>
-                                                                ))}
-                                                            </div>
-                                                            <textarea
-                                                                value={comment}
-                                                                onChange={(e) => setComment(e.target.value)}
-                                                                placeholder="Deneyiminizi anlatın... (İsteğe bağlı)"
-                                                                className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/5 rounded-xl p-4 text-xs text-zinc-800 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#5B4D9D] transition-all resize-none min-h-[100px]"
-                                                            />
-                                                            <button
-                                                                onClick={handleSubmitReview}
-                                                                disabled={rating === 0 || isSubmittingReview}
-                                                                className="w-full bg-[#5B4D9D] text-white py-4 rounded-xl font-black text-xs uppercase tracking-widest shadow-md hover:bg-[#483c80] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
-                                                            >
-                                                                {isSubmittingReview ? (
-                                                                    <span className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
-                                                                ) : "Gönder"}
-                                                            </button>
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                    )}
+                                                    ))}
                                                 </div>
                                             )}
 
