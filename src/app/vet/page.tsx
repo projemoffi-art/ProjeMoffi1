@@ -991,9 +991,12 @@ function VetPageContent() {
                                                 <MapPin className="w-3.5 h-3.5 text-zinc-400 dark:text-[#a1a1aa]" /> {clinic.distance} • Kadıköy, İstanbul
                                             </p>
                                             <div className="flex gap-1 mt-2">
-                                                {(clinic.features || []).slice(0, 2).map((f: string) => (
-                                                    <span key={f} className="text-[7.5px] font-bold bg-zinc-100 dark:bg-[#18181b] text-zinc-600 dark:text-[#a1a1aa] px-2 py-0.5 rounded border border-zinc-200 dark:border-[#27272a] uppercase">{f}</span>
-                                                ))}
+                                                {(clinic.features || []).slice(0, 2).map((f: string, fIndex: number) => {
+                                                    if (!f) console.warn("🚨 BOŞ FEATURE DEĞERİ!", { f, clinicId: clinic.id, index: fIndex });
+                                                    return (
+                                                        <span key={f} className="text-[7.5px] font-bold bg-zinc-100 dark:bg-[#18181b] text-zinc-600 dark:text-[#a1a1aa] px-2 py-0.5 rounded border border-zinc-200 dark:border-[#27272a] uppercase">{f}</span>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
 
@@ -1061,7 +1064,9 @@ function VetPageContent() {
                                         onMouseMove={dateScroll.onMouseMove}
                                         className="flex gap-2.5 overflow-x-auto pb-2 no-scrollbar -mx-1 px-1 snap-x momentum-scroll overscroll-contain cursor-grab active:cursor-grabbing select-none"
                                     >
-                                        {dateOptions.map((day) => (
+                                        {dateOptions.map((day, dIndex) => {
+                                            if (!day.key) console.warn("🚨 BOŞ DAY.KEY DEĞERİ!", { day, index: dIndex });
+                                            return (
                                             <button
                                                 key={day.key}
                                                 onClick={() => { setSelectedDate(day.key); setSelectedTime(null); }}
@@ -1075,7 +1080,8 @@ function VetPageContent() {
                                                 <div className="text-[8px] font-bold uppercase tracking-wider mb-0.5">{day.dayName}</div>
                                                 <div className="text-xs font-black">{day.label}</div>
                                             </button>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
 
@@ -1083,7 +1089,9 @@ function VetPageContent() {
                                 <div className="mb-6 text-left">
                                     <label className="text-[8px] font-black text-zinc-400 dark:text-[#a1a1aa] uppercase tracking-wider mb-3 block px-1">Saat Seçimi</label>
                                     <div className="grid grid-cols-4 gap-2">
-                                        {timeSlots.map(time => (
+                                        {timeSlots.map((time, tIndex) => {
+                                            if (!time) console.warn("🚨 BOŞ TIME DEĞERİ!", { time, index: tIndex });
+                                            return (
                                             <button
                                                 key={time}
                                                 onClick={() => {
@@ -1099,7 +1107,8 @@ function VetPageContent() {
                                             >
                                                 {time}
                                             </button>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
 
@@ -1578,7 +1587,9 @@ function VetPageContent() {
                             {/* LOGS LIST */}
                             <div className="flex-1 overflow-y-auto pr-1 no-scrollbar space-y-4 text-left momentum-scroll overscroll-contain pb-6">
                                 {transparencyLogs.length > 0 ? (
-                                    transparencyLogs.map((log) => (
+                                    transparencyLogs.map((log, lIndex) => {
+                                        if (!log.id) console.warn("🚨 BOŞ LOG.ID DEĞERİ!", { log, index: lIndex });
+                                        return (
                                         <div key={log.id} className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-[#27272a] rounded-2xl p-4 text-left space-y-2">
                                             <div className="flex justify-between items-start">
                                                 <h4 className="text-xs font-black text-zinc-800 dark:text-[#fafafa] uppercase">{log.clinicName}</h4>
@@ -1588,14 +1599,18 @@ function VetPageContent() {
                                                 Hekim, <strong>{log.petName}</strong> isimli evcil hayvanınızın şu paylaşılan verilerine erişim sağladı:
                                             </p>
                                             <div className="flex flex-wrap gap-1.5 pt-1">
-                                                {log.sharedFields.map((field: string) => (
+                                                {log.sharedFields.map((field: string, fIdx: number) => {
+                                                    if (!field) console.warn("🚨 BOŞ SHAREDFIELD DEĞERİ!", { field, logId: log.id, index: fIdx });
+                                                    return (
                                                     <span key={field} className="text-[8px] font-black bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded border border-indigo-500/20 uppercase tracking-wider">
                                                         {field}
                                                     </span>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         </div>
-                                    ))
+                                        );
+                                    })
                                 ) : (
                                     <div className="py-20 text-center opacity-40">
                                         <History className="w-12 h-12 mx-auto mb-4 text-zinc-400" />
