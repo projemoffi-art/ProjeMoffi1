@@ -1704,6 +1704,29 @@ export class MockApiService implements IApiService {
     async replyToReview(reviewId: string, clinicId: string, replyText: string): Promise<boolean> {
         return true;
     }
+
+    // Clinic Messages & Campaigns (Faz 8)
+    async getConversation(clinicId: string, userId: string): Promise<any[]> {
+        return [];
+    }
+    async sendMessage(clinicId: string, userId: string, senderRole: 'user' | 'clinic', message: string): Promise<boolean> {
+        return true;
+    }
+    async markMessagesRead(clinicId: string, userId: string, readerRole: 'user' | 'clinic'): Promise<boolean> {
+        return true;
+    }
+    async getUnreadMessageCount(clinicId: string, userId: string, readerRole: 'user' | 'clinic'): Promise<number> {
+        return 0;
+    }
+    async getClinicCampaigns(clinicId: string): Promise<any[]> {
+        return [];
+    }
+    async createCampaign(clinicId: string, title: string, description: string, startsAt: string, endsAt: string | null): Promise<boolean> {
+        return true;
+    }
+    async deleteCampaign(campaignId: string, clinicId: string): Promise<boolean> {
+        return true;
+    }
 }
 // Singleton instance for components that haven't migrated to the central services/apiService.ts yet
 export const apiService = new MockApiService();

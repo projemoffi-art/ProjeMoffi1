@@ -4177,25 +4177,57 @@ export class SupabaseApiService implements IApiService {
             }))
         }));
     }
-    // --- CAMPAIGNS ---
-    async getClinicCampaigns(clinicId: string): Promise<any[]> {
+    // --- CAMPAIGNS (FAZ 8) ---
+    async getClinicCampaigns(clinicId: string): Promise<ClinicCampaign[]> {
+        if (!isSupabaseEnabled) return [];
+        // Aktif kampanyalar: ends_at geçmemiş ya da null
+        const now = new Date().toISOString();
         const { data, error } = await supabase
-            .from('campaigns')
+            .from('clinic_campaigns')
             .select('*')
             .eq('clinic_id', clinicId)
+            .or(`ends_at.is.null,ends_at.gte.${now}`)
             .order('created_at', { ascending: false });
-        if (error) { console.error("Error fetching campaigns:", error); return []; }
-        return data || [];
+
+        if (error) {
+            console.error("Error fetching campaigns:", error);
+            return [];
+        }
+        return data as ClinicCampaign[];
     }
 
-    async addClinicCampaign(campaign: any): Promise<void> {
-        const { error } = await supabase.from('campaigns').insert(campaign);
-        if (error) { console.error("Error adding campaign:", error); throw error; }
+    async createCampaign(clinicId: string, title: string, description: string, startsAt: string, endsAt: string | null): Promise<boolean> {
+        if (!isSupabaseEnabled) return false;
+        const { error } = await supabase
+            .from('clinic_campaigns')
+            .insert({
+                clinic_id: clinicId,
+                title,
+                description,
+                starts_at: startsAt,
+                ends_at: endsAt
+            });
+
+        if (error) {
+            console.error("Error creating campaign:", error);
+            return false;
+        }
+        return true;
     }
 
-    async deleteClinicCampaign(id: string): Promise<void> {
-        const { error } = await supabase.from('campaigns').delete().eq('id', id);
-        if (error) { console.error("Error deleting campaign:", error); throw error; }
+    async deleteCampaign(campaignId: string, clinicId: string): Promise<boolean> {
+        if (!isSupabaseEnabled) return false;
+        const { error } = await supabase
+            .from('clinic_campaigns')
+            .delete()
+            .eq('id', campaignId)
+            .eq('clinic_id', clinicId);
+
+        if (error) {
+            console.error("Error deleting campaign:", error);
+            return false;
+        }
+        return true;
     }
 
     // --- QUESTS ---
