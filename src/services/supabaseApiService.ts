@@ -4177,6 +4177,80 @@ export class SupabaseApiService implements IApiService {
             }))
         }));
     }
+    // --- CLINIC MESSAGES (FAZ 8) ---
+    async getConversation(clinicId: string, userId: string): Promise<ClinicMessage[]> {
+        if (!isSupabaseEnabled) return [];
+        const { data, error } = await supabase
+            .from('clinic_messages')
+            .select('*')
+            .eq('clinic_id', clinicId)
+            .eq('user_id', userId)
+            .order('created_at', { ascending: true });
+
+        if (error) {
+            console.error("Error fetching conversation:", error);
+            return [];
+        }
+        return data as ClinicMessage[];
+    }
+
+    async sendMessage(clinicId: string, userId: string, senderRole: 'user' | 'clinic', message: string): Promise<boolean> {
+        if (!isSupabaseEnabled) return false;
+        const { error } = await supabase
+            .from('clinic_messages')
+            .insert({
+                clinic_id: clinicId,
+                user_id: userId,
+                sender_role: senderRole,
+                message: message,
+                is_read: false
+            });
+
+        if (error) {
+            console.error("Error sending message:", error);
+            return false;
+        }
+        return true;
+    }
+
+    async markMessagesRead(clinicId: string, userId: string, readerRole: 'user' | 'clinic'): Promise<boolean> {
+        if (!isSupabaseEnabled) return false;
+        const senderToUpdate = readerRole === 'user' ? 'clinic' : 'user';
+        
+        const { error } = await supabase
+            .from('clinic_messages')
+            .update({ is_read: true })
+            .eq('clinic_id', clinicId)
+            .eq('user_id', userId)
+            .eq('sender_role', senderToUpdate)
+            .eq('is_read', false);
+
+        if (error) {
+            console.error("Error marking messages read:", error);
+            return false;
+        }
+        return true;
+    }
+
+    async getUnreadMessageCount(clinicId: string, userId: string, readerRole: 'user' | 'clinic'): Promise<number> {
+        if (!isSupabaseEnabled) return 0;
+        const senderToCount = readerRole === 'user' ? 'clinic' : 'user';
+
+        const { count, error } = await supabase
+            .from('clinic_messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('clinic_id', clinicId)
+            .eq('user_id', userId)
+            .eq('sender_role', senderToCount)
+            .eq('is_read', false);
+
+        if (error) {
+            console.error("Error getting unread count:", error);
+            return 0;
+        }
+        return count || 0;
+    }
+
     // --- CAMPAIGNS (FAZ 8) ---
     async getClinicCampaigns(clinicId: string): Promise<ClinicCampaign[]> {
         if (!isSupabaseEnabled) return [];

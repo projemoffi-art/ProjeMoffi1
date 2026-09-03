@@ -75,12 +75,19 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
     const handleSendMessage = async () => {
         if (!chatInput.trim() || !clinicId || !currentUser?.id || isSendingMessage) return;
         setIsSendingMessage(true);
-        const success = await apiService.sendMessage(clinicId, currentUser.id, 'user', chatInput.trim());
-        if (success) {
-            setChatInput("");
-            await loadConversation();
+        try {
+            const success = await apiService.sendMessage(clinicId, currentUser.id, 'user', chatInput.trim());
+            if (success) {
+                setChatInput("");
+                await loadConversation();
+            } else {
+                console.error("sendMessage returned false");
+            }
+        } catch (err) {
+            console.error("Error in handleSendMessage:", err);
+        } finally {
+            setIsSendingMessage(false);
         }
-        setIsSendingMessage(false);
     };
 
     useEffect(() => {
@@ -119,11 +126,21 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
             setCurrentUser(user);
 
             const targetId = clinicData ? clinicData.id : clinicId;
+            const res = await apiService.getClinicDetails(targetId!);
+            
+            // Fix legacy references, ensure we use avatar_url for image
+            const cData = {
+                ...res,
+                logo: res?.avatar_url || res?.logo || 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=100'
+            };
+            
+            setClinic(cData);
 
             if (clinicData) {
                 // Dynamically build a realistic clinic profile using OpenStreetMap real world data!
                 setClinic({
                     ...clinicData,
+                    ...cData,
                     imageUrl: clinicData.isPremium ? 'https://images.unsplash.com/photo-1584132967334-10e028bd69f7?w=800' : 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=800',
                     distance: 'Yakında',
                     address: clinicData.name + ' Çevresi'
