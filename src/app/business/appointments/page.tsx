@@ -316,7 +316,9 @@ export default function BusinessAppointmentsPage() {
         if (!user?.id || !isSupabaseEnabled) return;
         setIsLoadingReviews(true);
         try {
+            console.log("Loading reviews for clinic ID:", user.id);
             const data = await apiService.getClinicReviews(user.id);
+            console.log("Returned data from getClinicReviews:", data);
             setReviewsData({
                 reviews: data.reviews || [],
                 averageRating: data.averageRating || 0
@@ -1354,14 +1356,14 @@ export default function BusinessAppointmentsPage() {
                                         <div className="flex justify-between items-start mb-4">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden flex-shrink-0">
-                                                    {review.user_avatar ? (
-                                                        <img src={review.user_avatar} alt={review.user_name} className="w-full h-full object-cover" />
+                                                    {review.user?.avatar ? (
+                                                        <img src={review.user.avatar} alt={review.user?.name} className="w-full h-full object-cover" />
                                                     ) : (
                                                         <User className="w-5 h-5 text-zinc-400 m-2.5" />
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <h4 className="font-bold text-sm text-foreground dark:text-white">{review.user_name || "İsimsiz Kullanıcı"}</h4>
+                                                    <h4 className="font-bold text-sm text-foreground dark:text-white">{review.user?.name || "İsimsiz Kullanıcı"}</h4>
                                                     <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">{new Date(review.created_at).toLocaleDateString()}</p>
                                                 </div>
                                             </div>
