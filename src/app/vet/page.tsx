@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
@@ -24,6 +24,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { apiService, isSupabaseEnabled } from "@/services/apiService";
+import { AppointmentsTab } from "@/components/profile/AppointmentsTab";
 
 function validateLuhn(cardNumber: string): boolean {
     const clean = cardNumber.replace(/\D/g, "");
@@ -53,7 +54,7 @@ function validateLuhn(cardNumber: string): boolean {
 function VetPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { activePet } = usePet();
+    const { activePet, appointments } = usePet();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
     const { user } = useAuth();
@@ -69,6 +70,7 @@ function VetPageContent() {
 
     // UI States
     const [searchQuery, setSearchQuery] = useState("");
+    const [viewMode, setViewMode] = useState<'clinics' | 'appointments'>('clinics');
     const [activeModal, setActiveModal] = useState<'appointment' | 'payment' | 'vaccine' | 'dental' | 'pharma' | 'sos' | 'success' | 'rating' | 'clinicList' | null>(null);
     
     // Payment Simulation States
@@ -608,6 +610,26 @@ function VetPageContent() {
         setTimeout(() => setActiveModal(null), 3000);
     };
 
+    const mappedAppointments = useMemo(() => {
+        if (!activePet?.id || !appointments?.[activePet.id]) return [];
+        return appointments[activePet.id].map((apt: any) => {
+            const d = apt.appointment_date ? new Date(apt.appointment_date) : null;
+            let type = 'Genel Muayene';
+            if (apt.notes && apt.notes.includes('Randevu tipi:')) {
+                type = apt.notes.split('Randevu tipi: ')[1].trim() || 'Genel Muayene';
+            }
+            return {
+                id: apt.id,
+                icon: '🏥',
+                type: type,
+                doctor: apt.clinic?.business_name || 'Klinik',
+                date: d ? d.toISOString().split('T')[0] : 'Tarih Yok',
+                time: d ? d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : 'Saat Yok',
+                status: apt.status || 'pending'
+            };
+        });
+    }, [activePet?.id, appointments]);
+
     return (
         <div className="min-h-screen bg-gradient-to-b from-[#f8f9fc] via-[#f1f3f7] to-[#f8f9fc] dark:from-[#09090b] dark:via-[#0d0d11] dark:to-[#09090b] pb-32 font-sans relative text-zinc-800 dark:text-[#fafafa] selection:bg-indigo-500/30 transition-colors duration-300">
             {/* Minimal solid design - no cheap floating background blobs */}
@@ -653,9 +675,26 @@ function VetPageContent() {
                         />
                     </div>
 
+                    {/* View Toggle */}
+                    <div className="flex bg-zinc-200/50 dark:bg-[#27272a]/50 p-1 rounded-xl">
+                        <button 
+                            onClick={() => setViewMode('clinics')}
+                            className={cn("flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all", viewMode === 'clinics' ? "bg-white dark:bg-[#18181b] shadow-sm text-indigo-500" : "text-zinc-500 dark:text-zinc-400")}
+                        >
+                            Klinik Keşfet
+                        </button>
+                        <button 
+                            onClick={() => setViewMode('appointments')}
+                            className={cn("flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all", viewMode === 'appointments' ? "bg-white dark:bg-[#18181b] shadow-sm text-indigo-500" : "text-zinc-500 dark:text-zinc-400")}
+                        >
+                            Randevularım
+                        </button>
+                    </div>
+
                     {/* Clean Category Tags */}
                     <div 
                         ref={categoryScroll.ref}
+                        style={{ display: viewMode === 'clinics' ? 'flex' : 'none' }}
                         onMouseDown={categoryScroll.onMouseDown}
                         onMouseLeave={categoryScroll.onMouseLeave}
                         onMouseUp={categoryScroll.onMouseUp}
@@ -687,7 +726,22 @@ function VetPageContent() {
             </header>
 
             <main className="px-6 py-6 space-y-6">
-
+                {viewMode === 'appointments' ? (
+                    <div className="bg-white dark:bg-[#121215] border border-zinc-200 dark:border-[#27272a] rounded-[2.5rem] p-6 shadow-sm overflow-hidden">
+                        <AppointmentsTab 
+                            activePet={activePet}
+                            isScheduleLoading={false}
+                            allRecords={[]}
+                            recordDocuments={{}}
+                            currentAppointments={mappedAppointments}
+                            onAddRecord={() => {}}
+                            onDeleteRecord={() => {}}
+                            onUploadDocument={() => {}}
+                            onDeleteDocument={() => {}}
+                        />
+                    </div>
+                ) : (
+                    <>
                 {/* Status Bar showing pet health state */}
                 {activePet && (
                     <div className="bg-white dark:bg-[#121215] border border-zinc-200 dark:border-[#27272a] p-4 rounded-2xl flex items-center justify-between text-left shadow-sm dark:shadow-none transition-colors duration-300">
@@ -828,6 +882,8 @@ function VetPageContent() {
                         ))}
                     </div>
                 </section>
+                    </>
+                )}
             </main>
 
             {/* --- MODALS & DRAWERS --- */}
