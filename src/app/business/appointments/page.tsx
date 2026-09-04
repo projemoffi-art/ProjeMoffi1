@@ -351,7 +351,8 @@ export default function BusinessAppointmentsPage() {
                         }
                     },
                     clinicId: item.clinic_id,
-                    clinicName: item.clinic_name
+                    clinicName: item.clinic_name,
+                    attendance_status: item.attendance_status
                 };
             });
             // Test mock kaldırıldı
@@ -613,6 +614,22 @@ export default function BusinessAppointmentsPage() {
         setAppointments(updated);
         if (typeof window !== 'undefined') {
             localStorage.setItem('moffi_confirmed_appointments', JSON.stringify(updated));
+        }
+    };
+
+    const handleAttendanceChange = async (id: number | string, status: 'attended' | 'no_show' | null) => {
+        if (!isSupabaseEnabled) return;
+        
+        // Optimistic UI Update
+        setAppointments(prev => prev.map(apt => apt.id === id ? { ...apt, attendance_status: status } : apt));
+        
+        try {
+            await apiService.updateAttendanceStatus(id.toString(), status);
+            showToast(status === 'attended' ? 'Randevu "Geldi" olarak işaretlendi.' : status === 'no_show' ? 'Randevu "Gelmedi" olarak işaretlendi.' : 'Katılım durumu sıfırlandı.', "CheckCircle2", "text-emerald-400 font-bold");
+        } catch (e) {
+            console.error("Katılım güncellenirken hata:", e);
+            // Revert on error
+            fetchAppointmentsFromDb();
         }
     };
 
@@ -1180,12 +1197,54 @@ export default function BusinessAppointmentsPage() {
                                                 <User className="w-3 h-3" /> {apt.ownerName} • {apt.type}
                                             </div>
                                         </div>
-                                        <button 
-                                            onClick={() => startConsultation(apt)}
-                                            className="px-4 py-2 rounded-xl bg-card dark:bg-white/5 border border-card-border text-sm font-bold hover:bg-white dark:bg-black hover:text-white dark:hover:bg-indigo-600 transition-colors"
-                                        >
-                                            {apt.status === 'completed' ? 'Muayene Detayı' : 'Muayene Et'}
-                                        </button>
+                                        <div className="flex items-center gap-3">
+                                            {/* (Faz 9) Gelecek randevu değilse ve iptal değilse no-show butonları */}
+                                            {(apt.status === 'confirmed' || apt.status === 'completed') && apt.rawDate && new Date(apt.rawDate) < new Date(new Date().setHours(0,0,0,0)) && (
+                                                <div className="flex items-center gap-2 mr-2 border-r border-card-border pr-4">
+                                                    {!apt.attendance_status ? (
+                                                        <>
+                                                            <button 
+                                                                onClick={() => handleAttendanceChange(apt.id, 'attended')}
+                                                                className="px-3 py-1.5 rounded-lg bg-green-500/10 text-green-600 dark:text-green-400 text-[10px] font-bold hover:bg-green-500/20 transition-colors"
+                                                            >
+                                                                Geldi ✓
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => handleAttendanceChange(apt.id, 'no_show')}
+                                                                className="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-bold hover:bg-red-500/20 transition-colors"
+                                                            >
+                                                                Gelmedi ✗
+                                                            </button>
+                                                        </>
+                                                    ) : (
+                                                        <div className="flex flex-col items-center gap-1">
+                                                            {apt.attendance_status === 'attended' ? (
+                                                                <span className="text-[10px] bg-green-500/10 text-green-500 font-bold px-2 py-0.5 rounded-full border border-green-500/20">
+                                                                    ✓ Geldi
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-[10px] bg-red-500/10 text-red-500 font-bold px-2 py-0.5 rounded-full border border-red-500/20">
+                                                                    ✗ Gelmedi
+                                                                </span>
+                                                            )}
+                                                            <button 
+                                                                onClick={() => handleAttendanceChange(apt.id, null)}
+                                                                className="text-[9px] text-gray-400 hover:text-indigo-400 underline decoration-dotted"
+                                                            >
+                                                                Değiştir
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            <button 
+                                                onClick={() => startConsultation(apt)}
+                                                className="px-4 py-2 rounded-xl bg-card dark:bg-white/5 border border-card-border text-sm font-bold hover:bg-white dark:bg-black hover:text-white dark:hover:bg-indigo-600 transition-colors"
+                                            >
+                                                {apt.status === 'completed' ? 'Muayene Detayı' : 'Muayene Et'}
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
