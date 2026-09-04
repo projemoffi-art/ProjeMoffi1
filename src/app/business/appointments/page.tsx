@@ -124,6 +124,48 @@ export default function BusinessAppointmentsPage() {
     const [isSendingMessage, setIsSendingMessage] = useState(false);
     const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
+    // Notification State (Faz 9)
+    const [unreadNotifications, setUnreadNotifications] = useState<any[]>([]);
+    const [showNotifications, setShowNotifications] = useState(false);
+    const notifRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!user?.id || !isSupabaseEnabled) return;
+        const fetchNotifications = async () => {
+            try {
+                const notifs = await apiService.getUnreadNotifications(user.id);
+                setUnreadNotifications((notifs || []).map(n => ({ ...n, isReadLocally: false })));
+            } catch (err) {
+                console.error("Error fetching notifications:", err);
+            }
+        };
+        fetchNotifications();
+    }, [user?.id]);
+
+    const handleNotificationClick = async (notifId: string) => {
+        const notif = unreadNotifications.find(n => n.id === notifId);
+        if (notif?.isReadLocally) return;
+
+        apiService.markNotificationRead(notifId).catch(console.error);
+        setUnreadNotifications(prev => prev.map(n => n.id === notifId ? { ...n, isReadLocally: true } : n));
+    };
+
+    const unreadCount = unreadNotifications.filter(n => !n.isReadLocally).length;
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+                setShowNotifications(false);
+            }
+        };
+        if (showNotifications) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showNotifications]);
+
     const exceptionsScrollProps = useDragScroll();
 
     const fetchExceptions = async () => {
@@ -967,10 +1009,65 @@ export default function BusinessAppointmentsPage() {
                         <p className="text-gray-500 font-medium">VetLife Global Clinic • 12 Aralık 2025</p>
                     </div>
                     <div className="flex items-center gap-4">
-                        <button className="w-12 h-12 rounded-2xl bg-card dark:bg-white/5 border border-card-border dark:border-card-border flex items-center justify-center relative">
-                            <Bell className="w-6 h-6 text-gray-600 dark:text-gray-300" />
-                            {pendingRequests.length > 0 && <span className="absolute top-3 right-3 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-black animate-pulse" />}
-                        </button>
+                        <div className="relative z-40" ref={notifRef}>
+                            <button 
+                                onClick={() => setShowNotifications(!showNotifications)}
+                                className="w-12 h-12 rounded-2xl bg-card dark:bg-white/5 border border-card-border dark:border-card-border flex items-center justify-center relative hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                            >
+                                <Bell className={cn("w-6 h-6 text-gray-600 dark:text-gray-300", unreadCount > 0 ? "animate-pulse" : "")} />
+                                {unreadCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-red-500 rounded-full border-2 border-white dark:border-black text-[10px] font-bold text-white flex items-center justify-center px-1">
+                                        {unreadCount}
+                                    </span>
+                                )}
+                            </button>
+                            <AnimatePresence>
+                                {showNotifications && (
+                                    <motion.div 
+                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        className="absolute top-[120%] right-0 w-80 bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-[#27272a] rounded-xl shadow-2xl overflow-hidden"
+                                    >
+                                        <div className="p-3 border-b border-zinc-100 dark:border-[#27272a]">
+                                            <h3 className="text-xs font-black uppercase tracking-wider text-zinc-500 dark:text-[#a1a1aa]">Bildirimler</h3>
+                                        </div>
+                                        <div className="max-h-80 overflow-y-auto">
+                                            {unreadNotifications.length === 0 ? (
+                                                <div className="p-4 text-center text-xs text-zinc-500 dark:text-[#a1a1aa] font-bold">
+                                                    Yeni bildirim yok
+                                                </div>
+                                            ) : (
+                                                unreadNotifications.map(notif => (
+                                                    <div 
+                                                        key={notif.id} 
+                                                        onClick={() => handleNotificationClick(notif.id)}
+                                                        className={cn(
+                                                            "p-4 border-b border-zinc-100 dark:border-[#27272a] last:border-0 hover:bg-zinc-50 dark:hover:bg-[#27272a]/50 cursor-pointer transition-all relative",
+                                                            notif.isReadLocally ? "opacity-50" : ""
+                                                        )}
+                                                    >
+                                                        <div className="flex justify-between items-start gap-2">
+                                                            <p className="text-xs font-bold text-zinc-800 dark:text-[#fafafa] mb-1 leading-relaxed">
+                                                                {notif.message}
+                                                            </p>
+                                                            {notif.isReadLocally && (
+                                                                <span className="text-[10px] text-green-500 flex items-center gap-1 font-bold whitespace-nowrap">
+                                                                    ✓ Okundu
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <span className="text-[9px] font-bold text-zinc-400 dark:text-[#a1a1aa] uppercase tracking-wider">
+                                                            {new Date(notif.created_at).toLocaleString('tr-TR')}
+                                                        </span>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
                         <div className="hidden md:flex items-center gap-3 bg-card dark:bg-white/5 px-4 py-2 rounded-2xl border border-card-border dark:border-card-border">
                             <img src={user?.user_metadata?.avatar_url || "https://images.unsplash.com/photo-1559839734-2b71ea86b48e?w=100"} className="w-8 h-8 rounded-full object-cover" />
                             <span className="font-bold text-sm">{user?.user_metadata?.full_name || user?.email?.split('@')[0] || "Klinik Yöneticisi"}</span>
