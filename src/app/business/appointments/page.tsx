@@ -1199,7 +1199,13 @@ export default function BusinessAppointmentsPage() {
                                         </div>
                                         <div className="flex items-center gap-3">
                                             {/* (Faz 9) Gelecek randevu değilse ve iptal değilse no-show butonları */}
-                                            {(apt.status === 'confirmed' || apt.status === 'completed') && apt.rawDate && new Date(apt.rawDate) < new Date(new Date().setHours(0,0,0,0)) && (
+                                            {apt.status === 'completed' ? (
+                                                <div className="flex items-center gap-2 mr-2 border-r border-card-border pr-4">
+                                                    <span className="text-[10px] bg-green-500/10 text-green-500 font-bold px-2 py-0.5 rounded-full border border-green-500/20">
+                                                        ✓ Geldi
+                                                    </span>
+                                                </div>
+                                            ) : apt.status === 'confirmed' && apt.rawDate && new Date(apt.rawDate) < new Date(new Date().setHours(0,0,0,0)) ? (
                                                 <div className="flex items-center gap-2 mr-2 border-r border-card-border pr-4">
                                                     {!apt.attendance_status ? (
                                                         <>
@@ -1236,7 +1242,7 @@ export default function BusinessAppointmentsPage() {
                                                         </div>
                                                     )}
                                                 </div>
-                                            )}
+                                            ) : null}
 
                                             <button 
                                                 onClick={() => startConsultation(apt)}
