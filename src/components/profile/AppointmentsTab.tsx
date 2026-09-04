@@ -148,7 +148,7 @@ export function AppointmentsTab({
             {noShowCount > 0 && (
                 <div className="mt-4 px-4 py-3 bg-[#12121A] border border-card-border rounded-xl flex items-center justify-center text-center">
                     <p className="text-[11px] font-medium text-gray-500">
-                        Bu yıl <span className="font-bold text-gray-300">{noShowCount} randevunuza</span> katılamadığınız kaydedildi.
+                        Toplam <span className="font-bold text-gray-300">{noShowCount} randevunuza</span> katılamadığınız kaydedildi.
                     </p>
                 </div>
             )}

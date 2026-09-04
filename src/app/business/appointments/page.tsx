@@ -15,6 +15,7 @@ import { apiService, isSupabaseEnabled } from "@/services/apiService";
 import { supabase } from "@/lib/supabase";
 import { sendAppointmentConfirmationEmail } from "@/actions/sendAppointmentEmail";
 import { useDragScroll } from "@/hooks/useDragScroll";
+import { NoShowBadge } from "@/components/business/NoShowBadge";
 
 export default function BusinessAppointmentsPage() {
     const { customRecords, setCustomRecords, updatePet } = usePet();
@@ -1284,7 +1285,10 @@ export default function BusinessAppointmentsPage() {
                                                     <div className="flex gap-4 mb-4">
                                                         <img src={req.image} className="w-14 h-14 rounded-2xl object-cover" />
                                                         <div>
-                                                            <div className="font-black text-foreground dark:text-white text-lg">{req.petName}</div>
+                                                            <div className="font-black text-foreground dark:text-white text-lg flex items-center flex-wrap">
+                                                                {req.petName}
+                                                                <NoShowBadge userId={req.userId} />
+                                                            </div>
                                                             <div className="text-xs text-gray-500 font-bold bg-card dark:bg-black/20 px-2 py-1 rounded-md inline-block mt-1">
                                                                 ⏰ {req.time || "Saatsiz"} • {req.date}
                                                             </div>

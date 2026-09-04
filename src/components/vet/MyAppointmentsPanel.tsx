@@ -115,7 +115,7 @@ export function MyAppointmentsPanel({ appointments }: MyAppointmentsPanelProps) 
             {noShowCount > 0 && (
                 <div className="mt-4 px-4 py-3 bg-zinc-50 dark:bg-[#18181b] border border-zinc-200 dark:border-zinc-800/60 rounded-xl flex items-center justify-center text-center">
                     <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
-                        Bu yıl <span className="font-bold text-zinc-700 dark:text-zinc-300">{noShowCount} randevunuza</span> katılamadığınız kaydedildi.
+                        Toplam <span className="font-bold text-zinc-700 dark:text-zinc-300">{noShowCount} randevunuza</span> katılamadığınız kaydedildi.
                     </p>
                 </div>
             )}
