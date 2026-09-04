@@ -437,7 +437,7 @@ function VetPageContent() {
             const lunchEnd = settings?.lunchEnd || "13:00";
             const slotDuration = settings?.slotDuration || 30;
 
-            const slots: string[] = [];
+            const slots: { time: string, disabled: boolean }[] = [];
             const [startH, startM] = startTime.split(':').map(Number);
             const [endH, endM] = endTime.split(':').map(Number);
             const [lunchStartH, lunchStartM] = lunchStart.split(':').map(Number);
@@ -448,17 +448,7 @@ function VetPageContent() {
             const lunchStartMinutes = lunchStartH * 60 + lunchStartM;
             const lunchEndMinutes = lunchEndH * 60 + lunchEndM;
 
-            for (let min = startMinutes; min < endMinutes; min += slotDuration) {
-                if (min >= lunchStartMinutes && min < lunchEndMinutes) {
-                    continue;
-                }
-                const h = Math.floor(min / 60);
-                const m = min % 60;
-                const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-                slots.push(timeStr);
-            }
-
-            const bookedTimes = new Set<string>();
+            const blockedIntervals: { start: number, end: number }[] = [];
 
             if (isSupabaseEnabled) {
                 dbAppointments.forEach((apt: any) => {
@@ -467,7 +457,11 @@ function VetPageContent() {
                             const aptDateStr = apt.appointment_date.split('T')[0];
                             if (aptDateStr === dateStr) {
                                 const timeStr = apt.appointment_date.split('T')[1].substring(0, 5);
-                                bookedTimes.add(timeStr);
+                                const duration = apt.duration_minutes || 30;
+                                const [h, m] = timeStr.split(':').map(Number);
+                                const startMin = h * 60 + m;
+                                const endMin = startMin + duration;
+                                blockedIntervals.push({ start: startMin, end: endMin });
                             }
                         } catch (e) {}
                     }
@@ -479,19 +473,41 @@ function VetPageContent() {
                 const pendingList = pendingSaved ? JSON.parse(pendingSaved) : [];
                 const confirmedList = confirmedSaved ? JSON.parse(confirmedSaved) : [];
                 
+                const addBlocked = (apt: any) => {
+                    const duration = apt.duration_minutes || 30;
+                    const [h, m] = apt.time.split(':').map(Number);
+                    const startMin = h * 60 + m;
+                    const endMin = startMin + duration;
+                    blockedIntervals.push({ start: startMin, end: endMin });
+                };
+
                 pendingList.forEach((apt: any) => {
-                    if (apt.date === dateStr && apt.status !== 'rejected') {
-                        bookedTimes.add(apt.time);
-                    }
+                    if (apt.date === dateStr && apt.status !== 'rejected') addBlocked(apt);
                 });
                 confirmedList.forEach((apt: any) => {
-                    if (apt.date === dateStr && apt.status !== 'rejected' && apt.status !== 'cancelled') {
-                        bookedTimes.add(apt.time);
-                    }
+                    if (apt.date === dateStr && apt.status !== 'rejected' && apt.status !== 'cancelled') addBlocked(apt);
                 });
             }
 
-            return slots.filter(time => !bookedTimes.has(time));
+            for (let min = startMinutes; min < endMinutes; min += slotDuration) {
+                if (min >= lunchStartMinutes && min < lunchEndMinutes) {
+                    continue;
+                }
+                const h = Math.floor(min / 60);
+                const m = min % 60;
+                const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                
+                const slotStart = min;
+                const slotEnd = min + slotDuration;
+                
+                const isBlocked = blockedIntervals.some(interval => 
+                    Math.max(interval.start, slotStart) < Math.min(interval.end, slotEnd)
+                );
+                
+                slots.push({ time: timeStr, disabled: isBlocked });
+            }
+
+            return slots;
         } catch (e) {
             console.error("Error generating dynamic slots:", e);
             return [];
@@ -505,8 +521,8 @@ function VetPageContent() {
             const now = new Date();
             const currentHour = now.getHours();
             const currentMin = now.getMinutes();
-            return generated.filter(time => {
-                const [h, m] = time.split(':').map(Number);
+            return generated.filter(slot => {
+                const [h, m] = slot.time.split(':').map(Number);
                 return h > currentHour || (h === currentHour && m > currentMin);
             });
         }
@@ -588,7 +604,7 @@ function VetPageContent() {
             selectedSvc?.service_name || 'general',
             sharedPassport,
             petInfo,
-            undefined // Randevular artık ücretsiz
+            selectedSvc?.duration_minutes || 30
         );
 
         // Record Transparency Log
@@ -1003,24 +1019,26 @@ function VetPageContent() {
                                     </div>
                                 </div>
 
-                                {/* TIME SELECTOR */}
                                 <div className="mb-6 text-left">
                                     <label className="text-[8px] font-black text-zinc-400 dark:text-[#a1a1aa] uppercase tracking-wider mb-3 block px-1">Saat Seçimi</label>
                                     <div className="grid grid-cols-4 gap-2">
-                                        {timeSlots.map((time, tIndex) => {
+                                        {timeSlots.map(({ time, disabled }, tIndex) => {
                                             if (!time) console.warn("🚨 BOŞ TIME DEĞERİ!", { time, index: tIndex });
                                             return (
                                             <button
                                                 key={time}
+                                                disabled={disabled}
                                                 onClick={() => {
                                                     console.log("Selected time clicked:", time);
                                                     setSelectedTime(time);
                                                 }}
                                                 className={cn(
                                                     "py-2.5 text-xs font-bold rounded-lg border transition-all text-center",
-                                                    selectedTime === time 
-                                                        ? "bg-indigo-500 text-black border-indigo-500 font-black" 
-                                                        : "border-zinc-200 dark:border-[#27272a] bg-zinc-50 dark:bg-[#18181b] text-zinc-500 dark:text-[#a1a1aa] hover:border-zinc-350 dark:hover:border-[#3f3f46] hover:text-zinc-800 dark:hover:text-[#fafafa]"
+                                                    disabled
+                                                        ? "opacity-50 line-through pointer-events-none bg-zinc-100 dark:bg-white/5 border-transparent text-zinc-400 dark:text-zinc-600"
+                                                        : selectedTime === time 
+                                                            ? "bg-indigo-500 text-black border-indigo-500 font-black" 
+                                                            : "border-zinc-200 dark:border-[#27272a] bg-zinc-50 dark:bg-[#18181b] text-zinc-500 dark:text-[#a1a1aa] hover:border-zinc-350 dark:hover:border-[#3f3f46] hover:text-zinc-800 dark:hover:text-[#fafafa]"
                                                 )}
                                             >
                                                 {time}

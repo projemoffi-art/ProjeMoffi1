@@ -2053,7 +2053,8 @@ export class SupabaseApiService implements IApiService {
                 payment_id: dto.paymentId || null,
                 payment_amount: dto.paymentAmount || null,
                 payment_status: dto.paymentStatus || null,
-                shared_passport: dto.sharedPassport || null
+                shared_passport: dto.sharedPassport || null,
+                duration_minutes: dto.duration_minutes || 30
             })
             .select()
             .single();

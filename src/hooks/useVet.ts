@@ -132,7 +132,8 @@ export function useVet() {
         time: string, 
         type: string, 
         sharedPassport?: any, 
-        petInfo?: { id: string; name: string; image: string }
+        petInfo?: { id: string; name: string; image: string },
+        duration_minutes: number = 30
     ) => {
         if (!petInfo?.id) throw new Error("Randevu için bir evcil hayvan seçilmeli");
         setIsLoading(true);
@@ -150,7 +151,8 @@ export function useVet() {
                 sharedPassport: sharedPassport,
                 paymentId: null,
                 paymentAmount: null,
-                paymentStatus: null
+                paymentStatus: null,
+                duration_minutes: duration_minutes
             };
 
             await apiService.createAppointment(appointmentPayload);
