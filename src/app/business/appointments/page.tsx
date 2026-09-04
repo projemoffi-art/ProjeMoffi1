@@ -209,6 +209,13 @@ export default function BusinessAppointmentsPage() {
                     console.error("Error parsing date:", e);
                 }
 
+                let parsedType = "Rutin Kontrol";
+                if (item.notes && item.notes.includes('Randevu tipi:')) {
+                    parsedType = item.notes.split('Randevu tipi: ')[1].trim() || "Rutin Kontrol";
+                } else if (item.reason) {
+                    parsedType = item.reason;
+                }
+
                 return {
                     id: item.id,
                     userId: item.user_id,
@@ -216,7 +223,7 @@ export default function BusinessAppointmentsPage() {
                     ownerName: item.user?.full_name || item.user?.username || "Pati Sahibi",
                     time: time,
                     date: dateStr,
-                    type: item.reason || "Rutin Kontrol",
+                    type: parsedType,
                     status: item.status,
                     image: item.pet?.avatar_url || item.pet?.photo_url || item.pet?.image || "https://images.unsplash.com/photo-1573865526739-10659fec78a5?q=80&w=100",
                     petId: item.pet_id,
