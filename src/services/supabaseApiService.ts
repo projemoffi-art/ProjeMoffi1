@@ -4210,6 +4210,67 @@ export class SupabaseApiService implements IApiService {
         return data as ClinicMessage[];
     }
 
+    async getClinicConversations(clinicId: string): Promise<any[]> {
+        const { data, error } = await supabase
+            .from('clinic_messages')
+            .select('*')
+            .eq('clinic_id', clinicId)
+            .order('created_at', { ascending: false });
+
+        if (error || !data) {
+            console.error("Error fetching clinic conversations:", error);
+            return [];
+        }
+
+        const userIds = [...new Set(data.map(m => m.user_id))];
+        let profilesMap: Record<string, any> = {};
+        if (userIds.length > 0) {
+            const { data: profiles } = await supabase.from('profiles').select('id, full_name, username, avatar_url').in('id', userIds);
+            if (profiles) {
+                profiles.forEach(p => { profilesMap[p.id] = p; });
+            }
+        }
+
+        const conversationsMap = new Map<string, any>();
+
+        data.forEach(msg => {
+            if (!conversationsMap.has(msg.user_id)) {
+                const profile = profilesMap[msg.user_id] || {};
+                const userName = profile.full_name || profile.username || 'Gizli Kullanıcı';
+                
+                conversationsMap.set(msg.user_id, {
+                    userId: msg.user_id,
+                    userName,
+                    userAvatar: profile.avatar_url || null,
+                    lastMessage: msg.message,
+                    lastMessageDate: msg.created_at,
+                    unreadCount: 0
+                });
+            }
+
+            if (msg.sender_role === 'user' && !msg.is_read) {
+                conversationsMap.get(msg.user_id).unreadCount += 1;
+            }
+        });
+
+        return Array.from(conversationsMap.values());
+    }
+
+    async getTotalClinicUnreadCount(clinicId: string): Promise<number> {
+        const { count, error } = await supabase
+            .from('clinic_messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('clinic_id', clinicId)
+            .eq('sender_role', 'user')
+            .eq('is_read', false);
+
+        if (error) {
+            console.error("Error getting total unread count:", error);
+            return 0;
+        }
+        return count || 0;
+    }
+
     async sendMessage(clinicId: string, userId: string, senderRole: 'user' | 'clinic', message: string): Promise<boolean> {
 
         const { error } = await supabase

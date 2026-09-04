@@ -427,6 +427,8 @@ export interface IApiService {
 
     // Clinic Messages & Campaigns (Faz 8)
     getConversation(clinicId: string, userId: string): Promise<ClinicMessage[]>;
+    getClinicConversations(clinicId: string): Promise<any[]>;
+    getTotalClinicUnreadCount(clinicId: string): Promise<number>;
     sendMessage(clinicId: string, userId: string, senderRole: 'user' | 'clinic', message: string): Promise<boolean>;
     markMessagesRead(clinicId: string, userId: string, readerRole: 'user' | 'clinic'): Promise<boolean>;
     getUnreadMessageCount(clinicId: string, userId: string, readerRole: 'user' | 'clinic'): Promise<number>;

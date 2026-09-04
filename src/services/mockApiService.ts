@@ -1709,6 +1709,12 @@ export class MockApiService implements IApiService {
     async getConversation(clinicId: string, userId: string): Promise<any[]> {
         return [];
     }
+    async getClinicConversations(clinicId: string): Promise<any[]> {
+        return [];
+    }
+    async getTotalClinicUnreadCount(clinicId: string): Promise<number> {
+        return 0;
+    }
     async sendMessage(clinicId: string, userId: string, senderRole: 'user' | 'clinic', message: string): Promise<boolean> {
         return true;
     }

@@ -73,7 +73,7 @@ export default function BusinessAppointmentsPage() {
     const [criticalNotes, setCriticalNotes] = useState("");
 
     // Tabs and Shift Settings States
-    const [activeTab, setActiveTab] = useState<'appointments' | 'advice' | 'shifts' | 'reviews'>('appointments');
+    const [activeTab, setActiveTab] = useState<'appointments' | 'advice' | 'shifts' | 'reviews' | 'messages'>('appointments');
     const [isSavingAdvice, setIsSavingAdvice] = useState(false);
 
     // Reviews States
@@ -106,6 +106,15 @@ export default function BusinessAppointmentsPage() {
     const [selectedExceptionDate, setSelectedExceptionDate] = useState<string | null>(null);
     const [exceptionForm, setExceptionForm] = useState<{ isClosed: boolean, open: string, close: string }>({ isClosed: false, open: "09:00", close: "18:00" });
     
+    // Messages States
+    const [conversations, setConversations] = useState<any[]>([]);
+    const [totalUnread, setTotalUnread] = useState(0);
+    const [selectedConv, setSelectedConv] = useState<any>(null);
+    const [chatMessages, setChatMessages] = useState<any[]>([]);
+    const [chatInput, setChatInput] = useState("");
+    const [isSendingMessage, setIsSendingMessage] = useState(false);
+    const pollingRef = useRef<NodeJS.Timeout | null>(null);
+
     const exceptionsScrollProps = useDragScroll();
 
     const fetchExceptions = async () => {
@@ -318,6 +327,73 @@ export default function BusinessAppointmentsPage() {
         loadSettings();
         fetchExceptions();
     }, [user?.id]);
+
+    const loadConversations = async () => {
+        if (!user?.id || !isSupabaseEnabled) return;
+        try {
+            const convs = await apiService.getClinicConversations(user.id);
+            setConversations(convs);
+            const unread = await apiService.getTotalClinicUnreadCount(user.id);
+            setTotalUnread(unread);
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const loadChatHistory = async (userId: string) => {
+        if (!user?.id || !isSupabaseEnabled) return;
+        try {
+            const history = await apiService.getConversation(user.id, userId);
+            setChatMessages(history);
+            await apiService.markMessagesRead(user.id, userId, 'clinic');
+            loadConversations();
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    useEffect(() => {
+        if (user?.id && isSupabaseEnabled) {
+            loadConversations();
+            const poller = setInterval(loadConversations, 10000); // 10s polling for new messages
+            return () => clearInterval(poller);
+        }
+    }, [user?.id]);
+
+    useEffect(() => {
+        if (activeTab === 'messages' && selectedConv) {
+            loadChatHistory(selectedConv.userId);
+            pollingRef.current = setInterval(() => {
+                loadChatHistory(selectedConv.userId);
+            }, 4000);
+        } else {
+            if (pollingRef.current) clearInterval(pollingRef.current);
+        }
+        return () => {
+            if (pollingRef.current) clearInterval(pollingRef.current);
+        }
+    }, [activeTab, selectedConv]);
+
+    const handleSendMessage = async () => {
+        if (!chatInput.trim() || !selectedConv || !user?.id || isSendingMessage) return;
+        setIsSendingMessage(true);
+        const text = chatInput.trim();
+        setChatInput("");
+        try {
+            const success = await apiService.sendMessage(user.id, selectedConv.userId, 'clinic', text);
+            if (success) {
+                await loadChatHistory(selectedConv.userId);
+            } else {
+                setChatInput(text);
+                alert("Mesaj gönderilemedi");
+            }
+        } catch (e) {
+            console.error(e);
+            setChatInput(text);
+        } finally {
+            setIsSendingMessage(false);
+        }
+    };
 
     const loadReviews = async () => {
         if (!user?.id || !isSupabaseEnabled) return;
@@ -803,6 +879,15 @@ export default function BusinessAppointmentsPage() {
                         className={`pb-4 px-2 font-black text-xs uppercase tracking-wider transition-all border-b-2 -mb-px flex items-center gap-2 ${activeTab === 'reviews' ? 'border-[#5B4D9D] text-[#5B4D9D]' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-foreground dark:hover:text-white'}`}
                     >
                         <Star className="w-3.5 h-3.5 mb-0.5" /> Yorumlar
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('messages')}
+                        className={`pb-4 px-2 font-black text-xs uppercase tracking-wider transition-all border-b-2 -mb-px flex items-center gap-2 ${activeTab === 'messages' ? 'border-[#5B4D9D] text-[#5B4D9D]' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-foreground dark:hover:text-white'}`}
+                    >
+                        <MessageSquare className="w-3.5 h-3.5 mb-0.5" /> Mesajlar
+                        {totalUnread > 0 && (
+                            <span className="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full">{totalUnread}</span>
+                        )}
                     </button>
                 </div>
 
@@ -1467,6 +1552,101 @@ export default function BusinessAppointmentsPage() {
                                 ))}
                             </div>
                         )}
+                    </div>
+                )}
+                {activeTab === 'messages' && (
+                    <div className="flex flex-col lg:flex-row gap-6 h-[70vh]">
+                        {/* Conversation List */}
+                        <div className="w-full lg:w-1/3 border border-zinc-200 dark:border-card-border rounded-3xl bg-white dark:bg-[#12121A] overflow-hidden flex flex-col shadow-moffi-card">
+                            <div className="p-4 border-b border-zinc-200 dark:border-card-border bg-zinc-50 dark:bg-[#18181b]">
+                                <h3 className="font-black text-sm uppercase tracking-wider text-zinc-500">Müşteri Mesajları</h3>
+                            </div>
+                            <div className="overflow-y-auto flex-1 p-2 space-y-2">
+                                {conversations.length === 0 && (
+                                    <div className="text-center text-sm text-zinc-400 p-4 font-bold">Henüz mesaj yok.</div>
+                                )}
+                                {conversations.map(conv => (
+                                    <button 
+                                        key={conv.userId}
+                                        onClick={() => setSelectedConv(conv)}
+                                        className={cn(
+                                            "w-full flex items-center justify-between p-3 rounded-2xl transition-all text-left",
+                                            selectedConv?.userId === conv.userId 
+                                                ? "bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20" 
+                                                : "hover:bg-zinc-50 dark:hover:bg-white/5 border border-transparent"
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-3 overflow-hidden">
+                                            <img src={conv.userAvatar || "https://images.unsplash.com/photo-1559839734-2b71ea86b48e?w=100"} className="w-10 h-10 rounded-full object-cover bg-zinc-200 shrink-0" />
+                                            <div className="overflow-hidden">
+                                                <div className="font-bold text-sm truncate dark:text-white text-zinc-800">{conv.userName}</div>
+                                                <div className={cn("text-xs truncate", conv.unreadCount > 0 ? "font-bold text-indigo-500" : "text-zinc-500")}>
+                                                    {conv.lastMessage}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {conv.unreadCount > 0 && (
+                                            <div className="bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shrink-0">
+                                                {conv.unreadCount}
+                                            </div>
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Chat Area */}
+                        <div className="flex-1 border border-zinc-200 dark:border-card-border rounded-3xl bg-white dark:bg-[#12121A] overflow-hidden flex flex-col shadow-moffi-card">
+                            {selectedConv ? (
+                                <>
+                                    <div className="p-4 border-b border-zinc-200 dark:border-card-border flex items-center gap-3 bg-zinc-50 dark:bg-[#18181b]">
+                                        <img src={selectedConv.userAvatar || "https://images.unsplash.com/photo-1559839734-2b71ea86b48e?w=100"} className="w-10 h-10 rounded-full object-cover bg-zinc-200 shrink-0" />
+                                        <h3 className="font-black text-sm uppercase dark:text-white text-zinc-800">{selectedConv.userName}</h3>
+                                    </div>
+                                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                                        {chatMessages.map(msg => (
+                                            <div key={msg.id} className={cn("flex flex-col max-w-[80%]", msg.sender_role === 'clinic' ? "ml-auto items-end" : "mr-auto items-start")}>
+                                                <div className={cn(
+                                                    "px-4 py-2.5 rounded-2xl text-sm font-medium",
+                                                    msg.sender_role === 'clinic' 
+                                                        ? "bg-indigo-500 text-white rounded-tr-sm" 
+                                                        : "bg-zinc-100 dark:bg-[#1A1A24] text-zinc-800 dark:text-zinc-200 rounded-tl-sm border border-zinc-200 dark:border-card-border"
+                                                )}>
+                                                    {msg.message}
+                                                </div>
+                                                <span className="text-[9px] font-bold text-zinc-400 mt-1 uppercase">
+                                                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="p-4 border-t border-zinc-200 dark:border-card-border bg-zinc-50 dark:bg-[#18181b]">
+                                        <div className="flex items-center gap-2">
+                                            <input 
+                                                type="text" 
+                                                value={chatInput}
+                                                onChange={e => setChatInput(e.target.value)}
+                                                onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
+                                                placeholder="Mesajınızı yazın..."
+                                                className="flex-1 bg-white dark:bg-[#12121A] border border-zinc-200 dark:border-card-border rounded-xl px-4 py-2.5 text-sm font-bold text-zinc-800 dark:text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                                            />
+                                            <button 
+                                                onClick={handleSendMessage}
+                                                disabled={isSendingMessage || !chatInput.trim()}
+                                                className="w-10 h-10 rounded-xl bg-indigo-500 text-white flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:bg-indigo-600 transition-colors shrink-0 active:scale-95"
+                                            >
+                                                <Send className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="flex-1 flex flex-col items-center justify-center text-zinc-400 p-8 text-center">
+                                    <MessageSquare className="w-16 h-16 mb-4 text-zinc-300 dark:text-zinc-600 opacity-50" />
+                                    <p className="font-bold text-lg text-zinc-500 uppercase tracking-tight">Mesajlaşmak için bir konuşma seçin</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
             </main>
