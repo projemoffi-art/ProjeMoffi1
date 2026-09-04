@@ -1555,9 +1555,9 @@ export default function BusinessAppointmentsPage() {
                     </div>
                 )}
                 {activeTab === 'messages' && (
-                    <div className="flex flex-col lg:flex-row gap-6 h-[70vh]">
+                    <div className="flex flex-col lg:flex-row gap-6 h-[75vh] w-full">
                         {/* Conversation List */}
-                        <div className="w-full lg:w-1/3 border border-zinc-200 dark:border-card-border rounded-3xl bg-white dark:bg-[#12121A] overflow-hidden flex flex-col shadow-moffi-card">
+                        <div className="w-full lg:w-[350px] shrink-0 border border-zinc-200 dark:border-card-border rounded-3xl bg-white dark:bg-[#12121A] overflow-hidden flex flex-col shadow-moffi-card">
                             <div className="p-4 border-b border-zinc-200 dark:border-card-border bg-zinc-50 dark:bg-[#18181b]">
                                 <h3 className="font-black text-sm uppercase tracking-wider text-zinc-500">Müşteri Mesajları</h3>
                             </div>
