@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, useMemo } from "react";
+import React, { useState, useEffect, Suspense, useMemo, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
@@ -175,7 +175,7 @@ function VetPageContent() {
         const fetchNotifications = async () => {
             try {
                 const notifs = await apiService.getUnreadNotifications(user.id);
-                setUnreadNotifications(notifs || []);
+                setUnreadNotifications((notifs || []).map(n => ({ ...n, isReadLocally: false })));
             } catch (err) {
                 console.error("Error fetching notifications:", err);
             }
@@ -184,9 +184,30 @@ function VetPageContent() {
     }, [user]);
 
     const handleNotificationClick = async (notifId: string) => {
-        await apiService.markNotificationRead(notifId);
-        setUnreadNotifications(prev => prev.filter(n => n.id !== notifId));
+        const notif = unreadNotifications.find(n => n.id === notifId);
+        if (notif?.isReadLocally) return;
+
+        apiService.markNotificationRead(notifId).catch(console.error);
+        setUnreadNotifications(prev => prev.map(n => n.id === notifId ? { ...n, isReadLocally: true } : n));
     };
+
+    const unreadCount = unreadNotifications.filter(n => !n.isReadLocally).length;
+
+    // Click outside handler for notifications
+    const notifRef = React.useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+                setShowNotifications(false);
+            }
+        };
+        if (showNotifications) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showNotifications]);
 
     useEffect(() => {
         if (!isSupabaseEnabled || !selectedClinic?.id) return;
@@ -784,13 +805,13 @@ function VetPageContent() {
 
             <main className="px-6 py-6 space-y-6">
                 {unreadNotifications.length > 0 && (
-                    <div className="relative z-40 mb-2">
+                    <div className="relative z-40 mb-2" ref={notifRef}>
                         <button 
                             onClick={() => setShowNotifications(!showNotifications)}
                             className="bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-black uppercase tracking-wider w-full justify-center transition-all hover:bg-indigo-500/20"
                         >
-                            <Bell className="w-4 h-4 animate-pulse" />
-                            {unreadNotifications.length} Yeni Bildirim
+                            <Bell className={cn("w-4 h-4", unreadCount > 0 ? "animate-pulse" : "")} />
+                            {unreadCount > 0 ? `${unreadCount} Yeni Bildirim` : `Bildirimler`}
                         </button>
                         <AnimatePresence>
                             {showNotifications && (
@@ -805,11 +826,21 @@ function VetPageContent() {
                                             <div 
                                                 key={notif.id} 
                                                 onClick={() => handleNotificationClick(notif.id)}
-                                                className="p-4 border-b border-zinc-100 dark:border-[#27272a] last:border-0 hover:bg-zinc-50 dark:hover:bg-[#27272a]/50 cursor-pointer transition-colors"
+                                                className={cn(
+                                                    "p-4 border-b border-zinc-100 dark:border-[#27272a] last:border-0 hover:bg-zinc-50 dark:hover:bg-[#27272a]/50 cursor-pointer transition-colors relative",
+                                                    notif.isReadLocally ? "opacity-50" : ""
+                                                )}
                                             >
-                                                <p className="text-xs font-bold text-zinc-800 dark:text-[#fafafa] mb-1 leading-relaxed">
-                                                    {notif.message}
-                                                </p>
+                                                <div className="flex justify-between items-start gap-2">
+                                                    <p className="text-xs font-bold text-zinc-800 dark:text-[#fafafa] mb-1 leading-relaxed">
+                                                        {notif.message}
+                                                    </p>
+                                                    {notif.isReadLocally && (
+                                                        <span className="text-[10px] text-green-500 flex items-center gap-1 font-bold whitespace-nowrap">
+                                                            ✓ Okundu
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <span className="text-[9px] font-bold text-zinc-400 dark:text-[#a1a1aa] uppercase tracking-wider">
                                                     {new Date(notif.created_at).toLocaleString('tr-TR')}
                                                 </span>
