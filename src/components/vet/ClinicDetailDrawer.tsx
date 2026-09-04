@@ -22,11 +22,13 @@ interface ClinicDetailDrawerProps {
 }
 
 import { useChat } from "@/context/ChatContext";
+import { usePet } from "@/context/PetContext";
 
 export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppointment, defaultOpenReviewForm }: ClinicDetailDrawerProps) {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
-    const { openChat } = useChat();
+    const { openChat, toggleChat } = useChat();
+    const { activePet } = usePet();
     const [clinic, setClinic] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<'info' | 'doctors' | 'reviews'>('info');
@@ -116,7 +118,7 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
             setActiveTab('info');
             setActiveReviewAppointmentId(null);
         }
-    }, [clinicId, clinicData, defaultOpenReviewForm]);
+    }, [clinicId, clinicData, defaultOpenReviewForm, activePet?.id]);
 
     // Handle auto-opening the review form once data is loaded
     useEffect(() => {
@@ -152,9 +154,19 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                 const camps = await apiService.getClinicCampaigns(targetId!);
                 const activeCamps = camps.filter((c: any) => {
                     if (c.status && c.status !== 'active') return false;
+                    
                     const expirationStr = c.expires_at || c.ends_at;
-                    if (!expirationStr) return true;
-                    return new Date(expirationStr) > new Date();
+                    if (expirationStr && new Date(expirationStr) <= new Date()) return false;
+                    
+                    const campTarget = c.target_pet_type || 'all';
+                    if (campTarget !== 'all') {
+                        if (!activePet || !activePet.type) return false;
+                        const userPetType = activePet.type.toLowerCase();
+                        if (campTarget === 'cat' && userPetType !== 'cat' && userPetType !== 'kedi') return false;
+                        if (campTarget === 'dog' && userPetType !== 'dog' && userPetType !== 'köpek') return false;
+                    }
+                    
+                    return true;
                 });
                 setCampaigns(activeCamps);
             } catch (err) {
