@@ -2088,6 +2088,17 @@ export class SupabaseApiService implements IApiService {
         const user = await this.getSessionUser();
         if (!user) throw new Error('Giriş gerekli');
 
+        // Bildirim için gereken verileri önceden çekiyoruz
+        const { data: appt } = await supabase
+            .from('appointments')
+            .select(`
+                clinic_id, 
+                appointment_date, 
+                user:profiles!appointments_user_id_fkey(full_name, username)
+            `)
+            .eq('id', appointmentId)
+            .single();
+
         const { error } = await supabase
             .from('appointments')
             .update({ status: 'cancelled' })
@@ -2095,6 +2106,20 @@ export class SupabaseApiService implements IApiService {
             .eq('user_id', user.id);
 
         if (error) throw error;
+
+        // Randevu başarıyla iptal edildiyse kliniğe bildirim gönder (Faz 9)
+        if (appt && appt.clinic_id) {
+            const dateStr = appt.appointment_date 
+                ? new Date(appt.appointment_date).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })
+                : 'Belirtilmedi';
+            const userName = appt.user?.full_name || appt.user?.username || 'Müşteri';
+            
+            await supabase.from('appointment_notifications').insert({
+                appointment_id: appointmentId,
+                recipient_id: appt.clinic_id,
+                message: `${userName} randevusunu iptal etti: ${dateStr}`
+            });
+        }
     }
 
     async getClinicAppointments(clinicId: string): Promise<any[]> {
@@ -2185,6 +2210,23 @@ export class SupabaseApiService implements IApiService {
 
         if (error) throw error;
         if (!data || data.length === 0) throw new Error('Güncelleme 0 satır etkiledi - RLS engelliyor olabilir.');
+
+        // Onay veya Ret durumunda müşteriye bildirim gönder (Faz 9)
+        if (status === 'confirmed' || status === 'rejected') {
+            const appt = data[0];
+            if (appt && appt.user_id) {
+                const dateStr = appt.appointment_date 
+                    ? new Date(appt.appointment_date).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })
+                    : 'Belirtilmedi';
+                const statusText = status === 'confirmed' ? 'onaylandı' : 'reddedildi';
+                
+                await supabase.from('appointment_notifications').insert({
+                    appointment_id: appointmentId,
+                    recipient_id: appt.user_id,
+                    message: `Randevunuz ${statusText}: ${dateStr}`
+                });
+            }
+        }
     }
 
     async getClinicSettings(clinicId: string): Promise<any> {
