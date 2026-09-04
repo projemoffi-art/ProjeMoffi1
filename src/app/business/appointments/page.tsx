@@ -210,8 +210,8 @@ export default function BusinessAppointmentsPage() {
                 }
 
                 let parsedType = "Rutin Kontrol";
-                if (item.notes && item.notes.includes('Randevu tipi:')) {
-                    parsedType = item.notes.split('Randevu tipi: ')[1].trim() || "Rutin Kontrol";
+                if (item.reason && item.reason.includes('Randevu tipi:')) {
+                    parsedType = item.reason.split('Randevu tipi: ')[1].trim() || "Rutin Kontrol";
                 } else if (item.reason) {
                     parsedType = item.reason;
                 }

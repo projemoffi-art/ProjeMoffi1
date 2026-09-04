@@ -73,8 +73,10 @@ export function CareHubModal({
         return raw.map((apt: any) => {
             const d = apt.appointment_date ? new Date(apt.appointment_date) : null;
             let type = 'Genel Muayene';
-            if (apt.notes && apt.notes.includes('Randevu tipi:')) {
-                type = apt.notes.split('Randevu tipi: ')[1].trim() || 'Genel Muayene';
+            if (apt.reason && apt.reason.includes('Randevu tipi:')) {
+                type = apt.reason.split('Randevu tipi: ')[1].trim() || 'Genel Muayene';
+            } else if (apt.reason) {
+                type = apt.reason;
             }
             return {
                 id: apt.id,
