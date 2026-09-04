@@ -2201,7 +2201,7 @@ export class SupabaseApiService implements IApiService {
         };
     }
 
-    async updateAppointmentStatus(appointmentId: string, status: string): Promise<void> {
+    async updateAppointmentStatus(appointmentId: string, status: string, rejectReason?: string): Promise<void> {
         const { data, error } = await supabase
             .from('appointments')
             .update({ status: status })
@@ -2219,11 +2219,12 @@ export class SupabaseApiService implements IApiService {
                     ? new Date(appt.appointment_date).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })
                     : 'Belirtilmedi';
                 const statusText = status === 'confirmed' ? 'onaylandı' : 'reddedildi';
+                const reasonText = (status === 'rejected' && rejectReason) ? `. Sebep: ${rejectReason}` : '';
                 
                 await supabase.from('appointment_notifications').insert({
                     appointment_id: appointmentId,
                     recipient_id: appt.user_id,
-                    message: `Randevunuz ${statusText}: ${dateStr}`
+                    message: `Randevunuz ${statusText}: ${dateStr}${reasonText}`
                 });
             }
         }

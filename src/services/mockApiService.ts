@@ -721,7 +721,7 @@ export class MockApiService implements IApiService {
     async getAppointments(userId: string): Promise<any[]> { return []; }
     async cancelAppointment(id: string): Promise<void> { }
     async getClinicAppointments(clinicId: string): Promise<any[]> { return []; }
-    async updateAppointmentStatus(appointmentId: string, status: string): Promise<void> { }
+    async updateAppointmentStatus(appointmentId: string, status: string, rejectReason?: string): Promise<void> { }
     async getClinicSettings(clinicId: string): Promise<any> { return null; }
     async saveClinicSettings(clinicId: string, settings: any): Promise<void> { }
 

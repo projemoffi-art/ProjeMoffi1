@@ -115,6 +115,10 @@ export default function BusinessAppointmentsPage() {
     const [selectedExceptionDate, setSelectedExceptionDate] = useState<string | null>(null);
     const [exceptionForm, setExceptionForm] = useState<{ isClosed: boolean, open: string, close: string }>({ isClosed: false, open: "09:00", close: "18:00" });
     
+    // Reject Reason States (Faz 9)
+    const [rejectingApptId, setRejectingApptId] = useState<string | number | null>(null);
+    const [rejectReason, setRejectReason] = useState("");
+
     // Messages States
     const [conversations, setConversations] = useState<any[]>([]);
     const [totalUnread, setTotalUnread] = useState(0);
@@ -612,13 +616,19 @@ export default function BusinessAppointmentsPage() {
         }
     };
 
-    const handleAction = async (id: number | string, action: 'accept' | 'reject') => {
+    const handleAction = async (id: number | string, action: 'accept' | 'reject', providedRejectReason?: string) => {
         const target = pendingRequests.find(r => r.id === id);
         if (!target) return;
 
+        if (action === 'reject' && providedRejectReason === undefined) {
+            setRejectingApptId(id);
+            setRejectReason("");
+            return;
+        }
+
         if (isSupabaseEnabled) {
             try {
-                await apiService.updateAppointmentStatus(id.toString(), action === 'accept' ? 'confirmed' : 'rejected');
+                await apiService.updateAppointmentStatus(id.toString(), action === 'accept' ? 'confirmed' : 'rejected', providedRejectReason);
                 showToast(
                     action === 'accept' 
                         ? `Randevu Onaylandı! ${target.petName} için bildirim gönderildi. ✨`
@@ -1011,7 +1021,10 @@ export default function BusinessAppointmentsPage() {
                     <div className="flex items-center gap-4">
                         <div className="relative z-40" ref={notifRef}>
                             <button 
-                                onClick={() => setShowNotifications(!showNotifications)}
+                                onClick={() => {
+                                    console.log('Bell button clicked! current showNotifications:', showNotifications);
+                                    setShowNotifications(!showNotifications);
+                                }}
                                 className="w-12 h-12 rounded-2xl bg-card dark:bg-white/5 border border-card-border dark:border-card-border flex items-center justify-center relative hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                             >
                                 <Bell className={cn("w-6 h-6 text-gray-600 dark:text-gray-300", unreadCount > 0 ? "animate-pulse" : "")} />
@@ -1250,10 +1263,29 @@ export default function BusinessAppointmentsPage() {
                                                              )}
                                                          </div>
                                                     )}
-                                                    <div className="flex gap-2">
-                                                        <button onClick={() => handleAction(req.id, 'reject')} className="flex-1 py-3 rounded-xl bg-card dark:bg-white/5 border border-card-border text-red-500 font-bold hover:bg-red-50 transition-colors">Reddet</button>
-                                                        <button onClick={() => handleAction(req.id, 'accept')} className="flex-1 py-3 rounded-xl bg-[#5B4D9D] text-white font-bold shadow-lg shadow-purple-500/20 hover:scale-105 transition-transform">Onayla</button>
-                                                    </div>
+                                                    {rejectingApptId === req.id ? (
+                                                        <div className="space-y-2 mt-2">
+                                                            <input 
+                                                                type="text" 
+                                                                placeholder="Reddetme sebebi (isteğe bağlı)..."
+                                                                value={rejectReason}
+                                                                onChange={(e) => setRejectReason(e.target.value)}
+                                                                className="w-full text-xs p-3 rounded-xl bg-white dark:bg-black/20 border border-zinc-200 dark:border-card-border focus:outline-none focus:border-red-400"
+                                                            />
+                                                            <div className="flex gap-2">
+                                                                <button onClick={() => setRejectingApptId(null)} className="flex-1 py-2 rounded-xl text-gray-500 font-bold hover:bg-gray-100 dark:hover:bg-white/5 transition-colors text-xs">İptal</button>
+                                                                <button onClick={() => {
+                                                                    handleAction(req.id, 'reject', rejectReason);
+                                                                    setRejectingApptId(null);
+                                                                }} className="flex-1 py-2 rounded-xl bg-red-500 text-white font-bold shadow-lg shadow-red-500/20 hover:bg-red-600 transition-colors text-xs">Kesin Reddet</button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex gap-2">
+                                                            <button onClick={() => handleAction(req.id, 'reject')} className="flex-1 py-3 rounded-xl bg-card dark:bg-white/5 border border-card-border text-red-500 font-bold hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">Reddet</button>
+                                                            <button onClick={() => handleAction(req.id, 'accept')} className="flex-1 py-3 rounded-xl bg-[#5B4D9D] text-white font-bold shadow-lg shadow-purple-500/20 hover:scale-105 transition-transform">Onayla</button>
+                                                        </div>
+                                                    )}
                                                 </motion.div>
                                             ))}
                                         </div>
