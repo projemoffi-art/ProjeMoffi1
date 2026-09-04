@@ -287,6 +287,7 @@ export interface IApiService {
     getAppointments(userId: string): Promise<any[]>;
     cancelAppointment(id: string): Promise<void>;
     getClinicAppointments(clinicId: string): Promise<any[]>;
+    getClinicServices(clinicId: string): Promise<any[]>;
     updateAppointmentStatus(appointmentId: string, status: string): Promise<void>;
     getClinicSettings(clinicId: string): Promise<any>;
     saveClinicSettings(clinicId: string, settings: any): Promise<void>;

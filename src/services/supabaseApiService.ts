@@ -2118,7 +2118,22 @@ export class SupabaseApiService implements IApiService {
             return [];
         }
         if (!data) return [];
+
         return data;
+    }
+
+    async getClinicServices(clinicId: string): Promise<any[]> {
+        const { data, error } = await supabase
+            .from('clinic_services')
+            .select('*')
+            .eq('clinic_id', clinicId)
+            .order('created_at', { ascending: true });
+
+        if (error) {
+            console.error("Error fetching clinic services:", error);
+            return [];
+        }
+        return data || [];
     }
 
     async getClinicDashboardStats(clinicId: string): Promise<any> {

@@ -1718,6 +1718,16 @@ export class MockApiService implements IApiService {
     async getUnreadMessageCount(clinicId: string, userId: string, readerRole: 'user' | 'clinic'): Promise<number> {
         return 0;
     }
+    async getClinicAppointments(clinicId: string): Promise<any[]> {
+        return [];
+    }
+
+    async getClinicServices(clinicId: string): Promise<any[]> {
+        return [
+            { id: 1, service_name: "Genel Muayene", duration_minutes: 20 },
+            { id: 2, service_name: "Aşı", duration_minutes: 15 },
+        ];
+    }
     async getClinicCampaigns(clinicId: string): Promise<any[]> {
         return [];
     }

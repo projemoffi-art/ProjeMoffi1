@@ -133,6 +133,9 @@ function VetPageContent() {
     const [dbAppointments, setDbAppointments] = useState<any[]>([]);
     const [clinicSettings, setClinicSettings] = useState<any>(null);
     const [clinicExceptions, setClinicExceptions] = useState<any[]>([]);
+    const [clinicServices, setClinicServices] = useState<any[]>([]);
+    const [selectedSvc, setSelectedSvc] = useState<any>(null);
+    const [appointmentType, setAppointmentType] = useState<string>('');
 
     console.log("Müşteri paneli render - clinicExceptions durumu:", clinicExceptions);
 
@@ -208,9 +211,20 @@ function VetPageContent() {
             }
         };
 
+        const loadClinicServices = async () => {
+            try {
+                const services = await apiService.getClinicServices(selectedClinic.id);
+                setClinicServices(services);
+            } catch (e) {
+                console.error("Failed to load clinic services:", e);
+                setClinicServices([]);
+            }
+        };
+
         loadDbAppointments();
         loadClinicSettings();
         loadClinicExceptions();
+        loadClinicServices();
         
         // Listen for new appointments to refresh slots in real-time
         const channel = new BroadcastChannel('moffi_appointments_channel');
@@ -571,7 +585,7 @@ function VetPageContent() {
             selectedClinic,
             selectedDate,
             selectedTime,
-            'general',
+            selectedSvc?.service_name || 'general',
             sharedPassport,
             petInfo,
             undefined // Randevular artık ücretsiz
@@ -907,6 +921,54 @@ function VetPageContent() {
                                     </div>
                                 </div>
 
+                                {/* SERVICE SELECTOR */}
+                                {!selectedSvc ? (
+                                    <div>
+                                        <label className="text-[8px] font-black text-zinc-400 dark:text-[#a1a1aa] uppercase tracking-wider mb-2 block px-1">Hizmet Seçimi</label>
+                                        {clinicServices.length === 0 ? (
+                                            <div className="bg-zinc-50 dark:bg-[#18181b] border border-zinc-200 dark:border-[#27272a] rounded-2xl p-6 text-center">
+                                                <p className="text-sm font-bold text-zinc-500 dark:text-[#a1a1aa] mb-4">Bu klinik henüz hizmetlerini eklemedi.</p>
+                                                <button 
+                                                    onClick={() => setSelectedSvc({ service_name: 'Belirtilmedi', duration_minutes: 30 })}
+                                                    className="px-6 py-2 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-xs font-black uppercase tracking-wider rounded-xl transition-colors hover:bg-indigo-100 dark:hover:bg-indigo-500/20 inline-block"
+                                                >
+                                                    Yine de Randevu Talep Et
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {clinicServices.map((svc: any) => (
+                                                    <div key={svc.id} className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-[#27272a] p-4 rounded-2xl flex items-center justify-between group transition-all hover:border-zinc-300 dark:hover:border-zinc-700">
+                                                        <div>
+                                                            <div className="font-black text-zinc-800 dark:text-[#fafafa] uppercase tracking-tight text-sm">{svc.service_name}</div>
+                                                            <div className="text-[10px] font-bold text-zinc-500 dark:text-[#a1a1aa] uppercase tracking-wider mt-0.5">~{svc.duration_minutes} dk</div>
+                                                        </div>
+                                                        <button 
+                                                            onClick={() => setSelectedSvc(svc)}
+                                                            className="px-4 py-2 bg-zinc-100 dark:bg-[#27272a] hover:bg-indigo-500 hover:text-black dark:hover:bg-indigo-500 dark:text-white text-zinc-600 font-black text-[10px] uppercase tracking-wider rounded-xl transition-colors"
+                                                        >
+                                                            Seç
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="flex items-center justify-between bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 p-3 rounded-2xl">
+                                            <div>
+                                                <div className="text-[9px] font-black text-indigo-400 uppercase tracking-wider mb-0.5">Seçilen Hizmet</div>
+                                                <div className="text-sm font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-tight">{selectedSvc.service_name}</div>
+                                            </div>
+                                            <button 
+                                                onClick={() => { setSelectedSvc(null); setSelectedDate(''); setSelectedTime(null); }}
+                                                className="text-[9px] font-black text-indigo-500/70 hover:text-indigo-500 uppercase tracking-widest px-3 py-1.5 bg-indigo-500/10 rounded-lg transition-colors"
+                                            >
+                                                Değiştir
+                                            </button>
+                                        </div>
+
                                 {/* DATE SELECTOR */}
                                 <div>
                                     <label className="text-[8px] font-black text-zinc-400 dark:text-[#a1a1aa] uppercase tracking-wider mb-2 block px-1">Tarih Seçimi</label>
@@ -1047,6 +1109,8 @@ function VetPageContent() {
                                         </div>
                                     </div>
                                 </div>
+                                    </>
+                                )}
                             </div>
 
                             {/* FIXED FOOTER CONTROLS */}
