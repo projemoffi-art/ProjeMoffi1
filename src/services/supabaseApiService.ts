@@ -2177,12 +2177,14 @@ export class SupabaseApiService implements IApiService {
     }
 
     async updateAppointmentStatus(appointmentId: string, status: string): Promise<void> {
-        const { error } = await supabase
+        const { data, error } = await supabase
             .from('appointments')
             .update({ status: status })
-            .eq('id', appointmentId);
+            .eq('id', appointmentId)
+            .select();
 
         if (error) throw error;
+        if (!data || data.length === 0) throw new Error('Güncelleme 0 satır etkiledi - RLS engelliyor olabilir.');
     }
 
     async getClinicSettings(clinicId: string): Promise<any> {

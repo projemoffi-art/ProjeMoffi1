@@ -690,7 +690,7 @@ function selectDailyQuests(
 
 const QuestEngineContext = createContext<QuestEngineContextType | undefined>(undefined);
 
-function getTodayStr() { return new Date().toISOString().split('T')[0]; }
+function getTodayStr() { return new Date().toLocaleDateString('sv-SE'); }
 function getMonthKey() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -1182,5 +1182,5 @@ function getWeekStart(): string {
     const day = d.getDay();
     const diff = d.getDate() - day + (day === 0 ? -6 : 1);
     const monday = new Date(d.setDate(diff));
-    return monday.toISOString().split('T')[0];
+    return monday.toLocaleDateString('sv-SE');
 }

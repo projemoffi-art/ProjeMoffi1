@@ -282,8 +282,8 @@ export default function WalkPage() {
                                 const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon...
                                 const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
                                 targetDate.setDate(today.getDate() + mondayOffset + i);
-                                const dateStr = targetDate.toISOString().split('T')[0];
-                                const isToday = dateStr === today.toISOString().split('T')[0];
+                                const dateStr = targetDate.toLocaleDateString('sv-SE');
+                                const isToday = dateStr === today.toLocaleDateString('sv-SE');
                                 const isFuture = targetDate > today;
 
                                 // O güne ait yürüyüşleri bul

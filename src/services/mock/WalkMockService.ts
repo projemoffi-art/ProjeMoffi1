@@ -117,7 +117,7 @@ export class WalkMockService implements IWalkService {
 
         for (let d = 0; d < 365; d++) {
             const checkDate = new Date(today.getTime() - d * 86400000);
-            const dateStr = checkDate.toISOString().split('T')[0];
+            const dateStr = checkDate.toLocaleDateString('sv-SE');
             const hasWalk = userWalks.some(w => w.startTime.startsWith(dateStr));
 
             if (hasWalk) {

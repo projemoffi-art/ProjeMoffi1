@@ -181,10 +181,10 @@ function VetPageContent() {
             try {
                 console.log("İstisna çekilen clinicId:", selectedClinic?.id);
                 const today = new Date();
-                const todayStr = today.toISOString().split('T')[0];
+                const todayStr = today.toLocaleDateString('sv-SE');
                 const future = new Date();
                 future.setDate(today.getDate() + 14);
-                const futureStr = future.toISOString().split('T')[0];
+                const futureStr = future.toLocaleDateString('sv-SE');
                 const exceptions = await apiService.getClinicExceptions(selectedClinic.id, todayStr, futureStr);
                 console.log("Müşteri paneli getClinicExceptions SONUCU:", exceptions);
                 setClinicExceptions(exceptions || []);
@@ -370,14 +370,14 @@ function VetPageContent() {
         } catch(e) {}
         
         // Apply Date-Specific Exceptions
-        const dateStrForEx = d.toISOString().split('T')[0];
+        const dateStrForEx = d.toLocaleDateString('sv-SE');
         const exception = clinicExceptions.find(ex => ex.exception_date === dateStrForEx);
         if (exception) {
             isClosed = exception.is_closed;
         }
 
         return {
-            key: d.toISOString().split('T')[0],
+            key: d.toLocaleDateString('sv-SE'),
             label: i === 0 ? 'Bugün' : i === 1 ? 'Yarın' : `${d.getDate()} ${monthNames[d.getMonth()]}`,
             dayName: dayNames[d.getDay()],
             closed: isClosed

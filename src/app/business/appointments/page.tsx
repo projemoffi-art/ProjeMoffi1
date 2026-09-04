@@ -91,11 +91,20 @@ export default function BusinessAppointmentsPage() {
         saturday: { open: "09:00", close: "18:00", closed: true },
         sunday: { open: "09:00", close: "18:00", closed: true }
     });
+    const [originalWorkingHours, setOriginalWorkingHours] = useState<{ [key: string]: { open: string, close: string, closed: boolean } } | null>(null);
     const [startTime, setStartTime] = useState("09:00");
     const [endTime, setEndTime] = useState("18:00");
     const [lunchStart, setLunchStart] = useState("12:00");
     const [lunchEnd, setLunchEnd] = useState("13:00");
     const [slotDuration, setSlotDuration] = useState<number>(30);
+
+    // Close Warning Modal State
+    const [closeWarningModal, setCloseWarningModal] = useState<{
+        isOpen: boolean;
+        appointments: any[];
+        onConfirm: ((cancelAppointments: boolean) => Promise<void>) | null;
+        isProcessing?: boolean;
+    }>({ isOpen: false, appointments: [], onConfirm: null, isProcessing: false });
 
     // Vet Health Advice States
     const [vetAdviceText, setVetAdviceText] = useState("");
@@ -124,8 +133,8 @@ export default function BusinessAppointmentsPage() {
             const endDate = new Date(today);
             endDate.setDate(endDate.getDate() + 14);
             
-            const todayStr = today.toISOString().split('T')[0];
-            const endStr = endDate.toISOString().split('T')[0];
+            const todayStr = today.toLocaleDateString('sv-SE');
+            const endStr = endDate.toLocaleDateString('sv-SE');
             
             const list = await apiService.getClinicExceptions(user.id, todayStr, endStr);
             setExceptions(list);
@@ -135,7 +144,6 @@ export default function BusinessAppointmentsPage() {
     };
 
     const handleSaveException = async () => {
-        console.log("SAVE TIKLANDI", { user_id: user?.id, selectedExceptionDate, exceptionForm });
         if (!user?.id || !selectedExceptionDate) return;
         try {
             const dateObj = new Date(selectedExceptionDate);
@@ -146,25 +154,73 @@ export default function BusinessAppointmentsPage() {
                 exceptionForm.isClosed === baseHours.closed && 
                 (exceptionForm.isClosed || (exceptionForm.open === baseHours.open && exceptionForm.close === baseHours.close));
 
-            if (isSameAsDefault) {
-                await apiService.deleteClinicException(user.id, selectedExceptionDate);
-                showToast("Gün varsayılan saatlere döndürüldü! ✨", "CheckCircle2", "text-emerald-500 font-bold");
-            } else {
-                await apiService.upsertClinicException(
-                    user.id,
-                    selectedExceptionDate,
-                    exceptionForm.isClosed,
-                    exceptionForm.isClosed ? null : exceptionForm.open,
-                    exceptionForm.isClosed ? null : exceptionForm.close
-                );
-                showToast("İstisna başarıyla kaydedildi! ✨", "CheckCircle2", "text-emerald-500 font-bold");
+            let conflictingAppts: any[] = [];
+            if (exceptionForm.isClosed) {
+                conflictingAppts = [...appointments, ...pendingRequests].filter(a => {
+                    if (!a.rawDate) return false;
+                    return new Date(a.rawDate).toLocaleDateString('sv-SE') === selectedExceptionDate;
+                });
             }
-            
-            setSelectedExceptionDate(null);
-            fetchExceptions();
+
+            const proceedSave = async (cancelAppointments: boolean) => {
+                if (cancelAppointments && conflictingAppts.length > 0) {
+                    setCloseWarningModal(prev => ({ ...prev, isProcessing: true }));
+                    for (const appt of conflictingAppts) {
+                        console.log("İptal ediliyor:", appt.id, "Appt Objesi:", appt);
+                        console.log(`[RLS DEBUG] Randevu clinic_id: ${appt.clinicId} | Oturum açan user.id: ${user.id} | Eşleşiyor mu: ${appt.clinicId === user.id}`);
+                        try {
+                            console.log("updateAppointmentStatus çağrılıyor:", appt.id);
+                            await apiService.updateAppointmentStatus(appt.id.toString(), 'cancelled');
+                            console.log("Başarıyla iptal edildi:", appt.id);
+                        } catch (e) {
+                            console.error("İptal hatası:", e);
+                        }
+                        
+                        try {
+                            const { error: notifError } = await supabase.from('appointment_notifications').insert({
+                                appointment_id: appt.id,
+                                recipient_id: appt.userId,
+                                message: "Kliniğiniz bu tarihte kapandığı için randevunuz iptal edildi."
+                            });
+                            if (notifError) console.error("Notif error", notifError);
+                        } catch (err) {}
+                    }
+                    setCloseWarningModal(prev => ({ ...prev, isProcessing: false, isOpen: false }));
+                    fetchAppointmentsFromDb();
+                }
+
+                if (isSameAsDefault) {
+                    await apiService.deleteClinicException(user.id, selectedExceptionDate);
+                    showToast("Gün varsayılan saatlere döndürüldü! ✨", "CheckCircle2", "text-emerald-500 font-bold");
+                } else {
+                    await apiService.upsertClinicException(
+                        user.id,
+                        selectedExceptionDate,
+                        exceptionForm.isClosed,
+                        exceptionForm.isClosed ? null : exceptionForm.open,
+                        exceptionForm.isClosed ? null : exceptionForm.close
+                    );
+                    showToast("İstisna başarıyla kaydedildi! ✨", "CheckCircle2", "text-emerald-500 font-bold");
+                }
+                
+                setSelectedExceptionDate(null);
+                fetchExceptions();
+            };
+
+            if (conflictingAppts.length > 0) {
+                setCloseWarningModal({
+                    isOpen: true,
+                    appointments: conflictingAppts,
+                    onConfirm: proceedSave,
+                    isProcessing: false
+                });
+                return;
+            }
+
+            await proceedSave(false);
         } catch (e) {
             console.error("Error saving exception:", e);
-            showToast("İşlem başarısız oldu! ❌", "AlertTriangle", "text-red-500 font-bold");
+            showToast("İstisna kaydedilemedi! ❌", "AlertTriangle", "text-red-500 font-bold");
         }
     };
 
@@ -232,6 +288,7 @@ export default function BusinessAppointmentsPage() {
                     ownerName: item.user?.full_name || item.user?.username || "Pati Sahibi",
                     time: time,
                     date: dateStr,
+                    rawDate: item.appointment_date,
                     type: parsedType,
                     status: item.status,
                     image: item.pet?.avatar_url || item.pet?.photo_url || item.pet?.image || "https://images.unsplash.com/photo-1573865526739-10659fec78a5?q=80&w=100",
@@ -280,6 +337,7 @@ export default function BusinessAppointmentsPage() {
                     
                     if (profile?.working_hours) {
                         setWorkingHours(profile.working_hours);
+                        setOriginalWorkingHours(profile.working_hours);
                     }
                     
                     if (settings) {
@@ -299,7 +357,10 @@ export default function BusinessAppointmentsPage() {
                 const saved = localStorage.getItem('moffi_clinic_settings');
                 if (saved) {
                     const parsed = JSON.parse(saved);
-                    if (parsed.workingHours) setWorkingHours(parsed.workingHours);
+                    if (parsed.workingHours) {
+                        setWorkingHours(parsed.workingHours);
+                        setOriginalWorkingHours(parsed.workingHours);
+                    }
                     if (parsed.startTime) setStartTime(parsed.startTime);
                     if (parsed.endTime) setEndTime(parsed.endTime);
                     if (parsed.lunchStart) setLunchStart(parsed.lunchStart);
@@ -620,7 +681,7 @@ export default function BusinessAppointmentsPage() {
         if (!vaccineName) return;
         setAddedVaccines(prev => [...prev, {
             name: vaccineName,
-            date: new Date().toISOString().split('T')[0],
+            date: new Date().toLocaleDateString('sv-SE'),
             nextDate: vaccineNextDate,
             batch: vaccineBatch
         }]);
@@ -774,24 +835,87 @@ export default function BusinessAppointmentsPage() {
             slotDuration
         };
 
-        if (isSupabaseEnabled) {
-            try {
-                const clinicId = user.id;
-                await Promise.all([
-                    apiService.saveClinicSettings(clinicId, settings),
-                    apiService.updateProfile({ working_hours: workingHours })
-                ]);
-            } catch (e) {
-                console.error("Failed to save clinic settings to Supabase:", e);
-                showToast("Vardiya ayarları veritabanına kaydedilemedi! ❌", "AlertTriangle", "text-red-500 font-bold");
-                return;
-            }
+        let conflictingAppts: any[] = [];
+        const newlyClosedDays = (Object.keys(workingHours) as Array<keyof typeof workingHours>).filter(day => {
+            const isNowClosed = workingHours[day].closed;
+            const wasClosed = originalWorkingHours?.[day]?.closed;
+            return isNowClosed && !wasClosed;
+        });
+
+        if (newlyClosedDays.length > 0) {
+            const dayNameToIndex: Record<string, number> = {
+                'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
+                'thursday': 4, 'friday': 5, 'saturday': 6
+            };
+            const newlyClosedIndexes = newlyClosedDays.map(d => dayNameToIndex[d]);
+            
+            conflictingAppts = [...appointments, ...pendingRequests].filter(a => {
+                if (!a.rawDate) return false;
+                const dateObj = new Date(a.rawDate);
+                if (dateObj < new Date()) return false;
+                return newlyClosedIndexes.includes(dateObj.getDay());
+            });
         }
+
+        const proceedSave = async (cancelAppointments: boolean) => {
+            if (cancelAppointments && conflictingAppts.length > 0) {
+                setCloseWarningModal(prev => ({ ...prev, isProcessing: true }));
+                for (const appt of conflictingAppts) {
+                    console.log("İptal ediliyor (Settings):", appt.id, "Appt Objesi:", appt);
+                    console.log(`[RLS DEBUG] Randevu clinic_id: ${appt.clinicId} | Oturum açan user.id: ${user.id} | Eşleşiyor mu: ${appt.clinicId === user.id}`);
+                    try {
+                        await apiService.updateAppointmentStatus(appt.id.toString(), 'cancelled');
+                        console.log("Başarıyla iptal edildi:", appt.id);
+                    } catch (e) {
+                        console.error("İptal hatası:", e);
+                    }
+
+                    try {
+                        const { error: notifError } = await supabase.from('appointment_notifications').insert({
+                            appointment_id: appt.id,
+                            recipient_id: appt.userId,
+                            message: "Kliniğiniz bu tarihte kapandığı için randevunuz iptal edildi."
+                        });
+                        if (notifError) console.error("Notif error", notifError);
+                    } catch (err) {}
+                }
+                setCloseWarningModal(prev => ({ ...prev, isProcessing: false, isOpen: false }));
+                fetchAppointmentsFromDb();
+            }
+
+            if (isSupabaseEnabled) {
+                try {
+                    const clinicId = user.id;
+                    await Promise.all([
+                        apiService.saveClinicSettings(clinicId, settings),
+                        apiService.updateProfile({ working_hours: workingHours })
+                    ]);
+                    setOriginalWorkingHours(workingHours);
+                } catch (e) {
+                    console.error("Failed to save clinic settings to Supabase:", e);
+                    showToast("Vardiya ayarları veritabanına kaydedilemedi! ❌", "AlertTriangle", "text-red-500 font-bold");
+                    return;
+                }
+            }
+            
+            showToast("Vardiya ayarları başarıyla kaydedildi! ✨", "CheckCircle2", "text-emerald-500 font-bold");
+        };
+
+        if (conflictingAppts.length > 0) {
+            setCloseWarningModal({
+                isOpen: true,
+                appointments: conflictingAppts,
+                onConfirm: proceedSave,
+                isProcessing: false
+            });
+            return;
+        }
+
+        await proceedSave(false);
 
         if (typeof window !== 'undefined') {
             localStorage.setItem('moffi_clinic_settings', JSON.stringify(settings));
         }
-        showToast("Vardiya ve takvim ayarları başarıyla kaydedildi! 📅✨", "Save", "text-[#6366f1] font-bold");
     };
 
     const handleSaveAdvice = async () => {
@@ -1179,7 +1303,7 @@ export default function BusinessAppointmentsPage() {
                                 {Array.from({ length: 14 }).map((_, i) => {
                                     const d = new Date();
                                     d.setDate(d.getDate() + i);
-                                    const dateStr = d.toISOString().split('T')[0];
+                                    const dateStr = d.toLocaleDateString('sv-SE');
                                     const dayNameShort = d.toLocaleDateString('tr-TR', { weekday: 'short' });
                                     const dayNum = d.getDate();
                                     const monthShort = d.toLocaleDateString('tr-TR', { month: 'short' });
@@ -1953,6 +2077,71 @@ export default function BusinessAppointmentsPage() {
                                     </button>
                                 </div>
                             )}
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Close Warning Modal */}
+            <AnimatePresence>
+                {closeWarningModal.isOpen && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                            className="bg-white dark:bg-[#121212] w-full max-w-lg rounded-[2.5rem] overflow-hidden shadow-2xl border border-black/10 dark:border-white/10"
+                        >
+                            <div className="p-6 text-center space-y-4">
+                                <div className="w-16 h-16 bg-amber-500/10 rounded-full mx-auto flex items-center justify-center">
+                                    <AlertTriangle className="w-8 h-8 text-amber-500" />
+                                </div>
+                                <h3 className="text-xl font-black text-foreground dark:text-white uppercase tracking-tight">Kapanış Onayı</h3>
+                                <p className="text-sm text-gray-500 font-medium">
+                                    Bu günde <span className="font-bold text-foreground dark:text-white">{closeWarningModal.appointments.length} randevunuz</span> var:
+                                </p>
+                                <div className="max-h-32 overflow-y-auto bg-black/5 dark:bg-white/5 rounded-2xl p-4 text-left">
+                                    {closeWarningModal.appointments.map(a => (
+                                        <div key={a.id} className="text-xs font-bold text-foreground dark:text-white mb-1">
+                                            • {a.time} - {a.petName} ({a.ownerName})
+                                        </div>
+                                    ))}
+                                </div>
+                                
+                                <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4 text-left">
+                                    <p className="text-xs text-blue-700 dark:text-blue-400 font-medium">
+                                        💡 <strong className="font-black">Hatırlatma:</strong> Mesajlar sekmesinden müşterilerinizle doğrudan iletişime geçebilirsiniz.
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div className="p-4 bg-black/5 dark:bg-white/5 border-t border-black/10 dark:border-white/10 space-y-3">
+                                <button
+                                    disabled={closeWarningModal.isProcessing}
+                                    onClick={() => closeWarningModal.onConfirm?.(false)}
+                                    className="w-full py-4 rounded-2xl bg-white dark:bg-black text-foreground dark:text-white font-black text-xs uppercase tracking-wider hover:opacity-80 transition-all border border-black/10 dark:border-white/10"
+                                >
+                                    Randevuları Koru, Sadece Yeni Alımı Kapat
+                                </button>
+                                <button
+                                    disabled={closeWarningModal.isProcessing}
+                                    onClick={() => closeWarningModal.onConfirm?.(true)}
+                                    className="w-full py-4 rounded-2xl bg-red-500 text-white font-black text-xs uppercase tracking-wider hover:bg-red-600 transition-all flex items-center justify-center gap-2"
+                                >
+                                    {closeWarningModal.isProcessing ? (
+                                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                    ) : (
+                                        "Tümünü İptal Et ve Bildirim Gönder"
+                                    )}
+                                </button>
+                                <button
+                                    disabled={closeWarningModal.isProcessing}
+                                    onClick={() => setCloseWarningModal({ isOpen: false, appointments: [], onConfirm: null })}
+                                    className="w-full py-2 text-gray-500 hover:text-foreground dark:hover:text-white font-bold text-xs uppercase transition-all"
+                                >
+                                    Vazgeç
+                                </button>
+                            </div>
                         </motion.div>
                     </div>
                 )}
