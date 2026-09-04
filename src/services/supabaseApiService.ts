@@ -2230,6 +2230,31 @@ export class SupabaseApiService implements IApiService {
         }
     }
 
+    // Randevunun katılım durumunu günceller (Faz 9)
+    async updateAttendanceStatus(appointmentId: string, attendanceStatus: 'attended' | 'no_show' | null): Promise<void> {
+        const { error } = await supabase
+            .from('appointments')
+            .update({ attendance_status: attendanceStatus })
+            .eq('id', appointmentId);
+
+        if (error) throw error;
+    }
+
+    // Bir müşterinin toplam 'gelmedi' (no_show) sayısını döndürür (Faz 9)
+    async getNoShowCount(userId: string): Promise<number> {
+        const { count, error } = await supabase
+            .from('appointments')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId)
+            .eq('attendance_status', 'no_show');
+
+        if (error) {
+            console.error("Error fetching no-show count:", error);
+            return 0;
+        }
+        return count || 0;
+    }
+
     async getClinicSettings(clinicId: string): Promise<any> {
         const [settingsRes, profileRes] = await Promise.all([
             supabase.from('clinic_settings').select('*').eq('clinic_id', clinicId).maybeSingle(),
