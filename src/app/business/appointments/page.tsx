@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { BusinessSidebar as Sidebar } from "@/components/business/Sidebar";
 import { usePet } from "@/context/PetContext";
 import { useAuth } from "@/context/AuthContext";
-import { showToast } from "@/lib/utils";
+import { showToast, cn } from "@/lib/utils";
 import { apiService, isSupabaseEnabled } from "@/services/apiService";
 import { supabase } from "@/lib/supabase";
 import { sendAppointmentConfirmationEmail } from "@/actions/sendAppointmentEmail";
