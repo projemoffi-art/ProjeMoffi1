@@ -20,59 +20,75 @@ export function useVet() {
     const [activeCategory, setActiveCategory] = useState<'all' | 'clinic' | 'food' | 'toy' | 'care'>('all');
     const [isLoading, setIsLoading] = useState(false);
     const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+    const [userProvince, setUserProvince] = useState<string>('');
+    const [userDistrict, setUserDistrict] = useState<string>('');
+
+    const [gpsDenied, setGpsDenied] = useState(false);
 
     useEffect(() => {
-        init();
+        const loadInitialData = async () => {
+            let initialLat: number | null = null;
+            let initialLng: number | null = null;
+            
+            if (typeof window !== 'undefined') {
+                if ("geolocation" in navigator) {
+                    try {
+                        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+                            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 4000 });
+                        });
+                        initialLat = position.coords.latitude;
+                        initialLng = position.coords.longitude;
+                        setUserLocation([initialLat, initialLng]);
+                    } catch (e) {
+                        console.warn("GPS denied or failed");
+                        setGpsDenied(true);
+                    }
+                }
+                
+                const savedProv = localStorage.getItem('moffi_user_province') || '';
+                const savedDist = localStorage.getItem('moffi_user_district') || '';
+                setUserProvince(savedProv);
+                setUserDistrict(savedDist);
+                init('all', savedProv, savedDist, initialLat, initialLng);
+            } else {
+                init('all');
+            }
+        };
+        
+        loadInitialData();
     }, []);
 
-    const simulateShops = (lat: number, lng: number): any[] => {
-        const categories = [
-            { id: 'sh-1', name: 'Pati Market', type: 'food', icon: '🍖', rating: 4.9 },
-            { id: 'sh-2', name: 'Moffi Toys', type: 'toy', icon: '🎾', rating: 4.7 },
-            { id: 'sh-3', name: 'Pet Care Center', type: 'care', icon: '✨', rating: 4.8 },
-            { id: 'sh-4', name: 'Gurme Mama', type: 'food', icon: '🍖', rating: 4.6 },
-        ];
-
-        return categories.map((shop, i) => {
-            const sLat = lat + (Math.random() - 0.5) * 0.02;
-            const sLng = lng + (Math.random() - 0.5) * 0.02;
-            const dist = calculateDistance(lat, lng, sLat, sLng);
-            return {
-                ...shop,
-                location: { lat: sLat, lng: sLng },
-                distance: dist.toFixed(1) + " km",
-                _distVal: dist,
-                is_premium: i === 0,
-                address: 'Yakınlarda bir yerde...',
-                features: []
-            };
-        });
-    };
-
-    const init = async (category: any = 'all') => {
+    const init = async (
+        category: any = 'all', 
+        overrideProv?: string, 
+        overrideDist?: string,
+        overrideLat?: number | null,
+        overrideLng?: number | null
+    ) => {
         setIsLoading(true);
         setActiveCategory(category);
-        try {
-            let lat = 40.9850;
-            let lng = 29.0300;
+        
+        const prov = overrideProv !== undefined ? overrideProv : userProvince;
+        const dist = overrideDist !== undefined ? overrideDist : userDistrict;
+        
+        const lat = overrideLat !== undefined ? overrideLat : (userLocation ? userLocation[0] : null);
+        const lng = overrideLng !== undefined ? overrideLng : (userLocation ? userLocation[1] : null);
 
-            if ("geolocation" in navigator) {
-                try {
-                    const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-                        navigator.geolocation.getCurrentPosition(resolve, reject);
-                    });
-                    lat = position.coords.latitude;
-                    lng = position.coords.longitude;
-                    setUserLocation([lat, lng]);
-                } catch (e) {
-                    console.warn("Location access denied");
-                }
+        try {
+            // ALWAYS filter by province/district if provided. If not provided, the user hasn't selected a location.
+            // In that case, we should return an empty array if they haven't selected a province, unless we want to load all.
+            // The user requested: "Eğer boşsa liste boş gösterilip uyarı çıkarılacak."
+            if (!prov || !dist) {
+                setAllLocations([]);
+                setFeaturedClinics([]);
+                setIsLoading(false);
+                return;
             }
 
-            const rawClinics = await apiService.getNearbyClinics(lat, lng);
-            const shops = simulateShops(lat, lng);
+            const rawClinics = await apiService.getNearbyClinics(prov, dist, lat, lng);
 
             const enrich = (list: any[]) => list.map(c => {
+                if (!c.location || lat === null || lng === null) return { ...c, _distVal: 999999, distance: c.distance || 'Konum Belirtilmemiş' };
                 const distVal = calculateDistance(lat, lng, c.location.lat, c.location.lng);
                 return {
                     ...c,
@@ -81,7 +97,7 @@ export function useVet() {
                 };
             }).sort((a, b) => a._distVal - b._distVal);
 
-            const allCombined = [...enrich(rawClinics), ...shops];
+            const allCombined = enrich(rawClinics);
             
             let filtered = allCombined;
             if (category !== 'all') {
@@ -93,12 +109,21 @@ export function useVet() {
 
             setFeaturedClinics(filtered.filter(c => c.is_premium || c.rating >= 4.8));
             setAllLocations(filtered);
-
         } catch (err) {
             console.error(err);
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const setLocationFilter = (prov: string, dist: string) => {
+        setUserProvince(prov);
+        setUserDistrict(dist);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('moffi_user_province', prov);
+            localStorage.setItem('moffi_user_district', dist);
+        }
+        init(activeCategory, prov, dist);
     };
 
     const bookAppointment = async (
@@ -107,8 +132,7 @@ export function useVet() {
         time: string, 
         type: string, 
         sharedPassport?: any, 
-        petInfo?: { id: string; name: string; image: string },
-        paymentDetails?: { paymentId: string; paymentAmount: number; paymentStatus: string }
+        petInfo?: { id: string; name: string; image: string }
     ) => {
         if (!petInfo?.id) throw new Error("Randevu için bir evcil hayvan seçilmeli");
         setIsLoading(true);
@@ -124,39 +148,15 @@ export function useVet() {
                 notes: `Randevu tipi: ${type === 'general' ? 'Genel Muayene' : type}`,
                 status: 'pending',
                 sharedPassport: sharedPassport,
-                paymentId: paymentDetails?.paymentId || null,
-                paymentAmount: paymentDetails?.paymentAmount || null,
-                paymentStatus: paymentDetails?.paymentStatus || null
+                paymentId: null,
+                paymentAmount: null,
+                paymentStatus: null
             };
 
             await apiService.createAppointment(appointmentPayload);
 
-            // Sync with local storage for business panel dashboard live view
             if (typeof window !== 'undefined') {
                 try {
-                    const stored = localStorage.getItem('moffi_pending_appointments');
-                    const pendingList = stored ? JSON.parse(stored) : [];
-
-                    const newRequest = {
-                        id: Date.now(),
-                        petId: petInfo.id,
-                        petName: petInfo.name,
-                        ownerName: user?.user_metadata?.full_name || "Moffi Üyesi",
-                        time: time,
-                        date: date,
-                        type: type === 'general' ? 'Genel Muayene' : type,
-                        status: 'pending',
-                        image: petInfo?.image || "https://images.unsplash.com/photo-1573865526739-10659fec78a5?q=80&w=100",
-                        sharedPassport: sharedPassport,
-                        paymentId: paymentDetails?.paymentId,
-                        paymentAmount: paymentDetails?.paymentAmount || clinic.price || 350,
-                        paymentStatus: paymentDetails?.paymentStatus || 'pre_authorized',
-                        clinicId: clinic.id,
-                        clinicName: clinic.name
-                    };
-
-                    pendingList.push(newRequest);
-                    localStorage.setItem('moffi_pending_appointments', JSON.stringify(pendingList));
 
                     // Broadcast event for B2B Panel
                     const channel = new BroadcastChannel('moffi_appointments_channel');
@@ -178,10 +178,14 @@ export function useVet() {
         featuredClinics,
         allClinics: allLocations,
         userLocation,
+        gpsDenied,
         isLoading,
         activeCategory,
+        userProvince,
+        userDistrict,
+        setLocationFilter,
         bookAppointment,
         searchByService: init,
-        refresh: () => init(activeCategory)
+        refresh: () => init(activeCategory, userProvince, userDistrict)
     };
 }

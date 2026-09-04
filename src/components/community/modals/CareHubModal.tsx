@@ -47,7 +47,7 @@ export function CareHubModal({
     foodTarget: initialFoodTarget,
 }: CareHubModalProps) {
     const router = useRouter();
-    const { activePet, updatePet } = usePet();
+    const { activePet, updatePet, appointments, refreshAppointments } = usePet();
     const petId = activePet?.id || 'default-pet';
     const todayStr = new Date().toISOString().split('T')[0];
 
@@ -63,8 +63,44 @@ export function CareHubModal({
     // Food logging list (stored locally for instant feed rendering)
     const [foodLog, setFoodLog] = useState<{ id: string; name: string; kcal: number; time: string }[]>([]);
 
-    // Local dynamic appointments list
-    const [localAppointments, setLocalAppointments] = useState<any[]>([]);
+    // Appointment cancel state
+    const [cancelModalId, setCancelModalId] = useState<string | null>(null);
+    const [isCancelling, setIsCancelling] = useState(false);
+
+    // Derived appointments from DB
+    const localAppointments = React.useMemo(() => {
+        const raw = appointments?.[petId] || [];
+        return raw.map((apt: any) => {
+            const d = apt.appointment_date ? new Date(apt.appointment_date) : null;
+            let type = 'Genel Muayene';
+            if (apt.notes && apt.notes.includes('Randevu tipi:')) {
+                type = apt.notes.split('Randevu tipi: ')[1].trim() || 'Genel Muayene';
+            }
+            return {
+                id: apt.id,
+                type: type,
+                clinicName: apt.clinic?.business_name || 'Moffi Veteriner Kliniği',
+                date: d ? d.toISOString().split('T')[0] : 'Tarih Yok',
+                time: d ? d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : 'Saat Yok',
+                status: apt.status || 'pending'
+            };
+        });
+    }, [appointments, petId]);
+
+    const handleCancelAppointment = async () => {
+        if (!cancelModalId) return;
+        setIsCancelling(true);
+        try {
+            await apiService.cancelAppointment(cancelModalId);
+            await refreshAppointments();
+        } catch (error) {
+            console.error("Error cancelling appointment:", error);
+            alert("İptal işlemi sırasında bir hata oluştu.");
+        } finally {
+            setIsCancelling(false);
+            setCancelModalId(null);
+        }
+    };
 
     // Load vaccine schedule
     const { schedule, ruleset, isLoading: isVaccinesLoading, markAsDone, refresh: refreshVaccines } = useVaccineSchedule(petId);
@@ -75,34 +111,6 @@ export function CareHubModal({
             setActiveTab(defaultTab);
         }
     }, [defaultTab, isOpen]);
-
-    // Refresh function for appointments
-    const refreshAppointments = useCallback(() => {
-        try {
-            const pending = JSON.parse(localStorage.getItem('moffi_pending_appointments') || '[]');
-            const confirmed = JSON.parse(localStorage.getItem('moffi_confirmed_appointments') || '[]');
-            
-            let combined = [...pending, ...confirmed];
-            if (combined.length === 0 && activePet?.name?.toLowerCase() === 'milo') {
-                combined = [{
-                    id: 'seed-apt-1',
-                    petName: 'Milo',
-                    type: 'Yıllık Genel Kontrol',
-                    clinicName: 'Moda Veteriner Polikliniği',
-                    date: '2026-06-19',
-                    time: '14:30',
-                    status: 'confirmed'
-                }];
-            }
-
-            const filtered = combined.filter((apt: any) => 
-                apt.petName?.toLowerCase() === activePet?.name?.toLowerCase()
-            );
-            setLocalAppointments(filtered);
-        } catch (e) {
-            console.error("Failed to load local appointments for CareHubModal:", e);
-        }
-    }, [activePet]);
 
     // Listen to real-time appointment updates from BroadcastChannel
     useEffect(() => {
@@ -786,9 +794,19 @@ export function CareHubModal({
                                                                     {apt.date} • {apt.time}
                                                                 </p>
                                                             </div>
-                                                            <span className={cn("text-[8px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider", statusColor)}>
-                                                                {statusLabel}
-                                                            </span>
+                                                            <div className="flex flex-col items-end gap-2">
+                                                                <span className={cn("text-[8px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider", statusColor)}>
+                                                                    {statusLabel}
+                                                                </span>
+                                                                {apt.status !== 'cancelled' && apt.status !== 'completed' && apt.status !== 'rejected' && (
+                                                                    <button 
+                                                                        onClick={() => setCancelModalId(apt.id)}
+                                                                        className="text-[9px] font-black text-red-500/70 hover:text-red-400 uppercase tracking-widest transition-colors"
+                                                                    >
+                                                                        İPTAL ET
+                                                                    </button>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     );
                                                 })
@@ -851,6 +869,45 @@ export function CareHubModal({
                             )}
 
                         </div>
+
+                        {/* CANCEL APPOINTMENT CONFIRMATION MODAL */}
+                        <AnimatePresence>
+                            {cancelModalId && (
+                                <motion.div 
+                                    initial={{ opacity: 0 }} 
+                                    animate={{ opacity: 1 }} 
+                                    exit={{ opacity: 0 }} 
+                                    className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+                                >
+                                    <motion.div 
+                                        initial={{ scale: 0.9, opacity: 0, y: 20 }} 
+                                        animate={{ scale: 1, opacity: 1, y: 0 }} 
+                                        exit={{ scale: 0.9, opacity: 0, y: 20 }} 
+                                        className="bg-background border border-card-border p-6 rounded-3xl w-full max-w-sm shadow-2xl relative overflow-hidden"
+                                    >
+                                        <div className="absolute -top-10 -right-10 w-32 h-32 bg-red-500/10 rounded-full blur-3xl"></div>
+                                        <h4 className="text-xl font-black text-foreground italic uppercase tracking-tighter mb-2">Randevuyu İptal Et</h4>
+                                        <p className="text-secondary text-sm mb-6 leading-relaxed">Bu randevuyu iptal etmek istediğinize emin misiniz? Bu işlem geri alınamaz.</p>
+                                        <div className="flex gap-3">
+                                            <button 
+                                                onClick={() => setCancelModalId(null)}
+                                                className="flex-1 py-3 rounded-2xl bg-foreground/5 text-foreground font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all"
+                                                disabled={isCancelling}
+                                            >
+                                                VAZGEÇ
+                                            </button>
+                                            <button 
+                                                onClick={handleCancelAppointment}
+                                                className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all flex justify-center items-center gap-2"
+                                                disabled={isCancelling}
+                                            >
+                                                {isCancelling ? 'İPTAL EDİLİYOR...' : 'EVET, İPTAL ET'}
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         {/* BOTTOM BANNER (AVERAGE PROGRESS INDICATOR) */}
                         <div className="p-4 bg-[#121215] border-t border-black/5 dark:border-white/5 flex items-center justify-between text-left">
