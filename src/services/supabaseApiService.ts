@@ -4440,4 +4440,33 @@ export class SupabaseApiService implements IApiService {
         const { error } = await supabase.from('quests').delete().eq('id', id);
         if (error) { console.error("Error deleting quest:", error); throw error; }
     }
+
+    // --- APPOINTMENT NOTIFICATIONS (FAZ 9) ---
+    async getUnreadNotifications(recipientId: string): Promise<any[]> {
+        const { data, error } = await supabase
+            .from('appointment_notifications')
+            .select('id, appointment_id, message, created_at')
+            .eq('recipient_id', recipientId)
+            .eq('is_read', false)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error("Error fetching unread notifications:", error);
+            return [];
+        }
+        return data || [];
+    }
+
+    async markNotificationRead(notificationId: string): Promise<boolean> {
+        const { error } = await supabase
+            .from('appointment_notifications')
+            .update({ is_read: true })
+            .eq('id', notificationId);
+
+        if (error) {
+            console.error("Error marking notification as read:", error);
+            return false;
+        }
+        return true;
+    }
 }
