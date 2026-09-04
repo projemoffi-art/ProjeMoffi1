@@ -24,7 +24,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { apiService, isSupabaseEnabled } from "@/services/apiService";
-import { AppointmentsTab } from "@/components/profile/AppointmentsTab";
+import { MyAppointmentsPanel } from "@/components/vet/MyAppointmentsPanel";
 
 function validateLuhn(cardNumber: string): boolean {
     const clean = cardNumber.replace(/\D/g, "");
@@ -727,19 +727,7 @@ function VetPageContent() {
 
             <main className="px-6 py-6 space-y-6">
                 {viewMode === 'appointments' ? (
-                    <div className="bg-white dark:bg-[#121215] border border-zinc-200 dark:border-[#27272a] rounded-[2.5rem] p-6 shadow-sm overflow-hidden">
-                        <AppointmentsTab 
-                            activePet={activePet}
-                            isScheduleLoading={false}
-                            allRecords={[]}
-                            recordDocuments={{}}
-                            currentAppointments={mappedAppointments}
-                            onAddRecord={() => {}}
-                            onDeleteRecord={() => {}}
-                            onUploadDocument={() => {}}
-                            onDeleteDocument={() => {}}
-                        />
-                    </div>
+                    <MyAppointmentsPanel appointments={mappedAppointments} />
                 ) : (
                     <>
                 {/* Status Bar showing pet health state */}
