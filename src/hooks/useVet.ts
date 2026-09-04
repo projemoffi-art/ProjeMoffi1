@@ -144,7 +144,7 @@ export function useVet() {
                 clinicName: clinic.name,
                 petId: petInfo.id,
                 userId: user?.id,
-                appointmentDate: `${date}T${time}:00Z`,
+                appointmentDate: `${date}T${time}:00`,
                 notes: `Randevu tipi: ${type === 'general' ? 'Genel Muayene' : type}`,
                 status: 'pending',
                 sharedPassport: sharedPassport,

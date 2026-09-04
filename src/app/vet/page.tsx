@@ -450,14 +450,9 @@ function VetPageContent() {
                 dbAppointments.forEach((apt: any) => {
                     if (apt.appointment_date && apt.status !== 'rejected' && apt.status !== 'cancelled') {
                         try {
-                            const d = new Date(apt.appointment_date);
-                            const year = d.getFullYear();
-                            const month = String(d.getMonth() + 1).padStart(2, '0');
-                            const day = String(d.getDate()).padStart(2, '0');
-                            const aptDateStr = `${year}-${month}-${day}`;
-                            
+                            const aptDateStr = apt.appointment_date.split('T')[0];
                             if (aptDateStr === dateStr) {
-                                const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+                                const timeStr = apt.appointment_date.split('T')[1].substring(0, 5);
                                 bookedTimes.add(timeStr);
                             }
                         } catch (e) {}
@@ -613,7 +608,14 @@ function VetPageContent() {
     const mappedAppointments = useMemo(() => {
         if (!activePet?.id || !appointments?.[activePet.id]) return [];
         return appointments[activePet.id].map((apt: any) => {
-            const d = apt.appointment_date ? new Date(apt.appointment_date) : null;
+            let dateStr = 'Tarih Yok';
+            let timeStr = 'Saat Yok';
+            if (apt.appointment_date) {
+                dateStr = apt.appointment_date.split('T')[0];
+                if (apt.appointment_date.includes('T')) {
+                    timeStr = apt.appointment_date.split('T')[1].substring(0, 5);
+                }
+            }
             let type = 'Genel Muayene';
             if (apt.notes && apt.notes.includes('Randevu tipi:')) {
                 type = apt.notes.split('Randevu tipi: ')[1].trim() || 'Genel Muayene';
@@ -623,8 +625,8 @@ function VetPageContent() {
                 icon: '🏥',
                 type: type,
                 doctor: apt.clinic?.business_name || 'Klinik',
-                date: d ? d.toISOString().split('T')[0] : 'Tarih Yok',
-                time: d ? d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : 'Saat Yok',
+                date: dateStr,
+                time: timeStr,
                 status: apt.status || 'pending'
             };
         });
