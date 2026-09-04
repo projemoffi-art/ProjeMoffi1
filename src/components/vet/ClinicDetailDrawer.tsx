@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
     X, Phone, Navigation, Star, MapPin, 
     Calendar, Clock, ShieldCheck, ChevronRight,
-    Users, MessageSquare, Info, Send, ChevronLeft
+    Users, MessageSquare, Info, Send, ChevronLeft, Megaphone, Tag
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiService } from "@/services/apiService";
@@ -40,6 +40,8 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
     const [comment, setComment] = useState("");
     const [isSubmittingReview, setIsSubmittingReview] = useState(false);
     const [currentUser, setCurrentUser] = useState<any>(null);
+    const [campaigns, setCampaigns] = useState<any[]>([]);
+    const [expandedCampaignId, setExpandedCampaignId] = useState<string | null>(null);
 
     // Chat States
     const [isChatOpen, setIsChatOpen] = useState(false);
@@ -145,6 +147,14 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
             };
             
             setClinic(cData);
+
+            try {
+                const camps = await apiService.getClinicCampaigns(targetId!);
+                const activeCamps = camps.filter((c: any) => c.status === 'active' && new Date(c.expires_at) > new Date());
+                setCampaigns(activeCamps);
+            } catch (err) {
+                console.error("Kampanyalar yüklenirken hata:", err);
+            }
 
             if (clinicData) {
                 // Dynamically build a realistic clinic profile using OpenStreetMap real world data!
@@ -366,6 +376,54 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                                         <span className="text-[9px] font-black text-zinc-600 dark:text-white/60 uppercase tracking-widest">Mesaj At</span>
                                     </button>
                                 </div>
+
+                                {/* CAMPAIGNS BANNER */}
+                                {campaigns.length > 0 && (
+                                    <div className="bg-indigo-50/50 dark:bg-indigo-900/10 border-y border-indigo-100 dark:border-indigo-500/20">
+                                        {campaigns.map((camp) => (
+                                            <div key={camp.id} className="border-b border-indigo-100 dark:border-indigo-500/10 last:border-0">
+                                                <button
+                                                    onClick={() => setExpandedCampaignId(expandedCampaignId === camp.id ? null : camp.id)}
+                                                    className="w-full flex items-center justify-between p-4 text-left hover:bg-indigo-50 dark:hover:bg-indigo-500/5 transition-colors"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center shrink-0">
+                                                            <Megaphone className="w-4 h-4 text-indigo-500" />
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-0.5">Özel Fırsat</div>
+                                                            <div className="text-sm font-bold text-zinc-800 dark:text-white leading-none">{camp.title}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="bg-indigo-500 text-white text-[10px] font-black px-2 py-1 rounded-md">{camp.discount_value}</span>
+                                                        <ChevronRight className={cn("w-4 h-4 text-indigo-500 transition-transform", expandedCampaignId === camp.id ? "rotate-90" : "")} />
+                                                    </div>
+                                                </button>
+                                                <AnimatePresence>
+                                                    {expandedCampaignId === camp.id && (
+                                                        <motion.div
+                                                            initial={{ height: 0, opacity: 0 }}
+                                                            animate={{ height: "auto", opacity: 1 }}
+                                                            exit={{ height: 0, opacity: 0 }}
+                                                            className="overflow-hidden"
+                                                        >
+                                                            <div className="p-4 pt-0 text-sm text-zinc-600 dark:text-white/70">
+                                                                <p className="mb-3">{camp.description}</p>
+                                                                {camp.coupon_code && (
+                                                                    <div className="inline-flex items-center gap-2 bg-indigo-100 dark:bg-indigo-500/20 px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-500/30">
+                                                                        <Tag className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                                                                        <span className="text-xs font-black text-indigo-700 dark:text-indigo-300 tracking-widest">{camp.coupon_code}</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
 
                                 {/* TABS NAVIGATION */}
                                 <div className="flex px-6 border-b border-zinc-200 dark:border-card-border bg-white dark:bg-[#111111] sticky top-0 z-20">
