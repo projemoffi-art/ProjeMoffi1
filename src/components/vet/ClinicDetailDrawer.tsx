@@ -161,9 +161,7 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                     const campTarget = c.target_pet_type || 'all';
                     if (campTarget !== 'all') {
                         if (!activePet || !activePet.type) return false;
-                        const userPetType = activePet.type.toLowerCase();
-                        if (campTarget === 'cat' && userPetType !== 'cat' && userPetType !== 'kedi') return false;
-                        if (campTarget === 'dog' && userPetType !== 'dog' && userPetType !== 'köpek') return false;
+                        if (campTarget !== activePet.type) return false;
                     }
                     
                     return true;

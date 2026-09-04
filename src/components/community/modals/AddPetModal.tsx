@@ -7,6 +7,7 @@ import {
     PhoneCall, Sparkles, Dog, Cat
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { PET_TYPES } from '@/constants/petTypes';
 
 interface AddPetModalProps {
     isOpen: boolean;
@@ -235,23 +236,18 @@ export function AddPetModal({
                                             />
                                         </div>
 
-                                        {/* Tür Seçimi - Horizontal Segmented Control */}
+                                        {/* Tür Seçimi - Grid Control */}
                                         <div className="space-y-1.5">
                                             <label className="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider ml-1">Tür</label>
-                                            <div className="flex bg-[#F1F3F2] p-1 rounded-2xl border border-gray-250/30">
-                                                {[
-                                                    { emoji: '🐶', label: 'Köpek' },
-                                                    { emoji: '🐱', label: 'Kedi' },
-                                                    { emoji: '🦜', label: 'Kuş' },
-                                                    { emoji: '🐰', label: 'Tavşan' }
-                                                ].map(t => (
+                                            <div className="grid grid-cols-3 gap-1.5 bg-[#F1F3F2] p-1.5 rounded-2xl border border-gray-250/30">
+                                                {PET_TYPES.map(t => (
                                                     <button
-                                                        key={t.emoji}
+                                                        key={t.key}
                                                         type="button"
-                                                        onClick={() => setNewPetType(t.emoji)}
+                                                        onClick={() => setNewPetType(t.key)}
                                                         className={cn(
-                                                            "flex-1 py-2 rounded-xl text-base transition-all flex flex-col items-center justify-center gap-0.5 cursor-pointer",
-                                                            newPetType === t.emoji 
+                                                            "py-2 rounded-xl text-base transition-all flex flex-col items-center justify-center gap-0.5 cursor-pointer",
+                                                            newPetType === t.key 
                                                                 ? "bg-white shadow-sm scale-[1.02] text-gray-900" 
                                                                 : "opacity-60 hover:opacity-90 text-gray-500"
                                                         )}

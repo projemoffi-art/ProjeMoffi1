@@ -63,8 +63,11 @@ import { useWellbeing } from '@/context/WellbeingContext';
 import { EcosystemPortal } from '@/components/community/EcosystemPortal';
 import { SpotlightSearch } from '@/components/community/SpotlightSearch';
 import { DiaryModal } from '@/components/community/DiaryModal';
-import { apiService, isSupabaseEnabled } from '../../services/apiService';
-import { supabase } from '@/lib/supabase';
+import { apiService } from '../../services/apiService';
+import { supabase } from '../../lib/supabase';
+import { PET_TYPES } from '@/constants/petTypes';
+
+// Optional components
 import { HubOverlay } from '../../components/community/HubOverlay';
 import { MoffiBottomNav } from '@/components/common/MoffiBottomNav';
 import { OverlaySystem } from '@/components/community/OverlaySystem';
@@ -201,7 +204,7 @@ export default function MoffiSocialMasterpiece() {
     const [isUploadingStory, setIsUploadingStory] = useState(false);
     const [addPetStep, setAddPetStep] = useState(1);
     const [newPetName, setNewPetName] = useState("");
-    const [newPetType, setNewPetType] = useState("🐶");
+    const [newPetType, setNewPetType] = useState("dog");
     const [newPetBreed, setNewPetBreed] = useState("");
     const [newPetAge, setNewPetAge] = useState("");
     const [newPetGender, setNewPetGender] = useState("Erkek");
@@ -2507,10 +2510,9 @@ export default function MoffiSocialMasterpiece() {
                                             <div className="w-24">
                                                 <label className="text-[11px] text-[var(--secondary-text)] font-bold ml-3 uppercase tracking-wider">Tür</label>
                                                 <select value={newPetType} onChange={e => setNewPetType(e.target.value)} className="w-full bg-[var(--card-bg)] border border-black/10 dark:border-white/10 rounded-2xl px-2 py-3.5 text-center text-xl mt-1 outline-none focus:border-cyan-400 transition-colors appearance-none" style={{ textAlignLast: "center" }}>
-                                                    <option value="🐶">🐶</option>
-                                                    <option value="🐱">🐱</option>
-                                                    <option value="🦜">🦜</option>
-                                                    <option value="🐰">🐰</option>
+                                                    {PET_TYPES.map(pt => (
+                                                        <option key={pt.key} value={pt.key}>{pt.emoji}</option>
+                                                    ))}
                                                 </select>
                                             </div>
                                         </div>

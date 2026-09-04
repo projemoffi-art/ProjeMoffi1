@@ -213,6 +213,7 @@ export default function ProfilePage() {
     // Edit form state
     const [editName, setEditName] = useState('');
     const [editUsername, setEditUsername] = useState('');
+    const [editPhone, setEditPhone] = useState('');
     const [editBio, setEditBio] = useState('');
     const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
     const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
@@ -221,11 +222,28 @@ export default function ProfilePage() {
     const [editAllowComments, setEditAllowComments] = useState(true);
     const [editCommentPrivacy, setEditCommentPrivacy] = useState('everyone');
     const [editFilterWords, setEditFilterWords] = useState('');
+    
+    // Unclaimed Match states
+    const [unclaimedMatches, setUnclaimedMatches] = useState<any[]>([]);
+    const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
+    const [claimCode, setClaimCode] = useState('');
+    const [claimLoading, setClaimLoading] = useState(false);
 
     const [isAddPetOpen, setIsAddPetOpen] = useState(false);
+
+    useEffect(() => {
+        if (searchParams.get('addPet') === 'true' && isOwnProfile) {
+            setIsAddPetOpen(true);
+            
+            // Clean up the URL to prevent reopening on reload
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, '', newUrl);
+        }
+    }, [searchParams, isOwnProfile]);
+
     const [addPetStep, setAddPetStep] = useState(1);
     const [newPetName, setNewPetName] = useState('');
-    const [newPetType, setNewPetType] = useState('🐶');
+    const [newPetType, setNewPetType] = useState('dog');
     const [newPetBreed, setNewPetBreed] = useState('');
     const [newPetAge, setNewPetAge] = useState('');
     const [newPetGender, setNewPetGender] = useState('Erkek');
@@ -263,9 +281,10 @@ export default function ProfilePage() {
 
     // Sync edit form from currentUser
     useEffect(() => {
-        if (currentUser && isOwnProfile) {
+        if (isOwnProfile && currentUser) {
             setEditName(currentUser.name || currentUser.username || '');
             setEditUsername(currentUser.username || '');
+            setEditPhone(currentUser.phone || '');
             setEditBio(currentUser.bio || '');
             setEditAvatarPreview(isPlaceholderUrl(currentUser.avatar) ? null : (currentUser.avatar || null));
             setEditCoverPreview(isPlaceholderUrl(currentUser.cover_photo) ? null : (currentUser.cover_photo || null));
@@ -312,6 +331,7 @@ export default function ProfilePage() {
                 bio: editBio,
                 avatar: avatarUrl,
                 cover_photo: coverUrl,
+                phone: editPhone,
                 default_allow_comments: editAllowComments,
                 default_comment_privacy: editCommentPrivacy,
                 comment_filter_words: editFilterWords.split(',').map(w => w.trim()).filter(Boolean),
@@ -323,6 +343,7 @@ export default function ProfilePage() {
                 bio: editBio,
                 avatar: avatarUrl,
                 cover_photo: coverUrl,
+                phone: editPhone,
                 default_allow_comments: editAllowComments,
                 default_comment_privacy: editCommentPrivacy,
                 comment_filter_words: editFilterWords.split(',').map(w => w.trim()).filter(Boolean),
@@ -340,6 +361,7 @@ export default function ProfilePage() {
                 avatar_url: avatarUrl,
                 cover_photo: coverUrl,
                 cover_url: coverUrl,
+                phone: editPhone,
                 default_allow_comments: editAllowComments,
                 default_comment_privacy: editCommentPrivacy,
                 comment_filter_words: editFilterWords.split(',').map(w => w.trim()).filter(Boolean),
@@ -349,6 +371,19 @@ export default function ProfilePage() {
             setEditAvatarFile(null);
             setEditCoverFile(null);
             showToast('✅ Profil güncellendi!', 'Sparkles', 'text-cyan-400');
+            
+            // Unclaimed Match Check
+            if (editPhone) {
+                try {
+                    const matches = await apiService.checkUnclaimedMatches(editPhone);
+                    if (matches && matches.length > 0) {
+                        setUnclaimedMatches(matches);
+                        setIsClaimModalOpen(true);
+                    }
+                } catch(e) {
+                    console.error("Match error:", e);
+                }
+            }
         } catch (err: any) {
             console.error('Kaydetme esnasında hata oluştu:', err);
             showToast('❌ Kayıt başarısız: ' + (err?.message || 'Bilinmeyen hata'), 'ShieldAlert', 'text-red-500');
@@ -891,7 +926,96 @@ export default function ProfilePage() {
                 setEditCommentPrivacy={setEditCommentPrivacy}
                 editFilterWords={editFilterWords}
                 setEditFilterWords={setEditFilterWords}
+                editPhone={editPhone}
+                setEditPhone={setEditPhone}
             />
+
+            {/* UNCLAIMED MATCH MODAL */}
+            <AnimatePresence>
+                {isClaimModalOpen && (
+                    <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="bg-background w-full max-w-md rounded-3xl p-6 shadow-2xl relative"
+                        >
+                            <button onClick={() => setIsClaimModalOpen(false)} className="absolute top-4 right-4 p-2 bg-foreground/5 rounded-full hover:bg-foreground/10 transition-colors">
+                                <X className="w-5 h-5 text-foreground" />
+                            </button>
+                            <h2 className="text-xl font-black uppercase text-foreground mb-4 italic">🎉 Kayıtların Bulundu!</h2>
+                            <p className="text-sm text-secondary mb-4">
+                                Telefon numaranla eşleşen veteriner kayıtları bulduk. Bunları profiline aktarmak için işlem yapman gerekiyor.
+                            </p>
+                            <div className="space-y-4 max-h-60 overflow-y-auto pr-2">
+                                {unclaimedMatches.map(match => (
+                                    <div key={match.id} className="p-4 rounded-2xl bg-foreground/5 border border-card-border flex flex-col gap-2">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h3 className="font-bold text-foreground text-sm">{match.pet_name || 'İsimsiz Pati'}</h3>
+                                                <p className="text-xs text-secondary">{match.raw_name}</p>
+                                            </div>
+                                            <span className="text-[10px] uppercase tracking-wider font-black px-2 py-1 rounded-full bg-accent text-white">
+                                                {match.status === 'sms_sent' ? 'SMS Onayı' : 'Manuel Onay'}
+                                            </span>
+                                        </div>
+                                        {match.status === 'sms_sent' ? (
+                                            <div className="flex gap-2 mt-2">
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="6 Haneli Kod" 
+                                                    className="flex-1 bg-background border border-card-border rounded-xl px-3 text-sm text-center outline-none"
+                                                    value={claimCode}
+                                                    onChange={e => setClaimCode(e.target.value)}
+                                                    maxLength={6}
+                                                />
+                                                <button 
+                                                    disabled={claimLoading || claimCode.length !== 6}
+                                                    onClick={async () => {
+                                                        setClaimLoading(true);
+                                                        try {
+                                                            await apiService.verifyAndClaim(match.id, claimCode);
+                                                            showToast('Kayıt başarıyla profiline eklendi!', 'Check', 'text-green-500');
+                                                            setUnclaimedMatches(prev => prev.filter(m => m.id !== match.id));
+                                                            if (unclaimedMatches.length === 1) setIsClaimModalOpen(false);
+                                                        } catch (err: any) {
+                                                            showToast(err.message, 'AlertCircle', 'text-red-500');
+                                                        } finally {
+                                                            setClaimLoading(false);
+                                                        }
+                                                    }}
+                                                    className="px-4 py-2 bg-foreground text-background text-xs font-black uppercase rounded-xl disabled:opacity-50"
+                                                >
+                                                    Doğrula
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <button 
+                                                disabled={claimLoading || match.status === 'claim_requested'}
+                                                onClick={async () => {
+                                                    setClaimLoading(true);
+                                                    try {
+                                                        await apiService.requestManualClaim(match.id);
+                                                        showToast('Kliniğe onay isteği gönderildi.', 'Check', 'text-emerald-500');
+                                                        setUnclaimedMatches(prev => prev.map(m => m.id === match.id ? {...m, status: 'claim_requested'} : m));
+                                                    } catch (err: any) {
+                                                        showToast(err.message, 'AlertCircle', 'text-red-500');
+                                                    } finally {
+                                                        setClaimLoading(false);
+                                                    }
+                                                }}
+                                                className="w-full mt-2 py-2 bg-foreground/10 text-foreground text-xs font-black uppercase rounded-xl hover:bg-foreground/20 transition disabled:opacity-50"
+                                            >
+                                                {match.status === 'claim_requested' ? 'İstek Gönderildi' : 'Manuel Onay İste'}
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             {/* ══ RELATIONS MODAL (Followers / Following) ══ */}
             <AnimatePresence>

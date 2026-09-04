@@ -10,6 +10,8 @@ import { usePet } from "@/context/PetContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useVoiceGuide } from "@/hooks/useVoiceGuide";
 import { apiService } from "@/services/apiService";
+import { useAuth } from "@/context/AuthContext";
+import { getPetTypeConfig } from "@/constants/petTypes";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
 
@@ -251,8 +253,8 @@ export function SeniorDashboard() {
                             {/* Pet Status Summary */}
                             <div className="bg-black/5 dark:bg-white/5 border-2 border-white/15 rounded-[2.5rem] p-6 text-center space-y-4">
                                 <div className="w-28 h-28 bg-amber-500/10 rounded-full mx-auto flex items-center justify-center border-2 border-amber-500/30">
-                                    <span className="text-[64px]" role="img" aria-label="dog">
-                                        {activePet?.type || "🐶"}
+                                    <span className="text-[64px]" role="img" aria-label="pet">
+                                        {(activePet?.type ? getPetTypeConfig(activePet.type)?.emoji : null) || "🐶"}
                                     </span>
                                 </div>
                                 <div>

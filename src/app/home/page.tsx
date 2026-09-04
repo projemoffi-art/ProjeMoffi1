@@ -1043,7 +1043,7 @@ export default function LegendaryLightDashboard() {
     const [selectedAnn, setSelectedAnn] = useState<any | null>(null);
     const [addPetStep, setAddPetStep] = useState(1);
     const [newPetName, setNewPetName] = useState("");
-    const [newPetType, setNewPetType] = useState("🐶");
+    const [newPetType, setNewPetType] = useState("dog");
     const [newPetBreed, setNewPetBreed] = useState("");
     const [newPetAge, setNewPetAge] = useState("");
     const [newPetGender, setNewPetGender] = useState("Erkek");

@@ -5,6 +5,7 @@ import { Plus, Megaphone, Trash2, Calendar, Tag, BarChart3, Clock, Loader2, Imag
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 import { apiService } from "@/services/apiService";
+import { PET_TYPES, getPetTypeConfig } from "@/constants/petTypes";
 
 interface Deal {
     id: string;
@@ -132,8 +133,9 @@ export default function BusinessCampaignsPage() {
                                 <label className="block text-xs font-bold text-gray-500 mb-1">Hedef Kitle</label>
                                 <select value={formData.target_pet_type} onChange={e => setFormData({...formData, target_pet_type: e.target.value})} className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-zinc-800 dark:text-white focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500">
                                     <option value="all">Tüm Evcil Hayvanlar</option>
-                                    <option value="dog">Sadece Köpek Sahipleri</option>
-                                    <option value="cat">Sadece Kedi Sahipleri</option>
+                                    {PET_TYPES.map(pt => (
+                                        <option key={pt.key} value={pt.key}>{pt.emoji} Sadece {pt.label} Sahipleri</option>
+                                    ))}
                                 </select>
                             </div>
                             <div>
@@ -176,7 +178,7 @@ export default function BusinessCampaignsPage() {
                                 </div>
                                 <div className="mt-auto space-y-2 text-sm text-gray-500">
                                     <div className="flex items-center gap-2"><Clock className="w-4 h-4"/> Bitiş: {deal.expires_at || deal.ends_at ? new Date(deal.expires_at || deal.ends_at).toLocaleString('tr-TR') : 'Süresiz'}</div>
-                                    <div className="flex items-center gap-2"><Tag className="w-4 h-4"/> Hedef: {deal.target_pet_type === 'all' ? 'Tümü' : deal.target_pet_type === 'dog' ? 'Köpek' : 'Kedi'}</div>
+                                    <div className="flex items-center gap-2"><Tag className="w-4 h-4"/> Hedef: {deal.target_pet_type === 'all' ? 'Tümü' : getPetTypeConfig(deal.target_pet_type)?.label || deal.target_pet_type}</div>
                                     <div className="flex items-center gap-2"><BarChart3 className="w-4 h-4"/> Kullanım: {deal.current_uses} {deal.max_uses ? `/ ${deal.max_uses}` : ''}</div>
                                 </div>
                             </div>
