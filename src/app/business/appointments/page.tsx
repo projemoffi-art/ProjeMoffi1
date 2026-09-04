@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
     CalendarCheck, CheckCircle2,
     User, Bell, X, Syringe, ClipboardList, Pill, AlertTriangle,
