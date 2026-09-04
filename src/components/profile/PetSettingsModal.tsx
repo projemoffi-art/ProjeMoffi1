@@ -10,6 +10,8 @@ import {
     Droplets, Flame, Heart, Star, Tag,
     FileText, Maximize2, PawPrint
 } from "lucide-react";
+import { Pet } from "@/context/PetContext";
+import { PET_TYPES as GLOBAL_PET_TYPES } from "@/constants/petTypes";
 import { cn } from "@/lib/utils";
 import { apiService } from "@/services/apiService";
 
@@ -132,7 +134,7 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
         petvet: pet?.petvet || pet?.petvet_no || "",
         birthday: pet?.birthday || pet?.birth_date || pet?.sos_settings?.birthday || "",
         // Tür & boyut (AddPetModal'dan gelenler)
-        type: pet?.type || "🐶",
+        type: pet?.type || "dog",
         size: pet?.size || "",
         // Biyometrik
         gender: pet?.gender || "Dişi",
@@ -172,7 +174,7 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
                 petvet: pet?.petvet || pet?.petvet_no || "",
                 birthday: pet?.birthday || pet?.birth_date || pet?.sos_settings?.birthday || "",
                 // Tür & boyut (AddPetModal'dan gelenler)
-                type: pet?.type || "🐶",
+                type: pet?.type || "dog",
                 size: pet?.size || "",
                 // Biyometrik
                 gender: pet?.gender || "Dişi",
@@ -275,7 +277,7 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
         }
     };
 
-    const PET_TYPES = ["🐶", "🐱", "🐰", "🦜", "🐹", "🐠", "🐍", "🦎"];
+
     const SIZE_OPTIONS = ["Mini", "Küçük", "Orta", "Büyük", "Dev"];
     const HEALTH_OPTIONS = ["Mükemmel", "İyi", "Hassas", "Tedavide"];
 
@@ -397,18 +399,19 @@ export function PetSettingsModal({ isOpen, onClose, pet, onSave, onDelete }: Pet
                                             <div className="flex-1">
                                                 <p className="text-[10px] font-black text-black/40 dark:text-white/30 uppercase tracking-[0.2em] mb-2">Hayvan Türü</p>
                                                 <div className="flex gap-2 flex-wrap">
-                                                    {PET_TYPES.map(emoji => (
+                                                    {GLOBAL_PET_TYPES.map(pt => (
                                                         <button
-                                                            key={emoji}
-                                                            onClick={() => setFormData(f => ({...f, type: emoji}))}
+                                                            key={pt.key}
+                                                            onClick={() => setFormData(f => ({...f, type: pt.key}))}
                                                             className={cn(
                                                                 "w-10 h-10 rounded-2xl text-xl flex items-center justify-center transition-all border",
-                                                                formData.type === emoji
+                                                                formData.type === pt.key
                                                                     ? "bg-white border-white scale-110 shadow-lg"
                                                                     : "bg-black/5 dark:bg-white/5 border-card-border hover:bg-black/10 dark:bg-white/10"
                                                             )}
+                                                            title={pt.label}
                                                         >
-                                                            {emoji}
+                                                            {pt.emoji}
                                                         </button>
                                                     ))}
                                                 </div>
