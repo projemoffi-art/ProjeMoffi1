@@ -1750,6 +1750,14 @@ export class MockApiService implements IApiService {
     async deleteCampaign(campaignId: string, clinicId: string): Promise<boolean> {
         return true;
     }
+
+    // Appointment Notifications (Faz 9)
+    async getUnreadNotifications(recipientId: string): Promise<any[]> {
+        return [];
+    }
+    async markNotificationRead(notificationId: string): Promise<boolean> {
+        return true;
+    }
 }
 // Singleton instance for components that haven't migrated to the central services/apiService.ts yet
 export const apiService = new MockApiService();

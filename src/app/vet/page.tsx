@@ -7,7 +7,7 @@ import {
     Search, MapPin, Star, Calendar, CreditCard,
     ShieldAlert, ChevronRight, Syringe, Utensils, Clock, Pill,
     CheckCircle2, ChevronLeft, X, Filter, PhoneCall, Activity, History,
-    ShieldCheck
+    ShieldCheck, Bell
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -95,6 +95,10 @@ function VetPageContent() {
     const [userRating, setUserRating] = useState(0);
     const [userComment, setUserComment] = useState("");
 
+    // Notification State (Faz 9)
+    const [unreadNotifications, setUnreadNotifications] = useState<any[]>([]);
+    const [showNotifications, setShowNotifications] = useState(false);
+
     // Live validation helpers
     const cleanCardNum = cardNumber.replace(/\D/g, "");
     const isLuhnInvalid = cleanCardNum.length >= 13 && !validateLuhn(cleanCardNum);
@@ -164,6 +168,25 @@ function VetPageContent() {
 
         checkReviewPrompts();
     }, [user, allClinics, pendingReviewPrompt]);
+
+    // Fetch notifications (Faz 9)
+    useEffect(() => {
+        if (!user || !isSupabaseEnabled) return;
+        const fetchNotifications = async () => {
+            try {
+                const notifs = await apiService.getUnreadNotifications(user.id);
+                setUnreadNotifications(notifs || []);
+            } catch (err) {
+                console.error("Error fetching notifications:", err);
+            }
+        };
+        fetchNotifications();
+    }, [user]);
+
+    const handleNotificationClick = async (notifId: string) => {
+        await apiService.markNotificationRead(notifId);
+        setUnreadNotifications(prev => prev.filter(n => n.id !== notifId));
+    };
 
     useEffect(() => {
         if (!isSupabaseEnabled || !selectedClinic?.id) return;
@@ -760,6 +783,44 @@ function VetPageContent() {
             </header>
 
             <main className="px-6 py-6 space-y-6">
+                {unreadNotifications.length > 0 && (
+                    <div className="relative z-40 mb-2">
+                        <button 
+                            onClick={() => setShowNotifications(!showNotifications)}
+                            className="bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-black uppercase tracking-wider w-full justify-center transition-all hover:bg-indigo-500/20"
+                        >
+                            <Bell className="w-4 h-4 animate-pulse" />
+                            {unreadNotifications.length} Yeni Bildirim
+                        </button>
+                        <AnimatePresence>
+                            {showNotifications && (
+                                <motion.div 
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-[#27272a] rounded-xl shadow-xl overflow-hidden"
+                                >
+                                    <div className="max-h-64 overflow-y-auto">
+                                        {unreadNotifications.map(notif => (
+                                            <div 
+                                                key={notif.id} 
+                                                onClick={() => handleNotificationClick(notif.id)}
+                                                className="p-4 border-b border-zinc-100 dark:border-[#27272a] last:border-0 hover:bg-zinc-50 dark:hover:bg-[#27272a]/50 cursor-pointer transition-colors"
+                                            >
+                                                <p className="text-xs font-bold text-zinc-800 dark:text-[#fafafa] mb-1 leading-relaxed">
+                                                    {notif.message}
+                                                </p>
+                                                <span className="text-[9px] font-bold text-zinc-400 dark:text-[#a1a1aa] uppercase tracking-wider">
+                                                    {new Date(notif.created_at).toLocaleString('tr-TR')}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                )}
                 {viewMode === 'appointments' ? (
                     <MyAppointmentsPanel appointments={mappedAppointments} />
                 ) : (

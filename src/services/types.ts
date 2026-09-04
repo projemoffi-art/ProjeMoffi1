@@ -436,6 +436,10 @@ export interface IApiService {
     createCampaign(clinicId: string, title: string, description: string, startsAt: string, endsAt: string | null): Promise<boolean>;
     addClinicCampaign(data: any): Promise<boolean>;
     deleteCampaign(campaignId: string, clinicId: string): Promise<boolean>;
+
+    // Appointment Notifications (Faz 9)
+    getUnreadNotifications(recipientId: string): Promise<any[]>;
+    markNotificationRead(notificationId: string): Promise<boolean>;
 }
 
 export interface ClinicMessage {
