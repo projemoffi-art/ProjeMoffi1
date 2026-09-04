@@ -14,7 +14,10 @@ import {
     ArrowLeftRight,
     X,
     PawPrint,
-    Gift
+    Gift,
+    Users,
+    FileSpreadsheet,
+    Activity
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -32,8 +35,11 @@ export function BusinessSidebar({ isMobileOpen = false, onMobileClose }: Sidebar
     const menuItems = [
         { name: t("business.sidebar.dashboard"), path: "/business/dashboard", icon: LayoutDashboard },
         { name: t("business.sidebar.appointments"), path: "/business/appointments", icon: Calendar },
+        { name: "Hastalarım", path: "/business/patients", icon: Users },
+        { name: "Veri Taşıma", path: "/business/migration", icon: FileSpreadsheet },
         { name: t("business.sidebar.finance"), path: "/business/finance", icon: Wallet },
         { name: t("business.sidebar.orders"), path: "/business/orders", icon: Package },
+        { name: "Hizmetlerim", path: "/business/services", icon: Activity },
         { name: t("business.sidebar.products"), path: "/business/products", icon: Store },
         { name: "Günün Fırsatı", path: "/business/campaigns", icon: Gift },
         { name: t("business.sidebar.quests"), path: "/business/quests", icon: Megaphone },

@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { usePet } from '@/context/PetContext';
 import { cn } from '@/lib/utils';
 import { Plus } from 'lucide-react';
@@ -28,7 +28,10 @@ export function PetSwitcher({ className, onAddPet }: PetSwitcherProps) {
                                 switchPet(String(pet.id));
                             }}
                             whileTap={{ scale: 0.9 }}
-                            className="relative group outline-none"
+                            className={cn(
+                                "relative group outline-none flex items-center transition-all duration-300",
+                                isActive ? "z-10 ml-2 mr-2" : ""
+                            )}
                         >
                             <div className={cn(
                                 "relative w-10 h-10 rounded-full border-2 transition-all duration-500 overflow-hidden",
@@ -51,10 +54,26 @@ export function PetSwitcher({ className, onAddPet }: PetSwitcherProps) {
                                 )}
                             </div>
                             
-                            {/* Hover Tooltip (Optional but Premium) */}
-                            <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[100]">
-                                <span className="text-[8px] font-black text-white uppercase tracking-widest">{pet.name}</span>
-                            </div>
+                            {/* ACTIVE PET NAME LABEL (Always visible for active pet) */}
+                            <AnimatePresence>
+                                {isActive && (
+                                    <motion.div
+                                        initial={{ width: 0, opacity: 0 }}
+                                        animate={{ width: "auto", opacity: 1 }}
+                                        exit={{ width: 0, opacity: 0 }}
+                                        className="overflow-hidden whitespace-nowrap pl-2 pr-1"
+                                    >
+                                        <span className="text-[10px] font-black text-zinc-800 dark:text-[#fafafa] uppercase tracking-widest">{pet.name}</span>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            {/* Hover Tooltip for inactive pets */}
+                            {!isActive && (
+                                <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[100]">
+                                    <span className="text-[8px] font-black text-white uppercase tracking-widest">{pet.name}</span>
+                                </div>
+                            )}
                         </motion.button>
                     );
                 })}

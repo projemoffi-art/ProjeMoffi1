@@ -91,6 +91,7 @@ interface PetContextType {
     setOrders: (petId: string, orders: any[]) => void;
     appointments: Record<string, any[]>;
     setAppointments: (petId: string, appointments: any[]) => void;
+    refreshAppointments: () => Promise<void>;
     walkRoutes: Record<string, any[]>;
     setWalkRoutes: (petId: string, routes: any[]) => void;
 }
@@ -259,16 +260,43 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
             const storedRecords = await apiService.loadData<Record<string, any[]>>('custom_records');
             const storedDocs = await apiService.loadData<Record<string, Record<string, string[]>>>('record_docs');
             const storedOrders = await apiService.loadData<Record<string, any[]>>('orders');
-            const storedAppts = await apiService.loadData<Record<string, any[]>>('appointments');
             const storedRoutes = await apiService.loadData<Record<string, any[]>>('walk_routes');
             if (storedRecords) setCustomRecordsInternal(storedRecords);
             if (storedDocs) setRecordDocumentsInternal(storedDocs);
             if (storedOrders) setOrdersInternal(storedOrders);
-            if (storedAppts) setAppointmentsInternal(storedAppts);
             if (storedRoutes) setWalkRoutesInternal(storedRoutes);
         };
         loadExtraData();
     }, []); // RUNS ONCE ONLY
+
+    const refreshAppointments = React.useCallback(async () => {
+        if (!user?.id) return;
+        try {
+            const list = await apiService.getAppointments(user.id);
+            const grouped: Record<string, any[]> = {};
+            list.forEach(apt => {
+                const pid = apt.pet_id;
+                if (!grouped[pid]) grouped[pid] = [];
+                grouped[pid].push(apt);
+            });
+            setAppointmentsInternal(grouped);
+        } catch (err) {
+            console.error("Failed to load user appointments:", err);
+        }
+    }, [user?.id]);
+
+    // APPOINTMENTS: LIVE DB FETCH & FOCUS SYNC
+    useEffect(() => {
+        if (!user?.id) return;
+        
+        refreshAppointments();
+
+        window.addEventListener('focus', refreshAppointments);
+        
+        return () => {
+            window.removeEventListener('focus', refreshAppointments);
+        };
+    }, [user?.id, refreshAppointments]);
 
     // PERSIST EXTRA DATA - debounced via useMemo-stable refs
     useEffect(() => {
@@ -285,21 +313,17 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
     }, [orders]);
     useEffect(() => {
         if (!isInitializedRef.current) return;
-        apiService.saveData('appointments', appointments);
-    }, [appointments]);
-    useEffect(() => {
-        if (!isInitializedRef.current) return;
         apiService.saveData('walk_routes', walkRoutes);
     }, [walkRoutes]);
 
     const petValue = React.useMemo(() => ({
         pets: petsWithMascot, activePet, isLoading, isInitialized, addPet, updatePet, deletePet, switchPet,
         customRecords, setCustomRecords, recordDocuments, setRecordDocuments,
-        orders, setOrders, appointments, setAppointments, walkRoutes, setWalkRoutes
+        orders, setOrders, appointments, setAppointments, refreshAppointments, walkRoutes, setWalkRoutes
     }), [
         petsWithMascot, activePet, isLoading, isInitialized, addPet, updatePet, deletePet, switchPet,
         customRecords, setCustomRecords, recordDocuments, setRecordDocuments,
-        orders, setOrders, appointments, setAppointments, walkRoutes, setWalkRoutes
+        orders, setOrders, appointments, setAppointments, refreshAppointments, walkRoutes, setWalkRoutes
     ]);
 
     return (

@@ -31,6 +31,8 @@ interface EditProfileModalProps {
     setEditCommentPrivacy?: (val: string) => void;
     editFilterWords?: string;
     setEditFilterWords?: (val: string) => void;
+    editPhone?: string;
+    setEditPhone?: (val: string) => void;
 }
 
 export function EditProfileModal({
@@ -58,7 +60,9 @@ export function EditProfileModal({
     editCommentPrivacy = "everyone",
     setEditCommentPrivacy,
     editFilterWords = "",
-    setEditFilterWords
+    setEditFilterWords,
+    editPhone = "",
+    setEditPhone
 }: EditProfileModalProps) {
     const coverInputRef = React.useRef<HTMLInputElement>(null);
     const profileInputRef = React.useRef<HTMLInputElement>(null);
@@ -214,6 +218,17 @@ export function EditProfileModal({
                                         className="w-full bg-foreground/5 border border-card-border rounded-2xl pl-10 pr-5 py-4 text-foreground outline-none focus:border-accent/50 transition-all font-bold" 
                                     />
                                 </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <label className="text-[10px] text-secondary font-black uppercase tracking-[0.2em] ml-2">Telefon Numarası</label>
+                                <input 
+                                    type="text" 
+                                    value={editPhone} 
+                                    onChange={e => setEditPhone?.(e.target.value)} 
+                                    placeholder="+905554443322"
+                                    className="w-full bg-foreground/5 border border-card-border rounded-2xl px-5 py-4 text-foreground outline-none focus:border-accent/50 transition-all font-bold" 
+                                />
                             </div>
 
                             <div className="space-y-2">

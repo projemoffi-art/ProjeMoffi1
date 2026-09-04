@@ -162,7 +162,7 @@ export default function MigrationPage() {
 
     const handleImport = async () => {
         if (!mapping.rawName || !mapping.rawPhone) {
-            showToast("Hata", "İsim ve Telefon eşleştirmesi zorunludur!", "error");
+            showToast("İsim ve Telefon eşleştirmesi zorunludur!", "X", "text-red-500");
             return;
         }
         setIsUploading(true);
@@ -462,20 +462,40 @@ export default function MigrationPage() {
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
-                                                    {patients.map(p => (
+                                                    {patients.map(p => {
+                                                        const isClaimRequested = p.status === 'claim_requested' || (p.status === 'unclaimed' && p.claim_requested_by != null);
+                                                        const displayStatus = p.status === 'sms_sent' ? 'sms_sent' : p.status === 'claimed' ? 'claimed' : isClaimRequested ? 'claim_requested' : 'unclaimed';
+                                                        return (
                                                         <tr key={p.id} className="text-slate-700 dark:text-slate-300">
                                                             <td className="py-3 px-4 font-medium">{p.raw_name}</td>
                                                             <td className="py-3 px-4">{p.normalized_phone}</td>
                                                             <td className="py-3 px-4">{p.pet_name || '-'}</td>
                                                             <td className="py-3 px-4">
-                                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.status === 'sms_sent' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400' : p.status === 'claimed' ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400'}`}>
-                                                                    {p.status === 'sms_sent' ? 'SMS Gönderildi' : p.status === 'claimed' ? 'Kaydını Aldı' : 'Bekliyor'}
+                                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${displayStatus === 'sms_sent' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400' : displayStatus === 'claimed' ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400' : displayStatus === 'claim_requested' ? 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400'}`}>
+                                                                    {displayStatus === 'sms_sent' ? 'SMS Gönderildi' : displayStatus === 'claimed' ? 'Kaydını Aldı' : displayStatus === 'claim_requested' ? 'Onay Bekliyor' : 'Bekliyor'}
                                                                 </span>
                                                             </td>
-                                                            <td className="py-3 px-4 text-right">
+                                                            <td className="py-3 px-4 text-right flex gap-2 justify-end">
+                                                                {displayStatus === 'claim_requested' && (
+                                                                    <button 
+                                                                        onClick={async () => {
+                                                                            try {
+                                                                                await apiService.approveManualClaim(p.id);
+                                                                                showToast('Hesap eşleşmesi onaylandı.', 'Check', 'text-green-500');
+                                                                                setPatients(patients.map(pat => pat.id === p.id ? {...pat, status: 'claimed'} : pat));
+                                                                            } catch (err: any) {
+                                                                                showToast(err.message, 'AlertCircle', 'text-red-500');
+                                                                            }
+                                                                        }}
+                                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-600 hover:bg-green-100 dark:bg-green-500/10 dark:text-green-400 dark:hover:bg-green-500/20 rounded-md text-xs font-medium transition-colors"
+                                                                    >
+                                                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                                                        Onayla
+                                                                    </button>
+                                                                )}
                                                                 <button 
                                                                     onClick={() => handleSendSms(p.id)}
-                                                                    disabled={p.status === 'claimed'}
+                                                                    disabled={displayStatus === 'claimed'}
                                                                     className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 text-primary-600 hover:bg-primary-100 dark:bg-primary-500/10 dark:text-primary-400 dark:hover:bg-primary-500/20 rounded-md text-xs font-medium transition-colors disabled:opacity-50"
                                                                 >
                                                                     <Send className="w-3.5 h-3.5" />
@@ -483,7 +503,7 @@ export default function MigrationPage() {
                                                                 </button>
                                                             </td>
                                                         </tr>
-                                                    ))}
+                                                    )})}
                                                 </tbody>
                                             </table>
                                         )}
