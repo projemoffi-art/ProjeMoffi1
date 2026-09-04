@@ -175,7 +175,7 @@ export default function BusinessCampaignsPage() {
                                     <span className="bg-orange-50 text-orange-600 px-2 py-1 rounded-md border border-orange-100 border-dashed">{deal.coupon_code}</span>
                                 </div>
                                 <div className="mt-auto space-y-2 text-sm text-gray-500">
-                                    <div className="flex items-center gap-2"><Clock className="w-4 h-4"/> Bitiş: {new Date(deal.expires_at).toLocaleString('tr-TR')}</div>
+                                    <div className="flex items-center gap-2"><Clock className="w-4 h-4"/> Bitiş: {deal.expires_at || deal.ends_at ? new Date(deal.expires_at || deal.ends_at).toLocaleString('tr-TR') : 'Süresiz'}</div>
                                     <div className="flex items-center gap-2"><Tag className="w-4 h-4"/> Hedef: {deal.target_pet_type === 'all' ? 'Tümü' : deal.target_pet_type === 'dog' ? 'Köpek' : 'Kedi'}</div>
                                     <div className="flex items-center gap-2"><BarChart3 className="w-4 h-4"/> Kullanım: {deal.current_uses} {deal.max_uses ? `/ ${deal.max_uses}` : ''}</div>
                                 </div>

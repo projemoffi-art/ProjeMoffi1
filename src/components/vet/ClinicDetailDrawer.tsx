@@ -150,7 +150,12 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
 
             try {
                 const camps = await apiService.getClinicCampaigns(targetId!);
-                const activeCamps = camps.filter((c: any) => c.status === 'active' && new Date(c.expires_at) > new Date());
+                const activeCamps = camps.filter((c: any) => {
+                    if (c.status && c.status !== 'active') return false;
+                    const expirationStr = c.expires_at || c.ends_at;
+                    if (!expirationStr) return true;
+                    return new Date(expirationStr) > new Date();
+                });
                 setCampaigns(activeCamps);
             } catch (err) {
                 console.error("Kampanyalar yüklenirken hata:", err);

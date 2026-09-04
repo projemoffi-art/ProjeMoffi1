@@ -4337,7 +4337,6 @@ export class SupabaseApiService implements IApiService {
             .from('clinic_campaigns')
             .select('*')
             .eq('clinic_id', clinicId)
-            .or(`ends_at.is.null,ends_at.gte.${now}`)
             .order('created_at', { ascending: false });
 
         if (error) {
@@ -4390,14 +4389,17 @@ export class SupabaseApiService implements IApiService {
             payload.ends_at = data.expires_at;
         }
 
-        const { error } = await supabase
+        const { data: insertedData, error } = await supabase
             .from('clinic_campaigns')
-            .insert(payload);
+            .insert(payload)
+            .select();
 
         if (error) {
-            console.error("Error in addClinicCampaign:", error);
+            console.error("Error in addClinicCampaign:", error.message, error.details, error.hint);
             return false;
         }
+        
+        console.log("Successfully inserted campaign:", insertedData);
         return true;
     }
 
