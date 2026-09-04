@@ -114,23 +114,23 @@ export default function BusinessCampaignsPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 mb-1">Kampanya Başlığı</label>
-                                <input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3" placeholder="Örn: Hafta Sonu Kedi Maması İndirimi" />
+                                <input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-zinc-800 dark:text-white focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500" placeholder="Örn: Hafta Sonu Kedi Maması İndirimi" />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 mb-1">Görsel URL (Story Formatı 9:16)</label>
-                                <input required type="url" value={formData.media_url} onChange={e => setFormData({...formData, media_url: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3" placeholder="https://..." />
+                                <input required type="url" value={formData.media_url} onChange={e => setFormData({...formData, media_url: e.target.value})} className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-zinc-800 dark:text-white focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500" placeholder="https://..." />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 mb-1">İndirim Oranı/Değeri</label>
-                                <input required type="text" value={formData.value} onChange={e => setFormData({...formData, value: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3" placeholder="Örn: %20 veya 50 TL" />
+                                <input required type="text" value={formData.value} onChange={e => setFormData({...formData, value: e.target.value})} className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-zinc-800 dark:text-white focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500" placeholder="Örn: %20 veya 50 TL" />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 mb-1">Kupon Kodu</label>
-                                <input required type="text" value={formData.coupon_code} onChange={e => setFormData({...formData, coupon_code: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3" placeholder="Örn: PAZAR20" />
+                                <input required type="text" value={formData.coupon_code} onChange={e => setFormData({...formData, coupon_code: e.target.value})} className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-zinc-800 dark:text-white focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500" placeholder="Örn: PAZAR20" />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 mb-1">Hedef Kitle</label>
-                                <select value={formData.target_pet_type} onChange={e => setFormData({...formData, target_pet_type: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                                <select value={formData.target_pet_type} onChange={e => setFormData({...formData, target_pet_type: e.target.value})} className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-zinc-800 dark:text-white focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500">
                                     <option value="all">Tüm Evcil Hayvanlar</option>
                                     <option value="dog">Sadece Köpek Sahipleri</option>
                                     <option value="cat">Sadece Kedi Sahipleri</option>
@@ -138,11 +138,11 @@ export default function BusinessCampaignsPage() {
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 mb-1">Geçerlilik Süresi (Saat)</label>
-                                <input required type="number" value={formData.hours_valid} onChange={e => setFormData({...formData, hours_valid: Number(e.target.value)})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3" min="1" max="72" />
+                                <input required type="number" value={formData.hours_valid} onChange={e => setFormData({...formData, hours_valid: Number(e.target.value)})} className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-zinc-800 dark:text-white focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500" min="1" max="72" />
                             </div>
                             <div className="md:col-span-2">
                                 <label className="block text-xs font-bold text-gray-500 mb-1">Kullanım Limiti (Boş = Sınırsız)</label>
-                                <input type="number" value={formData.max_uses} onChange={e => setFormData({...formData, max_uses: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3" placeholder="Örn: İlk 50 kişi" />
+                                <input type="number" value={formData.max_uses} onChange={e => setFormData({...formData, max_uses: e.target.value})} className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-zinc-800 dark:text-white focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500" placeholder="Örn: İlk 50 kişi" />
                             </div>
                         </div>
                         <button disabled={isSubmitting} type="submit" className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 transition flex items-center justify-center gap-2">

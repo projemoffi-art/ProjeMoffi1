@@ -1738,8 +1738,15 @@ export class MockApiService implements IApiService {
         return [];
     }
     async createCampaign(clinicId: string, title: string, description: string, startsAt: string, endsAt: string | null): Promise<boolean> {
+        console.log(`[Mock] Kampanya oluşturuldu: ${title} (${clinicId})`);
         return true;
     }
+
+    async addClinicCampaign(data: any): Promise<boolean> {
+        console.log(`[Mock] Zengin kampanya oluşturuldu: ${data.title} (${data.clinic_id})`);
+        return true;
+    }
+
     async deleteCampaign(campaignId: string, clinicId: string): Promise<boolean> {
         return true;
     }

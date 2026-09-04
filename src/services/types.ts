@@ -434,6 +434,7 @@ export interface IApiService {
     getUnreadMessageCount(clinicId: string, userId: string, readerRole: 'user' | 'clinic'): Promise<number>;
     getClinicCampaigns(clinicId: string): Promise<ClinicCampaign[]>;
     createCampaign(clinicId: string, title: string, description: string, startsAt: string, endsAt: string | null): Promise<boolean>;
+    addClinicCampaign(data: any): Promise<boolean>;
     deleteCampaign(campaignId: string, clinicId: string): Promise<boolean>;
 }
 

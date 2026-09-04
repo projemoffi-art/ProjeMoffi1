@@ -409,7 +409,12 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                                                             className="overflow-hidden"
                                                         >
                                                             <div className="p-4 pt-0 text-sm text-zinc-600 dark:text-white/70">
-                                                                <p className="mb-3">{camp.description}</p>
+                                                                {camp.media_url && (
+                                                                    <div className="mb-3 rounded-xl overflow-hidden max-w-sm mx-auto shadow-md">
+                                                                        <img src={camp.media_url} alt={camp.title} className="w-full h-auto object-cover max-h-48" />
+                                                                    </div>
+                                                                )}
+                                                                {camp.description && <p className="mb-3">{camp.description}</p>}
                                                                 {camp.coupon_code && (
                                                                     <div className="inline-flex items-center gap-2 bg-indigo-100 dark:bg-indigo-500/20 px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-500/30">
                                                                         <Tag className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />

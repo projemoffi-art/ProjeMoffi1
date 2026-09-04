@@ -4366,6 +4366,41 @@ export class SupabaseApiService implements IApiService {
         return true;
     }
 
+    async addClinicCampaign(data: any): Promise<boolean> {
+        const payload: any = {
+            clinic_id: data.clinic_id,
+            title: data.title,
+            media_url: data.media_url,
+            discount_value: data.discount_value,
+            coupon_code: data.coupon_code,
+            target_pet_type: data.target_pet_type || 'all',
+            expires_at: data.expires_at,
+            status: data.status || 'active'
+        };
+        
+        if (data.description !== undefined) {
+            payload.description = data.description;
+        }
+        if (data.max_uses !== undefined && data.max_uses !== null) {
+            payload.max_uses = data.max_uses;
+        }
+        
+        // Also map expires_at to ends_at for compatibility with any older queries
+        if (data.expires_at) {
+            payload.ends_at = data.expires_at;
+        }
+
+        const { error } = await supabase
+            .from('clinic_campaigns')
+            .insert(payload);
+
+        if (error) {
+            console.error("Error in addClinicCampaign:", error);
+            return false;
+        }
+        return true;
+    }
+
     async deleteCampaign(campaignId: string, clinicId: string): Promise<boolean> {
 
         const { error } = await supabase
