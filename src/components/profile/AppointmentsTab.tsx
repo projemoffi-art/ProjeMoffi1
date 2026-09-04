@@ -10,6 +10,7 @@ import { useShare } from "@/context/ShareContext";
 import { QRCodeSVG } from "qrcode.react";
 import { usePet } from "@/context/PetContext";
 import { apiService } from "@/services/apiService";
+import { useAuth } from "@/context/AuthContext";
 
 export function AppointmentsTab({ 
     activePet, 
@@ -23,6 +24,7 @@ export function AppointmentsTab({
     currentAppointments = [] 
 }: any) {
     const { openShare } = useShare();
+    const { user } = useAuth();
     const [isGenerating, setIsGenerating] = useState(false);
     const [generationStep, setGenerationStep] = useState(0);
     const [showPreview, setShowPreview] = useState(false);
@@ -31,6 +33,13 @@ export function AppointmentsTab({
     const { refreshAppointments } = usePet();
     const [cancelModalId, setCancelModalId] = useState<string | null>(null);
     const [isCancelling, setIsCancelling] = useState(false);
+    const [noShowCount, setNoShowCount] = useState<number>(0);
+
+    React.useEffect(() => {
+        if (user?.id) {
+            apiService.getNoShowCount(user.id).then(setNoShowCount).catch(console.error);
+        }
+    }, [user?.id]);
 
     const handleCancelAppointment = async () => {
         if (!cancelModalId) return;
@@ -132,6 +141,15 @@ export function AppointmentsTab({
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* Faz 9: No-Show Nötr Bilgi (AppointmentsTab) */}
+            {noShowCount > 0 && (
+                <div className="mt-4 px-4 py-3 bg-[#12121A] border border-card-border rounded-xl flex items-center justify-center text-center">
+                    <p className="text-[11px] font-medium text-gray-500">
+                        Bu yıl <span className="font-bold text-gray-300">{noShowCount} randevunuza</span> katılamadığınız kaydedildi.
+                    </p>
                 </div>
             )}
 

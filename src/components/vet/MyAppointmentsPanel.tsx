@@ -6,6 +6,8 @@ import { Calendar, Clock, AlertCircle, X, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { apiService } from '@/services/apiService';
 import { usePet } from '@/context/PetContext';
+import { useAuth } from '@/context/AuthContext';
+import { useEffect } from 'react';
 
 interface MyAppointmentsPanelProps {
     appointments: any[];
@@ -13,8 +15,16 @@ interface MyAppointmentsPanelProps {
 
 export function MyAppointmentsPanel({ appointments }: MyAppointmentsPanelProps) {
     const { refreshAppointments } = usePet();
+    const { user } = useAuth();
     const [cancelModalId, setCancelModalId] = useState<string | null>(null);
     const [isCancelling, setIsCancelling] = useState(false);
+    const [noShowCount, setNoShowCount] = useState<number>(0);
+
+    useEffect(() => {
+        if (user?.id) {
+            apiService.getNoShowCount(user.id).then(setNoShowCount).catch(console.error);
+        }
+    }, [user?.id]);
 
     const handleCancel = async () => {
         if (!cancelModalId) return;
@@ -100,6 +110,15 @@ export function MyAppointmentsPanel({ appointments }: MyAppointmentsPanelProps) 
                     </div>
                 ))}
             </div>
+
+            {/* Faz 9: No-Show Nötr Bilgi */}
+            {noShowCount > 0 && (
+                <div className="mt-4 px-4 py-3 bg-zinc-50 dark:bg-[#18181b] border border-zinc-200 dark:border-zinc-800/60 rounded-xl flex items-center justify-center text-center">
+                    <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+                        Bu yıl <span className="font-bold text-zinc-700 dark:text-zinc-300">{noShowCount} randevunuza</span> katılamadığınız kaydedildi.
+                    </p>
+                </div>
+            )}
 
             {/* Cancel Confirmation Modal */}
             <AnimatePresence>
