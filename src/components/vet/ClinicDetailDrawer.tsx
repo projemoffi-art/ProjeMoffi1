@@ -81,14 +81,12 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
         setIsSendingMessage(true);
         
         const messageToSend = chatInput.trim();
-        console.log("GONDERILIYOR:", clinicId, currentUser?.id, messageToSend);
         
         // HEMEN temizle (Optimistic UI)
         setChatInput("");
         
         try {
             const success = await apiService.sendMessage(clinicId, currentUser.id, 'user', messageToSend);
-            console.log("SONUC:", success);
             if (success) {
                 // await ile bekletmiyoruz, arkaplanda yenilensin
                 loadConversation();

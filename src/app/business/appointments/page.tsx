@@ -285,7 +285,6 @@ export default function BusinessAppointmentsPage() {
     };
 
     const fetchAppointmentsFromDb = async () => {
-        console.log(`[RANDEVU-TEST] ${new Date().toISOString()} - Fetch BAŞLADI`);
         if (!user?.id) {
             console.warn("Klinik ID'si bulunamadı, kullanıcı oturumu yüklenmemiş olabilir.");
             return;
@@ -360,7 +359,6 @@ export default function BusinessAppointmentsPage() {
             const confirmed = mapped.filter((a: any) => a.status === 'confirmed' || a.status === 'completed');
             const pending = mapped.filter((a: any) => a.status === 'pending');
 
-            console.log(`[RANDEVU-TEST] ${new Date().toISOString()} - Gelen veri sayısı:`, list?.length, list);
             setAppointments(confirmed);
             setPendingRequests(pending);
         } catch (e) {
@@ -621,16 +619,11 @@ export default function BusinessAppointmentsPage() {
     const handleAttendanceChange = async (id: number | string, status: 'attended' | 'no_show' | null) => {
         if (!isSupabaseEnabled) return;
         
-        console.log(`[handleAttendanceChange] Başlıyor. ID: ${id}, Yeni Durum: ${status}`);
-        const currentApt = appointments.find(a => a.id === id);
-        console.log(`[handleAttendanceChange] Mevcut Durum: ${currentApt?.attendance_status}`);
-
         // Optimistic UI Update
         setAppointments(prev => prev.map(apt => apt.id === id ? { ...apt, attendance_status: status } : apt));
         
         try {
             await apiService.updateAttendanceStatus(id.toString(), status);
-            console.log(`[handleAttendanceChange] Başarılı! Veritabanı güncellendi.`);
             showToast(status === 'attended' ? 'Randevu "Geldi" olarak işaretlendi.' : status === 'no_show' ? 'Randevu "Gelmedi" olarak işaretlendi.' : 'Katılım durumu sıfırlandı.', "CheckCircle2", "text-emerald-400 font-bold");
         } catch (e: any) {
             console.error("[handleAttendanceChange] Katılım güncellenirken kritik HATA:", e?.message || e);
@@ -1575,11 +1568,7 @@ export default function BusinessAppointmentsPage() {
                                             <div className="flex items-center gap-3">
                                                 <div 
                                                     onClick={(e) => {
-                                                        console.log("TOGGLE TIKLANDI, ONCEKI isClosed:", exceptionForm.isClosed);
-                                                        setExceptionForm(prev => {
-                                                            console.log("TOGGLE ICINDE prev.isClosed:", prev.isClosed, "-> YENI:", !prev.isClosed);
-                                                            return { ...prev, isClosed: !prev.isClosed };
-                                                        });
+                                                        setExceptionForm(prev => ({ ...prev, isClosed: !prev.isClosed }));
                                                     }}
                                                     className={`w-10 h-5.5 rounded-full p-0.5 transition-colors duration-200 flex items-center cursor-pointer ${exceptionForm.isClosed ? 'bg-red-500' : 'bg-[#5B4D9D]'}`}
                                                 >

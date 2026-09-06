@@ -81,7 +81,6 @@ function VetPageContent() {
     const [cardCvc, setCardCvc] = useState("");
     const [paymentError, setPaymentError] = useState("");
     const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
-    const [showOtpModal, setShowOtpModal] = useState(false);
     const [otpCode, setOtpCode] = useState("");
     const [otpError, setOtpError] = useState("");
     const [isOtpProcessing, setIsOtpProcessing] = useState(false);
@@ -140,8 +139,6 @@ function VetPageContent() {
     const [clinicServices, setClinicServices] = useState<any[]>([]);
     const [selectedSvc, setSelectedSvc] = useState<any>(null);
     const [appointmentType, setAppointmentType] = useState<string>('');
-
-    console.log("Müşteri paneli render - clinicExceptions durumu:", clinicExceptions);
 
     // Otomatik Yorum Daveti
     useEffect(() => {
@@ -223,7 +220,7 @@ function VetPageContent() {
 
         const loadClinicExceptions = async () => {
             try {
-                console.log("İstisna çekilen clinicId:", selectedClinic?.id);
+                setLoadingExceptions(true); 
                 const today = new Date();
                 const todayStr = today.toLocaleDateString('sv-SE');
                 const future = new Date();
