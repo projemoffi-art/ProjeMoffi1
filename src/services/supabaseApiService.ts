@@ -2232,12 +2232,14 @@ export class SupabaseApiService implements IApiService {
 
     // Randevunun katılım durumunu günceller (Faz 9)
     async updateAttendanceStatus(appointmentId: string, attendanceStatus: 'attended' | 'no_show' | null): Promise<void> {
-        const { error } = await supabase
+        const { data, error } = await supabase
             .from('appointments')
             .update({ attendance_status: attendanceStatus })
-            .eq('id', appointmentId);
+            .eq('id', appointmentId)
+            .select();
 
         if (error) throw error;
+        if (!data || data.length === 0) throw new Error('Güncelleme 0 satır etkiledi - RLS engelliyor olabilir.');
     }
 
     // Bir müşterinin toplam 'gelmedi' (no_show) sayısını döndürür (Faz 9)

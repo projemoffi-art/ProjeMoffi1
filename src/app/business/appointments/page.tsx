@@ -621,14 +621,19 @@ export default function BusinessAppointmentsPage() {
     const handleAttendanceChange = async (id: number | string, status: 'attended' | 'no_show' | null) => {
         if (!isSupabaseEnabled) return;
         
+        console.log(`[handleAttendanceChange] Başlıyor. ID: ${id}, Yeni Durum: ${status}`);
+        const currentApt = appointments.find(a => a.id === id);
+        console.log(`[handleAttendanceChange] Mevcut Durum: ${currentApt?.attendance_status}`);
+
         // Optimistic UI Update
         setAppointments(prev => prev.map(apt => apt.id === id ? { ...apt, attendance_status: status } : apt));
         
         try {
             await apiService.updateAttendanceStatus(id.toString(), status);
+            console.log(`[handleAttendanceChange] Başarılı! Veritabanı güncellendi.`);
             showToast(status === 'attended' ? 'Randevu "Geldi" olarak işaretlendi.' : status === 'no_show' ? 'Randevu "Gelmedi" olarak işaretlendi.' : 'Katılım durumu sıfırlandı.', "CheckCircle2", "text-emerald-400 font-bold");
-        } catch (e) {
-            console.error("Katılım güncellenirken hata:", e);
+        } catch (e: any) {
+            console.error("[handleAttendanceChange] Katılım güncellenirken kritik HATA:", e?.message || e);
             // Revert on error
             fetchAppointmentsFromDb();
         }
@@ -1247,7 +1252,12 @@ export default function BusinessAppointmentsPage() {
 
                                             <button 
                                                 onClick={() => startConsultation(apt)}
-                                                className="px-4 py-2 rounded-xl bg-card dark:bg-white/5 border border-card-border text-sm font-bold hover:bg-white dark:bg-black hover:text-white dark:hover:bg-indigo-600 transition-colors"
+                                                disabled={apt.attendance_status === 'no_show'}
+                                                className={`px-4 py-2 rounded-xl border text-sm font-bold transition-colors ${
+                                                    apt.attendance_status === 'no_show'
+                                                    ? 'bg-gray-100 dark:bg-white/5 border-transparent text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
+                                                    : 'bg-card dark:bg-white/5 border-card-border hover:bg-white dark:bg-black hover:text-white dark:hover:bg-indigo-600'
+                                                }`}
                                             >
                                                 {apt.status === 'completed' ? 'Muayene Detayı' : 'Muayene Et'}
                                             </button>

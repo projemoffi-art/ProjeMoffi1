@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState } from 'react';
 import { apiService } from '@/services/apiService';
@@ -33,7 +33,7 @@ export function NoShowBadge({ userId }: NoShowBadgeProps) {
 
     return (
         <span className="ml-2 text-[10px] bg-amber-500/10 text-amber-500 font-bold px-2 py-0.5 rounded-full border border-amber-500/20 whitespace-nowrap">
-            ⚠️ {noShowCount} kez gelmedi
+            ⚠️ Bu kullanıcı toplam {noShowCount} kez gelmedi
         </span>
     );
 }

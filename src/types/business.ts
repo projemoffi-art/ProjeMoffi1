@@ -68,7 +68,7 @@ export interface BusinessOrder {
 // ============================
 // APPOINTMENTS (Vet)
 // ============================
-export type AppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
+export type AppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled';
 
 export interface BusinessAppointment {
     id: string;
