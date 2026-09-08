@@ -172,12 +172,21 @@ function VetPageContent() {
         const fetchNotifications = async () => {
             try {
                 const notifs = await apiService.getUnreadNotifications(user.id);
-                setUnreadNotifications((notifs || []).map(n => ({ ...n, isReadLocally: false })));
+                setUnreadNotifications(prev => {
+                    const locallyReadIds = new Set(prev.filter(p => p.isReadLocally).map(p => p.id));
+                    return (notifs || []).map(n => ({ 
+                        ...n, 
+                        isReadLocally: locallyReadIds.has(n.id) 
+                    }));
+                });
             } catch (err) {
                 console.error("Error fetching notifications:", err);
             }
         };
         fetchNotifications();
+
+        const intervalId = setInterval(fetchNotifications, 15000);
+        return () => clearInterval(intervalId);
     }, [user]);
 
     const handleNotificationClick = async (notifId: string) => {
