@@ -1311,19 +1311,31 @@ export default function BusinessAppointmentsPage() {
                                     <Bell className="w-5 h-5 text-orange-500 fill-current" /> Gelen İstekler ({pendingRequests.length})
                                 </h3>
 
-                                <AnimatePresence>
+                                <AnimatePresence mode="wait">
                                     {activeFilter === 'confirmed' ? (
-                                        <div className="text-center py-12 bg-gray-50 dark:bg-white/5 rounded-3xl border border-dashed border-card-border dark:border-card-border">
+                                        <motion.div 
+                                            key="confirmed-msg"
+                                            initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                                            className="text-center py-12 bg-gray-50 dark:bg-white/5 rounded-3xl border border-dashed border-card-border dark:border-card-border"
+                                        >
                                             <CheckCircle2 className="w-12 h-12 text-green-500/50 mx-auto mb-3" />
                                             <p className="text-gray-500 dark:text-gray-400 font-bold text-sm">Sadece onaylı randevular listeleniyor</p>
-                                        </div>
+                                        </motion.div>
                                     ) : pendingRequests.length === 0 ? (
-                                        <div className="text-center py-12 bg-gray-50 dark:bg-white/5 rounded-3xl border border-dashed border-card-border dark:border-card-border">
+                                        <motion.div 
+                                            key="empty-msg"
+                                            initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                                            className="text-center py-12 bg-gray-50 dark:bg-white/5 rounded-3xl border border-dashed border-card-border dark:border-card-border"
+                                        >
                                             <CheckCircle2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                                             <p className="text-gray-500 dark:text-gray-400 font-bold text-sm">Bekleyen istek yok</p>
-                                        </div>
+                                        </motion.div>
                                     ) : (
-                                        <div className="space-y-4">
+                                        <motion.div 
+                                            key="pending-list"
+                                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                            className="space-y-4"
+                                        >
                                             {pendingRequests.map(req => (
                                                 <motion.div
                                                     key={req.id}
@@ -1407,7 +1419,7 @@ export default function BusinessAppointmentsPage() {
                                                     )}
                                                 </motion.div>
                                             ))}
-                                        </div>
+                                        </motion.div>
                                     )}
                                 </AnimatePresence>
                             </div>
