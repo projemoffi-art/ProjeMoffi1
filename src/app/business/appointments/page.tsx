@@ -1158,7 +1158,7 @@ export default function BusinessAppointmentsPage() {
                         {/* Stats Row */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div className="bg-card dark:bg-[#121212] p-6 rounded-3xl border border-card-border dark:border-card-border shadow-moffi-card">
-                                <div className="text-gray-500 text-xs font-bold uppercase mb-2">Bugünkü Randevular</div>
+                                <div className="text-gray-500 text-xs font-bold uppercase mb-2">Toplam Randevu (Bugün)</div>
                                 <div className="text-4xl font-black text-foreground dark:text-white">{appointments.length + pendingRequests.length}</div>
                             </div>
                             <div className="bg-[#5B4D9D] p-6 rounded-3xl shadow-xl shadow-purple-500/20 text-white">
@@ -1166,9 +1166,9 @@ export default function BusinessAppointmentsPage() {
                                 <div className="text-4xl font-black">{pendingRequests.length}</div>
                             </div>
                             <div className="bg-card dark:bg-[#121212] p-6 rounded-3xl border border-card-border dark:border-card-border shadow-moffi-card">
-                                <div className="text-gray-500 text-xs font-bold uppercase mb-2">Tahmini Kazanç</div>
+                                <div className="text-gray-500 text-xs font-bold uppercase mb-2">Onaylanmış Randevu</div>
                                 <div className="text-4xl font-black text-green-500 flex items-baseline gap-1">
-                                    {(appointments.length * 650).toLocaleString()}<span className="text-sm">₺</span>
+                                    {appointments.length}
                                 </div>
                             </div>
                         </div>
