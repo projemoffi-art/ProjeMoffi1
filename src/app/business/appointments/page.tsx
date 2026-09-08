@@ -1211,7 +1211,6 @@ export default function BusinessAppointmentsPage() {
                                     </div>
                                 ) : (
                                     <>
-                                        {console.log("Sol liste render - appointments:", appointments, "uzunluk:", appointments?.length, "activeFilter:", activeFilter)}
                                         {appointments.length === 0 && <div className="text-center text-gray-500 dark:text-gray-400 py-10">Bugün için planlanmış randevu yok.</div>}
                                         {appointments.map((apt) => (
                                             <div key={apt.id} className="group flex items-center gap-6 p-4 rounded-2xl hover:bg-gray-50 dark:hover:bg-black/5 dark:bg-white/5 transition-colors border border-transparent hover:border-card-border dark:hover:border-card-border">
