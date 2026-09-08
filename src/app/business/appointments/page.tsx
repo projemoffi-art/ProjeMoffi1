@@ -1176,11 +1176,11 @@ export default function BusinessAppointmentsPage() {
                                 className={`p-6 rounded-3xl cursor-pointer transition-all border flex flex-col ${
                                     activeFilter === 'pending'
                                     ? 'bg-[#5B4D9D] shadow-xl shadow-purple-500/40 ring-4 ring-[#5B4D9D]/30 border-transparent text-white'
-                                    : 'bg-[#5B4D9D]/80 hover:bg-[#5B4D9D] shadow-xl shadow-purple-500/20 border-transparent text-white/90 opacity-80 hover:opacity-100'
+                                    : 'bg-card dark:bg-[#121212] border-card-border dark:border-card-border hover:border-[#5B4D9D]/50 shadow-moffi-card opacity-70 hover:opacity-100 text-foreground dark:text-white'
                                 }`}
                             >
-                                <div className="text-white/80 text-xs font-bold uppercase mb-2">Bekleyen Onay</div>
-                                <div className="text-4xl font-black text-white">{pendingRequests.length}</div>
+                                <div className={`text-xs font-bold uppercase mb-2 ${activeFilter === 'pending' ? 'text-white/80' : 'text-gray-500'}`}>Bekleyen Onay</div>
+                                <div className={`text-4xl font-black ${activeFilter === 'pending' ? 'text-white' : 'text-foreground dark:text-white'}`}>{pendingRequests.length}</div>
                             </div>
                             <div 
                                 onClick={() => setActiveFilter('confirmed')}
@@ -1211,6 +1211,7 @@ export default function BusinessAppointmentsPage() {
                                     </div>
                                 ) : (
                                     <>
+                                        {console.log("Sol liste render - appointments:", appointments, "uzunluk:", appointments?.length, "activeFilter:", activeFilter)}
                                         {appointments.length === 0 && <div className="text-center text-gray-500 dark:text-gray-400 py-10">Bugün için planlanmış randevu yok.</div>}
                                         {appointments.map((apt) => (
                                             <div key={apt.id} className="group flex items-center gap-6 p-4 rounded-2xl hover:bg-gray-50 dark:hover:bg-black/5 dark:bg-white/5 transition-colors border border-transparent hover:border-card-border dark:hover:border-card-border">
