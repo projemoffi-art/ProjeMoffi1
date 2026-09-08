@@ -71,3 +71,7 @@ scratch/
 *.BACKUP*
 
 .vercel
+
+# temp files
+openapi.json
+supabase/.temp/
