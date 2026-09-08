@@ -134,6 +134,9 @@ export default function BusinessAppointmentsPage() {
     const [showNotifications, setShowNotifications] = useState(false);
     const notifRef = useRef<HTMLDivElement>(null);
 
+    // Filter State
+    const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'confirmed'>('all');
+
     useEffect(() => {
         if (!user?.id || !isSupabaseEnabled) return;
         const fetchNotifications = async () => {
@@ -1157,15 +1160,36 @@ export default function BusinessAppointmentsPage() {
                     <div className="flex-1 space-y-6">
                         {/* Stats Row */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <div className="bg-card dark:bg-[#121212] p-6 rounded-3xl border border-card-border dark:border-card-border shadow-moffi-card">
+                            <div 
+                                onClick={() => setActiveFilter('all')}
+                                className={`p-6 rounded-3xl cursor-pointer transition-all border ${
+                                    activeFilter === 'all'
+                                    ? 'bg-[#5B4D9D]/5 border-[#5B4D9D] ring-2 ring-[#5B4D9D]/20 shadow-moffi-card'
+                                    : 'bg-card dark:bg-[#121212] border-card-border dark:border-card-border hover:border-[#5B4D9D]/50 shadow-moffi-card opacity-70 hover:opacity-100'
+                                }`}
+                            >
                                 <div className="text-gray-500 text-xs font-bold uppercase mb-2">Toplam Randevu (Bugün)</div>
                                 <div className="text-4xl font-black text-foreground dark:text-white">{appointments.length + pendingRequests.length}</div>
                             </div>
-                            <div className="bg-[#5B4D9D] p-6 rounded-3xl shadow-xl shadow-purple-500/20 text-white">
-                                <div className="text-black/60 dark:text-white/60 text-xs font-bold uppercase mb-2">Bekleyen Onay</div>
-                                <div className="text-4xl font-black">{pendingRequests.length}</div>
+                            <div 
+                                onClick={() => setActiveFilter('pending')}
+                                className={`p-6 rounded-3xl cursor-pointer transition-all border flex flex-col ${
+                                    activeFilter === 'pending'
+                                    ? 'bg-[#5B4D9D] shadow-xl shadow-purple-500/40 ring-4 ring-[#5B4D9D]/30 border-transparent text-white'
+                                    : 'bg-[#5B4D9D]/80 hover:bg-[#5B4D9D] shadow-xl shadow-purple-500/20 border-transparent text-white/90 opacity-80 hover:opacity-100'
+                                }`}
+                            >
+                                <div className="text-white/80 text-xs font-bold uppercase mb-2">Bekleyen Onay</div>
+                                <div className="text-4xl font-black text-white">{pendingRequests.length}</div>
                             </div>
-                            <div className="bg-card dark:bg-[#121212] p-6 rounded-3xl border border-card-border dark:border-card-border shadow-moffi-card">
+                            <div 
+                                onClick={() => setActiveFilter('confirmed')}
+                                className={`p-6 rounded-3xl cursor-pointer transition-all border ${
+                                    activeFilter === 'confirmed'
+                                    ? 'bg-green-500/5 border-green-500 ring-2 ring-green-500/20 shadow-moffi-card'
+                                    : 'bg-card dark:bg-[#121212] border-card-border dark:border-card-border hover:border-green-500/50 shadow-moffi-card opacity-70 hover:opacity-100'
+                                }`}
+                            >
                                 <div className="text-gray-500 text-xs font-bold uppercase mb-2">Onaylanmış Randevu</div>
                                 <div className="text-4xl font-black text-green-500 flex items-baseline gap-1">
                                     {appointments.length}
@@ -1180,92 +1204,101 @@ export default function BusinessAppointmentsPage() {
                             </div>
 
                             <div className="space-y-4">
-                                {appointments.length === 0 && <div className="text-center text-gray-500 dark:text-gray-400 py-10">Bugün için planlanmış randevu yok.</div>}
-                                {appointments.map((apt) => (
-                                    <div key={apt.id} className="group flex items-center gap-6 p-4 rounded-2xl hover:bg-gray-50 dark:hover:bg-black/5 dark:bg-white/5 transition-colors border border-transparent hover:border-card-border dark:hover:border-card-border">
-                                        <div className="font-mono font-bold text-gray-500 dark:text-gray-400 min-w-[3rem] text-right">{apt.time || "--:--"}</div>
-                                        <div className="relative">
-                                            <div className="w-16 h-16 rounded-2xl bg-gray-200 overflow-hidden">
-                                                <img src={apt.image} className="w-full h-full object-cover" />
-                                            </div>
-                                            <div className={`absolute -bottom-2 -right-2 w-6 h-6 rounded-full border-4 border-white dark:border-[#121212] flex items-center justify-center ${apt.status === 'completed' ? 'bg-[#5B4D9D]' : 'bg-green-500'}`}>
-                                                <CheckCircle2 className="w-3 h-3 text-white" />
-                                            </div>
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-3">
-                                                <div className="font-bold text-lg text-foreground dark:text-white">{apt.petName}</div>
-                                                {apt.status === 'completed' ? (
-                                                    <span className="text-[10px] bg-[#5B4D9D]/10 text-[#5B4D9D] font-bold px-2 py-0.5 rounded-full border border-[#5B4D9D]/20">Tamamlandı</span>
-                                                ) : (
-                                                    <span className="text-[10px] bg-green-500/10 text-green-500 font-bold px-2 py-0.5 rounded-full border border-green-500/20">Onaylı</span>
-                                                )}
-                                            </div>
-                                            <div className="text-sm text-gray-500 flex items-center gap-2 mt-1">
-                                                <User className="w-3 h-3" /> {apt.ownerName} • {apt.type}
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            {/* (Faz 9) Gelecek randevu değilse ve iptal değilse no-show butonları */}
-                                            {apt.status === 'completed' ? (
-                                                <div className="flex items-center gap-2 mr-2 border-r border-card-border pr-4">
-                                                    <span className="text-[10px] bg-green-500/10 text-green-500 font-bold px-2 py-0.5 rounded-full border border-green-500/20">
-                                                        ✓ Geldi
-                                                    </span>
-                                                </div>
-                                            ) : apt.status === 'confirmed' && apt.rawDate && new Date(apt.rawDate) < new Date(new Date().setHours(0,0,0,0)) ? (
-                                                <div className="flex items-center gap-2 mr-2 border-r border-card-border pr-4">
-                                                    {!apt.attendance_status ? (
-                                                        <>
-                                                            <button 
-                                                                onClick={() => handleAttendanceChange(apt.id, 'attended')}
-                                                                className="px-3 py-1.5 rounded-lg bg-green-500/10 text-green-600 dark:text-green-400 text-[10px] font-bold hover:bg-green-500/20 transition-colors"
-                                                            >
-                                                                Geldi ✓
-                                                            </button>
-                                                            <button 
-                                                                onClick={() => handleAttendanceChange(apt.id, 'no_show')}
-                                                                className="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-bold hover:bg-red-500/20 transition-colors"
-                                                            >
-                                                                Gelmedi ✗
-                                                            </button>
-                                                        </>
-                                                    ) : (
-                                                        <div className="flex flex-col items-center gap-1">
-                                                            {apt.attendance_status === 'attended' ? (
-                                                                <span className="text-[10px] bg-green-500/10 text-green-500 font-bold px-2 py-0.5 rounded-full border border-green-500/20">
-                                                                    ✓ Geldi
-                                                                </span>
-                                                            ) : (
-                                                                <span className="text-[10px] bg-red-500/10 text-red-500 font-bold px-2 py-0.5 rounded-full border border-red-500/20">
-                                                                    ✗ Gelmedi
-                                                                </span>
-                                                            )}
-                                                            <button 
-                                                                onClick={() => handleAttendanceChange(apt.id, null)}
-                                                                className="text-[9px] text-gray-400 hover:text-indigo-400 underline decoration-dotted"
-                                                            >
-                                                                Değiştir
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ) : null}
-
-                                            <button 
-                                                onClick={() => startConsultation(apt)}
-                                                disabled={apt.attendance_status === 'no_show'}
-                                                className={`px-4 py-2 rounded-xl border text-sm font-bold transition-colors ${
-                                                    apt.attendance_status === 'no_show'
-                                                    ? 'bg-gray-100 dark:bg-white/5 border-transparent text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
-                                                    : 'bg-card dark:bg-white/5 border-card-border hover:bg-white dark:bg-black hover:text-white dark:hover:bg-indigo-600'
-                                                }`}
-                                            >
-                                                {apt.status === 'completed' ? 'Muayene Detayı' : 'Muayene Et'}
-                                            </button>
-                                        </div>
+                                {activeFilter === 'pending' ? (
+                                    <div className="text-center py-10 bg-gray-50 dark:bg-white/5 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800">
+                                        <p className="text-gray-500 dark:text-gray-300 font-bold">Sadece Bekleyen İstekler listeleniyor.</p>
+                                        <p className="text-xs text-gray-400 mt-2">Onaylı randevuları görmek için "Toplam" veya "Onaylanmış" filtresine tıklayın.</p>
                                     </div>
-                                ))}
+                                ) : (
+                                    <>
+                                        {appointments.length === 0 && <div className="text-center text-gray-500 dark:text-gray-400 py-10">Bugün için planlanmış randevu yok.</div>}
+                                        {appointments.map((apt) => (
+                                            <div key={apt.id} className="group flex items-center gap-6 p-4 rounded-2xl hover:bg-gray-50 dark:hover:bg-black/5 dark:bg-white/5 transition-colors border border-transparent hover:border-card-border dark:hover:border-card-border">
+                                                <div className="font-mono font-bold text-gray-500 dark:text-gray-400 min-w-[3rem] text-right">{apt.time || "--:--"}</div>
+                                                <div className="relative">
+                                                    <div className="w-16 h-16 rounded-2xl bg-gray-200 overflow-hidden">
+                                                        <img src={apt.image} className="w-full h-full object-cover" />
+                                                    </div>
+                                                    <div className={`absolute -bottom-2 -right-2 w-6 h-6 rounded-full border-4 border-white dark:border-[#121212] flex items-center justify-center ${apt.status === 'completed' ? 'bg-[#5B4D9D]' : 'bg-green-500'}`}>
+                                                        <CheckCircle2 className="w-3 h-3 text-white" />
+                                                    </div>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="font-bold text-lg text-foreground dark:text-white">{apt.petName}</div>
+                                                        {apt.status === 'completed' ? (
+                                                            <span className="text-[10px] bg-[#5B4D9D]/10 text-[#5B4D9D] font-bold px-2 py-0.5 rounded-full border border-[#5B4D9D]/20">Tamamlandı</span>
+                                                        ) : (
+                                                            <span className="text-[10px] bg-green-500/10 text-green-500 font-bold px-2 py-0.5 rounded-full border border-green-500/20">Onaylı</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-sm text-gray-500 flex items-center gap-2 mt-1">
+                                                        <User className="w-3 h-3" /> {apt.ownerName} • {apt.type}
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    {/* (Faz 9) Gelecek randevu değilse ve iptal değilse no-show butonları */}
+                                                    {apt.status === 'completed' ? (
+                                                        <div className="flex items-center gap-2 mr-2 border-r border-card-border pr-4">
+                                                            <span className="text-[10px] bg-green-500/10 text-green-500 font-bold px-2 py-0.5 rounded-full border border-green-500/20">
+                                                                ✓ Geldi
+                                                            </span>
+                                                        </div>
+                                                    ) : apt.status === 'confirmed' && apt.rawDate && new Date(apt.rawDate) < new Date(new Date().setHours(0,0,0,0)) ? (
+                                                        <div className="flex items-center gap-2 mr-2 border-r border-card-border pr-4">
+                                                            {!apt.attendance_status ? (
+                                                                <>
+                                                                    <button 
+                                                                        onClick={() => handleAttendanceChange(apt.id, 'attended')}
+                                                                        className="px-3 py-1.5 rounded-lg bg-green-500/10 text-green-600 dark:text-green-400 text-[10px] font-bold hover:bg-green-500/20 transition-colors"
+                                                                    >
+                                                                        Geldi ✓
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={() => handleAttendanceChange(apt.id, 'no_show')}
+                                                                        className="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-bold hover:bg-red-500/20 transition-colors"
+                                                                    >
+                                                                        Gelmedi ✗
+                                                                    </button>
+                                                                </>
+                                                            ) : (
+                                                                <div className="flex flex-col items-center gap-1">
+                                                                    {apt.attendance_status === 'attended' ? (
+                                                                        <span className="text-[10px] bg-green-500/10 text-green-500 font-bold px-2 py-0.5 rounded-full border border-green-500/20">
+                                                                            ✓ Geldi
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="text-[10px] bg-red-500/10 text-red-500 font-bold px-2 py-0.5 rounded-full border border-red-500/20">
+                                                                            ✗ Gelmedi
+                                                                        </span>
+                                                                    )}
+                                                                    <button 
+                                                                        onClick={() => handleAttendanceChange(apt.id, null)}
+                                                                        className="text-[9px] text-gray-400 hover:text-indigo-400 underline decoration-dotted"
+                                                                    >
+                                                                        Değiştir
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ) : null}
+
+                                                    <button 
+                                                        onClick={() => startConsultation(apt)}
+                                                        disabled={apt.attendance_status === 'no_show'}
+                                                        className={`px-4 py-2 rounded-xl border text-sm font-bold transition-colors ${
+                                                            apt.attendance_status === 'no_show'
+                                                            ? 'bg-gray-100 dark:bg-white/5 border-transparent text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
+                                                            : 'bg-card dark:bg-white/5 border-card-border hover:bg-white dark:bg-black hover:text-white dark:hover:bg-indigo-600'
+                                                        }`}
+                                                    >
+                                                        {apt.status === 'completed' ? 'Muayene Detayı' : 'Muayene Et'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -1279,7 +1312,12 @@ export default function BusinessAppointmentsPage() {
                                 </h3>
 
                                 <AnimatePresence>
-                                    {pendingRequests.length === 0 ? (
+                                    {activeFilter === 'confirmed' ? (
+                                        <div className="text-center py-12 bg-gray-50 dark:bg-white/5 rounded-3xl border border-dashed border-card-border dark:border-card-border">
+                                            <CheckCircle2 className="w-12 h-12 text-green-500/50 mx-auto mb-3" />
+                                            <p className="text-gray-500 dark:text-gray-400 font-bold text-sm">Sadece onaylı randevular listeleniyor</p>
+                                        </div>
+                                    ) : pendingRequests.length === 0 ? (
                                         <div className="text-center py-12 bg-gray-50 dark:bg-white/5 rounded-3xl border border-dashed border-card-border dark:border-card-border">
                                             <CheckCircle2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                                             <p className="text-gray-500 dark:text-gray-400 font-bold text-sm">Bekleyen istek yok</p>
