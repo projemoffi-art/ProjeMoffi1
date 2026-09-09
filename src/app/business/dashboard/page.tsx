@@ -1,17 +1,15 @@
 "use client";
 
-import { BusinessSidebar } from "@/components/business/Sidebar";
 import { AnalyticsChart } from "@/components/business/AnalyticsChart";
 import { CreateCampaignModal } from "@/components/business/CreateCampaignModal";
 import { useAuth, User } from "@/context/AuthContext";
-import { ArrowUpRight, Users, Eye, MousePointerClick, Wallet, Megaphone, LucideIcon, Map as MapIcon, Bell, Calendar, Menu } from "lucide-react";
+import { ArrowUpRight, Users, Eye, MousePointerClick, Wallet, Megaphone, LucideIcon, Map as MapIcon, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import React from "react";
 
 import { apiService } from "@/services/apiService"; // imported real api
 
 export default function BusinessDashboard() {
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
     const [isCampaignModalOpen, setIsCampaignModalOpen] = React.useState(false); // Modal State
     const { user, isSupabaseEnabled } = useAuth();
     
@@ -62,7 +60,7 @@ export default function BusinessDashboard() {
     const appointmentsCount = dashboardStats.appointmentsCount || 0;
 
     return (
-        <div className="flex min-h-screen font-sans">
+        <div className="p-4 md:p-8 font-sans w-full max-w-7xl mx-auto">
             {/* Modal */}
             <CreateCampaignModal
                 isOpen={isCampaignModalOpen}
@@ -70,61 +68,22 @@ export default function BusinessDashboard() {
                 onCreated={handleCampaignCreated}
             />
 
-            {/* Sidebar */}
-            <BusinessSidebar
-                isMobileOpen={isMobileMenuOpen}
-                onMobileClose={() => setIsMobileMenuOpen(false)}
-            />
+            {/* Page Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 md:mb-10">
+                <div>
+                    <h1 className="text-2xl md:text-3xl font-black text-foreground tracking-tight mb-1">Kontrol Paneli</h1>
+                    <p className="text-xs md:text-base text-gray-500 font-medium">Hoşgeldin, {user?.username || 'Admin'} 👋</p>
+                </div>
+                <button
+                    onClick={() => setIsCampaignModalOpen(true)}
+                    className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-200 hover:shadow-indigo-300 hover:-translate-y-0.5 transition-all whitespace-nowrap"
+                >
+                    + Yeni Kampanya
+                </button>
+            </div>
 
-            {/* Main Content */}
-            <main className="flex-1 p-4 md:p-8 md:pl-80 transition-all duration-300 w-full">
-                {/* Header */}
-                <header className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8 md:mb-10">
-                    <div className="flex items-center gap-4">
-                        {/* Mobile Menu Button */}
-                        <button
-                            onClick={() => setIsMobileMenuOpen(true)}
-                            className="w-10 h-10 rounded-xl bg-card border border-card-border/50 flex items-center justify-center text-foreground shadow-moffi-card md:hidden"
-                        >
-                            <Menu className="w-5 h-5" />
-                        </button>
-
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-black text-foreground tracking-tight mb-1">Kontrol Paneli</h1>
-                            <p className="text-xs md:text-base text-gray-500 font-medium">Hoşgeldin, {user?.username || 'Admin'} 👋</p>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 md:gap-4 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
-                        <div className="flex items-center gap-2 bg-card px-3 py-2 rounded-xl border border-card-border/50 shadow-moffi-card text-gray-500 text-xs md:text-sm font-medium whitespace-nowrap">
-                            <Calendar className="w-4 h-4" />
-                            <span>{new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                        </div>
-                        <button className="w-10 h-10 rounded-xl bg-card border border-card-border/50 flex flex-shrink-0 items-center justify-center text-gray-500 shadow-moffi-card relative hover:bg-gray-50">
-                            <Bell className="w-5 h-5" />
-                            <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-                        </button>
-                        <div className="h-8 w-[1px] bg-gray-200 hidden md:block" />
-                        <div className="bg-card px-5 py-2.5 rounded-xl border border-card-border/50 shadow-moffi-card flex flex-shrink-0 items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center">
-                                <Wallet className="w-4 h-4 text-indigo-600" />
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Bakiye</span>
-                                <span className="text-sm font-black text-foreground">₺{dashboardStats.totalBalance.toLocaleString('tr-TR')}</span>
-                            </div>
-                        </div>
-                        <button
-                            onClick={() => setIsCampaignModalOpen(true)}
-                            className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-200 hover:shadow-indigo-300 hover:-translate-y-0.5 transition-all whitespace-nowrap hidden md:block"
-                        >
-                            + Yeni Kampanya
-                        </button>
-                    </div>
-                </header>
-
-                {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                     <StatCard
                         title="Toplam Gösterim"
                         value={(appointmentsCount * 3).toString()}
@@ -224,7 +183,6 @@ export default function BusinessDashboard() {
                     </div>
                 </div>
 
-            </main>
         </div>
     );
 }

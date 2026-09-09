@@ -7,7 +7,6 @@ import {
     Clock, Coffee, Save, Calendar, Heart, Send, Star, MessageSquare
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BusinessSidebar as Sidebar } from "@/components/business/Sidebar";
 import { usePet } from "@/context/PetContext";
 import { useAuth } from "@/context/AuthContext";
 import { showToast, cn } from "@/lib/utils";
@@ -1036,16 +1035,13 @@ export default function BusinessAppointmentsPage() {
     };
 
     return (
-        <div className="flex min-h-screen font-sans">
-            <Sidebar />
-
-            <main className="flex-1 p-8 ml-0 md:ml-20 lg:ml-72 transition-all duration-300">
-                {/* HEADER */}
-                <header className="flex justify-between items-center mb-10">
-                    <div>
-                        <h1 className="text-3xl font-black text-foreground dark:text-white mb-2">Randevu Yönetimi</h1>
-                        <p className="text-gray-500 font-medium">VetLife Global Clinic • 12 Aralık 2025</p>
-                    </div>
+        <div className="p-4 md:p-8 font-sans w-full max-w-7xl mx-auto">
+            {/* HEADER */}
+            <div className="flex justify-between items-center mb-10">
+                <div>
+                    <h1 className="text-3xl font-black text-foreground dark:text-white mb-2">Randevu Yönetimi</h1>
+                    <p className="text-gray-500 font-medium">VetLife Global Clinic • 12 Aralık 2025</p>
+                </div>
                     <div className="flex items-center gap-4">
                         <div className="relative z-40" ref={notifRef}>
                             <button 
@@ -1114,8 +1110,7 @@ export default function BusinessAppointmentsPage() {
                             <span className="font-bold text-sm">{user?.user_metadata?.full_name || user?.email?.split('@')[0] || "Klinik Yöneticisi"}</span>
                         </div>
                     </div>
-                </header>
-
+                </div>
                 {/* TABS */}
                 <div className="flex gap-4 mb-8 border-b border-zinc-200 dark:border-[#27272a] pb-px">
                     <button 
@@ -1175,23 +1170,23 @@ export default function BusinessAppointmentsPage() {
                                 onClick={() => setActiveFilter('pending')}
                                 className={`p-6 rounded-3xl cursor-pointer transition-all border flex flex-col ${
                                     activeFilter === 'pending'
-                                    ? 'bg-[#5B4D9D] shadow-xl shadow-purple-500/40 ring-4 ring-[#5B4D9D]/30 border-transparent text-white'
-                                    : 'bg-card dark:bg-[#121212] border-card-border dark:border-card-border hover:border-[#5B4D9D]/50 shadow-moffi-card opacity-70 hover:opacity-100 text-foreground dark:text-white'
+                                    ? 'bg-[#5B4D9D]/5 border-[#5B4D9D] ring-2 ring-[#5B4D9D]/20 shadow-moffi-card'
+                                    : 'bg-card dark:bg-[#121212] border-card-border dark:border-card-border hover:border-[#5B4D9D]/50 shadow-moffi-card opacity-70 hover:opacity-100'
                                 }`}
                             >
-                                <div className={`text-xs font-bold uppercase mb-2 ${activeFilter === 'pending' ? 'text-white/80' : 'text-gray-500'}`}>Bekleyen Onay</div>
-                                <div className={`text-4xl font-black ${activeFilter === 'pending' ? 'text-white' : 'text-foreground dark:text-white'}`}>{pendingRequests.length}</div>
+                                <div className="text-gray-500 text-xs font-bold uppercase mb-2">Bekleyen Onay</div>
+                                <div className="text-4xl font-black text-foreground dark:text-white">{pendingRequests.length}</div>
                             </div>
                             <div 
                                 onClick={() => setActiveFilter('confirmed')}
                                 className={`p-6 rounded-3xl cursor-pointer transition-all border ${
                                     activeFilter === 'confirmed'
-                                    ? 'bg-green-500/5 border-green-500 ring-2 ring-green-500/20 shadow-moffi-card'
-                                    : 'bg-card dark:bg-[#121212] border-card-border dark:border-card-border hover:border-green-500/50 shadow-moffi-card opacity-70 hover:opacity-100'
+                                    ? 'bg-[#5B4D9D]/5 border-[#5B4D9D] ring-2 ring-[#5B4D9D]/20 shadow-moffi-card'
+                                    : 'bg-card dark:bg-[#121212] border-card-border dark:border-card-border hover:border-[#5B4D9D]/50 shadow-moffi-card opacity-70 hover:opacity-100'
                                 }`}
                             >
                                 <div className="text-gray-500 text-xs font-bold uppercase mb-2">Onaylanmış Randevu</div>
-                                <div className="text-4xl font-black text-green-500 flex items-baseline gap-1">
+                                <div className="text-4xl font-black text-foreground dark:text-white flex items-baseline gap-1">
                                     {appointments.length}
                                 </div>
                             </div>
@@ -2029,8 +2024,6 @@ export default function BusinessAppointmentsPage() {
                         </div>
                     </div>
                 )}
-            </main>
-
             {/* CONSULTATION FORM MODAL */}
             <AnimatePresence>
                 {isModalOpen && selectedApt && (
