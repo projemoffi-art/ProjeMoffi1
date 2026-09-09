@@ -1208,7 +1208,7 @@ export default function BusinessAppointmentsPage() {
                                     <>
                                         {appointments.length === 0 && <div className="text-center text-gray-500 dark:text-gray-400 py-10">Bugün için planlanmış randevu yok.</div>}
                                         {appointments.map((apt) => (
-                                            <div key={apt.id} className="group flex items-center gap-6 p-4 rounded-2xl hover:bg-gray-50 dark:hover:bg-black/5 dark:bg-white/5 transition-colors border border-transparent hover:border-card-border dark:hover:border-card-border">
+                                            <div key={apt.id} className="group flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 p-4 rounded-2xl hover:bg-gray-50 dark:hover:bg-black/5 dark:bg-white/5 transition-colors border border-transparent hover:border-card-border dark:hover:border-card-border">
                                                 <div className="font-mono font-bold text-gray-500 dark:text-gray-400 min-w-[3rem] text-right">{apt.time || "--:--"}</div>
                                                 <div className="relative">
                                                     <div className="w-16 h-16 rounded-2xl bg-gray-200 overflow-hidden">
@@ -1218,20 +1218,20 @@ export default function BusinessAppointmentsPage() {
                                                         <CheckCircle2 className="w-3 h-3 text-white" />
                                                     </div>
                                                 </div>
-                                                <div className="flex-1">
+                                                <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="font-bold text-lg text-foreground dark:text-white">{apt.petName}</div>
+                                                        <div className="font-bold text-lg text-foreground dark:text-white truncate">{apt.petName}</div>
                                                         {apt.status === 'completed' ? (
-                                                            <span className="text-[10px] bg-[#5B4D9D]/10 text-[#5B4D9D] font-bold px-2 py-0.5 rounded-full border border-[#5B4D9D]/20">Tamamlandı</span>
+                                                            <span className="text-[10px] bg-[#5B4D9D]/10 text-[#5B4D9D] font-bold px-2 py-0.5 rounded-full border border-[#5B4D9D]/20 shrink-0">Tamamlandı</span>
                                                         ) : (
-                                                            <span className="text-[10px] bg-green-500/10 text-green-500 font-bold px-2 py-0.5 rounded-full border border-green-500/20">Onaylı</span>
+                                                            <span className="text-[10px] bg-green-500/10 text-green-500 font-bold px-2 py-0.5 rounded-full border border-green-500/20 shrink-0">Onaylı</span>
                                                         )}
                                                     </div>
-                                                    <div className="text-sm text-gray-500 flex items-center gap-2 mt-1">
-                                                        <User className="w-3 h-3" /> {apt.ownerName} • {apt.type}
+                                                    <div className="text-sm text-gray-500 flex items-center gap-2 mt-1 truncate">
+                                                        <User className="w-3 h-3 shrink-0" /> <span className="truncate">{apt.ownerName} • {apt.type}</span>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-3 w-full sm:w-auto justify-end sm:justify-start">
                                                     {/* (Faz 9) Gelecek randevu değilse ve iptal değilse no-show butonları */}
                                                     {apt.status === 'completed' ? (
                                                         <div className="flex items-center gap-2 mr-2 border-r border-card-border pr-4">
