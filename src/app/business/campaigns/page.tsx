@@ -92,8 +92,9 @@ export default function BusinessCampaignsPage() {
     };
 
     return (
-        <div className="p-4 md:p-8">
-            <header className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
+        <div className="p-4 md:p-8 font-sans w-full max-w-7xl mx-auto">
+            {/* Page Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 md:mb-10">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-black tracking-tight flex items-center gap-2">
                         <Megaphone className="w-8 h-8 text-indigo-600" /> Günün Fırsatları
@@ -106,7 +107,7 @@ export default function BusinessCampaignsPage() {
                 >
                     {isCreating ? 'İptal Et' : <><Plus className="w-4 h-4"/> Yeni Fırsat Yarat</>}
                 </button>
-            </header>
+            </div>
 
             {isCreating && (
                 <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-[#121212] rounded-2xl p-6 shadow-xl mb-8 border border-card-border">

@@ -131,6 +131,7 @@ export function LoginForm({ setView, onComplete }: { setView: (v: AuthView) => v
         if (result.success) {
             onComplete();
         } else {
+            console.error("LOGIN ERROR FROM SUPABASE:", result.error);
             setError(translateError(result.error));
         }
     };
