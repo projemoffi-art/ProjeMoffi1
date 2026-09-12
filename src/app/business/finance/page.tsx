@@ -83,21 +83,13 @@ export default function BusinessFinancePage() {
     const maxMonthly = Math.max(...monthlyData.map(d => d.amount));
 
     return (
-        <div className="flex min-h-screen font-sans">
-            <BusinessSidebar isMobileOpen={isMobileMenuOpen} onMobileClose={() => setIsMobileMenuOpen(false)} />
-
-            <main className="flex-1 p-4 md:p-8 md:pl-80 transition-all duration-300 w-full">
-                {/* Header */}
-                <header className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => setIsMobileMenuOpen(true)} className="w-10 h-10 rounded-xl bg-card border border-card-border/50 flex items-center justify-center md:hidden">
-                            <Menu className="w-5 h-5 text-gray-600" />
-                        </button>
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-black text-foreground tracking-tight">Finans</h1>
-                            <p className="text-sm text-gray-500">Gelir, komisyon ve ödeme takibi</p>
-                        </div>
-                    </div>
+        <div className="p-4 md:p-8 font-sans w-full max-w-7xl mx-auto">
+            {/* Header */}
+            <header className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
+                <div>
+                    <h1 className="text-2xl md:text-3xl font-black text-foreground tracking-tight">Finans</h1>
+                    <p className="text-sm text-gray-500">Gelir, komisyon ve ödeme takibi</p>
+                </div>
                     <button
                         onClick={() => setShowPayoutModal(true)}
                         className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-green-200 hover:shadow-green-300 hover:-translate-y-0.5 transition-all flex items-center gap-2 self-start"
@@ -244,7 +236,7 @@ export default function BusinessFinancePage() {
                         </div>
                     </div>
                 </div>
-            </main>
+            </div>
 
             {/* Payout Modal */}
             <AnimatePresence>
