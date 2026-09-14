@@ -3,18 +3,17 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root, .light {
-  --background: #ffffff;
-  --foreground: #171717;
-  --card-bg: #f8fafc; /* Changed from rgba(255, 255, 255, 0.7) to solid subtle gray for better contrast */
-  --card-border: rgba(0, 0, 0, 0.08);
-  --accent: #22C55E;
-  --secondary-text: #6B7280;
-  --glass-bg: rgba(255, 255, 255, 0.85); /* Increased opacity to reduce transparency issues */
+  --background: #FBF7F2;
+  --foreground: #2D2621;
+  --card-bg: #FFFFFF;
+  --card-border: rgba(45, 38, 33, 0.08);
+  --accent: #E28F5B;
+  --accent-secondary: #8BA888;
+  --secondary-text: #7A6F66;
+  --glass-bg: rgba(255, 255, 255, 0.85);
   --glass-border: rgba(0, 0, 0, 0.05);
+  --brand-purple: #8B5A83;
   --emergency: #FF3B30;
-  --brand-purple: #5B4D9D;
-
-  /* LIGHT MODE CONFIG: Using @theme handles variables, no hardcoded overrides needed here anymore */
 }
 
 html, body {
@@ -28,6 +27,7 @@ html, body {
   --color-card: var(--card-bg);
   --color-card-border: var(--card-border);
   --color-accent: var(--accent);
+  --color-accent-secondary: var(--accent-secondary);
   --color-secondary: var(--secondary-text);
   --color-glass: var(--glass-bg);
   --color-glass-border: var(--glass-border);
@@ -328,20 +328,41 @@ nextjs-portal,
 }
 
 .dark {
-  --background: #0f0f11; /* Deeper Dark Space Canvas */
-  --foreground: #e4e4e7; /* Platinum Silver */
-  --card-bg: #1c1c21;    /* Premium Soft Obsidian Gray for Cards & Panels */
-  --card-border: rgba(255, 255, 255, 0.06); /* Micro Subtle Border */
-  --accent: #10B981;    /* Vibrant Emerald Accent */
-  --secondary-text: #9ca3af; /* Muted Soft Steel */
-  --glass-bg: rgba(28, 28, 33, 0.75); /* Frosted Obsidian Glass */
+  --background: #1C1815;
+  --foreground: #EDE6DF;
+  --card-bg: #262019;
+  --card-border: rgba(255, 255, 255, 0.06);
+  --accent: #F0A874;
+  --accent-secondary: #A3C29E;
+  --secondary-text: #B3A69B;
+  --glass-bg: rgba(28, 28, 33, 0.75);
   --glass-border: rgba(255, 255, 255, 0.06);
+  --brand-purple: #B586AC;
   --emergency: #EF4444;
-  --brand-purple: #8B5CF6;
 
   /* Global Overrides for theme container */
   background-color: var(--background);
   color: var(--foreground);
+}
+
+.theme-vet {
+  --background: #F5F9F8;
+  --foreground: #1E2B2A;
+  --card-bg: #FFFFFF;
+  --card-border: rgba(30, 43, 42, 0.07);
+  --accent: #4C8CA8;
+  --accent-secondary: #7FAE8E;
+  --secondary-text: #64748B;
+  --emergency: #FF3B30;
+}
+.dark .theme-vet {
+  --background: #10171A;
+  --foreground: #DCE6E4;
+  --card-bg: #1A2327;
+  --card-border: rgba(255, 255, 255, 0.06);
+  --accent: #6BB0D6;
+  --accent-secondary: #8FC49E;
+  --secondary-text: #94A3A6;
 }
 
 @layer utilities {

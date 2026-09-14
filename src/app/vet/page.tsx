@@ -739,7 +739,7 @@ function VetPageContent() {
     }, [activePet?.id, appointments]);
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-[#f8f9fc] via-[#f1f3f7] to-[#f8f9fc] dark:from-[#09090b] dark:via-[#0d0d11] dark:to-[#09090b] pb-32 font-sans relative text-zinc-800 dark:text-[#fafafa] selection:bg-indigo-500/30 transition-colors duration-300">
+        <div className="theme-vet min-h-screen bg-gradient-to-b from-[#f8f9fc] via-[#f1f3f7] to-[#f8f9fc] dark:from-[#09090b] dark:via-[#0d0d11] dark:to-[#09090b] pb-32 font-sans relative text-zinc-800 dark:text-[#fafafa] selection:bg-indigo-500/30 transition-colors duration-300">
             {/* Minimal solid design - no cheap floating background blobs */}
 
             {/* HEADER */}
