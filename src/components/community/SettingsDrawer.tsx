@@ -13,7 +13,7 @@ import {
     Users, Eye, MessageSquare, Tag, Plus,
     ArrowRight, Monitor, Layout,
     EyeOff, BellRing, Mail, AlertTriangle,
-    Clock, Moon, Sun, Timer, Coffee, Type, Glasses, Layers, Briefcase, Crown, QrCode
+    Clock, Moon, Sun, Timer, Coffee, Type, Glasses, Layers, Briefcase, Crown, QrCode, Building2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -372,6 +372,12 @@ const MainView = ({ user, setView, handleToggle, handleExport, isExporting, expo
                     <ChevronRight className="w-5 h-5 text-emerald-500/50 group-hover:text-emerald-500 transition-colors group-hover:translate-x-1 transform" />
                 </div>
             </div>
+        )}
+
+        {(user?.role === 'business' || user?.role === 'admin') && (
+            <Section title="İşletme Portalı">
+                <ActionRow icon={Building2} label="İşletme Paneline Geç" desc="Müşterilerinizi ve randevularınızı yönetin." onClick={() => { window.location.href = '/business/dashboard'; }} />
+            </Section>
         )}
 
         <Section title="Hesap Merkezi & Profil">
