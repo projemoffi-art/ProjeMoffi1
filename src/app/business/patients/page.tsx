@@ -34,8 +34,7 @@ export default function BusinessPatientsPage() {
     );
 
     return (
-        <div className="flex-1 bg-gray-50/50 dark:bg-[#0a0a0a] min-h-screen">
-            <div className="max-w-6xl mx-auto p-4 md:p-8">
+        <div className="p-4 md:p-8 font-sans w-full max-w-7xl mx-auto">
                 {/* Header Section */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                     <div>
@@ -148,7 +147,6 @@ export default function BusinessPatientsPage() {
                         </div>
                     )}
                 </div>
-            </div>
         </div>
     );
 }
