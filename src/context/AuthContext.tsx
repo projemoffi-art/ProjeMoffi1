@@ -249,14 +249,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         joinedAt: (profile as any).created_at || new Date().toISOString(),
                         stats: profile.stats || { posts: 0, followers: 0, following: 0 },
                         subscription_status: profile.subscription_status,
-                        businessType: (profile as any).businessType,
-                        businessName: (profile as any).businessName,
-                        businessApproved: (profile as any).businessApproved,
-                        kybStatus: (profile as any).kybStatus,
-                        taxId: (profile as any).taxId,
+                        businessType: (profile as any).business_type || (profile as any).businessType,
+                        businessName: (profile as any).business_name || (profile as any).businessName,
+                        businessApproved: (profile as any).business_approved || (profile as any).businessApproved,
+                        kybStatus: (profile as any).kyb_status || (profile as any).kybStatus,
+                        taxId: (profile as any).tax_id || (profile as any).taxId,
                         iban: (profile as any).iban,
                         address: (profile as any).address,
-                        ownerName: (profile as any).ownerName,
+                        ownerName: (profile as any).owner_name || (profile as any).ownerName,
                         phone: profile.phone,
                         settings: {
                             appearance: (profile as any).settings?.appearance || { auraStyle: 'minimal', accentColor: 'cyan', font: 'font-sans', auraVisible: true, auraIntensity: 100 },
@@ -336,21 +336,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         setUser(prev => prev ? {
                             ...prev,
                             role: profile.role || 'user',
-                            businessApproved: (profile as any).businessApproved,
-                            kybStatus: (profile as any).kybStatus,
-                            kybRejectionReason: (profile as any).kybRejectionReason
+                            businessApproved: (profile as any).business_approved || (profile as any).businessApproved,
+                            kybStatus: (profile as any).kyb_status || (profile as any).kybStatus,
+                            kybRejectionReason: (profile as any).kyb_rejection_reason || (profile as any).kybRejectionReason
                         } : null);
                         
-                        const label = (profile as any).kybStatus === 'approved' ? 'Tebrikler! 🎉' : 'KYB Başvurusu Reddedildi. ❌';
-                        const details = (profile as any).kybStatus === 'approved'
+                        const currentKyb = (profile as any).kyb_status || (profile as any).kybStatus;
+                        const label = currentKyb === 'approved' ? 'Tebrikler! 🎉' : 'KYB Başvurusu Reddedildi. ❌';
+                        const details = currentKyb === 'approved'
                             ? 'İşletme/Hekim kaydınız platform yöneticisi tarafından onaylandı! Panel özellikleriniz aktif edildi.'
-                            : `Başvurunuz reddedildi. Gerekçe: ${(profile as any).kybRejectionReason || 'Belirtilmedi'}`;
+                            : `Başvurunuz reddedildi. Gerekçe: ${(profile as any).kyb_rejection_reason || (profile as any).kybRejectionReason || 'Belirtilmedi'}`;
 
                         window.dispatchEvent(new CustomEvent('moffi-toast', {
                             detail: {
                                 message: `Kurumsal Doğrulama: ${label} ${details}`,
-                                icon: (profile as any).kybStatus === 'approved' ? 'ShieldCheck' : 'ShieldAlert',
-                                color: (profile as any).kybStatus === 'approved' ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'
+                                icon: currentKyb === 'approved' ? 'ShieldCheck' : 'ShieldAlert',
+                                color: currentKyb === 'approved' ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'
                             }
                         }));
                     }

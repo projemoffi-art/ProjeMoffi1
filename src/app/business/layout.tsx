@@ -28,7 +28,7 @@ export default function BusinessLayout({ children }: { children: React.ReactNode
     const isApproved = user.businessApproved === true || (user as any).business_approved === true || user.role === 'admin';
     const kybStatus = user.kybStatus || (user as any).kyb_status || 'pending';
     const rejectionReason = (user as any).kyb_rejection_reason || '';
-
+    
     if (user.role === 'business' && !isApproved) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 flex items-center justify-center p-6 font-sans">

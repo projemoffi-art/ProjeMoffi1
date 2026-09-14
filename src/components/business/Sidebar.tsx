@@ -67,7 +67,7 @@ export function BusinessSidebar({ isMobileOpen = false, onMobileClose }: Sidebar
             </div>
 
             {/* NAV ITEMS */}
-            <nav className="flex-1 space-y-1.5">
+            <nav className="flex-1 space-y-1.5 overflow-y-auto pb-4 scrollbar-thin scrollbar-thumb-zinc-200 dark:scrollbar-thumb-white/10 pr-2">
                 {menuItems.map((item) => {
                     const isActive = pathname === item.path;
                     const Icon = item.icon;
@@ -101,7 +101,7 @@ export function BusinessSidebar({ isMobileOpen = false, onMobileClose }: Sidebar
             {/* FOOTER ACTIONS */}
             <div className="border-t border-zinc-200/80 dark:border-card-border/40 pt-4 space-y-1.5">
                 <Link
-                    href="/vet"
+                    href="/home"
                     className="flex items-center gap-4 px-4 py-3 rounded-2xl text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-foreground dark:hover:text-white hover:bg-gray-50 dark:hover:bg-black/5 dark:bg-white/5 transition-all group"
                 >
                     <ArrowLeftRight className="w-5 h-5 text-gray-500 dark:text-gray-400 dark:text-gray-500 group-hover:scale-110" />
