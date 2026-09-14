@@ -75,6 +75,12 @@ export function MyAppointmentsPanel({ appointments }: MyAppointmentsPanelProps) 
                                 <h4 className="text-zinc-800 dark:text-[#fafafa] font-black text-base uppercase leading-tight mb-1">{appt.type}</h4>
                                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                                     <span className="text-indigo-600 dark:text-indigo-400">{appt.doctor}</span>
+                                    {appt.realDoctorName && (
+                                        <>
+                                            <span className="opacity-50">•</span>
+                                            <span className="text-zinc-600 dark:text-zinc-300">Dr. {appt.realDoctorName}</span>
+                                        </>
+                                    )}
                                     <span className="opacity-50">•</span>
                                     <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {appt.date}</span>
                                     <span className="opacity-50">•</span>

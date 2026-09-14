@@ -2073,7 +2073,8 @@ export class SupabaseApiService implements IApiService {
             .select(`
                 *,
                 clinic:profiles!appointments_clinic_id_profiles_fkey(business_name, avatar_url, address, phone),
-                pet:pets(*)
+                pet:pets(*),
+                doctor:doctors(name)
             `)
             .eq('user_id', user.id)
             .order('appointment_date', { ascending: true });
@@ -2131,7 +2132,8 @@ export class SupabaseApiService implements IApiService {
             .select(`
                 *,
                 pet:pets(*),
-                user:profiles!appointments_user_id_fkey(full_name, username, avatar_url, phone)
+                user:profiles!appointments_user_id_fkey(full_name, username, avatar_url, phone),
+                doctor:doctors(name)
             `);
             
         if (isUuid) {

@@ -698,7 +698,11 @@ function VetPageContent() {
             console.error("Failed to save transparency log:", e);
         }
 
-        setSuccessMessage("Randevu Talebiniz İletildi ✨");
+        if (selectedDoctor) {
+            setSuccessMessage(`Dr. ${selectedDoctor.name} ile Randevu Talebiniz İletildi ✨`);
+        } else {
+            setSuccessMessage("Randevu Talebiniz İletildi ✨");
+        }
         setActiveModal('success');
         setDetailClinicId(null);
         setTimeout(() => setActiveModal(null), 3000);
@@ -726,6 +730,7 @@ function VetPageContent() {
                 icon: '🏥',
                 type: type,
                 doctor: apt.clinic?.business_name || 'Klinik',
+                realDoctorName: apt.doctor?.name || apt.doctor_name || null,
                 date: dateStr,
                 time: timeStr,
                 status: apt.status || 'pending'

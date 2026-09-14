@@ -363,6 +363,7 @@ export default function BusinessAppointmentsPage() {
                     },
                     clinicId: item.clinic_id,
                     clinicName: item.clinic_name,
+                    realDoctorName: item.doctor?.name || item.doctor_name || null,
                     attendance_status: item.attendance_status
                 };
             });
@@ -1229,6 +1230,11 @@ export default function BusinessAppointmentsPage() {
                                                     </div>
                                                     <div className="text-sm text-gray-500 flex items-center gap-2 mt-1 truncate">
                                                         <User className="w-3 h-3 shrink-0" /> <span className="truncate">{apt.ownerName} • {apt.type}</span>
+                                                        {apt.realDoctorName && (
+                                                            <span className="truncate flex items-center gap-1">
+                                                                <span className="opacity-50">•</span> Dr. {apt.realDoctorName}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-3 w-full sm:w-auto justify-end sm:justify-start flex-wrap">
@@ -1348,6 +1354,7 @@ export default function BusinessAppointmentsPage() {
                                                             </div>
                                                             <div className="text-xs text-gray-500 font-bold bg-card dark:bg-black/20 px-2 py-1 rounded-md inline-block mt-1">
                                                                 ⏰ {req.time || "Saatsiz"} • {req.date}
+                                                                {req.realDoctorName && <span className="ml-2 border-l border-gray-300 dark:border-gray-700 pl-2">Dr. {req.realDoctorName}</span>}
                                                             </div>
                                                         </div>
                                                     </div>
