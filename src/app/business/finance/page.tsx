@@ -115,7 +115,7 @@ export default function BusinessFinancePage() {
                                 <h3 className="font-bold text-foreground">Aylık Gelir</h3>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Son 6 ay</p>
                             </div>
-                            <div className="bg-gray-50 p-1 rounded-xl flex">
+                            <div className="bg-gray-50 dark:bg-[#0a0a0a] p-1 rounded-xl flex">
                                 <button className="px-3 py-1 bg-card rounded-lg text-xs font-bold text-foreground shadow-moffi-card border border-card-border/50">Aylık</button>
                                 <button className="px-3 py-1 text-xs font-bold text-gray-500 dark:text-gray-400">Haftalık</button>
                             </div>
@@ -177,7 +177,7 @@ export default function BusinessFinancePage() {
                                 onClick={() => setTypeFilter(t)}
                                 className={cn(
                                     "px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition",
-                                    typeFilter === t ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" : "bg-card border border-card-border text-gray-600 hover:bg-gray-50"
+                                    typeFilter === t ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" : "bg-card border border-card-border text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-800"
                                 )}
                             >
                                 {t === 'all' ? 'Tümü' : TYPE_CONFIG[t].label}
@@ -223,8 +223,8 @@ export default function BusinessFinancePage() {
                                                     {isPositive ? '+' : '-'}₺{Math.abs(tx.amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
                                                 </div>
                                                 <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded",
-                                                    tx.status === 'completed' ? "text-green-600 bg-green-50" :
-                                                    tx.status === 'pending' ? "text-amber-600 bg-amber-50" : "text-gray-500 bg-gray-50"
+                                                    tx.status === 'completed' ? "text-green-600 bg-green-50 dark:bg-green-500/10 dark:text-green-400" :
+                                                    tx.status === 'pending' ? "text-amber-600 bg-amber-50 dark:bg-amber-500/10 dark:text-amber-400" : "text-gray-500 bg-gray-50 dark:bg-zinc-800 dark:text-gray-400"
                                                 )}>
                                                     {tx.status === 'completed' ? 'Tamamlandı' : tx.status === 'pending' ? 'Bekliyor' : 'İptal'}
                                                 </span>
@@ -301,10 +301,10 @@ function PayoutModal({ available, onClose }: { available: number; onClose: () =>
                         <p className="text-sm text-gray-500 mb-6">Çekilebilir bakiyeniz: <strong className="text-green-600">₺{available.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</strong></p>
                         <div className="mb-6">
                             <label className="text-xs font-bold text-gray-500 mb-1.5 block">Çekmek İstediğiniz Tutar (₺)</label>
-                            <input type="number" value={amount} onChange={e => setAmount(e.target.value)} className="w-full bg-gray-50 border border-card-border rounded-xl px-4 py-3 text-lg font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-green-200" />
+                            <input type="number" value={amount} onChange={e => setAmount(e.target.value)} className="w-full bg-gray-50 dark:bg-[#0a0a0a] border border-card-border rounded-xl px-4 py-3 text-lg font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-green-200" />
                         </div>
                         <div className="flex gap-3">
-                            <button onClick={onClose} className="flex-1 px-5 py-3 rounded-xl border border-card-border text-sm font-bold text-gray-600 hover:bg-gray-50">İptal</button>
+                            <button onClick={onClose} className="flex-1 px-5 py-3 rounded-xl border border-card-border text-sm font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-800">İptal</button>
                             <button onClick={handleRequest} disabled={requesting || Number(amount) <= 0 || Number(amount) > available} className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-5 py-3 rounded-xl font-bold text-sm shadow-lg shadow-green-200 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
                                 {requesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Banknote className="w-4 h-4" />}
                                 {requesting ? 'İşleniyor...' : 'Talep Gönder'}
