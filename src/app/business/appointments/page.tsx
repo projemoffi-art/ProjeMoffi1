@@ -1626,7 +1626,7 @@ export default function BusinessAppointmentsPage() {
                                                     }}
                                                     className={`w-10 h-5.5 rounded-full p-0.5 transition-colors duration-200 flex items-center cursor-pointer ${exceptionForm.isClosed ? 'bg-red-500' : 'bg-[#5B4D9D]'}`}
                                                 >
-                                                    <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${exceptionForm.isClosed ? 'translate-x-4.5' : 'translate-x-0'}`} />
+                                                    <div className={`bg-white dark:bg-zinc-200 w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${exceptionForm.isClosed ? 'translate-x-4.5' : 'translate-x-0'}`} />
                                                 </div>
                                                 <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Bu günü kapat</span>
                                             </div>
@@ -1767,7 +1767,7 @@ export default function BusinessAppointmentsPage() {
 
                                     {/* CTA Button */}
                                     <div className="z-20 mt-auto">
-                                        <div className="w-full py-2.5 bg-white text-black font-black text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-1.5 shadow-lg select-none">
+                                        <div className="w-full py-2.5 bg-white dark:bg-zinc-100 text-black font-black text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-1.5 shadow-lg select-none">
                                             Randevu Al 📅
                                         </div>
                                     </div>
