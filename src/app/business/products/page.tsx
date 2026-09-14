@@ -37,27 +37,28 @@ export default function BusinessProductsPage() {
 
     const businessId = user?.id;
 
-    useEffect(() => {
-        const fetchProducts = async () => {
-            if (user?.id) {
-                try {
-                    const products = await apiService.getClinicProducts(user.id);
-                    // Map real db schema to UI expected schema
-                    const mappedProducts = products.map((p: any) => ({
-                        ...p,
-                        images: [p.image_url || 'https://via.placeholder.com/150'],
-                        status: p.stock > 0 ? 'active' : 'out_of_stock'
-                    }));
-                    setAllProducts(mappedProducts);
-                } catch (e) {
-                    console.error(e);
-                } finally {
-                    setIsLoading(false);
-                }
-            } else {
+    const fetchProducts = async () => {
+        if (user?.id) {
+            try {
+                const products = await apiService.getClinicProducts(user.id);
+                // Map real db schema to UI expected schema
+                const mappedProducts = products.map((p: any) => ({
+                    ...p,
+                    images: [p.image_url || 'https://via.placeholder.com/150'],
+                    status: p.stock > 0 ? 'active' : 'out_of_stock'
+                }));
+                setAllProducts(mappedProducts);
+            } catch (e) {
+                console.error(e);
+            } finally {
                 setIsLoading(false);
             }
-        };
+        } else {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchProducts();
     }, [user?.id]);
 
@@ -201,8 +202,8 @@ export default function BusinessProductsPage() {
 
             {/* Edit/Add Modal */}
             <AnimatePresence>
-                {editModal && <ProductModal product={editModal} businessId={user?.id || ''} onClose={() => { setEditModal(null); window.location.reload(); }} />}
-                {showAddModal && <ProductModal product={null} businessId={user?.id || ''} onClose={() => { setShowAddModal(false); window.location.reload(); }} />}
+                {editModal && <ProductModal product={editModal} businessId={user?.id || ''} onClose={() => { setEditModal(null); fetchProducts(); }} />}
+                {showAddModal && <ProductModal product={null} businessId={user?.id || ''} onClose={() => { setShowAddModal(false); fetchProducts(); }} />}
             </AnimatePresence>
         </div>
     );
