@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { BusinessSidebar } from "@/components/business/Sidebar";
+
 import { useAuth } from "@/context/AuthContext";
 import { BusinessProduct, ProductStatus, ProductCategory } from "@/types/business";
 import { cn } from "@/lib/utils";
@@ -77,13 +77,10 @@ export default function BusinessProductsPage() {
     };
 
     return (
-        <div className="flex min-h-screen font-sans">
-            <BusinessSidebar isMobileOpen={isMobileMenuOpen} onMobileClose={() => setIsMobileMenuOpen(false)} />
-
-            <main className="flex-1 p-4 md:p-8 md:pl-80 transition-all duration-300 w-full">
-                {/* Header */}
-                <header className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
-                    <div className="flex items-center gap-4">
+        <div className="p-4 md:p-8 font-sans w-full max-w-7xl mx-auto">
+            {/* Header */}
+            <header className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
+                <div className="flex items-center gap-4">
                         <button onClick={() => setIsMobileMenuOpen(true)} className="w-10 h-10 rounded-xl bg-card border border-card-border/50 flex items-center justify-center md:hidden">
                             <Menu className="w-5 h-5 text-gray-600" />
                         </button>
@@ -201,7 +198,6 @@ export default function BusinessProductsPage() {
                         </table>
                     </div>
                 )}
-            </main>
 
             {/* Edit/Add Modal */}
             <AnimatePresence>
