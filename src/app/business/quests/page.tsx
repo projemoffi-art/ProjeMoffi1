@@ -44,7 +44,7 @@ export default function BusinessQuestsPage() {
     }, [user?.id]);
 
     return (
-        <div className="min-h-screen p-6 lg:p-10">
+        <div className="p-4 md:p-8 font-sans w-full max-w-7xl mx-auto">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
                 <div>
