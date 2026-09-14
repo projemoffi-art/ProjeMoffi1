@@ -25,6 +25,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { apiService, isSupabaseEnabled } from "@/services/apiService";
 import { MyAppointmentsPanel } from "@/components/vet/MyAppointmentsPanel";
+import turkeyCities from "@/data/turkey_cities.json";
 
 function validateLuhn(cardNumber: string): boolean {
     const clean = cardNumber.replace(/\D/g, "");
@@ -65,13 +66,16 @@ function VetPageContent() {
 
     const { 
         featuredClinics, allClinics, userLocation, isLoading, 
-        bookAppointment, searchByService, activeCategory 
+        bookAppointment, searchByService, activeCategory,
+        userProvince, userDistrict, setLocationFilter
     } = useVet();
 
     // UI States
     const [searchQuery, setSearchQuery] = useState("");
     const [viewMode, setViewMode] = useState<'clinics' | 'appointments'>('clinics');
     const [activeModal, setActiveModal] = useState<'appointment' | 'payment' | 'vaccine' | 'dental' | 'pharma' | 'sos' | 'success' | 'rating' | 'clinicList' | null>(null);
+    const [isLocationSelectorOpen, setIsLocationSelectorOpen] = useState(false);
+    const [selectedProv, setSelectedProv] = useState("");
     
     // Payment Simulation States
     const [tempAppointmentData, setTempAppointmentData] = useState<any>(null);
@@ -773,6 +777,61 @@ function VetPageContent() {
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
+
+                    {/* Location Selector Banner */}
+                    {(!userProvince || !userDistrict || isLocationSelectorOpen) ? (
+                        <div className="bg-white dark:bg-[#18181b] p-4 rounded-xl border border-zinc-200 dark:border-[#27272a] shadow-sm">
+                            <div className="flex items-center gap-2 mb-3">
+                                <MapPin className="w-4 h-4 text-indigo-500" />
+                                <h3 className="text-xs font-black uppercase tracking-wider text-zinc-800 dark:text-[#fafafa]">Konumunuzu Seçin</h3>
+                            </div>
+                            <div className="flex gap-3">
+                                <select 
+                                    className="flex-1 h-10 px-3 rounded-lg border border-zinc-200 dark:border-[#27272a] bg-zinc-50 dark:bg-[#27272a] text-xs font-bold outline-none text-zinc-800 dark:text-[#fafafa]"
+                                    value={selectedProv || userProvince || ""}
+                                    onChange={(e) => {
+                                        setSelectedProv(e.target.value);
+                                    }}
+                                >
+                                    <option value="" disabled>İl Seçiniz</option>
+                                    {turkeyCities.map(c => (
+                                        <option key={c.name} value={c.name}>{c.name}</option>
+                                    ))}
+                                </select>
+                                <select 
+                                    className="flex-1 h-10 px-3 rounded-lg border border-zinc-200 dark:border-[#27272a] bg-zinc-50 dark:bg-[#27272a] text-xs font-bold outline-none text-zinc-800 dark:text-[#fafafa]"
+                                    value={(selectedProv && selectedProv !== userProvince) ? "" : (userDistrict || "")}
+                                    onChange={(e) => {
+                                        const finalProv = selectedProv || userProvince;
+                                        setLocationFilter(finalProv, e.target.value);
+                                        setIsLocationSelectorOpen(false);
+                                        setSelectedProv(""); // Reset local override
+                                    }}
+                                    disabled={!(selectedProv || userProvince)}
+                                >
+                                    <option value="" disabled>İlçe Seçiniz</option>
+                                    {turkeyCities.find(c => c.name === (selectedProv || userProvince))?.districts.map((d: any) => (
+                                        <option key={d.name} value={d.name}>{d.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex items-center justify-between bg-zinc-50 dark:bg-[#27272a] px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700">
+                            <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-300">
+                                <MapPin className="w-3.5 h-3.5 text-indigo-500" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">
+                                    Konum: <span className="text-zinc-800 dark:text-white">{userProvince} / {userDistrict}</span>
+                                </span>
+                            </div>
+                            <button 
+                                onClick={() => setIsLocationSelectorOpen(true)}
+                                className="text-[9px] font-black text-indigo-500 hover:text-indigo-600 uppercase tracking-widest bg-indigo-500/10 px-2 py-1 rounded transition-colors"
+                            >
+                                Değiştir
+                            </button>
+                        </div>
+                    )}
 
                     {/* View Toggle */}
                     <div className="flex bg-zinc-200/50 dark:bg-[#27272a]/50 p-1 rounded-xl">
