@@ -158,14 +158,14 @@ export default function BusinessCampaignsPage() {
             {isLoading ? (
                 <div className="flex justify-center p-10"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>
             ) : deals.length === 0 ? (
-                <div className="text-center p-12 bg-gray-50 rounded-2xl border border-dashed border-gray-300">
+                <div className="text-center p-12 bg-gray-50 dark:bg-[#0a0a0a] rounded-2xl border border-dashed border-gray-300 dark:border-zinc-800">
                     <p className="text-gray-500">Henüz hiç fırsat hikayesi oluşturmamışsınız.</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {deals.map(deal => (
-                        <div key={deal.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-                            <div className="h-48 relative bg-gray-100">
+                        <div key={deal.id} className="bg-white dark:bg-[#0a0a0a] rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 overflow-hidden flex flex-col">
+                            <div className="h-48 relative bg-gray-100 dark:bg-zinc-800">
                                 <img src={deal.media_url} alt="kampanya" className="w-full h-full object-cover" />
                                 <div className="absolute top-2 right-2 bg-black/60 text-white px-2 py-1 rounded-lg text-xs font-bold">
                                     {deal.status === 'active' ? '🟢 Aktif' : '🔴 Pasif'}
