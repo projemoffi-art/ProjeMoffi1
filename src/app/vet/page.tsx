@@ -18,7 +18,7 @@ import { ClinicDetailDrawer } from "@/components/vet/ClinicDetailDrawer";
 import { MedicationModal } from "@/components/vet/MedicationModal";
 import { PetSwitcher } from "@/components/common/PetSwitcher";
 import { useVet } from "@/hooks/useVet";
-import { VetClinic } from "@/types/domain";
+import { VetClinic, Doctor } from "@/types/domain";
 import { Pet, usePet } from "@/context/PetContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
@@ -271,10 +271,21 @@ function VetPageContent() {
             }
         };
 
+        const loadClinicDoctors = async () => {
+            try {
+                const docs = await apiService.getClinicDoctors(selectedClinic.id);
+                setClinicDoctors(docs || []);
+            } catch (e) {
+                console.error("Failed to load clinic doctors:", e);
+                setClinicDoctors([]);
+            }
+        };
+
         loadDbAppointments();
         loadClinicSettings();
         loadClinicExceptions();
         loadClinicServices();
+        loadClinicDoctors();
         
         // Listen for new appointments to refresh slots in real-time
         const channel = new BroadcastChannel('moffi_appointments_channel');
@@ -391,6 +402,8 @@ function VetPageContent() {
     // Appointment Form States
     const [selectedDate, setSelectedDate] = useState<string>("");
     const [selectedTime, setSelectedTime] = useState<string | null>(null);
+    const [clinicDoctors, setClinicDoctors] = useState<Doctor[]>([]);
+    const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
     const dateOptions = Array.from({ length: 14 }, (_, i) => {
         const d = new Date();
         d.setDate(d.getDate() + i);
@@ -584,6 +597,7 @@ function VetPageContent() {
         setActiveModal('appointment');
         setSelectedDate(dateOptions[0]?.key || '');
         setSelectedTime(null);
+        setSelectedDoctor(null);
     };
 
     const calculatePetAge = (pet: any) => {
@@ -1084,6 +1098,44 @@ function VetPageContent() {
                                                 Değiştir
                                             </button>
                                         </div>
+                                        
+                                        {/* DOCTOR SELECTOR */}
+                                        {clinicDoctors.length > 0 && (
+                                            <div className="mt-4 mb-4">
+                                                <label className="text-[8px] font-black text-zinc-400 dark:text-[#a1a1aa] uppercase tracking-wider mb-2 block px-1">Doktor Seçimi (Opsiyonel)</label>
+                                                {!selectedDoctor ? (
+                                                    <div className="space-y-3">
+                                                        {clinicDoctors.map((doc: Doctor) => (
+                                                            <div key={doc.id} className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-[#27272a] p-4 rounded-2xl flex items-center justify-between group transition-all hover:border-zinc-300 dark:hover:border-zinc-700">
+                                                                <div>
+                                                                    <div className="font-black text-zinc-800 dark:text-[#fafafa] uppercase tracking-tight text-sm">{doc.name}</div>
+                                                                    {doc.title && <div className="text-[10px] font-bold text-zinc-500 dark:text-[#a1a1aa] uppercase tracking-wider mt-0.5">{doc.title}</div>}
+                                                                </div>
+                                                                <button 
+                                                                    onClick={() => setSelectedDoctor(doc)}
+                                                                    className="px-4 py-2 bg-zinc-100 dark:bg-[#27272a] hover:bg-indigo-500 hover:text-black dark:hover:bg-indigo-500 dark:text-white text-zinc-600 font-black text-[10px] uppercase tracking-wider rounded-xl transition-colors"
+                                                                >
+                                                                    Seç
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center justify-between bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 p-3 rounded-2xl">
+                                                        <div>
+                                                            <div className="text-[9px] font-black text-indigo-400 uppercase tracking-wider mb-0.5">Seçilen Doktor</div>
+                                                            <div className="text-sm font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-tight">{selectedDoctor.name}</div>
+                                                        </div>
+                                                        <button 
+                                                            onClick={() => setSelectedDoctor(null)}
+                                                            className="text-[9px] font-black text-indigo-500/70 hover:text-indigo-500 uppercase tracking-widest px-3 py-1.5 bg-indigo-500/10 rounded-lg transition-colors"
+                                                        >
+                                                            Değiştir
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
 
                                 {/* DATE SELECTOR */}
                                 <div>
