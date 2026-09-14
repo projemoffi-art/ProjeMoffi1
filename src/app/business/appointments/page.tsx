@@ -1231,27 +1231,27 @@ export default function BusinessAppointmentsPage() {
                                                         <User className="w-3 h-3 shrink-0" /> <span className="truncate">{apt.ownerName} • {apt.type}</span>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-3 w-full sm:w-auto justify-end sm:justify-start">
+                                                <div className="flex items-center gap-3 w-full sm:w-auto justify-end sm:justify-start flex-wrap">
                                                     {/* (Faz 9) Gelecek randevu değilse ve iptal değilse no-show butonları */}
                                                     {apt.status === 'completed' ? (
-                                                        <div className="flex items-center gap-2 mr-2 border-r border-card-border pr-4">
+                                                        <div className="flex items-center flex-wrap gap-2 mr-2 sm:border-r border-card-border sm:pr-4">
                                                             <span className="text-[10px] bg-green-500/10 text-green-500 font-bold px-2 py-0.5 rounded-full border border-green-500/20">
                                                                 ✓ Geldi
                                                             </span>
                                                         </div>
                                                     ) : apt.status === 'confirmed' && apt.rawDate && new Date(apt.rawDate) < new Date(new Date().setHours(0,0,0,0)) ? (
-                                                        <div className="flex items-center gap-2 mr-2 border-r border-card-border pr-4">
+                                                        <div className="flex items-center flex-wrap gap-2 mr-2 sm:border-r border-card-border sm:pr-4">
                                                             {!apt.attendance_status ? (
                                                                 <>
                                                                     <button 
                                                                         onClick={() => handleAttendanceChange(apt.id, 'attended')}
-                                                                        className="px-3 py-1.5 rounded-lg bg-green-500/10 text-green-600 dark:text-green-400 text-[10px] font-bold hover:bg-green-500/20 transition-colors"
+                                                                        className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-green-500/10 text-green-600 dark:text-green-400 text-[10px] font-bold hover:bg-green-500/20 transition-colors"
                                                                     >
                                                                         Geldi ✓
                                                                     </button>
                                                                     <button 
                                                                         onClick={() => handleAttendanceChange(apt.id, 'no_show')}
-                                                                        className="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-bold hover:bg-red-500/20 transition-colors"
+                                                                        className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-bold hover:bg-red-500/20 transition-colors"
                                                                     >
                                                                         Gelmedi ✗
                                                                     </button>
