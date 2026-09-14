@@ -47,6 +47,16 @@ export interface VetDoctor {
     workingHours: string;
 }
 
+export interface Doctor {
+    id: string;
+    clinic_id: string;
+    name: string;
+    title?: string;
+    photo_url?: string;
+    is_active: boolean;
+    created_at?: string;
+}
+
 export interface VetReview {
     id: string;
     userName: string;
