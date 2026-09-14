@@ -17,7 +17,8 @@ import {
     Gift,
     Users,
     FileSpreadsheet,
-    Activity
+    Activity,
+    Stethoscope
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -40,6 +41,7 @@ export function BusinessSidebar({ isMobileOpen = false, onMobileClose }: Sidebar
         { name: t("business.sidebar.finance"), path: "/business/finance", icon: Wallet },
         { name: t("business.sidebar.orders"), path: "/business/orders", icon: Package },
         { name: "Hizmetlerim", path: "/business/services", icon: Activity },
+        { name: "Doktorlar", path: "/business/doctors", icon: Stethoscope },
         { name: t("business.sidebar.products"), path: "/business/products", icon: Store },
         { name: "Günün Fırsatı", path: "/business/campaigns", icon: Gift },
         { name: t("business.sidebar.quests"), path: "/business/quests", icon: Megaphone },
