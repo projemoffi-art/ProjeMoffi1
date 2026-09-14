@@ -127,7 +127,7 @@ export default function BusinessDashboard() {
                                 <h3 className="text-xl font-bold text-foreground">Haftalık Ziyaretçi Trafiği</h3>
                                 <p className="text-sm text-gray-500 mt-1">Mağazanızın önünden geçen MoffiWalk kullanıcıları</p>
                             </div>
-                            <div className="bg-gray-50 p-1 rounded-xl flex">
+                            <div className="bg-gray-50 dark:bg-[#0a0a0a] p-1 rounded-xl flex">
                                 <button className="px-4 py-1.5 bg-card rounded-lg text-xs font-bold text-foreground shadow-moffi-card border border-card-border/50">Haftalık</button>
                                 <button className="px-4 py-1.5 text-xs font-bold text-gray-500 hover:text-foreground">Aylık</button>
                             </div>
