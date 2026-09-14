@@ -236,7 +236,6 @@ export default function BusinessFinancePage() {
                         </div>
                     </div>
                 </div>
-            </div>
 
             {/* Payout Modal */}
             <AnimatePresence>
