@@ -19,7 +19,7 @@ const CATEGORY_LABELS: Record<ProductCategory, string> = {
 
 const STATUS_CONFIG: Record<ProductStatus, { label: string; color: string; bg: string }> = {
     active: { label: 'Aktif', color: 'text-green-700', bg: 'bg-green-50 border-green-100' },
-    inactive: { label: 'Pasif', color: 'text-gray-500', bg: 'bg-gray-50 border-card-border' },
+    inactive: { label: 'Pasif', color: 'text-gray-500', bg: 'bg-gray-50 dark:bg-zinc-800/50 border-card-border' },
     out_of_stock: { label: 'Tükendi', color: 'text-red-700', bg: 'bg-red-50 border-red-100' },
 };
 
@@ -114,13 +114,13 @@ export default function BusinessProductsPage() {
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             placeholder="Ürün ara..."
-                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-card-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-[#0a0a0a] border border-card-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200"
                         />
                     </div>
                     <select
                         value={categoryFilter}
                         onChange={e => setCategoryFilter(e.target.value as ProductCategory | 'all')}
-                        className="px-4 py-2.5 bg-gray-50 border border-card-border rounded-xl text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                        className="px-4 py-2.5 bg-gray-50 dark:bg-[#0a0a0a] border border-card-border rounded-xl text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-200"
                     >
                         <option value="all">Tüm Kategoriler</option>
                         {Object.entries(CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -128,7 +128,7 @@ export default function BusinessProductsPage() {
                     <select
                         value={statusFilter}
                         onChange={e => setStatusFilter(e.target.value as ProductStatus | 'all')}
-                        className="px-4 py-2.5 bg-gray-50 border border-card-border rounded-xl text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                        className="px-4 py-2.5 bg-gray-50 dark:bg-[#0a0a0a] border border-card-border rounded-xl text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-200"
                     >
                         <option value="all">Tüm Durumlar</option>
                         {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
@@ -164,7 +164,7 @@ export default function BusinessProductsPage() {
                     <div className="bg-card rounded-2xl border border-card-border overflow-hidden">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b border-card-border bg-gray-50/50">
+                                <tr className="border-b border-card-border bg-gray-50/50 dark:bg-zinc-800/30">
                                     <th className="text-left p-4 font-bold text-gray-500 text-xs uppercase">Ürün</th>
                                     <th className="text-left p-4 font-bold text-gray-500 text-xs uppercase hidden md:table-cell">Kategori</th>
                                     <th className="text-right p-4 font-bold text-gray-500 text-xs uppercase">Fiyat</th>
@@ -175,7 +175,7 @@ export default function BusinessProductsPage() {
                             </thead>
                             <tbody>
                                 {filtered.map(product => (
-                                    <tr key={product.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition">
+                                    <tr key={product.id} className="border-b border-gray-50 dark:border-zinc-800/50 hover:bg-gray-50/50 dark:hover:bg-zinc-800/30 transition">
                                         <td className="p-4">
                                             <div className="flex items-center gap-3">
                                                 <img src={product.images[0]} alt="" className="w-10 h-10 rounded-lg object-cover" />
@@ -244,7 +244,7 @@ function ProductCard({ product, onEdit }: { product: BusinessProduct; onEdit: ()
                     </div>
                 )}
                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                    <button onClick={onEdit} className="w-8 h-8 bg-white/90 backdrop-blur rounded-lg flex items-center justify-center text-gray-600 hover:text-indigo-600 shadow-sm">
+                    <button onClick={onEdit} className="w-8 h-8 bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur rounded-lg flex items-center justify-center text-gray-600 hover:text-indigo-600 shadow-sm">
                         <Edit3 className="w-3.5 h-3.5" />
                     </button>
                 </div>
@@ -346,7 +346,7 @@ function ProductModal({ product, businessId, onClose }: { product: any | null; b
                     </div>
                 </div>
                 <div className="p-6 border-t border-card-border flex justify-end gap-3">
-                    <button onClick={onClose} className="px-5 py-2.5 rounded-xl border border-card-border text-sm font-bold text-gray-600 hover:bg-gray-50">İptal</button>
+                    <button onClick={onClose} className="px-5 py-2.5 rounded-xl border border-card-border text-sm font-bold text-gray-600 hover:bg-gray-50 dark:hover:bg-zinc-800">İptal</button>
                     <button onClick={handleSave} disabled={saving || saved || !name || !price} className={cn(
                         "px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all",
                         saved ? "bg-green-500 text-white" : "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-200 hover:-translate-y-0.5"
