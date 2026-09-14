@@ -147,7 +147,7 @@ export default function BusinessServicesPage() {
     }
 
     return (
-        <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500 pb-10">
+        <div className="p-4 md:p-8 font-sans w-full max-w-7xl mx-auto">
             <div>
                 <h1 className="text-2xl font-black text-foreground dark:text-white tracking-tight flex items-center gap-2">
                     <Activity className="w-6 h-6 text-indigo-500" />
