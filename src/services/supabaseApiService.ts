@@ -2047,6 +2047,7 @@ export class SupabaseApiService implements IApiService {
                 clinic_id: dto.clinicId || null,
                 clinic_name: dto.clinicName || '',
                 doctor_name: dto.doctorName || '',
+                doctor_id: dto.doctorId || null,
                 appointment_date: dto.appointmentDate || dto.date,
                 reason: dto.notes || dto.reason || '',
                 status: dto.status || 'pending',

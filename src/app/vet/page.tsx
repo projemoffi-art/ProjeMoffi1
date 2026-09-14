@@ -668,7 +668,8 @@ function VetPageContent() {
             selectedSvc?.service_name || 'general',
             sharedPassport,
             petInfo,
-            selectedSvc?.duration_minutes || 30
+            selectedSvc?.duration_minutes || 30,
+            selectedDoctor?.id
         );
 
         // Record Transparency Log
