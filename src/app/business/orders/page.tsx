@@ -20,7 +20,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
     shipped: { label: 'Kargoda', color: 'text-indigo-700', bg: 'bg-indigo-50 border-indigo-200', icon: Truck },
     delivered: { label: 'Teslim Edildi', color: 'text-green-700', bg: 'bg-green-50 border-green-200', icon: CheckCircle },
     cancelled: { label: 'İptal', color: 'text-red-700', bg: 'bg-red-50 border-red-200', icon: XCircle },
-    returned: { label: 'İade', color: 'text-foreground', bg: 'bg-gray-50 border-card-border', icon: RotateCcw },
+    returned: { label: 'İade', color: 'text-foreground', bg: 'bg-gray-50 dark:bg-zinc-800/50 border-card-border', icon: RotateCcw },
 };
 
 const STATUS_FLOW: string[] = ['awaiting_payment', 'preparing', 'shipped', 'delivered'];
@@ -122,7 +122,7 @@ export default function BusinessOrdersPage() {
                                 "px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap border transition-all",
                                 statusFilter === s
                                     ? "bg-indigo-50 border-indigo-200 text-indigo-700"
-                                    : "bg-card border-card-border text-gray-500 hover:bg-gray-50"
+                                    : "bg-card border-card-border text-gray-500 hover:bg-gray-50 dark:hover:bg-zinc-800"
                             )}
                         >
                             {s === 'all' ? 'Tümü' : STATUS_CONFIG[s].label}
@@ -140,7 +140,7 @@ export default function BusinessOrdersPage() {
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             placeholder="Sipariş no veya müşteri adı ara..."
-                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-card-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-[#0a0a0a] border border-card-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200"
                         />
                     </div>
                 </div>
@@ -310,7 +310,7 @@ function OrderDetailModal({ order, onClose, onStatusUpdate }: { order: any; onCl
                     {/* Address */}
                     <div>
                         <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Teslimat Adresi</h4>
-                        <div className="flex items-start gap-2 bg-gray-50 rounded-xl p-3">
+                        <div className="flex items-start gap-2 bg-gray-50 dark:bg-zinc-800/30 rounded-xl p-3">
                             <MapPin className="w-4 h-4 text-gray-500 dark:text-gray-400 mt-0.5 flex-shrink-0" />
                             <span className="text-sm text-foreground">{order.shippingAddress}</span>
                         </div>
@@ -321,7 +321,7 @@ function OrderDetailModal({ order, onClose, onStatusUpdate }: { order: any; onCl
                         <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Ürünler</h4>
                         <div className="space-y-2">
                             {order.items.map((item: any, i: number) => (
-                                <div key={i} className="flex items-center justify-between bg-gray-50 rounded-xl p-3">
+                                <div key={i} className="flex items-center justify-between bg-gray-50 dark:bg-zinc-800/30 rounded-xl p-3">
                                     <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-lg bg-gray-200 flex items-center justify-center text-gray-500 dark:text-gray-400">
                                             <Package className="w-4 h-4" />
@@ -338,7 +338,7 @@ function OrderDetailModal({ order, onClose, onStatusUpdate }: { order: any; onCl
                     </div>
 
                     {/* Financial Summary */}
-                    <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+                    <div className="bg-gray-50 dark:bg-zinc-800/30 rounded-xl p-4 space-y-2">
                         <div className="flex justify-between text-sm"><span className="text-gray-500">Ara Toplam</span><span className="font-bold text-foreground">₺{order.totalAmount.toLocaleString('tr-TR')}</span></div>
                         <div className="flex justify-between text-sm"><span className="text-gray-500">Komisyon (%10)</span><span className="font-bold text-red-600">-₺{order.commission.toFixed(2)}</span></div>
                         <div className="border-t border-card-border pt-2 flex justify-between text-sm"><span className="font-bold text-foreground">Net Gelir</span><span className="font-black text-green-600 text-base">₺{order.netAmount.toFixed(2)}</span></div>
@@ -346,7 +346,7 @@ function OrderDetailModal({ order, onClose, onStatusUpdate }: { order: any; onCl
 
                     {/* Tracking Number */}
                     {(order.status === 'preparing' || order.status === 'shipped') && (
-                        <div className="bg-gray-50 border border-card-border rounded-xl p-4">
+                        <div className="bg-gray-50 dark:bg-[#0a0a0a] border border-card-border rounded-xl p-4">
                             <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Kargo Bilgileri</h4>
                             <div className="flex flex-col gap-3">
                                 <div className="flex gap-3">
@@ -354,13 +354,13 @@ function OrderDetailModal({ order, onClose, onStatusUpdate }: { order: any; onCl
                                         value={carrier}
                                         onChange={e => setCarrier(e.target.value)}
                                         placeholder="Kargo Firması (Örn: Yurtiçi)"
-                                        className="w-1/3 bg-white border border-card-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                                        className="w-1/3 bg-white dark:bg-[#0a0a0a] border border-card-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200"
                                     />
                                     <input
                                         value={trackingNumber}
                                         onChange={e => setTrackingNumber(e.target.value)}
                                         placeholder="Kargo takip numarası"
-                                        className="flex-1 bg-white border border-card-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                                        className="flex-1 bg-white dark:bg-[#0a0a0a] border border-card-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200"
                                     />
                                 </div>
                                 <button
