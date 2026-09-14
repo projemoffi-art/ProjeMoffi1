@@ -321,27 +321,27 @@ function ProductModal({ product, businessId, onClose }: { product: any | null; b
                 <div className="p-6 space-y-4">
                     <div>
                         <label className="text-xs font-bold text-gray-500 mb-1.5 block">Ürün Adı</label>
-                        <input value={name} onChange={e => setName(e.target.value)} className="w-full bg-gray-50 border border-card-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" placeholder="Ürün adı" />
+                        <input value={name} onChange={e => setName(e.target.value)} className="w-full bg-gray-50 dark:bg-[#0a0a0a] text-zinc-800 dark:text-white placeholder:text-gray-400 border border-card-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" placeholder="Ürün adı" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="text-xs font-bold text-gray-500 mb-1.5 block">Fiyat (₺)</label>
-                            <input type="number" value={price} onChange={e => setPrice(e.target.value)} className="w-full bg-gray-50 border border-card-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" />
+                            <input type="number" value={price} onChange={e => setPrice(e.target.value)} className="w-full bg-gray-50 dark:bg-[#0a0a0a] text-zinc-800 dark:text-white placeholder:text-gray-400 border border-card-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" />
                         </div>
                         <div>
                             <label className="text-xs font-bold text-gray-500 mb-1.5 block">Stok</label>
-                            <input type="number" value={stock} onChange={e => setStock(e.target.value)} className="w-full bg-gray-50 border border-card-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" />
+                            <input type="number" value={stock} onChange={e => setStock(e.target.value)} className="w-full bg-gray-50 dark:bg-[#0a0a0a] text-zinc-800 dark:text-white placeholder:text-gray-400 border border-card-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" />
                         </div>
                     </div>
                     <div>
                         <label className="text-xs font-bold text-gray-500 mb-1.5 block">Kategori</label>
-                        <select value={category} onChange={e => setCategory(e.target.value as ProductCategory)} className="w-full bg-gray-50 border border-card-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                        <select value={category} onChange={e => setCategory(e.target.value as ProductCategory)} className="w-full bg-gray-50 dark:bg-[#0a0a0a] text-zinc-800 dark:text-white placeholder:text-gray-400 border border-card-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200">
                             {Object.entries(CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                         </select>
                     </div>
                     <div>
                         <label className="text-xs font-bold text-gray-500 mb-1.5 block">Açıklama</label>
-                        <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} className="w-full bg-gray-50 border border-card-border rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-200" placeholder="Ürün açıklaması" />
+                        <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} className="w-full bg-gray-50 dark:bg-[#0a0a0a] text-zinc-800 dark:text-white placeholder:text-gray-400 border border-card-border rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-200" placeholder="Ürün açıklaması" />
                     </div>
                 </div>
                 <div className="p-6 border-t border-card-border flex justify-end gap-3">
