@@ -6,7 +6,7 @@ import {
 } from './types';
 import { supabase } from '@/lib/supabase';
 import { MockApiService } from './mockApiService';
-import { UserVaccineRecord } from '@/types/domain';
+import { UserVaccineRecord, Doctor } from '@/types/domain';
 
 export class SupabaseApiService implements IApiService {
     // Session is managed internally by Supabase client very efficiently.
@@ -2160,6 +2160,76 @@ export class SupabaseApiService implements IApiService {
             return [];
         }
         return data || [];
+    }
+
+    async getClinicDoctors(clinicId: string): Promise<Doctor[]> {
+        const { data, error } = await supabase
+            .from('doctors')
+            .select('*')
+            .eq('clinic_id', clinicId)
+            .eq('is_active', true)
+            .order('created_at', { ascending: true });
+
+        if (error) {
+            console.error("Error fetching clinic doctors:", error);
+            return [];
+        }
+        return data || [];
+    }
+
+    async getAllClinicDoctors(clinicId: string): Promise<Doctor[]> {
+        const { data, error } = await supabase
+            .from('doctors')
+            .select('*')
+            .eq('clinic_id', clinicId)
+            .order('created_at', { ascending: true });
+
+        if (error) {
+            console.error("Error fetching all clinic doctors:", error);
+            return [];
+        }
+        return data || [];
+    }
+
+    async createDoctor(dto: { clinicId: string; name: string; title?: string; photoUrl?: string }): Promise<Doctor> {
+        const { data, error } = await supabase
+            .from('doctors')
+            .insert({
+                clinic_id: dto.clinicId,
+                name: dto.name,
+                title: dto.title || null,
+                photo_url: dto.photoUrl || null,
+                is_active: true
+            })
+            .select()
+            .single();
+
+        if (error) {
+            console.error("Error creating doctor:", error);
+            throw error;
+        }
+        return data;
+    }
+
+    async updateDoctor(id: string, dto: { name?: string; title?: string; photoUrl?: string; isActive?: boolean }): Promise<Doctor> {
+        const updateData: any = {};
+        if (dto.name !== undefined) updateData.name = dto.name;
+        if (dto.title !== undefined) updateData.title = dto.title;
+        if (dto.photoUrl !== undefined) updateData.photo_url = dto.photoUrl;
+        if (dto.isActive !== undefined) updateData.is_active = dto.isActive;
+
+        const { data, error } = await supabase
+            .from('doctors')
+            .update(updateData)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) {
+            console.error("Error updating doctor:", error);
+            throw error;
+        }
+        return data;
     }
 
     async getClinicDashboardStats(clinicId: string): Promise<any> {

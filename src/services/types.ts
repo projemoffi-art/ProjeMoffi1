@@ -1,3 +1,4 @@
+import { Doctor } from '@/types/domain';
 export interface Pet {
     id: string;
     name: string;
@@ -288,6 +289,10 @@ export interface IApiService {
     cancelAppointment(id: string): Promise<void>;
     getClinicAppointments(clinicId: string): Promise<any[]>;
     getClinicServices(clinicId: string): Promise<any[]>;
+    getClinicDoctors(clinicId: string): Promise<Doctor[]>;
+    getAllClinicDoctors(clinicId: string): Promise<Doctor[]>;
+    createDoctor(dto: { clinicId: string; name: string; title?: string; photoUrl?: string }): Promise<Doctor>;
+    updateDoctor(id: string, dto: { name?: string; title?: string; photoUrl?: string; isActive?: boolean }): Promise<Doctor>;
     updateAppointmentStatus(appointmentId: string, status: string, rejectReason?: string): Promise<void>;
     updateAttendanceStatus(appointmentId: string, status: 'attended' | 'no_show' | null): Promise<void>;
     getNoShowCount(userId: string): Promise<number>;

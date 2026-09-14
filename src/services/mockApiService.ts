@@ -722,6 +722,10 @@ export class MockApiService implements IApiService {
     async cancelAppointment(id: string): Promise<void> { }
     async getClinicAppointments(clinicId: string): Promise<any[]> { return []; }
     async getClinicServices(clinicId: string): Promise<any[]> { return []; }
+    async getClinicDoctors(clinicId: string): Promise<any[]> { return []; }
+    async getAllClinicDoctors(clinicId: string): Promise<any[]> { return []; }
+    async createDoctor(dto: any): Promise<any> { return {}; }
+    async updateDoctor(id: string, dto: any): Promise<any> { return {}; }
     async updateAppointmentStatus(appointmentId: string, status: string, rejectReason?: string): Promise<void> { }
     async updateAttendanceStatus(appointmentId: string, status: 'attended' | 'no_show' | null): Promise<void> { }
     async getNoShowCount(userId: string): Promise<number> { return 0; }
@@ -1730,6 +1734,11 @@ export class MockApiService implements IApiService {
     async getClinicAppointments(clinicId: string): Promise<any[]> {
         return [];
     }
+
+    async getClinicDoctors(clinicId: string): Promise<any[]> { return []; }
+    async getAllClinicDoctors(clinicId: string): Promise<any[]> { return []; }
+    async createDoctor(dto: any): Promise<any> { return {}; }
+    async updateDoctor(id: string, dto: any): Promise<any> { return {}; }
 
     async getClinicServices(clinicId: string): Promise<any[]> {
         return [
