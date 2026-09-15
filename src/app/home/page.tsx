@@ -3450,7 +3450,7 @@ export default function LegendaryLightDashboard() {
                                                                 <div className="flex flex-col gap-2">
                                                                     <div className="p-3 bg-secondary border border-card-border rounded-2xl flex justify-between items-center">
                                                                         <div className="flex items-center gap-2">
-                                                                            <CreditCard className="w-4.5 h-4.5 text-gray-600" />
+                                                                            <CreditCard className="w-4.5 h-4.5 text-secondary" />
                                                                             <div>
                                                                                 <span className="text-[10px] font-black text-foreground block">Moffi Pati-Kart (NFC)</span>
                                                                                 <span className="text-[8.5px] text-secondary font-semibold">Bakiye: {totalPatiPuan.toLocaleString()} Patipuan</span>
@@ -3477,7 +3477,7 @@ export default function LegendaryLightDashboard() {
                                                                     className="mt-4 w-full p-3 rounded-2xl bg-secondary border border-card-border/60 flex items-center justify-between group hover:brightness-95 transition-colors"
                                                                 >
                                                                     <div className="flex items-center gap-2">
-                                                                        <div className="w-6 h-6 rounded-lg bg-gray-200/50 flex items-center justify-center">
+                                                                        <div className="w-6 h-6 rounded-lg bg-secondary flex items-center justify-center">
                                                                             <ShieldCheck className="w-3.5 h-3.5 text-secondary group-hover:text-emerald-500 transition-colors" />
                                                                         </div>
                                                                         <div className="text-left">
