@@ -32,7 +32,7 @@ const RadarMap = dynamic(() => import('@/components/community/RadarMap'), {
 const SightingMapSelector = dynamic(() => import('@/components/community/SightingMapSelector'), {
     ssr: false,
     loading: () => (
-        <div className="w-full h-full bg-card dark:bg-[#1A1A1A] animate-pulse rounded-2xl flex items-center justify-center text-black/30 dark:text-white/20 font-bold">Harita Yükleniyor...</div>
+        <div className="w-full h-full bg-card dark:bg-[var(--color-camera-surface)] animate-pulse rounded-2xl flex items-center justify-center text-black/30 dark:text-white/20 font-bold">Harita Yükleniyor...</div>
     )
 });
 
@@ -2234,7 +2234,7 @@ export default function MoffiSocialMasterpiece() {
                             initial={{ scale: 0.95, y: 20, opacity: 0 }}
                             animate={{ scale: 1, y: 0, opacity: 1 }}
                             exit={{ scale: 0.95, y: 20, opacity: 0 }}
-                            className="w-full max-w-sm bg-card dark:bg-[#1C1C1E]/80 border border-black/10 dark:border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col"
+                            className="w-full max-w-sm bg-card dark:bg-[var(--color-camera-surface)]/80 border border-black/10 dark:border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {/* Navigation Header */}
@@ -2310,7 +2310,7 @@ export default function MoffiSocialMasterpiece() {
 
                                     {/* Avatar Overlap */}
                                     <div className="absolute -bottom-12 left-6">
-                                        <label htmlFor="edit-avatar-upload" className="block relative w-24 h-24 rounded-full border-4 border-[#1C1C1E] shadow-2xl cursor-pointer group bg-card dark:bg-[#1C1C1E] overflow-hidden">
+                                        <label htmlFor="edit-avatar-upload" className="block relative w-24 h-24 rounded-full border-4 border-[var(--color-camera-surface)] shadow-2xl cursor-pointer group bg-card dark:bg-[var(--color-camera-surface)] overflow-hidden">
                                             {editAvatarPreview ? (
                                                 <img src={editAvatarPreview} className="w-full h-full object-cover" />
                                             ) : (
@@ -2384,7 +2384,7 @@ export default function MoffiSocialMasterpiece() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[9999] bg-white/95 dark:bg-[#0a0a0b]/95 backdrop-blur-3xl flex flex-col"
+                        className="fixed inset-0 z-[9999] bg-white/95 dark:bg-[var(--color-camera-surface)]/95 backdrop-blur-3xl flex flex-col"
                     >
                         {/* Header */}
                         <div className="flex justify-between items-center px-6 pt-12 pb-4 shrink-0 border-b border-[var(--card-border)]">
@@ -2510,7 +2510,7 @@ export default function MoffiSocialMasterpiece() {
                                                         setSaturation(130);
                                                         showToast("AI İyileştirme ✨", "Profesyonel ayarlar uygulandı.", "success");
                                                     }}
-                                                    className="absolute bottom-6 right-6 z-20 w-8 h-8 flex items-center justify-center text-yellow-400 hover:scale-110 transition-all active:scale-95 group"
+                                                    className="absolute bottom-6 right-6 z-20 w-8 h-8 flex items-center justify-center text-cyan-400 hover:scale-110 transition-all active:scale-95 group"
                                                     title="AI İyileştir"
                                                 >
                                                     <Sparkles className="w-5 h-5 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]" />
@@ -2553,7 +2553,7 @@ export default function MoffiSocialMasterpiece() {
                                         <div className="w-20 h-20 rounded-[1.5rem] bg-gradient-to-tr from-cyan-500/20 to-purple-500/20 flex items-center justify-center border border-black/10 dark:border-white/10 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-xl">
                                             <ImagePlus className="w-8 h-8 text-cyan-400 drop-shadow-[0_0_15px_rgba(34,211,238,0.5)]" />
                                         </div>
-                                        <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-cyan-500 flex items-center justify-center text-black border-4 border-[#0a0a0b] shadow-xl group-hover:scale-110 transition-transform">
+                                        <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-cyan-500 flex items-center justify-center text-black border-4 border-[var(--color-camera-surface)] shadow-xl group-hover:scale-110 transition-transform">
                                             <Plus className="w-4 h-4" strokeWidth={3} />
                                         </div>
                                     </div>
@@ -2843,7 +2843,7 @@ export default function MoffiSocialMasterpiece() {
                                     disabled={isGeneratingAI}
                                     className={cn(
                                         "flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all active:scale-95 border ml-2",
-                                        isGeneratingAI ? "bg-black/5 dark:bg-white/5 opacity-50 border-transparent" : "bg-gradient-to-r from-cyan-500/10 to-blue-500/10 text-cyan-500 border-cyan-500/20 hover:from-cyan-500/20 hover:to-blue-500/20"
+                                        isGeneratingAI ? "bg-black/5 dark:bg-white/5 opacity-50 border-transparent" : "bg-gradient-to-r from-cyan-500/10 to-purple-500/10 text-cyan-500 border-cyan-500/20 hover:from-cyan-500/20 hover:to-purple-500/20"
                                     )}
                                 >
                                     {isGeneratingAI ? <div className="w-3.5 h-3.5 border-2 border-cyan-400/20 border-t-cyan-400 rounded-full animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
@@ -2859,7 +2859,7 @@ export default function MoffiSocialMasterpiece() {
                                              id="upload-tool-drawer"
                                              initial={{ opacity: 0, y: -10 }}
                                              animate={{ opacity: 1, y: 0 }}
-                                             className="bg-[#0c0c0d]/30 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-2xl overflow-hidden shrink-0"
+                                             className="bg-[var(--color-camera-surface)]/30 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-2xl overflow-hidden shrink-0"
                                          >
                                              <div className="p-4">
                                                  {activeTool === 'adjust' && (
@@ -3224,7 +3224,7 @@ export default function MoffiSocialMasterpiece() {
                             exit={{ opacity: 0, scale: 0.95 }}
                             className="fixed inset-0 z-[310] flex items-center justify-center p-4 pointer-events-none"
                         >
-                            <div className="bg-[#f0f0f0] dark:bg-[#1c1c1e] w-[270px] rounded-3xl overflow-hidden shadow-2xl flex flex-col pointer-events-auto items-center border border-black/10 dark:border-white/10">
+                            <div className="bg-[#f0f0f0] dark:bg-[var(--color-camera-surface)] w-[270px] rounded-3xl overflow-hidden shadow-2xl flex flex-col pointer-events-auto items-center border border-black/10 dark:border-white/10">
                                 <div className="p-5 flex flex-col items-center gap-1 w-full text-center">
                                     <h3 className="font-bold text-[17px] tracking-tight text-black dark:text-white leading-tight">
                                         Hikayeyi Sil
@@ -3282,7 +3282,7 @@ export default function MoffiSocialMasterpiece() {
                             transition={{ duration: 0.2, ease: "easeOut" }}
                             className="fixed inset-0 z-[300] flex items-center justify-center p-4 pointer-events-none"
                         >
-                            <div className="w-full max-w-[280px] bg-[#252528]/95 backdrop-blur-xl rounded-3xl overflow-hidden pointer-events-auto shadow-2xl border border-black/10 dark:border-white/10 flex flex-col">
+                            <div className="w-full max-w-[280px] bg-[var(--color-camera-surface)]/95 backdrop-blur-xl rounded-3xl overflow-hidden pointer-events-auto shadow-2xl border border-black/10 dark:border-white/10 flex flex-col">
                                 <div className="p-4 sm:p-6 flex flex-col items-center text-center gap-2 border-b border-black/10 dark:border-white/10">
                                     <h3 className="text-[var(--foreground)] text-base font-bold">Gönderiyi Sil</h3>
                                     <p className="text-[var(--foreground)]/70 text-sm leading-snug">Bu gönderiyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.</p>
@@ -3649,7 +3649,7 @@ export default function MoffiSocialMasterpiece() {
                                     </div>
 
                                     <div className="bg-[var(--card-bg)] border border-black/5 dark:border-white/5 rounded-2xl p-2.5 flex items-center gap-2.5 shadow-sm">
-                                        <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 shrink-0">
+                                        <div className="w-8 h-8 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-500 shrink-0">
                                             <User className="w-3.5 h-3.5" />
                                         </div>
                                         <div className="flex flex-col min-w-0">
@@ -3758,7 +3758,7 @@ export default function MoffiSocialMasterpiece() {
                             className="w-full max-w-md bg-[var(--card-bg)] rounded-[2rem] border border-black/10 dark:border-white/10 shadow-2xl relative z-10 overflow-hidden flex flex-col"
                         >
                             <div className="p-4 sm:p-6 pb-4 border-b border-[var(--card-border)] flex flex-col items-center">
-                                <div className="w-16 h-16 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center mb-4 ring-4 ring-blue-500/10">
+                                <div className="w-16 h-16 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center mb-4 ring-4 ring-purple-500/10">
                                     <Lock className="w-8 h-8" />
                                 </div>
                                 <h3 className="text-xl font-black text-[var(--foreground)] text-center">
@@ -3888,7 +3888,7 @@ export default function MoffiSocialMasterpiece() {
                                 {adoptionPetPhotos.length > 0 ? (
                                     <div className="grid grid-cols-4 gap-3 mb-2">
                                         {adoptionPetPhotos.map((photo, idx) => (
-                                            <div key={idx} className="aspect-square rounded-2xl bg-card dark:bg-[#1C1C1E] border border-black/10 dark:border-white/10 relative overflow-hidden group">
+                                            <div key={idx} className="aspect-square rounded-2xl bg-card dark:bg-[var(--color-camera-surface)] border border-black/10 dark:border-white/10 relative overflow-hidden group">
                                                 <img src={photo.preview} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
                                                 <button
                                                     onClick={() => setAdoptionPetPhotos(prev => prev.filter((_, i) => i !== idx))}
@@ -3911,7 +3911,7 @@ export default function MoffiSocialMasterpiece() {
                                 ) : (
                                     <div
                                         onClick={() => adoptionPhotoRef.current?.click()}
-                                        className="w-full h-52 rounded-3xl bg-card dark:bg-[#1C1C1E] border-2 border-dashed border-black/10 dark:border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-cyan-400/50 hover:bg-cyan-400/5 transition-colors cursor-pointer group mb-2 shadow-inner overflow-hidden"
+                                        className="w-full h-52 rounded-3xl bg-card dark:bg-[var(--color-camera-surface)] border-2 border-dashed border-black/10 dark:border-white/10 flex flex-col items-center justify-center text-[var(--secondary-text)] hover:border-cyan-400/50 hover:bg-cyan-400/5 transition-colors cursor-pointer group mb-2 shadow-inner overflow-hidden"
                                     >
                                         <Camera className="w-8 h-8 mb-2 group-hover:text-cyan-400 group-hover:scale-110 transition-all drop-shadow-md" />
                                         <span className="text-sm font-bold tracking-wide">Net Fotoğraflar Yükle</span>
@@ -4185,7 +4185,7 @@ export default function MoffiSocialMasterpiece() {
                                         ))}
                                     </div>
 
-                                    <div className="bg-card dark:bg-[#1C1C1E] rounded-xl p-3.5 border border-black/5 dark:border-white/5 relative overflow-hidden">
+                                    <div className="bg-card dark:bg-[var(--color-camera-surface)] rounded-xl p-3.5 border border-black/5 dark:border-white/5 relative overflow-hidden">
                                         <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 blur-3xl rounded-full" />
                                         <h3 className="text-cyan-400/80 text-[10px] font-black uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
                                             <Info className="w-3 h-3" /> Hikaye & Durum
@@ -4497,7 +4497,7 @@ export default function MoffiSocialMasterpiece() {
                             </div>
 
                             {/* Media Display */}
-                            <div className="relative w-full h-full md:max-w-md md:aspect-[9/16] md:h-auto md:max-h-[90vh] md:rounded-3xl overflow-hidden bg-[#1c1c1e] md:border md:border-black/10 dark:border-white/10 shadow-2xl">
+                            <div className="relative w-full h-full md:max-w-md md:aspect-[9/16] md:h-auto md:max-h-[90vh] md:rounded-3xl overflow-hidden bg-[var(--color-camera-surface)] md:border md:border-black/10 dark:border-white/10 shadow-2xl">
                                 <img
                                     key={storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].id}
                                     src={storyGroups[viewerStoryGroupIndex].stories[viewerStoryIndex].media_url}
@@ -4691,7 +4691,7 @@ export default function MoffiSocialMasterpiece() {
                         animate={{ y: 0 }}
                         exit={{ y: "120%" }}
                         transition={{ type: "spring", damping: 28, stiffness: 250 }}
-                        className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-[340px] z-[250] bg-white/95 dark:bg-[#121212]/95 backdrop-blur-3xl rounded-[2.5rem] shadow-[0_0_50px_-12px_rgba(0,0,0,0.25)] dark:shadow-[0_0_50px_-12px_rgba(0,0,0,0.6)] border border-black/5 dark:border-white/10 flex flex-col max-h-[75vh]"
+                        className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-[340px] z-[250] bg-white/95 dark:bg-[var(--color-camera-surface)]/95 backdrop-blur-3xl rounded-[2.5rem] shadow-[0_0_50px_-12px_rgba(0,0,0,0.25)] dark:shadow-[0_0_50px_-12px_rgba(0,0,0,0.6)] border border-black/5 dark:border-white/10 flex flex-col max-h-[75vh]"
                     >
                         {/* Elegant Drag Handle */}
                         <div className="w-full flex justify-center pt-4 pb-2 shrink-0">
