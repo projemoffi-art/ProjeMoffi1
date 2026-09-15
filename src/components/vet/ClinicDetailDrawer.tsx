@@ -459,7 +459,7 @@ export function ClinicDetailDrawer({ clinicId, clinicData, onClose, onBookAppoin
                                             <tab.icon className={cn("w-3.5 h-3.5", activeTab === tab.id ? "text-accent" : "")} />
                                             {tab.label}
                                             {activeTab === tab.id && (
-                                                <motion.div layoutId="activeTab" className="absolute bottom-0 inset-x-4 h-1 bg-accent rounded-t-full" />
+                                                <div className="absolute bottom-0 inset-x-4 h-1 bg-accent rounded-t-full" />
                                             )}
                                         </button>
                                     ))}
