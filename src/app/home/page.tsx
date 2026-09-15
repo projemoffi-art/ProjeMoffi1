@@ -2950,31 +2950,31 @@ export default function LegendaryLightDashboard() {
 
                                             {/* 4. Smart Food & Service Subscriptions (Abonelikler) */}
                                             <div className="flex flex-col gap-3">
-                                                <span className="text-[10px] font-black tracking-widest text-gray-500 dark:text-gray-400 uppercase px-1">MAMA & HİZMET ABONELİKLERİM</span>
+                                                <span className="text-[10px] font-black tracking-widest text-secondary uppercase px-1">MAMA & HİZMET ABONELİKLERİM</span>
                                                 
-                                                <div className="bg-white border border-gray-100 rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3">
+                                                <div className="bg-card border border-card-border rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3">
                                                     {subscriptions.length > 0 ? subscriptions.map((sub: any, idx: number) => (
-                                                        <div key={sub.id || idx} className={`flex justify-between items-center ${idx !== subscriptions.length - 1 ? 'pb-3 border-b border-gray-50' : ''}`}>
+                                                        <div key={sub.id || idx} className={`flex justify-between items-center ${idx !== subscriptions.length - 1 ? 'pb-3 border-b border-card-border' : ''}`}>
                                                             <div className="flex items-center gap-2.5">
                                                                 <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600 shrink-0">
                                                                     <ShoppingBag className="w-5 h-5" />
                                                                 </div>
                                                                 <div>
-                                                                    <h4 className="text-[11.5px] font-black text-gray-800">{sub.name}</h4>
-                                                                    <p className="text-[9.5px] text-gray-500 dark:text-gray-400 font-semibold mt-0.5">Aylık Düzenli Teslimat • %10 İndirimli</p>
+                                                                    <h4 className="text-[11.5px] font-black text-foreground">{sub.name}</h4>
+                                                                    <p className="text-[9.5px] text-secondary font-semibold mt-0.5">Aylık Düzenli Teslimat • %10 İndirimli</p>
                                                                 </div>
                                                             </div>
                                                             <div className="text-right">
                                                                 <span className="text-[11.5px] font-black text-orange-600 block">{(sub.price * 0.9).toLocaleString('tr-TR')} TL</span>
-                                                                <span className="text-[8px] font-bold text-gray-500 dark:text-gray-400 block uppercase font-sans">Abonelik</span>
+                                                                <span className="text-[8px] font-bold text-secondary block uppercase font-sans">Abonelik</span>
                                                             </div>
                                                         </div>
                                                     )) : (
                                                         <div className="text-center py-4 flex flex-col items-center">
-                                                            <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-2.5">Henüz aktif bir aboneliğiniz bulunmuyor.</p>
+                                                            <p className="text-[10px] font-bold text-secondary mb-2.5">Henüz aktif bir aboneliğiniz bulunmuyor.</p>
                                                             <button 
                                                                 onClick={() => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'petshop' }))}
-                                                                className="text-[10px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100/50 hover:bg-indigo-100 px-4 py-2 rounded-xl transition-colors"
+                                                                className="text-[10px] font-black text-accent-secondary bg-accent-secondary/10 border border-accent-secondary/20 hover:bg-accent-secondary/20 px-4 py-2 rounded-xl transition-colors"
                                                             >
                                                                 Marketi Keşfet
                                                             </button>
