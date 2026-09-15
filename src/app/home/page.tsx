@@ -3112,19 +3112,19 @@ export default function LegendaryLightDashboard() {
                                                     <div className="flex flex-col gap-3">
                                                         {/* Simulated Live Map */}
                                                         {showLiveMap && (
-                                                            <div className="p-4 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.02)] flex flex-col gap-3 relative overflow-hidden">
+                                                            <div className="p-4 bg-card border border-card-border rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.02)] flex flex-col gap-3 relative overflow-hidden">
                                                                 <div className="flex justify-between items-center">
-                                                                    <span className="text-[10px] font-black tracking-widest text-[#527958] uppercase">CANLI KURYE HARİTASI</span>
+                                                                    <span className="text-[10px] font-black tracking-widest text-accent-secondary uppercase">CANLI KURYE HARİTASI</span>
                                                                     <button 
                                                                         onClick={() => setShowLiveMap(false)}
-                                                                        className="text-[9.5px] font-black text-gray-500 dark:text-gray-400 hover:text-gray-600 cursor-pointer animate-none"
+                                                                        className="text-[9.5px] font-black text-secondary hover:text-gray-600 cursor-pointer animate-none"
                                                                     >
                                                                         Gizle ×
                                                                     </button>
                                                                 </div>
                                                                 
                                                                 {/* Map container */}
-                                                                <div className="relative h-40 bg-green-50/10 rounded-2xl overflow-hidden border border-gray-100 flex items-center justify-center">
+                                                                <div className="relative h-40 bg-green-50/10 rounded-2xl overflow-hidden border border-card-border flex items-center justify-center">
                                                                     <div className="absolute inset-0 opacity-[0.06] bg-[radial-gradient(#000_1.5px,transparent_1.5px)] [background-size:16px_16px]" />
                                                                     <svg className="absolute inset-0 w-full h-full" viewBox="0 0 300 160">
                                                                         {/* Streets */}
@@ -3158,10 +3158,10 @@ export default function LegendaryLightDashboard() {
                                                                             }}
                                                                         />
                                                                     </svg>
-                                                                    <div className="absolute top-2.5 left-2.5 bg-white/95 border border-gray-100 px-2 py-0.5 rounded-lg shadow-sm text-[8px] font-black text-gray-600">
+                                                                    <div className="absolute top-2.5 left-2.5 bg-card/95 border border-card-border px-2 py-0.5 rounded-lg shadow-sm text-[8px] font-black text-gray-600">
                                                                         📍 Caferağa Mah. Moda
                                                                     </div>
-                                                                    <div className="absolute bottom-2.5 right-2.5 bg-[#527958] text-white px-2 py-0.5 rounded-lg shadow-sm text-[8px] font-black">
+                                                                    <div className="absolute bottom-2.5 right-2.5 bg-accent-secondary text-white px-2 py-0.5 rounded-lg shadow-sm text-[8px] font-black">
                                                                         🛵 Kurye Can yolda
                                                                     </div>
                                                                 </div>
@@ -3170,26 +3170,26 @@ export default function LegendaryLightDashboard() {
 
                                                         {/* Shipping tracker list */}
                                                         {activeOrders.length === 0 ? (
-                                                            <div className="p-8 bg-white border border-gray-100 rounded-3xl text-center flex flex-col items-center justify-center gap-2">
+                                                            <div className="p-8 bg-card border border-card-border rounded-3xl text-center flex flex-col items-center justify-center gap-2">
                                                                 <span className="text-2xl">📦</span>
-                                                                <h5 className="text-xs font-black text-gray-800">Aktif Sipariş Yok</h5>
-                                                                <p className="text-[9.5px] text-gray-500 dark:text-gray-400 font-semibold">Şu an aktif takipte olan bir siparişiniz bulunmuyor.</p>
+                                                                <h5 className="text-xs font-black text-foreground">Aktif Sipariş Yok</h5>
+                                                                <p className="text-[9.5px] text-secondary font-semibold">Şu an aktif takipte olan bir siparişiniz bulunmuyor.</p>
                                                             </div>
                                                         ) : (
                                                             activeOrders.map((ord) => (
-                                                                <div key={ord.id} className="p-4 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3.5">
+                                                                <div key={ord.id} className="p-4 bg-card border border-card-border rounded-3xl shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3.5">
                                                                     <div className="flex justify-between items-center">
                                                                         <div className="flex items-center gap-2">
                                                                             <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-ping shrink-0" />
-                                                                            <h4 className="text-[10px] font-black text-gray-800 uppercase tracking-wider ml-1">Kurye Yolda • Sipariş Takibi</h4>
+                                                                            <h4 className="text-[10px] font-black text-foreground uppercase tracking-wider ml-1">Kurye Yolda • Sipariş Takibi</h4>
                                                                         </div>
                                                                         <span className="text-[8.5px] font-black text-green-700 bg-green-50 border border-green-200/50 px-2 py-0.5 rounded-full">{ord.status}</span>
                                                                     </div>
                                                                     
                                                                     <div className="flex justify-between items-start">
                                                                         <div>
-                                                                            <h5 className="text-[12px] font-black text-gray-800 leading-tight">{ord.name}</h5>
-                                                                            <p className="text-[9.5px] text-gray-500 dark:text-gray-400 font-semibold mt-0.5">{ord.desc}</p>
+                                                                            <h5 className="text-[12px] font-black text-foreground leading-tight">{ord.name}</h5>
+                                                                            <p className="text-[9.5px] text-secondary font-semibold mt-0.5">{ord.desc}</p>
                                                                         </div>
                                                                         <span className="text-[12px] font-black text-green-700 shrink-0">{ord.timeRemaining}</span>
                                                                     </div>
@@ -3206,14 +3206,14 @@ export default function LegendaryLightDashboard() {
                                                                         </div>
                                                                         <div className="flex-1 flex flex-col gap-1 items-center">
                                                                             <div className={`w-full h-1.5 rounded-full ${ord.progress >= 100 ? 'bg-green-600' : 'bg-gray-200'}`} />
-                                                                            <span className="text-[7.5px] font-black text-gray-500 dark:text-gray-400 uppercase">Teslimat</span>
+                                                                            <span className="text-[7.5px] font-black text-secondary uppercase">Teslimat</span>
                                                                         </div>
                                                                     </div>
 
-                                                                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
+                                                                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-card-border">
                                                                         <button 
                                                                             onClick={() => setShowLiveMap(true)}
-                                                                            className="py-2.5 rounded-xl bg-[#527958] hover:bg-[#436448] text-white text-[10px] font-black cursor-pointer text-center transition-colors shadow-sm"
+                                                                            className="py-2.5 rounded-xl bg-accent-secondary hover:brightness-95 text-white text-[10px] font-black cursor-pointer text-center transition-colors shadow-sm"
                                                                         >
                                                                             Haritada Göster 📍
                                                                         </button>
@@ -3234,10 +3234,10 @@ export default function LegendaryLightDashboard() {
                                                 {/* TAB 2: GEÇMİŞ SİPARİŞLER */}
                                                 {profileOrdersTab === 'past' && (
                                                     <div className="flex flex-col gap-3">
-                                                        <div className="p-4 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3">
-                                                            <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+                                                        <div className="p-4 bg-card border border-card-border rounded-3xl shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3">
+                                                            <div className="flex justify-between items-center pb-2 border-b border-card-border">
                                                                 <div>
-                                                                    <span className="text-[9px] font-black text-gray-500 dark:text-gray-400">SİPARİŞ #928374</span>
+                                                                    <span className="text-[9px] font-black text-secondary">SİPARİŞ #928374</span>
                                                                     <span className="text-[9.5px] text-gray-500 font-bold block mt-0.5">12 Mayıs 2026</span>
                                                                 </div>
                                                                 <span className="text-[9px] font-black text-green-700 bg-green-50 border border-green-200/55 px-2.5 py-0.5 rounded-full">
@@ -3249,12 +3249,12 @@ export default function LegendaryLightDashboard() {
                                                                     <ShoppingBag className="w-5 h-5" />
                                                                 </div>
                                                                 <div className="flex-1">
-                                                                    <h5 className="text-[11.5px] font-bold text-gray-800 leading-tight">Tahılsız Somonlu Kuru Köpek Maması (15kg)</h5>
-                                                                    <p className="text-[9.5px] text-gray-500 dark:text-gray-400 font-semibold mt-0.5">Moffi Premium Satıcı • 1,450 TL</p>
+                                                                    <h5 className="text-[11.5px] font-bold text-foreground leading-tight">Tahılsız Somonlu Kuru Köpek Maması (15kg)</h5>
+                                                                    <p className="text-[9.5px] text-secondary font-semibold mt-0.5">Moffi Premium Satıcı • 1,450 TL</p>
                                                                 </div>
                                                             </div>
-                                                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
-                                                                <button className="py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl text-[9.5px] font-black text-gray-700 cursor-pointer text-center transition-colors">
+                                                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-card-border">
+                                                                <button className="py-2 bg-secondary hover:brightness-95 border border-gray-200 rounded-xl text-[9.5px] font-black text-gray-700 cursor-pointer text-center transition-colors">
                                                                     Değerlendir (5 ⭐)
                                                                 </button>
                                                                 <button className="py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-[9.5px] font-black cursor-pointer text-center transition-colors">
@@ -3263,8 +3263,8 @@ export default function LegendaryLightDashboard() {
                                                             </div>
                                                         </div>
 
-                                                        <div className="p-4 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3">
-                                                            <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+                                                        <div className="p-4 bg-card border border-card-border rounded-3xl shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3">
+                                                            <div className="flex justify-between items-center pb-2 border-b border-card-border">
                                                                 <div>
                                                                     <span className="text-[9px] font-black text-gray-500">SİPARİŞ #837261</span>
                                                                     <span className="text-[9.5px] text-gray-500 font-bold block mt-0.5">28 Nisan 2026</span>
@@ -3278,12 +3278,12 @@ export default function LegendaryLightDashboard() {
                                                                     <Radio className="w-5 h-5" />
                                                                 </div>
                                                                 <div className="flex-1">
-                                                                    <h5 className="text-[11.5px] font-bold text-gray-800 leading-tight">Moffi Link™ Akıllı Tasma v2 - Orman Yeşili</h5>
-                                                                    <p className="text-[9.5px] text-gray-500 dark:text-gray-400 font-semibold mt-0.5">Moffi Donanım A.Ş. • 2,490 TL</p>
+                                                                    <h5 className="text-[11.5px] font-bold text-foreground leading-tight">Moffi Link™ Akıllı Tasma v2 - Orman Yeşili</h5>
+                                                                    <p className="text-[9.5px] text-secondary font-semibold mt-0.5">Moffi Donanım A.Ş. • 2,490 TL</p>
                                                                 </div>
                                                             </div>
-                                                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
-                                                                <button className="py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl text-[9.5px] font-black text-gray-700 cursor-pointer text-center transition-colors">
+                                                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-card-border">
+                                                                <button className="py-2 bg-secondary hover:brightness-95 border border-gray-200 rounded-xl text-[9.5px] font-black text-gray-700 cursor-pointer text-center transition-colors">
                                                                     Fatura İndir (PDF)
                                                                 </button>
                                                                 <button className="py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-[9.5px] font-black cursor-pointer text-center transition-colors">
