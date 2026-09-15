@@ -3286,7 +3286,7 @@ export default function LegendaryLightDashboard() {
                                                                 <button className="py-2 bg-secondary hover:brightness-95 border border-gray-200 rounded-xl text-[9.5px] font-black text-gray-700 cursor-pointer text-center transition-colors">
                                                                     Fatura İndir (PDF)
                                                                 </button>
-                                                                <button className="py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-[9.5px] font-black cursor-pointer text-center transition-colors">
+                                                                <button className="py-2 bg-secondary hover:brightness-95 text-foreground rounded-xl text-[9.5px] font-black cursor-pointer text-center transition-colors">
                                                                     Destek Talebi Aç
                                                                 </button>
                                                             </div>
