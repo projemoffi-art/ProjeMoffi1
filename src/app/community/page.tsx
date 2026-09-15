@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { compressImageToFile } from '@/lib/imageUtils';
 import { cn } from '@/lib/utils';
+import { isSupabaseEnabled } from '@/services/apiService';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 const MapLocationPicker = dynamic(() => import('@/components/common/MapLocationPicker').then(mod => mod.MapLocationPicker), { ssr: false });
