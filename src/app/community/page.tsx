@@ -2012,9 +2012,9 @@ export default function MoffiSocialMasterpiece() {
                     >
                         <div className={cn(
                             "backdrop-blur-xl border rounded-full px-5 py-2.5 shadow-2xl flex items-center gap-3 pointer-events-auto",
-                            toastMessage.type === 'success' ? "bg-cyan-500/10 border-cyan-500/30 text-cyan-400" :
-                                toastMessage.type === 'error' ? "bg-red-500/10 border-red-500/30 text-red-400" :
-                                    "bg-black/60 dark:bg-white/10 border-black/10 dark:border-white/20 text-white"
+                            toastMessage.type === 'success' ? "bg-accent-secondary/10 border-accent-secondary/30 text-accent-secondary" :
+                                toastMessage.type === 'error' ? "bg-emergency/10 border-emergency/30 text-emergency" :
+                                    "bg-card/90 border-[var(--card-border)] text-[var(--foreground)]"
                         )}>
                             {toastMessage.type === 'success' ? <Check className="w-4 h-4 shrink-0" strokeWidth={3} /> :
                                 toastMessage.type === 'error' ? <X className="w-4 h-4 shrink-0" strokeWidth={3} /> :
@@ -4624,11 +4624,11 @@ export default function MoffiSocialMasterpiece() {
                             <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
                                 <AlertCircle className="w-8 h-8 text-red-500" />
                             </div>
-                            <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-100">Beğeni Hatası</h3>
-                            <p className="text-sm text-zinc-600 dark:text-zinc-400 p-3 bg-zinc-100 dark:bg-zinc-800 rounded-xl font-mono break-words w-full select-all">
+                            <h3 className="font-bold text-lg text-[var(--foreground)]">Beğeni Hatası</h3>
+                            <p className="text-sm text-[var(--secondary-text)] p-3 bg-secondary border border-[var(--card-border)] rounded-xl font-mono break-words w-full select-all">
                                 {likeError}
                             </p>
-                            <p className="text-xs text-zinc-500">Lütfen bu hatayı kopyalayıp asistana gönderin.</p>
+                            <p className="text-xs text-[var(--secondary-text)]/70">Lütfen bu hatayı kopyalayıp asistana gönderin.</p>
                             <button 
                                 onClick={() => setLikeError(null)}
                                 className="mt-2 w-full py-3 bg-black dark:bg-white text-white dark:text-black rounded-xl font-bold active:scale-95 transition-transform"
