@@ -2708,7 +2708,7 @@ export default function LegendaryLightDashboard() {
                                                 <>
                                             {/* 2. Moffi Pay & Contactless Collar Card (Pati-Kart) */}
                                             <div className="flex flex-col gap-3">
-                                                <span className="text-[10px] font-black tracking-widest text-gray-500 dark:text-gray-400 uppercase px-1">FINANSAL PORTFÖY & TEMASSIZ PATİ-KART</span>
+                                                <span className="text-[10px] font-black tracking-widest text-secondary uppercase px-1">FINANSAL PORTFÖY & TEMASSIZ PATİ-KART</span>
                                                 
                                                 {/* The Interactive Black/Gold Card */}
                                                 <div className="bg-gradient-to-tr from-gray-950 via-gray-900 to-gray-900 text-white p-5 rounded-[28px] border border-gray-800/80 shadow-[0_12px_30px_rgba(0,0,0,0.12)] relative overflow-hidden group">
@@ -2748,18 +2748,18 @@ export default function LegendaryLightDashboard() {
                                                 <div className="grid grid-cols-2 gap-3">
                                                     <button 
                                                         disabled
-                                                        className="flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-100 p-3.5 rounded-2xl text-[11px] font-black text-gray-500 dark:text-gray-400 transition-all cursor-not-allowed shadow-sm relative overflow-hidden"
+                                                        className="flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-100 p-3.5 rounded-2xl text-[11px] font-black text-secondary transition-all cursor-not-allowed shadow-sm relative overflow-hidden"
                                                     >
-                                                        <div className="absolute inset-0 bg-white/50 z-10" />
+                                                        <div className="absolute inset-0 bg-card/50 z-10" />
                                                         <Plus className="w-3.5 h-3.5" />
                                                         <span>Bakiye Yükle</span>
                                                         <span className="absolute top-0 right-0 bg-orange-100 text-orange-600 text-[7px] px-1.5 py-0.5 rounded-bl-lg font-black z-20">YAKINDA</span>
                                                     </button>
                                                     <button 
                                                         disabled
-                                                        className="flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-100 p-3.5 rounded-2xl text-[11px] font-black text-gray-500 dark:text-gray-400 transition-all cursor-not-allowed shadow-sm relative overflow-hidden"
+                                                        className="flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-100 p-3.5 rounded-2xl text-[11px] font-black text-secondary transition-all cursor-not-allowed shadow-sm relative overflow-hidden"
                                                     >
-                                                        <div className="absolute inset-0 bg-white/50 z-10" />
+                                                        <div className="absolute inset-0 bg-card/50 z-10" />
                                                         <ArrowUpRight className="w-3.5 h-3.5" />
                                                         <span>Puan Transferi</span>
                                                         <span className="absolute top-0 right-0 bg-orange-100 text-orange-600 text-[7px] px-1.5 py-0.5 rounded-bl-lg font-black z-20">YAKINDA</span>
@@ -2768,30 +2768,30 @@ export default function LegendaryLightDashboard() {
 
                                                 <button 
                                                     onClick={() => setIsPolicyModalOpen(true)}
-                                                    className="w-full p-3.5 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-between group hover:bg-gray-100 transition-colors cursor-pointer mt-3"
+                                                    className="w-full p-3.5 rounded-2xl bg-secondary border-card-border flex items-center justify-between group hover:brightness-95 transition-colors cursor-pointer mt-3"
                                                 >
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-xl bg-white border border-gray-100 shadow-sm flex items-center justify-center">
+                                                        <div className="w-8 h-8 rounded-xl bg-card border-card-border shadow-sm flex items-center justify-center">
                                                             <ShieldCheck className="w-4 h-4 text-emerald-500" />
                                                         </div>
                                                         <div className="text-left">
-                                                            <span className="text-[11px] font-black text-gray-800 block">Pati-Kart KVKK & Kurallar</span>
-                                                            <span className="text-[9px] text-gray-500 font-medium">Adil kullanım politikalarını inceleyin</span>
+                                                            <span className="text-[11px] font-black text-foreground block">Pati-Kart KVKK & Kurallar</span>
+                                                            <span className="text-[9px] text-secondary font-medium">Adil kullanım politikalarını inceleyin</span>
                                                         </div>
                                                     </div>
-                                                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-emerald-500 transition-colors" />
+                                                    <ChevronRight className="w-4 h-4 text-secondary group-hover:text-emerald-500 transition-colors" />
                                                 </button>
 
                                                 {/* Pati-Kart Security Settings */}
-                                                <div className="bg-white border border-gray-100 rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-4">
+                                                <div className="bg-card border-card-border rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-4">
                                                     <div className="flex justify-between items-center">
                                                         <div className="flex items-center gap-2.5">
                                                             <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center text-red-600 shrink-0">
                                                                 <Lock className="w-4.5 h-4.5" />
                                                             </div>
                                                             <div>
-                                                                <h4 className="text-[11.5px] font-black text-gray-800">Pati-Kart Güvenlik Kilidi</h4>
-                                                                <p className="text-[9.5px] text-gray-500 dark:text-gray-400 font-semibold mt-0.5">Tasmanın NFC ödemelerini geçici olarak kilitle</p>
+                                                                <h4 className="text-[11.5px] font-black text-foreground">Pati-Kart Güvenlik Kilidi</h4>
+                                                                <p className="text-[9.5px] text-secondary font-semibold mt-0.5">Tasmanın NFC ödemelerini geçici olarak kilitle</p>
                                                             </div>
                                                         </div>
                                                         <button 
@@ -2799,7 +2799,7 @@ export default function LegendaryLightDashboard() {
                                                                 setNfcPaymentLocked(!nfcPaymentLocked);
                                                                 setToastMsg(nfcPaymentLocked ? "🔓 Pati-Kart ödeme kilidi kaldırıldı!" : "🔒 Pati-Kart geçici olarak kilitlendi!");
                                                             }}
-                                                            className={`w-11 h-6 rounded-full transition-colors flex items-center px-0.5 duration-300 ${nfcPaymentLocked ? 'bg-red-500' : 'bg-gray-200'}`}
+                                                            className={`w-11 h-6 rounded-full transition-colors flex items-center px-0.5 duration-300 ${nfcPaymentLocked ? 'bg-red-500' : 'bg-secondary'}`}
                                                         >
                                                             <motion.div 
                                                                 layout 
@@ -2809,12 +2809,12 @@ export default function LegendaryLightDashboard() {
                                                         </button>
                                                     </div>
 
-                                                    <div className="border-t border-gray-100 pt-3">
+                                                    <div className="border-t border-card-border pt-3">
                                                         <div className="flex justify-between items-center mb-2.5">
-                                                            <span className="text-[10.5px] font-black text-gray-700">Günlük Limit</span>
+                                                            <span className="text-[10.5px] font-black text-foreground">Günlük Limit</span>
                                                             <span className="text-xs font-black text-green-700 bg-green-50 px-2 py-0.5 rounded-lg border border-green-100">{dailySpendLimit} PATI</span>
                                                         </div>
-                                                        <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200/40 gap-1">
+                                                        <div className="flex bg-secondary p-1 rounded-2xl border border-card-border gap-1">
                                                             {[100, 250, 500, 1000].map((limit) => (
                                                                 <button 
                                                                     key={limit}
@@ -2824,8 +2824,8 @@ export default function LegendaryLightDashboard() {
                                                                     }}
                                                                     className={`flex-1 text-[9.5px] font-black py-2 rounded-xl transition-all cursor-pointer text-center relative ${
                                                                         dailySpendLimit === limit 
-                                                                            ? 'bg-white text-gray-900 shadow-sm' 
-                                                                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-600'
+                                                                            ? 'bg-card text-foreground shadow-sm' 
+                                                                            : 'text-secondary hover:text-gray-600'
                                                                     }`}
                                                                 >
                                                                     {limit} P
