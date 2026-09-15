@@ -2985,9 +2985,9 @@ export default function LegendaryLightDashboard() {
 
                                             {/* 5. Health & Vaccine Passport Center */}
                                             <div className="flex flex-col gap-3">
-                                                <span className="text-[10px] font-black tracking-widest text-gray-500 dark:text-gray-400 uppercase px-1">MEDİKAL SAĞLIK & DİJİTAL PASAPORT</span>
+                                                <span className="text-[10px] font-black tracking-widest text-secondary uppercase px-1">MEDİKAL SAĞLIK & DİJİTAL PASAPORT</span>
                                                 
-                                                <div className="bg-white border border-gray-100 rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-4">
+                                                <div className="bg-card border border-card-border rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-4">
                                                     
                                                     {/* Glowing Telehealth Consultation Banner */}
                                                     <div className="flex justify-between items-center p-3.5 bg-gradient-to-r from-emerald-500/10 to-teal-500/5 border border-emerald-100 rounded-2xl relative overflow-hidden group">
@@ -3010,7 +3010,7 @@ export default function LegendaryLightDashboard() {
                                                     </div>
 
                                                     {/* Passport Detail Ring and upcoming vaccines */}
-                                                    <div className="flex justify-between items-center p-3.5 bg-gray-50 border border-gray-100 rounded-2xl">
+                                                    <div className="flex justify-between items-center p-3.5 bg-secondary border border-card-border rounded-2xl">
                                                         <div className="flex items-center gap-3">
                                                             <div className="relative w-10 h-10 flex items-center justify-center">
                                                                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
@@ -3020,8 +3020,8 @@ export default function LegendaryLightDashboard() {
                                                                 <span className="absolute text-[8.5px] font-black text-emerald-700">80%</span>
                                                             </div>
                                                             <div>
-                                                                <span className="text-[8.5px] font-black text-gray-500 dark:text-gray-400 block uppercase">AŞILAMA TAMAMLIK ORANI</span>
-                                                                <h5 className="text-[11.5px] font-black text-gray-800 mt-0.5">Karma ve Kuduz Aşısı Aktif</h5>
+                                                                <span className="text-[8.5px] font-black text-secondary block uppercase">AŞILAMA TAMAMLIK ORANI</span>
+                                                                <h5 className="text-[11.5px] font-black text-foreground mt-0.5">Karma ve Kuduz Aşısı Aktif</h5>
                                                             </div>
                                                         </div>
                                                         <button 
@@ -3040,7 +3040,7 @@ export default function LegendaryLightDashboard() {
                                                             </div>
                                                             <span className="text-[8px] font-black text-amber-600 bg-amber-100/60 px-2 py-0.5 rounded">Hassas Diyet</span>
                                                         </div>
-                                                        <p className="text-[9.5px] font-semibold text-gray-700 leading-relaxed">
+                                                        <p className="text-[9.5px] font-semibold text-foreground leading-relaxed">
                                                             ❌ **Yasaklı Besinler:** Çikolata 🍫, Sarımsak 🧄, Üzüm 🍇. Tahılsız ve yüksek somon proteini diyeti aktif. Günlük kalori hedefi: **1,200 kcal**.
                                                         </p>
                                                     </div>
