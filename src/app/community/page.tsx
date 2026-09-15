@@ -306,6 +306,12 @@ export default function MoffiSocialMasterpiece() {
     const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
     const [isDiaryOpen, setIsDiaryOpen] = useState(false);
     const [isSOSOpen, setIsSOSOpen] = useState(false);
+    const [isStoryViewsDrawerOpen, setIsStoryViewsDrawerOpen] = useState(false);
+    const [storyViewers, setStoryViewers] = useState<any[]>([]);
+    const [isLoadingStoryViewers, setIsLoadingStoryViewers] = useState(false);
+    const [storyPreview, setStoryPreview] = useState<string | null>(null);
+    const [pendingStoryFile, setPendingStoryFile] = useState<File | null>(null);
+    const [isUploadingStory, setIsUploadingStory] = useState(false);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [uploadImageURL, setUploadImageURL] = useState<string | null>(null);
     const [uploadCaption, setUploadCaption] = useState('');
