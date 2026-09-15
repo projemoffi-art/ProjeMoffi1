@@ -1938,6 +1938,10 @@ export class SupabaseApiService implements IApiService {
 
         const clinicIds = data.map((d: any) => d.id);
         const { data: servicesData } = await supabase.from('clinic_services').select('clinic_id, service_name').in('clinic_id', clinicIds);
+        
+        // YENİ 1: Yorumları tüm klinikler için tek seferde (toplu) çek (N+1 engellendi)
+        const { data: reviewsData } = await supabase.from('clinic_reviews').select('clinic_id, rating').in('clinic_id', clinicIds);
+        
         const servicesMap = new Map();
         if (servicesData) {
             servicesData.forEach((s: any) => {
@@ -1946,10 +1950,26 @@ export class SupabaseApiService implements IApiService {
             });
         }
 
+        // YENİ 2: Hangi kliniğin kaç puanı olduğunu grupla ve map'te tut
+        const reviewsMap = new Map();
+        if (reviewsData) {
+            reviewsData.forEach((r: any) => {
+                if (!reviewsMap.has(r.clinic_id)) reviewsMap.set(r.clinic_id, { sum: 0, count: 0 });
+                const stats = reviewsMap.get(r.clinic_id);
+                stats.sum += r.rating;
+                stats.count += 1;
+            });
+        }
+
         return data.map((profile: any) => {
             const cServices = servicesMap.get(profile.id) || [];
             const pLat = profile.business_lat ? parseFloat(profile.business_lat) : null;
             const pLng = profile.business_lng ? parseFloat(profile.business_lng) : null;
+            
+            // YENİ 3: Ortalamayı hesapla
+            const rStats = reviewsMap.get(profile.id);
+            const avgRating = rStats && rStats.count > 0 ? (rStats.sum / rStats.count) : 0;
+            const rCount = rStats ? rStats.count : 0;
             
             let distKm = 999999;
             if (pLat !== null && pLng !== null && lat && lng) {
@@ -1964,8 +1984,8 @@ export class SupabaseApiService implements IApiService {
                 id: profile.id,
                 name: profile.business_name || profile.full_name || 'Veteriner Kliniği',
                 imageUrl: profile.avatar_url || null,
-                rating: 0, // B14 TODO: Fetch real ratings
-                reviewCount: 0,
+                rating: avgRating ? parseFloat(avgRating.toFixed(1)) : 0, // B14
+                reviewCount: rCount,
                 address: profile.address || 'Adres bilgisi girilmedi',
                 location: pLat !== null && pLng !== null ? { lat: pLat, lng: pLng } : null,
                 is_premium: false,
@@ -1991,12 +2011,28 @@ export class SupabaseApiService implements IApiService {
         const pLat = data.business_lat ? parseFloat(data.business_lat) : null;
         const pLng = data.business_lng ? parseFloat(data.business_lng) : null;
 
+        const reviewsRes = await this.getClinicReviews(clinicId);
+        const services = await this.getClinicServices(clinicId);
+
+        const { data: doctorsData } = await supabase
+            .from('doctors')
+            .select('id, name, title, photo_url')
+            .eq('clinic_id', clinicId)
+            .eq('is_active', true);
+
+        const doctors = (doctorsData || []).map((d: any) => ({
+            id: d.id,
+            name: d.name,
+            specialization: d.title,
+            imageUrl: d.photo_url,
+        }));
+
         return {
             id: data.id,
             name: data.business_name || data.full_name || 'Veteriner Kliniği',
             imageUrl: data.avatar_url || null,
-            rating: 0,
-            reviewCount: 0,
+            rating: reviewsRes.averageRating ? parseFloat(reviewsRes.averageRating.toFixed(1)) : 0,
+            reviewCount: reviewsRes.reviews.length || 0,
             about: 'Klinik detay bilgisi',
             address: data.address || 'Adres bilgisi girilmedi',
             location: pLat !== null && pLng !== null ? { lat: pLat, lng: pLng } : null,
@@ -2008,11 +2044,10 @@ export class SupabaseApiService implements IApiService {
                 weekdays: '09:00 - 18:00',
                 weekend: '10:00 - 15:00'
             },
-            services: ['Genel Muayene', 'Aşı', 'Cerrahi', 'Laboratuvar', 'Röntgen'],
+            services: services,
             veterinarians: [],
             gallery: [data.avatar_url].filter(Boolean),
-            doctors: [], // Future: doctors table
-            reviews: []  // Future: clinic_reviews table
+            doctors: doctors,
         };
     }
 
