@@ -3419,84 +3419,84 @@ export default function LegendaryLightDashboard() {
                                                 {/* TAB 4: SİPARİŞ AYARLARI */}
                                                 {profileOrdersTab === 'settings' && (
                                                     <div className="flex flex-col gap-3">
-                                                        <div className="p-4 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-4">
+                                                        <div className="p-4 bg-card border border-card-border rounded-3xl shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-4">
                                                             
                                                             {/* Address section */}
                                                             <div>
-                                                                <h5 className="text-[9.5px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 px-1">KAYITLI ADRESLERİM</h5>
+                                                                <h5 className="text-[9.5px] font-black text-secondary uppercase tracking-widest mb-2 px-1">KAYITLI ADRESLERİM</h5>
                                                                 <div className="flex flex-col gap-2">
-                                                                    <div className="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex justify-between items-start">
+                                                                    <div className="p-3 bg-secondary border border-card-border rounded-2xl flex justify-between items-start">
                                                                         <div>
-                                                                            <span className="text-[10px] font-black text-gray-800 block">🏠 Ev (Birincil)</span>
-                                                                            <span className="text-[9.5px] text-gray-500 font-semibold mt-1 block leading-snug">Moda Cd. No: 12, D: 4, Caferağa Mah. Kadıköy / İstanbul</span>
+                                                                            <span className="text-[10px] font-black text-foreground block">🏠 Ev (Birincil)</span>
+                                                                            <span className="text-[9.5px] text-secondary font-semibold mt-1 block leading-snug">Moda Cd. No: 12, D: 4, Caferağa Mah. Kadıköy / İstanbul</span>
                                                                         </div>
                                                                         <span className="text-[8px] font-black text-green-700 bg-green-50 px-1.5 py-0.5 rounded border border-green-200">Varsayılan</span>
                                                                     </div>
-                                                                    <div className="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex justify-between items-start">
+                                                                    <div className="p-3 bg-secondary border border-card-border rounded-2xl flex justify-between items-start">
                                                                         <div>
-                                                                            <span className="text-[10px] font-black text-gray-800 block">💼 İş Adresi</span>
-                                                                            <span className="text-[9.5px] text-gray-500 font-semibold mt-1 block leading-snug">Levent Plaza Kat: 8, Büyükdere Cd. Şişli / İstanbul</span>
+                                                                            <span className="text-[10px] font-black text-foreground block">💼 İş Adresi</span>
+                                                                            <span className="text-[9.5px] text-secondary font-semibold mt-1 block leading-snug">Levent Plaza Kat: 8, Büyükdere Cd. Şişli / İstanbul</span>
                                                                         </div>
                                                                     </div>
                                                                 </div>
-                                                                <button className="mt-2 text-[9.5px] font-black text-[#527958] flex items-center gap-1 cursor-pointer">
+                                                                <button className="mt-2 text-[9.5px] font-black text-accent-secondary flex items-center gap-1 cursor-pointer">
                                                                     <Plus className="w-3.5 h-3.5" /> Yeni Adres Ekle
                                                                 </button>
                                                             </div>
 
                                                             {/* Payment section */}
-                                                            <div className="pt-3 border-t border-gray-100">
-                                                                <h5 className="text-[9.5px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 px-1">KAYITLI KARTLARIM</h5>
+                                                            <div className="pt-3 border-t border-card-border">
+                                                                <h5 className="text-[9.5px] font-black text-secondary uppercase tracking-widest mb-2 px-1">KAYITLI KARTLARIM</h5>
                                                                 <div className="flex flex-col gap-2">
-                                                                    <div className="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex justify-between items-center">
+                                                                    <div className="p-3 bg-secondary border border-card-border rounded-2xl flex justify-between items-center">
                                                                         <div className="flex items-center gap-2">
                                                                             <CreditCard className="w-4.5 h-4.5 text-gray-600" />
                                                                             <div>
-                                                                                <span className="text-[10px] font-black text-gray-800 block">Moffi Pati-Kart (NFC)</span>
-                                                                                <span className="text-[8.5px] text-gray-500 dark:text-gray-400 font-semibold">Bakiye: {totalPatiPuan.toLocaleString()} Patipuan</span>
+                                                                                <span className="text-[10px] font-black text-foreground block">Moffi Pati-Kart (NFC)</span>
+                                                                                <span className="text-[8.5px] text-secondary font-semibold">Bakiye: {totalPatiPuan.toLocaleString()} Patipuan</span>
                                                                             </div>
                                                                         </div>
                                                                         <span className="w-2 h-2 rounded-full bg-green-500" />
                                                                     </div>
-                                                                    <div className="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex justify-between items-center">
+                                                                    <div className="p-3 bg-secondary border border-card-border rounded-2xl flex justify-between items-center">
                                                                         <div className="flex items-center gap-2">
-                                                                            <CreditCard className="w-4.5 h-4.5 text-gray-500 dark:text-gray-400" />
+                                                                            <CreditCard className="w-4.5 h-4.5 text-secondary" />
                                                                             <div>
-                                                                                <span className="text-[10px] font-bold text-gray-700 block">Yapı Kredi Play Card</span>
-                                                                                <span className="text-[8.5px] text-gray-500 font-mono">•••• 4820</span>
+                                                                                <span className="text-[10px] font-bold text-foreground block">Yapı Kredi Play Card</span>
+                                                                                <span className="text-[8.5px] text-secondary font-mono">•••• 4820</span>
                                                                             </div>
                                                                         </div>
                                                                     </div>
                                                                 </div>
-                                                                <button className="mt-2 text-[9.5px] font-black text-[#527958] flex items-center gap-1 cursor-pointer">
+                                                                <button className="mt-2 text-[9.5px] font-black text-accent-secondary flex items-center gap-1 cursor-pointer">
                                                                     <Plus className="w-3.5 h-3.5" /> Yeni Ödeme Yöntemi Ekle
                                                                 </button>
                                                                 
                                                                 <button 
                                                                     onClick={() => setIsPolicyModalOpen(true)}
-                                                                    className="mt-4 w-full p-3 rounded-2xl bg-gray-50 border border-gray-100/60 flex items-center justify-between group hover:bg-gray-100 transition-colors"
+                                                                    className="mt-4 w-full p-3 rounded-2xl bg-secondary border border-card-border/60 flex items-center justify-between group hover:brightness-95 transition-colors"
                                                                 >
                                                                     <div className="flex items-center gap-2">
                                                                         <div className="w-6 h-6 rounded-lg bg-gray-200/50 flex items-center justify-center">
-                                                                            <ShieldCheck className="w-3.5 h-3.5 text-gray-500 group-hover:text-emerald-500 transition-colors" />
+                                                                            <ShieldCheck className="w-3.5 h-3.5 text-secondary group-hover:text-emerald-500 transition-colors" />
                                                                         </div>
                                                                         <div className="text-left">
-                                                                            <span className="text-[10px] font-bold text-gray-700 block">Pati-Kart & KVKK Aydınlatması</span>
-                                                                            <span className="text-[8px] text-gray-500">Adil kullanım koşullarını incele</span>
+                                                                            <span className="text-[10px] font-bold text-foreground block">Pati-Kart & KVKK Aydınlatması</span>
+                                                                            <span className="text-[8px] text-secondary">Adil kullanım koşullarını incele</span>
                                                                         </div>
                                                                     </div>
-                                                                    <ChevronRight className="w-4 h-4 text-gray-500 dark:text-gray-400 group-hover:text-emerald-500 transition-colors" />
+                                                                    <ChevronRight className="w-4 h-4 text-secondary group-hover:text-emerald-500 transition-colors" />
                                                                 </button>
                                                             </div>
 
-                                                            <div className="pt-3 border-t border-gray-100">
-                                                                <h5 className="text-[9.5px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 px-1">SİPARİŞ & BİLDİRİM AYARLARI</h5>
-                                                                <div className="flex flex-col gap-2 text-[9.5px] font-bold text-gray-800">
+                                                            <div className="pt-3 border-t border-card-border">
+                                                                <h5 className="text-[9.5px] font-black text-secondary uppercase tracking-widest mb-2 px-1">SİPARİŞ & BİLDİRİM AYARLARI</h5>
+                                                                <div className="flex flex-col gap-2 text-[9.5px] font-bold text-foreground">
                                                                     {/* [V2_FEATURE_TASMA] - Tasma & Anomali bildirim ayarları gizlendi
-                                                                    <label className="flex justify-between items-center p-2.5 rounded-2xl bg-gray-50/70 cursor-pointer">
+                                                                    <label className="flex justify-between items-center p-2.5 rounded-2xl bg-secondary/70 cursor-pointer">
                                                                         <div className="flex flex-col gap-0.5">
                                                                             <span>Akıllı Tasma Geofence (Güvenli Çember)</span>
-                                                                            <span className="text-[8px] text-gray-500 dark:text-gray-400 font-medium">{pet.name} çember dışına çıkarsa anında bildirim gönder.</span>
+                                                                            <span className="text-[8px] text-secondary font-medium">{pet.name} çember dışına çıkarsa anında bildirim gönder.</span>
                                                                         </div>
                                                                         <input 
                                                                             type="checkbox" 
@@ -3505,13 +3505,13 @@ export default function LegendaryLightDashboard() {
                                                                                 setGeofenceAlerts(e.target.checked);
                                                                                 setToastMsg(e.target.checked ? "🔔 Geofence (Güvenli Çember) bildirimi aktif edildi!" : "🔕 Geofence bildirimi devredışı bırakıldı.");
                                                                             }}
-                                                                            className="rounded border-gray-300 text-[#527958] focus:ring-[#527958] w-4 h-4 cursor-pointer animate-none" 
+                                                                            className="rounded border-gray-300 text-accent-secondary focus:ring-accent-secondary w-4 h-4 cursor-pointer animate-none" 
                                                                         />
                                                                     </label>
-                                                                    <label className="flex justify-between items-center p-2.5 rounded-2xl bg-gray-50/70 cursor-pointer">
+                                                                    <label className="flex justify-between items-center p-2.5 rounded-2xl bg-secondary/70 cursor-pointer">
                                                                         <div className="flex flex-col gap-0.5">
                                                                             <span>Düşük Pil Uyarısı</span>
-                                                                            <span className="text-[8px] text-gray-500 dark:text-gray-400 font-medium">Tasma şarjı %15 altına inerse bildirim gönder.</span>
+                                                                            <span className="text-[8px] text-secondary font-medium">Tasma şarjı %15 altına inerse bildirim gönder.</span>
                                                                         </div>
                                                                         <input 
                                                                             type="checkbox" 
@@ -3520,13 +3520,13 @@ export default function LegendaryLightDashboard() {
                                                                                 setCollarLowBattery(e.target.checked);
                                                                                 setToastMsg(e.target.checked ? "🔋 Düşük pil uyarısı aktif edildi!" : "🔕 Düşük pil uyarısı devredışı bırakıldı.");
                                                                             }}
-                                                                            className="rounded border-gray-300 text-[#527958] focus:ring-[#527958] w-4 h-4 cursor-pointer animate-none" 
+                                                                            className="rounded border-gray-300 text-accent-secondary focus:ring-accent-secondary w-4 h-4 cursor-pointer animate-none" 
                                                                         />
                                                                     </label>
-                                                                    <label className="flex justify-between items-center p-2.5 rounded-2xl bg-gray-50/70 cursor-pointer">
+                                                                    <label className="flex justify-between items-center p-2.5 rounded-2xl bg-secondary/70 cursor-pointer">
                                                                         <div className="flex flex-col gap-0.5">
                                                                             <span>Sağlık Anomalisi SMS Uyarısı</span>
-                                                                            <span className="text-[8px] text-gray-500 dark:text-gray-400 font-medium">Stres, kalp ritmi veya anormal havlama durumunda SMS gönder.</span>
+                                                                            <span className="text-[8px] text-secondary font-medium">Stres, kalp ritmi veya anormal havlama durumunda SMS gönder.</span>
                                                                         </div>
                                                                         <input 
                                                                             type="checkbox" 
@@ -3535,17 +3535,17 @@ export default function LegendaryLightDashboard() {
                                                                                 setAnomaliesSms(e.target.checked);
                                                                                 setToastMsg(e.target.checked ? "📲 Sağlık anomalisi SMS bildirimi aktif!" : "🔕 Sağlık anomalisi SMS uyarısı devredışı.");
                                                                             }}
-                                                                            className="rounded border-gray-300 text-[#527958] focus:ring-[#527958] w-4 h-4 cursor-pointer animate-none" 
+                                                                            className="rounded border-gray-300 text-accent-secondary focus:ring-accent-secondary w-4 h-4 cursor-pointer animate-none" 
                                                                         />
                                                                     </label>
                                                                     */}
-                                                                    <label className="flex justify-between items-center p-2.5 rounded-2xl bg-gray-50/70 cursor-pointer">
+                                                                    <label className="flex justify-between items-center p-2.5 rounded-2xl bg-secondary/70 cursor-pointer">
                                                                         <span>Anlık Kurye ve Sipariş Takip Bildirimleri</span>
-                                                                        <input type="checkbox" defaultChecked className="rounded border-gray-300 text-[#527958] focus:ring-[#527958] w-4 h-4 cursor-pointer animate-none" />
+                                                                        <input type="checkbox" defaultChecked className="rounded border-gray-300 text-accent-secondary focus:ring-accent-secondary w-4 h-4 cursor-pointer animate-none" />
                                                                     </label>
-                                                                    <label className="flex justify-between items-center p-2.5 rounded-2xl bg-gray-50/70 cursor-pointer">
+                                                                    <label className="flex justify-between items-center p-2.5 rounded-2xl bg-secondary/70 cursor-pointer">
                                                                         <span>Fatura ve Kampanya E-Postaları</span>
-                                                                        <input type="checkbox" defaultChecked className="rounded border-gray-300 text-[#527958] focus:ring-[#527958] w-4 h-4 cursor-pointer animate-none" />
+                                                                        <input type="checkbox" defaultChecked className="rounded border-gray-300 text-accent-secondary focus:ring-accent-secondary w-4 h-4 cursor-pointer animate-none" />
                                                                     </label>
                                                                 </div>
                                                             </div>
