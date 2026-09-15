@@ -1042,7 +1042,16 @@ function VetPageContent() {
                                     <div className="flex-1 flex flex-col justify-between text-left">
                                         <div>
                                             <div className="flex items-center justify-between">
-                                                <h3 className="font-black text-foreground text-sm tracking-tight leading-none group-hover:text-accent dark:group-hover:text-accent transition-colors duration-300">{clinic.name}</h3>
+                                                <h3 
+                                                    className="font-black text-foreground text-sm tracking-tight leading-none group-hover:text-accent dark:group-hover:text-accent transition-colors duration-300 cursor-pointer"
+                                                    onClick={(e) => { 
+                                                        e.stopPropagation(); 
+                                                        setDetailClinicId(clinic.id); 
+                                                        setDetailClinicData(clinic); 
+                                                    }}
+                                                >
+                                                    {clinic.name}
+                                                </h3>
                                                 <div className="flex items-center gap-1 bg-yellow-500/10 border border-yellow-500/25 px-2 py-0.5 rounded-full text-yellow-500">
                                                     <Star className="w-3 h-3 fill-current" />
                                                     <span className="text-[9px] font-black">{clinic.rating}</span>
