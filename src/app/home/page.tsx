@@ -2748,7 +2748,7 @@ export default function LegendaryLightDashboard() {
                                                 <div className="grid grid-cols-2 gap-3">
                                                     <button 
                                                         disabled
-                                                        className="flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-100 p-3.5 rounded-2xl text-[11px] font-black text-secondary transition-all cursor-not-allowed shadow-sm relative overflow-hidden"
+                                                        className="flex items-center justify-center gap-1.5 bg-secondary border border-card-border p-3.5 rounded-2xl text-[11px] font-black text-secondary transition-all cursor-not-allowed shadow-sm relative overflow-hidden"
                                                     >
                                                         <div className="absolute inset-0 bg-card/50 z-10" />
                                                         <Plus className="w-3.5 h-3.5" />
@@ -2757,7 +2757,7 @@ export default function LegendaryLightDashboard() {
                                                     </button>
                                                     <button 
                                                         disabled
-                                                        className="flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-100 p-3.5 rounded-2xl text-[11px] font-black text-secondary transition-all cursor-not-allowed shadow-sm relative overflow-hidden"
+                                                        className="flex items-center justify-center gap-1.5 bg-secondary border border-card-border p-3.5 rounded-2xl text-[11px] font-black text-secondary transition-all cursor-not-allowed shadow-sm relative overflow-hidden"
                                                     >
                                                         <div className="absolute inset-0 bg-card/50 z-10" />
                                                         <ArrowUpRight className="w-3.5 h-3.5" />
@@ -2768,10 +2768,10 @@ export default function LegendaryLightDashboard() {
 
                                                 <button 
                                                     onClick={() => setIsPolicyModalOpen(true)}
-                                                    className="w-full p-3.5 rounded-2xl bg-secondary border-card-border flex items-center justify-between group hover:brightness-95 transition-colors cursor-pointer mt-3"
+                                                    className="w-full p-3.5 rounded-2xl bg-secondary border border-card-border flex items-center justify-between group hover:brightness-95 transition-colors cursor-pointer mt-3"
                                                 >
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-xl bg-card border-card-border shadow-sm flex items-center justify-center">
+                                                        <div className="w-8 h-8 rounded-xl bg-card border border-card-border shadow-sm flex items-center justify-center">
                                                             <ShieldCheck className="w-4 h-4 text-emerald-500" />
                                                         </div>
                                                         <div className="text-left">
@@ -2783,7 +2783,7 @@ export default function LegendaryLightDashboard() {
                                                 </button>
 
                                                 {/* Pati-Kart Security Settings */}
-                                                <div className="bg-card border-card-border rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-4">
+                                                <div className="bg-card border border-card-border rounded-3xl p-4.5 shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-4">
                                                     <div className="flex justify-between items-center">
                                                         <div className="flex items-center gap-2.5">
                                                             <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center text-red-600 shrink-0">
