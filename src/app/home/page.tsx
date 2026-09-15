@@ -3338,17 +3338,17 @@ export default function LegendaryLightDashboard() {
                                                                                     </div>
                                                                                 </div>
                                                                                 {/* Quantity Controls */}
-                                                                                <div className="flex items-center gap-2 bg-gray-55 border border-gray-150 px-2 py-1 rounded-xl">
+                                                                                <div className="flex items-center gap-2 bg-gray-100 border border-gray-200 px-2 py-1 rounded-xl">
                                                                                     <button 
                                                                                         onClick={() => updateCartItem(item.id, item.quantity - 1)}
-                                                                                        className="text-[12px] font-black text-gray-650 w-4 text-center cursor-pointer"
+                                                                                        className="text-[12px] font-black text-gray-700 w-4 text-center cursor-pointer"
                                                                                     >
                                                                                         -
                                                                                     </button>
                                                                                     <span className="text-[11px] font-black text-gray-800 w-3 text-center">{item.quantity}</span>
                                                                                     <button 
                                                                                         onClick={() => updateCartItem(item.id, item.quantity + 1)}
-                                                                                        className="text-[12px] font-black text-gray-650 w-4 text-center cursor-pointer"
+                                                                                        className="text-[12px] font-black text-gray-700 w-4 text-center cursor-pointer"
                                                                                     >
                                                                                         +
                                                                                     </button>
