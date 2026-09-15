@@ -2956,7 +2956,7 @@ export default function LegendaryLightDashboard() {
                                                     {subscriptions.length > 0 ? subscriptions.map((sub: any, idx: number) => (
                                                         <div key={sub.id || idx} className={`flex justify-between items-center ${idx !== subscriptions.length - 1 ? 'pb-3 border-b border-gray-50' : ''}`}>
                                                             <div className="flex items-center gap-2.5">
-                                                                <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center text-orange-655 shrink-0">
+                                                                <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600 shrink-0">
                                                                     <ShoppingBag className="w-5 h-5" />
                                                                 </div>
                                                                 <div>
@@ -3052,20 +3052,20 @@ export default function LegendaryLightDashboard() {
                                             {/* 7. Trendyol-Style Interactive Orders & Cart System */}
                                             <div className="flex flex-col gap-3">
                                                 <div className="flex justify-between items-center px-1">
-                                                    <span className="text-[10px] font-black tracking-widest text-gray-500 dark:text-gray-400 uppercase">SİPARİŞLERİM & SEPETİM</span>
+                                                    <span className="text-[10px] font-black tracking-widest text-secondary uppercase">SİPARİŞLERİM & SEPETİM</span>
                                                     <span className="text-[9.5px] font-black text-green-700 bg-green-50 border border-green-200/50 px-2 py-0.5 rounded-full">
                                                         {cartCount > 0 ? `${cartCount} Ürün` : 'Sepet Boş'}
                                                     </span>
                                                 </div>
                                                 
                                                 {/* Tab Selector Bar */}
-                                                <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200/40">
+                                                <div className="flex bg-secondary p-1 rounded-2xl border border-card-border">
                                                     <button 
                                                         onClick={() => setProfileOrdersTab('active')}
                                                         className={`flex-1 text-[9.5px] font-black py-2 rounded-xl transition-all cursor-pointer text-center ${
                                                             profileOrdersTab === 'active' 
-                                                                ? 'bg-white text-gray-900 shadow-sm' 
-                                                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-600'
+                                                                ? 'bg-card text-foreground shadow-sm' 
+                                                                : 'text-secondary hover:text-gray-600'
                                                         }`}
                                                     >
                                                         Aktif Takip
@@ -3074,8 +3074,8 @@ export default function LegendaryLightDashboard() {
                                                         onClick={() => setProfileOrdersTab('past')}
                                                         className={`flex-1 text-[9.5px] font-black py-2 rounded-xl transition-all cursor-pointer text-center ${
                                                             profileOrdersTab === 'past' 
-                                                                ? 'bg-white text-gray-900 shadow-sm' 
-                                                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-600'
+                                                                ? 'bg-card text-foreground shadow-sm' 
+                                                                : 'text-secondary hover:text-gray-600'
                                                         }`}
                                                     >
                                                         Geçmiş
@@ -3084,8 +3084,8 @@ export default function LegendaryLightDashboard() {
                                                         onClick={() => setProfileOrdersTab('cart')}
                                                         className={`flex-1 text-[9.5px] font-black py-2 rounded-xl transition-all cursor-pointer text-center relative ${
                                                             profileOrdersTab === 'cart' 
-                                                                ? 'bg-white text-gray-900 shadow-sm' 
-                                                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-600'
+                                                                ? 'bg-card text-foreground shadow-sm' 
+                                                                : 'text-secondary hover:text-gray-600'
                                                         }`}
                                                     >
                                                         Sepetim
@@ -3099,8 +3099,8 @@ export default function LegendaryLightDashboard() {
                                                         onClick={() => setProfileOrdersTab('settings')}
                                                         className={`flex-1 text-[9.5px] font-black py-2 rounded-xl transition-all cursor-pointer text-center ${
                                                             profileOrdersTab === 'settings' 
-                                                                ? 'bg-white text-gray-900 shadow-sm' 
-                                                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-600'
+                                                                ? 'bg-card text-foreground shadow-sm' 
+                                                                : 'text-secondary hover:text-gray-600'
                                                         }`}
                                                     >
                                                         Ayarlar
@@ -3298,13 +3298,13 @@ export default function LegendaryLightDashboard() {
                                                 {profileOrdersTab === 'cart' && (
                                                     <div className="flex flex-col gap-3">
                                                         {cartCount === 0 ? (
-                                                            <div className="p-8 bg-white border border-gray-100 rounded-3xl text-center flex flex-col items-center justify-center gap-2">
+                                                            <div className="p-8 bg-card border border-card-border rounded-3xl text-center flex flex-col items-center justify-center gap-2">
                                                                 <span className="text-3xl">🛒</span>
-                                                                <h5 className="text-xs font-black text-gray-800">Sepetiniz Boş</h5>
-                                                                <p className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold max-w-[200px]">{pet.name || 'Petiniz'} için eklediğiniz ürünler burada görünür.</p>
+                                                                <h5 className="text-xs font-black text-foreground">Sepetiniz Boş</h5>
+                                                                <p className="text-[10px] text-secondary font-semibold max-w-[200px]">{pet.name || 'Petiniz'} için eklediğiniz ürünler burada görünür.</p>
                                                                 <button 
                                                                     onClick={() => window.dispatchEvent(new CustomEvent('moffi-navigate', { detail: 'petshop' }))}
-                                                                    className="mt-2 bg-[#527958] text-white text-[10px] font-black px-4 py-2 rounded-xl"
+                                                                    className="mt-2 bg-accent-secondary text-white text-[10px] font-black px-4 py-2 rounded-xl"
                                                                 >
                                                                     Alışverişe Başla
                                                                 </button>
@@ -3312,7 +3312,7 @@ export default function LegendaryLightDashboard() {
                                                         ) : (
                                                             <div className="flex flex-col gap-3">
                                                                 {/* Cart items list */}
-                                                                <div className="p-4 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3.5">
+                                                                <div className="p-4 bg-card border border-card-border rounded-3xl shadow-[0_4px_15px_rgba(0,0,0,0.01)] flex flex-col gap-3.5">
                                                                     {cart.map((item: any, idx: number) => {
                                                                         const product = products.find((p: any) => p.id === item.productId);
                                                                         if (!product) return null;
@@ -3320,7 +3320,7 @@ export default function LegendaryLightDashboard() {
                                                                         const price = isSubscribed ? product.price * 0.9 : product.price;
 
                                                                         return (
-                                                                            <div key={item.id} className={`flex justify-between items-center ${idx !== 0 ? 'pt-3 border-t border-gray-100' : ''}`}>
+                                                                            <div key={item.id} className={`flex justify-between items-center ${idx !== 0 ? 'pt-3 border-t border-card-border' : ''}`}>
                                                                                 <div className="flex gap-2.5 items-center">
                                                                                     <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-100/35 flex items-center justify-center text-orange-600 shrink-0 overflow-hidden">
                                                                                         {product.image ? (
@@ -3330,25 +3330,25 @@ export default function LegendaryLightDashboard() {
                                                                                         )}
                                                                                     </div>
                                                                                     <div className="max-w-[120px]">
-                                                                                        <h5 className="text-[11px] font-black text-gray-800 truncate">{product.name}</h5>
+                                                                                        <h5 className="text-[11px] font-black text-foreground truncate">{product.name}</h5>
                                                                                         <span className="text-[9.5px] font-black text-orange-600 block mt-0.5">
                                                                                             {(price * item.quantity).toLocaleString('tr-TR')} TL 
-                                                                                            {isSubscribed && <span className="text-[8px] text-gray-500 dark:text-gray-400 line-through ml-1">{(product.price * item.quantity).toLocaleString('tr-TR')} TL</span>}
+                                                                                            {isSubscribed && <span className="text-[8px] text-secondary line-through ml-1">{(product.price * item.quantity).toLocaleString('tr-TR')} TL</span>}
                                                                                         </span>
                                                                                     </div>
                                                                                 </div>
                                                                                 {/* Quantity Controls */}
-                                                                                <div className="flex items-center gap-2 bg-gray-100 border border-gray-200 px-2 py-1 rounded-xl">
+                                                                                <div className="flex items-center gap-2 bg-secondary border border-card-border px-2 py-1 rounded-xl">
                                                                                     <button 
                                                                                         onClick={() => updateCartItem(item.id, item.quantity - 1)}
-                                                                                        className="text-[12px] font-black text-gray-700 w-4 text-center cursor-pointer"
+                                                                                        className="text-[12px] font-black text-foreground w-4 text-center cursor-pointer"
                                                                                     >
                                                                                         -
                                                                                     </button>
-                                                                                    <span className="text-[11px] font-black text-gray-800 w-3 text-center">{item.quantity}</span>
+                                                                                    <span className="text-[11px] font-black text-foreground w-3 text-center">{item.quantity}</span>
                                                                                     <button 
                                                                                         onClick={() => updateCartItem(item.id, item.quantity + 1)}
-                                                                                        className="text-[12px] font-black text-gray-700 w-4 text-center cursor-pointer"
+                                                                                        className="text-[12px] font-black text-foreground w-4 text-center cursor-pointer"
                                                                                     >
                                                                                         +
                                                                                     </button>
@@ -3359,16 +3359,16 @@ export default function LegendaryLightDashboard() {
                                                                 </div>
 
                                                                 {/* Checkout calculation */}
-                                                                <div className="p-4 bg-[#FBFBFB] border border-gray-100 rounded-3xl flex flex-col gap-2">
-                                                                    <div className="flex justify-between text-[10px] font-bold text-gray-500">
+                                                                <div className="p-4 bg-[#FBFBFB] border border-card-border rounded-3xl flex flex-col gap-2">
+                                                                    <div className="flex justify-between text-[10px] font-bold text-secondary">
                                                                         <span>Sepet Toplamı</span>
                                                                         <span>{cartTotal.toLocaleString('tr-TR')} TL</span>
                                                                     </div>
-                                                                    <div className="flex justify-between text-[10px] font-bold text-gray-500">
+                                                                    <div className="flex justify-between text-[10px] font-bold text-secondary">
                                                                         <span>Kargo Ücreti</span>
                                                                         <span className="text-green-600 font-black">Bedava</span>
                                                                     </div>
-                                                                    <div className="flex justify-between text-[11px] font-black text-gray-800 pt-2 border-t border-gray-200">
+                                                                    <div className="flex justify-between text-[11px] font-black text-foreground pt-2 border-t border-card-border">
                                                                         <span>Ödenecek Tutar</span>
                                                                         <span className="text-orange-600 text-sm font-black">{cartTotal.toLocaleString('tr-TR')} TL</span>
                                                                     </div>
