@@ -151,7 +151,7 @@ export function AddPetModal({
                                             className={cn(
                                                 "h-1 rounded-full transition-all duration-300", 
                                                 step === i 
-                                                    ? "w-6 bg-[#527958] shadow-[0_0_8px_rgba(82,121,88,0.3)]" 
+                                                    ? "w-6 bg-accent-secondary shadow-[0_0_8px_rgba(82,121,88,0.3)]" 
                                                     : "w-2 bg-gray-200"
                                             )} 
                                         />
@@ -172,7 +172,7 @@ export function AddPetModal({
                                 <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="w-full space-y-6">
                                     
                                     {/* PHOTO GALLERY SECTION */}
-                                    <div className="bg-white/60 rounded-[28px] p-5 border border-gray-200/80 shadow-sm space-y-3">
+                                    <div className="bg-card/60 rounded-[28px] p-5 border border-card-border shadow-sm space-y-3">
                                         <label className="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider ml-1">Fotoğraflar (En Fazla 5)</label>
                                         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
                                             {newPetPhotos.map((photo, index) => (
@@ -185,7 +185,7 @@ export function AddPetModal({
                                                         <X className="w-3.5 h-3.5 text-white" />
                                                     </button>
                                                     {index === 0 && (
-                                                        <div className="absolute bottom-1 left-1 right-1 bg-[#527958]/95 backdrop-blur-md flex items-center justify-center py-0.5 rounded-lg shadow-sm">
+                                                        <div className="absolute bottom-1 left-1 right-1 bg-accent-secondary/95 backdrop-blur-md flex items-center justify-center py-0.5 rounded-lg shadow-sm">
                                                             <span className="text-[7.5px] font-black text-white uppercase tracking-widest">Kapak</span>
                                                         </div>
                                                     )}
@@ -193,9 +193,9 @@ export function AddPetModal({
                                             ))}
 
                                             {newPetPhotos.length < 5 && (
-                                                <label htmlFor="add-pet-photos" className="shrink-0 w-20 h-20 rounded-2xl bg-white/60 border-2 border-dashed border-gray-200/80 flex flex-col items-center justify-center cursor-pointer hover:border-[#527958] hover:bg-white transition-all group shadow-inner">
+                                                <label htmlFor="add-pet-photos" className="shrink-0 w-20 h-20 rounded-2xl bg-card/60 border-2 border-dashed border-card-border flex flex-col items-center justify-center cursor-pointer hover:border-accent-secondary hover:bg-card transition-all group shadow-inner">
                                                     <div className="w-7 h-7 bg-green-50/80 rounded-xl flex items-center justify-center mb-1 group-hover:scale-110 transition-all duration-300">
-                                                        <Plus className="w-4.5 h-4.5 text-[#527958]" />
+                                                        <Plus className="w-4.5 h-4.5 text-accent-secondary" />
                                                     </div>
                                                     <span className="text-[8.5px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-wider text-center">Ekle</span>
                                                     <input
