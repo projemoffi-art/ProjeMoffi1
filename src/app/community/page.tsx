@@ -2513,7 +2513,7 @@ export default function MoffiSocialMasterpiece() {
                                                     className="absolute bottom-6 right-6 z-20 w-8 h-8 flex items-center justify-center text-cyan-400 hover:scale-110 transition-all active:scale-95 group"
                                                     title="AI İyileştir"
                                                 >
-                                                    <Sparkles className="w-5 h-5 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]" />
+                                                    <Sparkles className="w-5 h-5 drop-shadow-[0_0_10px_rgba(34,211,238,0.5)]" />
                                                 </motion.button>
                                             )}
                                         </div>
